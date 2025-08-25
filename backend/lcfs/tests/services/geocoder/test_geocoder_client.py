@@ -5,20 +5,21 @@ Tests for BC Geocoder service client.
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
+from httpx import RequestError
 
 from lcfs.services.geocoder.client import BCGeocoderService, Address, GeocodingResult
 
 
 @pytest.fixture
-def geocoder_service():
+def geocoder_service(fake_redis_client):
     """Create a geocoder service instance for testing."""
     return BCGeocoderService(
+        redis_client=fake_redis_client,
         bc_geocoder_url="https://test.geocoder.api.gov.bc.ca",
         nominatim_url="https://test.nominatim.openstreetmap.org",
         timeout=10,
         max_retries=2,
         rate_limit_delay=0.1,
-        cache_size=100,
         cache_ttl=60,
     )
 
@@ -77,7 +78,7 @@ class TestBCGeocoderService:
         assert geocoder_service._cache is not None
         assert "requests_made" in geocoder_service._metrics
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_address_success(
         self, geocoder_service, mock_bc_geocoder_response
     ):
@@ -101,7 +102,7 @@ class TestBCGeocoderService:
             assert address.longitude == -123.1207
             assert address.score == 95
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_address_cache_hit(
         self, geocoder_service, mock_bc_geocoder_response
     ):
@@ -130,20 +131,20 @@ class TestBCGeocoderService:
             # Cache hit should be recorded
             assert geocoder_service._metrics["cache_hits"] >= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_validate_address_error(self, geocoder_service):
         """Test address validation with API error."""
         with patch.object(
             geocoder_service, "_make_request", new_callable=AsyncMock
         ) as mock_request:
-            mock_request.side_effect = ClientError("API Error")
+            mock_request.side_effect = RequestError("API Error")
 
             addresses = await geocoder_service.validate_address("Invalid Address")
 
             assert addresses == []
             assert geocoder_service._metrics["api_errors"] >= 1
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_forward_geocode_success(
         self, geocoder_service, mock_bc_geocoder_response
     ):
@@ -165,7 +166,7 @@ class TestBCGeocoderService:
             assert result.address.longitude == -123.1207
             assert result.source == "bc_geocoder"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_forward_geocode_with_fallback(
         self, geocoder_service, mock_nominatim_response
     ):
@@ -199,7 +200,7 @@ class TestBCGeocoderService:
                 assert result.source == "nominatim"
                 mock_nominatim.assert_called_once()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reverse_geocode_success(self, geocoder_service):
         """Test successful reverse geocoding."""
         with patch.object(
@@ -224,7 +225,7 @@ class TestBCGeocoderService:
             assert result.address.city == "Vancouver"
             assert result.address.province == "British Columbia"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_batch_geocode(self, geocoder_service):
         """Test batch geocoding functionality."""
         with patch.object(
@@ -245,7 +246,7 @@ class TestBCGeocoderService:
             assert all(result.success for result in results)
             assert mock_forward.call_count == 3
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_check_bc_boundary_with_geocoding(self, geocoder_service):
         """Test BC boundary check using reverse geocoding."""
         with patch.object(
@@ -263,7 +264,7 @@ class TestBCGeocoderService:
 
             assert is_in_bc is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_check_bc_boundary_fallback(self, geocoder_service):
         """Test BC boundary check with fallback to coordinate bounds."""
         with patch.object(
@@ -282,7 +283,7 @@ class TestBCGeocoderService:
             )  # NYC
             assert is_in_bc is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_autocomplete_address(self, geocoder_service):
         """Test address autocomplete functionality."""
         with patch.object(
@@ -302,7 +303,7 @@ class TestBCGeocoderService:
             assert "123 Main St, Vancouver, BC" in suggestions
             assert "124 Main St, Vancouver, BC" in suggestions
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_autocomplete_address_short_input(self, geocoder_service):
         """Test autocomplete with short input returns empty list."""
         suggestions = await geocoder_service.autocomplete_address("12")
@@ -329,7 +330,7 @@ class TestBCGeocoderService:
         assert "nominatim_calls" in metrics
         assert "cache_stats" in metrics
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_shutdown(self, geocoder_service):
         """Test service shutdown."""
         with patch.object(
@@ -361,7 +362,7 @@ class TestBCGeocoderService:
         addresses = geocoder_service._parse_bc_geocoder_response(empty_response)
         assert addresses == []
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_nominatim_forward_geocode(
         self, geocoder_service, mock_nominatim_response
     ):
@@ -380,7 +381,7 @@ class TestBCGeocoderService:
             assert result.address.latitude == 49.2827
             assert result.address.longitude == -123.1207
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_nominatim_reverse_geocode(self, geocoder_service):
         """Test Nominatim reverse geocoding."""
         mock_response = {

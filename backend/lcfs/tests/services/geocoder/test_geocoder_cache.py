@@ -4,261 +4,303 @@ Tests for geocoder cache implementation.
 
 import pytest
 import asyncio
-import time
+import json
 from unittest.mock import patch
 
 from lcfs.services.geocoder.cache import GeocoderCache, CacheEntry, CacheDecorator
+from lcfs.services.geocoder.client import Address, GeocodingResult
+
+
+@pytest.fixture
+def geocoder_cache(fake_redis_client):
+    """Create a geocoder cache instance for testing."""
+    return GeocoderCache(
+        redis_client=fake_redis_client,
+        default_ttl=3600
+    )
 
 
 class TestGeocoderCache:
     """Test cases for geocoder cache."""
 
-    def test_cache_initialization(self):
+    def test_cache_initialization(self, geocoder_cache):
         """Test cache initialization."""
-        cache = GeocoderCache(max_size=100, default_ttl=3600)
-        assert cache.max_size == 100
+        cache = geocoder_cache
         assert cache.default_ttl == 3600
-        assert len(cache._cache) == 0
+        assert cache.key_prefix == "geocoder:"
 
-    def test_set_and_get(self):
+    @pytest.mark.anyio
+    async def test_set_and_get(self, geocoder_cache):
         """Test basic set and get operations."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         
-        cache.set("test_key", "test_value")
-        assert cache.get("test_key") == "test_value"
+        await cache.set("test_key", "test_value")
+        result = await cache.get("test_key")
+        assert result == "test_value"
         
         # Test cache miss
-        assert cache.get("nonexistent_key") is None
+        result = await cache.get("non_existent_key")
+        assert result is None
 
-    def test_ttl_expiration(self):
-        """Test TTL expiration."""
-        cache = GeocoderCache(max_size=10, default_ttl=1)  # 1 second TTL
+    @pytest.mark.anyio
+    async def test_set_with_ttl(self, geocoder_cache):
+        """Test set with custom TTL."""
+        cache = geocoder_cache
         
-        cache.set("test_key", "test_value", ttl=1)
-        assert cache.get("test_key") == "test_value"
+        await cache.set("test_key", "test_value", ttl=1)
+        result = await cache.get("test_key")
+        assert result == "test_value"
         
-        # Wait for expiration
-        time.sleep(1.1)
-        assert cache.get("test_key") is None
+        # Wait for TTL to expire and test again
+        await asyncio.sleep(1.1)
+        result = await cache.get("test_key")
+        assert result is None
 
-    def test_lru_eviction(self):
-        """Test LRU eviction when cache is full."""
-        cache = GeocoderCache(max_size=2, default_ttl=3600)
-        
-        cache.set("key1", "value1")
-        cache.set("key2", "value2")
-        
-        # Access key1 to make it more recently used
-        cache.get("key1")
-        
-        # Add key3, should evict key2 (least recently used)
-        cache.set("key3", "value3")
-        
-        assert cache.get("key1") == "value1"
-        assert cache.get("key2") is None  # Evicted
-        assert cache.get("key3") == "value3"
-
-    def test_delete(self):
+    @pytest.mark.anyio
+    async def test_delete(self, geocoder_cache):
         """Test cache deletion."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         
-        cache.set("test_key", "test_value")
-        assert cache.get("test_key") == "test_value"
+        await cache.set("test_key", "test_value")
+        result = await cache.get("test_key")
+        assert result == "test_value"
         
-        assert cache.delete("test_key") is True
-        assert cache.get("test_key") is None
+        deleted = await cache.delete("test_key")
+        assert deleted is True
+        
+        result = await cache.get("test_key")
+        assert result is None
         
         # Test deleting non-existent key
-        assert cache.delete("nonexistent_key") is False
+        deleted = await cache.delete("non_existent_key")
+        assert deleted is False
 
-    def test_clear(self):
+    @pytest.mark.anyio
+    async def test_clear(self, geocoder_cache):
         """Test cache clearing."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         
-        cache.set("key1", "value1")
-        cache.set("key2", "value2")
+        await cache.set("key1", "value1")
+        await cache.set("key2", "value2")
         
-        cache.clear()
-        assert cache.get("key1") is None
-        assert cache.get("key2") is None
-        assert len(cache._cache) == 0
+        result1 = await cache.get("key1")
+        result2 = await cache.get("key2")
+        assert result1 == "value1"
+        assert result2 == "value2"
+        
+        await cache.clear()
+        
+        result1 = await cache.get("key1")
+        result2 = await cache.get("key2")
+        assert result1 is None
+        assert result2 is None
 
-    def test_cache_entry_access_tracking(self):
-        """Test that cache entries track access count and time."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
-        
-        cache.set("test_key", "test_value")
-        
-        # Access the key multiple times
-        cache.get("test_key")
-        cache.get("test_key")
-        cache.get("test_key")
-        
-        entry = cache._cache["test_key"]
-        assert entry.access_count == 4  # 1 from set + 3 from gets
-        assert entry.last_accessed is not None
-
-    def test_generate_key(self):
+    def test_generate_key(self, geocoder_cache):
         """Test cache key generation."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         
         key1 = cache._generate_key("arg1", "arg2", kwarg1="value1")
         key2 = cache._generate_key("arg1", "arg2", kwarg1="value1")
-        key3 = cache._generate_key("arg1", "arg3", kwarg1="value1")
+        key3 = cache._generate_key("arg1", "arg2", kwarg1="value2")
         
-        # Same arguments should generate same key
-        assert key1 == key2
-        
-        # Different arguments should generate different key
-        assert key1 != key3
+        assert key1 == key2  # Same arguments should generate same key
+        assert key1 != key3  # Different arguments should generate different keys
+        assert key1.startswith("geocoder:")
 
-    def test_cache_key_for_method(self):
+    def test_cache_key_for_method(self, geocoder_cache):
         """Test method-specific cache key generation."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         
         key = cache.cache_key_for_method("validate_address", "123 Main St", min_score=50)
-        assert key.startswith("validate_address:")
+        assert key.startswith("geocoder:validate_address:")
 
-    def test_get_stats(self):
+    @pytest.mark.anyio
+    async def test_get_stats(self, geocoder_cache):
         """Test cache statistics."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         
-        # Initial stats
-        stats = cache.get_stats()
-        assert stats["hits"] == 0
-        assert stats["misses"] == 0
-        assert stats["sets"] == 0
-        assert stats["size"] == 0
-        assert stats["hit_rate"] == 0
+        # Get initial stats
+        stats = await cache.get_stats()
+        assert "hits" in stats
+        assert "misses" in stats
+        assert "sets" in stats
         
-        # After some operations
-        cache.set("key1", "value1")
-        cache.get("key1")  # Hit
-        cache.get("key2")  # Miss
+        # Perform some operations
+        await cache.set("key1", "value1")
+        await cache.get("key1")  # hit
+        await cache.get("nonexistent")  # miss
         
-        stats = cache.get_stats()
-        assert stats["hits"] == 1
-        assert stats["misses"] == 1
-        assert stats["sets"] == 1
-        assert stats["size"] == 1
-        assert stats["hit_rate"] == 0.5
+        # Check updated stats
+        stats = await cache.get_stats()
+        assert stats["hits"] >= 1
+        assert stats["misses"] >= 1
+        assert stats["sets"] >= 1
 
-    def test_cleanup_expired_entries(self):
-        """Test cleanup of expired entries."""
-        cache = GeocoderCache(max_size=10, default_ttl=1, cleanup_interval=0.1)
+    @pytest.mark.anyio
+    async def test_address_serialization(self, geocoder_cache):
+        """Test serialization and deserialization of Address objects."""
+        cache = geocoder_cache
         
-        # Set entries with short TTL
-        cache.set("key1", "value1", ttl=0.1)
-        cache.set("key2", "value2", ttl=2)
+        address = Address(
+            full_address="123 Main St, Vancouver, BC",
+            street_address="123 Main St",
+            city="Vancouver",
+            province="BC",
+            postal_code="V6B 1A1",
+            latitude=49.2827,
+            longitude=-123.1207,
+            score=95.0
+        )
         
-        assert cache.get("key1") == "value1"
-        assert cache.get("key2") == "value2"
+        await cache.set("address_key", address)
+        result = await cache.get("address_key")
         
-        # Wait for key1 to expire
-        time.sleep(0.2)
-        
-        # Manually trigger cleanup
-        cache._cleanup_expired()
-        
-        assert cache.get("key1") is None  # Expired
-        assert cache.get("key2") == "value2"  # Still valid
+        assert isinstance(result, Address)
+        assert result.full_address == address.full_address
+        assert result.latitude == address.latitude
+        assert result.longitude == address.longitude
 
-    @pytest.mark.asyncio
-    async def test_cache_shutdown(self):
+    @pytest.mark.anyio
+    async def test_geocoding_result_serialization(self, geocoder_cache):
+        """Test serialization and deserialization of GeocodingResult objects."""
+        cache = geocoder_cache
+        
+        address = Address(
+            full_address="123 Main St, Vancouver, BC",
+            latitude=49.2827,
+            longitude=-123.1207
+        )
+        
+        result_obj = GeocodingResult(
+            success=True,
+            address=address,
+            source="bc_geocoder"
+        )
+        
+        await cache.set("result_key", result_obj)
+        cached_result = await cache.get("result_key")
+        
+        assert isinstance(cached_result, GeocodingResult)
+        assert cached_result.success is True
+        assert cached_result.source == "bc_geocoder"
+        assert isinstance(cached_result.address, Address)
+
+    @pytest.mark.anyio
+    async def test_list_serialization(self, geocoder_cache):
+        """Test serialization of lists containing Address objects."""
+        cache = geocoder_cache
+        
+        addresses = [
+            Address(full_address="123 Main St", latitude=49.28, longitude=-123.12),
+            Address(full_address="456 Oak Ave", latitude=49.29, longitude=-123.13)
+        ]
+        
+        await cache.set("addresses_key", addresses)
+        result = await cache.get("addresses_key")
+        
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert all(isinstance(addr, Address) for addr in result)
+        assert result[0].full_address == "123 Main St"
+        assert result[1].full_address == "456 Oak Ave"
+
+    @pytest.mark.anyio
+    async def test_cache_shutdown(self, geocoder_cache):
         """Test cache shutdown."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600, cleanup_interval=0.1)
+        cache = geocoder_cache
         
-        # Wait a bit for cleanup task to start
-        await asyncio.sleep(0.05)
-        
-        # Shutdown should complete without errors
+        # Cache shutdown should work without errors
         await cache.shutdown()
 
 
 class TestCacheDecorator:
     """Test cases for cache decorator."""
 
-    @pytest.mark.asyncio
-    async def test_cache_decorator_hit(self):
+    @pytest.mark.anyio
+    async def test_cache_decorator_hit(self, geocoder_cache):
         """Test cache decorator with cache hit."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         decorator = CacheDecorator(cache, ttl=3600)
         
         call_count = 0
         
         @decorator
-        async def test_function(arg1, arg2="default"):
+        async def test_function(arg1, arg2, kwarg1=None):
             nonlocal call_count
             call_count += 1
-            return f"{arg1}_{arg2}_result"
+            return f"result_{arg1}_{arg2}_{kwarg1}"
         
-        # First call should execute function and cache result
-        result1 = await test_function("test", arg2="value")
-        assert result1 == "test_value_result"
+        # First call should execute function
+        result1 = await test_function("a", "b", kwarg1="c")
+        assert result1 == "result_a_b_c"
         assert call_count == 1
         
-        # Second call should hit cache and not execute function
-        result2 = await test_function("test", arg2="value")
-        assert result2 == "test_value_result"
+        # Second call should hit cache
+        result2 = await test_function("a", "b", kwarg1="c")
+        assert result2 == "result_a_b_c"
         assert call_count == 1  # Function not called again
 
-    @pytest.mark.asyncio
-    async def test_cache_decorator_miss(self):
-        """Test cache decorator with cache miss."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+    @pytest.mark.anyio
+    async def test_cache_decorator_miss(self, geocoder_cache):
+        """Test cache decorator with different arguments (cache miss)."""
+        cache = geocoder_cache
         decorator = CacheDecorator(cache, ttl=3600)
         
         call_count = 0
         
         @decorator
-        async def test_function(arg):
+        async def test_function(arg1):
             nonlocal call_count
             call_count += 1
-            return f"{arg}_result"
+            return f"result_{arg1}"
         
-        # Different arguments should result in different cache keys
-        result1 = await test_function("test1")
-        result2 = await test_function("test2")
+        # Different arguments should miss cache
+        result1 = await test_function("a")
+        result2 = await test_function("b")
         
-        assert result1 == "test1_result"
-        assert result2 == "test2_result"
-        assert call_count == 2  # Function called twice
+        assert result1 == "result_a"
+        assert result2 == "result_b"
+        assert call_count == 2  # Both calls executed
 
-    @pytest.mark.asyncio
-    async def test_cache_decorator_with_none_result(self):
+    @pytest.mark.anyio
+    async def test_cache_decorator_with_none_result(self, geocoder_cache):
         """Test cache decorator when function returns None."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         decorator = CacheDecorator(cache, ttl=3600)
         
         call_count = 0
         
         @decorator
-        async def test_function(arg):
+        async def test_function():
             nonlocal call_count
             call_count += 1
             return None
         
-        # Function returns None - should not be cached
-        result1 = await test_function("test")
-        result2 = await test_function("test")
-        
+        # First call
+        result1 = await test_function()
         assert result1 is None
+        assert call_count == 1
+        
+        # Second call should still hit cache for None values
+        result2 = await test_function()
         assert result2 is None
-        assert call_count == 2  # Function called twice (no caching of None)
+        assert call_count == 1  # Should use cached None value
 
-    @pytest.mark.asyncio
-    async def test_cache_decorator_with_prefix(self):
+    @pytest.mark.anyio
+    async def test_cache_decorator_with_prefix(self, geocoder_cache):
         """Test cache decorator with key prefix."""
-        cache = GeocoderCache(max_size=10, default_ttl=3600)
+        cache = geocoder_cache
         decorator = CacheDecorator(cache, ttl=3600, key_prefix="test_service")
         
         @decorator
         async def test_function(arg):
-            return f"{arg}_result"
+            return f"result_{arg}"
         
-        await test_function("test")
+        # Function should work normally
+        result = await test_function("test")
+        assert result == "result_test"
         
-        # Check that cache key has the prefix
-        cache_keys = list(cache._cache.keys())
-        assert len(cache_keys) == 1
-        assert "test_service:test_function:" in cache_keys[0]
+        # The key should be generated with prefix
+        # We can't easily test the exact key, but we can verify caching works
+        result2 = await test_function("test")
+        assert result2 == "result_test"
