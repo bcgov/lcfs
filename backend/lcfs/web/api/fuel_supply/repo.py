@@ -105,6 +105,7 @@ class FuelSupplyRepository:
                 FuelInstance.fuel_category_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
+                FuelType.renewable,
                 DefaultCarbonIntensity.default_carbon_intensity,
                 CategoryCarbonIntensity.category_carbon_intensity,
                 FuelCategory.category,
@@ -397,18 +398,39 @@ class FuelSupplyRepository:
                 == CurrentReport.compliance_report_group_uuid
             )
         )
-        # Type, Category, and Determine CI/Fuel codes are included
-        duplicate_query = select(FuelSupply.fuel_supply_id).where(
-            FuelSupply.compliance_report_id.in_(related_reports_subquery),
-            FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
-            FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
-            FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
-            FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
-            FuelSupply.end_use_id == fuel_supply.end_use_id,
-            FuelSupply.is_canada_produced == fuel_supply.is_canada_produced,
-            FuelSupply.is_q1_supplied == fuel_supply.is_q1_supplied,
-            FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
-            FuelSupply.group_uuid != fuel_supply.group_uuid,
+
+        # Subquery to get the maximum version for each group_uuid
+        max_version_subquery = (
+            select(FuelSupply.group_uuid, func.max(FuelSupply.version).label("max_version"))
+            .where(
+                FuelSupply.compliance_report_id.in_(related_reports_subquery),
+                FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+            )
+            .group_by(FuelSupply.group_uuid)
+        ).subquery()
+
+        # Main duplicate query - only consider latest versions of each group
+        duplicate_query = (
+            select(FuelSupply.fuel_supply_id)
+            .join(
+                max_version_subquery,
+                and_(
+                    FuelSupply.group_uuid == max_version_subquery.c.group_uuid,
+                    FuelSupply.version == max_version_subquery.c.max_version,
+                ),
+            )
+            .where(
+                FuelSupply.compliance_report_id.in_(related_reports_subquery),
+                FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
+                FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
+                FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
+                FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
+                FuelSupply.end_use_id == fuel_supply.end_use_id,
+                FuelSupply.is_canada_produced == fuel_supply.is_canada_produced,
+                FuelSupply.is_q1_supplied == fuel_supply.is_q1_supplied,
+                FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+                FuelSupply.group_uuid != fuel_supply.group_uuid,
+            )
         )
 
         # Add conditional filter for fuel_supply_id if it exists
@@ -416,11 +438,6 @@ class FuelSupplyRepository:
             duplicate_query = duplicate_query.where(
                 FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
             )
-
-        # Add ordering to get the most recent record
-        duplicate_query = duplicate_query.order_by(
-            FuelSupply.create_date.desc(), FuelSupply.version.desc()
-        )
 
         result = await self.db.execute(duplicate_query)
         return result.scalars().first()

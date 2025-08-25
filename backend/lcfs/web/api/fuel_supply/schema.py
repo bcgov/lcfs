@@ -90,6 +90,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
+    renewable: bool
     default_carbon_intensity: Optional[float] = None
     unit: str
     unrecognized: bool

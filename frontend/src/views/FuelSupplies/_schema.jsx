@@ -477,6 +477,8 @@ export const fuelSupplyColDefs = (
             if (matchingFuelCode) {
               params.data.fuelCodeId = matchingFuelCode.fuelCodeId
             }
+            params.data.isCanadaProduced =
+              matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
           }
         } else {
           // If user clears the value
@@ -501,11 +503,13 @@ export const fuelSupplyColDefs = (
         freeSolo: false,
         openOnFocus: true
       },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = !optionsData?.fuelTypes?.find(
+        const isRenewable = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.fossilDerived
+        )?.renewable
         return (
           params.data.fuelCategory === 'Diesel' &&
           complianceYear >= NEW_REGULATION_YEAR &&
@@ -513,10 +517,16 @@ export const fuelSupplyColDefs = (
           params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
         )
       },
-      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+      valueGetter: (params) =>
+        params.data.isCanadaProduced
+          ? 'Yes'
+          : params.colDef?.editable(params)
+            ? 'No'
+            : '',
       valueSetter: (params) => {
         if (params.newValue) {
-          params.data.isCanadaProduced = params.newValue === 'Yes'
+          params.data.isCanadaProduced =
+            params.newValue === 'Yes' || params.newValue === true
         }
         return true
       },
@@ -535,18 +545,41 @@ export const fuelSupplyColDefs = (
         freeSolo: false,
         openOnFocus: true
       },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
-        const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = !optionsData?.fuelTypes?.find(
+        const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.fossilDerived
+        )
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.renewable
         const fuelCode = params.data.fuelCode
-        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+        let isCanadian = false
+        if (fuelCode) {
+          const fuelCodeDetails = fuelType.fuelCodes?.find(
+            (fc) =>
+              fc.fuelCode === params.data.fuelCode ||
+              fc.fuelCode === params.data.fuelCode.replace('C-', '')
+          )
+          isCanadian =
+            fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
+        }
         return (
-          complianceYear === NEW_REGULATION_YEAR && isRenewable && isNonCanadian
+          params.data.fuelCategory === 'Diesel' &&
+          complianceYear >= NEW_REGULATION_YEAR &&
+          isRenewable &&
+          !isCanadian &&
+          params.data.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
         )
       },
-      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      valueGetter: (params) =>
+        params.data.isQ1Supplied
+          ? 'Yes'
+          : params.colDef?.editable(params)
+            ? 'No'
+            : '',
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.isQ1Supplied = params.newValue === 'Yes'
