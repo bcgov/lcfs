@@ -146,6 +146,9 @@ class FSE(BaseModel, Auditable, Versioning):
         secondary=fse_intended_use_association,
         back_populates="fse",
     )
+    compliance_associations = relationship(
+        "FSEComplianceAssociation", back_populates="fse", cascade="all, delete-orphan"
+    )
 
     @property
     def registration_number(self):
