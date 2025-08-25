@@ -16,7 +16,7 @@ async def seed_user_profiles(session):
     # Define the user profiles to seed
     user_profiles_to_seed = [
         {
-            "user_profile_id": 1,
+            "user_profile_id": 22,
             "keycloak_email": "alex.zorkin@gov.bc.ca",
             "keycloak_username": "ALZORKIN",
             "email": "alex.zorkin@gov.bc.ca",

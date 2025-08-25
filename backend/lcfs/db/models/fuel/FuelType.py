@@ -25,11 +25,6 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
     fossil_derived = Column(
         Boolean, default=False, comment="Indicates whether the fuel is fossil-derived"
     )
-    other_uses_fossil_derived = Column(
-        Boolean,
-        default=False,
-        comment="Indicates whether the fuel is fossil-derived for other uses",
-    )
     renewable = Column(
         Boolean,
         server_default=text("FALSE"),
