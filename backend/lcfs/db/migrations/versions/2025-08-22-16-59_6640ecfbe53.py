@@ -1,7 +1,7 @@
 """Create charging sites and FSE tables.
 
 Revision ID: 6640ecfbe53
-Revises: 2f5a7b9c1d2e1
+Revises: 32a1f93375bd
 Create Date: 2025-08-22 16:59:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "6640ecfbe53"
-down_revision = "2f5a7b9c1d2e1"
+down_revision = "32a1f93375bd"
 branch_labels = None
 depends_on = None
 
