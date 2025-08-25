@@ -17,6 +17,7 @@ from .FuelSupply import FuelSupply
 from .FSE import FSE
 from .FSENumber import FSENumber
 from .FSEStatus import FSEStatus
+from .FSEComplianceAssociation import FSEComplianceAssociation
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
@@ -40,6 +41,7 @@ __all__ = [
     "FSE",
     "FSENumber",
     "FSEStatus",
+    "FSEComplianceAssociation",
     "LevelOfEquipment",
     "NotionalTransfer",
     "OtherUses",
