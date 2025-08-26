@@ -459,6 +459,27 @@ class FuelSupplyRepository:
         return result.scalars().first()
 
     @repo_handler
+    async def get_prev_fuel_supply_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[FuelSupply]:
+        """
+        Retrieve the latest FuelSupply record for a given group UUID.
+        Ordered by `version` in descending order.
+        """
+        query = (
+            select(FuelSupply)
+            .where(FuelSupply.group_uuid == group_uuid)
+            .order_by(
+                FuelSupply.version.desc(),
+            )
+            .offset(1) # Skip the first (latest) record
+            .limit(1)
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
     async def get_latest_fuel_supply_by_group_uuid(
         self, group_uuid: str
     ) -> Optional[FuelSupply]:

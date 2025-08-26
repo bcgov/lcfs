@@ -95,24 +95,41 @@ export const handleScheduleDelete = async (
   defaultRowData
 ) => {
   const updatedRow = { ...params.node.data, deleted: true }
-
-  params.api.applyTransaction({ remove: [params.node.data] })
   if (updatedRow[idField]) {
     try {
       await saveRow(updatedRow)
+      params.api.applyTransaction({ remove: [params.node.data] })
       alertRef.current?.triggerAlert({
         message: 'Row deleted successfully.',
         severity: 'success'
       })
     } catch (error) {
-      alertRef.current?.triggerAlert({
-        message: `Error deleting row: ${error.message}`,
-        severity: 'error'
+      params.node.updateData({
+        ...params.node.data,
+        validationStatus: 'warning'
       })
+      if (error.code === 'ERR_BAD_REQUEST') {
+        const { fields, message } = error.response.data.errors[0]
+        const errMsg = `Unable to delete/undo row: ${message}`
+
+        alertRef.current?.triggerAlert({
+          message: errMsg,
+          severity: 'warning'
+        })
+      } else {
+        alertRef.current?.triggerAlert({
+          message: `Unable to delete/undo row: ${error.message}`,
+          severity: 'warning'
+        })
+      }
+      return false
     }
   }
 
   if (params.api.isRowDataEmpty()) {
-    setRowData([{ ...defaultRowData, id: uuid() }])
+    setTimeout(() => {
+      setRowData([{ ...defaultRowData, id: uuid() }])
+    }, 100)
   }
+  return true
 }

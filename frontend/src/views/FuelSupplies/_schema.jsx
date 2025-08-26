@@ -28,6 +28,7 @@ import {
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import { param } from 'node_modules/cypress/types/jquery'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -296,11 +297,12 @@ export const fuelSupplyColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.provisionOfTheAct = params.newValue
-          params.data.provisionOfTheActId = optionsData?.fuelTypes
-            ?.find((obj) => params.data.fuelType === obj.fuelType)
-            ?.provisions.find(
-              (item) => item.name === params.newValue
-            )?.provisionOfTheActId
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )
+          params.data.provisionOfTheActId = fuelType?.provisions.find(
+            (item) => item.name === params.newValue
+          )?.provisionOfTheActId
 
           // Handle GHGenius case
           if (params.newValue === PROVISION_GHGENIUS) {
@@ -339,9 +341,6 @@ export const fuelSupplyColDefs = (
             params.data.fuelCode = null
             params.data.fuelCodeId = null
             params.data.uci = null
-            const fuelType = optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            )
             if (fuelType) {
               if (
                 params.data.fuelType === 'Other' &&
@@ -406,27 +405,6 @@ export const fuelSupplyColDefs = (
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
-        if (!fuelType) {
-          // If we have a fuel code, format it with country prefix for display
-          if (params.data.fuelCode) {
-            // Find the fuel code details to get the country
-            const allFuelCodes =
-              optionsData?.fuelTypes?.flatMap((ft) => ft.fuelCodes) || []
-            const fuelCodeDetails = allFuelCodes.find(
-              (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-            )
-            const country =
-              fuelCodeDetails?.fuelProductionFacilityCountry ||
-              fuelCodeDetails?.fuel_production_facility_country
-            return formatFuelCodeWithCountryPrefix(
-              params.data.fuelCode,
-              country,
-              compliancePeriod
-            )
-          }
-          return params.data.fuelCode
-        }
-
         const isFuelCodeScenario =
           params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
         const fuelCodes =
@@ -447,16 +425,17 @@ export const fuelSupplyColDefs = (
         // Format the fuel code with country prefix for display
         if (params.data.fuelCode) {
           const fuelCodeDetails = fuelType.fuelCodes.find(
-            (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+            (fc) => fc.fuelCode === params.data.fuelCode
           )
-          const country =
-            fuelCodeDetails?.fuelProductionFacilityCountry ||
-            fuelCodeDetails?.fuel_production_facility_country
-          return formatFuelCodeWithCountryPrefix(
-            params.data.fuelCode,
-            country,
-            compliancePeriod
-          )
+          const isCanadaProduced =
+            fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
+          return isCanadaProduced
+            ? formatFuelCodeWithCountryPrefix(
+                params.data.fuelCode,
+                country,
+                compliancePeriod
+              )
+            : params.data.fuelCode
         }
 
         return params.data.fuelCode
@@ -479,14 +458,15 @@ export const fuelSupplyColDefs = (
             }
             params.data.isCanadaProduced =
               matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+            params.data.isQ1Supplied = false
           }
         } else {
           // If user clears the value
+          param.data.isCanadaProduced = false
+          param.data.isQ1Supplied = false
           params.data.fuelCode = undefined
           params.data.fuelCodeId = undefined
         }
-        params.data.isCanadaProduced = false
-        params.data.isQ1Supplied = false
         return true
       }
     },

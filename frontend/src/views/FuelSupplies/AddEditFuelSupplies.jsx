@@ -70,7 +70,6 @@ export const AddEditFuelSupplies = () => {
         ? REPORT_SCHEDULES_VIEW.EDIT
         : REPORT_SCHEDULES_VIEW.VIEW
     })
-
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
@@ -360,12 +359,6 @@ export const AddEditFuelSupplies = () => {
         ...params.node.data,
         validationStatus: 'pending'
       })
-
-      alertRef.current?.triggerAlert({
-        message: 'Updating row...',
-        severity: 'pending'
-      })
-
       let updatedData = cleanEmptyStringValues(params.node.data)
 
       if (updatedData.fuelType === 'Other') {
@@ -391,23 +384,29 @@ export const AddEditFuelSupplies = () => {
 
   const onAction = useCallback(
     async (action, params) => {
-      if (action === 'delete' || action === 'undo') {
-        await handleScheduleDelete(
-          params,
-          'fuelSupplyId',
-          saveRow,
-          alertRef,
-          setRowData,
-          { complianceReportId, compliancePeriod }
-        )
+      try {
+        if (action === 'delete' || action === 'undo') {
+          const success = await handleScheduleDelete(
+            params,
+            'fuelSupplyId',
+            saveRow,
+            alertRef,
+            setRowData,
+            { complianceReportId, compliancePeriod }
+          )
 
-        // Clear validation status
-        params.api.forEachNode((rowNode) => {
-          rowNode.updateData({
-            ...rowNode.data,
-            validationStatus: undefined
-          })
-        })
+          // Clear validation status
+          if (success) {
+            params.api.forEachNode((rowNode) => {
+              rowNode.updateData({
+                ...rowNode.data,
+                validationStatus: undefined
+              })
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error handling action:', error)
       }
     },
     [saveRow, complianceReportId, compliancePeriod]
