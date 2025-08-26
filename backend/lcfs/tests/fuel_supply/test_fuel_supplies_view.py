@@ -173,6 +173,7 @@ async def test_save_fuel_supply_row_delete(
         "provision_of_the_act_id": 1,
         "quantity": 1000,
         "units": "L",
+        "version": 0,
         "deleted": True,
     }
 
