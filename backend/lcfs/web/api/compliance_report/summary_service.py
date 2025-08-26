@@ -651,6 +651,7 @@ class ComplianceReportSummaryService:
                 compliance_year < 2025
                 or fs.fuel_category.category != "Diesel"
                 or (fs.fuel_category.category == "Diesel" and fs.is_canada_produced)
+                or (fs.fuel_category.category == "Diesel" and fs.is_q1_supplied)
             )
         ]
 
@@ -662,6 +663,7 @@ class ComplianceReportSummaryService:
                 compliance_year < 2025
                 or ou.fuel_category.category != "Diesel"
                 or (ou.fuel_category.category == "Diesel" and ou.is_canada_produced)
+                or (ou.fuel_category.category == "Diesel" and ou.is_q1_supplied)
             )
         ]
 
