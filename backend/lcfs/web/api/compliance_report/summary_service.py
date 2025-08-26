@@ -108,31 +108,6 @@ class ComplianceReportSummaryService:
         self.other_uses_repo = other_uses_repo
         self.compliance_data_service = compliance_data_service
 
-    async def _should_lock_lines_7_and_9(
-        self, compliance_report: ComplianceReport
-    ) -> bool:
-        """
-        Check if Lines 7 and 9 should be locked for 2025+ reports with previous assessed report.
-
-        Returns:
-            bool: True if Lines 7 and 9 should be locked (non-editable)
-        """
-        compliance_year = int(compliance_report.compliance_period.description)
-
-        # Only lock for 2025+ reports
-        if compliance_year < 2025:
-            return False
-
-        # Check for previous assessed report
-        if not compliance_report.supplemental_initiator:
-            prev_compliance_report = (
-                await self.cr_repo.get_assessed_compliance_report_by_period(
-                    compliance_report.organization_id, compliance_year - 1
-                )
-            )
-            return prev_compliance_report is not None
-
-        return False
 
     def convert_summary_to_dict(
         self,
@@ -510,8 +485,6 @@ class ComplianceReportSummaryService:
             locked_summary = self.convert_summary_to_dict(
                 compliance_report.summary, compliance_report
             )
-            # If the summary is locked, Lines 7 and 9 are also locked
-            locked_summary.lines_7_and_9_locked = True
             return locked_summary
 
         compliance_period_start = compliance_report.compliance_period.effective_date
@@ -713,11 +686,6 @@ class ComplianceReportSummaryService:
             can_sign,
             early_issuance_summary,
         )
-
-        # Check if Lines 7 and 9 should be locked (for draft/editable reports)
-        lines_7_and_9_locked = await self._should_lock_lines_7_and_9(compliance_report)
-        summary.lines_7_and_9_locked = lines_7_and_9_locked
-        existing_summary.lines_7_and_9_locked = lines_7_and_9_locked
 
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
