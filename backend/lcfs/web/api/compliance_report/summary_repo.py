@@ -106,8 +106,8 @@ class ComplianceReportSummaryRepository:
         # Update non-compliance penalty summary
         # Skip updating calculated penalty columns when penalty override is enabled
         # to preserve original calculated values
-        penalty_override_enabled = getattr(summary, 'penalty_override_enabled', False)
-        
+        penalty_override_enabled = getattr(summary, "penalty_override_enabled", False)
+
         if not penalty_override_enabled:
             non_compliance_summary = summary.non_compliance_penalty_summary
             for row in non_compliance_summary:
@@ -120,15 +120,19 @@ class ComplianceReportSummaryRepository:
 
         # Update penalty override fields - only for 2024 reports and later
         if compliance_year and compliance_year >= 2024:
-            if hasattr(summary, 'penalty_override_enabled'):
+            if hasattr(summary, "penalty_override_enabled"):
                 summary_obj.penalty_override_enabled = summary.penalty_override_enabled
-            if hasattr(summary, 'renewable_penalty_override'):
-                summary_obj.renewable_penalty_override = summary.renewable_penalty_override
-            if hasattr(summary, 'low_carbon_penalty_override'):
-                summary_obj.low_carbon_penalty_override = summary.low_carbon_penalty_override
-            if hasattr(summary, 'penalty_override_date'):
+            if hasattr(summary, "renewable_penalty_override"):
+                summary_obj.renewable_penalty_override = (
+                    summary.renewable_penalty_override
+                )
+            if hasattr(summary, "low_carbon_penalty_override"):
+                summary_obj.low_carbon_penalty_override = (
+                    summary.low_carbon_penalty_override
+                )
+            if hasattr(summary, "penalty_override_date"):
                 summary_obj.penalty_override_date = summary.penalty_override_date
-            if hasattr(summary, 'penalty_override_user'):
+            if hasattr(summary, "penalty_override_user"):
                 summary_obj.penalty_override_user = summary.penalty_override_user
         else:
             # For pre-2024 reports, ensure penalty override fields are cleared
@@ -143,12 +147,16 @@ class ComplianceReportSummaryRepository:
             # When override is enabled, total is sum of override values
             renewable_override = summary_obj.renewable_penalty_override or 0
             low_carbon_override = summary_obj.low_carbon_penalty_override or 0
-            summary_obj.total_non_compliance_penalty_payable = renewable_override + low_carbon_override
+            summary_obj.total_non_compliance_penalty_payable = (
+                renewable_override + low_carbon_override
+            )
         else:
             # When override is disabled, total is sum of calculated penalty values
             line_11_total = summary_obj.line_11_fossil_derived_base_fuel_total or 0
             line_21_total = summary_obj.line_21_non_compliance_penalty_payable or 0
-            summary_obj.total_non_compliance_penalty_payable = line_11_total + line_21_total
+            summary_obj.total_non_compliance_penalty_payable = (
+                line_11_total + line_21_total
+            )
 
         self.db.add(summary_obj)
         await self.db.flush()
@@ -264,35 +272,6 @@ class ComplianceReportSummaryRepository:
                 ) + (record.quantity_supplied or 0)
 
         return dict(fuel_quantities)
-
-    @repo_handler
-    async def aggregate_other_uses_quantity(
-        self, compliance_report_id: int, fossil_derived: bool
-    ) -> Dict[str, float]:
-        """Aggregate quantities from other uses."""
-        query = (
-            select(
-                FuelCategory.category,
-                func.coalesce(func.sum(OtherUses.quantity_supplied), 0).label(
-                    "quantity"
-                ),
-            )
-            .select_from(OtherUses)
-            .join(FuelType, OtherUses.fuel_type_id == FuelType.fuel_type_id)
-            .join(
-                FuelCategory,
-                OtherUses.fuel_category_id == FuelCategory.fuel_category_id,
-            )
-            .where(
-                OtherUses.compliance_report_id == compliance_report_id,
-                FuelType.fossil_derived.is_(fossil_derived),
-                FuelType.other_uses_fossil_derived.is_(fossil_derived),
-            )
-            .group_by(FuelCategory.category)
-        )
-
-        result = await self.db.execute(query)
-        return {self._format_category(row.category): row.quantity for row in result}
 
     @staticmethod
     def _format_category(category: str) -> str:
