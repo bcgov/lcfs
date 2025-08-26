@@ -69,6 +69,17 @@ class GeocoderCache:
         hash_key = hashlib.md5(key_string.encode()).hexdigest()
         return f"{self.key_prefix}{hash_key}"
     
+    def cache_key_for_method(self, method_name: str, *args, **kwargs) -> str:
+        """Generate a cache key for a specific method call."""
+        key_data = {
+            "method": method_name,
+            "args": args,
+            "kwargs": kwargs
+        }
+        key_string = json.dumps(key_data, sort_keys=True, default=str)
+        hash_key = hashlib.md5(key_string.encode()).hexdigest()
+        return f"{self.key_prefix}{method_name}:{hash_key}"
+    
     async def _increment_stat(self, stat_name: str, amount: int = 1) -> None:
         """Increment a statistic in Redis."""
         try:
