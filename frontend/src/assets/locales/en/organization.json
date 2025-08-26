@@ -100,6 +100,5 @@
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
   },
-  "snapshotTitle": "Organization Information from Compliance Report",
-  "enrolledInCreditMarket": "Enrolled in credit trading market"
+  "snapshotTitle": "Organization Information from Compliance Report"
 }
