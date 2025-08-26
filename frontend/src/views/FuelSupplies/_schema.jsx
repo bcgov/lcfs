@@ -28,7 +28,6 @@ import {
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
-import { param } from 'node_modules/cypress/types/jquery'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -427,15 +426,13 @@ export const fuelSupplyColDefs = (
           const fuelCodeDetails = fuelType.fuelCodes.find(
             (fc) => fc.fuelCode === params.data.fuelCode
           )
-          const isCanadaProduced =
-            fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
-          return isCanadaProduced
-            ? formatFuelCodeWithCountryPrefix(
-                params.data.fuelCode,
-                country,
-                compliancePeriod
-              )
-            : params.data.fuelCode
+          const country = fuelCodeDetails?.fuelProductionFacilityCountry
+
+          return formatFuelCodeWithCountryPrefix(
+            params.data.fuelCode,
+            country,
+            compliancePeriod
+          )
         }
 
         return params.data.fuelCode
@@ -532,9 +529,7 @@ export const fuelSupplyColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )?.renewable
+        const isRenewable = fuelType?.renewable
         const fuelCode = params.data.fuelCode
         let isCanadian = false
         if (fuelCode) {

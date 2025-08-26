@@ -55,6 +55,7 @@ class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: Optional[bool] = None
+    renewable: Optional[bool] = None
     provision_1_id: Optional[int] = None
     provision_2_id: Optional[int] = None
     fuel_categories: List[FuelCategorySchema]

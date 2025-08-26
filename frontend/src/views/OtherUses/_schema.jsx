@@ -185,11 +185,9 @@ export const otherUsesColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         const fuelCodeDetails = fuelType?.fuelCodes?.find(
-          (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+          (fc) => fc.fuelCode === params.data.fuelCode
         )
-        const country =
-          fuelCodeDetails?.fuelProductionFacilityCountry ||
-          fuelCodeDetails?.fuel_production_facility_country
+        const country = fuelCodeDetails?.fuelProductionFacilityCountry
         return formatFuelCodeWithCountryPrefix(
           params.data.fuelCode,
           country,
@@ -203,6 +201,20 @@ export const otherUsesColDefs = (
         // Extract the original fuel code from the formatted display value
         const originalFuelCode = extractOriginalFuelCode(params.newValue)
         params.data.fuelCode = originalFuelCode
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          const matchingFuelCode = fuelType?.fuelCodes?.find(
+            (fuelCode) => originalFuelCode === fuelCode.fuelCode
+          )
+          if (matchingFuelCode) {
+            params.data.fuelCodeId = matchingFuelCode.fuelCodeId
+          }
+          params.data.isCanadaProduced =
+            matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+          params.data.isQ1Supplied = false
+        }
         return true
       }
       return false
@@ -221,6 +233,8 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
       const complianceYear = parseInt(compliancePeriod, 10)
       const isRenewable = !optionsData?.fuelTypes?.find(
@@ -233,10 +247,16 @@ export const otherUsesColDefs = (
         params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
       )
     },
-    valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+    valueGetter: (params) =>
+      params.data.isCanadaProduced
+        ? 'Yes'
+        : params.colDef?.editable(params)
+          ? 'No'
+          : '',
     valueSetter: (params) => {
       if (params.newValue) {
-        params.data.isCanadaProduced = params.newValue === 'Yes'
+        params.data.isCanadaProduced =
+          params.newValue === 'Yes' || params.newValue === true
       }
       return true
     },
@@ -255,18 +275,38 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
-      const complianceYear = parseInt(compliancePeriod, 10)
-      const isRenewable = !optionsData?.fuelTypes?.find(
+      const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      )?.fossilDerived
+      )
+      const complianceYear = parseInt(compliancePeriod, 10)
+      const isRenewable = fuelType?.renewable
       const fuelCode = params.data.fuelCode
-      const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+      let isCanadian = false
+      if (fuelCode) {
+        const fuelCodeDetails = fuelType.fuelCodes?.find(
+          (fc) =>
+            fc.fuelCode === params.data.fuelCode ||
+            fc.fuelCode === params.data.fuelCode.replace('C-', '')
+        )
+        isCanadian = fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
+      }
       return (
-        complianceYear === NEW_REGULATION_YEAR && isRenewable && isNonCanadian
+        params.data.fuelCategory === 'Diesel' &&
+        complianceYear >= NEW_REGULATION_YEAR &&
+        isRenewable &&
+        !isCanadian &&
+        params.data.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
       )
     },
-    valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+    valueGetter: (params) =>
+      params.data.isQ1Supplied
+        ? 'Yes'
+        : params.colDef?.editable(params)
+          ? 'No'
+          : '',
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.isQ1Supplied = params.newValue === 'Yes'
