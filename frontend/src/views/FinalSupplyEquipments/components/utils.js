@@ -120,67 +120,6 @@ export const findOverlappingPeriods = (currentLoc, allLocations) => {
     }))
 }
 
-// Geofencing approach using Nominatim for reverse geocoding
-export const checkLocationInBC = async (lat, lng) => {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`,
-      {
-        headers: {
-          'User-Agent': 'BC-Travel-Planner/1.0'
-        }
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error('Reverse geocoding request failed')
-    }
-
-    const data = await response.json()
-
-    // Check if the location is in British Columbia
-    const state = data.address?.state || data.address?.province || ''
-    const country = data.address?.country || ''
-    const stateDistrict = data.address?.state_district || ''
-
-    // Return true if it's explicitly BC, or likely in BC based on surrounding data
-    return (
-      (state.toLowerCase().includes('british columbia') ||
-        stateDistrict.toLowerCase().includes('british columbia')) &&
-      country.toLowerCase() === 'canada'
-    )
-  } catch (error) {
-    console.error('Error checking location with geofencing:', error)
-    // Fallback to simple boundary check if the API fails
-    return lat > 48.0 && lat < 60.0 && lng > -139.0 && lng < -114.03
-  }
-}
-
-// Batch process location geofencing checks
-export const batchProcessGeofencing = async (locations) => {
-  const results = {}
-  const batchSize = 3 // Process 3 locations at a time
-
-  for (let i = 0; i < locations.length; i += batchSize) {
-    const batch = locations.slice(i, i + batchSize)
-    const batchPromises = batch.map(async (loc) => {
-      const isInBC = await checkLocationInBC(loc.lat, loc.lng)
-      return { id: loc.id, isInBC }
-    })
-
-    const batchResults = await Promise.all(batchPromises)
-
-    // Add batch results to the overall results
-    batchResults.forEach(({ id, isInBC }) => {
-      results[id] = isInBC
-    })
-    if (i + batchSize < locations.length) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-    }
-  }
-
-  return results
-}
 
 /**
  * Sorts an array of strings containing a mix of alphabets and numbers.

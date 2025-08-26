@@ -4,8 +4,7 @@ import {
   transformApiData,
   groupLocationsByCoordinates,
   findOverlappingPeriods,
-  sortMixedStrings,
-  batchProcessGeofencing
+  sortMixedStrings
 } from '../utils'
 
 describe('FinalSupplyEquipments utils.js', () => {
@@ -71,25 +70,4 @@ describe('FinalSupplyEquipments utils.js', () => {
     expect(sorted.slice(0, 2)).toEqual(['2foo', '10bar'])
   })
 
-  it('batchProcessGeofencing maps ids to results', async () => {
-    // stub the internal fetch by stubbing global.fetch used by checkLocationInBC
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              address: { state: 'British Columbia', country: 'Canada' }
-            })
-        })
-      )
-    )
-    const locations = [
-      { id: '1', lat: 50, lng: -120 },
-      { id: '2', lat: 55, lng: -130 }
-    ]
-    const results = await batchProcessGeofencing(locations)
-    expect(results).toEqual({ 1: true, 2: true })
-  })
 })
