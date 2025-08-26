@@ -328,6 +328,9 @@ class ComplianceReportSummarySchema(BaseSchema):
     low_carbon_penalty_override: Optional[float] = None
     penalty_override_date: Optional[datetime] = None
     penalty_override_user: Optional[int] = None
+    
+    # Lines 7 & 9 locking for 2025+ reports
+    lines_7_and_9_locked: Optional[bool] = False
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
