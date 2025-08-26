@@ -68,8 +68,6 @@ export const PHONE_REGEX =
 
 export const HELP_GUIDE_URL =
   'https://www2.gov.bc.ca/gov/content?id=7A58AF3855154747A0793F0C9A6E9089'
-export const ADDRESS_SEARCH_URL =
-  'https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=frontDoorPoint&addressString='
 
 export const FILTER_KEYS = {
   COMPLIANCE_REPORT_GRID: 'compliance-reports-grid-filter',
