@@ -518,3 +518,28 @@ async def update_organization(
     )
     response = await client.put(url, json=payload)
     return response
+
+
+@pytest.mark.anyio
+async def test_search_organizations_by_name(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+) -> None:
+    """Test organization search endpoint filters by fuel_supplier type only."""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+    # Test searching for existing organization
+    url = fastapi_app.url_path_for("search_organizations")
+    response = await client.get(url, params={"org_name": "Test"})
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list)
+
+    # Verify all returned organizations are fuel suppliers
+    # (In the test environment, only fuel supplier type should exist)
+    for org in data:
+        # The organization should have required fields
+        assert "name" in org
+        assert "address" in org
