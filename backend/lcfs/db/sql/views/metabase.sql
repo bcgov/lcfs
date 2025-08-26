@@ -2211,3 +2211,61 @@ WHERE lnt.rn = 1  -- Only get the latest version for each unique combination
 ORDER BY cp.description DESC, org.name, lnt.legal_name, fc.category;
 
 GRANT SELECT ON vw_notional_transfer_base TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Fuels for Other Use Data Model
+-- ==========================================
+DROP VIEW IF EXISTS vw_fuels_other_use_base CASCADE;
+CREATE OR REPLACE VIEW vw_fuels_other_use_base AS
+WITH latest_other_uses AS (
+    SELECT
+        ou.group_uuid,
+        MAX(ou.version) AS max_version
+    FROM other_uses ou
+    GROUP BY ou.group_uuid
+),
+selected_other_uses AS (
+    SELECT ou.*
+    FROM other_uses ou
+    JOIN latest_other_uses lou ON ou.group_uuid = lou.group_uuid 
+        AND ou.version = lou.max_version
+    WHERE ou.action_type != 'DELETE'
+)
+SELECT 
+    sou.other_uses_id,
+    sou.compliance_report_id,
+    ft.fuel_type,
+    fc.category,
+    sou.ci_of_fuel,
+    COALESCE(concat(fcp.prefix, fcode.fuel_suffix), 'N/A') as fuel_code,
+    sou.quantity_supplied,
+    sou.units,
+    eut.name as expected_use,
+    COALESCE(sou.rationale, 'N/A') as rationale,
+    cp.description as compliance_period,
+    org.name as organization_name,
+    crs.status::text,
+    cr.version,
+    pota.description as provision_of_the_act,
+    sou.create_date,
+    sou.update_date,
+    sou.create_user,
+    sou.update_user,
+    cr.compliance_period_id,
+    cr.organization_id,
+    cr.current_status_id
+FROM selected_other_uses sou
+JOIN compliance_report cr ON sou.compliance_report_id = cr.compliance_report_id
+JOIN fuel_type ft ON sou.fuel_type_id = ft.fuel_type_id
+JOIN fuel_category fc ON sou.fuel_category_id = fc.fuel_category_id
+JOIN expected_use_type eut ON sou.expected_use_id = eut.expected_use_type_id
+JOIN provision_of_the_act pota ON sou.provision_of_the_act_id = pota.provision_of_the_act_id
+LEFT JOIN fuel_code fcode ON sou.fuel_code_id = fcode.fuel_code_id
+LEFT JOIN fuel_code_prefix fcp ON fcode.prefix_id = fcp.fuel_code_prefix_id
+JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
+JOIN organization org ON cr.organization_id = org.organization_id
+JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+WHERE crs.status != 'Draft'::compliancereportstatusenum
+ORDER BY cp.description DESC, org.name, ft.fuel_type, fc.category;
+
+GRANT SELECT ON vw_fuels_other_use_base TO basic_lcfs_reporting_role;
