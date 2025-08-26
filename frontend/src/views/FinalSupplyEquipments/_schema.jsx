@@ -375,6 +375,14 @@ export const finalSupplyEquipmentColDefs = (
           params.data.postalCode = params.newValue.postalCode || ''
           params.data.latitude = params.newValue.latitude || ''
           params.data.longitude = params.newValue.longitude || ''
+        } else if (params.newValue?.label && params.newValue?.coordinates) {
+          // Handle geocoder API response format with label and coordinates
+          const addressParts = params.newValue.label.split(', ')
+          params.data.streetAddress = addressParts[0] || ''
+          params.data.city = addressParts[1] || ''
+          params.data.postalCode = addressParts[2] || ''
+          params.data.latitude = params.newValue.coordinates[1] || ''
+          params.data.longitude = params.newValue.coordinates[0] || ''
         }
         return true
       },
