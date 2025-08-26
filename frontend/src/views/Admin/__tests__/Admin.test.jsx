@@ -1,53 +1,84 @@
-import { vi, describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { BrowserRouter as Router } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material/styles'
-import theme from '@/themes'
+import { render } from '@testing-library/react'
+import { vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { faSpaceShuttle } from '@fortawesome/free-solid-svg-icons'
 import { Admin } from '../Admin'
 
-// Mock the useNavigate hook
 const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate
-  }
-})
 
-// Custom render function with all necessary providers
-const customRender = (ui, options = {}) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false
-      }
-    }
-  })
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate
+}))
 
-  const AllTheProviders = ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <Router>{children}</Router>
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
+vi.mock('@/components/BCButton', () => ({
+  default: vi.fn(({ children, onClick, startIcon, ...props }) => (
+    <button data-test="bc-button" onClick={onClick} {...props}>
+      {startIcon}
+      {children}
+    </button>
+  ))
+}))
 
-  return render(ui, { wrapper: AllTheProviders, ...options })
-}
+vi.mock('@/components/BCTypography', () => ({
+  default: vi.fn(({ children, ...props }) => (
+    <span data-test="bc-typography" {...props}>
+      {children}
+    </span>
+  ))
+}))
+
+vi.mock('@fortawesome/react-fontawesome', () => ({
+  FontAwesomeIcon: vi.fn((props) => (
+    <i data-test="font-awesome-icon" {...props}></i>
+  ))
+}))
 
 describe('Admin Component', () => {
-  it('renders correctly', () => {
-    customRender(<Admin />)
-    const button = screen.getByRole('button', { name: /Admin Settings/i })
-    expect(button).toBeInTheDocument()
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
-  it('navigates to admin users page when clicked', () => {
-    customRender(<Admin />)
-    const button = screen.getByRole('button', { name: /Admin Settings/i })
-    fireEvent.click(button)
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/users')
+  describe('Component Rendering', () => {
+    it('renders without crashing', () => {
+      const { container } = render(<Admin />)
+      expect(container.querySelector('[data-test="bc-button"]')).toBeTruthy()
+    })
+
+    it('renders button and typography components', () => {
+      const { container } = render(<Admin />)
+      
+      expect(container.querySelector('[data-test="bc-button"]')).toBeTruthy()
+      expect(container.querySelector('[data-test="bc-typography"]')).toBeTruthy()
+    })
+
+    it('renders button with admin settings text', () => {
+      const { container } = render(<Admin />)
+      
+      const typography = container.querySelector('[data-test="bc-typography"]')
+      expect(typography).toBeTruthy()
+      expect(typography.textContent).toBe('Admin Settings')
+    })
+
+    it('renders icon within button', () => {
+      const { container } = render(<Admin />)
+      
+      const button = container.querySelector('[data-test="bc-button"]')
+      const icon = button.querySelector('[data-test="font-awesome-icon"]')
+      expect(icon).toBeTruthy()
+    })
+  })
+
+  describe('User Interactions', () => {
+    it('calls navigate with /admin/users when button is clicked', async () => {
+      const user = userEvent.setup()
+      
+      render(<Admin />)
+      
+      const button = document.querySelector('[data-test="bc-button"]')
+      await user.click(button)
+      
+      expect(mockNavigate).toHaveBeenCalledTimes(1)
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/users')
+    })
   })
 })

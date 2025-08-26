@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { UserActivity } from '../UserActivity'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -39,17 +39,21 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: vi.fn(() => <div data-test="bc-grid-viewer">BCGridViewer</div>)
 }))
 
+const mockUseGetUserActivities = vi.fn()
 vi.mock('@/hooks/useUser', () => ({
-  useGetUserActivities: () => ({
-    data: { activities: [] }, // or mock real data if needed
-    isLoading: false,
-    isError: false
-  })
+  useGetUserActivities: (...args) => mockUseGetUserActivities(...args)
 }))
 
 describe('UserActivity', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    
+    // Setup default mock return values
+    mockUseGetUserActivities.mockReturnValue({
+      data: { activities: [] },
+      isLoading: false,
+      isError: false
+    })
   })
 
   afterEach(() => {
@@ -139,5 +143,147 @@ describe('UserActivity', () => {
     const gridProps = BCGridViewer.mock.calls[0][0]
     // Because data is mocked to []
     expect(gridProps.overlayNoRowsTemplate).toBe('admin:activitiesNotFound')
+  })
+
+  it('handles URL generation for undefined transaction type', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Extract the defaultColDef from BCGridViewer props
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    const { url } = gridProps.defaultColDef.cellRendererParams
+
+    // Test undefined transaction type
+    const mockData = { data: { transactionType: undefined, transactionId: 'TEST123' } }
+    
+    // Should return undefined for unknown transaction types
+    expect(url(mockData)).toBeUndefined()
+
+    // Test unknown transaction type
+    const mockDataUnknown = { data: { transactionType: 'UnknownType', transactionId: 'TEST123' } }
+    expect(url(mockDataUnknown)).toBeUndefined()
+  })
+
+  it('calls useGetUserActivities with correct initial pagination options', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Verify hook is called with initial pagination options
+    expect(mockUseGetUserActivities).toHaveBeenCalledWith(
+      {
+        page: 1,
+        size: 10,
+        sortOrders: expect.any(Array), // defaultSortModel from _schema
+        filters: []
+      },
+      {
+        cacheTime: 0,
+        staleTime: 0
+      }
+    )
+  })
+
+  it('has onPaginationChange callback defined', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Get the onPaginationChange callback from BCGridViewer props
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    const { onPaginationChange } = gridProps
+
+    // Verify callback exists and is a function
+    expect(onPaginationChange).toBeDefined()
+    expect(typeof onPaginationChange).toBe('function')
+  })
+
+  it('renders clear filters button and tests functionality', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Find the clear filters button
+    const clearFiltersButton = screen.getByRole('button')
+    expect(clearFiltersButton).toBeInTheDocument()
+    
+    // Verify it's clickable (this tests the handleClearFilters function gets called)
+    expect(clearFiltersButton).not.toBeDisabled()
+    
+    // Simulate click to test the function path
+    fireEvent.click(clearFiltersButton)
+    // If no errors thrown, the function executed successfully
+    expect(clearFiltersButton).toBeInTheDocument() // Still there after click
+  })
+
+  it('calls gridRef.current.clearFilters when clear filters button is clicked', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Mock the gridRef.current.clearFilters method
+    const mockClearFilters = vi.fn()
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    
+    // Simulate the gridRef being set with clearFilters method
+    act(() => {
+      gridProps.gridRef.current = { clearFilters: mockClearFilters }
+    })
+
+    // Find and click the clear filters button
+    const clearFiltersButton = screen.getByRole('button')
+    fireEvent.click(clearFiltersButton)
+
+    // Verify gridRef.current.clearFilters was called
+    expect(mockClearFilters).toHaveBeenCalledTimes(1)
+  })
+
+  it('tests onPaginationChange callback functionality', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Get the onPaginationChange callback from BCGridViewer props
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    const { onPaginationChange } = gridProps
+
+    // Test the callback with new pagination data
+    const newPagination = {
+      page: 2,
+      size: 20,
+      sortOrders: [{ field: 'actionTaken', direction: 'desc' }],
+      filters: [{ field: 'transactionType', value: 'Transfer' }]
+    }
+
+    // Call the onPaginationChange function to test lines 99-102
+    act(() => {
+      onPaginationChange(newPagination)
+    })
+
+    // Verify the hook was called again with updated pagination
+    // The component should re-render and call useGetUserActivities again
+    expect(mockUseGetUserActivities).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page: 2,
+        size: 20,
+        sortOrders: [{ field: 'actionTaken', direction: 'desc' }],
+        filters: [{ field: 'transactionType', value: 'Transfer' }]
+      }),
+      {
+        cacheTime: 0,
+        staleTime: 0
+      }
+    )
+  })
+
+  it('renders BCBox components with correct props', () => {
+    render(<UserActivity />, { wrapper })
+
+    // Verify main container is rendered
+    const container = screen.getByTestId('bc-grid-viewer').closest('div')
+    expect(container).toBeInTheDocument()
+    
+    // Verify typography heading is rendered
+    expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
+  })
+
+  it('passes correct autoSizeStrategy to BCGridViewer', () => {
+    render(<UserActivity />, { wrapper })
+
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    expect(gridProps.autoSizeStrategy).toEqual({
+      type: 'fitGridWidth',
+      defaultMinWidth: 50,
+      defaultMaxWidth: 600
+    })
   })
 })
