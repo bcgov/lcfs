@@ -177,11 +177,12 @@ async def test_get_organizations_paginated_balances_with_released_transactions(
 
 @pytest.mark.anyio
 async def test_search_organizations_with_valid_query(organizations_repo, add_models):
-    # Add a test organization with address
+    # Add a test organization with address and fuel supplier type
     test_org = Organization(
         organization_id=100,
         name="Test Company",
         operating_name="Test Co.",
+        organization_type_id=1,  # Fuel supplier type ID
         org_address=OrganizationAddress(
             street_address="123 Test St",
             city="Test City",
@@ -230,16 +231,25 @@ async def test_search_organizations_no_results(organizations_repo):
 
 @pytest.mark.anyio
 async def test_search_organizations_multiple_results(organizations_repo, add_models):
-    # Add multiple test organizations
+    # Add multiple test organizations with fuel supplier type
     test_orgs = [
         Organization(
-            organization_id=101, name="Test Company A", operating_name="Test Co. A"
+            organization_id=101,
+            name="Test Company A",
+            operating_name="Test Co. A",
+            organization_type_id=1,
         ),
         Organization(
-            organization_id=102, name="Test Company B", operating_name="Test Co. B"
+            organization_id=102,
+            name="Test Company B",
+            operating_name="Test Co. B",
+            organization_type_id=1,
         ),
         Organization(
-            organization_id=103, name="Another Company", operating_name="Another Co."
+            organization_id=103,
+            name="Another Company",
+            operating_name="Another Co.",
+            organization_type_id=1,
         ),
     ]
     await add_models(test_orgs)
@@ -257,9 +267,12 @@ async def test_search_organizations_multiple_results(organizations_repo, add_mod
 
 @pytest.mark.anyio
 async def test_search_organizations_case_insensitive(organizations_repo, add_models):
-    # Add a test organization
+    # Add a test organization with fuel supplier type
     test_org = Organization(
-        organization_id=104, name="CamelCase Company", operating_name="CamelCo"
+        organization_id=104,
+        name="CamelCase Company",
+        operating_name="CamelCo",
+        organization_type_id=1,
     )
     await add_models([test_org])
 

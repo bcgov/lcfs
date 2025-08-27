@@ -205,7 +205,12 @@ class ComplianceReportServices:
 
         # Get the group_uuid from the current report
         group_uuid = current_report.compliance_report_group_uuid
-        nickname = "Government adjustment" if current_report.current_status.status == ComplianceReportStatusEnum.Submitted else "Government re-assessment"
+        nickname = (
+            "Government adjustment"
+            if current_report.current_status.status
+            == ComplianceReportStatusEnum.Submitted
+            else "Government re-assessment"
+        )
         # Fetch the latest version number for the given group_uuid
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
         if not latest_report:
@@ -328,9 +333,11 @@ class ComplianceReportServices:
             raise DataNotFoundException("Draft status not found.")
 
         # Retrieve the assessed report for the current compliance period
+        # Exclude current report to avoid circular reference
         assessed_report = await self.repo.get_assessed_compliance_report_by_period(
             current_report.organization_id,
             int(current_report.compliance_period.description),
+            current_report.compliance_report_id,
         )
         if not assessed_report or not assessed_report.summary:
             raise DataNotFoundException(
@@ -700,6 +707,16 @@ class ComplianceReportServices:
             report.current_status.status == ComplianceReportStatusEnum.Assessed.value
             for report in compliance_report_chain
         )
+
+        has_government_reassessment_in_progress = any(
+            (chained_report.version > report.version)
+            and chained_report.supplemental_initiator
+            == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT.value
+            and chained_report.current_status.status
+            == ComplianceReportStatusEnum.Analyst_adjustment.value
+            for chained_report in compliance_report_chain
+        )
+        
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
@@ -721,6 +738,7 @@ class ComplianceReportServices:
             chain=masked_chain,
             is_newest=is_newest,
             had_been_assessed=had_been_assessed,
+            has_government_reassessment_in_progress=has_government_reassessment_in_progress,
         )
 
     @service_handler
@@ -1175,8 +1193,7 @@ class ComplianceReportServices:
 
         analysts = await self.repo.get_active_idir_analysts()
         analyst_list = [
-            AssignedAnalystSchema.model_validate(analyst) 
-            for analyst in analysts
+            AssignedAnalystSchema.model_validate(analyst) for analyst in analysts
         ]
 
         return analyst_list

@@ -961,11 +961,13 @@ async def test_handle_assessed_status_not_superseded(
     mock_report_model.transaction = MagicMock()
     # Set is_non_assessment to False to enter transaction logic
     mock_report_model.is_non_assessment = False
+    # Mock the summary that should already be locked from "Recommended by Analyst" step
+    mock_summary = MagicMock()
+    mock_summary.line_20_surplus_deficit_units = 100
+    mock_summary.is_locked = True
+    mock_report_model.summary = mock_summary
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
-    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
-        return_value=MagicMock(line_20_surplus_deficit_units=100)
-    )
 
     # Patch roles check to ensure it passes
     with patch(
@@ -990,8 +992,8 @@ async def test_handle_assessed_status_not_superseded(
         mock_report_model.transaction.update_user
         == mock_user_profile_director.keycloak_username
     )
-    # Verify compliance units were set to the calculated value
-    assert mock_report_model.transaction.compliance_units == 100
+    # Verify compliance units were set to the summary value
+    assert mock_report_model.transaction.compliance_units == mock_summary.line_20_surplus_deficit_units
     mock_repo.update_compliance_report.assert_called_once_with(mock_report_model)
 
 
@@ -1025,14 +1027,13 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
         SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
     )
 
-    # Mock the summary that will be calculated during assessment
+    # Mock the summary that should already be locked from "Recommended by Analyst" step
     mock_summary = MagicMock()
     mock_summary.line_20_surplus_deficit_units = 500  # Credit change amount
+    mock_summary.is_locked = True
+    mock_report.summary = mock_summary
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
-    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
-        return_value=mock_summary
-    )
 
     # Mock the new transaction that will be created
     mock_transaction = MagicMock()
@@ -1061,11 +1062,6 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
     # Verify we called necessary preliminary checks
     mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
         mock_report.compliance_report_group_uuid
-    )
-
-    # Verify we calculated the summary
-    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
-        mock_report, mock_user_profile_director, skip_can_sign_check=True
     )
 
     # Verify we attempted to create a transaction with the correct credit change
@@ -1256,21 +1252,21 @@ async def test_handle_assessed_status_calls_calculate_with_skip_check(
     mock_repo,
     mock_user_profile_director,
 ):
-    """Test that handle_assessed_status calls _calculate_and_lock_summary with skip_can_sign_check=True"""
+    """Test that handle_assessed_status expects a locked summary from the Recommended by Analyst step"""
     # Arrange
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
     mock_report.version = 1
     mock_report.transaction = MagicMock()
+    mock_report.is_non_assessment = False
 
-    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
-
-    # Mock the _calculate_and_lock_summary method
+    # Mock the summary that should already be locked
     mock_summary = MagicMock(spec=ComplianceReportSummary)
     mock_summary.line_20_surplus_deficit_units = 150
-    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
-        return_value=mock_summary
-    )
+    mock_summary.is_locked = True
+    mock_report.summary = mock_summary
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
     # Patch roles check
     with patch(
@@ -1282,10 +1278,10 @@ async def test_handle_assessed_status_calls_calculate_with_skip_check(
             mock_report, mock_user_profile_director
         )
 
-    # Assert that _calculate_and_lock_summary was called with skip_can_sign_check=True
-    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
-        mock_report, mock_user_profile_director, skip_can_sign_check=True
-    )
+    # Assert that the transaction was updated with the summary values
+    assert mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    assert mock_report.transaction.update_user == mock_user_profile_director.keycloak_username
+    assert mock_report.transaction.compliance_units == 150
 
 
 @pytest.mark.anyio
@@ -1307,19 +1303,13 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     mock_report.summary = None
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
-
-    # Mock the summary service for calculate_compliance_report_summary
-    calculated_summary = MagicMock()
-    calculated_summary.line_20_surplus_deficit_units = 200
-    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
-        return_value=calculated_summary
-    )
-
-    # Mock the _create_or_update_reserve_transaction method
-    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
     
-    # Mock the _calculate_and_lock_summary method (should not be called)
-    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+    # Mock the _calculate_and_lock_summary method (should be called)
+    mock_summary = MagicMock()
+    mock_summary.line_20_surplus_deficit_units = 200
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_summary
+    )
 
     # Patch roles check
     with patch(
@@ -1331,13 +1321,11 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
             mock_report, mock_user_profile_analyst
         )
 
-    # With new logic, _calculate_and_lock_summary is NOT called for recommended by analyst
-    # Instead, summary service is called to calculate without locking
-    compliance_report_update_service._calculate_and_lock_summary.assert_not_called()
-    # Verify that summary service was called to calculate but not lock
-    mock_summary_service.calculate_compliance_report_summary.assert_called()
-    # Verify transaction was created/updated
-    compliance_report_update_service._create_or_update_reserve_transaction.assert_called_once_with(200, mock_report)
+    # With new logic, _calculate_and_lock_summary IS called for recommended by analyst
+    # This is where the summary gets locked for assessment
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock_user_profile_analyst, skip_can_sign_check=True
+    )
 
 
 @pytest.mark.anyio
@@ -1346,7 +1334,7 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     mock_repo,
     mock_user_profile_analyst,
 ):
-    """Test that handle_recommended_by_analyst_status does NOT call _calculate_and_lock_summary for non-government supplemental reports"""
+    """Test that handle_recommended_by_analyst_status DOES call _calculate_and_lock_summary for all reports"""
     # Arrange
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
@@ -1358,7 +1346,10 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
     # Mock the _calculate_and_lock_summary method
-    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+    mock_summary = MagicMock()
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_summary
+    )
 
     # Patch roles check
     with patch(
@@ -1370,8 +1361,10 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
             mock_report, mock_user_profile_analyst
         )
 
-    # Assert that _calculate_and_lock_summary was NOT called
-    compliance_report_update_service._calculate_and_lock_summary.assert_not_called()
+    # Assert that _calculate_and_lock_summary WAS called
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock_user_profile_analyst, skip_can_sign_check=True
+    )
 
 
 @pytest.mark.anyio
