@@ -95,8 +95,8 @@ class Settings(BaseSettings):
     ches_sender_name: str = "LCFS Notification System"
 
     # Feature flags
-    feature_credit_market_notifications: bool = False
-    feature_fuel_code_expiry_email: bool = False
+    feature_credit_market_notifications: bool = True
+    feature_fuel_code_expiry_email: bool = True
 
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present
