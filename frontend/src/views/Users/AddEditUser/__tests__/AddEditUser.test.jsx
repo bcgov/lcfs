@@ -690,4 +690,359 @@ describe('AddEditUser', () => {
       })
     }
   })
+
+  // --- Delete Functionality Tests ---
+  it('shows delete button for BCeID users that are safe to delete', () => {
+    mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'bceidUser123',
+        isActive: true,
+        isGovernmentUser: false, // BCeID user
+        isSafeToRemove: true,
+        roles: []
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    // Government user viewing BCeID user
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: [],
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((role) => role === roles.government),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('delete-user-btn')).not.toBeDisabled()
+  })
+
+  it('shows disabled delete button for BCeID users that are not safe to delete', () => {
+    mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'bceidUser123',
+        isActive: true,
+        isGovernmentUser: false,
+        isSafeToRemove: false, // Not safe to delete
+        roles: []
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: [],
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((role) => role === roles.government),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('delete-user-btn')).toBeDisabled()
+  })
+
+  it('opens confirmation dialog when delete button is clicked', async () => {
+    mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'bceidUser123',
+        isActive: true,
+        isGovernmentUser: false,
+        isSafeToRemove: true,
+        roles: []
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: [],
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((role) => role === roles.government),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    
+    fireEvent.click(screen.getByTestId('delete-user-btn'))
+    
+    await waitFor(() => {
+      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument()
+      expect(screen.getByText('Are you sure you want to delete this user?')).toBeInTheDocument()
+    })
+  })
+
+  it('closes confirmation dialog when cancel is clicked', async () => {
+    mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'bceidUser123',
+        isActive: true,
+        isGovernmentUser: false,
+        isSafeToRemove: true,
+        roles: []
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: [],
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((role) => role === roles.government),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    
+    // Open dialog
+    fireEvent.click(screen.getByTestId('delete-user-btn'))
+    
+    await waitFor(() => {
+      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument()
+    })
+    
+    // Close dialog
+    fireEvent.click(screen.getByText('Cancel'))
+    
+    await waitFor(() => {
+      expect(screen.queryByText('Confirm Deletion')).not.toBeInTheDocument()
+    })
+  })
+
+  it('calls deleteUser when confirmation is clicked', async () => {
+    const orgId = 'org456'
+    mockUseParams.mockReturnValue({ userID: 'bceidUser123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'bceidUser123',
+        isActive: true,
+        isGovernmentUser: false,
+        isSafeToRemove: true,
+        roles: [],
+        organization: { organizationId: orgId }
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: [],
+        isGovernmentUser: true
+      },
+      hasRoles: vi.fn((role) => role === roles.government),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    
+    // Open dialog
+    fireEvent.click(screen.getByTestId('delete-user-btn'))
+    
+    await waitFor(() => {
+      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument()
+    })
+    
+    // Confirm deletion - look for the button specifically in the dialog
+    const deleteButtons = screen.getAllByText('Delete User')
+    const confirmDeleteButton = deleteButtons.find(button => 
+      button.closest('[role="dialog"]')
+    )
+    fireEvent.click(confirmDeleteButton)
+    
+    await waitFor(() => {
+      expect(mockDeleteUser).toHaveBeenCalledWith('bceidUser123', expect.any(Object))
+    })
+  })
+
+  // --- Form Rendering Tests ---
+  it('renders form components correctly', async () => {
+    render(<AddEditUser userType="idir" />, { wrapper })
+    
+    // Verify basic form elements are present
+    expect(screen.getByTestId('saveUser')).toBeInTheDocument()
+    expect(screen.getByTestId('back-btn')).toBeInTheDocument()
+    expect(screen.getByText(/Add user/)).toBeInTheDocument()
+  })
+
+  it('populates form with government user data', async () => {
+    mockUseParams.mockReturnValue({ userID: 'govUser123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'govUser123',
+        firstName: 'Jane',
+        lastName: 'Government',
+        title: 'Analyst',
+        keycloakEmail: 'jane.gov@gov.bc.ca',
+        keycloakUsername: 'jane.gov',
+        phone: '555-0001',
+        mobilePhone: '555-0002',
+        email: 'jane.alt@gov.bc.ca',
+        roles: [{ name: 'analyst' }, { name: 'administrator' }],
+        isActive: true,
+        isGovernmentUser: true
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    render(<AddEditUser userType="idir" />, { wrapper })
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Jane')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Government')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Analyst')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('jane.gov@gov.bc.ca')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('jane.gov')).toBeInTheDocument()
+    })
+  })
+
+  it('populates form with supplier user data', async () => {
+    mockUseParams.mockReturnValue({ userID: 'supplierUser123', orgID: 'org456' })
+    vi.mocked(organizationUserHooks.useOrganizationUser).mockReturnValue({
+      data: {
+        userProfileId: 'supplierUser123',
+        firstName: 'John',
+        lastName: 'Supplier',
+        title: 'Manager',
+        keycloakEmail: 'john@company.com',
+        keycloakUsername: 'john.supplier',
+        roles: [{ name: 'analyst' }, { name: 'read_only' }],
+        isActive: false,
+        isGovernmentUser: false,
+        organization: { name: 'Test Company' }
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: []
+      },
+      hasRoles: vi.fn((role) => role === roles.supplier),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('John')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Supplier')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('john@company.com')).toBeInTheDocument()
+      expect(screen.getByText('Edit user to Test Company')).toBeInTheDocument()
+    })
+  })
+
+  // --- Simple Error Callback Test ---
+  it('calls console.error when onUserOperationError is triggered', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
+    // Create a simple error for the callback to use
+    const testError = new Error('Test error')
+    
+    // Mock the hook to get access to the callback
+    render(<AddEditUser userType="idir" />, { wrapper })
+    
+    // Get the error callback from the hook - it should be defined
+    const createUserCall = vi.mocked(userHooks.useCreateUser).mock.calls[0]
+    const errorCallback = createUserCall[0].onError
+    
+    // Verify callback exists and call it
+    expect(errorCallback).toBeDefined()
+    errorCallback(testError)
+    
+    expect(consoleSpy).toHaveBeenCalledWith('Error saving user:', testError)
+    consoleSpy.mockRestore()
+  })
+
+  it('navigates to organization page on successful operation for supplier user', () => {
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        roles: []
+      },
+      hasRoles: vi.fn((role) => role === roles.supplier),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="bceid" />, { wrapper })
+    
+    // Get and call the success callback
+    const createUserCall = vi.mocked(userHooks.useCreateUser).mock.calls[0]
+    const successCallback = createUserCall[0].onSuccess
+    
+    expect(successCallback).toBeDefined()
+    successCallback()
+    
+    expect(mockUseNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATION.ORG)
+  })
+
+  it('handles payload with empty altEmail', async () => {
+    mockUseParams.mockReturnValue({ userID: 'user123' }) // Edit mode
+    
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'user123',
+        firstName: 'John',
+        lastName: 'Doe',
+        title: 'Developer',
+        keycloakEmail: 'john@example.com',
+        keycloakUsername: 'john.doe',
+        email: '', // Empty alt email
+        roles: [],
+        isActive: true,
+        isGovernmentUser: true
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 1, name: 'Test Org' },
+        organizationId: 1,
+        roles: []
+      },
+      hasRoles: vi.fn((role) => role === roles.government),
+      isLoading: false
+    })
+    
+    render(<AddEditUser userType="idir" />, { wrapper })
+    
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('John')).toBeInTheDocument()
+    })
+    
+    // Submit the form
+    fireEvent.click(screen.getByTestId('saveUser'))
+    
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith({
+        userID: 'user123',
+        payload: expect.objectContaining({
+          email: null // Empty email should be converted to null
+        })
+      })
+    })
+  })
 })
