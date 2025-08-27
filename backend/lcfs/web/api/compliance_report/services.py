@@ -333,9 +333,11 @@ class ComplianceReportServices:
             raise DataNotFoundException("Draft status not found.")
 
         # Retrieve the assessed report for the current compliance period
+        # Exclude current report to avoid circular reference
         assessed_report = await self.repo.get_assessed_compliance_report_by_period(
             current_report.organization_id,
             int(current_report.compliance_period.description),
+            current_report.compliance_report_id,
         )
         if not assessed_report or not assessed_report.summary:
             raise DataNotFoundException(
