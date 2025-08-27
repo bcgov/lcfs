@@ -193,12 +193,16 @@ class OrganizationsRepository:
 
         # Check if early issuance filter or sort is present
         has_early_issuance_filter = any(
-            filter.field in ["has_early_issuance", "hasEarlyIssuance"] for filter in pagination.filters
+            filter.field in ["has_early_issuance", "hasEarlyIssuance"]
+            for filter in pagination.filters
         )
         has_early_issuance_sort = any(
-            order.field in ["has_early_issuance", "hasEarlyIssuance"] for order in pagination.sort_orders
+            order.field in ["has_early_issuance", "hasEarlyIssuance"]
+            for order in pagination.sort_orders
         )
-        needs_early_issuance_joins = has_early_issuance_filter or has_early_issuance_sort
+        needs_early_issuance_joins = (
+            has_early_issuance_filter or has_early_issuance_sort
+        )
 
         # Base query with standard joins
         query = (
@@ -265,33 +269,36 @@ class OrganizationsRepository:
         # Sort the query results
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
-            
+
             # Map frontend field names to backend field names
             field_name = order.field
             if field_name == "hasEarlyIssuance":
                 field_name = "has_early_issuance"
-            
+
             if field_name == "status":
                 # Sort by organization status description
                 query = query.order_by(sort_method(OrganizationStatus.status))
             elif field_name == "registrationStatus":
                 # Sort by whether the organization is registered (status == "Registered")
                 registration_case = case(
-                    (OrganizationStatus.status == "Registered", 1),
-                    else_=0
+                    (OrganizationStatus.status == "Registered", 1), else_=0
                 )
                 query = query.order_by(sort_method(registration_case))
             elif field_name == "has_early_issuance":
                 # Sort by early issuance if the joins are available
                 if needs_early_issuance_joins:
-                    query = query.order_by(sort_method(OrganizationEarlyIssuanceByYear.has_early_issuance))
+                    query = query.order_by(
+                        sort_method(OrganizationEarlyIssuanceByYear.has_early_issuance)
+                    )
                 else:
                     # Skip sorting by early issuance if no joins are available
                     continue
             else:
                 # Default sorting for other fields
                 if hasattr(Organization, field_name):
-                    query = query.order_by(sort_method(getattr(Organization, field_name)))
+                    query = query.order_by(
+                        sort_method(getattr(Organization, field_name))
+                    )
                 else:
                     # Skip unknown fields
                     continue
@@ -338,6 +345,7 @@ class OrganizationsRepository:
     async def get_organization_names(self, conditions=None, order_by=("name", "asc")):
         """
         Fetches organization names and details based on provided conditions and dynamic ordering.
+        Only returns organizations with type 'fuel_supplier'.
 
         Parameters:
             conditions (list): SQLAlchemy conditions to filter the query.
@@ -347,7 +355,12 @@ class OrganizationsRepository:
         Returns:
             List of dictionaries with organization details including ID, names, balances, and status.
         """
-        query = select(Organization).join(OrganizationStatus)
+        query = (
+            select(Organization)
+            .join(OrganizationStatus)
+            .join(Organization.org_type)
+            .filter(OrganizationType.org_type == "fuel_supplier")
+        )
 
         if conditions:
             query = query.filter(*conditions)
@@ -381,12 +394,18 @@ class OrganizationsRepository:
     @repo_handler
     async def get_externally_registered_organizations(self, conditions):
         """
-        Get all externally registered  organizations from the database.
+        Get all externally registered organizations from the database.
+        Only returns organizations with type 'fuel_supplier'.
         """
+        # Add fuel supplier type filter to existing conditions
+        fuel_supplier_condition = Organization.org_type.has(
+            OrganizationType.org_type == "fuel_supplier"
+        )
+        all_conditions = conditions + [fuel_supplier_condition]
 
         query = (
             select(Organization)
-            .where(and_(*conditions))
+            .where(and_(*all_conditions))
             .options(
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),
@@ -439,14 +458,21 @@ class OrganizationsRepository:
         """
         Search for organizations based on a query string.
         Return exact match first if found, followed by partial matches.
+        Only returns organizations with type 'fuel_supplier'.
         """
         query = (
             select(Organization)
-            .options(joinedload(Organization.org_address))
+            .options(
+                joinedload(Organization.org_address), joinedload(Organization.org_type)
+            )
+            .join(Organization.org_type)
             .filter(
-                or_(
-                    Organization.name.ilike(f"%{search_query}%"),
-                    Organization.operating_name.ilike(f"%{search_query}%"),
+                and_(
+                    or_(
+                        Organization.name.ilike(f"%{search_query}%"),
+                        Organization.operating_name.ilike(f"%{search_query}%"),
+                    ),
+                    OrganizationType.org_type == "fuel_supplier",
                 )
             )
             .order_by(Organization.name)

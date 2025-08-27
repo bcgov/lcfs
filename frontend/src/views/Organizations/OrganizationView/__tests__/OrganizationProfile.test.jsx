@@ -783,6 +783,50 @@ describe('OrganizationProfile Component', () => {
     })
   })
 
+  describe('Organization Type Rendering', () => {
+    it('shows organization type with BCeID suffix when applicable', () => {
+      const orgDataWithType = {
+        ...mockOrgData,
+        orgType: { description: 'Fuel Supplier', isBceidUser: true }
+      }
+
+      render(
+        <OrganizationProfile
+          hasRoles={mockHasRoles}
+          isCurrentUserLoading={false}
+          orgID={mockOrgID}
+          orgData={orgDataWithType}
+          orgBalanceInfo={mockOrgBalanceInfo}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByText('Fuel Supplier (BCeID user)')).toBeInTheDocument()
+    })
+
+    it('shows organization type with non-BCeID suffix when applicable', () => {
+      const orgDataWithType = {
+        ...mockOrgData,
+        orgType: { description: 'Government', isBceidUser: false }
+      }
+
+      render(
+        <OrganizationProfile
+          hasRoles={mockHasRoles}
+          isCurrentUserLoading={false}
+          orgID={mockOrgID}
+          orgData={orgDataWithType}
+          orgBalanceInfo={mockOrgBalanceInfo}
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.getByText('Government (non-BCeID user)')
+      ).toBeInTheDocument()
+    })
+  })
+
   describe('Balance Information', () => {
     it('displays balance with correct format', () => {
       mockHasRoles.mockImplementation((role) => role === 'government')

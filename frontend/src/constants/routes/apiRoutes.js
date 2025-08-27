@@ -164,5 +164,15 @@ export const apiRoutes = {
   getCalculatorFuelTypes: '/calculator/:complianceYear/',
   getCalculatorFuelTypeOptions:
     '/calculator/:complianceYear/fuel-type-options/',
-  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/'
+  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
+
+  // geocoder endpoints
+  geocoderValidate: '/geocoder/validate',
+  geocoderForward: '/geocoder/forward',
+  geocoderReverse: '/geocoder/reverse',
+  geocoderBatch: '/geocoder/batch',
+  geocoderBoundaryCheck: '/geocoder/boundary-check',
+  geocoderAutocomplete: '/geocoder/autocomplete',
+  geocoderHealth: '/geocoder/health',
+  geocoderClearCache: '/geocoder/cache'
 }

@@ -682,6 +682,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               hasSupplemental={reportData?.report?.hasSupplemental}
               chain={reportData?.chain}
               setModalData={setModalData}
+              hasGovernmentReassessmentInProgress={
+                reportData?.hasGovernmentReassessmentInProgress
+              }
             />
           </Stack>
           <ReportDetails

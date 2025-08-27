@@ -40,8 +40,15 @@ vi.mock('../components/utils', () => ({
   fixLeafletIcons: vi.fn(),
   transformApiData: (data) => data.finalSupplyEquipments, // return array
   groupLocationsByCoordinates: (data) => ({ '0,0': data }),
-  findOverlappingPeriods: () => [],
-  batchProcessGeofencing: () => Promise.resolve({})
+  findOverlappingPeriods: () => []
+}))
+
+vi.mock('@/services/locationService', () => ({
+  useLocationService: () => ({
+    batchProcessGeofencing: () => Promise.resolve({}),
+    isLoading: false,
+    error: null
+  })
 }))
 
 // We will provide custom responses for the hook inside each test via a helper
