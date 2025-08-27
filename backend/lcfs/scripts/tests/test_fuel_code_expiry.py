@@ -69,6 +69,7 @@ class TestNotifyExpiringFuelCode:
     """Tests for the notify_expiring_fuel_code function"""
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_notify_expiring_fuel_code_success(self, mock_db_session, mock_fuel_codes):
         """Test successful notification sending"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class, \
@@ -96,8 +97,23 @@ class TestNotifyExpiringFuelCode:
             
             # Should send 2 emails (user1@example.com gets 2 codes, user2@example.com gets 1)
             assert mock_email_service.send_fuel_code_expiry_notifications.call_count == 2
+    
+    @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', False)
+    async def test_notify_expiring_fuel_code_flag_disabled(self, mock_db_session):
+        """Test that the task does nothing when the feature flag is disabled"""
+        with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class:
+            
+            mock_repo = AsyncMock()
+            mock_repo_class.return_value = mock_repo
+            
+            result = await notify_expiring_fuel_code(mock_db_session)
+            
+            assert result is True
+            mock_repo.get_expiring_fuel_codes.assert_not_called()
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_notify_expiring_fuel_code_no_codes(self, mock_db_session):
         """Test when no fuel codes are expiring"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class:
@@ -112,6 +128,7 @@ class TestNotifyExpiringFuelCode:
             mock_repo.get_expiring_fuel_codes.assert_called_once()
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_notify_expiring_fuel_code_repository_error(self, mock_db_session):
         """Test when repository throws an error"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class:
@@ -125,6 +142,7 @@ class TestNotifyExpiringFuelCode:
             assert result is False
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_notify_expiring_fuel_code_email_service_failure(self, mock_db_session, mock_fuel_codes):
         """Test when email service fails"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class, \
@@ -170,6 +188,7 @@ class TestNotifyExpiringFuelCode:
             assert result is True  # Should return True if at least one email succeeded
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_notify_expiring_fuel_code_email_exception(self, mock_db_session, mock_fuel_codes):
         """Test when email sending throws an exception"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class, \
@@ -192,6 +211,7 @@ class TestNotifyExpiringFuelCode:
             assert result is False
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_notify_expiring_fuel_code_invalid_emails(self, mock_db_session, mock_fuel_codes_invalid_emails):
         """Test handling of invalid email addresses"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class, \
@@ -331,6 +351,7 @@ class TestIntegration:
     """Integration tests for the complete workflow"""
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_end_to_end_workflow(self, mock_db_session):
         """Test the complete workflow from start to finish"""
         # Create test data
@@ -379,6 +400,7 @@ class TestIntegration:
                 assert 'expiry_count' in context
 
     @pytest.mark.anyio
+    @patch('lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email', True)
     async def test_logging_behavior(self, mock_db_session, mock_fuel_codes):
         """Test that appropriate logging occurs"""
         with patch('lcfs.scripts.tasks.fuel_code_expiry.FuelCodeRepository') as mock_repo_class, \

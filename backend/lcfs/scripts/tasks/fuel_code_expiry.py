@@ -18,6 +18,7 @@ from lcfs.web.api.base import NotificationTypeEnum
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -31,6 +32,10 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
         db_session: Database session provided by the scheduler
     """
     logger.info("Starting fuel code expiry notification task")
+
+    if not settings.feature_fuel_code_expiry_email:
+        logger.info("Fuel code expiry email feature is disabled. Exiting task.")
+        return True
 
     try:
         # Initialize repositories and services using the provided session
