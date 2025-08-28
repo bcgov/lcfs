@@ -40,6 +40,16 @@ export const OrganizationProfile = ({
           </BCTypography>
 
           <BCTypography variant="body4">
+            <strong>{t('org:orgTypeLabel')}:</strong>{' '}
+            {orgData?.orgType?.description || orgData?.orgType?.orgType}
+            {orgData?.orgType?.isBceidUser === true
+              ? ' (BCeID user)'
+              : orgData?.orgType?.isBceidUser === false
+                ? ' (non-BCeID user)'
+                : ''}
+          </BCTypography>
+
+          <BCTypography variant="body4">
             <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
             {phoneNumberFormatter({ value: orgData?.phone })}
           </BCTypography>
@@ -55,14 +65,6 @@ export const OrganizationProfile = ({
               {Math.abs(orgBalanceInfo?.reservedBalance || 0).toLocaleString()})
             </BCTypography>
           </Role>
-          {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED && (
-            <BCTypography variant="body4">
-              <strong>{t('org:enrolledInCreditMarket')}:</strong>{' '}
-              {orgData?.displayInCreditMarket
-                ? t('common:yes')
-                : t('common:no')}
-            </BCTypography>
-          )}
         </BCBox>
 
         {/* Right Column */}
