@@ -3,6 +3,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AddEditOrg } from '../AddEditOrg'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
+import { useApiService } from '@/services/useApiService'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -13,6 +15,10 @@ vi.mock('react-i18next', () => ({
 vi.mock('react-router-dom', () => ({
   useParams: vi.fn()
 }))
+
+// Mock hooks
+vi.mock('@/hooks/useOrganization')
+vi.mock('@/services/useApiService')
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -40,6 +46,15 @@ describe('AddEditOrg', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useTranslation.mockReturnValue({ t: mockT })
+    useOrganizationTypes.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null
+    })
+    useApiService.mockReturnValue({
+      post: vi.fn(),
+      put: vi.fn()
+    })
   })
 
   it('renders in edit mode when orgID is present', () => {

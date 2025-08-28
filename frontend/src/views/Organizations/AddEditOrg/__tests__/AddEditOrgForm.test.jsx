@@ -3,7 +3,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useApiService } from '@/services/useApiService'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { MemoryRouter } from 'react-router-dom'
@@ -48,7 +48,8 @@ vi.mock('@/services/useApiService', () => ({
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn()
+  useOrganization: vi.fn(),
+  useOrganizationTypes: vi.fn()
 }))
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -79,8 +80,13 @@ vi.mock('react-hook-form', () => ({
     reset: mockReset,
     control: {}
   }),
+<<<<<<< HEAD
   Controller: React.forwardRef(({ name, control, render }, ref) => (
     <div data-testid={`controller-${name}`}>
+=======
+  Controller: ({ name, control, render }) => (
+    <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
+>>>>>>> origin/develop
       {render({
         field: {
           onChange: vi.fn(),
@@ -186,17 +192,37 @@ vi.mock('@mui/material', () => ({
     return <div {...props}>{children}</div>
   },
   TextField: React.forwardRef(
-    ({ id, label, error, helperText, fullWidth, variant, ...props }, ref) => (
+    (
+      {
+        id,
+        label,
+        error,
+        helperText,
+        fullWidth,
+        variant,
+        select,
+        SelectProps, // eslint-disable-line no-unused-vars
+        children,
+        ...props
+      },
+      ref
+    ) => (
       <div data-testid={id || 'text-field'}>
         {label && <label htmlFor={id}>{label}</label>}
-        <input
-          id={id}
-          ref={ref}
-          data-fullwidth={fullWidth ? 'true' : undefined}
-          data-variant={variant}
-          data-test={props['data-test']}
-          {...props}
-        />
+        {select ? (
+          <select id={id} ref={ref} data-test={props['data-test']} {...props}>
+            {children}
+          </select>
+        ) : (
+          <input
+            id={id}
+            ref={ref}
+            data-fullwidth={fullWidth ? 'true' : undefined}
+            data-variant={variant}
+            data-test={props['data-test']}
+            {...props}
+          />
+        )}
         {error && <span>{helperText}</span>}
       </div>
     )
@@ -247,6 +273,41 @@ describe('AddEditOrgForm Component', () => {
   const mockNavigate = vi.fn()
   const mockApiPost = vi.fn()
   const mockApiPut = vi.fn()
+  const mockHandleCancelEdit = vi.fn()
+
+  // Mock organization types data
+  const mockOrgTypes = [
+    {
+      organizationTypeId: 1,
+      orgType: 'fuel_supplier',
+      description: 'Fuel supplier',
+      isBceidUser: true
+    },
+    {
+      organizationTypeId: 2,
+      orgType: 'aggregator',
+      description: 'Aggregator',
+      isBceidUser: true
+    },
+    {
+      organizationTypeId: 3,
+      orgType: 'fuel_producer',
+      description: 'Fuel producer, fuel code applicant',
+      isBceidUser: false
+    },
+    {
+      organizationTypeId: 4,
+      orgType: 'exempted_supplier',
+      description: 'Exempted supplier',
+      isBceidUser: false
+    },
+    {
+      organizationTypeId: 5,
+      orgType: 'initiative_agreement_holder',
+      description: 'Initiative agreement holder',
+      isBceidUser: false
+    }
+  ]
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -263,10 +324,16 @@ describe('AddEditOrgForm Component', () => {
       data: null,
       isFetched: false
     })
+    useOrganizationTypes.mockReturnValue({
+      data: mockOrgTypes,
+      isLoading: false,
+      error: null
+    })
 
     mockWatch.mockImplementation(() => '')
   })
 
+<<<<<<< HEAD
   describe('Basic Rendering - Form Structure', () => {
     it('renders the main form container', () => {
       render(
@@ -274,16 +341,24 @@ describe('AddEditOrgForm Component', () => {
           <AddEditOrgForm />
         </Wrapper>
       )
+=======
+  it('renders the form in add mode', () => {
+    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
+>>>>>>> origin/develop
 
       expect(screen.getByTestId('addEditOrgContainer')).toBeInTheDocument()
     })
 
+<<<<<<< HEAD
     it('renders all required form fields', () => {
       render(
         <Wrapper>
           <AddEditOrgForm />
         </Wrapper>
       )
+=======
+    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
+>>>>>>> origin/develop
 
       // Basic info fields
       expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
@@ -362,12 +437,16 @@ describe('AddEditOrgForm Component', () => {
       expect(mockHandleSubmit).toHaveBeenCalled()
     })
 
+<<<<<<< HEAD
     it('handles back button navigation', () => {
       render(
         <Wrapper>
           <AddEditOrgForm />
         </Wrapper>
       )
+=======
+    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
+>>>>>>> origin/develop
 
       const backButton = screen.getByText('backBtn')
       fireEvent.click(backButton)
@@ -394,6 +473,7 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 
+<<<<<<< HEAD
   describe('Form Validation - Error Handling', () => {
     it('displays validation errors when present', () => {
       // Skip this test as it requires complex mock manipulation
@@ -426,6 +506,25 @@ describe('AddEditOrgForm Component', () => {
         },
         isFetched: true
       })
+=======
+  it('calls handleCancelEdit when cancel button is clicked', async () => {
+    const user = userEvent.setup()
+
+    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
+
+    // Find and click the Cancel button by its text content
+    const cancelButton = screen.getByText('cancelBtn')
+    await user.click(cancelButton)
+
+    // Verify handleCancelEdit was called
+    expect(mockHandleCancelEdit).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles address autocomplete selection', async () => {
+    const user = userEvent.setup()
+
+    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
+>>>>>>> origin/develop
 
       render(
         <Wrapper>
@@ -456,35 +555,62 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 
+<<<<<<< HEAD
   describe('Component State and Effects', () => {
     it('renders alert component for notifications', () => {
+=======
+  describe('Organization Type Dropdown', () => {
+    it('renders organization type dropdown with all options', () => {
+>>>>>>> origin/develop
       render(
         <Wrapper>
           <AddEditOrgForm />
         </Wrapper>
       )
 
+<<<<<<< HEAD
       expect(screen.getByTestId('bc-alert2')).toBeInTheDocument()
     })
 
     it('handles address autocomplete fields', () => {
+=======
+      // Check that the organization type controller is rendered
+      expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
+    })
+
+    it('shows BCeID and non-BCeID user indicators in options', () => {
+>>>>>>> origin/develop
       render(
         <Wrapper>
           <AddEditOrgForm />
         </Wrapper>
       )
 
+<<<<<<< HEAD
       const addressInputs = screen.getAllByTestId('address-autocomplete')
       expect(addressInputs.length).toBeGreaterThan(0)
     })
 
     it('shows proper field labels and structure', () => {
+=======
+      // The Controller component should be present with orgType name
+      const controller = screen.getByTestId('controller-orgType')
+      expect(controller).toBeInTheDocument()
+
+      // Verify the form field is accessible
+      const orgTypeField = screen.getByTestId('orgType')
+      expect(orgTypeField).toBeInTheDocument()
+    })
+
+    it('defaults to fuel supplier selection', () => {
+>>>>>>> origin/develop
       render(
         <Wrapper>
           <AddEditOrgForm />
         </Wrapper>
       )
 
+<<<<<<< HEAD
       // Check for key labels that indicate proper form structure
       expect(screen.getByText('org:legalNameLabel')).toBeInTheDocument()
       expect(screen.getByText('org:emailAddrLabel:')).toBeInTheDocument()
@@ -503,6 +629,17 @@ describe('AddEditOrgForm Component', () => {
           'orgAddressOther': 'Suite 100'
         }
         return values[field] || ''
+=======
+      // Verify the default value is set correctly
+      const controller = screen.getByTestId('controller-orgType')
+      expect(controller).toBeInTheDocument()
+    })
+
+    it('handles organization type loading state', () => {
+      useOrganizationTypes.mockReturnValue({
+        data: null,
+        isLoading: true,
+        error: null
       })
 
       render(
@@ -511,6 +648,76 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
+      // Should still render the controller even when loading
+      expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
+    })
+
+    it('handles organization type error state', () => {
+      useOrganizationTypes.mockReturnValue({
+        data: null,
+        isLoading: false,
+        error: new Error('Failed to load organization types')
+      })
+
+      render(
+        <Wrapper>
+          <AddEditOrgForm />
+        </Wrapper>
+      )
+
+      // Should still render the controller even when there's an error
+      expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
+    })
+
+    it('populates form correctly in edit mode with organization type', async () => {
+      useParams.mockReturnValue({ orgID: '123' })
+      useOrganization.mockReturnValue({
+        data: {
+          name: 'Test Organization',
+          operatingName: 'Test Org',
+          email: 'test@example.com',
+          organizationTypeId: 2, // Aggregator
+          orgType: {
+            organizationTypeId: 2,
+            orgType: 'aggregator',
+            description: 'Aggregator',
+            isBceidUser: true
+          },
+          orgStatus: { organizationStatusId: 2 }
+        },
+        isFetched: true
+      })
+
+      render(
+        <Wrapper>
+          <AddEditOrgForm />
+        </Wrapper>
+      )
+
+      await waitFor(() => {
+        // Verify reset was called with correct organization type
+        expect(mockReset).toHaveBeenCalled()
+      })
+    })
+
+    it('validates organization type requirement', () => {
+      // Set up form errors for orgType
+      Object.assign(mockFormState, {
+        errors: {
+          orgType: {
+            message: 'Organization type is required.'
+          }
+        }
+>>>>>>> origin/develop
+      })
+
+      render(
+        <Wrapper>
+          <AddEditOrgForm />
+        </Wrapper>
+      )
+
+<<<<<<< HEAD
       // Find service address checkbox in head office section
       const headOfficeSection = screen.getByTestId('head-office-address-section')
       const checkbox = headOfficeSection.querySelector('input[type="checkbox"]')
@@ -582,3 +789,10 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 })
+=======
+      const controller = screen.getByTestId('controller-orgType')
+      expect(controller).toBeInTheDocument()
+    })
+  })
+})
+>>>>>>> origin/develop

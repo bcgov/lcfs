@@ -20,6 +20,27 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useOrganizationSnapshot.js')
 
+vi.mock('@/hooks/useGeocoder', () => ({
+  default: () => ({
+    validateAddress: { mutateAsync: vi.fn(), isLoading: false },
+    forwardGeocode: { mutateAsync: vi.fn(), isLoading: false },
+    reverseGeocode: { mutateAsync: vi.fn(), isLoading: false },
+    autocompleteAddress: { mutateAsync: vi.fn(), isLoading: false },
+    checkBCBoundary: { mutateAsync: vi.fn(), isLoading: false },
+    batchGeocode: { mutateAsync: vi.fn(), isLoading: false },
+    useHealthCheck: () => ({ data: null, isLoading: false })
+  })
+}))
+
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn()
+  })
+}))
+
 // Mock react-hook-form
 const mockReset = vi.fn()
 const mockSetValue = vi.fn()

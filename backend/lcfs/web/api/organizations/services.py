@@ -90,7 +90,12 @@ class OrganizationsService:
             filter_option = filter.type
             filter_type = filter.filter_type
 
-            if filter.field == "has_early_issuance":
+            # Map frontend field names to backend field names
+            field_name = filter.field
+            if field_name == "hasEarlyIssuance":
+                field_name = "has_early_issuance"
+
+            if field_name == "has_early_issuance":
                 # Get the early issuance field reference
                 early_issuance_field = self.repo.get_early_issuance_field()
                 conditions.append(
@@ -100,10 +105,33 @@ class OrganizationsService:
                 )
                 continue
 
-            if filter.field == "status":
+            if field_name == "registration_status":
+                # Registration status is computed from org status
+                # Convert boolean or string boolean to status enum for filtering
+                # Handle both boolean and string representations from frontend
+                if isinstance(filter_value, bool):
+                    is_registered = filter_value
+                elif isinstance(filter_value, str):
+                    is_registered = filter_value.lower() == "true"
+                else:
+                    # Skip invalid filter values
+                    continue
+
+                field = get_field_for_filter(OrganizationStatus, "status")
+                if is_registered:
+                    # Filter for "Registered" status
+                    conditions.append(field == "Registered")
+                else:
+                    # Filter for non-registered statuses
+                    conditions.append(
+                        field.in_(["Unregistered", "Suspended", "Canceled"])
+                    )
+                continue
+
+            if field_name == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
-                field = get_field_for_filter(Organization, filter.field)
+                field = get_field_for_filter(Organization, field_name)
 
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)

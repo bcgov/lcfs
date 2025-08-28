@@ -44,6 +44,14 @@ vi.mock('../components/utils', () => ({
   batchProcessGeofencing: vi.fn(() => Promise.resolve({}))
 }))
 
+vi.mock('@/services/locationService', () => ({
+  useLocationService: () => ({
+    batchProcessGeofencing: () => Promise.resolve({}),
+    isLoading: false,
+    error: null
+  })
+}))
+
 // We will provide custom responses for the hook inside each test via a helper
 let hookResponse
 vi.mock('@/hooks/useFinalSupplyEquipment', () => ({

@@ -3,8 +3,8 @@ import { expect, describe, it, vi, beforeEach } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import { FEATURE_FLAGS } from '@/constants/config.js'
 import { wrapper } from '@/tests/utils/wrapper'
+import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
 
 // Comprehensive mock setup
 const mockNavigate = vi.fn()
@@ -70,6 +70,18 @@ vi.mock('@/hooks/useComplianceReports', () => ({
     }
   }
 }))
+
+// Mock constants
+vi.mock('@/constants/config.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    FEATURE_FLAGS: {
+      SUPPLEMENTAL_REPORTING: 'SUPPLEMENTAL_REPORTING'
+    },
+    isFeatureEnabled: vi.fn(() => true)
+  }
+})
 
 // Mock components
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -143,14 +155,6 @@ vi.mock('@/components/BCTypography', () => ({
       {children}
     </div>
   )
-}))
-
-// Mock constants
-vi.mock('@/constants/config.js', () => ({
-  FEATURE_FLAGS: {
-    SUPPLEMENTAL_REPORTING: 'SUPPLEMENTAL_REPORTING'
-  },
-  isFeatureEnabled: vi.fn(() => true)
 }))
 
 // Setup default imports
