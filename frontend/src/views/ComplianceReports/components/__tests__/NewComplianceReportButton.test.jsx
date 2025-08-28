@@ -179,22 +179,22 @@ describe('NewComplianceReportButton', () => {
         {
           compliancePeriodId: 1,
           description: '2023',
-          effectiveDate: '2023-01-01T00:00:00Z'
+          effectiveDate: '2024-01-01T08:00:00Z' // Will be 2023 in local time (UTC-8)
         },
         {
           compliancePeriodId: 2,
           description: '2025',
-          effectiveDate: '2025-01-01T00:00:00Z'
+          effectiveDate: '2025-01-01T08:00:00Z' // Will be 2024 in local time
         },
         {
           compliancePeriodId: 3,
           description: '2026',
-          effectiveDate: '2026-01-01T00:00:00Z'
+          effectiveDate: '2026-01-01T08:00:00Z' // Will be 2025 in local time (current year)
         },
         {
           compliancePeriodId: 4,
           description: `${currentYear + 2}`,
-          effectiveDate: `${currentYear + 2}-01-01T00:00:00Z`
+          effectiveDate: `${currentYear + 2}-01-01T08:00:00Z` // Will be currentYear + 1 in local time
         }
       ]
 
@@ -211,10 +211,11 @@ describe('NewComplianceReportButton', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument()
       })
 
-      expect(screen.getByText('2025')).toBeInTheDocument()
-      expect(screen.getByText('2026')).toBeInTheDocument()
-      expect(screen.queryByText('2023')).not.toBeInTheDocument()
-      expect(screen.queryByText(`${currentYear + 2}`)).not.toBeInTheDocument()
+      // Should show periods where effectiveYear (local) is <= currentYear and >= 2024
+      expect(screen.getByText('2023')).toBeInTheDocument() // effectiveYear = 2024, shows (>= 2024 and <= 2025)
+      expect(screen.getByText('2025')).toBeInTheDocument() // effectiveYear = 2025 (currentYear), shows
+      expect(screen.queryByText('2026')).not.toBeInTheDocument() // effectiveYear = 2026 (> currentYear), filtered out
+      expect(screen.queryByText(`${currentYear + 2}`)).not.toBeInTheDocument() // effectiveYear = currentYear + 3, filtered out
     })
 
     it('handles periods data structure safely - nested data', async () => {
