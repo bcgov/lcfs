@@ -299,6 +299,7 @@ jobs:
           cmd: |
             yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
             yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-prod.yaml
+            yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-dynamic-schedule/values-prod.yaml
 
       - name: GitHub Commit & Push
         run: |
@@ -306,6 +307,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add lcfs/charts/lcfs-frontend/values-prod.yaml
           git add lcfs/charts/lcfs-backend/values-prod.yaml
+          git add lcfs/charts/lcfs-dynamic-scheduler/values-prod.yaml
           git commit -m "Update image tag ${{env.VERSION }}-${{env.PRE_RELEASE }} for prod"
           git push
 
