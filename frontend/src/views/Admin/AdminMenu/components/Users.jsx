@@ -2,7 +2,7 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -13,6 +13,7 @@ import { apiRoutes } from '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
 import { usersColumnDefs } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { useUsersList } from '@/hooks/useUser'
 
 export const Users = () => {
   const { t } = useTranslation(['common', 'admin'])
@@ -20,8 +21,18 @@ export const Users = () => {
   const [gridKey, setGridKey] = useState('users-grid')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [resetGridFn, setResetGridFn] = useState(null)
   const newUserButtonRef = useRef(null)
+
+  // Pagination state
+  const [paginationOptions, setPaginationOptions] = useState({
+    page: 1,
+    size: 10,
+    sortOrders: [
+      { field: 'isActive', direction: 'desc' },
+      { field: 'firstName', direction: 'asc' }
+    ],
+    filters: []
+  })
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -29,22 +40,17 @@ export const Users = () => {
       gridRef.current.api.deselectAll()
     }
   }, [])
+
   const gridOptions = {
     overlayNoRowsTemplate: t('admin:usersNotFound')
   }
-  const defaultSortModel = useMemo(
-    () => [
-      { field: 'isActive', direction: 'desc' },
-      { field: 'firstName', direction: 'asc' }
-    ],
-    []
-  )
 
   const navigate = useNavigate()
 
   const handleNewUserClick = () => {
     navigate(ROUTES.ADMIN.USERS.ADD)
   }
+
   const getRowId = useCallback((params) => {
     return params.data.userProfileId.toString()
   }, [])
@@ -60,6 +66,7 @@ export const Users = () => {
   )
 
   const gridRef = useRef()
+
   useEffect(() => {
     if (location.state?.message) {
       setAlertMessage(location.state.message)
@@ -67,15 +74,17 @@ export const Users = () => {
     }
   }, [location.state])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
+  const handleClearFilters = useCallback(() => {
+    try {
+      gridRef.current?.clearFilters?.()
+    } catch (e) {
+      // no-op
+    }
+    setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
   }, [])
 
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
-    }
-  }, [resetGridFn])
+  // Use the users list hook
+  const queryData = useUsersList(paginationOptions)
 
   return (
     <>
@@ -118,20 +127,20 @@ export const Users = () => {
           className="ag-theme-alpine"
           style={{ height: '100%', width: '100%' }}
         >
-          <BCDataGridServer
+          <BCGridViewer
             gridRef={gridRef}
-            apiEndpoint={apiRoutes.listUsers}
-            apiData={'users'}
-            columnDefs={usersColumnDefs(t)}
             gridKey={gridKey}
+            columnDefs={usersColumnDefs(t)}
+            queryData={queryData}
+            dataKey="users"
+            paginationOptions={paginationOptions}
+            onPaginationChange={setPaginationOptions}
             getRowId={getRowId}
             gridOptions={gridOptions}
-            defaultSortModel={defaultSortModel}
             handleGridKey={handleGridKey}
             enableResetButton={false}
             enableCopyButton={false}
             defaultColDef={defaultColDef}
-            onSetResetGrid={handleSetResetGrid}
           />
         </BCBox>
       </BCBox>

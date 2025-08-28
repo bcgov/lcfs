@@ -50,7 +50,7 @@ describe('AuditLog Component', () => {
     expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
   })
 
-  it('passes the correct props to BCDataGridServer', () => {
+  it('passes the correct props to BCGridViewer', () => {
     render(<AuditLog />, { wrapper })
     expect(screen.getByText('Mock Row')).toBeInTheDocument()
   })

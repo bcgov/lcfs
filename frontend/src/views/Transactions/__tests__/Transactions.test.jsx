@@ -35,12 +35,12 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ handleRowClicked }) => (
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({ onRowClicked }) => (
     <div
       data-test="mocked-data-grid"
       onClick={() =>
-        handleRowClicked({
+        onRowClicked({
           data: { transactionId: '123', transactionType: 'Transfer' }
         })
       }

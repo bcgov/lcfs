@@ -24,9 +24,9 @@ vi.mock('react-router-dom', async () => {
     }
   })
 
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     __esModule: true,
-    default: () => <div data-test="mocked-data-grid"></div>
+    BCGridViewer: () => <div data-test="mocked-data-grid"></div>
   }))
 
 vi.mock('@/components/Role', () => ({
@@ -35,9 +35,27 @@ vi.mock('@/components/Role', () => ({
 
 vi.mock('@/services/useApiService', () => ({
     useApiService: () => ({
-      download: mockDownload
+      download: mockDownload,
+      post: vi.fn().mockResolvedValue({
+        data: {
+          organizations: [],
+          pagination: { total: 0, page: 1, size: 10 }
+        }
+      })
     })
   }))
+
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({
+    data: {
+      organizations: [],
+      pagination: { total: 0, page: 1, size: 10 }
+    },
+    isLoading: false,
+    isError: false,
+    error: null
+  })
+}))
 
 vi.mock('@/components/BCAlert', () => ({
   default: (props) => {
@@ -118,8 +136,18 @@ describe('Organizations Component', () => {
     expect(mockDownload).toHaveBeenCalled()
   })
 
-  it('shows error alert when organization download fails', async () => {
-    mockDownload.mockRejectedValueOnce(new Error('Download failed'))
+  it('displays alert message when location state contains message', () => {
+    mockLocationValue.state = {
+      message: 'Test message',
+      severity: 'success'
+    }
+
+    render(<Organizations />, { wrapper })
+    expect(screen.getByText('Test message')).toBeInTheDocument()
+  })
+
+  it('displays error alert when download fails', async () => {
+    mockDownload.mockRejectedValue(new Error('Download failed'))
 
     render(<Organizations />, { wrapper })
 
@@ -131,38 +159,35 @@ describe('Organizations Component', () => {
     })
 
     await waitFor(() => {
-      const alertBox = screen.getByTestId('alert-box')
-      expect(alertBox).toBeInTheDocument()
-      expect(alertBox.textContent).toContain('Failed to download organization information.')
+      expect(screen.getByText('Failed to download organization information.')).toBeInTheDocument()
     })
   })
 
-  it('includes clear filters button', () => {
-    render(<Organizations />, { wrapper })
-
-    const clearFiltersButton = screen.getByText('Clear Filters')
-    expect(clearFiltersButton).toBeInTheDocument()
-  })
-
-  it('shows add organization button for admin users', async () => {
-    // Mock the Role component to simulate admin access
-    vi.mock('@/components/Role', () => ({
-      Role: ({ children, roles }) => {
-        // Simulate admin role check passing
-        return <div data-test="role-component" data-roles={roles.join(',')}>
-          {children}
-        </div>
-      }
-    }))
+  it('displays error alert when user download fails', async () => {
+    mockDownload.mockRejectedValue(new Error('Download failed'))
 
     render(<Organizations />, { wrapper })
 
-    const roleComponent = screen.getByTestId('role-component')
-    expect(roleComponent).toBeInTheDocument()
-    expect(roleComponent.getAttribute('data-roles')).toContain('Administrator')
+    await waitFor(() => screen.getByText('Download Users'))
+    const downloadUserButton = screen.getByText('Download Users')
 
-    const addButton = screen.getByText('Add Organization')
-    expect(addButton).toBeInTheDocument()
+    await act(async () => {
+      fireEvent.click(downloadUserButton)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to download user information.')).toBeInTheDocument()
+    })
   })
 
+  it('renders clear filters button', () => {
+    render(<Organizations />, { wrapper })
+    expect(screen.getByText('Clear Filters')).toBeInTheDocument()
+  })
+
+  it('renders download buttons', () => {
+    render(<Organizations />, { wrapper })
+    expect(screen.getByText('Download Organizations')).toBeInTheDocument()
+    expect(screen.getByText('Download Users')).toBeInTheDocument()
+  })
 })

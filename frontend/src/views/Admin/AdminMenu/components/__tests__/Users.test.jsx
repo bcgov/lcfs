@@ -10,9 +10,34 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock BCDataGridServer component
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: () => <div data-test="mocked-data-grid">Mocked DataGrid</div>
+// Mock BCGridViewer component
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => <div data-test="mocked-data-grid">Mocked DataGrid</div>
+}))
+
+// Mock React Query
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({
+    data: {
+      users: [],
+      pagination: { total: 0, page: 1, size: 10 }
+    },
+    isLoading: false,
+    isError: false,
+    error: null
+  })
+}))
+
+// Mock API Service
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({
+    post: vi.fn().mockResolvedValue({
+      data: {
+        users: [],
+        pagination: { total: 0, page: 1, size: 10 }
+      }
+    })
+  })
 }))
 
 describe('Users Component', () => {
@@ -42,7 +67,7 @@ describe('Users Component', () => {
     })
   })
 
-  it('renders BCDataGridServer with correct props', () => {
+  it('renders BCGridViewer with correct props', () => {
     render(<Users />, { wrapper })
     expect(screen.getByTestId('mocked-data-grid')).toBeInTheDocument()
   })

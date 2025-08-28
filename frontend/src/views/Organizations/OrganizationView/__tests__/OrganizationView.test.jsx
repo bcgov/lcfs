@@ -43,11 +43,11 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockCurrentUserHook
 }))
 
-// Mock the specific import of BCDataGridServer
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  // Replace BCDataGridServer with a dummy component
+// Mock the specific import of BCGridViewer
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  // Replace BCGridViewer with a dummy component
   __esModule: true, // This is important for mocking ES modules
-  default: () => <div data-test="mockedBCDataGridServer"></div>
+  BCGridViewer: () => <div data-test="mockedBCGridViewer"></div>
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({

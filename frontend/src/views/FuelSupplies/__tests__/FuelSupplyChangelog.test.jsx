@@ -14,10 +14,12 @@ vi.mock('@/components/Loading', () => ({
   default: () => <div>Loading...</div>
 }))
 
-// Mock BCDataGridServer component
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ apiData }) => (
-    <div data-test={`grid-${apiData}`}>Grid Component</div>
+// Mock BCGridViewer component
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({ dataKey }) => (
+    <div data-test="bc-grid-container" data-grid-key={dataKey}>
+      Grid Component
+    </div>
   )
 }))
 

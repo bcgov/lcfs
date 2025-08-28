@@ -11,6 +11,29 @@ export const useUsers = (options) => {
   })
 }
 
+export const useUsersList = (paginationOptions, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['users-list', paginationOptions],
+    queryFn: async () =>
+      (await client.post(apiRoutes.listUsers, paginationOptions)).data,
+    ...options
+  })
+}
+
+export const useUserActivities = (userID, paginationOptions, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['user-activities', userID, paginationOptions],
+    queryFn: async () => {
+      const endpoint = apiRoutes.getUserActivities.replace(':userID', userID)
+      return (await client.post(endpoint, paginationOptions)).data
+    },
+    enabled: !!userID,
+    ...options
+  })
+}
+
 export const useUser = (id, options) => {
   const client = useApiService()
   return useQuery({
