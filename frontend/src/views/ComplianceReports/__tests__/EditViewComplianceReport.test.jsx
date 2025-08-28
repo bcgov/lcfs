@@ -47,7 +47,7 @@ vi.mock('@tanstack/react-query', () => ({
 // Mock all UI components
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => <div data-test="bc-alert" {...props}>{children}</div>,
+  default: ({ children }) => <div data-test="bc-alert">{children}</div>,
   FloatingAlert: forwardRef((props, ref) => {
     // Create a mock triggerAlert function
     const triggerAlert = vi.fn()
@@ -61,33 +61,33 @@ vi.mock('@/components/BCAlert', () => ({
       }
     }
     
-    return <div data-test="floating-alert" {...props} />
+    return <div data-test="floating-alert" />
   })
 }))
 
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children }) => <div data-test="bc-box">{children}</div>
 }))
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => <button data-test="bc-button" {...props}>{children}</button>
+  default: ({ children, onClick, disabled }) => <button data-test="bc-button" onClick={onClick} disabled={disabled}>{children}</button>
 }))
 
 vi.mock('@/components/BCModal', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => props.open ? <div data-test="bc-modal" {...props}>{children}</div> : null
+  default: ({ children, open }) => open ? <div data-test="bc-modal">{children}</div> : null
 }))
 
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, 'data-test': dataTest }) => <div data-test={dataTest || "bc-typography"}>{children}</div>
 }))
 
 vi.mock('@/components/InternalComments', () => ({
   __esModule: true,
-  default: (props) => <div data-test="internal-comments" {...props} />
+  default: () => <div data-test="internal-comments" />
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -96,43 +96,43 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, ...props }) => <div data-test="role" {...props}>{children}</div>
+  Role: ({ children }) => <div data-test="role">{children}</div>
 }))
 
 // Mock complex child components
 vi.mock('../components/ComplianceReportSummary', () => ({
   __esModule: true,
-  default: (props) => <div data-test="compliance-report-summary" {...props} />
+  default: () => <div data-test="compliance-report-summary" />
 }))
 
 vi.mock('../components/ReportDetails', () => ({
   __esModule: true,
-  default: (props) => <div data-test="report-details" {...props} />
+  default: () => <div data-test="report-details" />
 }))
 
 vi.mock('../components/ActivityListCard', () => ({
-  ActivityListCard: (props) => <div data-test="activity-list-card" {...props} />
+  ActivityListCard: () => <div data-test="activity-list-card" />
 }))
 
 vi.mock('../components/AssessmentCard', () => ({
-  AssessmentCard: (props) => <div data-test="assessment-card" {...props} />
+  AssessmentCard: () => <div data-test="assessment-card" />
 }))
 
 vi.mock('@/views/ComplianceReports/components/AssessmentRecommendation.jsx', () => ({
-  AssessmentRecommendation: (props) => <div data-test="assessment-recommendation" {...props} />
+  AssessmentRecommendation: () => <div data-test="assessment-recommendation" />
 }))
 
 vi.mock('@/views/ComplianceReports/components/AssessmentStatement.jsx', () => ({
-  AssessmentStatement: (props) => <div data-test="assessment-statement" {...props} />
+  AssessmentStatement: () => <div data-test="assessment-statement" />
 }))
 
 vi.mock('@/views/ComplianceReports/components/Introduction.jsx', () => ({
-  Introduction: (props) => <div data-test="introduction" {...props} />
+  Introduction: () => <div data-test="introduction" />
 }))
 
 vi.mock('@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx', () => ({
   __esModule: true,
-  default: (props) => <div data-test="early-issuance-summary" {...props} />
+  default: () => <div data-test="early-issuance-summary" />
 }))
 
 vi.mock('../buttonConfigs', () => ({
@@ -141,20 +141,20 @@ vi.mock('../buttonConfigs', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material', () => ({
-  Fab: ({ children, ...props }) => <button data-test="fab" {...props}>{children}</button>,
-  Stack: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>,
-  Tooltip: ({ children, ...props }) => <div data-test="tooltip" {...props}>{children}</div>,
-  Alert: ({ children, ...props }) => <div data-test="alert" {...props}>{children}</div>,
-  AlertTitle: ({ children, ...props }) => <div data-test="alert-title" {...props}>{children}</div>
+  Fab: ({ children, onClick }) => <button data-test="fab" onClick={onClick}>{children}</button>,
+  Stack: ({ children }) => <div data-test="stack">{children}</div>,
+  Tooltip: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>,
+  Alert: ({ children, severity }) => <div data-test="alert" data-severity={severity}>{children}</div>,
+  AlertTitle: ({ children }) => <div data-test="alert-title">{children}</div>
 }))
 
 vi.mock('@mui/icons-material', () => ({
-  KeyboardArrowDown: (props) => <div data-test="arrow-down" {...props} />,
-  KeyboardArrowUp: (props) => <div data-test="arrow-up" {...props} />
+  KeyboardArrowDown: () => <div data-test="arrow-down" />,
+  KeyboardArrowUp: () => <div data-test="arrow-up" />
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: (props) => <div data-test="font-awesome-icon" {...props} />
+  FontAwesomeIcon: () => <div data-test="font-awesome-icon" />
 }))
 
 // Mock luxon

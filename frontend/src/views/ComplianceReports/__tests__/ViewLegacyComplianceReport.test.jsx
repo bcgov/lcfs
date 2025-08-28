@@ -62,7 +62,7 @@ vi.mock('@/views/ComplianceReports/legacy/LegacyReportDetails.jsx', () => ({
   )
 }))
 
-vi.mock('./legacy/LegacyReportSummary', () => ({
+vi.mock('../legacy/LegacyReportSummary', () => ({
   default: ({ children, reportID, alertRef, ...props }) => (
     <div data-test="legacy-report-summary">{children}</div>
   )

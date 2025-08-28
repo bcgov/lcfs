@@ -17,11 +17,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="typography" {...props}>{children}</div>
+  default: ({ children, textAlign, variant, ...props }) => <div data-test="typography" style={{ textAlign }} {...props}>{children}</div>
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bcbox" {...props}>{children}</div>
+  default: ({ children, sx, ...props }) => <div data-test="bcbox" style={sx} {...props}>{children}</div>
 }))
 
 vi.mock('@/views/Transfers/components', () => ({

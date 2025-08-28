@@ -4,7 +4,7 @@ import { FuelSupplyChangelog } from '../FuelSupplyChangelog'
 
 // Mock all external dependencies
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: vi.fn(({ gridKey, onPaginationChange, paginationOptions, ...props }) => {
+  BCGridViewer: vi.fn(({ gridKey, onPaginationChange, paginationOptions, columnDefs, queryData, getRowId, suppressPagination, gridOptions, defaultColDef, enablePageCaching, ...props }) => {
     const handlePaginationTest = () => {
       if (onPaginationChange && typeof onPaginationChange === 'function') {
         onPaginationChange({ page: 2, size: 10 })
@@ -12,7 +12,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     }
     
     return (
-      <div data-test={`bc-grid-viewer-${gridKey}`} {...props}>
+      <div data-test={`bc-grid-viewer-${gridKey}`}>
         <button onClick={handlePaginationTest} data-test="pagination-trigger">
           Test Pagination
         </button>

@@ -22,7 +22,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, variant, component, gutterBottom, sx, ...domProps }) => <div data-test="bc-typography" {...domProps}>{children}</div>
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -30,7 +30,7 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@mui/material', () => ({
-  Box: ({ children, ...props }) => <div data-test="box" {...props}>{children}</div>,
+  Box: ({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, ...domProps }) => <div data-test="box" {...domProps}>{children}</div>,
   Tooltip: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>,
   Fade: () => <div data-test="fade" />
 }))

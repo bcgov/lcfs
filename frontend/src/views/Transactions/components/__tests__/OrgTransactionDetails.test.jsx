@@ -103,7 +103,7 @@ describe('OrgTransactionDetails Component', () => {
         { wrapper }
       )
       
-      expect(screen.getByText(/Administrative adjustment/)).toBeInTheDocument()
+      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
       expect(screen.getByText(/Administrative adjustment — ID: AA123/)).toBeInTheDocument()
     })
 
@@ -116,7 +116,7 @@ describe('OrgTransactionDetails Component', () => {
         { wrapper }
       )
       
-      expect(screen.getByText(/Initiative agreement/)).toBeInTheDocument()
+      expect(screen.getByText('Initiative agreement for Test Organization')).toBeInTheDocument()
       expect(screen.getByText(/Initiative agreement — ID: IA456/)).toBeInTheDocument()
     })
   })
@@ -136,7 +136,7 @@ describe('OrgTransactionDetails Component', () => {
         { wrapper }
       )
       
-      expect(screen.getByText(/Administrative adjustment/)).toBeInTheDocument()
+      expect(screen.getByText('Administrative adjustment for Test Organization')).toBeInTheDocument()
     })
 
     it('uses initiativeAgreementStatus for initiative agreement type', () => {
@@ -156,7 +156,7 @@ describe('OrgTransactionDetails Component', () => {
         { wrapper }
       )
       
-      expect(screen.getByText(/Initiative agreement/)).toBeInTheDocument()
+      expect(screen.getByText('Initiative agreement for Test Organization')).toBeInTheDocument()
     })
   })
 

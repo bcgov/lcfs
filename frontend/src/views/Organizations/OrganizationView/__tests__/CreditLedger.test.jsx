@@ -17,37 +17,87 @@ vi.mock('@/utils/formatters', () => ({
 
 // Mock components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, alignItems, ...props }) => {
+    const domProps = {}
+    // Only pass through standard DOM attributes
+    Object.keys(props).forEach(key => {
+      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+        domProps[key] = props[key]
+      }
+    })
+    return <div {...domProps}>{children}</div>
+  }
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }) => {
+    const domProps = {}
+    // Only pass through standard DOM attributes
+    Object.keys(props).forEach(key => {
+      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+        domProps[key] = props[key]
+      }
+    })
+    return <div {...domProps}>{children}</div>
+  }
 }))
 
 vi.mock('@/components/DownloadButton', () => ({
-  DownloadButton: ({ onDownload, label, ...props }) => (
-    <button onClick={onDownload} {...props}>{label}</button>
-  )
+  DownloadButton: ({ onDownload, label, downloadLabel, isDownloading, dataTest, ...props }) => {
+    const domProps = {}
+    // Only pass through standard DOM attributes
+    Object.keys(props).forEach(key => {
+      if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+        domProps[key] = props[key]
+      }
+    })
+    if (dataTest) domProps['data-test'] = dataTest
+    return <button onClick={onDownload} disabled={isDownloading} {...domProps}>{downloadLabel || label}</button>
+  }
 }))
 
-vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ queryData, onPaginationChange, getRowId, ...props }) => (
-    <div data-test="credit-ledger-grid" {...props}>
-      Mock Grid with {queryData?.data?.ledger?.length || 0} items
-      {queryData?.data?.ledger?.map((item, index) => (
-        <div key={getRowId ? getRowId({ data: item }) : index} data-test={`grid-row-${index}`}>
-          {item.compliancePeriod}-{item.complianceUnits}-{item.transactionType}
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
+  const React = require('react')
+  return {
+    BCGridViewer: React.forwardRef(({ 
+      queryData, 
+      onPaginationChange, 
+      getRowId, 
+      gridKey,
+      dataKey,
+      columnDefs,
+      suppressPagination,
+      paginationOptions,
+      defaultColDef,
+      autoSizeStrategy,
+      ...props 
+    }, ref) => {
+      const domProps = {}
+      // Only pass through standard DOM attributes
+      Object.keys(props).forEach(key => {
+        if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+          domProps[key] = props[key]
+        }
+      })
+      return (
+        <div ref={ref} data-test="credit-ledger-grid" {...domProps}>
+          Mock Grid with {queryData?.data?.ledger?.length || 0} items
+          {queryData?.data?.ledger?.map((item, index) => (
+            <div key={getRowId ? getRowId({ data: item }) : index} data-test={`grid-row-${index}`}>
+              {item.compliancePeriod}-{item.complianceUnits}-{item.transactionType}
+            </div>
+          ))}
+          <button 
+            data-test="pagination-change" 
+            onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}
+          >
+            Change Page
+          </button>
         </div>
-      ))}
-      <button 
-        data-test="pagination-change" 
-        onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}
-      >
-        Change Page
-      </button>
-    </div>
-  )
-}))
+      )
+    })
+  }
+})
 
 // Mock hooks
 vi.mock('@/hooks/useCreditLedger', () => ({
@@ -132,7 +182,7 @@ describe('CreditLedger Component Tests', () => {
       renderComponent({ organizationId: 123 })
       
       expect(screen.getByText('org:creditLedger')).toBeInTheDocument()
-      expect(screen.getByText('org:downloadExcel')).toBeInTheDocument()
+      expect(screen.getByText('org:downloading')).toBeInTheDocument()
       expect(screen.getByText('5,000')).toBeInTheDocument()
     })
 
@@ -222,7 +272,7 @@ describe('CreditLedger Component Tests', () => {
       
       renderComponent({ organizationId: 123 })
       
-      const downloadButton = screen.getByText('org:downloadExcel')
+      const downloadButton = screen.getByText('org:downloading')
       fireEvent.click(downloadButton)
       
       expect(mockDownload).toHaveBeenCalledWith({

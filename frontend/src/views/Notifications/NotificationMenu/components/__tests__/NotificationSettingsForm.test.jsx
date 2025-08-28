@@ -191,32 +191,40 @@ describe('NotificationSettingsForm Component', () => {
   })
 
   describe('Interaction Tests', () => {
-    it('can interact with checkboxes', () => {
+    it('can interact with checkboxes', async () => {
       setupDefaultMocks({ subscriptionsData: [] })
       
-      customRender(<NotificationSettingsForm categories={mockCategories} />)
+      await act(async () => {
+        customRender(<NotificationSettingsForm categories={mockCategories} />)
+      })
 
       const checkboxes = screen.getAllByRole('checkbox')
       
       // Should be able to click checkbox without error
-      expect(() => fireEvent.click(checkboxes[0])).not.toThrow()
+      await act(async () => {
+        fireEvent.click(checkboxes[0])
+      })
     })
 
-    it('can interact with email form when present', () => {
+    it('can interact with email form when present', async () => {
       setupDefaultMocks()
       
-      customRender(
-        <NotificationSettingsForm 
-          categories={mockCategories} 
-          showEmailField={true}
-          initialEmail="test@example.com"
-        />
-      )
+      await act(async () => {
+        customRender(
+          <NotificationSettingsForm 
+            categories={mockCategories} 
+            showEmailField={true}
+            initialEmail="test@example.com"
+          />
+        )
+      })
 
       const saveButton = screen.getByText('Save')
       
       // Should be able to click save button without error
-      expect(() => fireEvent.click(saveButton)).not.toThrow()
+      await act(async () => {
+        fireEvent.click(saveButton)
+      })
     })
   })
 

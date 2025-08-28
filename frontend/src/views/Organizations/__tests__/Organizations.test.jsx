@@ -48,7 +48,27 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock schema
+// Mock cell renderers FIRST - before schema
+vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+  OrgStatusRenderer: () => <span>Status Renderer</span>,
+  LinkRenderer: () => <div data-test="link-renderer">Link</div>,
+  YesNoTextRenderer: () => <span>Yes/No Renderer</span>
+}))
+
+// Mock other dependencies
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationStatuses: () => ({ data: [] })
+}))
+
+vi.mock('@/components/BCDataGrid/components', () => ({
+  BCSelectFloatingFilter: () => <div>Filter</div>
+}))
+
+vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
+  usersColumnDefs: () => []
+}))
+
+// Mock schema after dependencies
 vi.mock('./OrganizationView/_schema', () => ({
   organizationsColDefs: () => [
     { field: 'name', headerName: 'Name' },
@@ -90,46 +110,83 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
-    <div data-test="bc-box" {...props}>
+  default: ({ children }) => (
+    <div data-test="bc-box">
       {children}
     </div>
   )
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, ...props }) => (
-    <button data-test="bc-button" onClick={onClick} {...props}>
+  default: ({ children, onClick, startIcon, disabled }) => (
+    <button data-test="bc-button" onClick={onClick} disabled={disabled}>
+      {startIcon && <span data-test="start-icon">{startIcon}</span>}
       {children}
     </button>
   )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => (
-    <span data-test="bc-typography" {...props}>
+  default: ({ children }) => (
+    <span data-test="bc-typography">
       {children}
     </span>
   )
 }))
 
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ onSetResetGrid, ...props }) => {
+  default: ({ 
+    onSetResetGrid, 
+    gridRef, 
+    apiEndpoint, 
+    apiData, 
+    columnDefs, 
+    gridKey, 
+    getRowId, 
+    defaultSortModel, 
+    gridOptions, 
+    enableCopyButton, 
+    defaultColDef 
+  }) => {
     // Simulate calling onSetResetGrid callback when component mounts
     if (onSetResetGrid && typeof onSetResetGrid === 'function') {
       setTimeout(() => {
         onSetResetGrid(() => console.log('Grid reset'))
       }, 0)
     }
-    return <div data-test="data-grid-server" {...props}>Data Grid</div>
+    // Handle grid ref if provided
+    if (gridRef && typeof gridRef === 'object') {
+      gridRef.current = {
+        api: {
+          refreshServerSide: vi.fn(),
+          setFilterModel: vi.fn(),
+          getFilterModel: vi.fn(() => ({})),
+        }
+      }
+    }
+    return <div data-test="data-grid-server">Data Grid</div>
   }
 }))
 
 vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => (
-    <div data-test="mui-stack" {...props}>
+  Stack: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
+    <div data-test="mui-stack" style={{
+      display: 'flex',
+      flexDirection: direction || 'column',
+      gap: spacing,
+      flexWrap: flexWrap || 'nowrap'
+    }}>
       {children}
     </div>
+  ),
+  TextField: ({ value, onChange, label, disabled }) => (
+    <input 
+      data-test="mui-textfield"
+      value={value}
+      onChange={(e) => onChange && onChange(e)}
+      placeholder={label}
+      disabled={disabled}
+    />
   )
 }))
 
@@ -141,22 +198,25 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
   )
 }))
 
-vi.mock('@/components/DownloadButton', () => ({
-  DownloadButton: ({ onDownload, isDownloading, label, ...props }) => (
-    <button
-      data-test="download-button"
-      onClick={onDownload}
-      disabled={isDownloading}
-      {...props}
-    >
-      {isDownloading ? `${label}...` : label}
-    </button>
-  )
-}))
+vi.mock('@/components/DownloadButton', () => {
+  const { forwardRef } = require('react')
+  return {
+    DownloadButton: forwardRef(({ onDownload, isDownloading, label, downloadLabel, dataTest }, ref) => (
+      <button
+        ref={ref}
+        data-test={dataTest || "download-button"}
+        onClick={onDownload}
+        disabled={isDownloading}
+      >
+        {isDownloading ? downloadLabel : label}
+      </button>
+    ))
+  }
+})
 
 vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick, ...props }) => (
-    <button data-test="clear-filters-button" onClick={onClick} {...props}>
+  ClearFiltersButton: ({ onClick }) => (
+    <button data-test="clear-filters-button" onClick={onClick}>
       Clear Filters
     </button>
   )
@@ -170,9 +230,7 @@ vi.mock('@/components/Role', () => ({
   )
 }))
 
-vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
-  LinkRenderer: () => <div data-test="link-renderer">Link</div>
-}))
+// Duplicate mock removed - merged with the one above
 
 describe('Organizations Component', () => {
   beforeEach(() => {

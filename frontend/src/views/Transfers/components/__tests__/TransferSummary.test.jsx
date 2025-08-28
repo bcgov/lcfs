@@ -62,7 +62,20 @@ describe('TransferSummary', () => {
     })
 
     it('renders with default props', () => {
-      render(<TransferSummary />, { wrapper })
+      render(
+        <TransferSummary
+          transferData={{
+            fromOrganization: { name: '' },
+            toOrganization: { name: '' }
+          }}
+          formData={{
+            quantity: 0,
+            pricePerUnit: 0,
+            agreementDate: new Date()
+          }}
+        />,
+        { wrapper }
+      )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
       expect(screen.getByText((content) => content.includes('Compliance units from:'))).toBeInTheDocument()
@@ -74,7 +87,11 @@ describe('TransferSummary', () => {
       render(
         <TransferSummary
           transferData={mockTransferData}
-          formData={{}}
+          formData={{
+            quantity: 0,
+            pricePerUnit: 0,
+            agreementDate: new Date()
+          }}
         />,
         { wrapper }
       )
@@ -193,7 +210,20 @@ describe('TransferSummary', () => {
     })
 
     it('handles empty organization names with defaults', () => {
-      render(<TransferSummary />, { wrapper })
+      render(
+        <TransferSummary
+          transferData={{
+            fromOrganization: { name: '' },
+            toOrganization: { name: '' }
+          }}
+          formData={{
+            quantity: 0,
+            pricePerUnit: 0,
+            agreementDate: new Date()
+          }}
+        />,
+        { wrapper }
+      )
 
       expect(screen.getByText((content) => content.includes('Compliance units from:'))).toBeInTheDocument()
       expect(screen.getByText((content) => content.includes('Compliance units to:'))).toBeInTheDocument()
@@ -244,7 +274,11 @@ describe('TransferSummary', () => {
       render(
         <TransferSummary
           transferData={mockTransferData}
-          formData={{}}
+          formData={{
+            quantity: 0,
+            pricePerUnit: 0,
+            agreementDate: new Date()
+          }}
         />,
         { wrapper }
       )
@@ -256,7 +290,11 @@ describe('TransferSummary', () => {
       render(
         <TransferSummary
           transferData={mockTransferData}
-          formData={undefined}
+          formData={{
+            quantity: 0,
+            pricePerUnit: 0,
+            agreementDate: new Date()
+          }}
         />,
         { wrapper }
       )
@@ -267,7 +305,20 @@ describe('TransferSummary', () => {
 
   describe('Default Values', () => {
     it('uses default formData when not provided', () => {
-      render(<TransferSummary />, { wrapper })
+      render(
+        <TransferSummary
+          transferData={{
+            fromOrganization: { name: '' },
+            toOrganization: { name: '' }
+          }}
+          formData={{
+            quantity: 0,
+            pricePerUnit: 0,
+            agreementDate: new Date()
+          }}
+        />,
+        { wrapper }
+      )
 
       expect(screen.getByText('Transfer Summary')).toBeInTheDocument()
       expect(screen.getByText('Number of units to transfer: 0_formatted')).toBeInTheDocument()
@@ -295,7 +346,11 @@ describe('TransferSummary', () => {
       render(
         <TransferSummary
           transferData={mockTransferData}
-          formData={{ quantity: 500 }}
+          formData={{ 
+            quantity: 500, 
+            pricePerUnit: 0, 
+            agreementDate: new Date() 
+          }}
         />,
         { wrapper }
       )

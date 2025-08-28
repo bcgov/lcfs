@@ -30,8 +30,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 // Mock current user hook
-const govUser = {
-  roles: [{ name: roles.government }],
+const adminUser = {
+  roles: [{ name: roles.administrator }],
   organization: { organizationId: '456' }
 }
 
@@ -42,13 +42,13 @@ const makeUserHook = (user) => ({
 })
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn(() => makeUserHook(govUser))
+  useCurrentUser: vi.fn(() => makeUserHook(adminUser))
 }))
 
 // Simple mocks for components
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   __esModule: true,
-  default: (props) => <div data-testid="grid">BCDataGridServer</div>
+  default: (props) => <div data-test="grid" data-testid="grid">BCDataGridServer</div>
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
@@ -116,7 +116,7 @@ describe('OrganizationUsers', () => {
         <OrganizationUsers />
       </Wrapper>
     )
-    expect(screen.getByText('org:usersLabel')).toBeInTheDocument()
+    expect(screen.getByText('Users')).toBeInTheDocument()
   })
 
   it('renders grid', () => {
@@ -143,7 +143,7 @@ describe('OrganizationUsers', () => {
         <OrganizationUsers />
       </Wrapper>
     )
-    expect(screen.getByText('org:newUsrBtn')).toBeInTheDocument()
+    expect(screen.getByText('New user')).toBeInTheDocument()
   })
 
   it('handles clear filters button click', () => {
@@ -163,7 +163,7 @@ describe('OrganizationUsers', () => {
         <OrganizationUsers />
       </Wrapper>
     )
-    const newUserButton = screen.getByText('org:newUsrBtn')
+    const newUserButton = screen.getByText('New user')
     fireEvent.click(newUserButton)
     expect(mockNavigate).toHaveBeenCalled()
   })

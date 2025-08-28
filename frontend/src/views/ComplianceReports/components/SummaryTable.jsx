@@ -147,7 +147,7 @@ const SummaryTable = ({
         <TableBody>
           {data?.map((row, rowIndex) => (
             <TableRow
-              key={row.line}
+              key={`${row.line ?? 'row'}-${rowIndex}`}
               sx={{
                 '&:last-child td, &:last-child th': { borderBottom: 0 },
                 backgroundColor: '#fcfcfc'

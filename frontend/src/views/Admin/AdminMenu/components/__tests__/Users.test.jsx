@@ -382,7 +382,9 @@ describe('Users Component', () => {
       })
       
       // Call the actual handleGridKey function to ensure coverage
-      capturedCallbacks.handleGridKey()
+      act(() => {
+        capturedCallbacks.handleGridKey()
+      })
       
       // Verify it executed (we can't directly check side effects, but calling it ensures coverage)
       expect(capturedCallbacks.handleGridKey).toBeInstanceOf(Function)

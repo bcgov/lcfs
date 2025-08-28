@@ -72,7 +72,11 @@ vi.mock('../NotificationMenu', async () => {
   }
 
   NotificationMenu.propTypes = {
-    tabIndex: { isRequired: true }
+    tabIndex: function(props, propName, componentName) {
+      if (props[propName] !== undefined && typeof props[propName] !== 'number') {
+        return new Error(`Invalid prop ${propName} supplied to ${componentName}. Expected number.`)
+      }
+    }
   }
 
   return { NotificationMenu, a11yProps }

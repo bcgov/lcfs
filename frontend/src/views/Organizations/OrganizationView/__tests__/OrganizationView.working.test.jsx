@@ -1,5 +1,5 @@
 import React from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OrganizationView } from '../OrganizationView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,7 +37,7 @@ vi.mock('@mui/material', async (importOriginal) => {
   return {
     ...actual,
     AppBar: ({ children, ...props }) => <div {...props}>{children}</div>,
-    Tabs: ({ children, onChange, value, ...props }) => {
+    Tabs: ({ children, onChange, value, scrollButtons, ...props }) => {
       // Create enhanced children with click handlers
       const enhancedChildren = React.Children.map(children, (child, index) => {
         if (React.isValidElement(child)) {
@@ -250,7 +250,7 @@ describe('OrganizationView Coverage Tests', () => {
   })
 
   // Test 12: Window resize handler branches (covers line 70)
-  it('handles window resize with different widths', () => {
+  it('handles window resize with different widths', async () => {
     let resizeHandler
     
     // Capture the resize handler
@@ -263,12 +263,20 @@ describe('OrganizationView Coverage Tests', () => {
     renderComponent()
     
     // Test mobile width (< 500)
-    Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true })
-    resizeHandler()
+    await act(async () => {
+      Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true })
+      resizeHandler()
+      // Allow time for state updates
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
     
     // Test desktop width (>= 500)
-    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
-    resizeHandler()
+    await act(async () => {
+      Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
+      resizeHandler()
+      // Allow time for state updates
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
     
     // Component should still render after both resize events
     expect(screen.getByRole('tablist')).toBeInTheDocument()

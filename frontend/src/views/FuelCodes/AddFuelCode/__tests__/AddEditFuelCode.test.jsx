@@ -137,7 +137,7 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, ...props }) => <button onClick={onClick} {...props}>{children}</button>
+  default: ({ children, onClick, startIcon, loading, variant, color, size, sx, ...domProps }) => <button onClick={onClick} {...domProps}>{children}</button>
 }))
 
 vi.mock('@/components/BCModal', () => ({

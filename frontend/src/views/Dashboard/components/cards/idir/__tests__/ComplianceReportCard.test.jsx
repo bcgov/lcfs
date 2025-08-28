@@ -25,8 +25,8 @@ vi.mock('react-i18next', () => ({
 // Mock components
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   __esModule: true,
-  default: ({ title, content, ...props }) => (
-    <div data-testid="bc-widget-card" {...props}>
+  default: ({ title, content, disableHover, ...domProps }) => (
+    <div data-testid="bc-widget-card" {...domProps}>
       <div data-testid="widget-title">{title}</div>
       <div data-testid="widget-content">{content}</div>
     </div>

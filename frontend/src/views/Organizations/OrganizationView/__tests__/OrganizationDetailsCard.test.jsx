@@ -44,7 +44,10 @@ vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
   useOrganizationBalance: () => ({
     data: { totalBalance: 200, reservedBalance: 25 }
-  })
+  }),
+  useOrganizationLinkKeys: () => ({ data: [] }),
+  useGenerateLinkKey: () => ({ mutate: vi.fn(), isLoading: false }),
+  useRegenerateLinkKey: () => ({ mutate: vi.fn(), isLoading: false })
 }))
 
 const govUser = {

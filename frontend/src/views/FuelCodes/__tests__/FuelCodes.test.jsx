@@ -100,6 +100,11 @@ vi.mock('@/hooks/useFuelCode', () => ({
   }))
 }))
 
+// Mock BCBox to prevent jsx prop warnings
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children, jsx, ...props }) => <div {...props}>{children}</div>
+}))
+
 // Import the component internals for direct testing
 import { FuelCodes as FuelCodesComponent } from '@/views/FuelCodes/FuelCodes.jsx'
 

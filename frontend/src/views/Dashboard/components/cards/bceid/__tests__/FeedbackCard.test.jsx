@@ -9,8 +9,21 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@mui/material', () => ({
-  Box: vi.fn(({ children, ...props }) => (
-    <div data-test="box" {...props}>{children}</div>
+  Box: vi.fn(({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, p, bgcolor, display, ...domProps }) => (
+    <div 
+      data-test="box" 
+      data-paddingtop={paddingTop}
+      data-paddingbottom={paddingBottom}
+      data-flexdirection={flexDirection}
+      data-alignitems={alignItems}
+      data-justifycontent={justifyContent}
+      data-p={p}
+      data-bgcolor={bgcolor}
+      data-display={display}
+      {...domProps}
+    >
+      {children}
+    </div>
   )),
   Icon: vi.fn(({ children, sx, ...props }) => (
     <div data-test="icon" data-sx={JSON.stringify(sx)} {...props}>{children}</div>
@@ -76,14 +89,14 @@ describe('FeedbackCard', () => {
     render(<FeedbackCard />)
     const boxElement = screen.getByTestId('box')
     expect(boxElement).toBeInTheDocument()
-    expect(boxElement).toHaveAttribute('p', '2')
-    expect(boxElement).toHaveAttribute('paddingTop', '4')
-    expect(boxElement).toHaveAttribute('paddingBottom', '4')
-    expect(boxElement).toHaveAttribute('bgcolor', 'background.grey')
-    expect(boxElement).toHaveAttribute('display', 'flex')
-    expect(boxElement).toHaveAttribute('flexDirection', 'column')
-    expect(boxElement).toHaveAttribute('alignItems', 'center')
-    expect(boxElement).toHaveAttribute('justifyContent', 'center')
+    expect(boxElement).toHaveAttribute('data-p', '2')
+    expect(boxElement).toHaveAttribute('data-paddingtop', '4')
+    expect(boxElement).toHaveAttribute('data-paddingbottom', '4')
+    expect(boxElement).toHaveAttribute('data-bgcolor', 'background.grey')
+    expect(boxElement).toHaveAttribute('data-display', 'flex')
+    expect(boxElement).toHaveAttribute('data-flexdirection', 'column')
+    expect(boxElement).toHaveAttribute('data-alignitems', 'center')
+    expect(boxElement).toHaveAttribute('data-justifycontent', 'center')
   })
 
   it('renders Icon component with correct styling', () => {

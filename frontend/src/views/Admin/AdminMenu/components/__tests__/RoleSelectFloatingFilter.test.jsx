@@ -3,13 +3,15 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { RoleSelectFloatingFilter } from '../RoleSelectFloatingFilter'
 
 vi.mock('@/components/BCDataGrid/components', () => ({
-  BCSelectFloatingFilter: vi.fn(({ optionsQuery, ...props }) => {
+  BCSelectFloatingFilter: vi.fn(({ optionsQuery, valueKey, labelKey, model, onModelChange, disabled, params, initialFilterType, multiple, initialSelectedValues, customProp, onSelectionChange, clearable, ...domProps }) => {
     const result = optionsQuery?.()
     return (
       <div 
         data-test="bc-select-floating-filter" 
-        {...props} 
-        data-options-result={JSON.stringify(result)} 
+        {...domProps} 
+        data-options-result={JSON.stringify(result)}
+        data-value-key={valueKey}
+        data-label-key={labelKey}
       />
     )
   })

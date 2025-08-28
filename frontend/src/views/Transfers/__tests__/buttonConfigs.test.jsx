@@ -1096,7 +1096,7 @@ describe('buttonClusterConfigFn', () => {
         hasRoles: vi.fn(() => true),
         hasAnyRole: vi.fn(() => true),
         currentUser: { 
-          organization: { organizationId: 1 },
+          organization: { organizationId: 1, name: 'From Org' },
           isGovernmentUser: false
         },
         methods: { getValues: vi.fn((key) => key === 'fromOrganizationId' ? 1 : 2) },
@@ -1106,7 +1106,8 @@ describe('buttonClusterConfigFn', () => {
         transferData: {
           agreementDate: '2024-01-01',
           currentStatus: { status: 'SUBMITTED' },
-          toOrganization: { organizationId: 2 }
+          toOrganization: { organizationId: 2, name: 'To Org' },
+          fromOrganization: { organizationId: 1, name: 'From Org' }
         },
         isGovernmentUser: false,
         recommendation: true,
@@ -1152,7 +1153,11 @@ describe('buttonClusterConfigFn', () => {
 
     it('should call signAndSend handler correctly', () => {
       const result = buttonClusterConfigFn(mockParams)
-      const formData = { agreementDate: new Date('2024-01-01') }
+      const formData = { 
+        agreementDate: new Date('2024-01-01'),
+        quantity: 100,
+        pricePerUnit: 25.00
+      }
       
       result.New[1].handler(formData)
       
@@ -1346,7 +1351,9 @@ describe('buttonClusterConfigFn', () => {
       const formData = {
         fromOrganizationId: '1',
         toOrganizationId: '2',
-        agreementDate: new Date('2024-01-01')
+        agreementDate: new Date('2024-01-01'),
+        quantity: 100,
+        pricePerUnit: 25.00
       }
       
       result.New[1].handler(formData)
@@ -1360,6 +1367,8 @@ describe('buttonClusterConfigFn', () => {
           fromOrganizationId: 1,
           toOrganizationId: 2,
           agreementDate: '2024-01-01',
+          quantity: 100,
+          pricePerUnit: 25,
           currentStatus: TRANSFER_STATUSES.SENT
         }
       })

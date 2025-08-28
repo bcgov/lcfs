@@ -549,78 +549,178 @@ describe('CreditCalculator', () => {
   
   describe('User Interactions', () => {
     it('handles fuel type selection click', async () => {
+      // Mock with fuel category selected to show fuel types
+      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
+        data: mockFuelTypeData, 
+        isLoading: false 
+      })
+      
       render(
-        <TestWrapper>
+        <TestWrapper formProps={{
+          defaultValues: {
+            complianceYear: '2023',
+            fuelRequirement: 'All fuel requirements',
+            fuelCategory: 'Gasoline', // Set fuel category to show fuel types
+            fuelType: '',
+            fuelCode: '',
+            provisionOfTheAct: '',
+            quantity: 0,
+            endUseType: ''
+          }
+        }}>
           <CreditCalculator />
         </TestWrapper>
       )
       
+      // Wait for fuel types to be rendered
       await waitFor(() => {
-        const gasolineOption = screen.getByTestId('Gasoline')
-        fireEvent.click(gasolineOption)
-        
-        expect(gasolineOption.closest('a')).toHaveClass('selected')
+        expect(screen.getByTestId('Gasoline')).toBeInTheDocument()
       })
+      
+      const gasolineOption = screen.getByTestId('Gasoline')
+      fireEvent.click(gasolineOption)
+      
+      expect(gasolineOption).toHaveClass('selected')
     })
     
     it('handles fuel type selection keyboard events (Enter)', async () => {
+      // Mock with fuel category selected to show fuel types
+      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
+        data: mockFuelTypeData, 
+        isLoading: false 
+      })
+      
       render(
-        <TestWrapper>
+        <TestWrapper formProps={{
+          defaultValues: {
+            complianceYear: '2023',
+            fuelRequirement: 'All fuel requirements',
+            fuelCategory: 'Gasoline', // Set fuel category to show fuel types
+            fuelType: '',
+            fuelCode: '',
+            provisionOfTheAct: '',
+            quantity: 0,
+            endUseType: ''
+          }
+        }}>
           <CreditCalculator />
         </TestWrapper>
       )
       
+      // Wait for fuel types to be rendered
       await waitFor(() => {
-        const gasolineOption = screen.getByTestId('Gasoline')
-        fireEvent.keyDown(gasolineOption, { key: 'Enter' })
-        
-        expect(gasolineOption.closest('a')).toHaveClass('selected')
+        expect(screen.getByTestId('Gasoline')).toBeInTheDocument()
       })
+      
+      const gasolineOption = screen.getByTestId('Gasoline')
+      fireEvent.keyDown(gasolineOption, { key: 'Enter' })
+      
+      expect(gasolineOption).toHaveClass('selected')
     })
     
     it('handles fuel type selection keyboard events (Space)', async () => {
+      // Mock with fuel category selected to show fuel types
+      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
+        data: mockFuelTypeData, 
+        isLoading: false 
+      })
+      
       render(
-        <TestWrapper>
+        <TestWrapper formProps={{
+          defaultValues: {
+            complianceYear: '2023',
+            fuelRequirement: 'All fuel requirements',
+            fuelCategory: 'Gasoline', // Set fuel category to show fuel types
+            fuelType: '',
+            fuelCode: '',
+            provisionOfTheAct: '',
+            quantity: 0,
+            endUseType: ''
+          }
+        }}>
           <CreditCalculator />
         </TestWrapper>
       )
       
+      // Wait for fuel types to be rendered
       await waitFor(() => {
-        const gasolineOption = screen.getByTestId('Gasoline')
-        fireEvent.keyDown(gasolineOption, { key: ' ' })
-        
-        expect(gasolineOption.closest('a')).toHaveClass('selected')
+        expect(screen.getByTestId('Gasoline')).toBeInTheDocument()
       })
+      
+      const gasolineOption = screen.getByTestId('Gasoline')
+      fireEvent.keyDown(gasolineOption, { key: ' ' })
+      
+      expect(gasolineOption).toHaveClass('selected')
     })
     
     it('handles end use selection click', async () => {
+      // Mock the fuel options to show end uses
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({ 
+        data: mockFuelOptions, 
+        isLoading: false 
+      })
+      
       render(
-        <TestWrapper>
+        <TestWrapper formProps={{
+          defaultValues: {
+            complianceYear: '2023',
+            fuelRequirement: 'All fuel requirements',
+            fuelCategory: 'Gasoline',
+            fuelType: 'Gasoline', // Set fuel type to show end uses
+            fuelCode: '',
+            provisionOfTheAct: '',
+            quantity: 0,
+            endUseType: ''
+          }
+        }}>
           <CreditCalculator />
         </TestWrapper>
       )
       
+      // Wait for end uses to be rendered
       await waitFor(() => {
-        const transportationOption = screen.getByTestId('Transportation')
-        fireEvent.click(transportationOption)
-        
-        expect(transportationOption.closest('a')).toHaveClass('selected')
+        expect(screen.getByTestId('Transportation')).toBeInTheDocument()
       })
+      
+      const transportationOption = screen.getByTestId('Transportation')
+      fireEvent.click(transportationOption)
+      
+      expect(transportationOption).toHaveClass('selected')
     })
     
     it('handles end use selection keyboard events', async () => {
+      // Mock the fuel options to show end uses
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({ 
+        data: mockFuelOptions, 
+        isLoading: false 
+      })
+      
       render(
-        <TestWrapper>
+        <TestWrapper formProps={{
+          defaultValues: {
+            complianceYear: '2023',
+            fuelRequirement: 'All fuel requirements',
+            fuelCategory: 'Gasoline',
+            fuelType: 'Gasoline', // Set fuel type to show end uses
+            fuelCode: '',
+            provisionOfTheAct: '',
+            quantity: 0,
+            endUseType: ''
+          }
+        }}>
           <CreditCalculator />
         </TestWrapper>
       )
       
+      // Wait for end uses to be rendered
       await waitFor(() => {
-        const transportationOption = screen.getByTestId('Transportation')
-        fireEvent.keyDown(transportationOption, { key: 'Enter' })
-        
-        expect(transportationOption.closest('a')).toHaveClass('selected')
+        expect(screen.getByTestId('Transportation')).toBeInTheDocument()
       })
+      
+      const transportationOption = screen.getByTestId('Transportation')
+      fireEvent.keyDown(transportationOption, { key: 'Enter' })
+      
+      expect(transportationOption).toHaveClass('selected')
     })
   })
   

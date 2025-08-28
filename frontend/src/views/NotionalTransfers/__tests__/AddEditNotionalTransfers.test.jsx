@@ -556,9 +556,11 @@ describe('AddEditNotionalTransfers', () => {
       render(<AddEditNotionalTransfers />, { wrapper })
       
       // Simulate the onGridReady callback
-      if (mockOnGridReady) {
-        mockOnGridReady(mockParams)
-      }
+      await act(async () => {
+        if (mockOnGridReady) {
+          mockOnGridReady(mockParams)
+        }
+      })
 
       expect(mockParams.api.sizeColumnsToFit).toHaveBeenCalled()
     })
@@ -583,16 +585,20 @@ describe('AddEditNotionalTransfers', () => {
       consoleSpy.mockRestore()
     })
 
-    it('sets timeout for cell editing', () => {
+    it('sets timeout for cell editing', async () => {
       vi.useFakeTimers()
       
       render(<AddEditNotionalTransfers />, { wrapper })
       
-      if (mockOnGridReady) {
-        mockOnGridReady(mockParams)
-      }
+      await act(async () => {
+        if (mockOnGridReady) {
+          mockOnGridReady(mockParams)
+        }
+      })
 
-      vi.advanceTimersByTime(100)
+      await act(async () => {
+        vi.advanceTimersByTime(100)
+      })
       
       expect(mockParams.api.getLastDisplayedRowIndex).toHaveBeenCalled()
       expect(mockParams.api.startEditingCell).toHaveBeenCalledWith({

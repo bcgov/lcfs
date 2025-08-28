@@ -365,16 +365,22 @@ describe('GeoMapping', () => {
   })
 
   describe('Error Handling', () => {
-    it('shows error state when there is an internal error', () => {
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
+    it('shows error state when there is an internal error', async () => {
+      await act(async () => {
+        renderWithHook({
+          isLoading: false,
+          isError: false,
+          data: mockSupplyEquipmentData,
+          refetch: vi.fn()
+        })
       })
       
-      // Component creates error internally, which would trigger error state
-      // This is tested by the empty data scenario above
+      // Wait for all async state updates to complete
+      await waitFor(() => {
+        // Component creates error internally, which would trigger error state
+        // This is tested by the empty data scenario above
+        expect(screen.getByTestId('map-container')).toBeInTheDocument()
+      })
     })
 
     it('shows no data state when supply equipment data is missing', () => {

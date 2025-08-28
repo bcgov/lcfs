@@ -45,7 +45,19 @@ vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
   useOrganizationBalance: () => ({
     data: { totalBalance: 200, reservedBalance: 25 }
-  })
+  }),
+  useAvailableFormTypes: () => ({ data: [] }),
+  useOrganizationLinkKeys: () => ({ data: [] }),
+  useGenerateLinkKey: () => ({ mutate: vi.fn(), isLoading: false }),
+  useRegenerateLinkKey: () => ({ mutate: vi.fn(), isLoading: false })
+}))
+
+// Mock Role component to always render children for government role
+vi.mock('@/components/Role', () => ({
+  Role: ({ children, roles }) => {
+    // Always show children for this test (we're mocking appropriate user roles)
+    return <div data-test="role-component">{children}</div>
+  }
 }))
 
 const govUser = {
@@ -220,7 +232,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/Credit trading enabled/)).toBeInTheDocument()
+    expect(screen.getByText(/creditTradingEnabledLabel/)).toBeInTheDocument()
   })
 
   it('shows credit trading disabled for registered organization', () => {
@@ -259,7 +271,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.queryByText(/Credit trading enabled/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/creditTradingEnabledLabel/)).not.toBeInTheDocument()
   })
 
   // Early Issuance Tests
@@ -298,7 +310,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
       </Wrapper>
     )
     expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
-    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.getAllByText('Yes')).toHaveLength(2) // Credit trading + Early issuance
   })
 
   it('shows early issuance for non-government user only when true', () => {
@@ -317,7 +329,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
       </Wrapper>
     )
     expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
-    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.getAllByText('Yes')).toHaveLength(2) // Credit trading + Early issuance
   })
 
   it('does not show early issuance for non-government user when false', () => {
@@ -408,7 +420,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/Compliance unit balance/)).toBeInTheDocument()
+    expect(screen.getByText(/Compliance Unit Balance/)).toBeInTheDocument()
     expect(screen.getByText('200 (25)')).toBeInTheDocument()
   })
 

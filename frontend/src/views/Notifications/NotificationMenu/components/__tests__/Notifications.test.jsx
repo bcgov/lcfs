@@ -44,7 +44,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, startIcon, endIcon, color, size, variant, ...props }) => (
     <button
       data-test={props['data-test']}
       data-testid={props['data-test']}
