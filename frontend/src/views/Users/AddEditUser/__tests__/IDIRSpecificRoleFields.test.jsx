@@ -10,9 +10,9 @@ vi.mock('@mui/material', () => ({
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
   default: ({ children, variant, component }) => (
-    <span data-test="bc-typography" data-variant={variant} data-component={component}>
+    <div data-test="bc-typography" data-variant={variant} data-component={component}>
       {children}
-    </span>
+    </div>
   )
 }))
 
@@ -100,7 +100,7 @@ describe('IDIRSpecificRoleFields', () => {
     const typography = screen.getByTestId('bc-typography')
     expect(typography).toBeInTheDocument()
     expect(typography).toHaveAttribute('data-variant', 'label')
-    expect(typography).toHaveAttribute('data-component', 'span')
+    expect(typography).toHaveAttribute('data-component', 'div')
     expect(mockT).toHaveBeenCalledWith('admin:Roles')
     expect(typography).toHaveTextContent('translated-admin:Roles')
   })

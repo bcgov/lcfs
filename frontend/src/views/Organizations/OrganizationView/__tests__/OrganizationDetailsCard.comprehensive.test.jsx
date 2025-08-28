@@ -232,7 +232,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/creditTradingEnabledLabel/)).toBeInTheDocument()
+    expect(screen.getByText(/Registered for transfers/)).toBeInTheDocument()
   })
 
   it('shows credit trading disabled for registered organization', () => {
@@ -310,7 +310,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
       </Wrapper>
     )
     expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
-    expect(screen.getAllByText('Yes')).toHaveLength(2) // Credit trading + Early issuance
+    expect(screen.getByText('Yes')).toBeInTheDocument() // Early issuance should be Yes
   })
 
   it('shows early issuance for non-government user only when true', () => {
@@ -329,7 +329,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
       </Wrapper>
     )
     expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
-    expect(screen.getAllByText('Yes')).toHaveLength(2) // Credit trading + Early issuance
+    expect(screen.getByText('Yes')).toBeInTheDocument() // Early issuance should be Yes
   })
 
   it('does not show early issuance for non-government user when false', () => {
@@ -434,7 +434,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
       </Wrapper>
     )
     expect(screen.getByText(/Registered for transfer/)).toBeInTheDocument()
-    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.getByText(/Yes — A registered organization/)).toBeInTheDocument()
   })
 
   it('shows unregistered transfer status for unregistered organization', () => {

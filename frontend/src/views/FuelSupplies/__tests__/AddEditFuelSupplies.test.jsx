@@ -149,7 +149,12 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
                   data: { fuelType: 'TestFuel' },
                   setDataValue: vi.fn()
                 },
-                data: { fuelType: 'TestFuel' }
+                data: { fuelType: 'TestFuel' },
+                api: {
+                  autoSizeAllColumns: vi.fn(),
+                  refreshCells: vi.fn(),
+                  sizeColumnsToFit: vi.fn()
+                }
               })
             }
           }}

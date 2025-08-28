@@ -90,7 +90,8 @@ const mockGridApi = {
   sizeColumnsToFit: vi.fn(),
   getLastDisplayedRowIndex: vi.fn(() => 0),
   startEditingCell: vi.fn(),
-  refreshCells: vi.fn()
+  refreshCells: vi.fn(),
+  autoSizeAllColumns: vi.fn()
 }
 
 const mockNode = {

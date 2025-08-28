@@ -44,12 +44,15 @@ vi.mock('../components/utils', () => ({
   batchProcessGeofencing: vi.fn(() => Promise.resolve({}))
 }))
 
+// Mock the location service to use our controllable mock
+let mockLocationService = {
+  batchProcessGeofencing: vi.fn(() => Promise.resolve({})),
+  isLoading: false,
+  error: null
+}
+
 vi.mock('@/services/locationService', () => ({
-  useLocationService: () => ({
-    batchProcessGeofencing: () => Promise.resolve({}),
-    isLoading: false,
-    error: null
-  })
+  useLocationService: () => mockLocationService
 }))
 
 // We will provide custom responses for the hook inside each test via a helper
@@ -115,7 +118,6 @@ describe('GeoMapping', () => {
   const mockTransformApiData = vi.mocked(utils.transformApiData)
   const mockGroupLocationsByCoordinates = vi.mocked(utils.groupLocationsByCoordinates)
   const mockFindOverlappingPeriods = vi.mocked(utils.findOverlappingPeriods)
-  const mockBatchProcessGeofencing = vi.mocked(utils.batchProcessGeofencing)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -123,7 +125,9 @@ describe('GeoMapping', () => {
     mockTransformApiData.mockImplementation((data) => data?.finalSupplyEquipments || [])
     mockGroupLocationsByCoordinates.mockImplementation((data) => ({ '0,0': data }))
     mockFindOverlappingPeriods.mockImplementation(() => [])
-    mockBatchProcessGeofencing.mockImplementation(() => Promise.resolve({}))
+    
+    // Reset location service mock
+    mockLocationService.batchProcessGeofencing = vi.fn(() => Promise.resolve({}))
   })
 
   it('shows loading state', () => {
@@ -206,7 +210,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
 
       renderWithHook({
         isLoading: false,
@@ -216,7 +220,7 @@ describe('GeoMapping', () => {
       })
 
       await waitFor(() => {
-        expect(mockBatchProcessGeofencing).toHaveBeenCalled()
+        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
       })
     })
 
@@ -225,7 +229,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockRejectedValue(new Error('Geofencing failed'))
+      mockLocationService.batchProcessGeofencing.mockRejectedValue(new Error('Geofencing failed'))
 
       renderWithHook({
         isLoading: false,
@@ -235,7 +239,7 @@ describe('GeoMapping', () => {
       })
 
       await waitFor(() => {
-        expect(mockBatchProcessGeofencing).toHaveBeenCalled()
+        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
       })
       // Error status would be set internally
     })
@@ -245,7 +249,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
       mockFindOverlappingPeriods.mockReturnValue(['overlap1'])
 
       renderWithHook({
@@ -256,7 +260,7 @@ describe('GeoMapping', () => {
       })
 
       await waitFor(() => {
-        expect(mockBatchProcessGeofencing).toHaveBeenCalled()
+        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
       })
 
       await waitFor(() => {
@@ -293,7 +297,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
       mockFindOverlappingPeriods.mockReturnValue([])
 
       renderWithHook({
@@ -305,7 +309,7 @@ describe('GeoMapping', () => {
 
       // Verify the component processes the data correctly for popup content
       await waitFor(() => {
-        expect(mockBatchProcessGeofencing).toHaveBeenCalled()
+        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
       })
 
       // The map markers component should be rendered, indicating generatePopupContent is working
@@ -318,7 +322,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
 
       renderWithHook({
         isLoading: false,
@@ -328,7 +332,7 @@ describe('GeoMapping', () => {
       })
 
       await waitFor(() => {
-        expect(mockBatchProcessGeofencing).toHaveBeenCalled()
+        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
       })
     })
 
@@ -337,7 +341,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockResolvedValue({ '1': false }) // Outside BC
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': false }) // Outside BC
 
       renderWithHook({
         isLoading: false,
@@ -347,7 +351,7 @@ describe('GeoMapping', () => {
       })
 
       await waitFor(() => {
-        expect(mockBatchProcessGeofencing).toHaveBeenCalled()
+        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
       })
     })
 
@@ -356,7 +360,7 @@ describe('GeoMapping', () => {
       mockGroupLocationsByCoordinates.mockReturnValue({ 
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockBatchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
       mockFindOverlappingPeriods.mockReturnValue(['overlap1', 'overlap2']) // Has overlaps
 
       renderWithHook({

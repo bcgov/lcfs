@@ -115,7 +115,9 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => {
       const mockApi = {
         sizeColumnsToFit: vi.fn(),
         getLastDisplayedRowIndex: () => 0,
-        startEditingCell: vi.fn()
+        startEditingCell: vi.fn(),
+        autoSizeAllColumns: vi.fn(),
+        refreshCells: vi.fn()
       }
 
       // Set up both possible refs
@@ -159,6 +161,11 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => {
                 data: { id: '1', test: 'data' },
                 updateData: vi.fn(),
                 rowIndex: 0
+              },
+              api: {
+                autoSizeAllColumns: vi.fn(),
+                refreshCells: vi.fn(),
+                sizeColumnsToFit: vi.fn()
               }
             })}
           >

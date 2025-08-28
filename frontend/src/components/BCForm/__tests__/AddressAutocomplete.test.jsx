@@ -7,6 +7,9 @@ import userEvent from '@testing-library/user-event'
 import { AddressAutocomplete } from '../AddressAutocomplete'
 import { AppWrapper } from '@/tests/utils'
 
+// Override the global mock for this test file
+vi.unmock('@/components/BCForm/AddressAutocomplete')
+
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   default: ({ variant, component, color, children, ...props }) => (

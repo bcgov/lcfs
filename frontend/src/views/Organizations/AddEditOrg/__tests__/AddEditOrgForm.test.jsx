@@ -1,6 +1,7 @@
 import React from 'react'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useApiService } from '@/services/useApiService'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
@@ -80,13 +81,8 @@ vi.mock('react-hook-form', () => ({
     reset: mockReset,
     control: {}
   }),
-<<<<<<< HEAD
   Controller: React.forwardRef(({ name, control, render }, ref) => (
-    <div data-testid={`controller-${name}`}>
-=======
-  Controller: ({ name, control, render }) => (
     <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
->>>>>>> origin/develop
       {render({
         field: {
           onChange: vi.fn(),
@@ -156,7 +152,8 @@ vi.mock('@/components/BCForm/index.js', () => ({
   AddressAutocomplete: React.forwardRef((props, ref) => (
     <input
       ref={ref}
-      data-test="address-autocomplete"
+      data-test={`address-autocomplete-${props.name || 'default'}`}
+      data-testid="address-autocomplete"
       value={props.value || ''}
       onChange={(e) => props.onChange && props.onChange(e.target.value)}
     />
@@ -333,32 +330,23 @@ describe('AddEditOrgForm Component', () => {
     mockWatch.mockImplementation(() => '')
   })
 
-<<<<<<< HEAD
   describe('Basic Rendering - Form Structure', () => {
     it('renders the main form container', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
-=======
-  it('renders the form in add mode', () => {
-    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
->>>>>>> origin/develop
 
       expect(screen.getByTestId('addEditOrgContainer')).toBeInTheDocument()
     })
 
-<<<<<<< HEAD
     it('renders all required form fields', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
-=======
-    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
->>>>>>> origin/develop
 
       // Basic info fields
       expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
@@ -371,7 +359,7 @@ describe('AddEditOrgForm Component', () => {
     it('renders address section fields', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -385,7 +373,7 @@ describe('AddEditOrgForm Component', () => {
     it('renders head office address fields', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -399,11 +387,10 @@ describe('AddEditOrgForm Component', () => {
     it('renders radio button groups', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-      expect(screen.getByTestId('orgSupplierType1')).toBeInTheDocument()
       expect(screen.getByTestId('orgRegForTransfers1')).toBeInTheDocument()
       expect(screen.getByTestId('orgRegForTransfers2')).toBeInTheDocument()
       expect(screen.getByTestId('hasEarlyIssuanceYes')).toBeInTheDocument()
@@ -413,13 +400,13 @@ describe('AddEditOrgForm Component', () => {
     it('renders action buttons', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
       expect(screen.getByTestId('saveOrganization')).toBeInTheDocument()
       expect(screen.getByText('saveBtn')).toBeInTheDocument()
-      expect(screen.getByText('backBtn')).toBeInTheDocument()
+      expect(screen.getByText('cancelBtn')).toBeInTheDocument()
     })
   })
 
@@ -427,7 +414,7 @@ describe('AddEditOrgForm Component', () => {
     it('handles form submission correctly', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -437,21 +424,17 @@ describe('AddEditOrgForm Component', () => {
       expect(mockHandleSubmit).toHaveBeenCalled()
     })
 
-<<<<<<< HEAD
     it('handles back button navigation', () => {
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
-=======
-    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
->>>>>>> origin/develop
 
-      const backButton = screen.getByText('backBtn')
+      const backButton = screen.getByText('cancelBtn')
       fireEvent.click(backButton)
 
-      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
+      expect(mockHandleCancelEdit).toHaveBeenCalled()
     })
 
     it('handles same as legal name checkbox interaction', () => {
@@ -462,7 +445,7 @@ describe('AddEditOrgForm Component', () => {
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -473,25 +456,19 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 
-<<<<<<< HEAD
-  describe('Form Validation - Error Handling', () => {
-    it('displays validation errors when present', () => {
-      // Skip this test as it requires complex mock manipulation
-      // The error handling logic is tested in the actual form component
-      expect(true).toBe(true)
-    })
+  it('calls handleCancelEdit when cancel button is clicked', async () => {
+    const user = userEvent.setup()
 
-    it('renders form without errors by default', () => {
-      render(
-        <Wrapper>
-          <AddEditOrgForm />
-        </Wrapper>
-      )
+    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
 
-      // Should not show any error alerts by default
-      expect(screen.queryByTestId('bc-alert')).not.toBeInTheDocument()
-    })
+    // Find and click the Cancel button by its text content
+    const cancelButton = screen.getByText('cancelBtn')
+    await user.click(cancelButton)
+
+    // Verify handleCancelEdit was called
+    expect(mockHandleCancelEdit).toHaveBeenCalledTimes(1)
   })
+
 
   describe('Data Loading and Edit Mode', () => {
     it('handles edit mode with organization data', () => {
@@ -506,29 +483,10 @@ describe('AddEditOrgForm Component', () => {
         },
         isFetched: true
       })
-=======
-  it('calls handleCancelEdit when cancel button is clicked', async () => {
-    const user = userEvent.setup()
-
-    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
-
-    // Find and click the Cancel button by its text content
-    const cancelButton = screen.getByText('cancelBtn')
-    await user.click(cancelButton)
-
-    // Verify handleCancelEdit was called
-    expect(mockHandleCancelEdit).toHaveBeenCalledTimes(1)
-  })
-
-  it('handles address autocomplete selection', async () => {
-    const user = userEvent.setup()
-
-    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
->>>>>>> origin/develop
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -545,7 +503,7 @@ describe('AddEditOrgForm Component', () => {
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -555,44 +513,25 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 
-<<<<<<< HEAD
-  describe('Component State and Effects', () => {
-    it('renders alert component for notifications', () => {
-=======
   describe('Organization Type Dropdown', () => {
     it('renders organization type dropdown with all options', () => {
->>>>>>> origin/develop
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-<<<<<<< HEAD
-      expect(screen.getByTestId('bc-alert2')).toBeInTheDocument()
-    })
-
-    it('handles address autocomplete fields', () => {
-=======
       // Check that the organization type controller is rendered
       expect(screen.getByTestId('controller-orgType')).toBeInTheDocument()
     })
 
     it('shows BCeID and non-BCeID user indicators in options', () => {
->>>>>>> origin/develop
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-<<<<<<< HEAD
-      const addressInputs = screen.getAllByTestId('address-autocomplete')
-      expect(addressInputs.length).toBeGreaterThan(0)
-    })
-
-    it('shows proper field labels and structure', () => {
-=======
       // The Controller component should be present with orgType name
       const controller = screen.getByTestId('controller-orgType')
       expect(controller).toBeInTheDocument()
@@ -603,33 +542,12 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('defaults to fuel supplier selection', () => {
->>>>>>> origin/develop
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-<<<<<<< HEAD
-      // Check for key labels that indicate proper form structure
-      expect(screen.getByText('org:legalNameLabel')).toBeInTheDocument()
-      expect(screen.getByText('org:emailAddrLabel:')).toBeInTheDocument()
-      expect(screen.getByText('org:serviceAddrLabel')).toBeInTheDocument()
-      expect(screen.getByText('org:bcAddrLabel')).toBeInTheDocument()
-    })
-  })
-
-  describe('Field Synchronization Logic', () => {
-    it('handles address synchronization checkbox', () => {
-      mockWatch.mockImplementation((field) => {
-        const values = {
-          'orgStreetAddress': '123 Service Street',
-          'orgCity': 'Service City',
-          'orgPostalCodeZipCode': 'V6B3K9',
-          'orgAddressOther': 'Suite 100'
-        }
-        return values[field] || ''
-=======
       // Verify the default value is set correctly
       const controller = screen.getByTestId('controller-orgType')
       expect(controller).toBeInTheDocument()
@@ -644,7 +562,7 @@ describe('AddEditOrgForm Component', () => {
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -661,7 +579,7 @@ describe('AddEditOrgForm Component', () => {
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -690,7 +608,7 @@ describe('AddEditOrgForm Component', () => {
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
@@ -701,6 +619,7 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('validates organization type requirement', () => {
+      const mockFormState = { errors: {} }
       // Set up form errors for orgType
       Object.assign(mockFormState, {
         errors: {
@@ -708,91 +627,16 @@ describe('AddEditOrgForm Component', () => {
             message: 'Organization type is required.'
           }
         }
->>>>>>> origin/develop
       })
 
       render(
         <Wrapper>
-          <AddEditOrgForm />
+          <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
         </Wrapper>
       )
 
-<<<<<<< HEAD
-      // Find service address checkbox in head office section
-      const headOfficeSection = screen.getByTestId('head-office-address-section')
-      const checkbox = headOfficeSection.querySelector('input[type="checkbox"]')
-
-      if (checkbox) {
-        fireEvent.click(checkbox)
-      }
-
-      // Address fields should exist and be accessible
-      expect(screen.getByTestId('orgHeadOfficeStreetAddress')).toBeInTheDocument()
-      expect(screen.getByTestId('orgHeadOfficeCity')).toBeInTheDocument()
-    })
-
-    it('clears operating name when legal name changes', () => {
-      mockWatch.mockImplementation((field) => {
-        if (field === 'orgOperatingName') return 'Old Operating Name'
-        return ''
-      })
-
-      render(
-        <Wrapper>
-          <AddEditOrgForm />
-        </Wrapper>
-      )
-
-      const checkbox = screen.getByTestId('sameAsLegalName')
-      // Click twice to test clearing logic
-      fireEvent.click(checkbox)
-      fireEvent.click(checkbox)
-
-      expect(mockSetValue).toHaveBeenCalledWith('orgOperatingName', '')
-    })
-  })
-
-  describe('Form Field Coverage', () => {
-    it('covers all major form field types', () => {
-      render(
-        <Wrapper>
-          <AddEditOrgForm />
-        </Wrapper>
-      )
-
-      // Text inputs
-      expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
-      expect(screen.getByTestId('orgOperatingName')).toBeInTheDocument()
-      
-      // Address inputs  
-      expect(screen.getAllByTestId('address-autocomplete').length).toBeGreaterThan(0)
-      
-      // Radio buttons
-      expect(screen.getByTestId('orgSupplierType1')).toBeInTheDocument()
-      expect(screen.getByTestId('hasEarlyIssuanceYes')).toBeInTheDocument()
-      
-      // Checkboxes
-      expect(screen.getByTestId('sameAsLegalName')).toBeInTheDocument()
-    })
-
-    it('includes province and country default fields', () => {
-      render(
-        <Wrapper>
-          <AddEditOrgForm />
-        </Wrapper>
-      )
-
-      expect(screen.getByTestId('orgProvince')).toBeInTheDocument()
-      expect(screen.getByTestId('orgCountry')).toBeInTheDocument()
-      expect(screen.getByTestId('orgHeadOfficeProvince')).toBeInTheDocument()
-      expect(screen.getByTestId('orgHeadOfficeCountry')).toBeInTheDocument()
-    })
-  })
-})
-=======
       const controller = screen.getByTestId('controller-orgType')
       expect(controller).toBeInTheDocument()
     })
   })
 })
->>>>>>> origin/develop

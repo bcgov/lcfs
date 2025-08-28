@@ -239,7 +239,9 @@ describe('Organizations Component', () => {
     navigateMock.mockReset()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Wait for any pending promises to resolve
+    await new Promise(resolve => setTimeout(resolve, 0))
     vi.clearAllMocks()
     mockLocationValue.state = null
   })
@@ -478,9 +480,11 @@ describe('Organizations Component', () => {
 
   describe('Button State Management', () => {
     it('shows loading state during organization download', async () => {
-      mockDownload.mockImplementation(() => 
-        new Promise(resolve => setTimeout(resolve, 100))
-      )
+      let resolveDownload
+      const downloadPromise = new Promise(resolve => {
+        resolveDownload = resolve
+      })
+      mockDownload.mockReturnValue(downloadPromise)
 
       render(<Organizations />, { wrapper })
 
@@ -490,12 +494,18 @@ describe('Organizations Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Download Organizations...')).toBeInTheDocument()
       })
+
+      // Resolve the promise to clean up
+      resolveDownload({})
+      await downloadPromise
     })
 
     it('shows loading state during user download', async () => {
-      mockDownload.mockImplementation(() => 
-        new Promise(resolve => setTimeout(resolve, 100))
-      )
+      let resolveDownload
+      const downloadPromise = new Promise(resolve => {
+        resolveDownload = resolve
+      })
+      mockDownload.mockReturnValue(downloadPromise)
 
       render(<Organizations />, { wrapper })
 
@@ -505,6 +515,10 @@ describe('Organizations Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Download Users...')).toBeInTheDocument()
       })
+
+      // Resolve the promise to clean up
+      resolveDownload({})
+      await downloadPromise
     })
   })
 })

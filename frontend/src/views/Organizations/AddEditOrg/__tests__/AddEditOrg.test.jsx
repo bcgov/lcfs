@@ -107,7 +107,7 @@ describe('AddEditOrg', () => {
     render(<AddEditOrg />)
 
     // Assert
-    expect(useTranslation).toHaveBeenCalledWith(['common', 'admin'])
+    expect(useTranslation).toHaveBeenCalledWith(['common', 'org'])
   })
 
   it('calls useParams hook to extract orgID', () => {
