@@ -105,7 +105,10 @@ describe('NewComplianceReportButton', () => {
     })
 
     it('shows loading state when isButtonLoading is true', () => {
-      render(<NewComplianceReportButton {...defaultProps} isButtonLoading={true} />, { wrapper })
+      render(
+        <NewComplianceReportButton {...defaultProps} isButtonLoading={true} />,
+        { wrapper }
+      )
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
@@ -113,7 +116,9 @@ describe('NewComplianceReportButton', () => {
     it('forwards ref correctly', () => {
       const ref = createRef()
 
-      render(<NewComplianceReportButton {...defaultProps} ref={ref} />, { wrapper })
+      render(<NewComplianceReportButton {...defaultProps} ref={ref} />, {
+        wrapper
+      })
 
       expect(ref.current).toBeTruthy()
     })
@@ -156,7 +161,10 @@ describe('NewComplianceReportButton', () => {
     })
 
     it('does not render menu when button is loading', () => {
-      render(<NewComplianceReportButton {...defaultProps} isButtonLoading={true} />, { wrapper })
+      render(
+        <NewComplianceReportButton {...defaultProps} isButtonLoading={true} />,
+        { wrapper }
+      )
 
       const button = screen.getByRole('button')
       fireEvent.click(button)
@@ -277,7 +285,9 @@ describe('NewComplianceReportButton', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument()
       })
 
-      const menuItems = within(screen.getByRole('menu')).getAllByRole('menuitem')
+      const menuItems = within(screen.getByRole('menu')).getAllByRole(
+        'menuitem'
+      )
       const reportedItem = menuItems.find((item) => item.textContent === '2025')
       expect(reportedItem).toHaveAttribute('aria-disabled', 'true')
     })
@@ -292,7 +302,9 @@ describe('NewComplianceReportButton', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument()
       })
 
-      const menuItems = within(screen.getByRole('menu')).getAllByRole('menuitem')
+      const menuItems = within(screen.getByRole('menu')).getAllByRole(
+        'menuitem'
+      )
       const item2025 = menuItems.find((item) => item.textContent === '2025')
       expect(item2025).toHaveAttribute('aria-disabled', 'true')
     })
@@ -307,8 +319,12 @@ describe('NewComplianceReportButton', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument()
       })
 
-      const menuItems = within(screen.getByRole('menu')).getAllByRole('menuitem')
-      const availableItem = menuItems.find((item) => item.textContent === '2026')
+      const menuItems = within(screen.getByRole('menu')).getAllByRole(
+        'menuitem'
+      )
+      const availableItem = menuItems.find(
+        (item) => item.textContent === '2026'
+      )
       expect(availableItem).not.toHaveAttribute('aria-disabled')
     })
   })
@@ -326,9 +342,11 @@ describe('NewComplianceReportButton', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument()
       })
 
-      const menuItems = within(screen.getByRole('menu')).getAllByRole('menuitem')
+      const menuItems = within(screen.getByRole('menu')).getAllByRole(
+        'menuitem'
+      )
       const item2026 = menuItems.find((item) => item.textContent === '2026')
-      
+
       expect(item2026).toBeInTheDocument()
       expect(item2026).not.toHaveAttribute('aria-disabled')
     })
