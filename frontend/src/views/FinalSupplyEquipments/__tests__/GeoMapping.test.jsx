@@ -116,18 +116,26 @@ const mockTransformedData = [
 
 describe('GeoMapping', () => {
   const mockTransformApiData = vi.mocked(utils.transformApiData)
-  const mockGroupLocationsByCoordinates = vi.mocked(utils.groupLocationsByCoordinates)
+  const mockGroupLocationsByCoordinates = vi.mocked(
+    utils.groupLocationsByCoordinates
+  )
   const mockFindOverlappingPeriods = vi.mocked(utils.findOverlappingPeriods)
 
   beforeEach(() => {
     vi.clearAllMocks()
     // Reset mock implementations
-    mockTransformApiData.mockImplementation((data) => data?.finalSupplyEquipments || [])
-    mockGroupLocationsByCoordinates.mockImplementation((data) => ({ '0,0': data }))
+    mockTransformApiData.mockImplementation(
+      (data) => data?.finalSupplyEquipments || []
+    )
+    mockGroupLocationsByCoordinates.mockImplementation((data) => ({
+      '0,0': data
+    }))
     mockFindOverlappingPeriods.mockImplementation(() => [])
-    
+
     // Reset location service mock
-    mockLocationService.batchProcessGeofencing = vi.fn(() => Promise.resolve({}))
+    mockLocationService.batchProcessGeofencing = vi.fn(() =>
+      Promise.resolve({})
+    )
   })
 
   it('shows loading state', () => {
@@ -170,8 +178,8 @@ describe('GeoMapping', () => {
   describe('Data Processing Effects', () => {
     it('processes API data when supplyEquipmentData loads', async () => {
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
-        '50.1234,-120.5678': [mockTransformedData[0]], 
+      mockGroupLocationsByCoordinates.mockReturnValue({
+        '50.1234,-120.5678': [mockTransformedData[0]],
         '51.2345,-121.6789': [mockTransformedData[1]]
       })
 
@@ -183,14 +191,18 @@ describe('GeoMapping', () => {
       })
 
       await waitFor(() => {
-        expect(mockTransformApiData).toHaveBeenCalledWith(mockSupplyEquipmentData)
+        expect(mockTransformApiData).toHaveBeenCalledWith(
+          mockSupplyEquipmentData
+        )
       })
-      expect(mockGroupLocationsByCoordinates).toHaveBeenCalledWith(mockTransformedData)
+      expect(mockGroupLocationsByCoordinates).toHaveBeenCalledWith(
+        mockTransformedData
+      )
     })
 
     it('handles empty data by setting error state', async () => {
       mockTransformApiData.mockReturnValue([])
-      
+
       renderWithHook({
         isLoading: false,
         isError: false,
@@ -207,10 +219,10 @@ describe('GeoMapping', () => {
 
     it('triggers geofencing when locations are loaded and status is idle', async () => {
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
 
       renderWithHook({
         isLoading: false,
@@ -226,10 +238,12 @@ describe('GeoMapping', () => {
 
     it('handles geofencing errors', async () => {
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockRejectedValue(new Error('Geofencing failed'))
+      mockLocationService.batchProcessGeofencing.mockRejectedValue(
+        new Error('Geofencing failed')
+      )
 
       renderWithHook({
         isLoading: false,
@@ -246,10 +260,10 @@ describe('GeoMapping', () => {
 
     it('calculates overlaps when geofencing is completed', async () => {
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
       mockFindOverlappingPeriods.mockReturnValue(['overlap1'])
 
       renderWithHook({
@@ -272,7 +286,7 @@ describe('GeoMapping', () => {
   describe('User Interactions', () => {
     it('refreshes data when refresh button is clicked', async () => {
       const refetchMock = vi.fn()
-      
+
       renderWithHook({
         isLoading: false,
         isError: false,
@@ -280,8 +294,10 @@ describe('GeoMapping', () => {
         refetch: refetchMock
       })
 
-      const refreshButton = screen.getByRole('button', { name: /refresh map data/i })
-      
+      const refreshButton = screen.getByRole('button', {
+        name: /refresh map data/i
+      })
+
       await act(async () => {
         fireEvent.click(refreshButton)
       })
@@ -294,10 +310,10 @@ describe('GeoMapping', () => {
     it('tests generatePopupContent functionality through component behavior', async () => {
       // Test that the function exists and works by verifying component renders with popup data
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
       mockFindOverlappingPeriods.mockReturnValue([])
 
       renderWithHook({
@@ -319,10 +335,10 @@ describe('GeoMapping', () => {
     it('tests generatePopupContent with BC location', async () => {
       // This function is internal but we can test through the component's state
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
 
       renderWithHook({
         isLoading: false,
@@ -338,10 +354,10 @@ describe('GeoMapping', () => {
 
     it('tests generatePopupContent with non-BC location', async () => {
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': false }) // Outside BC
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: false }) // Outside BC
 
       renderWithHook({
         isLoading: false,
@@ -357,10 +373,10 @@ describe('GeoMapping', () => {
 
     it('tests generatePopupContent with overlapping periods', async () => {
       mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({ 
+      mockGroupLocationsByCoordinates.mockReturnValue({
         '50.1234,-120.5678': [mockTransformedData[0]]
       })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ '1': true })
+      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
       mockFindOverlappingPeriods.mockReturnValue(['overlap1', 'overlap2']) // Has overlaps
 
       renderWithHook({
@@ -386,7 +402,7 @@ describe('GeoMapping', () => {
           refetch: vi.fn()
         })
       })
-      
+
       // Wait for all async state updates to complete
       await waitFor(() => {
         // Component creates error internally, which would trigger error state
@@ -402,11 +418,11 @@ describe('GeoMapping', () => {
         data: null,
         refetch: vi.fn()
       })
-      
+
       expect(screen.getByTestId('no-data-state')).toBeInTheDocument()
     })
 
-    // Note: Removed flaky test that was inconsistent between error-state vs no-data-state 
+    // Note: Removed flaky test that was inconsistent between error-state vs no-data-state
     // to maintain 100% pass rate while keeping high coverage
   })
 })

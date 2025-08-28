@@ -130,7 +130,10 @@ describe('OrganizationAddress', () => {
       return onSubmit(snapshotData)
     })
 
-    vi.spyOn(OrganizationSnapshotHooks, 'useUpdateOrganizationSnapshot').mockReturnValue({
+    vi.spyOn(
+      OrganizationSnapshotHooks,
+      'useUpdateOrganizationSnapshot'
+    ).mockReturnValue({
       mutate: mockMutate,
       isLoading: false
     })
@@ -150,18 +153,22 @@ describe('OrganizationAddress', () => {
     })
 
     it('renders the form in editing mode', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
+        wrapper
+      })
 
       // Check that form element exists
       const formElement = document.querySelector('form')
       expect(formElement).toBeInTheDocument()
-      
+
       // Check form fields are rendered by accessible names
       expect(screen.getByLabelText(/org:legalNameLabel/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/org:operatingNameLabel/i)).toBeInTheDocument()
+      expect(
+        screen.getByLabelText(/org:operatingNameLabel/i)
+      ).toBeInTheDocument()
       expect(screen.getByLabelText(/org:phoneNbrLabel/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/org:emailAddrLabel/i)).toBeInTheDocument()
-      
+
       // Check save and cancel buttons
       expect(screen.getByText('saveBtn')).toBeInTheDocument()
       expect(screen.getByText('cancelBtn')).toBeInTheDocument()
@@ -176,7 +183,10 @@ describe('OrganizationAddress', () => {
         serviceAddress: ''
       }
 
-      render(<OrganizationAddress {...defaultProps} snapshotData={incompleteData} />, { wrapper })
+      render(
+        <OrganizationAddress {...defaultProps} snapshotData={incompleteData} />,
+        { wrapper }
+      )
 
       const requiredElements = screen.getAllByText('Required')
       expect(requiredElements.length).toBeGreaterThan(0)
@@ -218,7 +228,9 @@ describe('OrganizationAddress', () => {
     it('clicking Cancel resets form and exits edit mode', async () => {
       const user = userEvent.setup()
 
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
+        wrapper
+      })
 
       const cancelButton = screen.getByText('cancelBtn')
       await user.click(cancelButton)
@@ -228,16 +240,27 @@ describe('OrganizationAddress', () => {
     })
 
     it('resets form data when snapshotData changes', () => {
-      const { rerender } = render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      const { rerender } = render(
+        <OrganizationAddress {...defaultProps} isEditing={true} />,
+        { wrapper }
+      )
 
       const newSnapshotData = { ...snapshotData, name: 'Updated Corp' }
-      rerender(<OrganizationAddress {...defaultProps} snapshotData={newSnapshotData} isEditing={true} />)
+      rerender(
+        <OrganizationAddress
+          {...defaultProps}
+          snapshotData={newSnapshotData}
+          isEditing={true}
+        />
+      )
 
       expect(mockReset).toHaveBeenCalledWith(newSnapshotData)
     })
 
     it('validates form data properly', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
+        wrapper
+      })
 
       // The component should have validation schema defined
       // This test ensures the validation is setup correctly
@@ -258,12 +281,16 @@ describe('OrganizationAddress', () => {
     it('displayAddressValue returns empty string when value is empty', () => {
       const emptySnapshot = { ...snapshotData, recordsAddress: '' }
 
-      render(<OrganizationAddress {...defaultProps} snapshotData={emptySnapshot} />, { wrapper })
+      render(
+        <OrganizationAddress {...defaultProps} snapshotData={emptySnapshot} />,
+        { wrapper }
+      )
 
       // Should not show "Required" for non-required fields that are empty
-      expect(screen.getByText('report:orgDetailsForm.bcRecordLabel:')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:orgDetailsForm.bcRecordLabel:')
+      ).toBeInTheDocument()
     })
-
   })
 
   // Mock Checkbox Functionality Tests (to test internal logic)
@@ -275,21 +302,29 @@ describe('OrganizationAddress', () => {
         operatingName: 'ACME Corp'
       }
 
-      render(<OrganizationAddress {...defaultProps} snapshotData={sameNameSnapshot} isEditing={true} />, { wrapper })
+      render(
+        <OrganizationAddress
+          {...defaultProps}
+          snapshotData={sameNameSnapshot}
+          isEditing={true}
+        />,
+        { wrapper }
+      )
 
       // Component should render with checkboxes based on data equality
       expect(screen.getByLabelText(/org:legalNameLabel/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/org:operatingNameLabel/i)).toBeInTheDocument()
+      expect(
+        screen.getByLabelText(/org:operatingNameLabel/i)
+      ).toBeInTheDocument()
     })
-
-
-
   })
 
   // Address Selection Tests
   describe('Address Selection', () => {
     it('renders address form fields in edit mode', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
+        wrapper
+      })
 
       // Component should have form with checkboxes
       expect(document.querySelector('form')).toBeInTheDocument()
@@ -298,7 +333,9 @@ describe('OrganizationAddress', () => {
     })
 
     it('renders address form structure in edit mode', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
+        wrapper
+      })
 
       // Component should have form with required structure
       expect(document.querySelector('form')).toBeInTheDocument()
@@ -313,9 +350,16 @@ describe('OrganizationAddress', () => {
         headOfficeAddress: '123 Main St.'
       }
 
-      render(<OrganizationAddress {...defaultProps} snapshotData={sameHeadOfficeSnapshot} isEditing={true} />, { wrapper })
+      render(
+        <OrganizationAddress
+          {...defaultProps}
+          snapshotData={sameHeadOfficeSnapshot}
+          isEditing={true}
+        />,
+        { wrapper }
+      )
 
-      // Component should handle head office address syncing  
+      // Component should handle head office address syncing
       expect(document.querySelector('form')).toBeInTheDocument()
       expect(screen.getByLabelText(/org:legalNameLabel/i)).toBeInTheDocument()
     })
@@ -323,14 +367,15 @@ describe('OrganizationAddress', () => {
 
   // Additional Coverage Tests
   describe('Additional Coverage', () => {
-
     it('renders all form field types correctly', () => {
-      render(<OrganizationAddress {...defaultProps} isEditing={true} />, { wrapper })
+      render(<OrganizationAddress {...defaultProps} isEditing={true} />, {
+        wrapper
+      })
 
       // All text fields should be present - check by input elements instead of role
       const inputs = document.querySelectorAll('input')
       expect(inputs.length).toBeGreaterThanOrEqual(5) // name, operatingName, phone, email, serviceAddress, recordsAddress, headOfficeAddress
-      
+
       // Form with save and cancel buttons
       expect(document.querySelector('form')).toBeInTheDocument()
       expect(screen.getByText('saveBtn')).toBeInTheDocument()
@@ -338,10 +383,15 @@ describe('OrganizationAddress', () => {
     })
 
     it('displays correct labels for read-only vs edit mode', () => {
-      const { rerender } = render(<OrganizationAddress {...defaultProps} isEditing={false} />, { wrapper })
+      const { rerender } = render(
+        <OrganizationAddress {...defaultProps} isEditing={false} />,
+        { wrapper }
+      )
 
       expect(screen.getByText('report:hoAddrLabelView:')).toBeInTheDocument()
-      expect(screen.getByText('report:orgDetailsForm.serviceAddrLabelView:')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:orgDetailsForm.serviceAddrLabelView:')
+      ).toBeInTheDocument()
       expect(document.querySelector('form')).not.toBeInTheDocument()
 
       rerender(<OrganizationAddress {...defaultProps} isEditing={true} />)

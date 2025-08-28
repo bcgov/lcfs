@@ -15,7 +15,7 @@ vi.mock('leaflet', () => {
   const mockDefaultIcon = vi.fn().mockImplementation(() => ({
     type: 'default-icon'
   }))
-  
+
   const mockIcon = vi.fn().mockImplementation((options) => ({
     options,
     iconUrl: options.iconUrl,
@@ -24,19 +24,83 @@ vi.mock('leaflet', () => {
     iconAnchor: options.iconAnchor,
     popupAnchor: options.popupAnchor
   }))
-  
+
   mockDefaultIcon.prototype = {
     _getIconUrl: vi.fn()
   }
   mockDefaultIcon.mergeOptions = vi.fn()
-  
+
   mockIcon.Default = mockDefaultIcon
-  
+
   const L = {
     Icon: mockIcon
   }
-  
+
   return { default: L }
+})
+
+describe('FinalSupplyEquipments utils.js', () => {
+  it('datesOverlap correctly detects overlaps', () => {
+    expect(
+      datesOverlap('2023-01-01', '2023-01-31', '2023-01-15', '2023-02-01')
+    ).toBe(true)
+    expect(
+      datesOverlap('2023-01-01', '2023-01-31', '2023-02-01', '2023-02-28')
+    ).toBe(false)
+  })
+
+  it('transformApiData converts API rows and handles null', () => {
+    expect(transformApiData(null)).toEqual([])
+    const input = {
+      finalSupplyEquipments: [
+        {
+          finalSupplyEquipmentId: 1,
+          serialNbr: 'SN1',
+          latitude: '49.3',
+          longitude: '-123.1',
+          streetAddress: '123 St',
+          city: 'Van',
+          postalCode: 'V6B',
+          supplyFromDate: '2023-01-01',
+          supplyToDate: '2023-12-31'
+        }
+      ]
+    }
+    const out = transformApiData(input)
+    expect(out[0].id).toBe('1_SN1')
+    expect(out[0].lat).toBe(49.3)
+  })
+
+  it('groupLocationsByCoordinates rounds coords for grouping', () => {
+    const grouped = groupLocationsByCoordinates([
+      { lat: 49.300001, lng: -123.1 },
+      { lat: 49.300001, lng: -123.1 }
+    ])
+    expect(Object.keys(grouped)).toHaveLength(1)
+  })
+
+  it('findOverlappingPeriods detects same-serial overlaps', () => {
+    const loc1 = {
+      id: '10_SN1',
+      uniqueId: 'u1',
+      supplyFromDate: '2023-01-01',
+      supplyToDate: '2023-03-31'
+    }
+    const loc2 = {
+      id: '11_SN1',
+      uniqueId: 'u2',
+      supplyFromDate: '2023-03-01',
+      supplyToDate: '2023-04-30'
+    }
+    const result = findOverlappingPeriods(loc1, [loc1, loc2])
+    expect(result).toHaveLength(1)
+  })
+
+  it('sortMixedStrings puts numeric prefixes first', () => {
+    const arr = ['Banana', '2foo', '10bar', 'apple']
+    const sorted = sortMixedStrings(arr)
+    expect(sorted.slice(0, 2)).toEqual(['2foo', '10bar'])
+  })
 })
 
 // Mock fetch globally
@@ -55,14 +119,16 @@ describe('FinalSupplyEquipments utils.js', () => {
     it('should delete _getIconUrl and merge options', async () => {
       // Dynamic import to get the mocked version
       const L = (await import('leaflet')).default
-      
+
       fixLeafletIcons()
-      
+
       expect(L.Icon.Default.prototype._getIconUrl).toBeUndefined()
       expect(L.Icon.Default.mergeOptions).toHaveBeenCalledWith({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+        iconRetinaUrl:
+          'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
         iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
+        shadowUrl:
+          'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
       })
     })
   })
@@ -71,12 +137,13 @@ describe('FinalSupplyEquipments utils.js', () => {
     it('should create marker icon with correct color and properties', async () => {
       const L = (await import('leaflet')).default
       const color = 'red'
-      
+
       const icon = createMarkerIcon(color)
-      
+
       expect(L.Icon).toHaveBeenCalledWith({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        shadowUrl:
+          'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
         iconSize: [25, 41],
         iconAnchor: [12, 41],
         popupAnchor: [1, -34]
@@ -85,10 +152,10 @@ describe('FinalSupplyEquipments utils.js', () => {
 
     it('should work with different color values', async () => {
       const L = (await import('leaflet')).default
-      
+
       createMarkerIcon('blue')
       createMarkerIcon('green')
-      
+
       expect(L.Icon).toHaveBeenCalledTimes(2)
     })
   })
@@ -109,22 +176,36 @@ describe('FinalSupplyEquipments utils.js', () => {
 
   describe('datesOverlap', () => {
     it('should detect overlapping date ranges', () => {
-      expect(datesOverlap('2023-01-01', '2023-01-31', '2023-01-15', '2023-02-01')).toBe(true)
-      expect(datesOverlap('2023-01-01', '2023-03-31', '2023-02-01', '2023-02-28')).toBe(true)
+      expect(
+        datesOverlap('2023-01-01', '2023-01-31', '2023-01-15', '2023-02-01')
+      ).toBe(true)
+      expect(
+        datesOverlap('2023-01-01', '2023-03-31', '2023-02-01', '2023-02-28')
+      ).toBe(true)
     })
 
     it('should detect non-overlapping date ranges', () => {
-      expect(datesOverlap('2023-01-01', '2023-01-31', '2023-02-01', '2023-02-28')).toBe(false)
-      expect(datesOverlap('2023-03-01', '2023-03-31', '2023-01-01', '2023-02-28')).toBe(false)
+      expect(
+        datesOverlap('2023-01-01', '2023-01-31', '2023-02-01', '2023-02-28')
+      ).toBe(false)
+      expect(
+        datesOverlap('2023-03-01', '2023-03-31', '2023-01-01', '2023-02-28')
+      ).toBe(false)
     })
 
     it('should handle edge cases with same dates', () => {
-      expect(datesOverlap('2023-01-01', '2023-01-31', '2023-01-31', '2023-02-28')).toBe(true)
-      expect(datesOverlap('2023-01-01', '2023-01-31', '2023-02-01', '2023-01-31')).toBe(false)
+      expect(
+        datesOverlap('2023-01-01', '2023-01-31', '2023-01-31', '2023-02-28')
+      ).toBe(true)
+      expect(
+        datesOverlap('2023-01-01', '2023-01-31', '2023-02-01', '2023-01-31')
+      ).toBe(false)
     })
 
     it('should handle identical date ranges', () => {
-      expect(datesOverlap('2023-01-01', '2023-01-31', '2023-01-01', '2023-01-31')).toBe(true)
+      expect(
+        datesOverlap('2023-01-01', '2023-01-31', '2023-01-01', '2023-01-31')
+      ).toBe(true)
     })
   })
 
@@ -157,7 +238,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       }
 
       const result = transformApiData(input)
-      
+
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
         id: '1_SN1',
@@ -190,7 +271,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       }
 
       const result = transformApiData(input)
-      
+
       expect(result[0]).toMatchObject({
         id: 'unknown_unknown',
         uniqueId: 'unknown_unknown_0',
@@ -213,7 +294,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       }
 
       const result = transformApiData(input)
-      
+
       expect(result).toHaveLength(2)
       expect(result[0].id).toBe('1_SN1')
       expect(result[1].id).toBe('2_SN2')
@@ -229,7 +310,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       ]
 
       const result = groupLocationsByCoordinates(locations)
-      
+
       expect(Object.keys(result)).toHaveLength(2)
       expect(result['49.300000,-123.100000']).toHaveLength(2)
       expect(result['50.000000,-124.000000']).toHaveLength(1)
@@ -246,7 +327,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       ]
 
       const result = groupLocationsByCoordinates(locations)
-      
+
       expect(Object.keys(result)).toHaveLength(2)
     })
   })
@@ -278,7 +359,7 @@ describe('FinalSupplyEquipments utils.js', () => {
 
     it('should find overlapping periods for same serial number', () => {
       const result = findOverlappingPeriods(mockLocations[0], mockLocations)
-      
+
       expect(result).toHaveLength(1)
       expect(result[0].uniqueId).toBe('u2')
       expect(result[0].fseId).toBe('11')
@@ -295,29 +376,28 @@ describe('FinalSupplyEquipments utils.js', () => {
       }
 
       const result = findOverlappingPeriods(currentLoc, mockLocations)
-      
+
       expect(result).toHaveLength(0)
     })
 
     it('should exclude same record from results', () => {
       const result = findOverlappingPeriods(mockLocations[0], mockLocations)
-      
-      expect(result.find(loc => loc.uniqueId === 'u1')).toBeUndefined()
+
+      expect(result.find((loc) => loc.uniqueId === 'u1')).toBeUndefined()
     })
 
     it('should only match same serial numbers', () => {
       const result = findOverlappingPeriods(mockLocations[0], mockLocations)
-      
-      expect(result.find(loc => loc.serialNum === 'SN2')).toBeUndefined()
+
+      expect(result.find((loc) => loc.serialNum === 'SN2')).toBeUndefined()
     })
   })
-
 
   describe('sortMixedStrings', () => {
     it('should put strings with numeric prefixes first', () => {
       const input = ['banana', '2foo', '10bar', 'apple']
       const result = sortMixedStrings(input)
-      
+
       expect(result.slice(0, 2)).toEqual(['2foo', '10bar'])
       expect(result.slice(2)).toEqual(['apple', 'banana'])
     })
@@ -325,28 +405,28 @@ describe('FinalSupplyEquipments utils.js', () => {
     it('should sort numeric prefixes numerically', () => {
       const input = ['10item', '2item', '1item']
       const result = sortMixedStrings(input)
-      
+
       expect(result).toEqual(['1item', '2item', '10item'])
     })
 
     it('should handle strings ending with numbers', () => {
       const input = ['item10', 'item2', 'item1']
       const result = sortMixedStrings(input)
-      
+
       expect(result).toEqual(['item1', 'item2', 'item10'])
     })
 
     it('should sort alphabetically for non-numeric strings', () => {
       const input = ['zebra', 'apple', 'banana']
       const result = sortMixedStrings(input)
-      
+
       expect(result).toEqual(['apple', 'banana', 'zebra'])
     })
 
     it('should handle mixed scenarios', () => {
       const input = ['item2', '1prefix', 'zebra', 'apple', '10prefix']
       const result = sortMixedStrings(input)
-      
+
       expect(result).toEqual(['1prefix', '10prefix', 'apple', 'item2', 'zebra'])
     })
 
@@ -361,7 +441,7 @@ describe('FinalSupplyEquipments utils.js', () => {
     it('should not mutate original array', () => {
       const original = ['c', 'a', 'b']
       const sorted = sortMixedStrings(original)
-      
+
       expect(original).toEqual(['c', 'a', 'b'])
       expect(sorted).toEqual(['a', 'b', 'c'])
     })
@@ -369,14 +449,14 @@ describe('FinalSupplyEquipments utils.js', () => {
     it('should handle case insensitive sorting', () => {
       const input = ['Zebra', 'apple', 'Banana']
       const result = sortMixedStrings(input)
-      
+
       expect(result).toEqual(['apple', 'Banana', 'Zebra'])
     })
 
     it('should handle numeric prefixes with same remainder', () => {
       const input = ['10item', '2item', '1item']
       const result = sortMixedStrings(input)
-      
+
       expect(result).toEqual(['1item', '2item', '10item'])
     })
   })

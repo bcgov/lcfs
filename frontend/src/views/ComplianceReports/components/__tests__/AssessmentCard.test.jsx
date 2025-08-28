@@ -1,10 +1,9 @@
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { expect, describe, it, vi, beforeEach } from 'vitest'
-import { AssessmentCard } from '../AssessmentCard'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 import { wrapper } from '@/tests/utils/wrapper'
-import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
+import { AssessmentCard } from '../AssessmentCard'
 
 // Comprehensive mock setup
 const mockNavigate = vi.fn()
@@ -28,13 +27,15 @@ vi.mock('react-i18next', () => ({
     t: (key, options) => {
       const translations = {
         'report:assessment': 'Assessment',
-        'report:orgDetails': 'Organization Details', 
+        'report:orgDetails': 'Organization Details',
         'report:reportHistory': 'Report History',
         'report:supplementalWarning': 'Supplemental Warning',
         'report:createSupplementalRptBtn': 'Create Supplemental Report',
         'report:downloadExcel': 'Download Excel',
-        'report:supplementalCreated': 'Supplemental report created successfully',
-        'report:createBceidSupplementalConfirmText': 'Create supplemental confirmation',
+        'report:supplementalCreated':
+          'Supplemental report created successfully',
+        'report:createBceidSupplementalConfirmText':
+          'Create supplemental confirmation',
         'report:addressEdited': '(address edited)',
         'common:cancelBtn': 'Cancel'
       }
@@ -109,7 +110,9 @@ vi.mock('@/views/ComplianceReports/components/OrganizationAddress.jsx', () => ({
     <div data-test="organization-address">
       Organization Address Component
       {isEditing && <span data-test="editing-mode">Editing</span>}
-      <button onClick={() => setIsEditing(false)} data-test="stop-editing">Stop Editing</button>
+      <button onClick={() => setIsEditing(false)} data-test="stop-editing">
+        Stop Editing
+      </button>
     </div>
   )
 }))
@@ -118,7 +121,9 @@ vi.mock('@/views/ComplianceReports/components/HistoryCard.jsx', () => ({
   HistoryCard: ({ report, assessedMessage, defaultExpanded }) => (
     <div data-test="history-card">
       History Card v{report.version}
-      {assessedMessage && assessedMessage !== false && <div data-test="assessed-message">{assessedMessage}</div>}
+      {assessedMessage && assessedMessage !== false && (
+        <div data-test="assessed-message">{assessedMessage}</div>
+      )}
       {defaultExpanded && <span data-test="default-expanded">Expanded</span>}
     </div>
   )
@@ -127,14 +132,27 @@ vi.mock('@/views/ComplianceReports/components/HistoryCard.jsx', () => ({
 // Mock Role component - controllable for different test scenarios
 let mockShowRoleContent = false
 vi.mock('@/components/Role', () => ({
-  Role: ({ children }) => mockShowRoleContent ? children : null
+  Role: ({ children }) => (mockShowRoleContent ? children : null)
 }))
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, disabled, loading, 'data-test': dataTest, className, variant, color, size, sx, startIcon, ...props }) => (
-    <button 
-      onClick={onClick} 
+  default: ({
+    children,
+    onClick,
+    disabled,
+    loading,
+    'data-test': dataTest,
+    className,
+    variant,
+    color,
+    size,
+    sx,
+    startIcon,
+    ...props
+  }) => (
+    <button
+      onClick={onClick}
       disabled={disabled || loading}
       data-test={dataTest}
       className={className}
@@ -151,14 +169,21 @@ vi.mock('@/components/BCButton', () => ({
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
   default: ({ children, variant, color, ...props }) => (
-    <div data-test="bc-typography" data-variant={variant} data-color={color} {...props}>
+    <div
+      data-test="bc-typography"
+      data-variant={variant}
+      data-color={color}
+      {...props}
+    >
       {children}
     </div>
   )
 }))
 
 // Setup default imports
-const { useOrganizationSnapshot } = await import('@/hooks/useOrganizationSnapshot.js')
+const { useOrganizationSnapshot } = await import(
+  '@/hooks/useOrganizationSnapshot.js'
+)
 
 describe('AssessmentCard', () => {
   // Default props for testing
@@ -213,11 +238,17 @@ describe('AssessmentCard', () => {
   describe('Function Coverage', () => {
     it('tests onEdit function', async () => {
       mockHasRoles.mockReturnValue(true)
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />,
+        { wrapper }
+      )
+
       const editButton = screen.getByTestId('edit-button')
       fireEvent.click(editButton)
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('editing-mode')).toBeInTheDocument()
       })
@@ -226,10 +257,10 @@ describe('AssessmentCard', () => {
     it('tests onDownloadReport success path', async () => {
       mockApiServiceDownload.mockResolvedValue(undefined)
       render(<AssessmentCard {...defaultProps} />, { wrapper })
-      
+
       const downloadButton = screen.getByTestId('download-report')
       fireEvent.click(downloadButton)
-      
+
       await waitFor(() => {
         expect(mockApiServiceDownload).toHaveBeenCalledWith({
           url: expect.stringContaining('123')
@@ -241,11 +272,17 @@ describe('AssessmentCard', () => {
 
     it('tests handleCreateSupplementalClick', async () => {
       mockShowRoleContent = true // Enable role content to show supplemental button
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        />,
+        { wrapper }
+      )
+
       const supplementalButton = screen.getByTestId('create-supplemental')
       fireEvent.click(supplementalButton)
-      
+
       expect(mockSetModalData).toHaveBeenCalledWith(
         expect.objectContaining({
           primaryButtonText: 'Create Supplemental Report',
@@ -257,18 +294,24 @@ describe('AssessmentCard', () => {
 
     it('tests primaryButtonAction execution', async () => {
       mockShowRoleContent = true
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        />,
+        { wrapper }
+      )
+
       const supplementalButton = screen.getByTestId('create-supplemental')
       fireEvent.click(supplementalButton)
-      
+
       // Get the modal data and execute the primary button action
       const modalData = mockSetModalData.mock.calls[0][0]
       expect(modalData.primaryButtonAction).toBeDefined()
-      
+
       // Execute the primary button action (this calls createSupplementalReport)
       modalData.primaryButtonAction()
-      
+
       expect(mockMutateSupplementalReport).toHaveBeenCalled()
     })
 
@@ -279,19 +322,27 @@ describe('AssessmentCard', () => {
           compliancePeriod: { description: '2024' }
         }
       }
-      
+
       mockShowRoleContent = true // Enable role content for this test
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        />,
+        { wrapper }
+      )
+
       // Trigger the success callback directly
       await act(async () => {
         if (mockSupplementalReportCallbacks.onSuccess) {
           mockSupplementalReportCallbacks.onSuccess(mockSuccessData)
         }
       })
-      
+
       expect(mockSetModalData).toHaveBeenCalledWith(null)
-      expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/2024/456')
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/compliance-reporting/2024/456'
+      )
       expect(mockTriggerAlert).toHaveBeenCalledWith({
         message: 'Supplemental report created successfully',
         severity: 'success'
@@ -300,17 +351,23 @@ describe('AssessmentCard', () => {
 
     it('tests createSupplementalReport error callback', async () => {
       const mockError = { message: 'Creation failed' }
-      
+
       mockShowRoleContent = true // Enable role content for this test
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        />,
+        { wrapper }
+      )
+
       // Trigger the error callback directly
       await act(async () => {
         if (mockSupplementalReportCallbacks.onError) {
           mockSupplementalReportCallbacks.onError(mockError)
         }
       })
-      
+
       expect(mockSetModalData).toHaveBeenCalledWith(null)
       expect(mockTriggerAlert).toHaveBeenCalledWith({
         message: 'Creation failed',
@@ -328,16 +385,22 @@ describe('AssessmentCard', () => {
 
     it('tests isEditing state changes', async () => {
       mockHasRoles.mockReturnValue(true)
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />,
+        { wrapper }
+      )
+
       fireEvent.click(screen.getByTestId('edit-button'))
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('editing-mode')).toBeInTheDocument()
       })
-      
+
       fireEvent.click(screen.getByTestId('stop-editing'))
-      
+
       await waitFor(() => {
         expect(screen.queryByTestId('editing-mode')).not.toBeInTheDocument()
       })
@@ -345,19 +408,22 @@ describe('AssessmentCard', () => {
 
     it('tests isDownloading state during download', async () => {
       let resolveDownload
-      mockApiServiceDownload.mockImplementation(() => new Promise(resolve => {
-        resolveDownload = resolve
-      }))
-      
+      mockApiServiceDownload.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveDownload = resolve
+          })
+      )
+
       render(<AssessmentCard {...defaultProps} />, { wrapper })
-      
+
       const downloadButton = screen.getByTestId('download-report')
       fireEvent.click(downloadButton)
-      
+
       await waitFor(() => {
         expect(downloadButton).toHaveTextContent('Loading...')
       })
-      
+
       resolveDownload()
       await waitFor(() => {
         expect(downloadButton).not.toHaveTextContent('Loading...')
@@ -372,38 +438,57 @@ describe('AssessmentCard', () => {
         { version: 0, history: ['item1'] },
         { version: 1, history: [] }
       ]
-      render(<AssessmentCard {...defaultProps} chain={chainWithHistory} />, { wrapper })
+      render(<AssessmentCard {...defaultProps} chain={chainWithHistory} />, {
+        wrapper
+      })
       expect(screen.getByText('History Card v0')).toBeInTheDocument()
       expect(screen.queryByText('History Card v1')).not.toBeInTheDocument()
     })
 
     it('tests filteredChain without history items', () => {
-      const chainWithoutHistory = [
-        { version: 0, history: [] },
-        { version: 1 }
-      ]
-      render(<AssessmentCard {...defaultProps} chain={chainWithoutHistory} />, { wrapper })
+      const chainWithoutHistory = [{ version: 0, history: [] }, { version: 1 }]
+      render(<AssessmentCard {...defaultProps} chain={chainWithoutHistory} />, {
+        wrapper
+      })
       expect(screen.queryByText('History Card v0')).not.toBeInTheDocument()
     })
 
     it('tests isAddressEditable - true for draft status and not editing', () => {
       mockHasRoles.mockReturnValue(true)
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />,
+        { wrapper }
+      )
       expect(screen.getByTestId('edit-button')).toBeInTheDocument()
     })
 
     it('tests isAddressEditable - true for analyst role and submitted status', () => {
-      mockHasRoles.mockImplementation(role => role === roles.analyst)
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED} />, { wrapper })
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        />,
+        { wrapper }
+      )
       expect(screen.getByTestId('edit-button')).toBeInTheDocument()
     })
 
     it('tests isAddressEditable - false when editing', async () => {
       mockHasRoles.mockReturnValue(true)
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
-      
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />,
+        { wrapper }
+      )
+
       fireEvent.click(screen.getByTestId('edit-button'))
-      
+
       await waitFor(() => {
         expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
       })
@@ -411,7 +496,13 @@ describe('AssessmentCard', () => {
 
     it('tests isAddressEditable - false for other conditions', () => {
       mockHasRoles.mockReturnValue(false)
-      render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
+      render(
+        <AssessmentCard
+          {...defaultProps}
+          currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        />,
+        { wrapper }
+      )
       expect(screen.queryByTestId('edit-button')).not.toBeInTheDocument()
     })
   })
@@ -420,17 +511,27 @@ describe('AssessmentCard', () => {
   describe('Conditional Rendering', () => {
     describe('Title Rendering', () => {
       it('shows assessment title when status is assessed', () => {
-        render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+          />,
+          { wrapper }
+        )
         expect(screen.getByText('Assessment')).toBeInTheDocument()
       })
 
       it('shows assessment title when isGovernmentUser is true', () => {
-        render(<AssessmentCard {...defaultProps} isGovernmentUser={true} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} isGovernmentUser={true} />, {
+          wrapper
+        })
         expect(screen.getByText('Assessment')).toBeInTheDocument()
       })
 
       it('shows assessment title when hasSupplemental is true', () => {
-        render(<AssessmentCard {...defaultProps} hasSupplemental={true} />, { wrapper })
+        render(<AssessmentCard {...defaultProps} hasSupplemental={true} />, {
+          wrapper
+        })
         expect(screen.getByText('Assessment')).toBeInTheDocument()
       })
 
@@ -443,7 +544,13 @@ describe('AssessmentCard', () => {
     describe('UI Element Display', () => {
       it('shows edit button when isAddressEditable is true', () => {
         mockHasRoles.mockReturnValue(true)
-        render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          />,
+          { wrapper }
+        )
         expect(screen.getByTestId('edit-button')).toBeInTheDocument()
       })
 
@@ -483,7 +590,14 @@ describe('AssessmentCard', () => {
 
       it('hides report history when status is draft', () => {
         const chain = [{ version: 0, history: ['item'] }]
-        render(<AssessmentCard {...defaultProps} chain={chain} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            chain={chain}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          />,
+          { wrapper }
+        )
         expect(screen.queryByText('Report History')).not.toBeInTheDocument()
       })
 
@@ -501,23 +615,42 @@ describe('AssessmentCard', () => {
     describe('Assessment Statement Logic', () => {
       it('shows assessment statement for first report with statement', () => {
         const chain = [
-          { version: 0, history: ['item'], assessmentStatement: 'Test statement' }
+          {
+            version: 0,
+            history: ['item'],
+            assessmentStatement: 'Test statement'
+          }
         ]
-        render(<AssessmentCard {...defaultProps} chain={chain} isGovernmentUser={false} />, { wrapper })
-        expect(screen.getByTestId('assessed-message')).toHaveTextContent('Test statement')
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            chain={chain}
+            isGovernmentUser={false}
+          />,
+          { wrapper }
+        )
+        expect(screen.getByTestId('assessed-message')).toHaveTextContent(
+          'Test statement'
+        )
       })
 
       it('shows assessment statement on first card even when statement is from later report', () => {
         const chain = [
           { version: 0, history: ['item'] },
-          { version: 1, history: ['item'], assessmentStatement: 'Test statement' }
+          {
+            version: 1,
+            history: ['item'],
+            assessmentStatement: 'Test statement'
+          }
         ]
         render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
-        
+
         // Assessment statement from any report in chain shows on first card
         const historyCards = screen.getAllByTestId('history-card')
         expect(historyCards).toHaveLength(2)
-        expect(screen.getByTestId('assessed-message')).toHaveTextContent('Test statement')
+        expect(screen.getByTestId('assessed-message')).toHaveTextContent(
+          'Test statement'
+        )
       })
 
       it('hides assessment statement when statement is null', () => {
@@ -530,9 +663,20 @@ describe('AssessmentCard', () => {
 
       it('hides assessment statement for government user with supplemental version', () => {
         const chain = [
-          { version: 1, history: ['item'], assessmentStatement: 'Test statement' }
+          {
+            version: 1,
+            history: ['item'],
+            assessmentStatement: 'Test statement'
+          }
         ]
-        render(<AssessmentCard {...defaultProps} chain={chain} isGovernmentUser={true} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            chain={chain}
+            isGovernmentUser={true}
+          />,
+          { wrapper }
+        )
         expect(screen.queryByTestId('assessed-message')).not.toBeInTheDocument()
       })
     })
@@ -540,20 +684,40 @@ describe('AssessmentCard', () => {
     describe('Role-Based Display', () => {
       it('shows supplemental warning for assessed status when role content enabled', () => {
         mockShowRoleContent = true
-        render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+          />,
+          { wrapper }
+        )
         expect(screen.getByText('Supplemental Warning')).toBeInTheDocument()
       })
 
       it('shows supplemental button for assessed status when role content enabled', () => {
         mockShowRoleContent = true
-        render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+          />,
+          { wrapper }
+        )
         expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
       it('hides supplemental button when role content disabled', () => {
         mockShowRoleContent = false
-        render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED} />, { wrapper })
-        expect(screen.queryByTestId('create-supplemental')).not.toBeInTheDocument()
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+          />,
+          { wrapper }
+        )
+        expect(
+          screen.queryByTestId('create-supplemental')
+        ).not.toBeInTheDocument()
       })
 
       it('shows download button for non-draft status', () => {
@@ -562,7 +726,13 @@ describe('AssessmentCard', () => {
       })
 
       it('hides download button for draft status', () => {
-        render(<AssessmentCard {...defaultProps} currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} />, { wrapper })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          />,
+          { wrapper }
+        )
         expect(screen.queryByTestId('download-report')).not.toBeInTheDocument()
       })
     })
@@ -579,9 +749,13 @@ describe('AssessmentCard', () => {
           isLoading: false
         })
         render(<AssessmentCard {...defaultProps} />, { wrapper })
-        expect(screen.getByText((content, element) => 
-          element && element.textContent === 'Test Organization (address edited)'
-        )).toBeInTheDocument()
+        expect(
+          screen.getByText(
+            (content, element) =>
+              element &&
+              element.textContent === 'Test Organization (address edited)'
+          )
+        ).toBeInTheDocument()
       })
 
       it('hides address edited indicator when snapshot is not edited', () => {
@@ -599,7 +773,7 @@ describe('AssessmentCard', () => {
           { version: 1, history: ['item'] }
         ]
         render(<AssessmentCard {...defaultProps} chain={chain} />, { wrapper })
-        
+
         // First history card should be expanded
         const historyCards = screen.getAllByTestId('history-card')
         expect(historyCards[0]).toHaveTextContent('Expanded')
@@ -616,29 +790,31 @@ describe('AssessmentCard', () => {
         { version: 0, history: ['item'], assessmentStatement: 'Statement' }
       ]
       render(
-        <AssessmentCard 
-          {...defaultProps} 
+        <AssessmentCard
+          {...defaultProps}
           isGovernmentUser={true}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           chain={chain}
-        />, 
+        />,
         { wrapper }
       )
-      
+
       expect(screen.getByText('Assessment')).toBeInTheDocument()
-      expect(screen.queryByTestId('create-supplemental')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('create-supplemental')
+      ).not.toBeInTheDocument()
     })
 
     it('handles complete supplier user scenario', () => {
       mockShowRoleContent = true // Supplier should see role-based content
       render(
-        <AssessmentCard 
-          {...defaultProps} 
+        <AssessmentCard
+          {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
-        />, 
+        />,
         { wrapper }
       )
-      
+
       expect(screen.getByText('Assessment')).toBeInTheDocument() // ASSESSED status shows Assessment
       expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
     })
@@ -658,7 +834,9 @@ describe('AssessmentCard', () => {
         { version: 0 }, // no history property
         { history: null, version: 1 }
       ]
-      render(<AssessmentCard {...defaultProps} chain={malformedChain} />, { wrapper })
+      render(<AssessmentCard {...defaultProps} chain={malformedChain} />, {
+        wrapper
+      })
       expect(screen.queryByText('Report History')).not.toBeInTheDocument()
     })
 
@@ -672,24 +850,24 @@ describe('AssessmentCard', () => {
     it('handles all combinations of title conditions', () => {
       // Test all true conditions
       render(
-        <AssessmentCard 
-          {...defaultProps} 
+        <AssessmentCard
+          {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
           isGovernmentUser={true}
           hasSupplemental={true}
-        />, 
+        />,
         { wrapper }
       )
       expect(screen.getByText('Assessment')).toBeInTheDocument()
-      
+
       // Test all false conditions should show org details
       render(
-        <AssessmentCard 
-          {...defaultProps} 
+        <AssessmentCard
+          {...defaultProps}
           currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
           isGovernmentUser={false}
           hasSupplemental={false}
-        />, 
+        />,
         { wrapper }
       )
       expect(screen.getByText('Organization Details')).toBeInTheDocument()

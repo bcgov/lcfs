@@ -23,7 +23,7 @@ vi.mock('@/services/useApiService')
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   default: vi.fn(({ title, content, id, color, 'data-test': dataTest }) => (
-    <div 
+    <div
       data-test="bc-widget-card"
       data-container-test={dataTest}
       data-title={title}
@@ -68,7 +68,10 @@ describe('AddEditOrg', () => {
     expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
     expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
     expect(mockT).toHaveBeenCalledWith('org:editOrgTitle')
-    expect(screen.getByTestId('bc-widget-card')).toHaveAttribute('data-title', 'translated-org:editOrgTitle')
+    expect(screen.getByTestId('bc-widget-card')).toHaveAttribute(
+      'data-title',
+      'translated-org:editOrgTitle'
+    )
   })
 
   it('renders in add mode when orgID is not present', () => {
@@ -82,7 +85,10 @@ describe('AddEditOrg', () => {
     expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
     expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
     expect(mockT).toHaveBeenCalledWith('org:addOrgTitle')
-    expect(screen.getByTestId('bc-widget-card')).toHaveAttribute('data-title', 'translated-org:addOrgTitle')
+    expect(screen.getByTestId('bc-widget-card')).toHaveAttribute(
+      'data-title',
+      'translated-org:addOrgTitle'
+    )
   })
 
   it('renders with correct static props for BCWidgetCard', () => {
@@ -96,7 +102,10 @@ describe('AddEditOrg', () => {
     const widgetCard = screen.getByTestId('bc-widget-card')
     expect(widgetCard).toHaveAttribute('data-id', 'user-card')
     expect(widgetCard).toHaveAttribute('data-color', 'nav')
-    expect(widgetCard).toHaveAttribute('data-container-test', 'addEditOrgContainer')
+    expect(widgetCard).toHaveAttribute(
+      'data-container-test',
+      'addEditOrgContainer'
+    )
   })
 
   it('calls useTranslation hook with correct parameters', () => {

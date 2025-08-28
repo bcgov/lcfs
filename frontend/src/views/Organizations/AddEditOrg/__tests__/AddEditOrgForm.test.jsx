@@ -132,10 +132,7 @@ vi.mock('@/components/BCAlert', () => ({
       triggerAlert: vi.fn()
     }))
     return (
-      <div 
-        data-test="bc-alert2"
-        data-dismissable={props.dismissable}
-      >
+      <div data-test="bc-alert2" data-dismissable={props.dismissable}>
         Alert Content
       </div>
     )
@@ -143,9 +140,7 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/Loading', () => ({
-  default: (props) => (
-    <div data-testid="loading">{props.message}</div>
-  )
+  default: (props) => <div data-testid="loading">{props.message}</div>
 }))
 
 vi.mock('@/components/BCForm/index.js', () => ({
@@ -166,7 +161,9 @@ vi.mock('../ReferenceCompareBox', () => ({
       <div>{props.title}</div>
       <button onClick={props.onDismiss}>Dismiss</button>
       {props.data?.map((item, index) => (
-        <div key={index}>{item.label}: {item.value}</div>
+        <div key={index}>
+          {item.label}: {item.value}
+        </div>
       ))}
     </div>
   )
@@ -184,7 +181,23 @@ vi.mock('@mui/material', () => ({
       {children}
     </div>
   ),
-  Grid: ({ children, container, item, xs, sm, md, lg, xl, spacing, direction, justifyContent, alignItems, wrap, zeroMinWidth, ...props }) => {
+  Grid: ({
+    children,
+    container,
+    item,
+    xs,
+    sm,
+    md,
+    lg,
+    xl,
+    spacing,
+    direction,
+    justifyContent,
+    alignItems,
+    wrap,
+    zeroMinWidth,
+    ...props
+  }) => {
     // Filter out Grid-specific props that shouldn't be passed to DOM
     return <div {...props}>{children}</div>
   },
@@ -224,13 +237,31 @@ vi.mock('@mui/material', () => ({
       </div>
     )
   ),
-  FormControl: ({ children, fullWidth, variant, component, margin, ...props }) => <div {...props}>{children}</div>,
+  FormControl: ({
+    children,
+    fullWidth,
+    variant,
+    component,
+    margin,
+    ...props
+  }) => <div {...props}>{children}</div>,
   FormControlLabel: ({ control, label, ...props }) => (
-    <div {...props}>{control}<span>{label}</span></div>
+    <div {...props}>
+      {control}
+      <span>{label}</span>
+    </div>
   ),
   FormLabel: ({ children, ...props }) => <div {...props}>{children}</div>,
   InputLabel: ({ children, ...props }) => <label {...props}>{children}</label>,
-  RadioGroup: ({ children, row, defaultValue, value, onChange, name, ...props }) => <div {...props}>{children}</div>,
+  RadioGroup: ({
+    children,
+    row,
+    defaultValue,
+    value,
+    onChange,
+    name,
+    ...props
+  }) => <div {...props}>{children}</div>,
   Radio: React.forwardRef((props, ref) => (
     <input
       ref={ref}
@@ -377,11 +408,19 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      expect(screen.getByTestId('head-office-address-section')).toBeInTheDocument()
-      expect(screen.getByTestId('orgHeadOfficeStreetAddress')).toBeInTheDocument()
-      expect(screen.getByTestId('orgHeadOfficeAddressOther')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('head-office-address-section')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgHeadOfficeStreetAddress')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgHeadOfficeAddressOther')
+      ).toBeInTheDocument()
       expect(screen.getByTestId('orgHeadOfficeCity')).toBeInTheDocument()
-      expect(screen.getByTestId('orgHeadOfficePostalCodeZipCode')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgHeadOfficePostalCodeZipCode')
+      ).toBeInTheDocument()
     })
 
     it('renders radio button groups', () => {
@@ -452,14 +491,21 @@ describe('AddEditOrgForm Component', () => {
       const checkbox = screen.getByTestId('sameAsLegalName')
       fireEvent.click(checkbox)
 
-      expect(mockSetValue).toHaveBeenCalledWith('orgOperatingName', 'Test Legal Name')
+      expect(mockSetValue).toHaveBeenCalledWith(
+        'orgOperatingName',
+        'Test Legal Name'
+      )
     })
   })
 
   it('calls handleCancelEdit when cancel button is clicked', async () => {
     const user = userEvent.setup()
 
-    render(<Wrapper><AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} /></Wrapper>)
+    render(
+      <Wrapper>
+        <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+      </Wrapper>
+    )
 
     // Find and click the Cancel button by its text content
     const cancelButton = screen.getByText('cancelBtn')
@@ -468,7 +514,6 @@ describe('AddEditOrgForm Component', () => {
     // Verify handleCancelEdit was called
     expect(mockHandleCancelEdit).toHaveBeenCalledTimes(1)
   })
-
 
   describe('Data Loading and Edit Mode', () => {
     it('handles edit mode with organization data', () => {
