@@ -14,10 +14,9 @@ from .EndUserType import EndUserType
 from .FinalSupplyEquipment import FinalSupplyEquipment
 from .FuelExport import FuelExport
 from .FuelSupply import FuelSupply
-from .FSE import FSE
-from .FSENumber import FSENumber
-from .FSEStatus import FSEStatus
-from .FSEComplianceAssociation import FSEComplianceAssociation
+from .ChargingEquipment import ChargingEquipment
+from .ChargingEquipmentStatus import ChargingEquipmentStatus
+from .ComplianceReportChargingEquipment import ComplianceReportChargingEquipment
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
@@ -38,10 +37,9 @@ __all__ = [
     "FinalSupplyEquipment",
     "FuelSupply",
     "FuelExport",
-    "FSE",
-    "FSENumber",
-    "FSEStatus",
-    "FSEComplianceAssociation",
+    "ChargingEquipment",
+    "ChargingEquipmentStatus",
+    "ComplianceReportChargingEquipment",
     "LevelOfEquipment",
     "NotionalTransfer",
     "OtherUses",

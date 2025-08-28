@@ -1,15 +1,13 @@
-"""FSE Compliance Reporting association
+"""Charging Equipment Compliance Reporting association
 
 Revision ID: b7c0cbcad7d8
 Revises: 6640ecfbe53
-Create Date: 2025-08-25 08:59:52.924747
+Create Date: 2025-08-28 08:59:52.924747
 
 """
 
 import sqlalchemy as sa
 from alembic import op
-from alembic_postgresql_enum import TableReference
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "b7c0cbcad7d8"
@@ -20,19 +18,19 @@ depends_on = None
 
 def upgrade() -> None:
     op.create_table(
-        "fse_compliance_association",
+        "compliance_report_charging_equipment",
         sa.Column(
-            "fse_compliance_id",
+            "charging_equipment_compliance_id",
             sa.Integer(),
             autoincrement=True,
             nullable=False,
-            comment="Unique identifier for the FSE compliance association",
+            comment="Unique identifier for the charging equipment compliance association",
         ),
         sa.Column(
-            "fse_id",
+            "charging_equipment_id",
             sa.Integer(),
             nullable=False,
-            comment="Reference to final supply equipment",
+            comment="Reference to charging equipment",
         ),
         sa.Column(
             "compliance_report_id",
@@ -100,41 +98,46 @@ def upgrade() -> None:
             ["compliance_report_id"],
             ["compliance_report.compliance_report_id"],
             name=op.f(
-                "fk_fse_compliance_association_compliance_report_id_compliance_report"
+                "fk_compliance_report_charging_equipment_compliance_report_id_compliance_report"
             ),
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["fse_id"],
-            ["fse.fse_id"],
-            name=op.f("fk_fse_compliance_association_fse_id_fse"),
+            ["charging_equipment_id"],
+            ["charging_equipment.charging_equipment_id"],
+            name=op.f(
+                "fk_compliance_report_charging_equipment_charging_equipment_id_charging_equipment"
+            ),
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["organization_id"],
             ["organization.organization_id"],
-            name=op.f("fk_fse_compliance_association_organization_id_organization"),
+            name=op.f(
+                "fk_compliance_report_charging_equipment_organization_id_organization"
+            ),
         ),
         sa.PrimaryKeyConstraint(
-            "fse_compliance_id", name=op.f("pk_fse_compliance_association")
+            "charging_equipment_compliance_id",
+            name=op.f("pk_compliance_report_charging_equipment"),
         ),
-        comment="Association between FSE, Compliance Report, and Organization with supply data",
+        comment="Association between Charging Equipment, Compliance Report, and Organization with supply data",
     )
     op.create_index(
-        op.f("ix_fse_compliance_association_compliance_report_id"),
-        "fse_compliance_association",
+        op.f("ix_compliance_report_charging_equipment_compliance_report_id"),
+        "compliance_report_charging_equipment",
         ["compliance_report_id"],
         unique=False,
     )
     op.create_index(
-        op.f("ix_fse_compliance_association_fse_id"),
-        "fse_compliance_association",
-        ["fse_id"],
+        op.f("ix_compliance_report_charging_equipment_charging_equipment_id"),
+        "compliance_report_charging_equipment",
+        ["charging_equipment_id"],
         unique=False,
     )
     op.create_index(
-        op.f("ix_fse_compliance_association_organization_id"),
-        "fse_compliance_association",
+        op.f("ix_compliance_report_charging_equipment_organization_id"),
+        "compliance_report_charging_equipment",
         ["organization_id"],
         unique=False,
     )
@@ -142,15 +145,15 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index(
-        op.f("ix_fse_compliance_association_organization_id"),
-        table_name="fse_compliance_association",
+        op.f("ix_compliance_report_charging_equipment_organization_id"),
+        table_name="compliance_report_charging_equipment",
     )
     op.drop_index(
-        op.f("ix_fse_compliance_association_fse_id"),
-        table_name="fse_compliance_association",
+        op.f("ix_compliance_report_charging_equipment_charging_equipment_id"),
+        table_name="compliance_report_charging_equipment",
     )
     op.drop_index(
-        op.f("ix_fse_compliance_association_compliance_report_id"),
-        table_name="fse_compliance_association",
+        op.f("ix_compliance_report_charging_equipment_compliance_report_id"),
+        table_name="compliance_report_charging_equipment",
     )
-    op.drop_table("fse_compliance_association")
+    op.drop_table("compliance_report_charging_equipment")

@@ -6,11 +6,11 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     Table,
-    Double,
     Enum,
+    select,
+    event,
 )
 from sqlalchemy.orm import relationship, Session
-from sqlalchemy import event
 import enum
 
 
@@ -19,13 +19,13 @@ class PortsEnum(enum.Enum):
     DUAL_PORT = "Dual port"
 
 
-fse_intended_use_association = Table(
-    "fse_intended_use_association",
+charging_equipment_intended_use_association = Table(
+    "charging_equipment_intended_use_association",
     BaseModel.metadata,
     Column(
-        "fse_id",
+        "charging_equipment_id",
         Integer,
-        ForeignKey("fse.fse_id", ondelete="CASCADE"),
+        ForeignKey("charging_equipment.charging_equipment_id", ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
@@ -37,19 +37,19 @@ fse_intended_use_association = Table(
 )
 
 
-class FSE(BaseModel, Auditable, Versioning):
+class ChargingEquipment(BaseModel, Auditable, Versioning):
     """
-    Model representing final supply equipment
+    Model representing charging equipment
     """
 
-    __tablename__ = "fse"
-    __table_args__ = {"comment": "Final supply equipment"}
+    __tablename__ = "charging_equipment"
+    __table_args__ = {"comment": "Charging equipment"}
 
-    fse_id = Column(
+    charging_equipment_id = Column(
         Integer,
         primary_key=True,
         autoincrement=True,
-        comment="Unique identifier for the final supply equipment",
+        comment="Unique identifier for the charging equipment",
     )
 
     charging_site_id = Column(
@@ -62,16 +62,16 @@ class FSE(BaseModel, Auditable, Versioning):
 
     status_id = Column(
         Integer,
-        ForeignKey("fse_status.fse_status_id"),
+        ForeignKey("charging_equipment_status.charging_equipment_status_id"),
         nullable=False,
-        comment="Current status of the final supply equipment",
+        comment="Current status of the charging equipment",
         index=True,
     )
 
-    fse_number = Column(
+    equipment_number = Column(
         String(3),
         nullable=False,
-        comment="Auto-generated 3-digit FSE number (suffix for registration)",
+        comment="Auto-generated 3-digit equipment number (suffix for registration)",
         index=True,
     )
 
@@ -114,22 +114,10 @@ class FSE(BaseModel, Auditable, Versioning):
         comment="Port configuration of the equipment",
     )
 
-    latitude = Column(
-        Double,
-        nullable=True,
-        comment="Latitude coordinate of the equipment location",
-    )
-
-    longitude = Column(
-        Double,
-        nullable=True,
-        comment="Longitude coordinate of the equipment location",
-    )
-
     notes = Column(
         Text,
         nullable=True,
-        comment="Optional notes about the final supply equipment",
+        comment="Optional notes about the charging equipment",
     )
 
     # Relationships
@@ -137,69 +125,73 @@ class FSE(BaseModel, Auditable, Versioning):
         "Organization", foreign_keys=[allocating_organization_id]
     )
 
-    charging_site = relationship("ChargingSite", back_populates="fse")
-    status = relationship("FSEStatus", back_populates="fse")
+    charging_site = relationship("ChargingSite", back_populates="charging_equipment")
+    status = relationship(
+        "ChargingEquipmentStatus", back_populates="charging_equipment"
+    )
     level_of_equipment = relationship("LevelOfEquipment")
 
     intended_uses = relationship(
         "EndUseType",
-        secondary=fse_intended_use_association,
-        back_populates="fse",
+        secondary=charging_equipment_intended_use_association,
     )
     compliance_associations = relationship(
-        "FSEComplianceAssociation", back_populates="fse", cascade="all, delete-orphan"
+        "ComplianceReportChargingEquipment",
+        back_populates="charging_equipment",
+        cascade="all, delete-orphan",
     )
 
     @property
     def registration_number(self):
-        """Generate the full registration number using site number + FSE number."""
-        if self.charging_site and self.charging_site.site_code and self.fse_number:
-            return f"{self.charging_site.site_code}-{self.fse_number}"
+        """Generate the full registration number using site code + equipment number."""
+        if (
+            self.charging_site
+            and self.charging_site.site_code
+            and self.equipment_number
+        ):
+            return f"{self.charging_site.site_code}-{self.equipment_number}"
         return None
 
     def __repr__(self):
         return (
-            f"<FSE("
-            f"id={self.fse_id}, "
-            f"fse_number='{self.fse_number}', "
+            f"<ChargingEquipment("
+            f"id={self.charging_equipment_id}, "
+            f"equipment_number='{self.equipment_number}', "
             f"serial='{self.serial_number}', "
             f"version={self.version}"
             f")>"
         )
 
 
-# SUGGESTION: Convert to base-36 encoding (0-9, A-Z) using:
-# - 3 alphanumeric: increase capacity from 999 to 46,656 unique FSE numbers per charging site
-# The same approach can be used for charging site codes
-@event.listens_for(FSE, "before_insert")
-def generate_fse_number(mapper, connection, target):
-    if getattr(target, "fse_number", None):
+@event.listens_for(ChargingEquipment, "before_insert")
+def generate_equipment_number(mapper, connection, target):
+    if getattr(target, "equipment_number", None):
         return
     if not getattr(target, "charging_site_id", None):
         # relying on DB constraint to ensure presence; skip if absent
         return
     session = Session(bind=connection)
     try:
-        # Lock-less approach: read current FSENumber tracker row; create if missing
-        from lcfs.db.models.compliance.FSENumber import FSENumber
+        # Find the highest equipment number for this charging site
+        max_equipment_number = session.execute(
+            select(ChargingEquipment.equipment_number)
+            .where(ChargingEquipment.charging_site_id == target.charging_site_id)
+            .order_by(ChargingEquipment.equipment_number.desc())
+            .limit(1)
+        ).scalar_one_or_none()
 
-        tracker = session.get(FSENumber, {"charging_site_id": target.charging_site_id})
-        if tracker is None:
-            tracker = FSENumber(
-                charging_site_id=target.charging_site_id, current_sequence_number=0
-            )
-            session.add(tracker)
-            session.flush()
+        if max_equipment_number:
+            # Convert to int and increment
+            next_seq = int(max_equipment_number) + 1
+        else:
+            # First equipment for this site
+            next_seq = 1
 
-        next_seq = (tracker.current_sequence_number or 0) + 1
         if next_seq > 999:
             raise ValueError(
-                "Exceeded maximum FSE numbers (999) for this charging site"
+                "Exceeded maximum equipment numbers (999) for this charging site"
             )
 
-        tracker.current_sequence_number = next_seq
-        session.flush()
-
-        target.fse_number = f"{next_seq:03d}"
+        target.equipment_number = f"{next_seq:03d}"
     finally:
         session.close()

@@ -11,32 +11,32 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 
 
-# Association table for FSE, ComplianceReport, and Organization with additional data
-class FSEComplianceAssociation(BaseModel, Auditable):
+# Association table for charging equipment, ComplianceReport, and Organization with additional data
+class ComplianceReportChargingEquipment(BaseModel, Auditable):
     """
-    Association table linking FSE, ComplianceReport, and Organization
+    Association table linking Charging Equipment, Compliance Report, and Organization
     with supply period and usage data
     """
 
-    __tablename__ = "fse_compliance_association"
+    __tablename__ = "compliance_report_charging_equipment"
     __table_args__ = {
-        "comment": "Association between FSE, Compliance Report, and Organization with supply data"
+        "comment": "Association between Charging Equipment, Compliance Report, and Organization with supply data"
     }
 
     # Primary key
-    fse_compliance_id = Column(
+    charging_equipment_compliance_id = Column(
         Integer,
         primary_key=True,
         autoincrement=True,
-        comment="Unique identifier for the FSE compliance association",
+        comment="Unique identifier for the charging equipment compliance association",
     )
 
     # Foreign keys to the three main entities
-    fse_id = Column(
+    charging_equipment_id = Column(
         Integer,
-        ForeignKey("fse.fse_id", ondelete="CASCADE"),
+        ForeignKey("charging_equipment.charging_equipment_id", ondelete="CASCADE"),
         nullable=False,
-        comment="Reference to final supply equipment",
+        comment="Reference to charging equipment",
         index=True,
     )
 
@@ -83,19 +83,21 @@ class FSEComplianceAssociation(BaseModel, Auditable):
     )
 
     # Relationships
-    fse = relationship("FSE", back_populates="compliance_associations")
+    charging_equipment = relationship(
+        "ChargingEquipment", back_populates="compliance_associations"
+    )
     compliance_report = relationship(
-        "ComplianceReport", back_populates="fse_associations"
+        "ComplianceReport", back_populates="charging_equipment_associations"
     )
     organization = relationship(
-        "Organization", back_populates="fse_compliance_associations"
+        "Organization", back_populates="charging_equipment_compliance_associations"
     )
 
     def __repr__(self):
         return (
-            f"<FSEComplianceAssociation("
-            f"id={self.fse_compliance_id}, "
-            f"fse_id={self.fse_id}, "
+            f"<ComplianceReportChargingEquipment("
+            f"id={self.charging_equipment_compliance_id}, "
+            f"charging_equipment_id={self.charging_equipment_id}, "
             f"compliance_report_id={self.compliance_report_id}, "
             f"organization_id={self.organization_id}, "
             f"supply_period={self.date_of_supply_from} to {self.date_of_supply_to}"

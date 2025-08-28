@@ -1,8 +1,8 @@
-"""Create charging sites and FSE tables.
+"""Create charging sites and Charging Equipment tables.
 
 Revision ID: 6640ecfbe53
-Revises: 32a1f93375bd
-Create Date: 2025-08-22 16:59:00.000000
+Revises: 71e8f75d9815
+Create Date: 2025-08-28 16:59:00.000000
 
 """
 
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "6640ecfbe53"
-down_revision = "32a1f93375bd"
+down_revision = "71e8f75d9815"
 branch_labels = None
 depends_on = None
 
@@ -138,6 +138,18 @@ def upgrade() -> None:
             comment="Postal code of the charging site",
         ),
         sa.Column(
+            "latitude",
+            sa.Double(),
+            nullable=True,
+            comment="Latitude coordinate of the charging site location",
+        ),
+        sa.Column(
+            "longitude",
+            sa.Double(),
+            nullable=True,
+            comment="Longitude coordinate of the charging site location",
+        ),
+        sa.Column(
             "notes",
             sa.Text(),
             nullable=True,
@@ -196,21 +208,21 @@ def upgrade() -> None:
         comment="Charging sites",
     )
 
-    # 3. Create fse_status table
+    # 3. Create charging_equipment_status table
     op.create_table(
-        "fse_status",
+        "charging_equipment_status",
         sa.Column(
-            "fse_status_id",
+            "charging_equipment_status_id",
             sa.Integer(),
             autoincrement=True,
             nullable=False,
-            comment="Unique identifier for the final supply equipment status",
+            comment="Unique identifier for the charging equipment status",
         ),
         sa.Column(
             "status",
             sa.String(length=50),
             nullable=False,
-            comment="FSE status",
+            comment="Charging equipment status",
         ),
         sa.Column(
             "description",
@@ -250,54 +262,20 @@ def upgrade() -> None:
             nullable=True,
             comment="The user who last updated this record in the database.",
         ),
-        sa.PrimaryKeyConstraint("fse_status_id"),
+        sa.PrimaryKeyConstraint("charging_equipment_status_id"),
         sa.UniqueConstraint("status"),
-        comment="Status values for final supply equipment",
+        comment="Status values for charging equipment",
     )
 
-    # 4. Create fse_number table
+    # 4. Create charging_equipment table
     op.create_table(
-        "fse_number",
+        "charging_equipment",
         sa.Column(
-            "charging_site_id",
-            sa.Integer(),
-            nullable=False,
-            comment="The charging site ID for the FSE sequence.",
-        ),
-        sa.Column(
-            "current_sequence_number",
-            sa.Integer(),
-            nullable=False,
-            server_default=sa.text("0"),
-            comment="Current sequence number used for FSE number generation.",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the record was updated in the database.",
-        ),
-        sa.PrimaryKeyConstraint("charging_site_id"),
-        comment="Tracks the highest sequence numbers for FSE number generation by charging site.",
-    )
-
-    # 5. Create fse table
-    op.create_table(
-        "fse",
-        sa.Column(
-            "fse_id",
+            "charging_equipment_id",
             sa.Integer(),
             autoincrement=True,
             nullable=False,
-            comment="Unique identifier for the final supply equipment",
+            comment="Unique identifier for the charging equipment",
         ),
         sa.Column(
             "charging_site_id",
@@ -309,13 +287,13 @@ def upgrade() -> None:
             "status_id",
             sa.Integer(),
             nullable=False,
-            comment="Current status of the final supply equipment",
+            comment="Current status of the charging equipment",
         ),
         sa.Column(
-            "fse_number",
+            "equipment_number",
             sa.String(length=3),
             nullable=False,
-            comment="Auto-generated 3-digit FSE number (suffix for registration)",
+            comment="Auto-generated 3-digit equipment number (suffix for registration)",
         ),
         sa.Column(
             "allocating_organization_id",
@@ -354,22 +332,10 @@ def upgrade() -> None:
             comment="Port configuration of the equipment",
         ),
         sa.Column(
-            "latitude",
-            sa.Double(),
-            nullable=True,
-            comment="Latitude coordinate of the equipment location",
-        ),
-        sa.Column(
-            "longitude",
-            sa.Double(),
-            nullable=True,
-            comment="Longitude coordinate of the equipment location",
-        ),
-        sa.Column(
             "notes",
             sa.Text(),
             nullable=True,
-            comment="Optional notes about the final supply equipment",
+            comment="Optional notes about the charging equipment",
         ),
         # Versioning fields
         sa.Column(
@@ -419,11 +385,11 @@ def upgrade() -> None:
             nullable=True,
             comment="The user who last updated this record in the database.",
         ),
-        sa.PrimaryKeyConstraint("fse_id"),
-        comment="Final supply equipment",
+        sa.PrimaryKeyConstraint("charging_equipment_id"),
+        comment="Charging equipment",
     )
 
-    # 6. Create charging_site_intended_user_association table
+    # 5. Create charging_site_intended_user_association table
     op.create_table(
         "charging_site_intended_user_association",
         sa.Column(
@@ -439,7 +405,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("charging_site_id", "end_user_type_id"),
     )
 
-    # 7. Create charging_site_document_association table
+    # 6. Create charging_site_document_association table
     op.create_table(
         "charging_site_document_association",
         sa.Column(
@@ -455,11 +421,11 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("charging_site_id", "document_id"),
     )
 
-    # 8. Create fse_intended_use_association table
+    # 7. Create charging_equipment_intended_use_association table
     op.create_table(
-        "fse_intended_use_association",
+        "charging_equipment_intended_use_association",
         sa.Column(
-            "fse_id",
+            "charging_equipment_id",
             sa.Integer(),
             nullable=False,
         ),
@@ -468,7 +434,7 @@ def upgrade() -> None:
             sa.Integer(),
             nullable=False,
         ),
-        sa.PrimaryKeyConstraint("fse_id", "end_use_type_id"),
+        sa.PrimaryKeyConstraint("charging_equipment_id", "end_use_type_id"),
     )
 
     # Create foreign key constraints
@@ -487,40 +453,34 @@ def upgrade() -> None:
         ["charging_site_status_id"],
     )
     op.create_foreign_key(
-        "fk_fse_charging_site_id",
-        "fse",
+        "fk_charging_equipment_charging_site_id",
+        "charging_equipment",
         "charging_site",
         ["charging_site_id"],
         ["charging_site_id"],
     )
     op.create_foreign_key(
-        "fk_fse_status_id",
-        "fse",
-        "fse_status",
+        "fk_charging_equipment_status_id",
+        "charging_equipment",
+        "charging_equipment_status",
         ["status_id"],
-        ["fse_status_id"],
+        ["charging_equipment_status_id"],
     )
     op.create_foreign_key(
-        "fk_fse_allocating_organization_id",
-        "fse",
+        "fk_charging_equipment_allocating_organization_id",
+        "charging_equipment",
         "organization",
         ["allocating_organization_id"],
         ["organization_id"],
     )
     op.create_foreign_key(
-        "fk_fse_level_of_equipment_id",
-        "fse",
+        "fk_charging_equipment_level_of_equipment_id",
+        "charging_equipment",
         "level_of_equipment",
         ["level_of_equipment_id"],
         ["level_of_equipment_id"],
     )
-    op.create_foreign_key(
-        "fk_fse_number_charging_site_id",
-        "fse_number",
-        "charging_site",
-        ["charging_site_id"],
-        ["charging_site_id"],
-    )
+
     op.create_foreign_key(
         "fk_charging_site_intended_user_site_id",
         "charging_site_intended_user_association",
@@ -553,16 +513,16 @@ def upgrade() -> None:
         ondelete="CASCADE",
     )
     op.create_foreign_key(
-        "fk_fse_intended_use_fse_id",
-        "fse_intended_use_association",
-        "fse",
-        ["fse_id"],
-        ["fse_id"],
+        "fk_charging_equipment_intended_use_charging_equipment_id",
+        "charging_equipment_intended_use_association",
+        "charging_equipment",
+        ["charging_equipment_id"],
+        ["charging_equipment_id"],
         ondelete="CASCADE",
     )
     op.create_foreign_key(
-        "fk_fse_intended_use_end_use_type_id",
-        "fse_intended_use_association",
+        "fk_charging_equipment_intended_use_end_use_type_id",
+        "charging_equipment_intended_use_association",
         "end_use_type",
         ["end_use_type_id"],
         ["end_use_type_id"],
@@ -574,10 +534,24 @@ def upgrade() -> None:
     )
     op.create_index("idx_charging_site_status_id", "charging_site", ["status_id"])
     op.create_index("idx_charging_site_site_code", "charging_site", ["site_code"])
-    op.create_index("idx_fse_charging_site_id", "fse", ["charging_site_id"])
-    op.create_index("idx_fse_status_id", "fse", ["status_id"])
-    op.create_index("idx_fse_fse_number", "fse", ["fse_number"])
-    op.create_index("idx_fse_level_of_equipment_id", "fse", ["level_of_equipment_id"])
+    op.create_index(
+        "idx_charging_equipment_charging_site_id",
+        "charging_equipment",
+        ["charging_site_id"],
+    )
+    op.create_index(
+        "idx_charging_equipment_status_id", "charging_equipment", ["status_id"]
+    )
+    op.create_index(
+        "idx_charging_equipment_equipment_number",
+        "charging_equipment",
+        ["equipment_number"],
+    )
+    op.create_index(
+        "idx_charging_equipment_level_of_equipment_id",
+        "charging_equipment",
+        ["level_of_equipment_id"],
+    )
 
     # Seed initial status data
     charging_site_status_table = sa.table(
@@ -587,8 +561,8 @@ def upgrade() -> None:
         sa.column("display_order", sa.Integer),
     )
 
-    fse_status_table = sa.table(
-        "fse_status",
+    charging_equipment_status_table = sa.table(
+        "charging_equipment_status",
         sa.column("status", sa.String),
         sa.column("description", sa.String),
         sa.column("display_order", sa.Integer),
@@ -621,31 +595,31 @@ def upgrade() -> None:
     )
 
     op.bulk_insert(
-        fse_status_table,
+        charging_equipment_status_table,
         [
             {
                 "status": "Draft",
-                "description": "FSE is being created or edited",
+                "description": "Charging equipment is being created or edited",
                 "display_order": 1,
             },
             {
                 "status": "Submitted",
-                "description": "FSE has been submitted for review",
+                "description": "Charging equipment has been submitted for review",
                 "display_order": 2,
             },
             {
                 "status": "Validated",
-                "description": "FSE has been validated",
+                "description": "Charging equipment has been validated",
                 "display_order": 3,
             },
             {
                 "status": "Updated",
-                "description": "FSE has been updated after validation",
+                "description": "Charging equipment has been updated after validation",
                 "display_order": 4,
             },
             {
                 "status": "Decommissioned",
-                "description": "FSE is no longer in service",
+                "description": "Charging equipment is no longer in service",
                 "display_order": 5,
             },
         ],
@@ -654,22 +628,24 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Drop indexes
-    op.drop_index("idx_fse_level_of_equipment_id", "fse")
-    op.drop_index("idx_fse_fse_number", "fse")
-    op.drop_index("idx_fse_status_id", "fse")
-    op.drop_index("idx_fse_charging_site_id", "fse")
+    op.drop_index("idx_charging_equipment_level_of_equipment_id", "charging_equipment")
+    op.drop_index("idx_charging_equipment_equipment_number", "charging_equipment")
+    op.drop_index("idx_charging_equipment_status_id", "charging_equipment")
+    op.drop_index("idx_charging_equipment_charging_site_id", "charging_equipment")
     op.drop_index("idx_charging_site_site_code", "charging_site")
     op.drop_index("idx_charging_site_status_id", "charging_site")
     op.drop_index("idx_charging_site_organization_id", "charging_site")
 
     # Drop foreign key constraints
     op.drop_constraint(
-        "fk_fse_intended_use_end_use_type_id",
-        "fse_intended_use_association",
+        "fk_charging_equipment_intended_use_end_use_type_id",
+        "charging_equipment_intended_use_association",
         type_="foreignkey",
     )
     op.drop_constraint(
-        "fk_fse_intended_use_fse_id", "fse_intended_use_association", type_="foreignkey"
+        "fk_charging_equipment_intended_use_charging_equipment_id",
+        "charging_equipment_intended_use_association",
+        type_="foreignkey",
     )
     op.drop_constraint(
         "fk_charging_site_document_document_id",
@@ -691,13 +667,25 @@ def downgrade() -> None:
         "charging_site_intended_user_association",
         type_="foreignkey",
     )
+
     op.drop_constraint(
-        "fk_fse_number_charging_site_id", "fse_number", type_="foreignkey"
+        "fk_charging_equipment_level_of_equipment_id",
+        "charging_equipment",
+        type_="foreignkey",
     )
-    op.drop_constraint("fk_fse_level_of_equipment_id", "fse", type_="foreignkey")
-    op.drop_constraint("fk_fse_allocating_organization_id", "fse", type_="foreignkey")
-    op.drop_constraint("fk_fse_status_id", "fse", type_="foreignkey")
-    op.drop_constraint("fk_fse_charging_site_id", "fse", type_="foreignkey")
+    op.drop_constraint(
+        "fk_charging_equipment_allocating_organization_id",
+        "charging_equipment",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "fk_charging_equipment_status_id", "charging_equipment", type_="foreignkey"
+    )
+    op.drop_constraint(
+        "fk_charging_equipment_charging_site_id",
+        "charging_equipment",
+        type_="foreignkey",
+    )
     op.drop_constraint(
         "fk_charging_site_status_id", "charging_site", type_="foreignkey"
     )
@@ -706,11 +694,10 @@ def downgrade() -> None:
     )
 
     # Drop tables
-    op.drop_table("fse_intended_use_association")
+    op.drop_table("charging_equipment_intended_use_association")
     op.drop_table("charging_site_document_association")
     op.drop_table("charging_site_intended_user_association")
-    op.drop_table("fse")
-    op.drop_table("fse_number")
-    op.drop_table("fse_status")
+    op.drop_table("charging_equipment")
+    op.drop_table("charging_equipment_status")
     op.drop_table("charging_site")
     op.drop_table("charging_site_status")

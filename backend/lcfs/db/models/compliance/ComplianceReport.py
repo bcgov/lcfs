@@ -195,8 +195,8 @@ class ComplianceReport(BaseModel, Auditable):
     organization_snapshot = relationship(
         "ComplianceReportOrganizationSnapshot", back_populates="compliance_report"
     )
-    fse_associations = relationship(
-        "FSEComplianceAssociation",
+    charging_equipment_associations = relationship(
+        "ComplianceReportChargingEquipment",
         back_populates="compliance_report",
         cascade="all, delete-orphan",
     )

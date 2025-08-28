@@ -28,9 +28,3 @@ class EndUserType(BaseModel):
         secondary="final_supply_intended_user_association",
         back_populates="intended_user_types",
     )
-
-    charging_sites = relationship(
-        "ChargingSite",
-        secondary="charging_site_intended_user_association",
-        back_populates="intended_users",
-    )

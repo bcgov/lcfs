@@ -9,6 +9,7 @@ from sqlalchemy import (
     UniqueConstraint,
     select,
     event,
+    Double,
 )
 from sqlalchemy.orm import relationship, Session
 
@@ -113,6 +114,18 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         comment="Postal code of the charging site",
     )
 
+    latitude = Column(
+        Double,
+        nullable=True,
+        comment="Latitude coordinate of the charging site location",
+    )
+
+    longitude = Column(
+        Double,
+        nullable=True,
+        comment="Longitude coordinate of the charging site location",
+    )
+
     notes = Column(
         Text,
         nullable=True,
@@ -126,7 +139,6 @@ class ChargingSite(BaseModel, Auditable, Versioning):
     intended_users = relationship(
         "EndUserType",
         secondary=charging_site_intended_user_association,
-        back_populates="charging_sites",
     )
 
     documents = relationship(
@@ -135,7 +147,9 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         back_populates="charging_sites",
     )
 
-    fse = relationship("FSE", back_populates="charging_site")
+    charging_equipment = relationship(
+        "ChargingEquipment", back_populates="charging_site"
+    )
 
     def __repr__(self):
         return (

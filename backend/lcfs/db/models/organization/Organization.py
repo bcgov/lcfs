@@ -189,8 +189,8 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     )
 
     charging_sites = relationship("ChargingSite", back_populates="organization")
-    fse_compliance_associations = relationship(
-        "FSEComplianceAssociation", back_populates="organization"
+    charging_equipment_compliance_associations = relationship(
+        "ComplianceReportChargingEquipment", back_populates="organization"
     )
 
 
