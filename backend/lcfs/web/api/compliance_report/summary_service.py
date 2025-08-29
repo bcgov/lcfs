@@ -1107,14 +1107,11 @@ class ComplianceReportSummaryService:
         organization_id: int,
         compliance_report: ComplianceReport,
     ) -> Tuple[List[ComplianceReportSummaryRowSchema], int]:
-        previous_summary = None
-        if compliance_report.version > 0:
-            previous_summary = await self.repo.get_previous_summary(compliance_report)
-
         # For Line 15 and 16, we should only use values from assessed reports
         # Get the last assessed report for this organization and compliance period
+        # Exclude current report to avoid circular reference
         assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
-            organization_id, compliance_period_start.year
+            organization_id, compliance_period_start.year, compliance_report.compliance_report_id
         )
 
         compliance_units_transferred_out = int(
