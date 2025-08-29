@@ -494,6 +494,8 @@ class NotificationRepository:
             select(NotificationChannelSubscription)
             .options(
                 selectinload(NotificationChannelSubscription.user_profile)
+                .selectinload(UserProfile.user_roles)
+                .joinedload(UserRole.role)
             )
             .join(
                 NotificationType,
