@@ -70,8 +70,9 @@ const SummaryTable = ({
       // For currency inputs (penalty fields), store as string to preserve decimal input
       value = enteredValue.replace(/[^0-9.]/g, '')
     } else {
-      // integer
-      value = enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
+      // integer - parse as float first to handle decimals correctly, then convert to int
+      const cleanedValue = enteredValue.replace(/[^0-9.-]/g, '') // Keep digits, decimal, and minus
+      value = cleanedValue === '' ? 0 : Math.floor(parseFloat(cleanedValue) || 0)
 
       if (constraints.max !== undefined && value > constraints.max) {
         value = constraints.max
