@@ -15,7 +15,8 @@ import {
   useGetAllocationAgreementsList,
   useSaveAllocationAgreement,
   useImportAllocationAgreement,
-  useGetAllocationAgreementImportJobStatus
+  useGetAllocationAgreementImportJobStatus,
+  useGetAllocationAgreementImportResult
 } from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
@@ -39,6 +40,7 @@ export const AddEditAllocationAgreements = () => {
   const [isDownloading, setIsDownloading] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isOverwrite, setIsOverwrite] = useState(false)
+  const [lastImportJobId, setLastImportJobId] = useState(null)
   const [hideOverwrite, setHideOverwrite] = useState(false)
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
   const [importAnchorEl, setImportAnchorEl] = useState(null)
@@ -76,6 +78,13 @@ export const AddEditAllocationAgreements = () => {
   const { mutateAsync: saveRow } = useSaveAllocationAgreement({
     complianceReportId
   })
+  const { mutateAsync: importFile } = useImportAllocationAgreement(complianceReportId, {
+    onSuccess: (data) => {
+      if (data?.data?.jobId) {
+        setLastImportJobId(data.data.jobId)
+      }
+    }
+  })
 
   const {
     data,
@@ -85,6 +94,20 @@ export const AddEditAllocationAgreements = () => {
     complianceReportId,
     changelog: isSupplemental
   })
+
+  // Monitor import job status and handle completion
+  const { data: jobStatus } = useGetAllocationAgreementImportJobStatus(lastImportJobId, {
+    enabled: !!lastImportJobId
+  })
+
+  // Handle import completion
+  useEffect(() => {
+    if (jobStatus && jobStatus.progress >= 100 && lastImportJobId) {
+      // Import is complete, handle rejected rows
+      handleImportCompletion(lastImportJobId)
+      setLastImportJobId(null) // Clear the job ID
+    }
+  }, [jobStatus, lastImportJobId, handleImportCompletion])
 
   // Decide when to hide or show Overwrite based on isOriginalReport + existing data
   useEffect(() => {
@@ -473,6 +496,44 @@ export const AddEditAllocationAgreements = () => {
     setImportAnchorEl(null)
   }
 
+  const handleImportCompletion = useCallback(async (jobId) => {
+    // Fetch the detailed import result to get rejected rows
+    try {
+      const importResult = await apiService.get(`/allocation-agreements/import-result/${jobId}`)
+      const result = importResult.data
+
+      if (result.rejected_rows && result.rejected_rows.length > 0) {
+        // Convert rejected rows to grid format with validation status
+        const rejectedRowsForGrid = result.rejected_rows.map(rejectedRow => {
+          const row = {
+            id: uuid(),
+            allocationAgreementId: null, // null for rejected rows
+            complianceReportId: parseInt(complianceReportId),
+            validationStatus: 'error',
+            validationMsg: rejectedRow.errors.map(err => err.message).join('; '),
+            isImportRejected: true,
+            modified: true,
+            isNewRow: true,
+            ...rejectedRow.data
+          }
+          return row
+        })
+
+        // Fetch current data and append rejected rows
+        refetch().then(() => {
+          setRowData(currentRows => [...currentRows, ...rejectedRowsForGrid])
+        })
+      } else {
+        // No rejected rows, just refetch normal data
+        refetch()
+      }
+    } catch (error) {
+      console.error('Error fetching import results:', error)
+      // Fallback to normal refetch
+      refetch()
+    }
+  }, [complianceReportId, apiService, refetch])
+
   const handleNavigateBack = useCallback(() => {
     navigate(
       buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId }),
@@ -638,11 +699,11 @@ export const AddEditAllocationAgreements = () => {
           open={isImportDialogOpen}
           close={() => {
             setIsImportDialogOpen(false)
-            refetch()
+            // Import completion is handled by the jobStatus useEffect above
           }}
           complianceReportId={complianceReportId}
           isOverwrite={isOverwrite}
-          importHook={useImportAllocationAgreement}
+          importHook={importFile}
           getJobStatusHook={useGetAllocationAgreementImportJobStatus}
         />
       </Grid2>

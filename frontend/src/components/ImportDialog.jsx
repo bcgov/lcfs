@@ -321,6 +321,15 @@ function ImportDialog({
                       </BCTypography>
                     </Box>
                   </Box>
+                  {rejectedCount > 0 && (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+                      <BCTypography variant="body2" color="text.secondary">
+                        {t(`common:importExport.import.dialog.rejectedRowsInfo`, {
+                          count: rejectedCount
+                        })}
+                      </BCTypography>
+                    </Box>
+                  )}
                 </>
               ) : (
                 <BCTypography color="error" variant="h4">

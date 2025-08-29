@@ -231,3 +231,34 @@ class OrganizationDetailsSchema(BaseSchema):
 
 class AllocationAgreementOptionsSchema(FuelTypeOptionsResponse):
     allocation_transaction_types: List[AllocationTransactionTypeSchema]
+
+
+class ValidationErrorSchema(BaseSchema):
+    field: str
+    message: str
+
+
+class RejectedRowSchema(BaseSchema):
+    row_number: int
+    data: dict
+    errors: List[ValidationErrorSchema]
+
+
+class ImportSummarySchema(BaseSchema):
+    total: int
+    imported: int
+    rejected: int
+
+
+class ImportResultSchema(BaseSchema):
+    job_id: str
+    status: str
+    summary: ImportSummarySchema
+    imported_rows: List[int] = Field(default_factory=list)  # IDs of successfully imported records
+    rejected_rows: List[RejectedRowSchema] = Field(default_factory=list)
+
+
+class AllocationAgreementWithValidationSchema(AllocationAgreementCreateSchema):
+    validation_status: Optional[str] = None
+    validation_msg: Optional[str] = None
+    is_import_rejected: Optional[bool] = False

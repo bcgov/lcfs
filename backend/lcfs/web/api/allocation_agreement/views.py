@@ -28,6 +28,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
     OrganizationDetailsSchema,
+    ImportResultSchema,
 )
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.api.allocation_agreement.validation import AllocationAgreementValidation
@@ -296,6 +297,21 @@ async def import_allocation_agreements(
         compliance_report_id, request.user, file, overwrite
     )
     return {"jobId": job_id}
+
+
+@router.get(
+    "/import-result/{job_id}",
+    response_model=ImportResultSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_allocation_agreement_import_result(
+    job_id: str,
+    importer: AllocationAgreementImporter = Depends(),
+):
+    """
+    Endpoint to get complete import results including rejected rows
+    """
+    return await importer.get_import_result(job_id)
 
 
 @router.get(

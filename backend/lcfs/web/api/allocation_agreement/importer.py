@@ -21,7 +21,12 @@ from lcfs.settings import settings
 from lcfs.utils.constants import POSTAL_REGEX, ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
-from lcfs.web.api.allocation_agreement.schema import AllocationAgreementCreateSchema
+from lcfs.web.api.allocation_agreement.schema import (
+    AllocationAgreementCreateSchema,
+    ImportResultSchema,
+    ImportSummarySchema,
+    RejectedRowSchema,
+)
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -108,6 +113,35 @@ class AllocationAgreementImporter:
         )
 
         return job_id
+
+    async def get_import_result(self, job_id: str) -> ImportResultSchema:
+        """
+        Get complete import results including rejected rows for frontend processing
+        """
+        redis_client = await self.redis_client.get_redis()
+        progress_data_str = await redis_client.get(f"jobs/{job_id}")
+        
+        if progress_data_str is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Job with ID {job_id} not found or has expired",
+            )
+        
+        progress_data = json.loads(progress_data_str)
+        
+        return ImportResultSchema(
+            job_id=job_id,
+            status=progress_data.get("status", "unknown"),
+            summary=ImportSummarySchema(
+                total=progress_data.get("created", 0) + progress_data.get("rejected", 0),
+                imported=progress_data.get("created", 0),
+                rejected=progress_data.get("rejected", 0)
+            ),
+            imported_rows=progress_data.get("imported_row_ids", []),
+            rejected_rows=[
+                RejectedRowSchema(**row) for row in progress_data.get("rejected_rows", [])
+            ]
+        )
 
     async def get_status(self, job_id: str) -> dict:
         """
@@ -231,6 +265,8 @@ async def import_async(
                     created = 0
                     rejected = 0
                     errors = []
+                    rejected_rows = []
+                    imported_row_ids = []
 
                     await _update_progress(
                         redis_client,
@@ -240,6 +276,8 @@ async def import_async(
                         created=created,
                         rejected=rejected,
                         errors=errors,
+                        rejected_rows=rejected_rows,
+                        imported_row_ids=imported_row_ids,
                     )
 
                     # Iterate through data rows, skipping the header.
@@ -260,32 +298,52 @@ async def import_async(
                                 created=created,
                                 rejected=rejected,
                                 errors=errors,
+                                rejected_rows=rejected_rows,
+                                imported_row_ids=imported_row_ids,
                             )
 
                         # Check if the entire row is empty
                         if all(cell is None for cell in row):
                             continue
 
-                        # Validate row
-                        error = _validate_row(
+                        # Validate row with detailed error information
+                        validation_errors = _validate_row_detailed(
                             row,
                             row_idx,
                             valid_fuel_types,
                             valid_fuel_categories,
                             valid_provisions,
                         )
-                        if error:
-                            errors.append(error)
+                        
+                        if validation_errors:
+                            # Row has validation errors - preserve for frontend editing
+                            row_data = _row_to_dict(row)
+                            rejected_rows.append({
+                                "row_number": row_idx,
+                                "data": row_data,
+                                "errors": validation_errors
+                            })
+                            # Also add simple error message for legacy compatibility
+                            error_messages = [error["message"] for error in validation_errors]
+                            errors.append(f"Row {row_idx}: {'; '.join(error_messages)}")
                             rejected += 1
                             continue
 
                         # Parse row data and insert into DB
                         try:
                             aa_data = _parse_row(row, compliance_report_id)
-                            await aa_service.create_allocation_agreement(aa_data)
+                            result = await aa_service.create_allocation_agreement(aa_data)
+                            imported_row_ids.append(result.allocation_agreement_id)
                             created += 1
                         except Exception as ex:
                             logger.error(str(ex))
+                            # Database error - also preserve row data
+                            row_data = _row_to_dict(row)
+                            rejected_rows.append({
+                                "row_number": row_idx,
+                                "data": row_data,
+                                "errors": [{"field": "general", "message": str(ex)}]
+                            })
                             errors.append(f"Row {row_idx}: {ex}")
                             rejected += 1
 
@@ -298,6 +356,8 @@ async def import_async(
                         created=created,
                         rejected=rejected,
                         errors=errors,
+                        rejected_rows=rejected_rows,
+                        imported_row_ids=imported_row_ids,
                     )
                     logger.debug(
                         f"Completed importing Allocation Agreement data, {created} rows created"
@@ -425,6 +485,133 @@ def _validate_row(
     return None
 
 
+def _validate_row_detailed(
+    row: tuple,
+    row_idx: int,
+    valid_fuel_types: set,
+    valid_fuel_categories: set,
+    valid_provisions: set,
+) -> List[dict]:
+    """
+    Validates a single row and returns detailed validation errors.
+    Returns a list of validation error dictionaries.
+    """
+    (
+        responsibility,
+        transaction_partner,
+        postal_address,
+        email,
+        phone,
+        fuel_type,
+        fuel_type_other,
+        fuel_category,
+        provision,
+        fuel_code,
+        quantity,
+    ) = row
+
+    errors = []
+
+    # Check required fields
+    field_mappings = {
+        "allocationTransactionType": responsibility,
+        "transactionPartner": transaction_partner,
+        "postalAddress": postal_address,
+        "transactionPartnerEmail": email,
+        "transactionPartnerPhone": phone,
+        "fuelType": fuel_type,
+        "fuelCategory": fuel_category,
+        "provisionOfTheAct": provision,
+        "quantity": quantity,
+    }
+
+    for field_name, field_value in field_mappings.items():
+        if field_value is None or field_value == "":
+            errors.append({
+                "field": field_name,
+                "message": f"{field_name} is required"
+            })
+
+    # Skip further validation if any required fields are missing
+    if errors:
+        return errors
+
+    # Validate email address
+    email_pattern = re.compile(r"^[\w\.-]+@[\w\.-]+\.\w+$")
+    if not email_pattern.match(email):
+        errors.append({
+            "field": "transactionPartnerEmail",
+            "message": "Invalid email address format"
+        })
+
+    # Validate quantity (must be integer > 0)
+    try:
+        if int(quantity) <= 0:
+            errors.append({
+                "field": "quantity",
+                "message": "Quantity must be greater than 0"
+            })
+    except (ValueError, TypeError):
+        errors.append({
+            "field": "quantity",
+            "message": "Quantity must be a valid number"
+        })
+
+    # Validate dropdown values
+    if fuel_type not in valid_fuel_types:
+        errors.append({
+            "field": "fuelType",
+            "message": f"Invalid fuel type: {fuel_type}. Must be one of: {', '.join(list(valid_fuel_types)[:3])}..."
+        })
+
+    if fuel_category not in valid_fuel_categories:
+        errors.append({
+            "field": "fuelCategory",
+            "message": f"Invalid fuel category: {fuel_category}. Must be one of: {', '.join(list(valid_fuel_categories)[:3])}..."
+        })
+
+    if provision not in valid_provisions:
+        errors.append({
+            "field": "provisionOfTheAct",
+            "message": f"Invalid determining carbon intensity: {provision}. Must be one of: {', '.join(list(valid_provisions)[:3])}..."
+        })
+
+    return errors
+
+
+def _row_to_dict(row: tuple) -> dict:
+    """
+    Converts a row tuple to a dictionary with field names.
+    """
+    (
+        responsibility,
+        transaction_partner,
+        postal_address,
+        email,
+        phone,
+        fuel_type,
+        fuel_type_other,
+        fuel_category,
+        provision,
+        fuel_code,
+        quantity,
+    ) = row
+
+    return {
+        "allocationTransactionType": responsibility,
+        "transactionPartner": transaction_partner,
+        "postalAddress": postal_address,
+        "transactionPartnerEmail": email,
+        "transactionPartnerPhone": phone,
+        "fuelType": fuel_type,
+        "fuelTypeOther": fuel_type_other,
+        "fuelCategory": fuel_category,
+        "provisionOfTheAct": provision,
+        "fuelCode": fuel_code,
+        "quantity": quantity,
+    }
+
+
 def _parse_row(
     row: tuple, compliance_report_id: int
 ) -> AllocationAgreementCreateSchema:
@@ -471,17 +658,25 @@ async def _update_progress(
     created: int = 0,
     rejected: int = 0,
     errors: List[str] = None,
+    rejected_rows: List[dict] = None,
+    imported_row_ids: List[int] = None,
 ):
     """
     Persists the job status and progress in Redis.
     """
     if errors is None:
         errors = []
+    if rejected_rows is None:
+        rejected_rows = []
+    if imported_row_ids is None:
+        imported_row_ids = []
     data = {
         "progress": progress,
         "status": status_msg,
         "created": created,
         "rejected": rejected,
         "errors": errors,
+        "rejected_rows": rejected_rows,
+        "imported_row_ids": imported_row_ids,
     }
-    await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=60)
+    await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=3600)  # Extended TTL for import results
