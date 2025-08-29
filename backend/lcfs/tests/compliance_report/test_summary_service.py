@@ -262,14 +262,6 @@ async def test_supplemental_low_carbon_fuel_target_summary(
         mock_assessed_report
     )
 
-    previous_summary_mock = MagicMock(
-        spec=ComplianceReportSummary
-    )  # Use MagicMock with spec
-    previous_summary_mock.line_18_units_to_be_banked = 15
-    previous_summary_mock.line_19_units_to_be_exported = 15
-    mock_summary_repo.get_previous_summary = AsyncMock(
-        return_value=previous_summary_mock
-    )
 
     mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
         1000  # Expected to be called
@@ -299,10 +291,10 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     assert line_values[14] == 200
     assert (
         line_values[15] == 15
-    )  # From previous_summary_mock.line_18_units_to_be_banked
+    )  # From assessed_report_mock.line_18_units_to_be_banked
     assert (
         line_values[16] == 15
-    )  # From previous_summary_mock.line_19_units_to_be_exported
+    )  # From assessed_report_mock.line_19_units_to_be_exported
     assert (
         line_values[17] == 1000
     )  # From mock_trxn_repo.calculate_line_17_available_balance_for_period
@@ -327,7 +319,7 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
         organization_id, compliance_period_start.year
     )
-    mock_summary_repo.get_previous_summary.assert_called_once_with(compliance_report)
+    mock_repo.get_assessed_compliance_report_by_period.assert_called_once_with(organization_id, compliance_period_start.year, compliance_report.compliance_report_id)
 
 
 @pytest.mark.anyio
