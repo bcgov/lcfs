@@ -6,15 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
 from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
-<<<<<<< HEAD
-from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
-=======
-from lcfs.web.api.compliance_report.summary_service import (
-    ComplianceReportSummaryService,
-)
->>>>>>> main
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     ReceivedOrTransferredEnumSchema,
@@ -268,7 +260,6 @@ async def test_supplemental_low_carbon_fuel_target_summary(
         mock_assessed_report
     )
 
-
     mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
         1000  # Expected to be called
     )
@@ -295,9 +286,7 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     assert line_values[12] == 500
     assert line_values[13] == 300
     assert line_values[14] == 200
-    assert (
-        line_values[15] == 15
-    )  # From assessed_report_mock.line_18_units_to_be_banked
+    assert line_values[15] == 15  # From assessed_report_mock.line_18_units_to_be_banked
     assert (
         line_values[16] == 15
     )  # From assessed_report_mock.line_19_units_to_be_exported
@@ -325,7 +314,11 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
         organization_id, compliance_period_start.year
     )
-    mock_repo.get_assessed_compliance_report_by_period.assert_called_once_with(organization_id, compliance_period_start.year, compliance_report.compliance_report_id)
+    mock_repo.get_assessed_compliance_report_by_period.assert_called_once_with(
+        organization_id,
+        compliance_period_start.year,
+        compliance_report.compliance_report_id,
+    )
 
 
 @pytest.mark.anyio
@@ -2368,11 +2361,6 @@ async def test_penalty_override_with_zero_values():
 
 
 # Tests for Summary Lines 7 & 9 Auto-population and Locking (Issue #2893)
-
-<<<<<<< HEAD
-=======
-
->>>>>>> main
 @pytest.mark.anyio
 async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     compliance_report_summary_service,
@@ -2381,14 +2369,6 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     # Mock data
     fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 500}
     renewable_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 50}
-<<<<<<< HEAD
-    previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 5}  # This should populate Line 7
-    previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 2}  # This should populate Line 9
-    notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
-    
-    # Create a proper ComplianceReportSummary mock with the actual fields
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-=======
     previous_retained = {
         "gasoline": 10,
         "diesel": 20,
@@ -2406,7 +2386,6 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         ComplianceReportSummary,
     )
 
->>>>>>> main
     mock_prev_summary = ComplianceReportSummary(
         line_6_renewable_fuel_retained_gasoline=100,
         line_6_renewable_fuel_retained_diesel=200,
@@ -2418,11 +2397,7 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         line_4_eligible_renewable_fuel_required_diesel=80,
         line_4_eligible_renewable_fuel_required_jet_fuel=0,
     )
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> main
     # Test that the method includes Lines 7 & 9 in the result
     result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
         fossil_quantities,
@@ -2433,24 +2408,6 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         2025,
         mock_prev_summary,
     )
-<<<<<<< HEAD
-    
-    # Check that all lines are present in the result - should be 11 lines total
-    assert len(result) == 11, f"Expected 11 lines, got {len(result)}"
-    
-    # Find Lines 7 & 9 in the result (handle both legacy and non-legacy formats)
-    line_7_row = next((row for row in result if row.line in [7, "7", "7 | 18"]), None)
-    line_9_row = next((row for row in result if row.line in [9, "9", "9 | 20"]), None)
-    
-    assert line_7_row is not None, f"Line 7 should be present in summary. Found lines: {[row.line for row in result]}"
-    assert line_9_row is not None, f"Line 9 should be present in summary. Found lines: {[row.line for row in result]}"
-    assert line_7_row.gasoline == previous_retained["gasoline"]  # 10
-    assert line_7_row.diesel == previous_retained["diesel"]      # 20
-    assert line_7_row.jet_fuel == previous_retained["jet_fuel"]  # 5
-    
-    assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
-    assert line_9_row.diesel == previous_obligation["diesel"]      # 10
-=======
 
     # Check that all lines are present in the result - should be 11 lines total
     assert len(result) == 11, f"Expected 11 lines, got {len(result)}"
@@ -2471,5 +2428,5 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
 
     assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
     assert line_9_row.diesel == previous_obligation["diesel"]  # 10
->>>>>>> main
+
     assert line_9_row.jet_fuel == previous_obligation["jet_fuel"]  # 2
