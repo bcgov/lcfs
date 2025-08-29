@@ -195,6 +195,11 @@ class ComplianceReport(BaseModel, Auditable):
     organization_snapshot = relationship(
         "ComplianceReportOrganizationSnapshot", back_populates="compliance_report"
     )
+    charging_equipment_associations = relationship(
+        "ComplianceReportChargingEquipment",
+        back_populates="compliance_report",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<ComplianceReport(id={self.compliance_report_id}, version={self.version})>"

@@ -391,6 +391,7 @@ class TestCreditMarketServices:
         assert result.reserved_balance == 25
 
     @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_sent_on_new_listing(
         self, 
         credit_market_service, 
@@ -438,6 +439,7 @@ class TestCreditMarketServices:
         assert call_args.notification_data.related_organization_id == 1
 
     @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_sent_when_credits_added_to_existing_listing(
         self, 
         credit_market_service, 
@@ -563,6 +565,7 @@ class TestCreditMarketServices:
         mock_notification_service.send_notification.assert_not_called()
 
     @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_handles_errors_gracefully(
         self, 
         credit_market_service, 
@@ -612,3 +615,46 @@ class TestCreditMarketServices:
         
         # Verify notification was attempted
         mock_notification_service.send_notification.assert_called_once()
+
+    @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', False)
+    async def test_credit_market_notification_not_sent_when_flag_disabled(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification is NOT sent when the feature flag is disabled"""
+        
+        # Set up organization without display initially
+        sample_organization.display_in_credit_market = False
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with new listing
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 100
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "display_in_credit_market": True,
+            "credits_to_sell": 100
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify notification was NOT sent because the flag is disabled
+        mock_notification_service.send_notification.assert_not_called()
