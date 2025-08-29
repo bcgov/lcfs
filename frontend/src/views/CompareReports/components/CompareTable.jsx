@@ -52,7 +52,7 @@ const CompareTable = ({
       <Table sx={tableStyles.table} aria-label={`${title} table`}>
         {enableFuelControls && (
           <TableHead>
-            <TableRow>
+            <TableRow key="fuel-controls-header-1">
               <TableCell
                 sx={{
                   ...tableStyles.headerCell,
@@ -124,7 +124,7 @@ const CompareTable = ({
                 </Box>
               </TableCell>
             </TableRow>
-            <TableRow>
+            <TableRow key="fuel-controls-header-2">
               <TableCell
                 align="center"
                 sx={{
@@ -183,7 +183,7 @@ const CompareTable = ({
         )}
         {!enableFuelControls && (
           <TableHead>
-            <TableRow>
+            <TableRow key="standard-header">
               {columns.map((column, index) => (
                 <TableCell
                   key={column.id}
@@ -205,7 +205,7 @@ const CompareTable = ({
         <TableBody>
           {data?.map((row, rowIndex) => (
             <TableRow
-              key={row.line}
+              key={row.line ?? rowIndex}
               sx={{
                 '&:last-child td, &:last-child th': { borderBottom: 0 },
                 backgroundColor: '#fcfcfc'

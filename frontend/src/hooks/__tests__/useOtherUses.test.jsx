@@ -26,7 +26,7 @@ vi.mock('@/services/useApiService', () => ({
 
 vi.mock('@/constants/routes', () => ({
   apiRoutes: {
-    otherUsesOptions: '/other-uses/options?',
+    otherUsesOptions: '/other-uses/table-options?',
     getAllOtherUses: '/other-uses/list',
     getOtherUses: '/other-uses/filtered',
     saveOtherUses: '/other-uses',
@@ -60,7 +60,7 @@ describe('useOtherUses', () => {
 
       expect(result.current.data).toEqual(mockOptions)
       expect(mockApiService.get).toHaveBeenCalledWith(
-        '/other-uses/options?compliancePeriod=2024'
+        '/other-uses/table-options?compliancePeriod=2024'
       )
     })
 

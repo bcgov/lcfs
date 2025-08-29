@@ -303,6 +303,7 @@ jobs:
           cmd: |
             yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-test.yaml
             yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-test.yaml
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-dynamic-scheduler/values-test.yaml
 
       - name: GitHub Commit & Push
         run: |
@@ -310,5 +311,6 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add lcfs/charts/lcfs-frontend/values-test.yaml
           git add lcfs/charts/lcfs-backend/values-test.yaml
+          git add lcfs/charts/lcfs-dynamic-scheduler/values-test.yaml
           git commit -m "Update the image tag to ${{ env.VERSION }}-${{ env.PRE_RELEASE }} on LCFS Test Environment"
           git push

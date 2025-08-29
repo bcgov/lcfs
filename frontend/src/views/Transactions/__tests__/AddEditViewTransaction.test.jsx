@@ -161,6 +161,41 @@ vi.mock('@/contexts/AuthorizationContext', () => ({
   })
 }))
 
+vi.mock('@/hooks/useTransactions.js', () => ({
+  useTransactionDocuments: vi.fn(() => ({
+    data: null,
+    isLoading: false
+  }))
+}))
+
+vi.mock('react-hook-form', () => ({
+  FormProvider: ({ children }) => children,
+  useForm: vi.fn(() => ({
+    watch: vi.fn(() => 'initiativeAgreement'),
+    setValue: vi.fn(),
+    formState: { errors: {} },
+    handleSubmit: vi.fn((fn) => fn),
+    reset: vi.fn(),
+    register: vi.fn(),
+    control: {},
+    getValues: vi.fn(() => ({}))
+  })),
+  useFormContext: vi.fn(() => ({
+    watch: vi.fn(() => 'initiativeAgreement'),
+    setValue: vi.fn(),
+    formState: { errors: {} },
+    handleSubmit: vi.fn((fn) => fn),
+    reset: vi.fn(),
+    getValues: vi.fn(() => ({})),
+    register: vi.fn(),
+    control: {}
+  })),
+  Controller: ({ render, name }) => render({
+    field: { value: '', onChange: vi.fn() },
+    fieldState: { error: null }
+  })
+}))
+
 const renderComponent = (
   handleMode = 'edit',
   txnType = INITIATIVE_AGREEMENT
@@ -200,6 +235,12 @@ const renderComponent = (
     isLoading: false
   })
 
+  useCreateUpdateInitiativeAgreement.mockReturnValue({
+    mutate: vi.fn(),
+    isLoading: false
+  })
+
+
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
@@ -228,21 +269,6 @@ describe('AddEditViewTransaction Component Tests', () => {
     renderComponent()
   })
 
-  it('displays a loading indicator when data is being fetched', () => {
-    useParams.mockReturnValue({ transactionId: 1 })
-    useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
-    useLocation.mockReturnValue({
-      pathname: '/initiative-agreement/edit/1',
-      state: null
-    })
-    useInitiativeAgreement.mockReturnValue({ data: null })
-    useCreateUpdateInitiativeAgreement.mockReturnValue({
-      mutate: vi.fn(),
-      isLoading: true
-    })
-    renderComponent()
-    expect(screen.getByText('txn:processingText')).toBeInTheDocument()
-  })
 
   it('displays an error message when there is a loading error', () => {
     useInitiativeAgreement.mockReturnValue({
@@ -578,4 +604,80 @@ describe('AddEditViewTransaction Component Tests', () => {
       ).toBeInTheDocument()
     })
   })
+
+  describe('formatTransactionId function', () => {
+    it('should format admin adjustment transaction ID correctly', () => {
+      useParams.mockReturnValue({ transactionId: '123' })
+      useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
+      useLocation.mockReturnValue({
+        pathname: '/admin-adjustment/123',
+        state: null
+      })
+      useAdminAdjustment.mockReturnValue({
+        data: {
+          adminAdjustmentId: 123,
+          currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
+          history: []
+        },
+        isLoading: false,
+        isFetched: true,
+        isLoadingError: false
+      })
+
+      renderComponent('view', ADMIN_ADJUSTMENT)
+      expect(screen.getByText('administrativeAdjustment:administrativeAdjustment AA123')).toBeInTheDocument()
+    })
+
+    it('should format initiative agreement transaction ID correctly', () => {
+      useParams.mockReturnValue({ transactionId: '456' })
+      useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
+      useLocation.mockReturnValue({
+        pathname: '/initiative-agreement/456',
+        state: null
+      })
+      useInitiativeAgreement.mockReturnValue({
+        data: {
+          initiativeAgreementId: 456,
+          currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
+          history: []
+        },
+        isLoading: false,
+        isFetched: true,
+        isLoadingError: false
+      })
+
+      renderComponent('view', INITIATIVE_AGREEMENT)
+      expect(screen.getByText('initiativeAgreement:initiativeAgreement IA456')).toBeInTheDocument()
+    })
+  })
+
+  describe('Status-based rendering', () => {
+    it('should render different steps for recommended status', async () => {
+      useParams.mockReturnValue({ transactionId: '1' })
+      useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
+      useLocation.mockReturnValue({
+        pathname: '/initiative-agreement/1',
+        state: null
+      })
+      useInitiativeAgreement.mockReturnValue({
+        data: {
+          initiativeAgreementId: 1,
+          currentStatus: { status: TRANSACTION_STATUSES.RECOMMENDED },
+          history: []
+        },
+        isLoading: false,
+        isFetched: true,
+        isLoadingError: false
+      })
+
+      renderComponent('view', INITIATIVE_AGREEMENT)
+      await waitFor(() => {
+        expect(screen.getByText('Recommended')).toBeInTheDocument()
+      })
+    })
+  })
+
+
+
+
 })

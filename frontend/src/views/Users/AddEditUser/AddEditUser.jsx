@@ -490,7 +490,7 @@ export const AddEditUser = ({
       {/* Confirmation Dialog for deletion */}
       <Dialog open={openConfirm} onClose={handleCancelDelete}>
         <DialogTitle>
-          <BCTypography variant="h6" color={colors.primary.main}>
+          <BCTypography variant="subtitle1" component="span" color={colors.primary.main}>
             {t('admin:deleteUser.confirmTitle')}
           </BCTypography>
         </DialogTitle>

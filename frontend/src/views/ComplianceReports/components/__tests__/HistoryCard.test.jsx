@@ -853,3 +853,92 @@ describe('Non-Assessment Report', () => {
     expect(screen.queryByText('*')).not.toBeInTheDocument()
   })
 })
+
+
+describe('History Processing Logic', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: true },
+      hasRoles: () => false
+    })
+  })
+
+  it('handles null history array', () => {
+    const reportWithNullHistory = {
+      ...defaultReport,
+      history: null
+    }
+
+    renderComponent(reportWithNullHistory)
+
+    // Should not crash and should not show any history items
+    expect(screen.queryByTestId('list-item')).not.toBeInTheDocument()
+  })
+
+  it('handles empty history array', () => {
+    const reportWithEmptyHistory = {
+      ...defaultReport,
+      history: []
+    }
+
+    renderComponent(reportWithEmptyHistory)
+
+    // Should not crash and should not show any history items
+    expect(screen.queryByTestId('list-item')).not.toBeInTheDocument()
+  })
+
+  it('hides history line when current report is draft and history item matches report ID', () => {
+    const reportId = 123
+    const historyWithDraftConflict = {
+      ...defaultReport,
+      complianceReportId: reportId,
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+      history: [
+        {
+          complianceReportId: reportId, // Same ID as current report
+          status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }, // Non-draft status
+          createDate: '2024-01-01T00:00:00Z',
+          userProfile: { firstName: 'Test', lastName: 'User' }
+        },
+        {
+          complianceReportId: 456, // Different ID
+          status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+          createDate: '2024-01-02T00:00:00Z',
+          userProfile: { firstName: 'Other', lastName: 'User' }
+        }
+      ]
+    }
+
+    renderComponent(historyWithDraftConflict, { defaultExpanded: true })
+
+    // Should only show the history item with different ID
+    expect(screen.getByTestId('list-item')).toBeInTheDocument()
+    // Should contain "Other User" but not "Test User"
+    expect(screen.getByText(/Other User/)).toBeInTheDocument()
+    expect(screen.queryByText(/Test User/)).not.toBeInTheDocument()
+  })
+
+  it('shows history line when current report is draft but history item has draft status', () => {
+    const reportId = 123
+    const historyWithDraftStatus = {
+      ...defaultReport,
+      complianceReportId: reportId,
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+      history: [
+        {
+          complianceReportId: reportId, // Same ID as current report
+          status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }, // Draft status - should show
+          createDate: '2024-01-01T00:00:00Z',
+          userProfile: { firstName: 'Test', lastName: 'User' }
+        }
+      ]
+    }
+
+    renderComponent(historyWithDraftStatus, { defaultExpanded: true })
+
+    // Should show the draft history item
+    expect(screen.getByTestId('list-item')).toBeInTheDocument()
+    expect(screen.getByText(/Test User/)).toBeInTheDocument()
+  })
+})

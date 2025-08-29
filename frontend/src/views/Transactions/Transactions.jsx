@@ -397,7 +397,7 @@ export const Transactions = () => {
           <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
             <BCGridViewer
               gridRef={gridRef}
-              gridKey="transactions-grid-v2"
+              gridKey="transactions-grid"
               columnDefs={transactionsColDefs(t)}
               getRowId={getRowId}
               overlayNoRowsTemplate={t('txn:noTxnsFound')}

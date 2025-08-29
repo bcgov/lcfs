@@ -1,432 +1,638 @@
-// import React from 'react'
-// import { render, screen, waitFor } from '@testing-library/react'
-// import { describe, it, expect, beforeEach, vi } from 'vitest'
-// import { NotionalTransferChangelog } from '../NotionalTransferChangelog'
-// import { wrapper } from '@/tests/utils/wrapper'
-// import { useGetChangeLog } from '@/hooks/useComplianceReports'
+import React from 'react'
+import { render, screen, act } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { NotionalTransferChangelog } from '../NotionalTransferChangelog'
+import { wrapper } from '@/tests/utils/wrapper'
 
-// // Mock hooks
-// vi.mock('@/hooks/useComplianceReports')
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key) => key
+  })
+}))
 
-// // Mock react-i18next
-// vi.mock('react-i18next', () => ({
-//   useTranslation: () => ({
-//     t: (key) => key
-//   })
-// }))
+// Mock react-router-dom
+vi.mock('react-router-dom', () => ({
+  useParams: () => ({
+    complianceReportId: 'test-report-id',
+    compliancePeriod: '2024'
+  })
+}))
 
-// // Mock BCGridViewer
-// vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-//   BCGridViewer: ({
-//     gridKey,
-//     columnDefs,
-//     queryData,
-//     getRowId,
-//     suppressPagination,
-//     gridOptions,
-//     defaultColDef,
-//     paginationOptions,
-//     onPaginationChange
-//   }) => (
-//     <div data-test="bc-grid-viewer">
-//       <div data-test="grid-key">{gridKey}</div>
-//       <div data-test="row-count">
-//         {queryData?.data?.items?.length || 0} rows
-//       </div>
-//       <div data-test="pagination-suppressed">
-//         {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
-//       </div>
-//       <div data-test="has-pagination-options">
-//         {paginationOptions ? 'has-pagination' : 'no-pagination'}
-//       </div>
-//       <div data-test="has-pagination-change">
-//         {onPaginationChange ? 'has-change-handler' : 'no-change-handler'}
-//       </div>
-//       <div data-test="get-row-id">
-//         {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
-//       </div>
-//       {/* Simulate items for testing */}
-//       {queryData?.data?.items?.map((item, index) => (
-//         <div key={index} data-test="grid-item">
-//           {item.notionalTransferId} - {item.actionType}
-//         </div>
-//       ))}
-//     </div>
-//   )
-// }))
+// Mock compliance report hooks
+vi.mock('@/hooks/useComplianceReports', () => ({
+  useComplianceReportWithCache: vi.fn(),
+  useGetChangeLog: vi.fn()
+}))
 
-// // Mock Loading component
-// vi.mock('@/components/Loading', () => ({
-//   default: () => <div data-test="loading-component">Loading...</div>
-// }))
+const { useComplianceReportWithCache, useGetChangeLog } = vi.mocked(await import('@/hooks/useComplianceReports'))
 
-// // Mock the store
-// vi.mock('@/stores/useComplianceReportStore', () => ({
-//   default: () => ({
-//     currentReport: {
-//       report: {
-//         complianceReportGroupUuid: 'test-group-uuid'
-//       }
-//     }
-//   })
-// }))
+// Mock BCGridViewer
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({
+    gridKey,
+    columnDefs,
+    queryData,
+    getRowId,
+    suppressPagination,
+    gridOptions,
+    paginationOptions,
+    onPaginationChange
+  }) => (
+    <div data-test="bc-grid-viewer">
+      <div data-test="grid-key">{gridKey}</div>
+      <div data-test="row-count">{queryData?.data?.items?.length || 0}</div>
+      <div data-test="pagination-suppressed">{suppressPagination?.toString()}</div>
+      <div data-test="has-pagination-options">{(!!paginationOptions).toString()}</div>
+      <div data-test="has-pagination-change">{(!!onPaginationChange).toString()}</div>
+      <div data-test="column-count">{columnDefs?.length || 0}</div>
+      <div data-test="grid-options">{JSON.stringify(gridOptions || {})}</div>
+      {queryData?.data?.items?.map((item, index) => (
+        <div key={index} data-test="grid-item">
+          ID: {getRowId ? getRowId({ data: item }) : 'no-id'} - {item.actionType}
+        </div>
+      ))}
+    </div>
+  )
+}))
 
-// // Mock schema
-// vi.mock('./_schema', () => ({
-//   changelogColDefs: () => [
-//     { field: 'legalName', headerName: 'Legal Name' },
-//     { field: 'actionType', headerName: 'Action' }
-//   ],
-//   changelogCommonColDefs: (highlight) => [
-//     { field: 'legalName', headerName: 'Legal Name' },
-//     { field: 'quantity', headerName: 'Quantity' }
-//   ]
-// }))
+// Mock BCTypography
+vi.mock('@/components/BCTypography', () => ({
+  default: ({ children, variant, color, component, ...props }) => (
+    <div data-test="bc-typography" data-variant={variant} data-color={color} {...props}>
+      {children}
+    </div>
+  )
+}))
 
-// // Mock constants
-// vi.mock('@/constants/schedules.js', () => ({
-//   defaultInitialPagination: {
-//     page: 1,
-//     size: 10,
-//     filters: [],
-//     sortOrders: []
-//   }
-// }))
+// Mock Loading
+vi.mock('@/components/Loading', () => ({
+  default: () => <div data-test="loading">Loading...</div>
+}))
 
-// // Mock colors
-// vi.mock('@/themes/base/colors', () => ({
-//   default: {
-//     alerts: {
-//       error: { background: '#ffebee' },
-//       success: { background: '#e8f5e8' }
-//     }
-//   }
-// }))
+// Mock Material-UI components
+vi.mock('@mui/material', () => ({
+  Box: ({ children, mb, ...props }) => (
+    <div data-test="mui-box" data-mb={mb} {...props}>
+      {children}
+    </div>
+  ),
+  TextField: ({ children, ...props }) => (
+    <div data-test="text-field" {...props}>
+      {children}
+    </div>
+  ),
+  Button: ({ children, ...props }) => (
+    <div data-test="button" {...props}>
+      {children}
+    </div>
+  ),
+  Typography: ({ children, ...props }) => (
+    <div data-test="typography" {...props}>
+      {children}
+    </div>
+  ),
+  Paper: ({ children, ...props }) => (
+    <div data-test="paper" {...props}>
+      {children}
+    </div>
+  )
+}))
 
-// describe('NotionalTransferChangelog', () => {
-//   beforeEach(() => {
-//     vi.resetAllMocks()
-//   })
+// Mock Material-UI styles
+vi.mock('@mui/material/styles', () => ({
+  styled: () => () => ({ children, ...props }) => (
+    <div data-test="styled-component" {...props}>
+      {children}
+    </div>
+  ),
+  useTheme: () => ({
+    spacing: (val) => val * 8,
+    palette: {
+      primary: { main: '#1976d2' },
+      secondary: { main: '#dc004e' }
+    }
+  })
+}))
 
-//   it('shows loading component when data is loading', () => {
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: null,
-//       isLoading: true
-//     })
+// Mock schema
+vi.mock('./_schema', () => ({
+  changelogColDefs: () => [
+    { field: 'notionalTransferId', headerName: 'ID' },
+    { field: 'legalName', headerName: 'Legal Name' },
+    { field: 'actionType', headerName: 'Action' },
+    { field: 'quantity', headerName: 'Quantity' },
+    { field: 'unitOfMeasure', headerName: 'Unit' }
+  ],
+  changelogCommonColDefs: (highlight) => [
+    { field: 'notionalTransferId', headerName: 'ID' },
+    { field: 'legalName', headerName: 'Legal Name' }
+  ]
+}))
 
-//     render(<NotionalTransferChangelog />, { wrapper })
-//     expect(screen.getByTestId('loading-component')).toBeInTheDocument()
-//   })
+// Mock constants
+vi.mock('@/constants/schedules.js', () => ({
+  defaultInitialPagination: {
+    page: 1,
+    size: 10,
+    filters: [],
+    sortOrders: []
+  }
+}))
 
-//   it('renders empty state when no changelog data', () => {
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: [],
-//       isLoading: false
-//     })
+// Mock colors
+vi.mock('@/themes/base/colors', () => ({
+  default: {
+    alerts: {
+      error: { background: '#ffebee' },
+      success: { background: '#e8f5e8' }
+    }
+  }
+}))
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+describe('NotionalTransferChangelog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    
+    // Default mock implementations
+    useComplianceReportWithCache.mockReturnValue({
+      data: {
+        report: {
+          complianceReportGroupUuid: 'test-group-uuid'
+        }
+      },
+      isLoading: false
+    })
 
-//     // Should render but with no changelog items
-//     const grids = screen.queryAllByTestId('bc-grid-viewer')
-//     expect(grids).toHaveLength(0)
-//   })
+    useGetChangeLog.mockReturnValue({
+      data: [],
+      isLoading: false
+    })
+  })
 
-//   it('renders single changelog item correctly', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Version 1.0',
-//         notionalTransfers: [
-//           { notionalTransferId: 1, legalName: 'Org A', actionType: 'CREATE' },
-//           { notionalTransferId: 2, legalName: 'Org B', actionType: 'UPDATE' }
-//         ]
-//       }
-//     ]
+  describe('Loading states', () => {
+    it('shows loading when changelogDataLoading is true', () => {
+      useGetChangeLog.mockReturnValue({
+        data: null,
+        isLoading: true
+      })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+      render(<NotionalTransferChangelog />, { wrapper })
+      expect(screen.getByTestId('loading')).toBeInTheDocument()
+    })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+    it('shows loading when currentReportLoading is true', () => {
+      useComplianceReportWithCache.mockReturnValue({
+        data: null,
+        isLoading: true
+      })
 
-//     expect(screen.getByText('Version 1.0')).toBeInTheDocument()
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
-//   })
+      render(<NotionalTransferChangelog />, { wrapper })
+      expect(screen.getByTestId('loading')).toBeInTheDocument()
+    })
+  })
 
-//   it('renders multiple changelog items correctly', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Current Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 1, legalName: 'Org A', actionType: 'CREATE' }
-//         ]
-//       },
-//       {
-//         version: 0,
-//         nickname: 'Original Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 2, legalName: 'Org B', actionType: 'DELETE' }
-//         ]
-//       }
-//     ]
+  describe('getRowId function', () => {
+    it('converts notionalTransferId to string', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: [
+          { notionalTransferId: 123, actionType: 'CREATE', legalName: 'Test Org' }
+        ]
+      }]
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('grid-item')).toHaveTextContent('ID: 123 - CREATE')
+    })
+  })
 
-//     expect(screen.getByText('Current Version')).toBeInTheDocument()
-//     expect(screen.getByText('Original Version')).toBeInTheDocument()
+  describe('gridOptions function', () => {
+    it('applies DELETE action styling', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: [
+          { notionalTransferId: 1, actionType: 'DELETE', legalName: 'Test Org' }
+        ]
+      }]
 
-//     const grids = screen.getAllByTestId('bc-grid-viewer')
-//     expect(grids).toHaveLength(2)
-//   })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//   it('suppresses pagination for small datasets', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Small Dataset',
-//         notionalTransfers: Array.from({ length: 5 }, (_, i) => ({
-//           notionalTransferId: i + 1,
-//           legalName: `Org ${i + 1}`,
-//           actionType: 'CREATE'
-//         }))
-//       }
-//     ]
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      const gridOptions = JSON.parse(screen.getByTestId('grid-options').textContent)
+      expect(gridOptions.overlayNoRowsTemplate).toBe('notionalTransfer:noNotionalTransfersFound')
+      expect(gridOptions.autoSizeStrategy.type).toBe('fitGridWidth')
+      expect(gridOptions.enableCellTextSelection).toBe(true)
+      expect(gridOptions.ensureDomOrder).toBe(true)
+    })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+    it('applies CREATE action styling', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: [
+          { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Test Org' }
+        ]
+      }]
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
-//       'pagination-suppressed'
-//     )
-//     expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
-//       'no-pagination'
-//     )
-//     expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
-//       'no-change-handler'
-//     )
-//   })
+      render(<NotionalTransferChangelog />, { wrapper })
+      expect(screen.getByTestId('grid-item')).toHaveTextContent('ID: 1 - CREATE')
+    })
 
-//   it('enables pagination for large datasets', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Large Dataset',
-//         notionalTransfers: Array.from({ length: 15 }, (_, i) => ({
-//           notionalTransferId: i + 1,
-//           legalName: `Org ${i + 1}`,
-//           actionType: 'CREATE'
-//         }))
-//       }
-//     ]
+    it('handles no styling for other action types', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: [
+          { notionalTransferId: 1, actionType: 'UPDATE', legalName: 'Test Org' }
+        ]
+      }]
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+      render(<NotionalTransferChangelog />, { wrapper })
+      expect(screen.getByTestId('grid-item')).toHaveTextContent('ID: 1 - UPDATE')
+    })
+  })
 
-//     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
-//       'pagination-enabled'
-//     )
-//     expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
-//       'has-pagination'
-//     )
-//     expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
-//       'has-change-handler'
-//     )
-//   })
+  describe('getPaginatedData function', () => {
+    it('returns all data when pagination disabled (small dataset)', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Small Dataset',
+        notionalTransfers: Array.from({ length: 5 }, (_, i) => ({
+          notionalTransferId: i + 1,
+          actionType: 'CREATE',
+          legalName: `Org ${i + 1}`
+        }))
+      }]
 
-//   it('uses different column definitions for current/original vs other versions', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Current Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 1, legalName: 'Org A', actionType: 'CREATE' }
-//         ]
-//       },
-//       {
-//         version: 2,
-//         nickname: 'Middle Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 2, legalName: 'Org B', actionType: 'UPDATE' }
-//         ]
-//       },
-//       {
-//         version: 0,
-//         nickname: 'Original Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 3, legalName: 'Org C', actionType: 'DELETE' }
-//         ]
-//       }
-//     ]
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('row-count')).toHaveTextContent('5')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('true')
+    })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+    it('applies pagination for large datasets', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Large Dataset',
+        notionalTransfers: Array.from({ length: 15 }, (_, i) => ({
+          notionalTransferId: i + 1,
+          actionType: 'CREATE',
+          legalName: `Org ${i + 1}`
+        }))
+      }]
 
-//     const grids = screen.getAllByTestId('bc-grid-viewer')
-//     expect(grids).toHaveLength(3)
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     // All should have getRowId function
-//     const getRowIdElements = screen.getAllByTestId('get-row-id')
-//     getRowIdElements.forEach((element) => {
-//       expect(element).toHaveTextContent('has-get-row-id')
-//     })
-//   })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('row-count')).toHaveTextContent('10')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('false')
+      expect(screen.getByTestId('has-pagination-options')).toHaveTextContent('true')
+      expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('true')
+    })
 
-//   it('handles empty notional transfers array', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Empty Version',
-//         notionalTransfers: []
-//       }
-//     ]
+    it('suppresses pagination for current version with small dataset', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Current Version',
+        notionalTransfers: Array.from({ length: 3 }, (_, i) => ({
+          notionalTransferId: i + 1,
+          actionType: 'CREATE',
+          legalName: `Org ${i + 1}`
+        }))
+      }]
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('row-count')).toHaveTextContent('3')
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('true')
+      expect(screen.getByTestId('has-pagination-options')).toHaveTextContent('false')
+    })
 
-//     expect(screen.getByText('Empty Version')).toBeInTheDocument()
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
-//     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
-//       'pagination-suppressed'
-//     )
-//   })
+    it('suppresses pagination for original version with small dataset', () => {
+      const mockData = [{
+        version: 0,
+        nickname: 'Original Version',
+        notionalTransfers: Array.from({ length: 3 }, (_, i) => ({
+          notionalTransferId: i + 1,
+          actionType: 'CREATE',
+          legalName: `Org ${i + 1}`
+        }))
+      }]
 
-//   it('handles missing store data gracefully', () => {
-//     // Mock empty store
-//     vi.doMock('@/stores/useComplianceReportStore', () => ({
-//       default: () => ({
-//         currentReport: null
-//       })
-//     }))
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: [],
-//       isLoading: false
-//     })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent('true')
+      expect(screen.getByTestId('has-pagination-options')).toHaveTextContent('false')
+    })
+  })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+  describe('handlePaginationChange function', () => {
+    it('provides pagination handler for large datasets', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: Array.from({ length: 15 }, (_, i) => ({
+          notionalTransferId: i + 1,
+          actionType: 'CREATE',
+          legalName: `Org ${i + 1}`
+        }))
+      }]
 
-//     // Should render without errors
-//     const grids = screen.queryAllByTestId('bc-grid-viewer')
-//     expect(grids).toHaveLength(0)
-//   })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//   it('generates unique grid keys for multiple versions', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Version 1',
-//         notionalTransfers: [
-//           { notionalTransferId: 1, legalName: 'Org A', actionType: 'CREATE' }
-//         ]
-//       },
-//       {
-//         version: 2,
-//         nickname: 'Version 2',
-//         notionalTransfers: [
-//           { notionalTransferId: 2, legalName: 'Org B', actionType: 'UPDATE' }
-//         ]
-//       }
-//     ]
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('true')
+    })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+    it('does not provide pagination handler for small datasets', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Small Dataset',
+        notionalTransfers: Array.from({ length: 5 }, (_, i) => ({
+          notionalTransferId: i + 1,
+          actionType: 'CREATE',
+          legalName: `Org ${i + 1}`
+        }))
+      }]
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     const gridKeys = screen.getAllByTestId('grid-key')
-//     expect(gridKeys[0]).toHaveTextContent('notional-transfers-changelog-0')
-//     expect(gridKeys[1]).toHaveTextContent('notional-transfers-changelog-1')
-//   })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('false')
+    })
+  })
 
-//   it('correctly identifies current and original versions', async () => {
-//     const mockChangelogData = [
-//       {
-//         version: 2, // Current (index 0)
-//         nickname: 'Current Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 1, legalName: 'Org A', actionType: 'CREATE' }
-//         ]
-//       },
-//       {
-//         version: 1, // Middle version
-//         nickname: 'Middle Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 2, legalName: 'Org B', actionType: 'UPDATE' }
-//         ]
-//       },
-//       {
-//         version: 0, // Original version
-//         nickname: 'Original Version',
-//         notionalTransfers: [
-//           { notionalTransferId: 3, legalName: 'Org C', actionType: 'DELETE' }
-//         ]
-//       }
-//     ]
+  describe('Rendering logic', () => {
+    it('renders empty state with no data', () => {
+      useGetChangeLog.mockReturnValue({
+        data: [],
+        isLoading: false
+      })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      const grids = screen.queryAllByTestId('bc-grid-viewer')
+      expect(grids).toHaveLength(0)
+    })
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+    it('renders single changelog item', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: [
+          { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Test Org' }
+        ]
+      }]
 
-//     await waitFor(() => {
-//       const grids = screen.getAllByTestId('bc-grid-viewer')
-//       expect(grids).toHaveLength(3)
-//     })
-//   })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//   it('handles pagination state management correctly', () => {
-//     const mockChangelogData = [
-//       {
-//         version: 1,
-//         nickname: 'Paginated Version',
-//         notionalTransfers: Array.from({ length: 15 }, (_, i) => ({
-//           notionalTransferId: i + 1,
-//           legalName: `Org ${i + 1}`,
-//           actionType: 'CREATE'
-//         }))
-//       }
-//     ]
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByText('Test Version')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(screen.getByTestId('row-count')).toHaveTextContent('1')
+    })
 
-//     vi.mocked(useGetChangeLog).mockReturnValue({
-//       data: mockChangelogData,
-//       isLoading: false
-//     })
+    it('renders multiple changelog items', () => {
+      const mockData = [
+        {
+          version: 1,
+          nickname: 'Current Version',
+          notionalTransfers: [
+            { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Org A' }
+          ]
+        },
+        {
+          version: 0,
+          nickname: 'Original Version',
+          notionalTransfers: [
+            { notionalTransferId: 2, actionType: 'DELETE', legalName: 'Org B' }
+          ]
+        }
+      ]
 
-//     render(<NotionalTransferChangelog />, { wrapper })
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
 
-//     // Should show first 10 items (default page size)
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('10 rows')
-//     expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
-//       'has-change-handler'
-//     )
-//   })
-// })
-describe.todo()
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByText('Current Version')).toBeInTheDocument()
+      expect(screen.getByText('Original Version')).toBeInTheDocument()
+      
+      const grids = screen.getAllByTestId('bc-grid-viewer')
+      expect(grids).toHaveLength(2)
+    })
+
+    it('uses column definitions for different version types', () => {
+      const mockData = [
+        {
+          version: 1,
+          nickname: 'Current Version',
+          notionalTransfers: [
+            { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Org A' }
+          ]
+        },
+        {
+          version: 2,
+          nickname: 'Middle Version',
+          notionalTransfers: [
+            { notionalTransferId: 2, actionType: 'UPDATE', legalName: 'Org B' }
+          ]
+        }
+      ]
+
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      // Verify that both grids have column definitions
+      const grids = screen.getAllByTestId('bc-grid-viewer')
+      expect(grids).toHaveLength(2)
+      
+      const columnCounts = screen.getAllByTestId('column-count')
+      expect(columnCounts).toHaveLength(2)
+      // Both should have positive column counts indicating column definitions are passed
+      expect(parseInt(columnCounts[0].textContent)).toBeGreaterThan(0)
+      expect(parseInt(columnCounts[1].textContent)).toBeGreaterThan(0)
+    })
+
+    it('generates unique grid keys', () => {
+      const mockData = [
+        {
+          version: 1,
+          nickname: 'Version 1',
+          notionalTransfers: [
+            { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Org A' }
+          ]
+        },
+        {
+          version: 2,
+          nickname: 'Version 2',
+          notionalTransfers: [
+            { notionalTransferId: 2, actionType: 'UPDATE', legalName: 'Org B' }
+          ]
+        }
+      ]
+
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      const gridKeys = screen.getAllByTestId('grid-key')
+      expect(gridKeys[0]).toHaveTextContent('notional-transfers-changelog-0')
+      expect(gridKeys[1]).toHaveTextContent('notional-transfers-changelog-1')
+    })
+
+    it('handles empty notionalTransfers array', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Empty Version',
+        notionalTransfers: []
+      }]
+
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(screen.getByText('Empty Version')).toBeInTheDocument()
+      expect(screen.getByTestId('row-count')).toHaveTextContent('0')
+    })
+  })
+
+  describe('Hook integration', () => {
+    it('calls hooks with correct parameters', () => {
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(useComplianceReportWithCache).toHaveBeenCalledWith('test-report-id')
+      expect(useGetChangeLog).toHaveBeenCalledWith({
+        complianceReportGroupUuid: 'test-group-uuid',
+        dataType: 'notional-transfers'
+      })
+    })
+
+    it('handles missing currentReport gracefully', () => {
+      useComplianceReportWithCache.mockReturnValue({
+        data: null,
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      expect(useGetChangeLog).toHaveBeenCalledWith({
+        complianceReportGroupUuid: undefined,
+        dataType: 'notional-transfers'
+      })
+    })
+  })
+
+  describe('Component structure', () => {
+    it('renders proper Box structure', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version',
+        notionalTransfers: [
+          { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Test Org' }
+        ]
+      }]
+
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      const boxes = screen.getAllByTestId('mui-box')
+      expect(boxes.length).toBeGreaterThan(0)
+      
+      // Check for the main container box and item boxes
+      const itemBox = boxes.find(box => box.getAttribute('data-mb') === '4')
+      expect(itemBox).toBeInTheDocument()
+    })
+
+    it('renders BCTypography with correct props', () => {
+      const mockData = [{
+        version: 1,
+        nickname: 'Test Version Title',
+        notionalTransfers: [
+          { notionalTransferId: 1, actionType: 'CREATE', legalName: 'Test Org' }
+        ]
+      }]
+
+      useGetChangeLog.mockReturnValue({
+        data: mockData,
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />, { wrapper })
+      
+      const typography = screen.getByTestId('bc-typography')
+      expect(typography).toHaveAttribute('data-variant', 'h6')
+      expect(typography).toHaveAttribute('data-color', 'primary')
+      expect(typography).toHaveTextContent('Test Version Title')
+    })
+  })
+})
