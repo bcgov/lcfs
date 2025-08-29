@@ -5,6 +5,7 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useTransfer, useUpdateCategory } from '@/hooks/useTransfer'
 import { useLoadingStore } from '@/stores/useLoadingStore'
+import { useQueryClient } from '@tanstack/react-query'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
@@ -29,9 +30,15 @@ vi.mock('@/stores/useLoadingStore', () => ({
   useLoadingStore: vi.fn()
 }))
 
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: vi.fn()
+}))
+
 describe('CategoryCheckbox Component', () => {
   const setLoadingMock = vi.fn()
   const mutateMock = vi.fn()
+  const invalidateQueriesMock = vi.fn()
+  let onMutateCallback, onSuccessCallback
 
   beforeEach(() => {
     keycloak.useKeycloak.mockReturnValue({
@@ -44,14 +51,24 @@ describe('CategoryCheckbox Component', () => {
       selector({ setLoading: setLoadingMock })
     )
 
-    // Mock updateCategory hook
-    useUpdateCategory.mockReturnValue({
-      mutate: mutateMock
+    // Mock useQueryClient
+    vi.mocked(useQueryClient).mockReturnValue({
+      invalidateQueries: invalidateQueriesMock
+    })
+
+    // Mock updateCategory hook and capture callbacks
+    useUpdateCategory.mockImplementation((transferId, options) => {
+      onMutateCallback = options.onMutate
+      onSuccessCallback = options.onSuccess
+      return {
+        mutate: mutateMock
+      }
     })
 
     // Reset mocks
     setLoadingMock.mockReset()
     mutateMock.mockReset()
+    invalidateQueriesMock.mockReset()
   })
 
   afterEach(() => {
@@ -148,5 +165,45 @@ describe('CategoryCheckbox Component', () => {
 
     // Verify the input is indeed disabled
     expect(checkboxInput).toBeDisabled()
+  })
+
+  it('should execute onMutate callback and set loading to true', () => {
+    useTransfer.mockReturnValue({
+      data: { transferCategory: { category: null } },
+      isFetching: false
+    })
+
+    render(<CategoryCheckbox />, { wrapper })
+
+    // Call the onMutate callback directly
+    onMutateCallback()
+
+    expect(setLoadingMock).toHaveBeenCalledWith(true)
+  })
+
+  it('should execute onSuccess callback and invalidate queries', () => {
+    useTransfer.mockReturnValue({
+      data: { transferCategory: { category: null } },
+      isFetching: false
+    })
+
+    render(<CategoryCheckbox />, { wrapper })
+
+    // Call the onSuccess callback directly
+    onSuccessCallback()
+
+    expect(invalidateQueriesMock).toHaveBeenCalledWith(['transfer'])
+  })
+
+  it('should not call setLoading when isFetching is true', () => {
+    useTransfer.mockReturnValue({
+      data: { transferCategory: { category: null } },
+      isFetching: true
+    })
+
+    render(<CategoryCheckbox />, { wrapper })
+
+    // setLoading(false) should not be called when isFetching is true
+    expect(setLoadingMock).not.toHaveBeenCalledWith(false)
   })
 })

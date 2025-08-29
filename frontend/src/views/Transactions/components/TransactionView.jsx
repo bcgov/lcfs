@@ -92,7 +92,7 @@ export const TransactionView = ({ transaction }) => {
                 {t('txn:attachments')}
               </BCTypography>
               {loadedFiles && loadedFiles.length > 0 && (
-                <BCTypography variant="body2" style={{ display: 'inline' }}>
+                <BCBox component="div" style={{ display: 'inline-block' }}>
                   <List
                     component="div"
                     sx={{ maxWidth: '100%', listStyleType: 'disc' }}
@@ -123,7 +123,7 @@ export const TransactionView = ({ transaction }) => {
                       </ListItemButton>
                     ))}
                   </List>
-                </BCTypography>
+                </BCBox>
               )}
             </Grid>
           </Grid>
