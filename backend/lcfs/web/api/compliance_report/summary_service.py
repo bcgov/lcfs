@@ -512,6 +512,7 @@ class ComplianceReportSummaryService:
             )
             # If the summary is locked, Lines 7 and 9 are also locked
             locked_summary.lines_7_and_9_locked = True
+
             return locked_summary
 
         compliance_period_start = compliance_report.compliance_period.effective_date
@@ -1111,7 +1112,9 @@ class ComplianceReportSummaryService:
         # Get the last assessed report for this organization and compliance period
         # Exclude current report to avoid circular reference
         assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
-            organization_id, compliance_period_start.year, compliance_report.compliance_report_id
+            organization_id,
+            compliance_period_start.year,
+            compliance_report.compliance_report_id,
         )
 
         compliance_units_transferred_out = int(
