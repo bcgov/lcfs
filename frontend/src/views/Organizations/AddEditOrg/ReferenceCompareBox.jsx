@@ -137,7 +137,10 @@ const ReferenceCompareBox = ({
                   <Tooltip title="Dismiss reference" arrow>
                     <IconButton
                       size="small"
-                      onClick={onDismiss}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDismiss()
+                      }}
                       sx={{
                         color: '#666',
                         '&:hover': {

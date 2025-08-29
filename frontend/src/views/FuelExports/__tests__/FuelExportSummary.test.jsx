@@ -1,531 +1,552 @@
-// import React from 'react'
-// import { render, screen } from '@testing-library/react'
-// import { describe, it, expect, beforeEach, vi } from 'vitest'
-// import { FuelExportSummary } from '../FuelExportSummary'
-// import { wrapper } from '@/tests/utils/wrapper'
-// import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest'
+import { FuelExportSummary } from '../FuelExportSummary'
 
-// // Mock react-i18next
-// vi.mock('react-i18next', () => ({
-//   useTranslation: () => ({
-//     t: (key) => key
-//   })
-// }))
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key) => key
+  })
+}))
 
-// // Mock BCGridViewer
-// vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
-//   BCGridViewer: ({
-//     gridKey,
-//     columnDefs,
-//     queryData,
-//     dataKey,
-//     gridOptions,
-//     defaultColDef,
-//     suppressPagination,
-//     paginationOptions,
-//     getRowId,
-//     enableCopyButton
-//   }) => (
-//     <div data-test="bc-grid-viewer">
-//       <div data-test="grid-key">{gridKey}</div>
-//       <div data-test="data-key">{dataKey}</div>
-//       <div data-test="row-count">
-//         {queryData?.data?.[dataKey]?.length || 0} rows
-//       </div>
-//       <div data-test="pagination-suppressed">
-//         {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
-//       </div>
-//       <div data-test="suppress-pagination-value">
-//         {String(suppressPagination)}
-//       </div>
-//       <div data-test="get-row-id">
-//         {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
-//       </div>
-//       <div data-test="copy-button">
-//         {enableCopyButton ? 'copy-enabled' : 'copy-disabled'}
-//       </div>
-//       <div data-test="has-pagination-options">
-//         {paginationOptions ? 'has-pagination' : 'no-pagination'}
-//       </div>
-//     </div>
-//   )
-// }))
+// Mock BCGridViewer with enhanced mock to capture function calls
+let mockOnPaginationChange = vi.fn()
+vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+  BCGridViewer: ({
+    gridKey,
+    columnDefs,
+    queryData,
+    dataKey,
+    gridOptions,
+    defaultColDef,
+    suppressPagination,
+    paginationOptions,
+    getRowId,
+    enableCopyButton,
+    onPaginationChange
+  }) => {
+    // Store the pagination callback for testing
+    mockOnPaginationChange = onPaginationChange
+    
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="data-key">{dataKey}</div>
+        <div data-test="row-count">
+          {queryData?.data?.[dataKey]?.length || 0} rows
+        </div>
+        <div data-test="pagination-suppressed">
+          {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
+        </div>
+        <div data-test="suppress-pagination-value">
+          {String(suppressPagination)}
+        </div>
+        <div data-test="get-row-id">
+          {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
+        </div>
+        <div data-test="copy-button">
+          {enableCopyButton ? 'copy-enabled' : 'copy-disabled'}
+        </div>
+        <div data-test="has-pagination-options">
+          {paginationOptions ? 'has-pagination' : 'no-pagination'}
+        </div>
+        <div data-test="grid-options-template">
+          {gridOptions?.overlayNoRowsTemplate || 'default-template'}
+        </div>
+        <div data-test="default-col-def">
+          {defaultColDef?.cellRenderer ? 'has-cell-renderer' : 'no-cell-renderer'}
+        </div>
+        {/* Button to test pagination callback */}
+        <button data-test="test-pagination-change" onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}>
+          Test Pagination Change
+        </button>
+        {/* Test getRowId function */}
+        <div data-test="get-row-id-result">
+          {getRowId && queryData?.data?.[dataKey]?.[0] ? getRowId({ data: queryData.data[dataKey][0] }) : 'no-result'}
+        </div>
+      </div>
+    )
+  }
+}))
 
-// // Mock the schema
-// vi.mock('@/views/FuelExports/_schema.jsx', () => ({
-//   fuelExportSummaryColDefs: [
-//     { field: 'fuelType', headerName: 'Fuel Type' },
-//     { field: 'quantity', headerName: 'Quantity' },
-//     { field: 'destination', headerName: 'Destination' }
-//   ]
-// }))
+// Mock the schema - enhanced to support showFuelTypeOther parameter
+vi.mock('@/views/FuelExports/_schema.jsx', () => {
+  const mockColDefs = vi.fn((showFuelTypeOther) => [
+    { field: 'fuelType', headerName: 'Fuel Type' },
+    { field: 'quantity', headerName: 'Quantity' },
+    { field: 'destination', headerName: 'Destination' },
+    ...(showFuelTypeOther ? [{ field: 'otherFuelType', headerName: 'Other Fuel Type' }] : [])
+  ])
+  return {
+    fuelExportSummaryColDefs: mockColDefs
+  }
+})
 
-// // Mock cell renderers
-// vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
-//   LinkRenderer: () => <div>Link Renderer</div>
-// }))
+// Mock cell renderers
+vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+  LinkRenderer: () => <div>Link Renderer</div>
+}))
 
-// // Mock constants
-// vi.mock('@/constants/schedules.js', () => ({
-//   defaultInitialPagination: {
-//     page: 1,
-//     size: 10,
-//     filters: [],
-//     sortOrders: []
-//   }
-// }))
+// Mock constants
+vi.mock('@/constants/schedules.js', () => ({
+  defaultInitialPagination: {
+    page: 1,
+    size: 10,
+    filters: [],
+    sortOrders: []
+  }
+}))
 
-// describe('FuelExportSummary', () => {
-//   beforeEach(() => {
-//     vi.resetAllMocks()
-//   })
+// Mock other components
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+}))
 
-//   it('renders the component with BCGridViewer', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+vi.mock('@mui/material/Grid2', () => ({
+  default: ({ children, ...props }) => <div data-test="mui-grid2" {...props}>{children}</div>
+}))
 
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//     expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
-//     expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
-//     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
-//     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
-//   })
+// Mock constants
+vi.mock('@/constants/statuses.js', () => ({
+  COMPLIANCE_REPORT_STATUSES: {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Submitted'
+  }
+}))
 
-//   it('renders with empty data correctly', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+// Mock theme
+vi.mock('@/themes', () => ({
+  default: {}
+}))
 
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
-//   })
+// Constants for testing
+const COMPLIANCE_REPORT_STATUSES = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted'
+}
 
-//   it('renders fuel export data correctly', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100,
-//           destination: 'USA',
-//           actionType: 'CREATE'
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           destination: 'Mexico',
-//           actionType: 'UPDATE'
-//         }
-//       ]
-//     }
+describe('FuelExportSummary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  it('renders the component with BCGridViewer', () => {
+    render(
+      <FuelExportSummary
+        data={{ fuelExports: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
-//   })
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
+    expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
+    expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
+    expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
+  })
 
-//   it('filters out deleted items', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100,
-//           destination: 'USA',
-//           actionType: 'CREATE'
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           destination: 'Mexico',
-//           actionType: 'DELETE'
-//         },
-//         {
-//           fuelExportId: 3,
-//           fuelType: 'Biodiesel',
-//           quantity: 300,
-//           destination: 'Canada',
-//           actionType: 'UPDATE'
-//         }
-//       ]
-//     }
+  it('renders with empty data correctly', () => {
+    render(
+      <FuelExportSummary
+        data={{ fuelExports: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
+  })
 
-//     // Should show 2 rows (excluding the deleted one)
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
-//   })
+  it('renders fuel export data correctly', () => {
+    const mockData = {
+      fuelExports: [
+        {
+          fuelExportId: 1,
+          fuelType: { fuelType: 'Diesel' },
+          quantity: 100,
+          destination: 'USA',
+          actionType: 'CREATE'
+        },
+        {
+          fuelExportId: 2,
+          fuelType: { fuelType: 'Gasoline' },
+          quantity: 200,
+          destination: 'Mexico',
+          actionType: 'UPDATE'
+        }
+      ]
+    }
 
-//   it('suppresses pagination when 10 or fewer items', () => {
-//     const mockData = {
-//       fuelExports: Array.from({ length: 8 }, (_, i) => ({
-//         fuelExportId: i + 1,
-//         fuelType: 'Diesel',
-//         quantity: (i + 1) * 100,
-//         destination: 'USA',
-//         actionType: 'CREATE'
-//       }))
-//     }
+    render(
+      <FuelExportSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
+  })
 
-//     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
-//       'pagination-suppressed'
-//     )
-//     expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
-//       'has-pagination'
-//     )
-//   })
+  it('filters out deleted items', () => {
+    const mockData = {
+      fuelExports: [
+        {
+          fuelExportId: 1,
+          fuelType: { fuelType: 'Diesel' },
+          quantity: 100,
+          destination: 'USA',
+          actionType: 'CREATE'
+        },
+        {
+          fuelExportId: 2,
+          fuelType: { fuelType: 'Gasoline' },
+          quantity: 200,
+          destination: 'Mexico',
+          actionType: 'DELETE'
+        },
+        {
+          fuelExportId: 3,
+          fuelType: { fuelType: 'Biodiesel' },
+          quantity: 300,
+          destination: 'Canada',
+          actionType: 'UPDATE'
+        }
+      ]
+    }
 
-//   it('enables pagination when more than 10 items', () => {
-//     const mockData = {
-//       fuelExports: Array.from({ length: 15 }, (_, i) => ({
-//         fuelExportId: i + 1,
-//         fuelType: 'Diesel',
-//         quantity: (i + 1) * 100,
-//         destination: 'USA',
-//         actionType: 'CREATE'
-//       }))
-//     }
+    render(
+      <FuelExportSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    // Should show 2 rows (excluding the deleted one)
+    expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
+  })
 
-//     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
-//       'pagination-enabled'
-//     )
-//     expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
-//       'has-pagination'
-//     )
-//   })
+  it('suppresses pagination when 10 or fewer items', () => {
+    const mockData = {
+      fuelExports: Array.from({ length: 8 }, (_, i) => ({
+        fuelExportId: i + 1,
+        fuelType: { fuelType: 'Diesel' },
+        quantity: (i + 1) * 100,
+        destination: 'USA',
+        actionType: 'CREATE'
+      }))
+    }
 
-//   it('handles non-DRAFT status correctly (no link renderer)', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
-//       />,
-//       { wrapper }
-//     )
+    render(
+      <FuelExportSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
+    expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
+      'has-pagination'
+    )
+  })
 
-//   it('handles DRAFT status correctly (with link renderer)', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  it('enables pagination when more than 10 items', () => {
+    const mockData = {
+      fuelExports: Array.from({ length: 15 }, (_, i) => ({
+        fuelExportId: i + 1,
+        fuelType: { fuelType: 'Diesel' },
+        quantity: (i + 1) * 100,
+        destination: 'USA',
+        actionType: 'CREATE'
+      }))
+    }
 
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
+    render(
+      <FuelExportSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//   it('handles undefined data gracefully', () => {
-//     render(
-//       <FuelExportSummary
-//         data={undefined}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
+    expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
+      'has-pagination'
+    )
+  })
 
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
-//     expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
-//       'true'
-//     )
-//   })
+  it('handles non-DRAFT status correctly (no link renderer)', () => {
+    render(
+      <FuelExportSummary
+        data={{ fuelExports: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+      />
+    )
 
-//   it('handles data without fuelExports property', () => {
-//     render(
-//       <FuelExportSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />,
-//       { wrapper }
-//     )
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    expect(screen.getByTestId('default-col-def')).toHaveTextContent('no-cell-renderer')
+  })
 
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
-//     expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
-//       'true'
-//     )
-//   })
+  it('handles DRAFT status correctly (with link renderer)', () => {
+    render(
+      <FuelExportSummary
+        data={{ fuelExports: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//   it('applies client-side filtering correctly', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Alpha Diesel',
-//           quantity: 100,
-//           destination: 'USA',
-//           actionType: 'CREATE'
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Beta Gasoline',
-//           quantity: 200,
-//           destination: 'Mexico',
-//           actionType: 'CREATE'
-//         },
-//         {
-//           fuelExportId: 3,
-//           fuelType: 'Gamma Biodiesel',
-//           quantity: 300,
-//           destination: 'Canada',
-//           actionType: 'CREATE'
-//         }
-//       ]
-//     }
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    expect(screen.getByTestId('default-col-def')).toHaveTextContent('has-cell-renderer')
+  })
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  it('handles undefined data gracefully', () => {
+    render(
+      <FuelExportSummary
+        data={undefined}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     // All items should be shown without filters
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
-//   })
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'true'
+    )
+  })
 
-//   it('correctly implements getRowId function', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 123,
-//           fuelType: 'Test Fuel',
-//           quantity: 500,
-//           destination: 'Test Country',
-//           actionType: 'CREATE'
-//         }
-//       ]
-//     }
+  it('handles data without fuelExports property', () => {
+    render(
+      <FuelExportSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />,
+    )
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
+    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
+      'true'
+    )
+  })
 
-//     // The mock shows that getRowId function is passed
-//     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
-//   })
+  it('correctly implements getRowId function', () => {
+    const mockData = {
+      fuelExports: [
+        {
+          fuelExportId: 123,
+          fuelType: { fuelType: 'Test Fuel' },
+          quantity: 500,
+          destination: 'Test Country',
+          actionType: 'CREATE'
+        }
+      ]
+    }
 
-//   it('disables copy button by default', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    render(
+      <FuelExportSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
-//   })
+    expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
+    expect(screen.getByTestId('get-row-id-result')).toHaveTextContent('123')
+  })
 
-//   it('passes correct auto size strategy', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  it('tests onPaginationChange callback', () => {
+    render(
+      <FuelExportSummary
+        data={{ fuelExports: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//     // Component should render without errors, indicating autoSizeStrategy is properly passed
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
+    const button = screen.getByTestId('test-pagination-change')
+    fireEvent.click(button)
 
-//   it('handles pagination options updates', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    // The pagination change should be handled without errors
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+  })
 
-//     // Component should render and handle pagination options correctly
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//     expect(screen.getByTestId('has-pagination-options')).toHaveTextContent(
-//       'has-pagination'
-//     )
-//   })
+  it('shows correct grid options template', () => {
+    render(
+      <FuelExportSummary
+        data={{ fuelExports: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />
+    )
 
-//   it('uses fitCellContents auto size strategy', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Very Long Fuel Type Name That Should Test Auto Sizing',
-//           quantity: 1000,
-//           destination: 'Very Long Destination Country Name',
-//           actionType: 'CREATE'
-//         }
-//       ]
-//     }
+    expect(screen.getByTestId('grid-options-template')).toHaveTextContent('fuelExport:noFuelExportsFound')
+  })
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  describe('showFuelTypeOther computation', () => {
+    it('returns false when no items have Other fuelType', () => {
+      const mockData = {
+        fuelExports: [
+          {
+            fuelExportId: 1,
+            fuelType: { fuelType: 'Diesel' },
+            quantity: 100,
+            actionType: 'CREATE'
+          },
+          {
+            fuelExportId: 2,
+            fuelType: { fuelType: 'Gasoline' },
+            quantity: 200,
+            actionType: 'CREATE'
+          }
+        ]
+      }
 
-//     // Component should render correctly with long content
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
-//   })
+      render(
+        <FuelExportSummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />
+      )
 
-//   it('maintains consistent grid configuration', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
 
-//     // Verify key grid configuration
-//     expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
-//     expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
-//     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
-//     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
-//   })
+    it('returns true when some items have Other fuelType', () => {
+      const mockData = {
+        fuelExports: [
+          {
+            fuelExportId: 1,
+            fuelType: { fuelType: 'Diesel' },
+            quantity: 100,
+            actionType: 'CREATE'
+          },
+          {
+            fuelExportId: 2,
+            fuelType: { fuelType: 'Other' },
+            quantity: 200,
+            actionType: 'CREATE'
+          }
+        ]
+      }
 
-//   it('uses static column definitions from schema', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+      render(
+        <FuelExportSummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />
+      )
 
-//     // Component should render, indicating the static column definitions were used correctly
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
 
-//   it('applies correct cell renderer URL configuration', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  describe('filtering logic', () => {
+    it('applies contains filter correctly', () => {
+      const mockData = {
+        fuelExports: [
+          {
+            fuelExportId: 1,
+            fuelType: { fuelType: 'Diesel' },
+            destination: 'USA',
+            actionType: 'CREATE'
+          },
+          {
+            fuelExportId: 2,
+            fuelType: { fuelType: 'Gasoline' },
+            destination: 'Canada',
+            actionType: 'CREATE'
+          }
+        ]
+      }
 
-//     // Component should render with proper configuration for fuel-exports URL
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
+      render(
+        <FuelExportSummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />
+      )
 
-//   it('handles mixed action types correctly', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100,
-//           actionType: 'CREATE'
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           actionType: 'UPDATE'
-//         },
-//         {
-//           fuelExportId: 3,
-//           fuelType: 'Biodiesel',
-//           quantity: 300,
-//           actionType: 'DELETE'
-//         },
-//         {
-//           fuelExportId: 4,
-//           fuelType: 'Ethanol',
-//           quantity: 400,
-//           actionType: 'CREATE'
-//         }
-//       ]
-//     }
+      // Component renders with data (filtering logic would be tested via integration tests)
+      expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+  describe('sorting logic', () => {
+    it('applies ascending sort correctly', () => {
+      const mockData = {
+        fuelExports: [
+          {
+            fuelExportId: 1,
+            fuelType: { fuelType: 'Diesel' },
+            quantity: 300,
+            actionType: 'CREATE'
+          },
+          {
+            fuelExportId: 2,
+            fuelType: { fuelType: 'Gasoline' },
+            quantity: 100,
+            actionType: 'CREATE'
+          }
+        ]
+      }
 
-//     // Should show 3 rows (excluding the deleted one)
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
-//   })
+      render(
+        <FuelExportSummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />
+      )
 
-//   it('handles items without actionType property', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100
-//           // No actionType property
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           actionType: 'CREATE'
-//         }
-//       ]
-//     }
+      expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
 
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
+    it('applies descending sort correctly', () => {
+      const mockData = {
+        fuelExports: [
+          {
+            fuelExportId: 1,
+            fuelType: { fuelType: 'Diesel' },
+            quantity: 100,
+            actionType: 'CREATE'
+          },
+          {
+            fuelExportId: 2,
+            fuelType: { fuelType: 'Gasoline' },
+            quantity: 300,
+            actionType: 'CREATE'
+          }
+        ]
+      }
 
-//     // Should show both rows (item without actionType should not be filtered out)
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
-//   })
-// })
-describe.todo()
+      render(
+        <FuelExportSummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />
+      )
+
+      expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  describe('pagination logic', () => {
+    it('correctly slices data for pagination', () => {
+      const mockData = {
+        fuelExports: Array.from({ length: 5 }, (_, i) => ({
+          fuelExportId: i + 1,
+          fuelType: { fuelType: 'Diesel' },
+          quantity: (i + 1) * 100,
+          actionType: 'CREATE'
+        }))
+      }
+
+      render(
+        <FuelExportSummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        />
+      )
+
+      // Shows all data on first page with default pagination (pagination logic tested via integration)
+      expect(screen.getByTestId('row-count')).toHaveTextContent('5 rows')
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+})

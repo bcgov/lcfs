@@ -63,6 +63,15 @@ describe('Introduction component', () => {
     expect(screen.getByTestId('compliance-report-intro')).toBeInTheDocument()
   })
 
+  it('renders with expanded=false', () => {
+    render(<Introduction expanded={false} compliancePeriod={'2024'} />, {
+      wrapper
+    })
+
+    expect(screen.getByText('Introduction Header')).toBeInTheDocument()
+    expect(screen.getByTestId('compliance-report-intro')).toBeInTheDocument()
+  })
+
   it('renders regular sections correctly when isEarlyIssuance is not set', () => {
     render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
       wrapper
@@ -143,5 +152,118 @@ describe('Introduction component', () => {
 
     // Restore the original implementation
     useTranslationSpy.mockRestore()
+  })
+
+  it('handles different compliancePeriod formats correctly', () => {
+    const tSpy = vi.fn((key, options) => {
+      if (key === 'report:sections') {
+        return [
+          { header: 'Section 1', content: ['<p>Content for section 1.</p>'] }
+        ]
+      }
+      return key
+    })
+
+    const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
+    useTranslationSpy.mockReturnValue({ t: tSpy })
+
+    render(<Introduction expanded={true} compliancePeriod={2023} />, {
+      wrapper
+    })
+
+    expect(tSpy).toHaveBeenCalledWith(
+      'report:sections',
+      expect.objectContaining({
+        returnObjects: true,
+        complianceYear: 2023,
+        nextYear: 2024
+      })
+    )
+
+    useTranslationSpy.mockRestore()
+  })
+
+  it('handles empty sections array', () => {
+    const tSpy = vi.fn((key, options) => {
+      if (key === 'report:sections') {
+        return []
+      }
+      if (key === 'report:introduction') return 'Introduction Header'
+      if (key === 'report:questions') return 'Questions Header'
+      if (key === 'report:contact') return '<p>Contact us</p>'
+      return key
+    })
+
+    const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
+    useTranslationSpy.mockReturnValue({ t: tSpy })
+
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
+      wrapper
+    })
+
+    expect(screen.getByText('Introduction Header')).toBeInTheDocument()
+    expect(screen.getByText('Questions Header')).toBeInTheDocument()
+
+    useTranslationSpy.mockRestore()
+  })
+
+  it('handles section with empty content array', () => {
+    const tSpy = vi.fn((key, options) => {
+      if (key === 'report:sections') {
+        return [
+          { header: 'Empty Section', content: [] }
+        ]
+      }
+      if (key === 'report:introduction') return 'Introduction Header'
+      return key
+    })
+
+    const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
+    useTranslationSpy.mockReturnValue({ t: tSpy })
+
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
+      wrapper
+    })
+
+    expect(screen.getByText('Empty Section')).toBeInTheDocument()
+
+    useTranslationSpy.mockRestore()
+  })
+
+  it('handles section with multiple content items', () => {
+    const tSpy = vi.fn((key, options) => {
+      if (key === 'report:sections') {
+        return [
+          { 
+            header: 'Multi Content Section', 
+            content: ['<p>First content.</p>', '<p>Second content.</p>', '<p>Third content.</p>'] 
+          }
+        ]
+      }
+      if (key === 'report:introduction') return 'Introduction Header'
+      return key
+    })
+
+    const useTranslationSpy = vi.spyOn(reactI18next, 'useTranslation')
+    useTranslationSpy.mockReturnValue({ t: tSpy })
+
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
+      wrapper
+    })
+
+    expect(screen.getByText('Multi Content Section')).toBeInTheDocument()
+    expect(screen.getByText('First content.')).toBeInTheDocument()
+    expect(screen.getByText('Second content.')).toBeInTheDocument()
+    expect(screen.getByText('Third content.')).toBeInTheDocument()
+
+    useTranslationSpy.mockRestore()
+  })
+
+  it('renders intro-details test id', () => {
+    render(<Introduction expanded={true} compliancePeriod={'2024'} />, {
+      wrapper
+    })
+
+    expect(screen.getByTestId('intro-details')).toBeInTheDocument()
   })
 })

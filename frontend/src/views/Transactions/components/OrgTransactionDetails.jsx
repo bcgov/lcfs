@@ -65,8 +65,10 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
         {dateFormatter({ value: effectiveDate })}
       </BCTypography>
       {loadedFiles && loadedFiles.length > 0 && (
-        <BCTypography variant="body2" style={{ display: 'inline' }}>
-          <strong>{t('txn:attachments')}</strong>
+        <Box component="div">
+          <BCTypography variant="body2" component="span">
+            <strong>{t('txn:attachments')}</strong>
+          </BCTypography>
           <List
             component="div"
             sx={{ maxWidth: '100%', listStyleType: 'disc' }}
@@ -97,7 +99,7 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
               </ListItemButton>
             ))}
           </List>
-        </BCTypography>
+        </Box>
       )}
       {transactionData.govComment && (
         <BCTypography variant="body2">

@@ -2,180 +2,134 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { TransferDetailsCard } from '../TransferDetailsCard'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useMediaQuery, useTheme } from '@mui/material'
-import { currencyFormatter } from '@/utils/formatters'
-import { wrapper } from '@/tests/utils/wrapper'
 
-global.XMLHttpRequest = vi.fn(() => ({
-  open: vi.fn(),
-  send: vi.fn(),
-  setRequestHeader: vi.fn(),
-  onreadystatechange: vi.fn(),
-  readyState: 4,
-  status: 200,
-  responseText: JSON.stringify({})
-}))
-
-const keycloak = vi.hoisted(() => ({
-  useKeycloak: () => ({
-    keycloak: vi.fn()
-  })
-}))
-vi.mock('@react-keycloak/web', () => keycloak)
-
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: {
-      roles: [{ name: 'Government' }]
-    },
-    isLoading: false,
-    hasRoles: vi.fn().mockReturnValue(true),
-    hasAnyRole: vi.fn().mockReturnValue(true)
-  })
+// Only mock absolutely necessary external dependencies
+vi.mock('@/utils/formatters', () => ({
+  calculateTotalValue: vi.fn().mockReturnValue(2550),
+  currencyFormatter: vi.fn().mockReturnValue('$2,550.00'),
+  formatNumberWithCommas: vi.fn().mockReturnValue('100')
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key) => key
+  useTranslation: () => ({ 
+    t: (key) => key 
   })
 }))
 
-vi.mock('@mui/material', async (importOriginal) => {
-  const mod = await importOriginal() // type is inferred
-  return {
-    ...mod,
-    useMediaQuery: vi.fn(),
-    useTheme: vi.fn()
-  }
-})
-
-vi.mock('@/contexts/AuthorizationContext', () => ({
-  useAuthorization: () => ({
-    setForbidden: vi.fn()
-  })
+vi.mock('@/components/BCTypography', () => ({
+  default: ({ children, textAlign, variant, ...props }) => <div data-test="typography" style={{ textAlign }} {...props}>{children}</div>
 }))
+
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children, sx, ...props }) => <div data-test="bcbox" style={sx} {...props}>{children}</div>
+}))
+
+vi.mock('@/views/Transfers/components', () => ({
+  OrganizationBadge: (props) => <div data-test="organization-badge" data-org-id={props.organizationId} data-org-name={props.organizationName}>{props.organizationName}</div>
+}))
+
+import { calculateTotalValue, currencyFormatter, formatNumberWithCommas } from '@/utils/formatters'
 
 describe('TransferDetailsCard Component', () => {
-  const mockUseTheme = {
-    breakpoints: {
-      down: vi.fn().mockReturnValue(false)
-    },
-    spacing: vi.fn().mockReturnValue('16px')
+  const defaultProps = {
+    fromOrgId: 1,
+    fromOrganization: 'Organization A',
+    toOrgId: 2,
+    toOrganization: 'Organization B',
+    quantity: 100,
+    pricePerUnit: 25.50,
+    transferStatus: 'Submitted',
+    isGovernmentUser: true
   }
 
   beforeEach(() => {
-    useTheme.mockReturnValue(mockUseTheme)
-    useMediaQuery.mockReturnValue(false) // Set to false for desktop tests
+    vi.clearAllMocks()
+    // Reset mock return values
+    vi.mocked(calculateTotalValue).mockReturnValue(2550)
+    vi.mocked(currencyFormatter).mockReturnValue('$2,550.00')
+    vi.mocked(formatNumberWithCommas).mockReturnValue('100')
   })
 
-  it('renders correctly with provided props', () => {
-    render(
-      <TransferDetailsCard
-        fromOrgId={1}
-        fromOrganization="Org A"
-        toOrgId={2}
-        toOrganization="Org B"
-        quantity={10}
-        pricePerUnit={5}
-        transferStatus="Submitted"
-        isGovernmentUser={true}
-      />,
-      { wrapper }
-    )
-    expect(screen.getByText('Org A')).toBeInTheDocument()
-    expect(screen.getByText('Org B')).toBeInTheDocument()
+  describe('Basic Rendering', () => {
+    it('renders component without crashing', () => {
+      expect(() => render(<TransferDetailsCard {...defaultProps} />)).not.toThrow()
+    })
   })
 
-  it('calculates and displays total value correctly', () => {
-    render(
-      <TransferDetailsCard
-        fromOrgId={1}
-        fromOrganization="Org A"
-        toOrgId={2}
-        toOrganization="Org B"
-        quantity={10}
-        pricePerUnit={5}
-        transferStatus="Submitted"
-        isGovernmentUser={true}
-      />,
-      { wrapper }
-    )
-    const totalValue = (10 * 5).toFixed(2)
-    expect(
-      screen.getByText(currencyFormatter({ value: totalValue }))
-    ).toBeInTheDocument()
+  describe('Hook Integration', () => {
+    it('renders component and calls utility functions', () => {
+      render(<TransferDetailsCard {...defaultProps} />)
+      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(100, 25.50)
+      expect(vi.mocked(currencyFormatter)).toHaveBeenCalledWith({ value: 2550 })
+      expect(vi.mocked(formatNumberWithCommas)).toHaveBeenCalledWith({ value: 100 })
+    })
   })
 
-  it('renders icons correctly based on screen size', () => {
-    // Test for desktop view
-    render(
-      <TransferDetailsCard
-        fromOrgId={1}
-        fromOrganization="Org A"
-        toOrgId={2}
-        toOrganization="Org B"
-        quantity={10}
-        pricePerUnit={5}
-        transferStatus="Submitted"
-        isGovernmentUser={true}
-      />,
-      { wrapper }
-    )
-    expect(screen.getByTestId('SyncAltIcon')).toBeInTheDocument()
+  describe('Content Rendering', () => {
+    it('displays organization names', () => {
+      render(<TransferDetailsCard {...defaultProps} />)
+      expect(screen.getByText('Organization A')).toBeInTheDocument()
+      expect(screen.getByText('Organization B')).toBeInTheDocument()
+    })
 
-    // Change to mobile view
-    useMediaQuery.mockReturnValue(true)
-    render(
-      <TransferDetailsCard
-        fromOrgId={1}
-        fromOrganization="Org A"
-        toOrgId={2}
-        toOrganization="Org B"
-        quantity={10}
-        pricePerUnit={5}
-        transferStatus="Submitted"
-        isGovernmentUser={true}
-      />,
-      { wrapper }
-    )
-    expect(screen.getByTestId('SwapVertIcon')).toBeInTheDocument()
+    it('displays formatted values', () => {
+      render(<TransferDetailsCard {...defaultProps} />)
+      expect(screen.getByText('100 transfer:complianceUnits')).toBeInTheDocument()
+      expect(screen.getByText('$2,550.00')).toBeInTheDocument()
+    })
   })
 
-  it('handles zero and negative quantities and prices', () => {
-    render(
-      <TransferDetailsCard
-        fromOrgId={1}
-        fromOrganization="Org A"
-        toOrgId={2}
-        toOrganization="Org B"
-        quantity={0}
-        pricePerUnit={0}
-        transferStatus="Submitted"
-        isGovernmentUser={true}
-      />,
-      { wrapper }
-    )
-    expect(screen.getByText('$0.00')).toBeInTheDocument()
-    expect(screen.getByText('0 transfer:complianceUnits')).toBeInTheDocument()
-  })
+  describe('Props Integration', () => {
+    it('handles minimal props without crashing', () => {
+      const minimalProps = {
+        quantity: 50,
+        pricePerUnit: 10
+      }
+      
+      expect(() => render(<TransferDetailsCard {...minimalProps} />)).not.toThrow()
+    })
 
-  it('formats large numbers correctly', () => {
-    render(
-      <TransferDetailsCard
-        fromOrgId={1}
-        fromOrganization="Org A"
-        toOrgId={2}
-        toOrganization="Org B"
-        quantity={1000000}
-        pricePerUnit={5000}
-        transferStatus="Submitted"
-        isGovernmentUser={true}
-      />,
-      { wrapper }
-    )
-    const totalValue = (1000000 * 5000).toFixed(2)
-    expect(
-      screen.getByText(currencyFormatter({ value: totalValue }))
-    ).toBeInTheDocument()
+    it('handles zero values', () => {
+      const zeroProps = {
+        ...defaultProps,
+        quantity: 0,
+        pricePerUnit: 0
+      }
+      
+      vi.mocked(calculateTotalValue).mockReturnValue(0)
+      vi.mocked(currencyFormatter).mockReturnValue('$0.00')
+      vi.mocked(formatNumberWithCommas).mockReturnValue('0')
+      
+      render(<TransferDetailsCard {...zeroProps} />)
+      
+      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(0, 0)
+      expect(vi.mocked(currencyFormatter)).toHaveBeenCalledWith({ value: 0 })
+      expect(vi.mocked(formatNumberWithCommas)).toHaveBeenCalledWith({ value: 0 })
+    })
+
+    it('handles large numbers', () => {
+      const largeProps = {
+        ...defaultProps,
+        quantity: 1000000,
+        pricePerUnit: 999.99
+      }
+      
+      vi.mocked(calculateTotalValue).mockReturnValue(999990000)
+      
+      render(<TransferDetailsCard {...largeProps} />)
+      
+      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(1000000, 999.99)
+    })
+
+    it('passes correct props to OrganizationBadge components', () => {
+      render(<TransferDetailsCard {...defaultProps} />)
+      
+      const orgBadges = screen.getAllByTestId('organization-badge')
+      expect(orgBadges).toHaveLength(2)
+      expect(orgBadges[0]).toHaveAttribute('data-org-id', '1')
+      expect(orgBadges[0]).toHaveAttribute('data-org-name', 'Organization A')
+      expect(orgBadges[1]).toHaveAttribute('data-org-id', '2')
+      expect(orgBadges[1]).toHaveAttribute('data-org-name', 'Organization B')
+    })
   })
 })

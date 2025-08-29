@@ -25,7 +25,7 @@ vi.mock('@/services/useApiService', () => ({
 
 vi.mock('@/constants/routes', () => ({
   apiRoutes: {
-    fuelExportOptions: '/fuel-exports/options?',
+    fuelExportOptions: '/fuel-exports/table-options?',
     getAllFuelExports: '/fuel-exports/list',
     saveFuelExports: '/fuel-exports',
     importFuelExports: '/fuel-exports/import'
@@ -58,7 +58,7 @@ describe('useFuelExport', () => {
 
       expect(result.current.data).toEqual(mockOptions)
       expect(mockApiService.get).toHaveBeenCalledWith(
-        '/fuel-exports/options?compliancePeriod=2024'
+        '/fuel-exports/table-options?compliancePeriod=2024'
       )
     })
 

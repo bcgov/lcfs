@@ -265,5 +265,139 @@ describe('AddPlainComment Component', () => {
 
       expect(mockSameOrganization).toHaveBeenCalledWith(toOrgId)
     })
+
+    it('should handle default isGovernmentUser prop when not provided', () => {
+      useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
+      render(
+        <AddPlainComment
+          toOrgId={1}
+          handleCommentChange={mockHandleCommentChange}
+          comment="test"
+          transferStatus="Sent"
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByText('Your comments (optional)')).toBeInTheDocument()
+    })
+
+    it('should render input field with correct properties when expanded', () => {
+      useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
+      render(
+        <AddPlainComment
+          toOrgId={1}
+          handleCommentChange={mockHandleCommentChange}
+          comment="test comment"
+          transferStatus="Sent"
+        />,
+        { wrapper }
+      )
+
+      fireEvent.click(screen.getByTestId('toggle-comments'))
+      
+      const textField = screen.getByRole('textbox')
+      expect(textField).toHaveAttribute('rows', '4')
+      expect(textField).toHaveValue('test comment')
+    })
+
+    it('should handle empty comment string', () => {
+      useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
+      render(
+        <AddPlainComment
+          toOrgId={1}
+          handleCommentChange={mockHandleCommentChange}
+          comment=""
+          transferStatus="Sent"
+        />,
+        { wrapper }
+      )
+
+      fireEvent.click(screen.getByTestId('toggle-comments'))
+      
+      const textField = screen.getByRole('textbox')
+      expect(textField).toHaveValue('')
+    })
+
+    it('should handle click on toggle box area', () => {
+      useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => true) })
+      render(
+        <AddPlainComment
+          toOrgId={1}
+          handleCommentChange={mockHandleCommentChange}
+          comment=""
+          transferStatus="Sent"
+        />,
+        { wrapper }
+      )
+
+      // Initially collapsed
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+      
+      // Click anywhere on the toggle area (not just the button)
+      const toggleBox = screen.getByTestId('toggle-comments').closest('div')
+      fireEvent.click(toggleBox)
+      
+      // Should expand
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+    })
+
+    it('should use different toOrgId values correctly', () => {
+      const mockSameOrganization = vi.fn(() => false)
+      useCurrentUser.mockReturnValue({ sameOrganization: mockSameOrganization })
+      
+      const { rerender } = render(
+        <AddPlainComment
+          toOrgId={999}
+          handleCommentChange={mockHandleCommentChange}
+          comment=""
+          transferStatus="Sent"
+        />,
+        { wrapper }
+      )
+
+      expect(mockSameOrganization).toHaveBeenCalledWith(999)
+      
+      mockSameOrganization.mockReturnValue(true)
+      rerender(
+        <AddPlainComment
+          toOrgId={123}
+          handleCommentChange={mockHandleCommentChange}
+          comment=""
+          transferStatus="Sent"
+        />
+      )
+      
+      expect(mockSameOrganization).toHaveBeenCalledWith(123)
+    })
+
+    it('should handle multiple status values for government user', () => {
+      useCurrentUser.mockReturnValue({ sameOrganization: vi.fn(() => false) })
+      
+      // Test with additional valid statuses
+      const { rerender } = render(
+        <AddPlainComment
+          toOrgId={1}
+          handleCommentChange={mockHandleCommentChange}
+          comment=""
+          transferStatus="Submitted"
+          isGovernmentUser={true}
+        />,
+        { wrapper }
+      )
+      
+      expect(screen.getByText('Government comments to organizations (optional)')).toBeInTheDocument()
+      
+      rerender(
+        <AddPlainComment
+          toOrgId={1}
+          handleCommentChange={mockHandleCommentChange}
+          comment=""
+          transferStatus="Recommended"
+          isGovernmentUser={true}
+        />
+      )
+      
+      expect(screen.getByText('Government comments to organizations (optional)')).toBeInTheDocument()
+    })
   })
 })

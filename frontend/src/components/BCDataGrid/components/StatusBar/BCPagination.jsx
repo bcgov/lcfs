@@ -72,7 +72,7 @@ BCPagination.propTypes = {
   enableResetButton: PropTypes.bool,
   enableExportButton: PropTypes.bool,
   exportName: PropTypes.string,
-  gridRef: PropTypes.object.isRequired,
+  gridRef: PropTypes.object,
   page: PropTypes.number.isRequired,
   size: PropTypes.number.isRequired,
   total: PropTypes.number.isRequired,

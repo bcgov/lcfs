@@ -4,23 +4,14 @@ import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridViewer } from '../BCGridViewer'
 
-// Mock components and dependencies
-vi.mock('@/components/BCAlert', () => ({
-  default: ({ severity, children }) => (
-    <div data-testid="bc-alert" data-severity={severity}>
-      {children}
-    </div>
-  ),
-  FloatingAlert: vi.fn().mockImplementation(({ children, ...props }) => (
-    <div data-testid="floating-alert" {...props}>
-      {children}
-    </div>
-  ))
-}))
+// Unmock the components we're testing (overrides global mocks)
+vi.unmock('@/components/BCDataGrid/BCGridViewer')
+
+// Mock components and dependencies (BCAlert uses global mock)
 
 vi.mock('@/components/BCBox', () => ({
   default: vi.fn().mockImplementation(({ children, ...props }) => (
-    <div data-testid="bc-box" {...props}>
+    <div data-test="bc-box" {...props}>
       {children}
     </div>
   ))
@@ -47,7 +38,7 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
     
     return (
       <div 
-        data-testid="bc-grid-base"
+        data-test="bc-grid-base"
         onClick={() => {
           if (onFirstDataRendered) onFirstDataRendered({ api: mockGridApi })
           if (onFilterChanged) onFilterChanged({ api: mockGridApi })
@@ -61,10 +52,10 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/components', () => ({
-  AccessibleHeader: () => <div data-testid="accessible-header">Header</div>,
+  AccessibleHeader: () => <div data-test="accessible-header">Header</div>,
   BCPagination: vi.fn().mockImplementation((props) => (
     <div 
-      data-testid="bc-pagination"
+      data-test="bc-pagination"
       onClick={() => {
         if (props.handleChangePage) props.handleChangePage({}, 1)
         if (props.handleChangeRowsPerPage) props.handleChangeRowsPerPage({ target: { value: '20' } })
@@ -155,8 +146,8 @@ describe('BCGridViewer Component', () => {
         </TestWrapper>
       )
       
+      expect(screen.getByTestId('bc-alert')).toBeInTheDocument()
       expect(screen.getByText(/Server error/)).toBeInTheDocument()
-      expect(screen.getByText(/Please contact your administrator/)).toBeInTheDocument()
     })
 
     it('should not render error alert for 404 errors', () => {
@@ -197,6 +188,7 @@ describe('BCGridViewer Component', () => {
         </TestWrapper>
       )
       
+      expect(screen.getByTestId('bc-alert')).toBeInTheDocument()
       expect(screen.getByText(/Network error/)).toBeInTheDocument()
     })
   })

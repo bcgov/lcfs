@@ -59,11 +59,18 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: vi.fn().mockImplementation(({ children, ...props }) => (
-    <div data-testid="floating-alert" {...props}>
-      {children}
-    </div>
-  ))
+  FloatingAlert: vi.fn().mockImplementation(({ children, ...props }) => {
+    const { ref } = props
+    // Mock the imperative handle
+    if (ref && typeof ref === 'object') {
+      ref.current = { triggerAlert: vi.fn() }
+    }
+    return (
+      <div data-testid="floating-alert" {...props}>
+        {children}
+      </div>
+    )
+  })
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -372,6 +379,133 @@ describe('AssessmentStatement Component', () => {
     fireEvent.click(saveButton)
 
     // Verify the mutate function was called with the updated value from the form
+    expect(mutateMock).toHaveBeenCalledWith(
+      {
+        assessmentStatement: 'New assessment statement',
+        status: COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function)
+      })
+    )
+  })
+
+  test('callback functions are defined and available', async () => {
+    const mutateMock = vi.fn()
+
+    useUpdateComplianceReport.mockReturnValue({
+      mutate: mutateMock,
+      isPending: false
+    })
+
+    vi.mocked(useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 'org1' },
+        roles: ['Analyst']
+      },
+      isLoading: false,
+      hasRoles: vi.fn((role) => ['Analyst'].includes(role))
+    })
+
+    render(
+      <TestWrapper initialValues={{ assessmentStatement: 'Test statement' }}>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
+
+    const saveButton = screen.getByText('Save Statement')
+    fireEvent.click(saveButton)
+
+    // Verify the mutate function was called with callback functions
+    expect(mutateMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function)
+      })
+    )
+
+    // Verify we can access and execute the callback functions without error
+    const callArgs = mutateMock.mock.calls[0]
+    const callbacks = callArgs[1]
+    
+    expect(typeof callbacks.onSuccess).toBe('function')
+    expect(typeof callbacks.onError).toBe('function')
+    
+    // Execute callbacks to ensure they don't throw errors
+    expect(() => callbacks.onSuccess()).not.toThrow()
+    expect(() => callbacks.onError()).not.toThrow()
+  })
+
+  test('handles director role with RECOMMENDED_BY_MANAGER status', async () => {
+    useCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: 'org1' },
+        roles: ['Director']
+      },
+      isLoading: false,
+      hasRoles: vi.fn((role) => ['Director'].includes(role))
+    })
+
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        report: {
+          assessmentStatement: 'Director assessment',
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER }
+        }
+      }
+    })
+
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
+
+    // Should be enabled for Director with RECOMMENDED_BY_MANAGER status
+    const inputElement = screen.getByRole('textbox')
+    expect(inputElement).not.toBeDisabled()
+
+    const saveButton = screen.getByText('Save Statement')
+    expect(saveButton).not.toBeDisabled()
+  })
+
+  test('handles handleSaveAssessmentStatement function execution', async () => {
+    const mutateMock = vi.fn()
+
+    useUpdateComplianceReport.mockReturnValue({
+      mutate: mutateMock,
+      isPending: false
+    })
+
+    useCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: 'org1' },
+        roles: ['Analyst']
+      },
+      isLoading: false,
+      hasRoles: vi.fn((role) => ['Analyst'].includes(role))
+    })
+
+    const mockGetValues = vi.fn().mockReturnValue('New assessment statement')
+
+    render(
+      <TestWrapper initialValues={{ assessmentStatement: 'Initial' }}>
+        {({ methods }) => {
+          methods.getValues = mockGetValues
+          return <AssessmentStatement methods={methods} />
+        }}
+      </TestWrapper>
+    )
+
+    const saveButton = screen.getByText('Save Statement')
+    fireEvent.click(saveButton)
+
+    // Verify getValues was called correctly
+    expect(mockGetValues).toHaveBeenCalledWith('assessmentStatement')
+
+    // Verify mutate was called with correct data structure
     expect(mutateMock).toHaveBeenCalledWith(
       {
         assessmentStatement: 'New assessment statement',
