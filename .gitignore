@@ -146,3 +146,5 @@ windsurf.md
 .codeium/
 .tabnine/
 .kite/
+.claude/
+.mcp.json

@@ -1,0 +1,35 @@
+# Remove version - it's obsolete in modern Docker Compose
+
+services:
+  # RAG System - Simple LLM API using Haystack + Hayhooks with open-source models
+  rag-llm:
+    container_name: lcfs-rag-llm
+    restart: "no"
+    build:
+      context: ./rag-system
+      dockerfile: Dockerfile
+    environment:
+      HAYSTACK_TELEMETRY_ENABLED: "false"
+      # No API keys needed - using local open-source models
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    ports:
+      - "1416:1416"  # Hayhooks default port
+    volumes:
+      # Cache Hugging Face models locally
+      - huggingface_cache:/root/.cache/huggingface
+    networks:
+      - shared_network
+    labels:
+      - "lcfs.service=rag-llm"
+      - "lcfs.description=LCFS RAG System LLM API using open-source models"
+
+# Add volume for Hugging Face model cache
+volumes:
+  huggingface_cache:
+    name: lcfs_huggingface_cache
+
+# Use existing network from main docker-compose.yml
+networks:
+  shared_network:
+    external: true
+    name: shared_network
