@@ -22,11 +22,11 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { schemaValidation } from './_schema'
+import { createValidationSchema, schemaValidation } from './_schema'
 
 // Internal Modules
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
@@ -72,7 +72,39 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
   const [sameAsServiceAddress, setSameAsServiceAddress] = useState(false)
 
-  // useForm hook setup with React Hook Form and Yup for form validation
+  // State for tracking organization type and validation requirements
+  const [selectedOrgType, setSelectedOrgType] = useState(null)
+  const [requiresBCeID, setRequiresBCeID] = useState(true)
+
+  // useForm hook setup with React Hook Form - validation handled in onSubmit
+  const methods = useForm({
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      orgLegalName: '',
+      orgOperatingName: '',
+      orgEmailAddress: '',
+      orgPhoneNumber: '',
+      orgType: '1',
+      orgRegForTransfers: '',
+      orgStreetAddress: '',
+      orgCity: '',
+      orgPostalCodeZipCode: '',
+      orgAddressOther: '',
+      orgProvince: 'BC',
+      orgCountry: 'Canada',
+      orgHeadOfficeStreetAddress: '',
+      orgHeadOfficeAddressOther: '',
+      orgHeadOfficeCity: '',
+      orgHeadOfficeProvince: '',
+      orgHeadOfficeCountry: '',
+      orgHeadOfficePostalCodeZipCode: '',
+      orgEDRMSRecord: '',
+      recordsAddress: '',
+      hasEarlyIssuance: ''
+    }
+  })
+
   const {
     register,
     handleSubmit,
@@ -82,9 +114,44 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     trigger,
     reset,
     control
-  } = useForm({
-    resolver: yupResolver(schemaValidation)
-  })
+  } = methods
+
+  // Watch the organization type field for changes
+  const watchedOrgType = watch('orgType')
+
+  // Effect to handle organization type changes and update validation requirements
+  useEffect(() => {
+    if (watchedOrgType && orgTypes && orgTypes.length > 0) {
+      const selectedType = orgTypes.find(
+        (type) => type.organizationTypeId === parseInt(watchedOrgType)
+      )
+
+      if (selectedType) {
+        setSelectedOrgType(watchedOrgType)
+        const newRequiresBCeID = selectedType.isBceidUser
+        setRequiresBCeID(newRequiresBCeID)
+
+        // Handle validation when switching organization types
+        if (!newRequiresBCeID) {
+          // For non-BCeID types, clear errors for fields that are now optional
+          methods.clearErrors([
+            'orgPhoneNumber',
+            'orgStreetAddress',
+            'orgCity',
+            'orgPostalCodeZipCode'
+          ])
+        }
+      }
+    }
+  }, [watchedOrgType, orgTypes])
+
+  // Initialize organization type for new organizations
+  useEffect(() => {
+    if (!orgID && orgTypes && orgTypes.length > 0) {
+      setSelectedOrgType('1')
+      setRequiresBCeID(true)
+    }
+  }, [orgTypes, orgID])
 
   useEffect(() => {
     if (isFetched && data) {
@@ -128,8 +195,26 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
 
       setSameAsLegalName(shouldSyncNames)
       setSameAsServiceAddress(shouldSyncAddress)
+
+      // Set initial organization type state for editing
+      const orgTypeId =
+        data.organizationTypeId?.toString() ||
+        data.orgType?.organizationTypeId?.toString() ||
+        '1'
+
+      setSelectedOrgType(orgTypeId)
+
+      // Set initial BCeID requirement based on org type
+      if (orgTypes && orgTypes.length > 0) {
+        const selectedType = orgTypes.find(
+          (type) => type.organizationTypeId === parseInt(orgTypeId)
+        )
+        if (selectedType) {
+          setRequiresBCeID(selectedType.isBceidUser)
+        }
+      }
     }
-  }, [isFetched, data, reset])
+  }, [isFetched, data, reset, orgTypes])
 
   // Watching form fields
   const orgLegalName = watch('orgLegalName')
@@ -178,8 +263,40 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     )
   }
 
+  // Custom validation helper for conditional fields
+  const validateConditionalFields = async (data) => {
+    const validationSchema = createValidationSchema(
+      orgTypes || [],
+      data.orgType
+    )
+    try {
+      await validationSchema.validate(data, { abortEarly: false })
+      return { isValid: true, errors: {} }
+    } catch (validationErrors) {
+      const formattedErrors = {}
+      validationErrors.inner.forEach((error) => {
+        formattedErrors[error.path] = error.message
+      })
+      return { isValid: false, errors: formattedErrors }
+    }
+  }
+
   // Prepare payload and call mutate function
   const onSubmit = async (data) => {
+    // Perform custom validation based on the current organization type
+    const validation = await validateConditionalFields(data)
+
+    if (!validation.isValid) {
+      // Set form errors for the failing fields
+      Object.keys(validation.errors).forEach((fieldName) => {
+        methods.setError(fieldName, {
+          type: 'manual',
+          message: validation.errors[fieldName]
+        })
+      })
+      return // Don't submit if validation fails
+    }
+
     const payload = {
       organizationId: orgID,
       name: data.orgLegalName,
@@ -466,10 +583,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 </Box>
                 <Box mb={2}>
                   <InputLabel htmlFor="orgPhoneNumber" sx={{ pb: 1 }}>
-                    {t('org:phoneNbrLabel')}:
+                    {t('org:phoneNbrLabel')}
+                    {requiresBCeID ? '' : ' (Optional)'}:
                   </InputLabel>
                   <TextField
-                    required
+                    required={requiresBCeID}
                     id="orgPhoneNumber"
                     data-test="orgPhoneNumber"
                     variant="outlined"
@@ -692,7 +810,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 }}
               >
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
-                  {t('org:streetAddrLabel')}:
+                  {t('org:streetAddrLabel')}
+                  {requiresBCeID ? '' : ' (Optional)'}:
                 </InputLabel>
                 <Controller
                   name="orgStreetAddress"
@@ -731,10 +850,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgCity" sx={{ pb: 1 }}>
-                  {t('org:cityLabel')}:
+                  {t('org:cityLabel')}
+                  {requiresBCeID ? '' : ' (Optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresBCeID}
                   id="orgCity"
                   data-test="orgCity"
                   variant="outlined"
@@ -774,10 +894,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgPostalCodeZipCode" sx={{ pb: 1 }}>
-                  {t('org:poLabel')}:
+                  {t('org:poLabel')}
+                  {requiresBCeID ? '' : ' (Optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresBCeID}
                   id="orgPostalCodeZipCode"
                   data-test="orgPostalCodeZipCode"
                   variant="outlined"

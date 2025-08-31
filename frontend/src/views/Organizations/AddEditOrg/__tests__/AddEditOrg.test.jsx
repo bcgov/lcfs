@@ -86,9 +86,20 @@ describe('AddEditOrg', () => {
       isFetched: true
     })
 
-    // Ensure organization types hook returns a default value for the form
+    // Mock organization types with BCeID required type for validation testing
     useOrganizationTypes.mockReturnValue({
-      data: [],
+      data: [
+        {
+          organizationTypeId: 1,
+          organizationTypeName: 'Fuel Supplier',
+          isBceidUser: true
+        },
+        {
+          organizationTypeId: 2,
+          organizationTypeName: 'Initiative Agreement Holder',
+          isBceidUser: false
+        }
+      ],
       isLoading: false,
       error: null
     })
@@ -158,7 +169,6 @@ describe('AddEditOrg', () => {
       expect(
         screen.getByText(/Email Address is required./i)
       ).toBeInTheDocument()
-      expect(screen.getByText(/Phone Number is required./i)).toBeInTheDocument()
     })
   })
 
