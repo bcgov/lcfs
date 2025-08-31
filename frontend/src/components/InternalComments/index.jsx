@@ -55,7 +55,7 @@ const InternalComments = ({ entityType, entityId }) => {
 
 InternalComments.propTypes = {
   entityType: PropTypes.string.isRequired,
-  entityId: PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])]),
+  entityId: PropTypes.oneOfType([PropTypes.number, PropTypes.string, PropTypes.oneOf([null])]),
   onCommentChange: PropTypes.func
 }
 

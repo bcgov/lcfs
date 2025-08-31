@@ -5,6 +5,7 @@ from datetime import datetime
 import structlog
 from typing import List
 
+from lcfs.settings import settings
 from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
 from fastapi_cache import FastAPICache
@@ -461,8 +462,8 @@ class OrganizationsService:
             and new_credits_to_sell > 0
             and (not was_displayed_in_market or old_credits_to_sell == 0)
         )
-
-        if is_new_listing:
+        
+        if is_new_listing and settings.feature_credit_market_notifications:
             await self._send_credit_market_notification(updated_organization, user)
 
         return updated_organization

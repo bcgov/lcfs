@@ -1,5 +1,7 @@
 from .AllocationAgreement import AllocationAgreement
 from .AllocationTransactionType import AllocationTransactionType
+from .ChargingSite import ChargingSite
+from .ChargingSiteStatus import ChargingSiteStatus
 from .CompliancePeriod import CompliancePeriod
 from .ComplianceReport import ComplianceReport
 from .ComplianceReportCountView import ComplianceReportCountView
@@ -12,6 +14,9 @@ from .EndUserType import EndUserType
 from .FinalSupplyEquipment import FinalSupplyEquipment
 from .FuelExport import FuelExport
 from .FuelSupply import FuelSupply
+from .ChargingEquipment import ChargingEquipment
+from .ChargingEquipmentStatus import ChargingEquipmentStatus
+from .ComplianceReportChargingEquipment import ComplianceReportChargingEquipment
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
@@ -19,6 +24,8 @@ from .OtherUses import OtherUses
 __all__ = [
     "AllocationAgreement",
     "AllocationTransactionType",
+    "ChargingSite",
+    "ChargingSiteStatus",
     "CompliancePeriod",
     "ComplianceReport",
     "ComplianceReportCountView",
@@ -30,6 +37,9 @@ __all__ = [
     "FinalSupplyEquipment",
     "FuelSupply",
     "FuelExport",
+    "ChargingEquipment",
+    "ChargingEquipmentStatus",
+    "ComplianceReportChargingEquipment",
     "LevelOfEquipment",
     "NotionalTransfer",
     "OtherUses",

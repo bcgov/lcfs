@@ -1,7 +1,71 @@
-import { buttonClusterConfigFn } from '../buttonConfigs'
+import { 
+  redOutlinedButton, 
+  outlinedButton, 
+  containedButton, 
+  buttonClusterConfigFn 
+} from '../buttonConfigs'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+
+vi.mock('@/themes/base/colors', () => ({
+  default: {
+    white: { main: '#ffffff' },
+    error: { main: '#error' }
+  }
+}))
+
+vi.mock('@/utils/formatters', () => ({
+  dateFormatter: vi.fn((date) => '2024-01-01')
+}))
+
+vi.mock('@fortawesome/free-solid-svg-icons', () => ({
+  faFloppyDisk: 'faFloppyDisk',
+  faPencil: 'faPencil',
+  faTrash: 'faTrash'
+}))
+
+vi.mock('./components', () => ({
+  TransferSummary: vi.fn(() => 'TransferSummary')
+}))
+
+describe('buttonConfigs', () => {
+  describe('Helper Functions', () => {
+    it('should create redOutlinedButton with correct config', () => {
+      const result = redOutlinedButton('Test Label', 'testIcon')
+      
+      expect(result).toEqual({
+        variant: 'outlined',
+        color: 'error',
+        iconColor: '#error',
+        label: 'Test Label',
+        startIcon: 'testIcon'
+      })
+    })
+
+    it('should create outlinedButton with correct config', () => {
+      const result = outlinedButton('Test Label', 'testIcon')
+      
+      expect(result).toEqual({
+        variant: 'outlined',
+        color: 'primary',
+        label: 'Test Label',
+        startIcon: 'testIcon'
+      })
+    })
+
+    it('should create containedButton with correct config', () => {
+      const result = containedButton('Test Label', 'testIcon')
+      
+      expect(result).toEqual({
+        variant: 'contained',
+        color: 'primary',
+        iconColor: '#ffffff',
+        label: 'Test Label',
+        startIcon: 'testIcon'
+      })
+    })
+  })
 
 describe('buttonClusterConfigFn', () => {
   const t = vi.fn((key) => key)
@@ -1023,6 +1087,484 @@ describe('buttonClusterConfigFn', () => {
     })
   })
 
+  describe('Button Handler Tests', () => {
+    let mockParams
+
+    beforeEach(() => {
+      mockParams = {
+        toOrgData: [{ organizationId: 2, name: 'Org 2' }],
+        hasRoles: vi.fn(() => true),
+        hasAnyRole: vi.fn(() => true),
+        currentUser: { 
+          organization: { organizationId: 1, name: 'From Org' },
+          isGovernmentUser: false
+        },
+        methods: { getValues: vi.fn((key) => key === 'fromOrganizationId' ? 1 : 2) },
+        t: vi.fn((key) => key),
+        setModalData: vi.fn(),
+        createUpdateTransfer: vi.fn(),
+        transferData: {
+          agreementDate: '2024-01-01',
+          currentStatus: { status: 'SUBMITTED' },
+          toOrganization: { organizationId: 2, name: 'To Org' },
+          fromOrganization: { organizationId: 1, name: 'From Org' }
+        },
+        isGovernmentUser: false,
+        recommendation: true,
+        signingAuthorityDeclaration: true
+      }
+    })
+
+    it('should call saveDraft handler correctly', () => {
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = {
+        fromOrganizationId: '1',
+        toOrganizationId: '2',
+        agreementDate: new Date('2024-01-01')
+      }
+      
+      result.New[0].handler(formData)
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          fromOrganizationId: 1,
+          toOrganizationId: 2,
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.DRAFT
+        }
+      })
+    })
+
+    it('should call deleteDraft handler correctly', () => {
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Draft[0].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.deleteDraftBtn',
+        primaryButtonColor: 'error',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:deleteConfirmText'
+      })
+    })
+
+    it('should call signAndSend handler correctly', () => {
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { 
+        agreementDate: new Date('2024-01-01'),
+        quantity: 100,
+        pricePerUnit: 25.00
+      }
+      
+      result.New[1].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.signAndSendBtn',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: expect.any(Object)
+      })
+    })
+
+    it('should call signAndSubmit handler correctly', () => {
+      mockParams.currentUser.organization.organizationId = 2
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SENT
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Sent[1].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.signAndSubmitBtn',
+        primaryButtonColor: 'primary',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:submitConfirmText'
+      })
+    })
+
+    it('should call declineTransfer handler correctly', () => {
+      mockParams.currentUser.organization.organizationId = 2
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SENT
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Sent[0].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.declineTransferBtn',
+        primaryButtonColor: 'error',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:declineConfirmText'
+      })
+    })
+
+    it('should call rescindTransfer handler correctly', () => {
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SUBMITTED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      // Find the rescind button
+      const rescindButton = result.Submitted.find(btn => btn.id === 'rescind-btn')
+      rescindButton.handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.rescindTransferBtn',
+        primaryButtonColor: 'error',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:rescindConfirmText'
+      })
+    })
+
+    it('should call saveComment handler correctly', () => {
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SUBMITTED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { data: 'test' }
+      
+      result.Submitted[0].handler(formData)
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          data: 'test',
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.SUBMITTED
+        }
+      })
+    })
+
+    it('should call refuseTransfer handler correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.RECOMMENDED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Recommended[0].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.refuseTransferBtn',
+        primaryButtonColor: 'error',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:refuseConfirmText',
+        warningText: 'transfer:refuseWarningText'
+      })
+    })
+
+    it('should call recordTransfer handler correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.RECOMMENDED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Recommended[3].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.recordTransferBtn',
+        primaryButtonColor: 'primary',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:recordConfirmText'
+      })
+    })
+
+    it('should call recommendTransfer handler correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SUBMITTED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Submitted[1].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.recommendBtn',
+        primaryButtonColor: 'primary',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:recommendConfirmText'
+      })
+    })
+
+    it('should call returnToAnalyst handler correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.RECOMMENDED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Recommended[2].handler(formData)
+      
+      expect(mockParams.setModalData).toHaveBeenCalledWith({
+        primaryButtonAction: expect.any(Function),
+        primaryButtonText: 'transfer:actionBtns.returnToAnalystBtn',
+        primaryButtonColor: 'error',
+        secondaryButtonText: 'cancelBtn',
+        title: 'confirmation',
+        content: 'transfer:returnConfirmText',
+        warningText: 'transfer:returnWarningText'
+      })
+    })
+
+    it('should execute deleteDraft primaryButtonAction correctly', () => {
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Draft[0].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.DELETED
+        }
+      })
+    })
+
+    it('should execute signAndSend primaryButtonAction correctly', () => {
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = {
+        fromOrganizationId: '1',
+        toOrganizationId: '2',
+        agreementDate: new Date('2024-01-01'),
+        quantity: 100,
+        pricePerUnit: 25.00
+      }
+      
+      result.New[1].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          fromOrganizationId: 1,
+          toOrganizationId: 2,
+          agreementDate: '2024-01-01',
+          quantity: 100,
+          pricePerUnit: 25,
+          currentStatus: TRANSFER_STATUSES.SENT
+        }
+      })
+    })
+
+    it('should execute signAndSubmit primaryButtonAction correctly', () => {
+      mockParams.currentUser.organization.organizationId = 2
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SENT
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Sent[1].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.SUBMITTED
+        }
+      })
+    })
+
+    it('should execute declineTransfer primaryButtonAction correctly', () => {
+      mockParams.currentUser.organization.organizationId = 2
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SENT
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Sent[0].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.DECLINED
+        }
+      })
+    })
+
+    it('should execute rescindTransfer primaryButtonAction correctly', () => {
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SUBMITTED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      const rescindButton = result.Submitted.find(btn => btn.id === 'rescind-btn')
+      rescindButton.handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.RESCINDED
+        }
+      })
+    })
+
+    it('should execute refuseTransfer primaryButtonAction correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.RECOMMENDED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Recommended[0].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.REFUSED
+        }
+      })
+    })
+
+    it('should execute recordTransfer primaryButtonAction correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.RECOMMENDED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Recommended[3].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.RECORDED
+        }
+      })
+    })
+
+    it('should execute recommendTransfer primaryButtonAction correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.SUBMITTED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Submitted[1].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.RECOMMENDED
+        }
+      })
+    })
+
+    it('should execute returnToAnalyst primaryButtonAction correctly', () => {
+      mockParams.currentUser.isGovernmentUser = true
+      mockParams.isGovernmentUser = true
+      mockParams.transferData.currentStatus.status = TRANSFER_STATUSES.RECOMMENDED
+      
+      const result = buttonClusterConfigFn(mockParams)
+      const formData = { agreementDate: new Date('2024-01-01') }
+      
+      result.Recommended[2].handler(formData)
+      
+      // Execute the primaryButtonAction
+      const modalCall = mockParams.setModalData.mock.calls[0][0]
+      modalCall.primaryButtonAction()
+      
+      expect(mockParams.createUpdateTransfer).toHaveBeenCalledWith({
+        data: {
+          agreementDate: '2024-01-01',
+          currentStatus: TRANSFER_STATUSES.SUBMITTED
+        }
+      })
+    })
+  })
+
+  describe('When status is Recorded', () => {
+    it('should return an empty array', () => {
+      const hasRoles = vi.fn()
+      const hasAnyRole = vi.fn()
+      const currentUser = {
+        isGovernmentUser: false,
+        organization: {
+          organizationId: 1
+        }
+      }
+      const transferData = {
+        currentStatus: {
+          status: TRANSFER_STATUSES.RECORDED
+        },
+        agreementDate: new Date(),
+        transferHistory: []
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        transferData,
+        isGovernmentUser,
+        recommendation,
+        signingAuthorityDeclaration
+      })
+
+      const buttons = config[TRANSFER_STATUSES.RECORDED]
+
+      expect(buttons).toHaveLength(0)
+    })
+  })
+
   describe('Edge Cases', () => {
     it('should handle undefined transferData gracefully', () => {
       const hasRoles = vi.fn()
@@ -1072,5 +1614,165 @@ describe('buttonClusterConfigFn', () => {
 
       expect(config).toBeDefined()
     })
+
+    it('should handle undefined toOrgData gracefully', () => {
+      const hasRoles = vi.fn()
+      const hasAnyRole = vi.fn()
+      const currentUser = {
+        isGovernmentUser: false,
+        organization: { organizationId: 1 }
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData: undefined,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        undefined,
+        isGovernmentUser,
+        recommendation,
+        signingAuthorityDeclaration
+      })
+
+      expect(config).toBeDefined()
+    })
+
+    it('should handle missing toOrganization in transferData', () => {
+      const hasRoles = vi.fn(() => true)
+      const hasAnyRole = vi.fn(() => true)
+      const currentUser = {
+        isGovernmentUser: false,
+        organization: { organizationId: 1 }
+      }
+      const transferData = {
+        currentStatus: { status: TRANSFER_STATUSES.SENT },
+        agreementDate: new Date(),
+        transferHistory: []
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        transferData,
+        isGovernmentUser,
+        recommendation,
+        signingAuthorityDeclaration
+      })
+
+      expect(config[TRANSFER_STATUSES.SENT]).toBeDefined()
+    })
+
+    it('should handle empty toOrgData array', () => {
+      const hasRoles = vi.fn()
+      const hasAnyRole = vi.fn()
+      const currentUser = {
+        isGovernmentUser: false,
+        organization: { organizationId: 1 }
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData: [],
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        undefined,
+        isGovernmentUser,
+        recommendation,
+        signingAuthorityDeclaration
+      })
+
+      expect(config).toBeDefined()
+    })
   })
+
+  describe('Additional Branch Coverage', () => {
+    it('should handle toOrganization lookup from toOrgData', () => {
+      const toOrgData = [
+        { organizationId: 1, name: 'Org 1' },
+        { organizationId: 2, name: 'Org 2' }
+      ]
+      const methods = {
+        getValues: vi.fn((key) => {
+          if (key === 'toOrganizationId') return 2
+          if (key === 'fromOrganizationId') return 1
+          return null
+        })
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles: vi.fn(() => true),
+        hasAnyRole: vi.fn(() => true),
+        currentUser: { organization: { organizationId: 1 } },
+        methods,
+        t: vi.fn((key) => key),
+        setModalData: vi.fn(),
+        createUpdateTransfer: vi.fn(),
+        transferData: null,
+        isGovernmentUser: false,
+        recommendation: true,
+        signingAuthorityDeclaration: true
+      })
+
+      expect(config).toBeDefined()
+      expect(methods.getValues).toHaveBeenCalledWith('toOrganizationId')
+      expect(methods.getValues).toHaveBeenCalledWith('fromOrganizationId')
+    })
+
+    it('should test disabled states based on roles', () => {
+      const config = buttonClusterConfigFn({
+        toOrgData: [],
+        hasRoles: vi.fn(() => false), // No roles
+        hasAnyRole: vi.fn(() => false),
+        currentUser: { organization: { organizationId: 1 } },
+        methods: { getValues: vi.fn(() => 1) },
+        t: vi.fn((key) => key),
+        setModalData: vi.fn(),
+        createUpdateTransfer: vi.fn(),
+        transferData: null,
+        isGovernmentUser: false,
+        recommendation: false,
+        signingAuthorityDeclaration: false
+      })
+
+      // signAndSend should be disabled when user lacks roles or declaration
+      expect(config.New[1].disabled).toBe(true)
+    })
+
+    it('should test isGovernmentUser flag usage', () => {
+      const config = buttonClusterConfigFn({
+        toOrgData: [],
+        hasRoles: vi.fn(() => true),
+        hasAnyRole: vi.fn(() => true),
+        currentUser: { organization: { organizationId: 1 } },
+        methods: { getValues: vi.fn(() => 1) },
+        t: vi.fn((key) => key),
+        setModalData: vi.fn(),
+        createUpdateTransfer: vi.fn(),
+        transferData: { agreementDate: '2024-01-01', currentStatus: { status: 'SUBMITTED' } },
+        isGovernmentUser: false, // Not government user
+        recommendation: true,
+        signingAuthorityDeclaration: true
+      })
+
+      // saveComment should be disabled for non-government users
+      const saveCommentBtn = config.Submitted.find(btn => btn.id === 'save-comment-btn')
+      expect(saveCommentBtn?.disabled).toBe(true)
+    })
+  })
+})
 })

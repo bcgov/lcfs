@@ -688,4 +688,5 @@ describe('ReportDetails', () => {
       expect(supportingDocsDetails).not.toBeInTheDocument()
     })
   })
+
 })
