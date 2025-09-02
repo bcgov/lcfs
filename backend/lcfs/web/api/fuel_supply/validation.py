@@ -18,6 +18,7 @@ class FuelSupplyValidation:
     async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
         return await self.fs_repo.check_duplicate(fuel_supply)
 
+    # Ensure that if a row being added or updated is later undone, its previous data does not conflict with existing rows.
     async def check_duplicate_of_prev_data(
         self, fuel_supply: FuelSupplyCreateUpdateSchema
     ):

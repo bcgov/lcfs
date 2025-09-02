@@ -1,26 +1,29 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import {
-  DEFAULT_CI_FUEL,
-  DEFAULT_CI_FUEL_CODE,
-  NEW_REGULATION_YEAR,
-  REPORT_SCHEDULES
-} from '@/constants/common'
+import { NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common'
 import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
   useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { isArrayEmpty } from '@/utils/array.js'
 import { cleanEmptyStringValues } from '@/utils/formatters'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import {
+  processFuelSupplyRowData,
+  calculateColumnVisibility,
+  updateGridColumnsVisibility,
+  handleFuelTypeChange,
+  handleFuelCategoryChange,
+  validateFuelSupply,
+  processCellEditingComplete,
+  createGridOptions
+} from '@/utils/fuelSupplyUtils'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
@@ -70,17 +73,8 @@ export const AddEditFuelSupplies = () => {
         ? REPORT_SCHEDULES_VIEW.EDIT
         : REPORT_SCHEDULES_VIEW.VIEW
     })
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
-      autoSizeStrategy: {
-        type: 'fitCellContents',
-        defaultMinWidth: 50,
-        defaultMaxWidth: 600
-      }
-    }),
-    [t]
-  )
+
+  const gridOptions = useMemo(() => createGridOptions(t), [t])
 
   const columnDefs = useMemo(
     () =>
@@ -102,115 +96,34 @@ export const AddEditFuelSupplies = () => {
     ]
   )
 
-  const processedRowData = useMemo(() => {
-    if (fuelSuppliesLoading || !fuelSupplyData) return []
-
-    const baseRowData = isArrayEmpty(fuelSupplyData)
-      ? []
-      : fuelSupplyData.fuelSupplies.map((item) => ({
-          ...item,
-          complianceReportId,
-          compliancePeriod,
-          isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId,
-          id: uuid()
-        }))
-
-    return [
-      ...baseRowData,
-      { id: uuid(), complianceReportId, compliancePeriod }
+  const processedRowData = useMemo(
+    () =>
+      processFuelSupplyRowData({
+        fuelSupplyData,
+        fuelSuppliesLoading,
+        complianceReportId,
+        compliancePeriod,
+        isSupplemental
+      }),
+    [
+      fuelSupplyData,
+      fuelSuppliesLoading,
+      complianceReportId,
+      compliancePeriod,
+      isSupplemental
     ]
-  }, [
-    fuelSupplyData,
-    fuelSuppliesLoading,
-    complianceReportId,
-    compliancePeriod,
-    isSupplemental
-  ])
+  )
 
-  const getColumnVisibility = useMemo(() => {
-    if (!optionsData?.fuelTypes || isArrayEmpty(rowData)) {
-      return {
-        shouldShowIsCanadaProduced: false,
-        shouldShowIsQ1Supplied: false
-      }
-    }
+  const columnVisibility = useMemo(
+    () => calculateColumnVisibility(rowData, optionsData, compliancePeriod),
+    [rowData, optionsData, compliancePeriod]
+  )
 
-    let shouldShowIsCanadaProduced = false
-    let shouldShowIsQ1Supplied = false
-    const complianceYear = parseInt(compliancePeriod, 10)
+  const updateColumnsVisibility = useCallback(() => {
+    updateGridColumnsVisibility(gridRef, columnVisibility)
+  }, [columnVisibility])
 
-    for (const row of rowData) {
-      if (!row.fuelType) continue
-
-      const fuelType = optionsData.fuelTypes.find(
-        (obj) => row.fuelType === obj.fuelType
-      )
-
-      if (!fuelType) continue
-
-      const isRenewable = fuelType.renewable
-      let isCanadian = false
-
-      if (row.fuelCode) {
-        const fuelCodeDetails = fuelType.fuelCodes?.find(
-          (fc) =>
-            fc.fuelCode === row.fuelCode ||
-            fc.fuelCode === row.fuelCode.replace('C-', '')
-        )
-        isCanadian = fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
-      }
-
-      // Check conditions for showing columns
-      if (
-        (row.fuelCategory === 'Diesel' &&
-          complianceYear >= NEW_REGULATION_YEAR &&
-          isRenewable &&
-          row.provisionOfTheAct === DEFAULT_CI_FUEL_CODE) ||
-        isCanadian
-      ) {
-        shouldShowIsCanadaProduced = true
-      }
-
-      if (
-        row.fuelCategory === 'Diesel' &&
-        complianceYear === NEW_REGULATION_YEAR &&
-        isRenewable &&
-        !isCanadian &&
-        row.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
-      ) {
-        shouldShowIsQ1Supplied = true
-      }
-
-      // Early exit if both conditions are met
-      if (shouldShowIsCanadaProduced && shouldShowIsQ1Supplied) break
-    }
-
-    return { shouldShowIsCanadaProduced, shouldShowIsQ1Supplied }
-  }, [rowData, optionsData, compliancePeriod])
-
-  const updateGridColumnsVisibility = useCallback(() => {
-    const api = gridRef.current?.api
-    if (!api) return
-
-    const { shouldShowIsCanadaProduced, shouldShowIsQ1Supplied } =
-      getColumnVisibility
-
-    // Only update if visibility actually changed
-    const currentIsCanadaProduced = api
-      .getColumn('isCanadaProduced')
-      ?.isVisible()
-    const currentIsQ1Supplied = api.getColumn('isQ1Supplied')?.isVisible()
-
-    if (currentIsCanadaProduced !== shouldShowIsCanadaProduced) {
-      api.setColumnsVisible(['isCanadaProduced'], shouldShowIsCanadaProduced)
-    }
-
-    if (currentIsQ1Supplied !== shouldShowIsQ1Supplied) {
-      api.setColumnsVisible(['isQ1Supplied'], shouldShowIsQ1Supplied)
-    }
-  }, [getColumnVisibility])
-
+  // Alert handling
   useEffect(() => {
     if (location?.state?.message) {
       alertRef.current?.triggerAlert({
@@ -220,35 +133,18 @@ export const AddEditFuelSupplies = () => {
     }
   }, [location?.state?.message, location?.state?.severity])
 
+  // Set row data
   useEffect(() => {
     setRowData(processedRowData)
   }, [processedRowData])
 
+  // Update column visibility
   useEffect(() => {
-    const timeoutId = setTimeout(updateGridColumnsVisibility, 100)
+    const timeoutId = setTimeout(updateColumnsVisibility, 100)
     return () => clearTimeout(timeoutId)
-  }, [updateGridColumnsVisibility])
+  }, [updateColumnsVisibility])
 
-  const validate = useCallback(
-    (params, validationFn, errorMessage, alertRef, field = null) => {
-      const value = field ? params.node?.data[field] : params
-
-      if (field && params.colDef.field !== field) {
-        return true
-      }
-
-      if (!validationFn(value)) {
-        alertRef.current?.triggerAlert({
-          message: errorMessage,
-          severity: 'error'
-        })
-        return false
-      }
-      return true
-    },
-    []
-  )
-
+  // Grid event handlers
   const onGridReady = useCallback(async (params) => {
     setGridApi(params.api)
 
@@ -278,108 +174,41 @@ export const AddEditFuelSupplies = () => {
     async (params) => {
       setWarnings({})
       const { colId } = params.column
-      const { node } = params
 
       if (colId === 'fuelType') {
-        const selectedFuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.node.data.fuelType === obj.fuelType
-        )
-
-        if (selectedFuelType) {
-          const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
-            (item) => item.fuelCategory
-          )
-          const endUseTypes = selectedFuelType.eerRatios.map(
-            (item) => item.endUseType
-          )
-
-          updateRowDataValues(node, {
-            fuelCategory:
-              fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null,
-            endUseType: endUseTypes.length === 1 ? endUseTypes[0].type : null,
-            provisionOfTheAct:
-              selectedFuelType.provisions.length === 1
-                ? selectedFuelType.provisions[0].name
-                : null,
-            isCanadaProduced: false,
-            isQ1Supplied: false
-          })
-        }
+        handleFuelTypeChange(params, optionsData, updateRowDataValues)
       }
 
       if (colId === 'fuelCategory') {
-        const selectedFuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.node.data.fuelType === obj.fuelType
-        )
-
-        if (selectedFuelType) {
-          const endUseTypes = selectedFuelType.eerRatios
-            .filter(
-              (item) =>
-                item.fuelCategory.fuelCategory === params.data.fuelCategory
-            )
-            .map((item) => item.endUseType)
-
-          updateRowDataValues(node, {
-            endUseType: endUseTypes.length === 1 ? endUseTypes[0].type : null,
-            provisionOfTheAct:
-              selectedFuelType.provisions.length === 1
-                ? selectedFuelType.provisions[0].name
-                : null,
-            isCanadaProduced: false,
-            isQ1Supplied: false
-          })
-        }
+        handleFuelCategoryChange(params, optionsData, updateRowDataValues)
       }
 
       // Trigger column visibility update and auto-size
       setTimeout(() => {
-        updateGridColumnsVisibility()
+        updateColumnsVisibility()
         params.api.autoSizeAllColumns()
       }, 0)
     },
-    [optionsData, updateGridColumnsVisibility, updateRowDataValues]
+    [optionsData, updateColumnsVisibility, updateRowDataValues]
   )
 
   const onCellEditingStopped = useCallback(
     async (params) => {
-      if (params.oldValue === params.newValue) return
-
-      const isValid = validate(
+      const updatedData = await processCellEditingComplete({
         params,
-        (value) => value !== null && !isNaN(value) && value > 0,
-        'Quantity supplied must be greater than 0.',
+        validateFn: validateFuelSupply,
         alertRef,
-        'quantity'
-      )
-
-      if (!isValid) return
-
-      params.node.updateData({
-        ...params.node.data,
-        validationStatus: 'pending'
-      })
-      let updatedData = cleanEmptyStringValues(params.node.data)
-
-      if (updatedData.fuelType === 'Other') {
-        updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
-      }
-
-      updatedData = await handleScheduleSave({
-        alertRef,
-        idField: 'fuelSupplyId',
-        labelPrefix: 'fuelSupply:fuelSupplyColLabels',
-        params,
-        setErrors,
-        setWarnings,
         saveRow,
         t,
-        updatedData
+        setErrors,
+        setWarnings
       })
 
-      params.node.updateData(updatedData)
+      if (updatedData) {
+        params.node.updateData(updatedData)
+      }
     },
-    [saveRow, t, validate]
+    [saveRow, t]
   )
 
   const onAction = useCallback(
