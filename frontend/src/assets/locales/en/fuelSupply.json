@@ -2,6 +2,7 @@
   "fuelSupplyTitle": "Supply of fuel",
   "noFuelSuppliesFound": "No fuel supplies found",
   "fuelSupplyGuide": "Report fuel volumes you supplied for the various end uses.",
+  "fuelSupplyNote": "Note: From 2025 onwards, you must indicate whether the fuel was produced in Canada for all renewable fuels.",
   "fuelSupplyDownloadBtn": "Download as Excel",
   "fuelSupplyDownloadingMsg": "Downloading supply of fuels information",
   "fuelSupplyDownloadFailMsg": "Failed to download supply of fuel information.",
@@ -31,7 +32,9 @@
     "energyDensity": "Energy density",
     "eer": "EER",
     "energy": "Energy Content",
-    "determiningCarbonIntensity": "Determining carbon intensity"
+    "determiningCarbonIntensity": "Determining carbon intensity",
+    "isCanadaProduced": "Fuel produced in Canada?",
+    "isQ1Supplied": "Supplied in Q1?"
   },
   "validateMsg": {
     "isRequired": "{{field}} is required"

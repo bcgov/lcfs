@@ -20,6 +20,7 @@ import {
   extractOriginalFuelCode,
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
+import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -184,11 +185,9 @@ export const otherUsesColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         const fuelCodeDetails = fuelType?.fuelCodes?.find(
-          (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+          (fc) => fc.fuelCode === params.data.fuelCode
         )
-        const country =
-          fuelCodeDetails?.fuelProductionFacilityCountry ||
-          fuelCodeDetails?.fuel_production_facility_country
+        const country = fuelCodeDetails?.fuelProductionFacilityCountry
         return formatFuelCodeWithCountryPrefix(
           params.data.fuelCode,
           country,
@@ -202,10 +201,119 @@ export const otherUsesColDefs = (
         // Extract the original fuel code from the formatted display value
         const originalFuelCode = extractOriginalFuelCode(params.newValue)
         params.data.fuelCode = originalFuelCode
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          const matchingFuelCode = fuelType?.fuelCodes?.find(
+            (fuelCode) => originalFuelCode === fuelCode.fuelCode
+          )
+          if (matchingFuelCode) {
+            params.data.fuelCodeId = matchingFuelCode.fuelCodeId
+          }
+          params.data.isCanadaProduced =
+            matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+          params.data.isQ1Supplied = false
+        }
         return true
       }
       return false
     }
+  },
+  {
+    field: 'isCanadaProduced',
+    headerComponent: RequiredHeader,
+    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
+    cellEditor: AutocompleteCellEditor,
+    cellRenderer: SelectRenderer,
+    cellEditorParams: {
+      options: ['Yes', 'No'],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
+    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+    editable: (params) => {
+      const complianceYear = parseInt(compliancePeriod, 10)
+      const isRenewable = !optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )?.fossilDerived
+      return (
+        params.data.fuelCategory === 'Diesel' &&
+        complianceYear >= NEW_REGULATION_YEAR &&
+        isRenewable &&
+        params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+      )
+    },
+    valueGetter: (params) =>
+      params.data.isCanadaProduced
+        ? 'Yes'
+        : params.colDef?.editable(params)
+          ? 'No'
+          : '',
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.isCanadaProduced =
+          params.newValue === 'Yes' || params.newValue === true
+      }
+      return true
+    },
+    minWidth: 220
+  },
+  {
+    field: 'isQ1Supplied',
+    headerComponent: RequiredHeader,
+    headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
+    cellEditor: AutocompleteCellEditor,
+    cellRenderer: SelectRenderer,
+    cellEditorParams: {
+      options: ['Yes', 'No'],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
+    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+    editable: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const complianceYear = parseInt(compliancePeriod, 10)
+      const isRenewable = fuelType?.renewable
+      const fuelCode = params.data.fuelCode
+      let isCanadian = false
+      if (fuelCode) {
+        const fuelCodeDetails = fuelType.fuelCodes?.find(
+          (fc) =>
+            fc.fuelCode === params.data.fuelCode ||
+            fc.fuelCode === params.data.fuelCode.replace('C-', '')
+        )
+        isCanadian = fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
+      }
+      return (
+        params.data.fuelCategory === 'Diesel' &&
+        complianceYear >= NEW_REGULATION_YEAR &&
+        isRenewable &&
+        !isCanadian &&
+        params.data.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
+      )
+    },
+    valueGetter: (params) =>
+      params.data.isQ1Supplied
+        ? 'Yes'
+        : params.colDef?.editable(params)
+          ? 'No'
+          : '',
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.isQ1Supplied = params.newValue === 'Yes'
+      }
+      return true
+    },
+    minWidth: 180
   },
   {
     field: 'quantitySupplied',
@@ -343,6 +451,20 @@ export const otherUsesSummaryColDefs = [
     }
   },
   {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
+    field: 'isCanadaProduced',
+    floatingFilter: false,
+    valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : ''),
+    minWidth: 240
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
+    field: 'isQ1Supplied',
+    floatingFilter: false,
+    valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : ''),
+    minWidth: 180
+  },
+  {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     field: 'quantitySupplied',
     floatingFilter: false,
@@ -415,6 +537,20 @@ export const changelogCommonColDefs = (highlight = true) => [
       }
       return ''
     }
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
+    field: 'isCanadaProduced',
+    minWidth: 240,
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'isCanadaProduced')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
+    field: 'isQ1Supplied',
+    minWidth: 180,
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'isQ1Supplied')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),

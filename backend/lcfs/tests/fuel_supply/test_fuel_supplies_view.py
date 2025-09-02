@@ -173,6 +173,7 @@ async def test_save_fuel_supply_row_delete(
         "provision_of_the_act_id": 1,
         "quantity": 1000,
         "units": "L",
+        "version": 0,
         "deleted": True,
     }
 
@@ -292,6 +293,8 @@ async def test_save_fuel_supply_draft_status_allowed(
             "provision_of_the_act_id": 1,
             "quantity": 1000,
             "units": "L",
+            "is_canada_produced": True,
+            "is_q1_supplied": False,
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 201
@@ -333,6 +336,8 @@ async def test_save_fuel_supply_submitted_status_blocked(
             "provision_of_the_act_id": 1,
             "quantity": 1000,
             "units": "L",
+            "is_canada_produced": True,
+            "is_q1_supplied": False,
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 403

@@ -591,18 +591,18 @@ async def test_calculate_renewable_fuel_target_summary_2028(
     assert result[2].jet_fuel == 1100.0
     # Line 4
     assert result[3].gasoline == 15.0
-    assert result[3].diesel == 28.0
+    assert result[3].diesel == 56.0  # Updated for 8% diesel rate in 2028
     assert result[3].jet_fuel == 11
     # Line 5
     assert result[4].gasoline == 500.0
     assert result[4].diesel == 100.0
     assert result[4].jet_fuel == 300.0
     # Line 6 - values are preserved but capped at 5% of line 4
-    # Line 4: gasoline=15 (5% = 0.75 -> rounds to 1), diesel=28 (5% = 1.4 -> rounds to 1), jet_fuel=11 (5% = 0.55 -> rounds to 1)
+    # Line 4: gasoline=15 (5% = 0.75 -> rounds to 1), diesel=56 (5% = 2.8 -> rounds to 3), jet_fuel=11 (5% = 0.55 -> rounds to 1)
     # Original values: gasoline=100, diesel=200, jet_fuel=300
-    # Capped values: min(100, 1) = 1, min(200, 1) = 1, min(300, 1) = 1
+    # Capped values: min(100, 1) = 1, min(200, 3) = 3, min(300, 1) = 1
     assert result[5].gasoline == 1
-    assert result[5].diesel == 1
+    assert result[5].diesel == 3
     assert result[5].jet_fuel == 1
     # Line 7
     assert result[6].gasoline == 300.0
@@ -610,9 +610,9 @@ async def test_calculate_renewable_fuel_target_summary_2028(
     assert result[6].jet_fuel == 100.0
     # Line 8 - values are preserved but capped at 5% of line 4
     # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Capped values: min(300, 1) = 1, min(200, 1) = 1, min(100, 1) = 1
+    # Capped values: min(300, 1) = 1, min(200, 3) = 3, min(100, 1) = 1
     assert result[7].gasoline == 1
-    assert result[7].diesel == 1
+    assert result[7].diesel == 3
     assert result[7].jet_fuel == 1
     # Line 9
     assert result[8].gasoline == 400.0
@@ -672,18 +672,18 @@ async def test_calculate_renewable_fuel_target_summary_2029(
     assert result[2].jet_fuel == 300.0
     # Line 4
     assert result[3].gasoline == 20.0
-    assert result[3].diesel == 20.0
+    assert result[3].diesel == 40.0  # Updated for 8% diesel rate in 2029
     assert result[3].jet_fuel == 6.0
     # Line 5
     assert result[4].gasoline == 100.0
     assert result[4].diesel == 300.0
     assert result[4].jet_fuel == 200.0
     # Line 6 - values are preserved but capped at 5% of line 4
-    # Line 4: gasoline=20 (5% = 1), diesel=20 (5% = 1), jet_fuel=6 (5% = 0.3 -> rounds to 0)
+    # Line 4: gasoline=20 (5% = 1), diesel=40 (5% = 2), jet_fuel=6 (5% = 0.3 -> rounds to 0)
     # Original values: gasoline=100, diesel=200, jet_fuel=300
-    # Capped values: min(100, 1) = 1, min(200, 1) = 1, min(300, 0) = 0
+    # Capped values: min(100, 1) = 1, min(200, 2) = 2, min(300, 0) = 0
     assert result[5].gasoline == 1
-    assert result[5].diesel == 1
+    assert result[5].diesel == 2
     assert result[5].jet_fuel == 0
     # Line 7
     assert result[6].gasoline == 200.0
@@ -691,10 +691,10 @@ async def test_calculate_renewable_fuel_target_summary_2029(
     assert result[6].jet_fuel == 300.0
     # Line 8 - values are preserved but capped at 5% of line 4
     # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Line 4: gasoline=20 (5% = 1), diesel=20 (5% = 1), jet_fuel=6 (5% = 0)
-    # Capped values: min(300, 1) = 1, min(200, 1) = 1, min(100, 0) = 0
+    # Line 4: gasoline=20 (5% = 1), diesel=40 (5% = 2), jet_fuel=6 (5% = 0)
+    # Capped values: min(300, 1) = 1, min(200, 2) = 2, min(100, 0) = 0
     assert result[7].gasoline == 1
-    assert result[7].diesel == 1
+    assert result[7].diesel == 2
     assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 300.0
@@ -754,18 +754,18 @@ async def test_calculate_renewable_fuel_target_summary_2030(
     assert result[2].jet_fuel == 400.0
     # Line 4
     assert result[3].gasoline == 15.0
-    assert result[3].diesel == 20.0
+    assert result[3].diesel == 40.0  # Updated for 8% diesel rate in 2030
     assert result[3].jet_fuel == 12.0
     # Line 5
     assert result[4].gasoline == 200.0
     assert result[4].diesel == 300.0
     assert result[4].jet_fuel == 100.0
     # Line 6 - values are preserved but capped at 5% of line 4
-    # Line 4: gasoline=15 (5% = 0.75 -> rounds to 1), diesel=20 (5% = 1), jet_fuel=12 (5% = 0.6 -> rounds to 1)
+    # Line 4: gasoline=15 (5% = 0.75 -> rounds to 1), diesel=40 (5% = 2), jet_fuel=12 (5% = 0.6 -> rounds to 1)
     # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Capped values: min(300, 1) = 1, min(200, 1) = 1, min(100, 1) = 1
+    # Capped values: min(300, 1) = 1, min(200, 2) = 2, min(100, 1) = 1
     assert result[5].gasoline == 1
-    assert result[5].diesel == 1
+    assert result[5].diesel == 2
     assert result[5].jet_fuel == 1
     # Line 7
     assert result[6].gasoline == 300.0
@@ -773,9 +773,9 @@ async def test_calculate_renewable_fuel_target_summary_2030(
     assert result[6].jet_fuel == 200.0
     # Line 8 - values are preserved but capped at 5% of line 4
     # Original values: gasoline=100, diesel=100, jet_fuel=100
-    # Capped values: min(100, 1) = 1, min(100, 1) = 1, min(100, 1) = 1
+    # Capped values: min(100, 1) = 1, min(100, 2) = 2, min(100, 1) = 1
     assert result[7].gasoline == 1
-    assert result[7].diesel == 1
+    assert result[7].diesel == 2
     assert result[7].jet_fuel == 1
     # Line 9
     assert result[8].gasoline == 100.0
@@ -825,9 +825,9 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
 
     # Penalty should be applied due to no renewables, checking for decimal values
     assert result[10].gasoline == 15.08  # 50.25 L shortfall * $0.30/L = 15.075 rounded
-    assert result[10].diesel == 36.09  # 80.2 L shortfall * $0.45/L = 36.09
+    assert result[10].diesel == 72.18  # 160.4 L shortfall * $0.45/L = 72.18 (8% of 2005 = 160.4)
     assert result[10].jet_fuel == 45.08  # 90.15 L shortfall * $0.50/L = 45.075 rounded
-    assert result[10].total_value == (15.08 + 36.09 + 45.08)  # 96.25
+    assert result[10].total_value == (15.08 + 72.18 + 45.08)  # 132.34
 
 
 @pytest.mark.anyio
@@ -912,16 +912,16 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
 
     _assert_renewable_common(result)
     # Lines 6 & 8 should be preserved but capped at 5% of line 4
-    # Line 4: gasoline=500 (5% = 25), diesel=800 (5% = 40), jet_fuel=900 (5% = 45)
+    # Line 4: gasoline=500 (5% = 25), diesel=1600 (5% = 80), jet_fuel=900 (5% = 45) - diesel is 8% for 2030
     # Original values: gasoline=100, diesel=200, jet_fuel=300
-    # Capped values: min(100, 25) = 25, min(200, 40) = 40, min(300, 45) = 45
+    # Capped values: min(100, 25) = 25, min(200, 80) = 80, min(300, 45) = 45
     assert result[5].gasoline == 25
-    assert result[5].diesel == 40
+    assert result[5].diesel == 80
     assert result[5].jet_fuel == 45
     # Line 8: gasoline=50, diesel=100, jet_fuel=150
-    # Capped values: min(50, 25) = 25, min(100, 40) = 40, min(150, 45) = 45
+    # Capped values: min(50, 25) = 25, min(100, 80) = 80, min(150, 45) = 45
     assert result[7].gasoline == 25
-    assert result[7].diesel == 40
+    assert result[7].diesel == 80
     assert result[7].jet_fuel == 45
 
 
@@ -973,17 +973,17 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
     _assert_renewable_common(result)
     # Lines 6 & 8 are preserved but capped at 5% of calculated line 4
     # For 2030: renewable requirements result in line 4 values that give these 5% caps:
-    # 5% caps: gasoline=262, diesel=430, jet_fuel=458 (from actual calculation)
+    # 5% caps: gasoline=263, diesel=860, jet_fuel=458 (diesel is 8% for 2030)
     # Line 6 original values: gasoline=1000, diesel=2000, jet_fuel=3000
     # Since original values exceed caps, they get capped down
-    # But since 1000 > 262, we get min(1000, 262) = 262 (rounds up to 263 in calculation)
+    # But since 1000 > 263, we get min(1000, 263) = 263 (rounds up to 263 in calculation)
     assert result[5].gasoline == 263
-    assert result[5].diesel == 430
+    assert result[5].diesel == 860
     assert result[5].jet_fuel == 458
     # Line 8 original values: gasoline=500, diesel=1000, jet_fuel=1500
-    # Capped values: min(500, 263) = 263, min(1000, 430) = 430, min(1500, 458) = 458
+    # Capped values: min(500, 263) = 263, min(1000, 860) = 860, min(1500, 458) = 458
     assert result[7].gasoline == 263
-    assert result[7].diesel == 430
+    assert result[7].diesel == 860
     assert result[7].jet_fuel == 458
 
 

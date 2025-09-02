@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from lcfs.web.api.base import (
     BaseSchema,
@@ -90,6 +90,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
+    renewable: bool
     default_carbon_intensity: Optional[float] = None
     unit: str
     unrecognized: bool
@@ -156,6 +157,8 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     energy: Optional[float] = None
     deleted: Optional[bool] = None
     is_new_supplemental_entry: Optional[bool] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
 
     class Config:
         use_enum_values = True
@@ -167,8 +170,10 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
 
     @model_validator(mode="before")
     @classmethod
-    def check_quantity_required(cls, values):
-        if isinstance(values, DeleteFuelSupplyResponseSchema):
+    def check_quantity_required(cls, values, info: ValidationInfo):
+        if isinstance(values, DeleteFuelSupplyResponseSchema) or (
+            info.context and info.context.get("skip_quantity_validation")
+        ):
             return values
         return fuel_quantity_required(values)
 

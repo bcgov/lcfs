@@ -117,6 +117,12 @@ async def save_fuel_supply_row(
     await report_validate.validate_compliance_report_editable(compliance_report)
 
     if request_data.deleted:
+        if request_data.version > 0:
+            duplicate_id = await fs_validate.check_duplicate_of_prev_data(request_data)
+            if duplicate_id is not None:
+                duplicate_response = format_duplicate_error(request_data.fuel_supply_id)
+                return duplicate_response
+        # Delete fuel supply row using actions service
         return await action_service.delete_fuel_supply(request_data)
     else:
         duplicate_id = await fs_validate.check_duplicate(request_data)
@@ -150,6 +156,8 @@ def format_duplicate_error(duplicate_id: int):
                         "fuelType",
                         "fuelCategory",
                         "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
                     ],
                     "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
                 }
@@ -162,6 +170,8 @@ def format_duplicate_error(duplicate_id: int):
                         "fuelType",
                         "fuelCategory",
                         "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
                     ],
                     "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
                 }
