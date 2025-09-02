@@ -1,6 +1,8 @@
 import { v4 as uuid } from 'uuid'
 import { isArrayEmpty } from '@/utils/array.js'
 import { DEFAULT_CI_FUEL, DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import { handleScheduleSave } from '@/utils/schedules'
+import { cleanEmptyStringValues } from '@/utils/formatters'
 
 /**
  * Processes raw fuel supply data for grid consumption
@@ -35,7 +37,8 @@ export const processFuelSupplyRowData = ({
  * Determines which columns should be visible based on row data and fuel types
  */
 export const calculateColumnVisibility = (rowData, optionsData, compliancePeriod) => {
-  if (!optionsData?.fuelTypes || isArrayEmpty(rowData)) {
+  const complianceYear = parseInt(compliancePeriod, 10)
+  if (!optionsData?.fuelTypes || isArrayEmpty(rowData) || complianceYear < NEW_REGULATION_YEAR) {
     return {
       shouldShowIsCanadaProduced: false,
       shouldShowIsQ1Supplied: false
@@ -44,7 +47,6 @@ export const calculateColumnVisibility = (rowData, optionsData, compliancePeriod
 
   let shouldShowIsCanadaProduced = false
   let shouldShowIsQ1Supplied = false
-  const complianceYear = parseInt(compliancePeriod, 10)
 
   for (const row of rowData) {
     if (!row.fuelType) continue
