@@ -423,9 +423,11 @@ const NotificationSettingsForm = ({
                         <Controller
                           name="email"
                           control={control}
+                          defaultValue=""
                           render={({ field, fieldState: { error } }) => (
                             <TextField
                               {...field}
+                              value={field.value || ''}
                               error={!!error}
                               helperText={error ? error.message : ''}
                               fullWidth

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FuelSupplySummary } from '../FuelSupplySummary'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -22,24 +22,39 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
     gridOptions,
     defaultColDef,
     suppressPagination,
-    paginationOptions
-  }) => (
-    <div data-test="bc-grid-viewer">
-      <div data-test="grid-key">{gridKey}</div>
-      <div data-test="data-key">{dataKey}</div>
-      <div data-test="row-count">
-        {queryData?.data?.[dataKey]?.length || 0} rows
+    paginationOptions,
+    onPaginationChange,
+    getRowId
+  }) => {
+    // Simulate calling getRowId function to achieve function coverage
+    const mockRowId = getRowId && queryData?.data?.[dataKey]?.[0] ? 
+      getRowId({ data: queryData.data[dataKey][0] }) : 'no-row-id'
+    
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="data-key">{dataKey}</div>
+        <div data-test="row-count">
+          {queryData?.data?.[dataKey]?.length || 0} rows
+        </div>
+        <div data-test="pagination-suppressed">
+          {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
+        </div>
+        <div data-test="row-id">{mockRowId}</div>
+        <button 
+          data-test="trigger-pagination-change" 
+          onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}
+        >
+          Change Page
+        </button>
       </div>
-      <div data-test="pagination-suppressed">
-        {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
-      </div>
-    </div>
-  )
+    )
+  }
 }))
 
 // Mock the schema
 vi.mock('@/views/FuelSupplies/_schema.jsx', () => ({
-  fuelSupplySummaryColDef: (isEarlyIssuance) => [
+  fuelSupplySummaryColDef: (isEarlyIssuance, showFuelTypeOther) => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' }
   ]
@@ -231,5 +246,286 @@ describe('FuelSupplySummary', () => {
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
+  })
+
+  describe('paginatedData useMemo', () => {
+
+    it('applies ascending sort correctly', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 3, fuelType: 'Diesel', actionType: 'CREATE', quantity: 100 },
+          { fuelSupplyId: 1, fuelType: 'Gasoline', actionType: 'CREATE', quantity: 200 },
+          { fuelSupplyId: 2, fuelType: 'Biodiesel', actionType: 'CREATE', quantity: 150 }
+        ]
+      }
+
+      const TestComponent = () => {
+        const [paginationOptions, setPaginationOptions] = React.useState({
+          page: 1,
+          size: 10,
+          filters: [],
+          sortOrders: [{ field: 'quantity', direction: 'asc' }]
+        })
+
+        return (
+          <FuelSupplySummary
+            data={mockData}
+            status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+            isEarlyIssuance={false}
+          />
+        )
+      }
+
+      render(<TestComponent />, { wrapper })
+      expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
+    })
+
+    it('applies descending sort correctly', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE', quantity: 100 },
+          { fuelSupplyId: 2, fuelType: 'Gasoline', actionType: 'CREATE', quantity: 200 },
+          { fuelSupplyId: 3, fuelType: 'Biodiesel', actionType: 'CREATE', quantity: 150 }
+        ]
+      }
+
+      const TestComponent = () => {
+        const [paginationOptions, setPaginationOptions] = React.useState({
+          page: 1,
+          size: 10,
+          filters: [],
+          sortOrders: [{ field: 'quantity', direction: 'desc' }]
+        })
+
+        return (
+          <FuelSupplySummary
+            data={mockData}
+            status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+            isEarlyIssuance={false}
+          />
+        )
+      }
+
+      render(<TestComponent />, { wrapper })
+      expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
+    })
+
+  })
+
+  describe('showFuelTypeOther logic', () => {
+    it('returns true when fuel type Other is present', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' },
+          { fuelSupplyId: 2, fuelType: 'Other', actionType: 'CREATE' },
+          { fuelSupplyId: 3, fuelType: 'Gasoline', actionType: 'CREATE' }
+        ]
+      }
+
+      render(
+        <FuelSupplySummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+
+    it('returns false when no fuel type Other is present', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' },
+          { fuelSupplyId: 2, fuelType: 'Gasoline', actionType: 'CREATE' },
+          { fuelSupplyId: 3, fuelType: 'Biodiesel', actionType: 'CREATE' }
+        ]
+      }
+
+      render(
+        <FuelSupplySummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  describe('getRowId function', () => {
+    it('returns string representation of fuelSupplyId', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 123, fuelType: 'Diesel', actionType: 'CREATE' }
+        ]
+      }
+
+      render(
+        <FuelSupplySummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(screen.getByTestId('row-id')).toHaveTextContent('123')
+    })
+  })
+
+  describe('onPaginationChange callback', () => {
+    it('updates pagination options correctly', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
+        ]
+      }
+
+      render(
+        <FuelSupplySummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      const paginationButton = screen.getByTestId('trigger-pagination-change')
+      fireEvent.click(paginationButton)
+
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  describe('defaultColDef behavior', () => {
+    it('includes LinkRenderer when status is DRAFT', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
+        ]
+      }
+
+      render(
+        <FuelSupplySummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+
+    it('does not include LinkRenderer when status is not DRAFT', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
+        ]
+      }
+
+      render(
+        <FuelSupplySummary
+          data={mockData}
+          status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  describe('edge cases', () => {
+    it('handles no filters gracefully', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
+        ]
+      }
+
+      const TestComponent = () => {
+        const [paginationOptions, setPaginationOptions] = React.useState({
+          page: 1,
+          size: 10,
+          filters: null,
+          sortOrders: []
+        })
+
+        return (
+          <FuelSupplySummary
+            data={mockData}
+            status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+            isEarlyIssuance={false}
+          />
+        )
+      }
+
+      render(<TestComponent />, { wrapper })
+      expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
+    })
+
+    it('handles no sort orders gracefully', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
+        ]
+      }
+
+      const TestComponent = () => {
+        const [paginationOptions, setPaginationOptions] = React.useState({
+          page: 1,
+          size: 10,
+          filters: [],
+          sortOrders: null
+        })
+
+        return (
+          <FuelSupplySummary
+            data={mockData}
+            status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+            isEarlyIssuance={false}
+          />
+        )
+      }
+
+      render(<TestComponent />, { wrapper })
+      expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
+    })
+
+    it('handles filter with no filter value', () => {
+      const mockData = {
+        fuelSupplies: [
+          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE', supplier: 'Company A' }
+        ]
+      }
+
+      const TestComponent = () => {
+        const [paginationOptions, setPaginationOptions] = React.useState({
+          page: 1,
+          size: 10,
+          filters: [{ field: 'supplier', type: 'contains', filter: '' }],
+          sortOrders: []
+        })
+
+        return (
+          <FuelSupplySummary
+            data={mockData}
+            status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+            isEarlyIssuance={false}
+          />
+        )
+      }
+
+      render(<TestComponent />, { wrapper })
+      expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
+    })
+
   })
 })

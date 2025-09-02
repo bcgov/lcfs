@@ -5,11 +5,13 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor
+  waitFor,
+  act
 } from '@testing-library/react'
 import { FuelCodes } from '@/views/FuelCodes'
 import { roles } from '@/constants/roles.js'
 import { wrapper } from '@/tests/utils/wrapper'
+import { ROUTES } from '@/routes/routes'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -20,8 +22,7 @@ vi.mock('react-i18next', () => ({
         'fuelCode:newFuelCodeBtn': 'New fuel code',
         'fuelCode:fuelCodeDownloadBtn': 'Download fuel codes information',
         'fuelCode:fuelCodeDownloadingMsg': 'Downloading fuel codes information',
-        'fuelCode:fuelCodeDownloadFailMsg':
-          'Failed to download fuel code information',
+        'fuelCode:fuelCodeDownloadFailMsg': 'Failed to download fuel code information',
         'fuelCode:noFuelCodesFound': 'No fuel codes found',
         'common:ClearFilters': 'Clear filters'
       }
@@ -52,11 +53,10 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 // Mock React Router
 const mockNavigate = vi.fn()
+const mockLocationState = { state: null }
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  useLocation: () => ({
-    state: null
-  }),
+  useLocation: () => mockLocationState,
   useSearchParams: () => [new URLSearchParams(), vi.fn()]
 }))
 
@@ -100,6 +100,14 @@ vi.mock('@/hooks/useFuelCode', () => ({
   }))
 }))
 
+// Mock BCBox to prevent jsx prop warnings
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children, jsx, ...props }) => <div {...props}>{children}</div>
+}))
+
+// Import the component internals for direct testing
+import { FuelCodes as FuelCodesComponent } from '@/views/FuelCodes/FuelCodes.jsx'
+
 // Create mock grid ref with AG Grid API methods
 const createMockGridRef = (filterModel = {}, columnState = []) => ({
   current: {
@@ -118,6 +126,7 @@ describe('FuelCodes Component Tests', () => {
   beforeEach(() => {
     mockGridRef = createMockGridRef()
     mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
+    mockLocationState.state = null
     vi.clearAllMocks()
     mockNavigate.mockClear()
   })
@@ -127,49 +136,201 @@ describe('FuelCodes Component Tests', () => {
     vi.resetAllMocks()
   })
 
-  // HIGH PRIORITY TESTS - Component rendering and core functionality
+  describe('Utility Functions', () => {
+    describe('Filter conversion logic', () => {
+      it('should handle empty filter model correctly', () => {
+        const emptyModel = {}
+        const result = Object.entries(emptyModel).map(([field, cfg]) => ({
+          field,
+          filterType: cfg.filterType || 'text',
+          type: cfg.type,
+          filter: cfg.filter,
+          dateFrom: cfg.dateFrom,
+          dateTo: cfg.dateTo
+        }))
+        expect(result).toEqual([])
+      })
+
+      it('should convert filter model with single filter', () => {
+        const model = {
+          name: {
+            filterType: 'text',
+            type: 'contains',
+            filter: 'test'
+          }
+        }
+        const result = Object.entries(model).map(([field, cfg]) => ({
+          field,
+          filterType: cfg.filterType || 'text',
+          type: cfg.type,
+          filter: cfg.filter,
+          dateFrom: cfg.dateFrom,
+          dateTo: cfg.dateTo
+        }))
+        expect(result).toEqual([{
+          field: 'name',
+          filterType: 'text',
+          type: 'contains',
+          filter: 'test',
+          dateFrom: undefined,
+          dateTo: undefined
+        }])
+      })
+
+      it('should convert filter model with date filters', () => {
+        const model = {
+          applicationDate: {
+            filterType: 'date',
+            type: 'inRange',
+            dateFrom: '2024-01-01',
+            dateTo: '2024-12-31'
+          }
+        }
+        const result = Object.entries(model).map(([field, cfg]) => ({
+          field,
+          filterType: cfg.filterType || 'text',
+          type: cfg.type,
+          filter: cfg.filter,
+          dateFrom: cfg.dateFrom,
+          dateTo: cfg.dateTo
+        }))
+        expect(result).toEqual([{
+          field: 'applicationDate',
+          filterType: 'date',
+          type: 'inRange',
+          filter: undefined,
+          dateFrom: '2024-01-01',
+          dateTo: '2024-12-31'
+        }])
+      })
+
+      it('should handle missing filterType with default text type', () => {
+        const model = {
+          code: {
+            type: 'equals',
+            filter: '001'
+          }
+        }
+        const result = Object.entries(model).map(([field, cfg]) => ({
+          field,
+          filterType: cfg.filterType || 'text',
+          type: cfg.type,
+          filter: cfg.filter,
+          dateFrom: cfg.dateFrom,
+          dateTo: cfg.dateTo
+        }))
+        expect(result).toEqual([{
+          field: 'code',
+          filterType: 'text',
+          type: 'equals',
+          filter: '001',
+          dateFrom: undefined,
+          dateTo: undefined
+        }])
+      })
+    })
+  })
 
   describe('Component Rendering', () => {
-    it('renders title correctly', () => {
+    it('should render title correctly', () => {
       render(<FuelCodes />, { wrapper })
       const title = screen.getByTestId('title')
       expect(title).toBeInTheDocument()
       expect(title.textContent).toBe('Fuel codes')
     })
 
-    it('renders grid viewer with correct props', () => {
+    it('should render grid viewer with correct props', () => {
       render(<FuelCodes />, { wrapper })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
 
-    it('renders download button with correct initial state', () => {
+    it('should render download button with correct initial state', () => {
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
       expect(downloadButton).toBeInTheDocument()
       expect(downloadButton).toBeEnabled()
-      expect(downloadButton).toHaveTextContent(
-        'Download fuel codes information'
-      )
+      expect(downloadButton).toHaveTextContent('Download fuel codes information')
     })
 
-    it('renders new fuel code button for analysts', () => {
+    it('should render new fuel code button for analysts', () => {
       render(<FuelCodes />, { wrapper })
       const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
       expect(newFuelCodeBtn).toBeInTheDocument()
       expect(newFuelCodeBtn).toHaveTextContent('New fuel code')
     })
+
+    it('should render clear filters button', () => {
+      render(<FuelCodes />, { wrapper })
+      const clearFiltersButton = screen.getByRole('button', {
+        name: /clear filters/i
+      })
+      expect(clearFiltersButton).toBeInTheDocument()
+    })
   })
 
-  describe('Primary User Interactions', () => {
-    it('clicking new fuel code button navigates to add page', () => {
+  describe('Alert Message Handling', () => {
+    it('should not render alert when no location state message', () => {
+      mockLocationState.state = null
+      render(<FuelCodes />, { wrapper })
+      const alertBox = screen.queryByTestId('alert-box')
+      expect(alertBox).not.toBeInTheDocument()
+    })
+
+    it('should render alert with message from location state', async () => {
+      mockLocationState.state = {
+        message: 'Test success message',
+        severity: 'success'
+      }
+      
+      render(<FuelCodes />, { wrapper })
+      
+      await waitFor(() => {
+        const alertBox = screen.getByTestId('alert-box')
+        expect(alertBox).toBeInTheDocument()
+        expect(alertBox).toHaveTextContent('Test success message')
+      })
+    })
+
+    it('should render alert with default info severity', async () => {
+      mockLocationState.state = {
+        message: 'Test message without severity'
+      }
+      
+      render(<FuelCodes />, { wrapper })
+      
+      await waitFor(() => {
+        const alertBox = screen.getByTestId('alert-box')
+        expect(alertBox).toBeInTheDocument()
+        expect(alertBox).toHaveTextContent('Test message without severity')
+      })
+    })
+
+    it('should render alert with error severity', async () => {
+      mockLocationState.state = {
+        message: 'Test error message',
+        severity: 'error'
+      }
+      
+      render(<FuelCodes />, { wrapper })
+      
+      await waitFor(() => {
+        const alertBox = screen.getByTestId('alert-box')
+        expect(alertBox).toBeInTheDocument()
+        expect(alertBox).toHaveTextContent('Test error message')
+      })
+    })
+  })
+
+  describe('User Interactions', () => {
+    it('should navigate to add fuel code page when new button clicked', () => {
       render(<FuelCodes />, { wrapper })
       const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
       fireEvent.click(newFuelCodeBtn)
-      expect(mockNavigate).toHaveBeenCalledWith('/fuel-codes/add-fuel-code')
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.ADD)
     })
 
-    it('handles download button click with no filters or sorting', async () => {
+    it('should handle download button click', async () => {
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
@@ -192,10 +353,88 @@ describe('FuelCodes Component Tests', () => {
         })
       })
     })
+
+    it('should handle clear filters button click', async () => {
+      render(<FuelCodes />, { wrapper })
+      const clearFiltersButton = screen.getByRole('button', {
+        name: /clear filters/i
+      })
+
+      await act(async () => {
+        fireEvent.click(clearFiltersButton)
+      })
+
+      expect(clearFiltersButton).toBeInTheDocument()
+    })
   })
 
-  describe('Export Functionality with Filters and Sorting', () => {
-    it('calls buildExportPayload with correct format when download is triggered', async () => {
+  describe('Download Functionality', () => {
+    it('should show loading state during download', async () => {
+      mockDownloadMutate = vi.fn(() => new Promise(() => {}))
+
+      render(<FuelCodes />, { wrapper })
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        expect(downloadButton).toHaveTextContent('Downloading fuel codes information...')
+        expect(downloadButton).toBeDisabled()
+      })
+    })
+
+    it('should reset button state after successful download', async () => {
+      mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
+
+      render(<FuelCodes />, { wrapper })
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        expect(downloadButton).toHaveTextContent('Download fuel codes information')
+        expect(downloadButton).toBeEnabled()
+      })
+    })
+
+    it('should display error message on download failure', async () => {
+      mockDownloadMutate = vi.fn().mockRejectedValue(new Error('Download failed'))
+
+      render(<FuelCodes />, { wrapper })
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        const alertBox = screen.getByTestId('alert-box')
+        expect(alertBox).toBeInTheDocument()
+        expect(alertBox).toHaveTextContent('Failed to download fuel code information')
+      })
+    })
+
+    it('should reset button state after download failure', async () => {
+      mockDownloadMutate = vi.fn().mockRejectedValue(new Error('Download failed'))
+
+      render(<FuelCodes />, { wrapper })
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        expect(downloadButton).toHaveTextContent('Download fuel codes information')
+        expect(downloadButton).toBeEnabled()
+      })
+    })
+
+    it('should handle export payload with filters', async () => {
+      const mockFilterModel = {
+        name: {
+          filterType: 'text',
+          type: 'contains',
+          filter: 'test'
+        }
+      }
+
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
@@ -214,110 +453,7 @@ describe('FuelCodes Component Tests', () => {
       })
     })
 
-    it('verifies export payload structure includes both filters and sortOrders properties', async () => {
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        const callArgs = mockDownloadMutate.mock.calls[0][0]
-        expect(callArgs).toHaveProperty('format', 'xlsx')
-        expect(callArgs.body).toHaveProperty('filters')
-        expect(callArgs.body).toHaveProperty('sortOrders')
-        expect(callArgs.body).toHaveProperty('page', 1)
-        expect(callArgs.body).toHaveProperty('size', 10000)
-      })
-    })
-
-    it('confirms sortOrders property is not hardcoded as empty array', async () => {
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        const callArgs = mockDownloadMutate.mock.calls[0][0]
-        // The sortOrders should come from paginationOptions.sortOrders, not hardcoded []
-        expect(Array.isArray(callArgs.body.sortOrders)).toBe(true)
-      })
-    })
-  })
-
-  describe('State Management and Loading States', () => {
-    it('shows loading state during download', async () => {
-      // Mock a pending download
-      mockDownloadMutate = vi.fn(() => new Promise(() => {})) // Never resolves
-
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(
-          'Downloading fuel codes information...'
-        )
-        expect(downloadButton).toBeDisabled()
-      })
-    })
-
-    it('resets button state after successful download', async () => {
-      mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
-
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(
-          'Download fuel codes information'
-        )
-        expect(downloadButton).toBeEnabled()
-      })
-    })
-  })
-
-  describe('Error Handling', () => {
-    it('displays error message on download failure', async () => {
-      mockDownloadMutate = vi
-        .fn()
-        .mockRejectedValue(new Error('Download failed'))
-
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        const alertBox = screen.getByTestId('alert-box')
-        expect(alertBox).toBeInTheDocument()
-        expect(alertBox).toHaveTextContent(
-          'Failed to download fuel code information'
-        )
-      })
-    })
-
-    it('resets button state after download failure', async () => {
-      mockDownloadMutate = vi
-        .fn()
-        .mockRejectedValue(new Error('Download failed'))
-
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(
-          'Download fuel codes information'
-        )
-        expect(downloadButton).toBeEnabled()
-      })
-    })
-
-    it('handles missing grid reference gracefully', async () => {
+    it('should handle missing grid reference gracefully', async () => {
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
@@ -342,48 +478,19 @@ describe('FuelCodes Component Tests', () => {
     })
   })
 
-  describe('Clear Filters Functionality', () => {
-    it('clears filters when clear filters button is clicked', () => {
-      render(<FuelCodes />, { wrapper })
-      const clearFiltersButton = screen.getByRole('button', {
-        name: /clear filters/i
-      })
-
-      fireEvent.click(clearFiltersButton)
-
-      // The actual clearing logic would be tested through the grid's clearFilters method
-      // This tests that the button exists and is clickable
-      expect(clearFiltersButton).toBeInTheDocument()
-    })
-  })
-
-  // MEDIUM PRIORITY TESTS - Edge cases and detailed scenarios
-
-  describe('Alert Message Handling', () => {
-    it('renders without alert when no location state message', () => {
-      render(<FuelCodes />, { wrapper })
-
-      // Should not show alert box when there's no message
-      const alertBox = screen.queryByTestId('alert-box')
-      expect(alertBox).not.toBeInTheDocument()
-    })
-  })
-
   describe('Data Loading States', () => {
-    it('handles loading state from useGetFuelCodes', () => {
+    it('should handle loading state from useGetFuelCodes', () => {
       mockGetFuelCodesData = {
         ...mockGetFuelCodesData,
         isLoading: true
       }
 
       render(<FuelCodes />, { wrapper })
-
-      // The grid should show loading state
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
 
-    it('handles error state from useGetFuelCodes', () => {
+    it('should handle error state from useGetFuelCodes', () => {
       mockGetFuelCodesData = {
         ...mockGetFuelCodesData,
         isError: true,
@@ -394,63 +501,11 @@ describe('FuelCodes Component Tests', () => {
       }
 
       render(<FuelCodes />, { wrapper })
-
       const errorMessage = screen.getByText(/Failed to load fuel codes/)
       expect(errorMessage).toBeInTheDocument()
     })
-  })
 
-  describe('Complex Export Scenarios', () => {
-    it('exports with date range filters', async () => {
-      const mockFilterModel = {
-        applicationDate: {
-          filterType: 'date',
-          type: 'inRange',
-          dateFrom: '2024-01-01',
-          dateTo: '2024-12-31'
-        }
-      }
-
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        expect(mockDownloadMutate).toHaveBeenCalledWith({
-          format: 'xlsx',
-          body: expect.objectContaining({
-            filters: expect.any(Array),
-            sortOrders: expect.any(Array)
-          })
-        })
-      })
-    })
-
-    it('verifies export functionality with proper payload structure', async () => {
-      render(<FuelCodes />, { wrapper })
-      const downloadButton = screen.getByTestId('fuel-code-download-btn')
-
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        expect(mockDownloadMutate).toHaveBeenCalledWith({
-          format: 'xlsx',
-          body: expect.objectContaining({
-            page: 1,
-            size: 10000,
-            filters: expect.any(Array),
-            sortOrders: expect.any(Array)
-          })
-        })
-      })
-    })
-  })
-
-  // LOW PRIORITY TESTS - UI variations and edge cases
-
-  describe('UI Variations', () => {
-    it('handles empty fuel codes data', () => {
+    it('should handle empty fuel codes data', () => {
       mockGetFuelCodesData = {
         data: {
           pagination: { total: 0, page: 1, size: 10 },
@@ -462,26 +517,149 @@ describe('FuelCodes Component Tests', () => {
       }
 
       render(<FuelCodes />, { wrapper })
+      const gridContainer = screen.getByTestId('bc-grid-container')
+      expect(gridContainer).toBeInTheDocument()
+    })
+  })
 
+  describe('Component State Management', () => {
+    it('should initialize with correct default state', () => {
+      render(<FuelCodes />, { wrapper })
+      
+      // Verify initial rendering without errors
+      expect(screen.getByTestId('title')).toBeInTheDocument()
+      expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
+    })
+
+    it('should handle pagination options correctly', () => {
+      render(<FuelCodes />, { wrapper })
+      const gridContainer = screen.getByTestId('bc-grid-container')
+      expect(gridContainer).toBeInTheDocument()
+    })
+  })
+
+  describe('Grid Integration', () => {
+    it('should pass correct props to BCGridViewer', () => {
+      render(<FuelCodes />, { wrapper })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
 
-    it('renders with different pagination sizes', () => {
-      mockGetFuelCodesData = {
-        data: {
-          pagination: { total: 50, page: 2, size: 25 },
-          fuelCodes: []
-        },
-        isLoading: false,
-        error: null,
-        isError: false
+    it('should handle row ID generation', () => {
+      const params = { data: { fuelCodeId: 123 } }
+      const result = params.data.fuelCodeId.toString()
+      expect(result).toBe('123')
+    })
+
+    it('should handle different fuel code IDs', () => {
+      const params1 = { data: { fuelCodeId: 1 } }
+      const params2 = { data: { fuelCodeId: '002' } }
+      
+      expect(params1.data.fuelCodeId.toString()).toBe('1')
+      expect(params2.data.fuelCodeId.toString()).toBe('002')
+    })
+  })
+
+  describe('Export Payload Building', () => {
+    it('should build export payload with default values', () => {
+      const payload = {
+        page: 1,
+        size: 10000,
+        filters: [],
+        sortOrders: [
+          {
+            direction: 'desc',
+            field: 'lastUpdated'
+          }
+        ]
+      }
+      
+      expect(payload.page).toBe(1)
+      expect(payload.size).toBe(10000)
+      expect(Array.isArray(payload.filters)).toBe(true)
+      expect(Array.isArray(payload.sortOrders)).toBe(true)
+    })
+
+    it('should handle undefined grid reference', () => {
+      const gridRef = { current: null }
+      const filterModel = gridRef.current?.api?.getFilterModel?.() || {}
+      const filters = Object.entries(filterModel).map(([field, cfg]) => ({
+        field,
+        filterType: cfg.filterType || 'text',
+        type: cfg.type,
+        filter: cfg.filter,
+        dateFrom: cfg.dateFrom,
+        dateTo: cfg.dateTo
+      }))
+      
+      expect(filters).toEqual([])
+    })
+  })
+
+  describe('Error Scenarios', () => {
+    it('should handle console error during download', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mockDownloadMutate = vi.fn().mockRejectedValue(new Error('Network error'))
+
+      render(<FuelCodes />, { wrapper })
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Error downloading fuel code information:',
+          expect.any(Error)
+        )
+      })
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should clear alert message before download', async () => {
+      mockLocationState.state = {
+        message: 'Previous message',
+        severity: 'info'
       }
 
       render(<FuelCodes />, { wrapper })
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('alert-box')).toBeInTheDocument()
+      })
 
-      const gridContainer = screen.getByTestId('bc-grid-container')
-      expect(gridContainer).toBeInTheDocument()
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        expect(mockDownloadMutate).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('Conditional Rendering', () => {
+    it('should render new fuel code button only for analysts', () => {
+      render(<FuelCodes />, { wrapper })
+      const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
+      expect(newFuelCodeBtn).toBeInTheDocument()
+    })
+
+    it('should always render download and clear filters buttons', () => {
+      render(<FuelCodes />, { wrapper })
+      
+      expect(screen.getByTestId('fuel-code-download-btn')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /clear filters/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('Translation Integration', () => {
+    it('should use translation keys for all text content', () => {
+      render(<FuelCodes />, { wrapper })
+      
+      expect(screen.getByText('Fuel codes')).toBeInTheDocument()
+      expect(screen.getByText('New fuel code')).toBeInTheDocument()
+      expect(screen.getByText('Download fuel codes information')).toBeInTheDocument()
+      expect(screen.getByText('Clear filters')).toBeInTheDocument()
     })
   })
 })

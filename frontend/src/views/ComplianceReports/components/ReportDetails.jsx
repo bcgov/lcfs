@@ -632,7 +632,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                       sx={{ px: 2 }}
                       aria-label="edit"
                       className="small-icon"
-                      onClick={activity.action}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        activity.action(e)
+                      }}
                     >
                       <Edit />
                     </IconButton>
