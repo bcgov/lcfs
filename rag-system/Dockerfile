@@ -1,10 +1,16 @@
-FROM deepset/hayhooks:v0.6.0
+FROM deepset/hayhooks:v0.10.1
 
-# Install additional dependencies for RAG functionality
+# Install additional dependencies for RAG functionality  
 RUN pip install torch transformers sentence-transformers nltk
+
+# Install Haystack Ollama integration
+RUN pip install ollama-haystack
 
 # Install reranking models - using lightweight cross-encoder
 RUN pip install sentence-transformers accelerate
+
+# Install Qdrant client and Haystack integration for vector database
+RUN pip install qdrant-client qdrant-haystack
 
 # Copy data directory for document ingestion
 COPY data/ /opt/data/
