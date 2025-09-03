@@ -1,34 +1,39 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import { useEffect, useMemo, useState } from 'react'
+import Grid2 from '@mui/material/Grid2'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import Grid2 from '@mui/material/Grid2'
-import { scheduleCSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
-import { useGetOtherUses } from '@/hooks/useOtherUses.js'
+import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
+import { exclusionSummaryColDefs } from './_schema.jsx'
 
-export const ScheduleCSummary = ({ data, status }) => {
+export const ExclusionAgreementSummary = ({ data, status }) => {
+  const gridRef = useRef()
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { t } = useTranslation(['common', 'otherUses', 'legacy'])
-
-  const { complianceReportId } = useParams()
-
-  const location = useLocation()
+  const { complianceReportId: reportIdString } = useParams()
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
 
-  const queryData = useGetOtherUses(
-    { ...paginationOptions, complianceReportId },
+  const { t } = useTranslation(['common', 'exclusionAgreement', 'legacy'])
+  const location = useLocation()
+
+  const complianceReportId = parseInt(reportIdString)
+
+  const queryData = useGetAllocationAgreements(
+    complianceReportId,
+    paginationOptions,
     {
       cacheTime: 0,
-      staleTime: 0
+      staleTime: 0,
+      enabled: !isNaN(complianceReportId)
     }
   )
 
@@ -46,20 +51,24 @@ export const ScheduleCSummary = ({ data, status }) => {
       cellRenderer:
         status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
       cellRendererParams: {
-        url: () => 'fuels-other-use'
+        url: () => 'exclusion-agreements'
       }
     }),
     [status]
   )
 
-  const columns = useMemo(() => {
-    return scheduleCSummaryColDefs(t)
-  }, [t])
+  const columns = useMemo(() => exclusionSummaryColDefs(t), [t])
 
-  const getRowId = (params) => params.data.otherUsesId.toString()
+  const getRowId = (params) => {
+    return params.data.allocationAgreementId.toString()
+  }
 
   return (
-    <Grid2 className="other-uses-container" data-test="container" mx={-1}>
+    <Grid2
+      className="exclusion-agreement-container"
+      data-test="exclusion-agreement-summary"
+      mx={-1}
+    >
       <div>
         {alertMessage && (
           <BCAlert data-test="alert-box" severity={alertSeverity}>
@@ -69,12 +78,13 @@ export const ScheduleCSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey="other-uses"
+          gridKey="exclusion-agreements"
           getRowId={getRowId}
           columnDefs={columns}
+          gridRef={gridRef}
           defaultColDef={defaultColDef}
           queryData={queryData}
-          dataKey="otherUses"
+          dataKey="allocationAgreements"
           suppressPagination={data?.length <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
@@ -95,4 +105,4 @@ export const ScheduleCSummary = ({ data, status }) => {
   )
 }
 
-ScheduleCSummary.displayName = 'ScheduleCSummary'
+ExclusionAgreementSummary.displayName = 'ExclusionAgreementSummary'

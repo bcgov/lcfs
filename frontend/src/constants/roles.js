@@ -9,7 +9,8 @@ export const roles = {
   transfers: 'Transfer',
   compliance_reporting: 'Compliance Reporting',
   signing_authority: 'Signing Authority',
-  read_only: 'Read Only'
+  read_only: 'Read Only',
+  beta_tester: 'Beta Tester'
 }
 
 export const govRoles = [

@@ -130,8 +130,8 @@ class OrganizationBase(BaseSchema):
 class OrganizationSchema(OrganizationBase):
     organization_address_id: Optional[int] = None
     organization_attorney_address_id: Optional[int] = None
-    org_type: Optional[OrganizationTypeSchema] = []
-    org_status: Optional[OrganizationStatusSchema] = []
+    org_type: Optional[OrganizationTypeSchema] = None
+    org_status: Optional[OrganizationStatusSchema] = None
 
 
 class OrganizationListSchema(BaseSchema):
@@ -177,8 +177,8 @@ class OrganizationUpdateSchema(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
-    address: Optional[OrganizationAddressCreateSchema] = []
-    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
+    address: Optional[OrganizationAddressCreateSchema] = None
+    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = None
 
 
 class OrganizationResponseSchema(BaseSchema):
@@ -199,11 +199,11 @@ class OrganizationResponseSchema(BaseSchema):
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
     organization_type_id: Optional[int] = None
-    org_status: Optional[OrganizationStatusSchema] = []
-    org_type: Optional[OrganizationTypeSchema] = []
+    org_status: Optional[OrganizationStatusSchema] = None
+    org_type: Optional[OrganizationTypeSchema] = None
     records_address: Optional[str] = None
-    org_address: Optional[OrganizationAddressSchema] = []
-    org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
+    org_address: Optional[OrganizationAddressSchema] = None
+    org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = None
 
 
 class OrganizationSummaryResponseSchema(BaseSchema):
