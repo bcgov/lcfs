@@ -151,23 +151,39 @@ class AllocationAgreementMigrator:
                 crear.quantity_not_sold,
                 tt.id AS transaction_type_id
             FROM compliance_report legacy_cr
-            -- Join to exclusion report within the same supplemental chain (by root_report_id)
-            INNER JOIN compliance_report exclusion_cr
-                ON exclusion_cr.root_report_id = legacy_cr.root_report_id
-               AND exclusion_cr.exclusion_agreement_id IS NOT NULL
-            -- Ensure we only use the latest exclusion report in the chain up to this report's traversal (as-of)
-               AND exclusion_cr.traversal = (
-                    SELECT MAX(e2.traversal)
-                    FROM compliance_report e2
-                    WHERE e2.root_report_id = legacy_cr.root_report_id
-                      AND e2.exclusion_agreement_id IS NOT NULL
-                      AND e2.traversal <= legacy_cr.traversal
-               )
-            -- Now join from the exclusion report to the agreement tables
-            INNER JOIN compliance_report_exclusion_agreement crea
-                ON exclusion_cr.exclusion_agreement_id = crea.id
-            INNER JOIN compliance_report_exclusion_agreement_record crear
-                ON crea.id = crear.exclusion_agreement_id
+            -- First, try to join to the report's own exclusion agreement if it exists (combo reports)
+            LEFT JOIN compliance_report_exclusion_agreement crea_direct
+                ON legacy_cr.exclusion_agreement_id = crea_direct.id
+            LEFT JOIN compliance_report_exclusion_agreement_record crear_direct
+                ON crea_direct.id = crear_direct.exclusion_agreement_id
+            -- If not found, join to the latest exclusion report in the same organization/period
+            LEFT JOIN (
+                SELECT DISTINCT ON (exclusion_cr.organization_id, exclusion_cr.compliance_period_id)
+                    exclusion_cr.exclusion_agreement_id,
+                    exclusion_cr.organization_id,
+                    exclusion_cr.compliance_period_id
+                FROM compliance_report exclusion_cr
+                WHERE exclusion_cr.exclusion_agreement_id IS NOT NULL
+                ORDER BY exclusion_cr.organization_id, exclusion_cr.compliance_period_id, exclusion_cr.traversal DESC
+            ) latest_exclusion 
+                ON latest_exclusion.organization_id = legacy_cr.organization_id
+               AND latest_exclusion.compliance_period_id = legacy_cr.compliance_period_id
+               AND crea_direct.id IS NULL  -- Only use if direct exclusion not found
+            LEFT JOIN compliance_report_exclusion_agreement crea_latest
+                ON latest_exclusion.exclusion_agreement_id = crea_latest.id
+            LEFT JOIN compliance_report_exclusion_agreement_record crear_latest
+                ON crea_latest.id = crear_latest.exclusion_agreement_id
+            -- Coalesce the results to use direct first, then latest
+            CROSS JOIN (
+                SELECT 
+                    COALESCE(crear_direct.id, crear_latest.id) AS id,
+                    COALESCE(crear_direct.transaction_partner, crear_latest.transaction_partner) AS transaction_partner,
+                    COALESCE(crear_direct.postal_address, crear_latest.postal_address) AS postal_address,
+                    COALESCE(crear_direct.quantity, crear_latest.quantity) AS quantity,
+                    COALESCE(crear_direct.quantity_not_sold, crear_latest.quantity_not_sold) AS quantity_not_sold,
+                    COALESCE(crear_direct.transaction_type_id, crear_latest.transaction_type_id) AS transaction_type_id,
+                    COALESCE(crear_direct.fuel_type_id, crear_latest.fuel_type_id) AS fuel_type_id
+            ) crear
             -- Standard joins for details
             INNER JOIN transaction_type tt
                 ON crear.transaction_type_id = tt.id
@@ -177,6 +193,7 @@ class AllocationAgreementMigrator:
                 ON aft.unit_of_measure_id = uom.id
             WHERE
                 legacy_cr.id = %s
+                AND crear.id IS NOT NULL  -- Ensure we have allocation data
             ORDER BY
                 crear.id;
         """
@@ -369,6 +386,11 @@ class AllocationAgreementMigrator:
                                 )
                                 total_skipped += 1
                                 continue
+
+                            # Check if this is a supplemental report that needs special handling
+                            logger.debug(
+                                f"Checking if TFRS report {tfrs_id} is a supplemental report that needs allocation inheritance"
+                            )
 
                             # Retrieve allocation agreement records from source for the given TFRS report
                             allocation_records = self.get_allocation_agreement_records(

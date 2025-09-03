@@ -1299,7 +1299,7 @@ async def test_calculate_fuel_export_compliance_units_parametrized(
     ],
 )
 async def test_calculate_fuel_supply_compliance_units_parametrized_legacy(
-    compliance_report_summary_service, fuel_data, expected_legacy_result
+    compliance_report_summary_service, mock_summary_repo, fuel_data, expected_legacy_result
 ):
     """Test calculation for compliance periods before 2024 (legacy formula)"""
     mock_fuel_supply = Mock(**fuel_data)

@@ -199,8 +199,8 @@ class OrganizationResponseSchema(BaseSchema):
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
     organization_type_id: Optional[int] = None
-    org_status: Optional[OrganizationStatusSchema] = []
-    org_type: Optional[OrganizationTypeSchema] = []
+    org_status: Optional[OrganizationStatusSchema] = None
+    org_type: Optional[OrganizationTypeSchema] = None
     records_address: Optional[str] = None
     org_address: Optional[OrganizationAddressSchema] = None
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = None

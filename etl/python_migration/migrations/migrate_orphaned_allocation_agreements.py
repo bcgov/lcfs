@@ -47,9 +47,11 @@ class OrphanedAllocationAgreementMigrator:
         """Find TFRS exclusion reports without a sibling report"""
         query = """
             /*
-             * Find exclusion reports that don't have a corresponding main report in the same
-             * org/period. If multiple exclusion supplementals exist in a chain, pick the latest
-             * one (by traversal) for processing.
+             * Find exclusion reports that are truly standalone (orphaned):
+             * 1. Has exclusion_agreement_id (is an exclusion report)
+             * 2. Does NOT have a main compliance report in the same organization/period
+             * 3. Excludes reports that are part of combo compliance+exclusion reports
+             * If multiple exclusion supplementals exist in a chain, pick the latest one.
              */
             WITH exclusion_candidates AS (
                 SELECT
@@ -63,13 +65,14 @@ class OrphanedAllocationAgreementMigrator:
                 FROM compliance_report cr_excl
                 JOIN compliance_report_workflow_state ws ON cr_excl.status_id = ws.id
                 WHERE cr_excl.exclusion_agreement_id IS NOT NULL
+                -- Check if this is truly a standalone exclusion report
                 AND NOT EXISTS (
                     SELECT 1
-                    FROM compliance_report cr_main
-                    WHERE cr_main.organization_id = cr_excl.organization_id
-                      AND cr_main.compliance_period_id = cr_excl.compliance_period_id
-                      AND cr_main.id != cr_excl.id
-                      AND cr_main.exclusion_agreement_id IS NULL
+                    FROM compliance_report cr_other
+                    WHERE cr_other.organization_id = cr_excl.organization_id
+                      AND cr_other.compliance_period_id = cr_excl.compliance_period_id
+                      AND cr_other.root_report_id = cr_excl.root_report_id
+                      AND cr_other.exclusion_agreement_id IS NULL  -- Has main compliance data
                 )
             ), latest_exclusion_per_chain AS (
                 SELECT ec.*

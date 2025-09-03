@@ -357,7 +357,8 @@ class ComplianceSummaryUpdater:
             line_17_decimal = Decimal(str(line_17))
             balance_chg_from_assessment = compliance_units_issued - banked_used
             # Available compliance unit balance at the end of the compliance date for the period
-            compliance_units_balance = line_17_decimal + compliance_units_issued
+            # This should be the available balance at period end, not credits issued
+            available_balance_at_period_end = line_17_decimal  # This is the correct Line 22 value
             total_payable = line11_gas + line11_diesel + line28_non_compliance
 
             return {
@@ -407,11 +408,11 @@ class ComplianceSummaryUpdater:
                 "line_15_banked_units_used": banked_used,
                 "line_16_banked_units_remaining": Decimal("0.0"),  # Not tracked in TFRS
                 "line_17_non_banked_units_used": line_17_decimal,
-                "line_18_units_to_be_banked": compliance_units_issued,
+                "line_18_units_to_be_banked": issued_compliance_units,
                 "line_19_units_to_be_exported": Decimal("0.0"),  # Not tracked in TFRS
                 "line_20_surplus_deficit_units": balance_chg_from_assessment,
                 "line_21_surplus_deficit_ratio": line28_non_compliance,
-                "line_22_compliance_units_issued": compliance_units_balance,
+                "line_22_compliance_units_issued": available_balance_at_period_end,
                 # Fossil derived base fuel (aggregate)
                 "line_11_fossil_derived_base_fuel_gasoline": fossil_gas,
                 "line_11_fossil_derived_base_fuel_diesel": fossil_diesel,
