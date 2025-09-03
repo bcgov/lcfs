@@ -110,6 +110,8 @@ class OtherUsesServices:
                 model.provision_of_the_act.name if model.provision_of_the_act else None
             ),
             fuel_code=model.fuel_code.fuel_code if model.fuel_code else None,
+            is_canada_produced=model.is_canada_produced,
+            is_q1_supplied=model.is_q1_supplied,
             ci_of_fuel=model.ci_of_fuel,
             expected_use=(model.expected_use.name if model.expected_use else None),
             group_uuid=model.group_uuid,

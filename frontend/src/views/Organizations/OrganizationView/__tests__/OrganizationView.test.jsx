@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OrganizationView } from '../OrganizationView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -6,6 +6,55 @@ import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { roles } from '@/constants/roles.js'
 
+// Mock react-router-dom hooks
+const mockNavigate = vi.fn()
+const mockUseLocation = vi.fn(() => ({ state: {} }))
+const mockUseParams = vi.fn(() => ({ orgID: '123' }))
+
+vi.mock('react-router-dom', () => ({
+  ...vi.importActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+  useLocation: () => mockUseLocation(),
+  useParams: () => mockUseParams()
+}))
+
+// Mock useCurrentUser hook
+const mockCurrentUser = vi.fn(() => ({
+  data: { 
+    organization: { organizationId: '456' },
+    roles: [{ name: roles.government }] 
+  },
+  hasRoles: vi.fn().mockReturnValue(true)
+}))
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => mockCurrentUser()
+}))
+
+// Mock useTranslation
+const mockT = vi.fn((key, defaultValue) => defaultValue || key)
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: mockT })
+}))
+
+// Mock child components  
+vi.mock('../OrganizationDetailsCard', () => ({
+  OrganizationDetailsCard: () => <div data-test="organization-details-card">Organization Details</div>
+}))
+
+vi.mock('../OrganizationUsers', () => ({
+  OrganizationUsers: () => <div data-test="organization-users">Organization Users</div>
+}))
+
+vi.mock('../CreditLedger', () => ({
+  CreditLedger: ({ organizationId }) => (
+    <div data-test="credit-ledger" data-organization-id={organizationId}>
+      Credit Ledger - Org: {organizationId}
+    </div>
+  )
+}))
+
+// Mock Keycloak
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
     keycloak: {
@@ -16,109 +65,10 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-// Mock the specific import of useApiService
-vi.mock('@/services/useApiService', () => {
-  const mockGet = vi.fn(() =>
-    Promise.resolve({
-      data: { name: 'Test Org', operatingName: 'Test Operating Name' }
-    })
-  )
-  return {
-    useApiService: () => ({
-      get: mockGet
-    })
-  }
-})
-
-const mockCurrentUserHook = {
-  data: {
-    roles: [{ name: roles.government }]
-  },
-  isLoading: false,
-  hasRoles: vi.fn().mockReturnValue(true),
-  hasAnyRole: vi.fn().mockReturnValue(true)
-}
-
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => mockCurrentUserHook
-}))
-
-// Mock the specific import of BCDataGridServer
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  // Replace BCDataGridServer with a dummy component
-  __esModule: true, // This is important for mocking ES modules
-  default: () => <div data-test="mockedBCDataGridServer"></div>
-}))
-
-vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick, ...props }) => (
-    <button data-test="clear-filters-button" onClick={onClick} {...props}>
-      Clear filters
-    </button>
-  )
-}))
-
-// Mock the CreditLedger component
-vi.mock('../CreditLedger', () => ({
-  CreditLedger: ({ organizationId }) => (
-    <div data-testid="credit-ledger" data-organization-id={organizationId}>
-      Credit Ledger Component
-    </div>
-  )
-}))
-
-vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn((orgId) => ({
-    data: {
-      organizationId: orgId,
-      orgStatus: { status: 'Registered' },
-      name: 'Test Org',
-      operatingName: 'Test Operating Name',
-      email: 'test@test.com',
-      phone: '1234567890',
-      hasEarlyIssuance: false,
-      orgAddress: {
-        streetAddress: '123 Test St',
-        addressOther: 'Unit 101',
-        city: 'Testville',
-        provinceState: 'TestState',
-        country: 'TestCountry',
-        postalcodeZipcode: '12345'
-      },
-      orgAttorneyAddress: {
-        // Adding this to simulate a full address structure
-        streetAddress: '456 Lawyer Ln',
-        addressOther: 'Suite 202',
-        city: 'Lawyerville',
-        provinceState: 'LawState',
-        country: 'LawCountry',
-        postalcodeZipcode: '67890'
-      }
-    },
-    isLoading: false,
-    isError: false
-  })),
-  useOrganizationBalance: vi.fn((orgId) => ({
-    data: {
-      registered: true,
-      organizationId: orgId,
-      totalBalance: 1000,
-      reservedBalance: 500
-    },
-    isLoading: false
-  }))
-}))
-
-vi.mock('react-router-dom', () => ({
-  ...vi.importActual('react-router-dom'),
-  MemoryRouter: () => vi.fn(),
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ state: {} }),
-  useParams: () => ({ orgID: '123' })
-}))
-
-const renderComponent = (props) => {
-  const queryClient = new QueryClient()
+const renderComponent = (props = {}) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } }
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
@@ -128,20 +78,16 @@ const renderComponent = (props) => {
   )
 }
 
-const setupRoleTest = (roleName, passCheck) => {
-  cleanup()
-
-  // Configure mock
-  mockCurrentUserHook.data = { roles: [{ name: roleName }] }
-  mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(passCheck)
-
-  // Render with this configuration
-  renderComponent()
-}
-
-describe('OrganizationView Component Tests', () => {
+describe('OrganizationView', () => {
   beforeEach(() => {
-    renderComponent()
+    vi.clearAllMocks()
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 1024
+    })
+    global.addEventListener = vi.fn()
+    global.removeEventListener = vi.fn()
   })
 
   afterEach(() => {
@@ -149,114 +95,231 @@ describe('OrganizationView Component Tests', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders organization details correctly', () => {
-    expect(screen.getByText(/Test Operating Name/i)).toBeInTheDocument()
-    expect(screen.getByText(/test@test.com/i)).toBeInTheDocument()
-  })
-
-  it('shows correct labels and values for organization data', () => {
-    expect(screen.getByText(/Legal name of organization/i)).toBeInTheDocument()
-    expect(
-      screen.getByText(/Operating name of organization/i)
-    ).toBeInTheDocument()
-    expect(screen.getByText(/Phone Number/i)).toBeInTheDocument()
-    expect(screen.getByText(/Email Address/i)).toBeInTheDocument()
-  })
-
-  it('handles role-based elements correctly for government role', () => {
-    expect(screen.getByText(/Compliance Unit Balance:/i)).toBeInTheDocument()
-    expect(screen.getByText(/1,000/i)).toBeInTheDocument()
-    expect(screen.getByText(/500/i)).toBeInTheDocument()
-  })
-
-  it('renders the "Registered for transfers" text for a Registered org', () => {
-    expect(
-      screen.getByText(
-        /A registered organization is able to transfer compliance units/i
-      )
-    ).toBeInTheDocument()
-  })
-
-  it('shows nothing for early issuance if hasEarlyIssuance is not provided', () => {
-    setupRoleTest(roles.supplier, false)
-    expect(
-      screen.queryByText(/Early issuance reporting/i)
-    ).not.toBeInTheDocument()
-  })
-
-  it('shows no for early issuance if user is government', () => {
-    setupRoleTest(roles.government, true)
-    expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
-    // Get all "No" texts and verify there are 2 (for credit market and early issuance)
-    const noTexts = screen.getAllByText(/^No$/i)
-    expect(noTexts).toHaveLength(2)
-  })
-
-  it('has a functioning clear filters button', () => {
-    // Click on the Users tab to navigate to the tab with the clear filters button
-    fireEvent.click(screen.getByText(/Users/i))
-    
-    const clearFilterButton = screen.getByRole('button', { name: /clear filters/i })
-    expect(clearFilterButton).toBeInTheDocument()
-    expect(clearFilterButton).not.toBeDisabled()
-
-    expect(() => fireEvent.click(clearFilterButton)).not.toThrow()
-  })
-
-  it('shows edit button when user has administrator role', () => {
-    setupRoleTest('Administrator', true)
-    expect(screen.getByText('Edit')).toBeInTheDocument()
-  })
-
-  it('does not show edit button when user lacks administrator role', () => {
-    setupRoleTest('Supplier', false)
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument()
-  })
-
-  it('shows New User button for users with administrator role', () => {
-    setupRoleTest('Administrator', true)
-
-    // Click on the Users tab to navigate to the tab with the New User button
-    fireEvent.click(screen.getByText(/Users/i))
-
-    // Check for the New User button
-    expect(screen.getByText(/new user/i)).toBeInTheDocument()
-  })
-
-  describe('Credit Ledger Tab Tests', () => {
-    it('shows credit ledger tab for IDIR government users', () => {
-      setupRoleTest(roles.government, true)
-
-      // Check that credit ledger tab is present for government users
-      expect(screen.getByText(/Credit ledger/i)).toBeInTheDocument()
+  describe('TabPanel Component', () => {
+    it('renders correctly with tabs displayed', () => {
+      renderComponent()
+      
+      // Test basic tab rendering which exercises TabPanel internally
+      expect(screen.getByRole('tablist')).toBeInTheDocument()
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Organization Details')).toBeInTheDocument()
     })
 
-    it('shows credit ledger tab for BCeID supplier users', () => {
-      setupRoleTest(roles.supplier, false) // false means not government role
+    it('switches tab content when different tabs are clicked', () => {
+      renderComponent()
+      
+      // Tab switching exercises TabPanel's hidden/visible logic
+      expect(screen.getByText('Organization Details')).toBeInTheDocument()
+      expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
+      
+      fireEvent.click(screen.getByText('org:usersTab'))
+      expect(screen.queryByText('Organization Details')).not.toBeInTheDocument() 
+      expect(screen.getByText('Organization Users')).toBeInTheDocument()
+    })
+  })
 
-      // Check that credit ledger tab is present for suppliers too
-      expect(screen.getByText(/Credit ledger/i)).toBeInTheDocument()
+  describe('OrganizationView Component', () => {
+    it('renders basic component structure', () => {
+      renderComponent()
+      
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('org:usersTab')).toBeInTheDocument()  
+      expect(screen.getByText('org:creditLedgerTab')).toBeInTheDocument()
     })
 
-    it('credit ledger tab shows the component when clicked for IDIR users', () => {
-      setupRoleTest(roles.government, true)
+    it('calls translation hook with correct namespace', () => {
+      renderComponent()
+      
+      expect(mockT).toHaveBeenCalledWith('org:dashboardTab', 'Dashboard')
+      expect(mockT).toHaveBeenCalledWith('org:usersTab')
+      expect(mockT).toHaveBeenCalledWith('org:creditLedgerTab')
+    })
+  })
 
-      // Click on the credit ledger tab to activate it
-      fireEvent.click(screen.getByText(/Credit ledger/i))
-
-      // Check that credit ledger component text appears
-      expect(screen.getByText('Credit Ledger Component')).toBeInTheDocument()
+  describe('Organization ID Logic', () => {
+    it('uses orgID from params when available (IDIR users)', () => {
+      mockUseParams.mockReturnValue({ orgID: '123' })
+      mockCurrentUser.mockReturnValue({
+        data: { organization: { organizationId: '456' }},
+        hasRoles: vi.fn().mockReturnValue(true)
+      })
+      
+      renderComponent()
+      
+      // Click on credit ledger tab to see organizationId prop
+      fireEvent.click(screen.getByText('org:creditLedgerTab'))
+      
+      expect(screen.getByText('Credit Ledger - Org: 123')).toBeInTheDocument()
     })
 
-    it('credit ledger component receives correct organizationId prop', () => {
-      setupRoleTest(roles.government, true)
+    it('uses currentUser organizationId when orgID not in params (BCeID users)', () => {
+      mockUseParams.mockReturnValue({}) // No orgID
+      mockCurrentUser.mockReturnValue({
+        data: { organization: { organizationId: '456' }},
+        hasRoles: vi.fn().mockReturnValue(false)
+      })
+      
+      renderComponent()
+      
+      // Click on credit ledger tab to see organizationId prop
+      fireEvent.click(screen.getByText('org:creditLedgerTab'))
+      
+      expect(screen.getByText('Credit Ledger - Org: 456')).toBeInTheDocument()
+    })
+  })
 
-      // Click on the credit ledger tab to activate it
-      fireEvent.click(screen.getByText(/Credit ledger/i))
+  describe('Alert State Management', () => {
+    it('displays alert when location state has message', () => {
+      mockUseLocation.mockReturnValue({
+        state: { 
+          message: 'Test alert message',
+          severity: 'success' 
+        }
+      })
+      
+      renderComponent()
+      
+      expect(screen.getByText('Test alert message')).toBeInTheDocument()
+    })
 
-      // Check that the CreditLedger component receives the orgID from useParams (123)
-      expect(screen.getByText('Credit Ledger Component')).toBeInTheDocument()
-      // The mock component shows data-organization-id="123" in the DOM
+    it('displays alert with default severity when not specified', () => {
+      mockUseLocation.mockReturnValue({
+        state: { message: 'Test message' }
+      })
+      
+      renderComponent()
+      
+      expect(screen.getByText('Test message')).toBeInTheDocument()
+    })
+
+    it('does not display alert when no message in state', () => {
+      mockUseLocation.mockReturnValue({ state: {} })
+      
+      renderComponent()
+      
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('calls navigate to clear location state when alert is shown', () => {
+      const mockPath = '/test-path'
+      mockUseLocation.mockReturnValue({
+        pathname: mockPath,
+        state: { message: 'Test message' }
+      })
+      
+      renderComponent()
+      
+      expect(mockNavigate).toHaveBeenCalledWith(mockPath, { 
+        replace: true, 
+        state: {} 
+      })
+    })
+  })
+
+  describe('Window Resize Handling', () => {
+    it('adds resize event listener on mount', () => {
+      renderComponent()
+      
+      expect(global.addEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+    })
+
+    it('removes resize event listener on unmount', () => {
+      const { unmount } = renderComponent()
+      
+      unmount()
+      
+      expect(global.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+    })
+
+    it('handles window resize events', () => {
+      Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true })
+      
+      let resizeHandler
+      global.addEventListener = vi.fn((event, handler) => {
+        if (event === 'resize') resizeHandler = handler
+      })
+      
+      renderComponent()
+      
+      // Just verify the handler exists, don't trigger it
+      expect(resizeHandler).toBeDefined()
+      expect(typeof resizeHandler).toBe('function')
+    })
+  })
+
+  describe('Tab Navigation', () => {
+    it('changes tab when handleChangeTab is called', () => {
+      renderComponent()
+      
+      // Initially on first tab (Dashboard)
+      expect(screen.getByText('Organization Details')).toBeInTheDocument()
+      
+      // Click on Users tab
+      fireEvent.click(screen.getByText('org:usersTab'))
+      
+      expect(screen.getByText('Organization Users')).toBeInTheDocument()
+      
+      // Click on Credit Ledger tab
+      fireEvent.click(screen.getByText('org:creditLedgerTab'))
+      
+      expect(screen.getByText(/Credit Ledger - Org:/)).toBeInTheDocument()
+    })
+
+    it('shows correct tab content based on active tab', () => {
+      renderComponent()
+      
+      // Tab 0 - Dashboard (default)
+      expect(screen.getByText('Organization Details')).toBeInTheDocument()
+      expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
+      
+      // Click Users tab (tab 1)
+      fireEvent.click(screen.getByText('org:usersTab'))
+      expect(screen.getByText('Organization Users')).toBeInTheDocument()
+      expect(screen.queryByText('Organization Details')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Tab Content Rendering', () => {
+    it('passes organizationId prop to CreditLedger component', () => {
+      mockUseParams.mockReturnValue({ orgID: '789' })
+      
+      renderComponent()
+      
+      fireEvent.click(screen.getByText('org:creditLedgerTab'))
+      
+      const creditLedger = screen.getByTestId('credit-ledger')
+      expect(creditLedger).toHaveAttribute('data-organization-id', '789')
+    })
+
+    it('renders all three tabs with correct labels', () => {
+      renderComponent()
+      
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs).toHaveLength(3)
+      
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('org:usersTab')).toBeInTheDocument()
+      expect(screen.getByText('org:creditLedgerTab')).toBeInTheDocument()
+    })
+  })
+
+  describe('Current User Integration', () => {
+    it('calls useCurrentUser hook', () => {
+      renderComponent()
+      
+      expect(mockCurrentUser).toHaveBeenCalled()
+    })
+
+    it('derives isIdir from hasRoles government check', () => {
+      const mockHasRoles = vi.fn().mockReturnValue(true)
+      mockCurrentUser.mockReturnValue({
+        data: { organization: { organizationId: '456' }},
+        hasRoles: mockHasRoles
+      })
+      
+      renderComponent()
+      
+      expect(mockHasRoles).toHaveBeenCalledWith(roles.government)
     })
   })
 })

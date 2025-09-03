@@ -232,13 +232,15 @@ const ComplianceReportSummary = ({
                           t,
                           summaryData?.renewableFuelTargetSummary,
                           canEdit,
-                          compliancePeriodYear
+                          compliancePeriodYear,
+                          summaryData?.lines7And9Locked
                         )
                       : []
                   }
                   data={summaryData?.renewableFuelTargetSummary}
                   onCellEditStopped={handleCellEdit}
                   useParenthesis={true}
+                  lines7And9Locked={summaryData?.lines7And9Locked}
                 />
                 <SummaryTable
                   data-test="low-carbon-summary"

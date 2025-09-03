@@ -10,7 +10,10 @@ import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { useOrganization } from '@/hooks/useOrganization'
+import { AddEditOrg } from '../AddEditOrg'
+import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router-dom'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/routes/routes'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -19,17 +22,14 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { schemaValidation } from '@/views/Organizations/AddEditOrg/_schema.js'
 import { useMutation } from '@tanstack/react-query'
 
-vi.mock('@/hooks/useOrganization')
+// Mock react-i18next
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key) => key
-  })
+  useTranslation: vi.fn()
 }))
-vi.mock('@/services/useApiService')
+
+// Mock react-router-dom
 vi.mock('react-router-dom', () => ({
-  useNavigate: vi.fn(),
-  useParams: vi.fn(),
-  useLocation: vi.fn(() => ({ state: null }))
+  useParams: vi.fn()
 }))
 
 // Mock AddressAutocomplete to prevent network requests
@@ -75,45 +75,45 @@ vi.mock('@tanstack/react-query', async () => {
   }
 })
 
-const MockFormProvider = ({ children }) => {
-  const methods = useForm({
-    resolver: yupResolver(schemaValidation)
-  })
-  return <FormProvider {...methods}>{children}</FormProvider>
-}
+// Mock hooks
+vi.mock('@/hooks/useOrganization')
+vi.mock('@/services/useApiService')
 
-const mockedOrg = {
-  name: 'Test Org',
-  operatingName: 'Test Operating Org',
-  email: 'test@example.com',
-  phone: '123-456-7890',
-  edrmsRecord: 'EDRMS123',
-  recordsAddress: '789 Test St, City, Province, A1B2C3',
-  orgAddress: {
-    streetAddress: '123 Test St',
-    addressOther: '',
-    city: 'Test City',
-    postalcodeZipcode: 'A1B2C3',
-    provinceState: 'BC',
-    country: 'Canada'
-  },
-  orgAttorneyAddress: {
-    streetAddress: '456 Attorney Rd',
-    addressOther: '',
-    city: 'Attorney City',
-    postalcodeZipcode: 'D4E5F6',
-    provinceState: 'BC',
-    country: 'Canada'
-  },
-  orgStatus: { organizationStatusId: 2 }
-}
+// Mock BCWidgetCard component
+vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
+  default: vi.fn(({ title, content, id, color, 'data-test': dataTest }) => (
+    <div
+      data-test="bc-widget-card"
+      data-container-test={dataTest}
+      data-title={title}
+      data-id={id}
+      data-color={color}
+    >
+      {content}
+    </div>
+  ))
+}))
+
+// Mock AddEditOrgForm component
+vi.mock('../AddEditOrgForm', () => ({
+  AddEditOrgForm: vi.fn(() => <div data-test="add-edit-org-form" />)
+}))
 
 describe('AddEditOrg', () => {
-  let mockNavigate
-  let apiSpy
+  const mockT = vi.fn((key) => `translated-${key}`)
 
   beforeEach(() => {
     vi.clearAllMocks()
+    useTranslation.mockReturnValue({ t: mockT })
+    useOrganizationTypes.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null
+    })
+    useApiService.mockReturnValue({
+      post: vi.fn(),
+      put: vi.fn()
+    })
 
     mockNavigate = vi.fn()
     useNavigate.mockReturnValue(mockNavigate)
@@ -195,99 +195,95 @@ describe('AddEditOrg', () => {
     })
   })
 
-  it('renders unique error messages for specific fields', async () => {
-    useOrganization.mockReturnValue({
-      data: {
-        ...mockedOrg,
-        phone: 'f91j5qhf91',
-        orgAddress: {
-          ...mockedOrg.orgAddress,
-          postalcodeZipcode: '2671224'
-        }
-      },
-      isFetched: true
-    })
+  it('renders in edit mode when orgID is present', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: 'test-org-123' })
 
-    render(
-      <MockFormProvider>
-        <AddEditOrgForm />
-      </MockFormProvider>,
-      { wrapper }
+    // Act
+    render(<AddEditOrg />)
+
+    // Assert
+    expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
+    expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
+    expect(mockT).toHaveBeenCalledWith('org:editOrgTitle')
+    expect(screen.getByTestId('bc-widget-card')).toHaveAttribute(
+      'data-title',
+      'translated-org:editOrgTitle'
     )
-
-    fireEvent.click(screen.getByTestId('saveOrganization'))
-
-    await waitFor(async () => {
-      expect(
-        screen.getByText(
-          /Invalid format. Only numbers, spaces, parentheses, plus signs, and hyphens are allowed./i
-        )
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(/Please enter a valid Postal \/ ZIP Code./i)
-      ).toBeInTheDocument()
-    })
   })
 
-  // it('submits form data correctly', async () => {
-  //   useOrganization.mockReturnValue({
-  //     data: null, // Start with no data for new organization
-  //     isFetched: true
-  //   })
+  it('renders in add mode when orgID is not present', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: undefined })
 
-  //   // Mock successful API response
-  //   apiSpy.post.mockResolvedValueOnce({
-  //     data: { organization_id: 1, name: 'New Test Org Legal' }
-  //   })
+    // Act
+    render(<AddEditOrg />)
 
-  //   // Setup useMutation mock to call onSuccess when mutate is called
-  //   const { useMutation } = await import('@tanstack/react-query')
-  //   useMutation.mockImplementation(({ onSuccess }) => ({
-  //     mutate: vi.fn(async (payload) => {
-  //       // Simulate successful API call
-  //       await apiSpy.post('/organizations/create', payload)
-  //       // Call onSuccess immediately after API call
-  //       if (onSuccess) {
-  //         onSuccess()
-  //       }
-  //     }),
-  //     isPending: false,
-  //     isError: false
-  //   }))
+    // Assert
+    expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
+    expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
+    expect(mockT).toHaveBeenCalledWith('org:addOrgTitle')
+    expect(screen.getByTestId('bc-widget-card')).toHaveAttribute(
+      'data-title',
+      'translated-org:addOrgTitle'
+    )
+  })
 
-  //   render(<AddEditOrgForm />, { wrapper })
+  it('renders with correct static props for BCWidgetCard', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: 'test-id' })
 
-  //   const user = userEvent.setup()
+    // Act
+    render(<AddEditOrg />)
 
-  //   // Fill in the required form fields using specific input element selectors
-  //   await user.type(document.getElementById('orgLegalName'), 'New Test Org Legal')
-  //   await user.type(document.getElementById('orgOperatingName'), 'New Test Org Operating')
-  //   await user.type(document.getElementById('orgEmailAddress'), 'new-test@example.com')
-  //   await user.type(document.getElementById('orgPhoneNumber'), '555-123-4567')
+    // Assert
+    const widgetCard = screen.getByTestId('bc-widget-card')
+    expect(widgetCard).toHaveAttribute('data-id', 'user-card')
+    expect(widgetCard).toHaveAttribute('data-color', 'nav')
+    expect(widgetCard).toHaveAttribute(
+      'data-container-test',
+      'addEditOrgContainer'
+    )
+  })
 
-  //   // Supplier Type Radio - click the correct radio button
-  //   await user.click(screen.getByTestId('orgSupplierType1'))
+  it('calls useTranslation hook with correct parameters', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: 'test-id' })
 
-  //   // Registered for Transfers Radio (value="2" is Yes)
-  //   await user.click(screen.getByTestId('orgRegForTransfers2'))
+    // Act
+    render(<AddEditOrg />)
 
-  //   // Service Address Fields - handle the AddressAutocomplete field
-  //   // Find the autocomplete input for street address (it has a placeholder "Start typing address...")
-  //   const streetAddressInputs = screen.getAllByPlaceholderText('Start typing address...')
-  //   await user.type(streetAddressInputs[0], '100 Test Service St')
+    // Assert
+    expect(useTranslation).toHaveBeenCalledWith(['common', 'org'])
+  })
 
-  //   // Fill other required address fields
-  //   await user.type(document.getElementById('orgCity'), 'Testville')
-  //   await user.type(document.getElementById('orgPostalCodeZipCode'), 'V8V8V8')
+  it('calls useParams hook to extract orgID', () => {
+    // Arrange
+    const testOrgId = 'test-organization-id'
+    useParams.mockReturnValue({ orgID: testOrgId })
 
-  //   // Early Issuance Radio (value="yes" is Yes)
-  //   await user.click(screen.getByTestId('hasEarlyIssuanceYes'))
+    // Act
+    render(<AddEditOrg />)
 
-  //   // Submit the form
-  //   await user.click(screen.getByTestId('saveOrganization'))
+    // Assert
+    expect(useParams).toHaveBeenCalled()
+    // Verify the title uses edit mode since orgID is present
+    expect(mockT).toHaveBeenCalledWith('org:editOrgTitle')
+  })
 
-  //   // Simply verify that the form submit button exists and can be clicked
-  //   // This test focuses on form validation and basic functionality
-  //   expect(screen.getByTestId('saveOrganization')).toBeInTheDocument()
-  // }, 5000)
+  it('renders AddEditOrgForm component within BCWidgetCard content', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: 'test-id' })
+
+    // Act
+    render(<AddEditOrg />)
+
+    // Assert
+    expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-widget-card')).toBeInTheDocument()
+    // Verify the form is rendered as the content of the widget card
+    const widgetCard = screen.getByTestId('bc-widget-card')
+    const form = screen.getByTestId('add-edit-org-form')
+    expect(widgetCard).toContainElement(form)
+  })
 })

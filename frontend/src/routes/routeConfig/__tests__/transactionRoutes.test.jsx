@@ -39,7 +39,15 @@ describe('transactionRoutes', () => {
   it('should have correct route structure for transactions list', () => {
     const listRoute = transactionRoutes.find(route => route.path === '/transactions')
     expect(listRoute).toBeDefined()
-    expect(listRoute.handle.title).toBe('Transactions')
+    expect(typeof listRoute.handle.title).toBe('function')
+    
+    // Test the dynamic title function
+    const mockLocation = { search: '' }
+    expect(listRoute.handle.title({ params: {}, location: mockLocation })).toBe('Transactions')
+    
+    const mockLocationWithTab = { search: '?tab=credit-trading-market' }
+    expect(listRoute.handle.title({ params: {}, location: mockLocationWithTab })).toBe('Credit trading market')
+    
     expect(listRoute.handle.crumb()).toBe('Transactions')
   })
 

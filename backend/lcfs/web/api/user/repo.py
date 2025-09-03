@@ -306,6 +306,21 @@ class UserRepository:
         return user_result.unique().scalar_one_or_none() if user_result else None
 
     @repo_handler
+    async def get_user_by_username(self, username: str) -> UserProfile:
+        query = (
+            select(UserProfile)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
+            .where(UserProfile.keycloak_username == username)
+        )
+
+        # Execute the query
+        user_result = await self.db.execute(query)
+        return user_result.unique().scalar_one_or_none() if user_result else None
+
+    @repo_handler
     async def create_user(
         self, user_create: UserCreateSchema, user_id: int = None
     ) -> UserProfile:

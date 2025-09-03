@@ -6,10 +6,10 @@ from lcfs.db.models.notification import (
     ChannelEnum,
 )
 from lcfs.db.models.organization import Organization
-from lcfs.db.models.user import UserProfile
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
+    AudienceType,
     NotificationTypeEnum,
     PaginationRequestSchema,
     apply_filter_conditions,
@@ -18,7 +18,10 @@ from lcfs.web.api.base import (
 )
 import structlog
 
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lcfs.db.models.user.UserProfile import UserProfile as UserProfileType
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -76,13 +79,15 @@ class NotificationRepository:
         Retrieve all notification messages for a user
         """
         # Start building the query
+        # Import locally to avoid circular import
+        from lcfs.db.models.user.UserProfile import UserProfile
+        from lcfs.db.models.user.UserRole import UserRole
+        
         query = (
             select(NotificationMessage)
             .options(
                 joinedload(NotificationMessage.related_organization),
-                joinedload(NotificationMessage.origin_user_profile)
-                .joinedload(UserProfile.user_roles)
-                .joinedload(UserRole.role),
+                selectinload(NotificationMessage.origin_user_profile).selectinload(UserProfile.user_roles).joinedload(UserRole.role),
             )
             .where(NotificationMessage.related_user_profile_id == user_profile_id)
         )
@@ -98,6 +103,9 @@ class NotificationRepository:
     def _apply_notification_filters(
         self, pagination: PaginationRequestSchema, conditions: List
     ):
+        # Import locally to avoid circular import
+        from lcfs.db.models.user.UserProfile import UserProfile
+        
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
@@ -156,6 +164,10 @@ class NotificationRepository:
         Returns:
             List[NotificationSchema]: A list of notification messages matching the query.
         """
+        # Import locally to avoid circular import
+        from lcfs.db.models.user.UserProfile import UserProfile
+        from lcfs.db.models.user.UserRole import UserRole
+        
         conditions = [NotificationMessage.related_user_profile_id == user_id]
         pagination = validate_pagination(pagination)
 
@@ -169,9 +181,7 @@ class NotificationRepository:
             select(NotificationMessage)
             .options(
                 joinedload(NotificationMessage.related_organization),
-                joinedload(NotificationMessage.origin_user_profile)
-                .joinedload(UserProfile.user_roles)
-                .joinedload(UserRole.role),
+                selectinload(NotificationMessage.origin_user_profile).selectinload(UserProfile.user_roles).joinedload(UserRole.role),
             )
             .where(and_(*conditions))
         )
@@ -472,16 +482,20 @@ class NotificationRepository:
         notification_type: NotificationTypeEnum,
         channel: ChannelEnum,
         organization_id: int = None,
+        audience_type: AudienceType = AudienceType.SAME_ORGANIZATION,
     ) -> List[int]:
         """
         Retrieve a list of user ids subscribed to a notification type
         """
+        # Import locally to avoid circular import
+        from lcfs.db.models.user.UserProfile import UserProfile
+        
         query = (
             select(NotificationChannelSubscription)
             .options(
                 selectinload(NotificationChannelSubscription.user_profile)
                 .selectinload(UserProfile.user_roles)
-                .selectinload(UserRole.role)
+                .joinedload(UserRole.role)
             )
             .join(
                 NotificationType,
@@ -502,12 +516,33 @@ class NotificationRepository:
                 NotificationType.name == notification_type.value,
                 NotificationChannelSubscription.is_enabled == True,
                 NotificationChannel.channel_name == channel.value,
-                or_(
-                    UserProfile.organization_id == organization_id,
-                    UserProfile.organization_id.is_(None),
-                ),
             )
         )
+        
+        # Apply organization filtering based on audience type
+        if organization_id is not None:
+            if audience_type == AudienceType.OTHER_ORGANIZATIONS:
+                # Notify all other organizations (exclude posting org + government)
+                query = query.filter(
+                    and_(
+                        UserProfile.organization_id != organization_id,  # Exclude posting org
+                        UserProfile.organization_id.is_not(None),       # Exclude government users
+                    )
+                )
+            elif audience_type == AudienceType.GOVERNMENT_ONLY:
+                # Notify only government users
+                query = query.filter(UserProfile.organization_id.is_(None))
+            elif audience_type == AudienceType.ALL_EXCEPT_POSTING_ORG:
+                # Notify everyone except the posting organization
+                query = query.filter(UserProfile.organization_id != organization_id)
+            else:  # AudienceType.SAME_ORGANIZATION (default)
+                # Notify the specific organization + government users
+                query = query.filter(
+                    or_(
+                        UserProfile.organization_id == organization_id,
+                        UserProfile.organization_id.is_(None),
+                    )
+                )
         result = await self.db.execute(query)
         return result.scalars().all()
 

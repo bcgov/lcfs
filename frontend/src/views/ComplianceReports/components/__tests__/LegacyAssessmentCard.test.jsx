@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { LegacyAssessmentCard } from '../LegacyAssessmentCard'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // 1. Mock i18next
 vi.mock('react-i18next', () => ({
@@ -166,7 +167,7 @@ describe('LegacyAssessmentCard', () => {
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
-        currentStatus="Assessed"
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         legacyReportId="999"
         chain={[]}
       />,
@@ -239,5 +240,128 @@ describe('LegacyAssessmentCard', () => {
       'http://localhost:3000/compliance_reporting/edit/999/intro',
       '_blank'
     )
+  })
+
+  it('hides contact message for government users', () => {
+    render(
+      <LegacyAssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={true}
+        currentStatus="Draft"
+        legacyReportId="999"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+    expect(screen.queryByText(/report:contactForAddrChange/i)).not.toBeInTheDocument()
+  })
+
+  it('does not render report history when chain is empty', () => {
+    render(
+      <LegacyAssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus="Draft"
+        legacyReportId="999"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+    expect(screen.queryByText('report:reportHistory')).not.toBeInTheDocument()
+  })
+
+  it('handles null orgData gracefully', () => {
+    render(
+      <LegacyAssessmentCard
+        orgData={null}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus="Draft"
+        legacyReportId="999"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+    
+    // Should still render the card and button
+    expect(screen.getByTestId('view-legacy')).toBeInTheDocument()
+    expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
+  })
+
+  it('handles orgData with missing addresses', () => {
+    const orgDataNoAddresses = {
+      name: 'Test Org Without Addresses'
+    }
+
+    render(
+      <LegacyAssessmentCard
+        orgData={orgDataNoAddresses}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus="Draft"
+        legacyReportId="999"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByText('Test Org Without Addresses')).toBeInTheDocument()
+    // Should still render address labels even without addresses
+    expect(
+      screen.getByText((text) => text.includes('report:serviceAddrLabel:'))
+    ).toBeInTheDocument()
+  })
+
+  it('handles undefined orgData gracefully', () => {
+    render(
+      <LegacyAssessmentCard
+        orgData={undefined}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus="Draft"
+        legacyReportId="999"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+    
+    // Should still render the card and button
+    expect(screen.getByTestId('view-legacy')).toBeInTheDocument()
+    expect(screen.getByText('report:orgDetails')).toBeInTheDocument()
+  })
+
+  it('renders supplemental warning message', () => {
+    render(
+      <LegacyAssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus="Draft"
+        legacyReportId="999"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByText('report:supplementalWarning')).toBeInTheDocument()
+  })
+
+  it('renders view legacy button with correct attributes', () => {
+    render(
+      <LegacyAssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus="Draft"
+        legacyReportId="123"
+        chain={[]}
+      />,
+      { wrapper }
+    )
+    
+    const button = screen.getByTestId('view-legacy')
+    expect(button).toHaveTextContent('report:viewLegacyBtn')
+    expect(button).toHaveClass('svg-icon-button')
   })
 })

@@ -141,6 +141,8 @@ async def test_update_fuel_supply_not_found(fuel_supply_action_service):
         units="L",
         group_uuid="some-uuid",
         version=0,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     with pytest.raises(HTTPException) as exc_info:
@@ -162,6 +164,8 @@ async def test_create_fuel_supply(fuel_supply_action_service):
         quantity=2000,
         fuel_type_other=None,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Create nested objects using SimpleNamespace
@@ -286,6 +290,8 @@ async def test_update_fuel_supply_success(fuel_supply_action_service, mock_fuel_
         units="L",
         group_uuid="some-uuid",
         version=0,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Call the service method
@@ -325,6 +331,8 @@ async def test_delete_fuel_supply(fuel_supply_action_service):
         provision_of_the_act_id=1,
         quantity=1000,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     existing_fuel_supply = FuelSupply(
         compliance_report_id=1,
@@ -358,6 +366,8 @@ async def test_delete_fuel_supply_changelog(fuel_supply_action_service):
         provision_of_the_act_id=1,
         quantity=1000,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     existing_fuel_supply = FuelSupply(
         compliance_report_id=1,

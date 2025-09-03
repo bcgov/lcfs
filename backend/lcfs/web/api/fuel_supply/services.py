@@ -205,6 +205,7 @@ class FuelSupplyServices:
                 fuel_type_id=row_data["fuel_type_id"],
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
+                renewable=row_data["renewable"],
                 default_carbon_intensity=(
                     round(default_ci or 0, 2)
                     if default_ci is not None and row_data["fuel_type"] != "Other"
@@ -298,6 +299,8 @@ class FuelSupplyServices:
             energy=fuel_supply.energy,
             deleted=False,
             is_new_supplemental_entry=False,
+            is_canada_produced=fuel_supply.is_canada_produced,
+            is_q1_supplied=fuel_supply.is_q1_supplied,
         )
 
     @service_handler

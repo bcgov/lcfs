@@ -17,9 +17,12 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Mock the BCGridViewer correctly
-vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: () => <div data-testid="mockedBCGridViewer"></div>
-}))
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
+  const { forwardRef } = require('react')
+  return {
+    BCGridViewer: forwardRef((props, ref) => <div data-testid="mockedBCGridViewer" ref={ref}></div>)
+  }
+})
 
 // Mock useGetNotionalTransfers hook
 vi.mock('@/hooks/useNotionalTransfer', () => ({

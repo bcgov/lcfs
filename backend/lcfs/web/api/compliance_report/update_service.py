@@ -98,8 +98,19 @@ class ComplianceReportUpdateService:
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
         report.assessment_statement = report_data.assessment_statement
+        
+        # Handle non-assessment flag changes
         if report_data.is_non_assessment is not None:
+            old_is_non_assessment = report.is_non_assessment
             report.is_non_assessment = report_data.is_non_assessment
+            
+            # If changing TO non-assessment, lock summary
+            if not old_is_non_assessment and report_data.is_non_assessment:
+                # Lock the summary since this report won't go through normal assessment workflow
+                await self._calculate_and_lock_summary(
+                    report, user, skip_can_sign_check=True
+                )
+                    
         updated_report = await self.repo.update_compliance_report(report)
 
         # Handle status change related actions
@@ -210,21 +221,23 @@ class ComplianceReportUpdateService:
         )
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
-        
+
         # Simply ensure summary exists - it will continue to refresh dynamically
         # because we're NOT locking it (unlike the old behavior)
         if not report.summary:
             # Create summary if it doesn't exist
-            calculated_summary = await self.summary_service.calculate_compliance_report_summary(
-                report.compliance_report_id
+            calculated_summary = (
+                await self.summary_service.calculate_compliance_report_summary(
+                    report.compliance_report_id
+                )
             )
             report.summary = calculated_summary
-        
+
         # Always recalculate to get latest values for transaction
         await self.summary_service.calculate_compliance_report_summary(
             report.compliance_report_id
         )
-        
+
         credit_change = report.summary.line_20_surplus_deficit_units
         await self._create_or_update_reserve_transaction(credit_change, report)
         await self.repo.update_compliance_report(report)
@@ -259,26 +272,11 @@ class ComplianceReportUpdateService:
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # If its a government adjustment, create a transaction but DON'T lock the summary yet
-        # Let it continue refreshing until recommended by manager
-        if (
-            report.supplemental_initiator
-            and report.supplemental_initiator
-            == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
-        ):
-            # Ensure summary exists and is recalculated
-            if not report.summary:
-                calculated_summary = await self.summary_service.calculate_compliance_report_summary(
-                    report.compliance_report_id
-                )
-                report.summary = calculated_summary
-            else:
-                await self.summary_service.calculate_compliance_report_summary(
-                    report.compliance_report_id
-                )
-            
-            credit_change = report.summary.line_20_surplus_deficit_units
-            await self._create_or_update_reserve_transaction(credit_change, report)
+        # Lock the summary when report is recommended by analyst - this is the snapshot point
+        calculated_summary = await self._calculate_and_lock_summary(
+            report, user, skip_can_sign_check=True
+        )
+        await self.repo.update_compliance_report(report)
 
     async def handle_recommended_by_manager_status(
         self, report: ComplianceReport, user: UserProfile
@@ -300,11 +298,7 @@ class ComplianceReportUpdateService:
         )
         if not has_compliance_manager_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
-        
-        # Lock the summary when report is recommended by manager - this is the new snapshot point
-        calculated_summary = await self._calculate_and_lock_summary(
-            report, user, skip_can_sign_check=True
-        )
+
         await self.repo.update_compliance_report(report)
 
     async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
@@ -325,13 +319,17 @@ class ComplianceReportUpdateService:
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # Skip transaction creation if this is a non-assessment report
+        # Handle transaction creation/update based on assessment type
         if not report.is_non_assessment:
-            # First ensure we have a summary and calculate credit change
-            calculated_summary = await self._calculate_and_lock_summary(
-                report, user, skip_can_sign_check=True
-            )
-            credit_change = calculated_summary.line_20_surplus_deficit_units
+            # For assessment reports: use already-locked summary to create/update transaction
+            # Summary should already be locked from "Recommended by Analyst" step
+            if not report.summary or not report.summary.is_locked:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Report summary must be locked before assessment. Please ensure the report was recommended by an analyst first."
+                )
+            
+            credit_change = report.summary.line_20_surplus_deficit_units
 
             if report.transaction:
                 # Update the transaction to assessed
@@ -348,11 +346,8 @@ class ComplianceReportUpdateService:
                     )
                     report.transaction.update_user = user.keycloak_username
         else:
-            # For non-assessment reports, still calculate summary but don't create/update transactions
-            await self._calculate_and_lock_summary(
-                report, user, skip_can_sign_check=True
-            )
-
+            # For non-assessment reports: summary should already be locked when flag was set
+            # Just ensure no transactions exist
             if report.transaction_id:
                 await self.trx_service.repo.delete_transaction(
                     report.transaction_id, report.compliance_report_id

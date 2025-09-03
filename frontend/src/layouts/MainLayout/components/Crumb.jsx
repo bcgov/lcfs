@@ -40,7 +40,12 @@ const Crumb = () => {
     `/compliance-reporting/${compliancePeriod}-Compliance-report`
   )
   const pathnames = path.split('/').filter((x) => x)
-  const title = matches[matches.length - 1]?.handle?.title
+  const currentMatch = matches[matches.length - 1]
+  const handleTitle = currentMatch?.handle?.title
+  const title =
+    typeof handleTitle === 'function'
+      ? handleTitle({ params: currentMatch?.params || {}, location })
+      : handleTitle
 
   // Mapping for custom breadcrumb labels and routes
   const customBreadcrumbs = {

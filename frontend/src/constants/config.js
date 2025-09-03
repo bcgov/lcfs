@@ -47,7 +47,8 @@ export const FEATURE_FLAGS = {
   LEGACY_REPORT_DETAILS: 'fullLegacyReports',
   FSE_IMPORT_EXPORT: 'fseImportExport',
   ALLOCATION_AGREEMENT_IMPORT_EXPORT: 'allocationAgreementImportExport',
-  GOVERNMENT_ADJUSTMENT: 'governmentAdjustment'
+  GOVERNMENT_ADJUSTMENT: 'governmentAdjustment',
+  OBFUSCATED_LINKS: 'obfuscatedLinks'
 }
 
 export const CONFIG = {
@@ -76,6 +77,7 @@ export const CONFIG = {
     allocationAgreementImportExport:
       window.lcfs_config.feature_flags.allocationAgreementImportExport ?? false,
     governmentAdjustment:
-      window.lcfs_config.feature_flags.governmentAdjustment ?? false
+      window.lcfs_config.feature_flags.governmentAdjustment ?? false,
+    obfuscatedLinks: window.lcfs_config.feature_flags.obfuscatedLinks ?? false
   }
 }
