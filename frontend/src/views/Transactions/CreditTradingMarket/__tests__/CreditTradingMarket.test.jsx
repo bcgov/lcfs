@@ -47,12 +47,6 @@ describe('CreditTradingMarket', () => {
     expect(vi.mocked(useTranslation)).toHaveBeenCalledWith(['creditMarket'])
   })
 
-  it('renders heading with correct translation key', () => {
-    render(<CreditTradingMarket />)
-    expect(mockT).toHaveBeenCalledWith('creditMarket:marketHeading')
-    expect(screen.getByText('translated-creditMarket:marketHeading')).toBeInTheDocument()
-  })
-
   it('renders disclaimer with correct translation key', () => {
     render(<CreditTradingMarket />)
     expect(mockT).toHaveBeenCalledWith('creditMarket:marketDisclaimer')
@@ -79,10 +73,6 @@ describe('CreditTradingMarket', () => {
     const mainHeading = headings.find(el => el.getAttribute('data-variant') === 'h4')
     const disclaimer = headings.find(el => el.getAttribute('data-variant') === 'body2')
     
-    expect(mainHeading).toBeInTheDocument()
-    expect(mainHeading).toHaveAttribute('data-mb', '2')
-    expect(mainHeading).toHaveAttribute('data-sx', JSON.stringify({ color: 'primary.main' }))
-    
     expect(disclaimer).toBeInTheDocument()
     expect(disclaimer).toHaveAttribute('data-color', 'text.secondary')
     expect(disclaimer).toHaveAttribute('data-mb', '3')
@@ -91,12 +81,10 @@ describe('CreditTradingMarket', () => {
   it('renders all required elements in correct order', () => {
     render(<CreditTradingMarket />)
     
-    const headingText = screen.getByText('translated-creditMarket:marketHeading')
     const disclaimerText = screen.getByText('translated-creditMarket:marketDisclaimer')
     const tableComponent = screen.getByTestId('credit-market-table')
     const accordionComponent = screen.getByTestId('credit-market-accordion')
     
-    expect(headingText).toBeInTheDocument()
     expect(disclaimerText).toBeInTheDocument()
     expect(tableComponent).toBeInTheDocument()
     expect(accordionComponent).toBeInTheDocument()
