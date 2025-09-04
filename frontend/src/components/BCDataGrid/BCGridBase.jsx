@@ -17,7 +17,7 @@ import { useSearchParams } from 'react-router-dom'
 const ROW_HEIGHT = 45
 
 export const BCGridBase = forwardRef(
-  ({ autoSizeStrategy, autoHeight, ...props }, forwardedRef) => {
+  ({ autoSizeStrategy, autoHeight, enableCellTextSelection, getRowId, overlayNoRowsTemplate, queryData, dataKey, paginationOptions, onPaginationChange, ...props }, forwardedRef) => {
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
     const ref = useRef(null)
@@ -103,7 +103,6 @@ export const BCGridBase = forwardRef(
           loadingMessage: 'One moment please...'
         }}
         animateRows
-        overlayNoRowsTemplate="No rows found"
         autoSizeStrategy={{ type: 'fitCellContents', ...autoSizeStrategy }}
         suppressDragLeaveHidesColumns
         suppressMovableColumns
@@ -111,9 +110,12 @@ export const BCGridBase = forwardRef(
         suppressCsvExport={false}
         suppressColumnVirtualisation={true}
         enableBrowserTooltips={true}
+        enableCellTextSelection={enableCellTextSelection}
+        getRowId={getRowId}
         suppressPaginationPanel
         suppressScrollOnNewData
         onRowDataUpdated={determineHeight}
+        overlayNoRowsTemplate={overlayNoRowsTemplate || "No rows found"}
         getRowStyle={(params) => {
           const defaultStyle =
             typeof getRowStyle === 'function' ? getRowStyle(params) : {}

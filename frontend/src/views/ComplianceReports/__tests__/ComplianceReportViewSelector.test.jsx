@@ -84,6 +84,9 @@ describe('ComplianceReportViewSelector', () => {
         id: 'report-123',
         currentStatus: {
           status: 'Draft'
+        },
+        compliancePeriod: {
+          description: '2024'
         }
       }
     },
@@ -106,6 +109,24 @@ describe('ComplianceReportViewSelector', () => {
     mockUseCurrentUser.mockReturnValue(defaultCurrentUser)
     mockUseGetComplianceReport.mockReturnValue(defaultReportData)
   })
+
+  const setupMocks = ({
+    currentUser = defaultCurrentUser,
+    reportData = defaultReportData,
+    complianceReportId = 'test-report-id',
+    locationState = null,
+    isError = false,
+    error = null
+  } = {}) => {
+    mockUseCurrentUser.mockReturnValue(currentUser)
+    mockUseGetComplianceReport.mockReturnValue({
+      ...reportData,
+      isError,
+      error
+    })
+    mockUseParams.mockReturnValue({ complianceReportId })
+    mockUseLocation.mockReturnValue({ state: locationState })
+  }
 
   describe('Component rendering', () => {
     it('renders the component function correctly', () => {
@@ -202,17 +223,20 @@ describe('ComplianceReportViewSelector', () => {
   })
 
   describe('Report type rendering', () => {
-    it('renders ViewLegacyComplianceReport when legacyId exists', () => {
-      const reportWithLegacyId = {
+    it('renders ViewLegacyComplianceReport for pre-2024 reports when feature flag is disabled', () => {
+      // Feature flag disabled (default)
+      isFeatureEnabled.mockReturnValue(false)
+      
+      const pre2024Report = {
         ...defaultReportData,
         data: {
           report: {
             ...defaultReportData.data.report,
-            legacyId: 'legacy-123'
+            compliancePeriod: { description: '2023' }
           }
         }
       }
-      mockUseGetComplianceReport.mockReturnValue(reportWithLegacyId)
+      mockUseGetComplianceReport.mockReturnValue(pre2024Report)
 
       render(<ComplianceReportViewSelector />, { wrapper })
       
@@ -220,93 +244,94 @@ describe('ComplianceReportViewSelector', () => {
       expect(screen.queryByTestId('edit-report')).not.toBeInTheDocument()
     })
 
-    it('renders EditViewComplianceReport when legacyId does not exist', () => {
-      const reportWithoutLegacyId = {
+    it('renders EditViewComplianceReport for 2024+ reports', () => {
+      const report2024Plus = {
         ...defaultReportData,
         data: {
           report: {
             ...defaultReportData.data.report,
-            legacyId: null
+            compliancePeriod: { description: '2024' }
           }
         }
       }
-      mockUseGetComplianceReport.mockReturnValue(reportWithoutLegacyId)
+      mockUseGetComplianceReport.mockReturnValue(report2024Plus)
 
       render(<ComplianceReportViewSelector />, { wrapper })
       
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
       expect(screen.queryByTestId('legacy-report')).not.toBeInTheDocument()
     })
-
-    render(<ComplianceReportViewSelector />, { wrapper })
-
-    await waitFor(() => {
-      expect(screen.getByText('Edit Compliance Report')).toBeInTheDocument()
-      expect(screen.queryByText('Legacy Report View')).not.toBeInTheDocument()
-    })
   })
 
-  it('renders EditViewComplianceReport when feature flag is enabled for pre-2024 reports', async () => {
-    // Mock feature flag as enabled
-    isFeatureEnabled.mockReturnValue(true)
-    
-    setupMocks({
-      reportData: {
-        report: {
-          compliancePeriod: { description: '2015' },
-          currentStatus: { status: 'DRAFT' }
+  describe('Feature flag behavior', () => {
+    it('renders EditViewComplianceReport when feature flag is enabled for pre-2024 reports', async () => {
+      // Mock feature flag as enabled
+      isFeatureEnabled.mockReturnValue(true)
+      
+      setupMocks({
+        reportData: {
+          data: {
+            report: {
+              compliancePeriod: { description: '2015' },
+              currentStatus: { status: 'DRAFT' }
+            }
+          }
         }
-      }
+      })
+
+      render(<ComplianceReportViewSelector />, { wrapper })
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-report')).toBeInTheDocument()
+        expect(screen.queryByTestId('legacy-report')).not.toBeInTheDocument()
+      })
     })
 
-    render(<ComplianceReportViewSelector />, { wrapper })
-
-    await waitFor(() => {
-      expect(screen.getByText('Edit Compliance Report')).toBeInTheDocument()
-      expect(screen.queryByText('Legacy Report View')).not.toBeInTheDocument()
-    })
-  })
-
-  it('renders ViewLegacyComplianceReport when feature flag is disabled for pre-2024 reports', async () => {
-    // Mock feature flag as disabled
-    isFeatureEnabled.mockReturnValue(false)
-    
-    setupMocks({
-      reportData: {
-        report: {
-          compliancePeriod: { description: '2023' },
-          currentStatus: { status: 'DRAFT' }
+    it('renders ViewLegacyComplianceReport when feature flag is disabled for pre-2024 reports', async () => {
+      // Mock feature flag as disabled
+      isFeatureEnabled.mockReturnValue(false)
+      
+      setupMocks({
+        reportData: {
+          data: {
+            report: {
+              compliancePeriod: { description: '2023' },
+              currentStatus: { status: 'DRAFT' }
+            }
+          }
         }
-      }
-    })
+      })
 
-    render(<ComplianceReportViewSelector />, { wrapper })
+      render(<ComplianceReportViewSelector />, { wrapper })
 
-    await waitFor(() => {
-      expect(screen.getByText('Legacy Report View')).toBeInTheDocument()
-      expect(screen.queryByText('Edit Compliance Report')).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByTestId('legacy-report')).toBeInTheDocument()
+        expect(screen.queryByTestId('edit-report')).not.toBeInTheDocument()
+      })
     })
   })
 
-  it('passes error and isError props to the rendered component', async () => {
+  describe('Props passing', () => {
+    it('passes error and isError props to the rendered component', async () => {
       const testError = { message: 'Test error' }
       setupMocks({
         isError: true,
         error: testError,
         reportData: {
-          report: {
-            compliancePeriod: { description: '2024' }, // 2024+ always shows full view
-            currentStatus: { status: 'DRAFT' }
+          data: {
+            report: {
+              compliancePeriod: { description: '2024' },
+              currentStatus: { status: 'DRAFT' }
+            }
           }
         }
       })
-      mockUseGetComplianceReport.mockReturnValue(reportWithLegacyId)
 
       render(<ComplianceReportViewSelector />, { wrapper })
       
-      const legacyReportElement = screen.getByTestId('legacy-report')
-      expect(legacyReportElement.textContent).toContain('"error":"Test error"')
-      expect(legacyReportElement.textContent).toContain('"isError":true')
+      const editReportElement = screen.getByTestId('edit-report')
+      expect(editReportElement.textContent).toContain('"error":{"message":"Test error"}')
+      expect(editReportElement.textContent).toContain('"isError":true')
     })
 
     it('passes correct props to EditViewComplianceReport', () => {
@@ -472,47 +497,51 @@ describe('ComplianceReportViewSelector', () => {
 
   })
 
-  it('does not invalidate cache when location state is null', async () => {
-    setupMocks({
-      reportData: {
-        report: {
-          compliancePeriod: { description: '2024' },
-          currentStatus: { status: 'DRAFT' }
+  describe('Cache invalidation tests', () => {
+    it('does not invalidate cache when location state is null', async () => {
+      setupMocks({
+        reportData: {
+          data: {
+            report: {
+              compliancePeriod: { description: '2024' },
+              currentStatus: { status: 'DRAFT' }
+            }
+          }
+        },
+        locationState: null // No location state
+      })
+
+      render(<ComplianceReportViewSelector />, { wrapper })
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-report')).toBeInTheDocument()
+      })
+
+      // Should not invalidate cache since there's no location state
+      expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
+      expect(mockRefetch).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Hook integration tests', () => {
+    it('calls useGetComplianceReport with correct parameters', async () => {
+      const currentUser = { data: { organization: { organizationId: '456' } }, isLoading: false }
+      const complianceReportId = '789'
+
+      setupMocks({
+        currentUser,
+        complianceReportId
+      })
+
+      render(<ComplianceReportViewSelector />, { wrapper })
+
+      expect(mockUseGetComplianceReport).toHaveBeenCalledWith(
+        '456', // organizationId
+        '789', // complianceReportId
+        {
+          enabled: true // !isCurrentUserLoading
         }
-      },
-      locationState: null // No location state
+      )
     })
-
-    render(<ComplianceReportViewSelector />, { wrapper })
-
-    await waitFor(() => {
-      expect(screen.getByText('Edit Compliance Report')).toBeInTheDocument()
-    })
-
-    // Should not invalidate cache since there's no location state
-    expect(mockQueryClient.invalidateQueries).not.toHaveBeenCalled()
-    expect(mockRefetch).not.toHaveBeenCalled()
   })
-
-  it('calls useGetComplianceReport with correct parameters', async () => {
-    const currentUser = { organization: { organizationId: '456' } }
-    const complianceReportId = '789'
-
-    setupMocks({
-      currentUser,
-      complianceReportId,
-      isCurrentUserLoading: false
-    })
-
-    render(<ComplianceReportViewSelector />, { wrapper })
-
-    expect(
-      useComplianceReportsHook.useGetComplianceReport
-    ).toHaveBeenCalledWith(
-      '456', // organizationId
-      '789', // complianceReportId
-      {
-        enabled: true // !isCurrentUserLoading
-      }
-    )
-  })
+})
