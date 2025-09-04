@@ -110,7 +110,7 @@ class PipelineWrapper(BasePipelineWrapper):
 
         # Create prompt builder with RAG template for LCFS
         prompt_builder = PromptBuilder(
-            template="""You are an expert accounting assistant. Use the provided context to answer accounting and financial questions with detailed, comprehensive explanations.
+            template="""You are an expert accounting assistant. Use the provided context to clearly and concisely answer accounting and financial questions.
 
 Context:
 {% for document in documents %}
@@ -120,7 +120,7 @@ Context:
 
 Question: {{ query }}
 
-Answer: Based on the context provided, here is a detailed explanation:""",
+Answer:""",
             required_variables=["query", "documents"],
         )
 
@@ -131,9 +131,12 @@ Answer: Based on the context provided, here is a detailed explanation:""",
             model=self.ollama_model,
             url=ollama_url,
             generation_kwargs={
-                "num_predict": 40,  # Maximum tokens to generate
-                "temperature": 0.3,  # Lower temperature for more factual responses
-                "top_p": 0.85,  # Focused sampling
+                "num_predict": 50,  # Allow for 2 sentences
+                "temperature": 0.1,  # Slightly more creative for better sentences
+                "top_p": 0.8,  # More natural language flow
+                "top_k": 10,  # Allow for better word choices
+                "repeat_penalty": 1.2,  # Moderate repetition penalty
+                "stop": ["\n\n"],  # Stop at paragraph breaks only
             },
         )
 
@@ -146,11 +149,11 @@ Answer: Based on the context provided, here is a detailed explanation:""",
         self.pipeline.add_component("reranker", reranker)
         self.pipeline.add_component("prompt_builder", prompt_builder)
         self.pipeline.add_component("generator", generator)
-        
+
         # Detect pipeline configuration
         self.reranking_enabled = "reranker" in self.pipeline.graph.nodes
         self.hybrid_retrieval = (
-            "bm25_retriever" in self.pipeline.graph.nodes 
+            "bm25_retriever" in self.pipeline.graph.nodes
             and "embedding_retriever" in self.pipeline.graph.nodes
         )
 
@@ -263,15 +266,15 @@ Answer: Based on the context provided, here is a detailed explanation:""",
 
     def _get_reranker_model(self) -> str:
         """Get the reranker model name if reranking is enabled"""
-        if self.reranking_enabled and hasattr(self, 'pipeline'):
+        if self.reranking_enabled and hasattr(self, "pipeline"):
             try:
                 reranker = self.pipeline.get_component("reranker")
-                if hasattr(reranker, 'model'):
+                if hasattr(reranker, "model"):
                     return reranker.model
             except:
                 pass
         return "jinaai/jina-reranker-v1-tiny-en"  # Default fallback
-    
+
     def _get_documents(self) -> List[Document]:
         """Load and return documents from the data directory"""
         documents = []
@@ -388,7 +391,9 @@ Answer: Based on the context provided, here is a detailed explanation:""",
                 "num_documents_reranked": 0,
                 "model": self.ollama_model,
                 "embedding_model": "BAAI/bge-small-en-v1.5",
-                "reranker_model": self._get_reranker_model() if self.reranking_enabled else None,
+                "reranker_model": (
+                    self._get_reranker_model() if self.reranking_enabled else None
+                ),
                 "hybrid_retrieval": self.hybrid_retrieval,
                 "reranking_enabled": self.reranking_enabled,
                 "filtered_out": True,
@@ -436,12 +441,14 @@ Answer: Based on the context provided, here is a detailed explanation:""",
             # Use reranked documents as final docs for best quality
             final_docs = reranked_docs
 
-            # Create timing breakdown with reranking
-            retrieval_time = total_time * 0.15  # BM25 + embedding retrieval ~15%
-            embedding_time = total_time * 0.10  # Text embedding ~10%
-            joining_time = total_time * 0.05  # Document joining ~5%
-            reranking_time = total_time * 0.20  # Reranking with Jina tiny ~20%
-            generation_time = total_time * 0.50  # Text generation ~50%
+            # Use actual timing measurements from pipeline execution
+            # Note: Individual component timings would require pipeline restructuring
+            # For now, providing total time as the authoritative measurement
+            embedding_time = total_time * 0.10  # Estimated
+            retrieval_time = total_time * 0.15  # Estimated
+            joining_time = total_time * 0.05  # Estimated
+            reranking_time = total_time * 0.20  # Estimated
+            generation_time = total_time * 0.50  # Estimated
 
             # Format final context for response with full content preserved
             context = []
@@ -464,7 +471,9 @@ Answer: Based on the context provided, here is a detailed explanation:""",
                 "num_documents_reranked": len(final_docs),
                 "model": self.ollama_model,
                 "embedding_model": "BAAI/bge-small-en-v1.5",
-                "reranker_model": self._get_reranker_model() if self.reranking_enabled else None,
+                "reranker_model": (
+                    self._get_reranker_model() if self.reranking_enabled else None
+                ),
                 "hybrid_retrieval": self.hybrid_retrieval,
                 "reranking_enabled": self.reranking_enabled,
                 "timing": {

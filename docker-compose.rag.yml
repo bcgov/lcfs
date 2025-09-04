@@ -61,7 +61,7 @@ services:
       QDRANT_HOST: "qdrant"
       QDRANT_PORT: "6333"
       OLLAMA_URL: "http://ollama:11434"    # Ollama API URL for Haystack integration
-      OLLAMA_MODEL: "smollm2:135m"     # SmolLM2 135M - smallest available model
+      OLLAMA_MODEL: "qwen2:0.5b"       # Qwen2 0.5B - better instruction following
     ports:
       - "1416:1416"  # Hayhooks default port
     volumes:
