@@ -159,6 +159,7 @@ class AllocationAgreementImporter:
                 "created": progress_data.get("created", 0),
                 "rejected": progress_data.get("rejected", 0),
                 "errors": progress_data.get("errors", []),
+                "rejected_rows": progress_data.get("rejected_rows", []),
             }
         except json.JSONDecodeError:
             return {"progress": 0, "status": "Invalid status data found."}

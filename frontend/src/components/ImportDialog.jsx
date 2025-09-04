@@ -59,9 +59,10 @@ const DIALOG_STATES = {
  * - open: Boolean, whether the dialog is open.
  * - close: Function, to call when closing the dialog.
  * - complianceReportId: The report id used for the import.
- * - isOverwrite: Boolean, whether the import mode is “overwrite.”
+ * - isOverwrite: Boolean, whether the import mode is "overwrite."
  * - importHook: A hook that returns the import mutation (e.g. useImportAllocationAgreement or useImportFinalSupplyEquipment).
  * - getJobStatusHook: A hook to check the import job status.
+ * - onImportComplete: Optional function to call when import completes with rejected rows data
  */
 function ImportDialog({
   open,
@@ -69,7 +70,8 @@ function ImportDialog({
   complianceReportId,
   isOverwrite,
   importHook,
-  getJobStatusHook
+  getJobStatusHook,
+  onImportComplete
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -91,6 +93,7 @@ function ImportDialog({
   // Imported/Rejected counts
   const [createdCount, setCreatedCount] = useState(0)
   const [rejectedCount, setRejectedCount] = useState(0)
+  const [rejectedRows, setRejectedRows] = useState([])
 
   const { mutate: importFile } = importHook(complianceReportId, {
     onSuccess: (data) => {
@@ -125,15 +128,27 @@ function ImportDialog({
     if (jobID && open) {
       intervalId = setInterval(async () => {
         try {
-          await refetch()
-          if (data) {
-            setUploadProgress(data.progress)
-            setUploadStatus(data.status)
-            setCreatedCount(data.created)
-            setRejectedCount(data.rejected)
-            if (data.progress >= 100) {
+          const result = await refetch()
+          if (result.data) {
+            setUploadProgress(result.data.progress)
+            setUploadStatus(result.data.status)
+            setCreatedCount(result.data.created)
+            setRejectedCount(result.data.rejected)
+            if (result.data.progress >= 100) {
               setDialogState(DIALOG_STATES.COMPLETED)
-              setErrorMsgs(data.errors)
+              setErrorMsgs(result.data.errors)
+              setRejectedRows(result.data.rejected_rows || [])
+              
+              // Debug logging
+              console.log('Import complete. Result data:', result.data)
+              console.log('Rejected rows:', result.data.rejected_rows)
+              console.log('Rejected count:', result.data.rejected)
+              
+              // Call the callback with rejected rows if provided
+              if (onImportComplete && result.data.rejected_rows?.length > 0) {
+                console.log('Calling onImportComplete with rejected rows')
+                onImportComplete(result.data.rejected_rows)
+              }
               clearInterval(intervalId)
               setIntervalID(null)
               setJobID(null)
@@ -154,7 +169,7 @@ function ImportDialog({
         setIntervalID(null)
       }
     }
-  }, [jobID, data, refetch, open])
+  }, [jobID, open, refetch, onImportComplete])
 
   const preventBrowserDefaults = (e) => {
     e.preventDefault()
@@ -169,6 +184,7 @@ function ImportDialog({
     setJobID(null)
     setCreatedCount(0)
     setRejectedCount(0)
+    setRejectedRows([])
     setErrorMsgs([])
     setUploadStatus(t(`common:importExport.import.dialog.uploadStatusStarting`))
 
