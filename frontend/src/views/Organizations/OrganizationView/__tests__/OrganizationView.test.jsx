@@ -6,7 +6,7 @@ import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { roles } from '@/constants/roles.js'
 
-// Mock react-router-dom hooks
+// Mock react-router-dom hooks - SINGLE DEFINITION
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn(() => ({ state: {} }))
 const mockUseParams = vi.fn(() => ({ orgID: '123' }))
@@ -18,11 +18,11 @@ vi.mock('react-router-dom', () => ({
   useParams: () => mockUseParams()
 }))
 
-// Mock useCurrentUser hook
+// Mock useCurrentUser hook - SINGLE DEFINITION
 const mockCurrentUser = vi.fn(() => ({
-  data: { 
+  data: {
     organization: { organizationId: '456' },
-    roles: [{ name: roles.government }] 
+    roles: [{ name: roles.government }]
   },
   hasRoles: vi.fn().mockReturnValue(true)
 }))
@@ -37,15 +37,20 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: mockT })
 }))
 
-// Mock child components  
+// Mock child components
 vi.mock('../OrganizationDetailsCard', () => ({
-  OrganizationDetailsCard: () => <div data-test="organization-details-card">Organization Details</div>
+  OrganizationDetailsCard: () => (
+    <div data-test="organization-details-card">Organization Details</div>
+  )
 }))
 
 vi.mock('../OrganizationUsers', () => ({
-  OrganizationUsers: () => <div data-test="organization-users">Organization Users</div>
+  OrganizationUsers: () => (
+    <div data-test="organization-users">Organization Users</div>
+  )
 }))
 
+// Mock CreditLedger - SINGLE DEFINITION
 vi.mock('../CreditLedger', () => ({
   CreditLedger: ({ organizationId }) => (
     <div data-test="credit-ledger" data-organization-id={organizationId}>
@@ -65,6 +70,95 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
+// Mock useApiService
+vi.mock('@/services/useApiService', () => {
+  const mockGet = vi.fn(() =>
+    Promise.resolve({
+      data: { name: 'Test Org', operatingName: 'Test Operating Name' }
+    })
+  )
+  return {
+    useApiService: () => ({
+      get: mockGet
+    })
+  }
+})
+
+// Mock BCGridViewer - Fixed to use named export
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => <div data-test="bc-grid-viewer">BCGridViewer</div>
+}))
+
+vi.mock('@/components/ClearFiltersButton', () => ({
+  ClearFiltersButton: ({ onClick, ...props }) => (
+    <button data-test="clear-filters-button" onClick={onClick} {...props}>
+      Clear filters
+    </button>
+  )
+}))
+
+// Mock useOrganization hooks
+vi.mock('@/hooks/useOrganization', () => ({
+  useOrganization: vi.fn((orgId) => ({
+    data: {
+      organizationId: orgId,
+      orgStatus: { status: 'Registered' },
+      name: 'Test Org',
+      operatingName: 'Test Operating Name',
+      email: 'test@test.com',
+      phone: '1234567890',
+      hasEarlyIssuance: false,
+      creditTradingEnabled: true,
+      orgAddress: {
+        streetAddress: '123 Test St',
+        addressOther: 'Unit 101',
+        city: 'Testville',
+        provinceState: 'TestState',
+        country: 'TestCountry',
+        postalcodeZipcode: '12345'
+      },
+      orgAttorneyAddress: {
+        streetAddress: '456 Lawyer Ln',
+        addressOther: 'Suite 202',
+        city: 'Lawyerville',
+        provinceState: 'LawState',
+        country: 'LawCountry',
+        postalcodeZipcode: '67890'
+      }
+    },
+    isLoading: false,
+    isError: false
+  })),
+  useOrganizationBalance: vi.fn((orgId) => ({
+    data: {
+      registered: true,
+      organizationId: orgId,
+      totalBalance: 1000,
+      reservedBalance: 500
+    },
+    isLoading: false
+  }))
+}))
+
+// Mock BCAlert
+vi.mock('@/components/BCAlert', () => ({
+  default: ({ children, severity, sx }) => (
+    <div data-test="alert-box" role="alert" data-severity={severity}>
+      {children}
+    </div>
+  )
+}))
+
+// Mock BCBox
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
+}))
+
+// SINGLE renderComponent function definition
 const renderComponent = (props = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
@@ -88,6 +182,17 @@ describe('OrganizationView', () => {
     })
     global.addEventListener = vi.fn()
     global.removeEventListener = vi.fn()
+
+    // Reset mock returns to defaults
+    mockUseLocation.mockReturnValue({ state: {} })
+    mockUseParams.mockReturnValue({ orgID: '123' })
+    mockCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: '456' },
+        roles: [{ name: roles.government }]
+      },
+      hasRoles: vi.fn().mockReturnValue(true)
+    })
   })
 
   afterEach(() => {
@@ -98,7 +203,7 @@ describe('OrganizationView', () => {
   describe('TabPanel Component', () => {
     it('renders correctly with tabs displayed', () => {
       renderComponent()
-      
+
       // Test basic tab rendering which exercises TabPanel internally
       expect(screen.getByRole('tablist')).toBeInTheDocument()
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
@@ -107,13 +212,13 @@ describe('OrganizationView', () => {
 
     it('switches tab content when different tabs are clicked', () => {
       renderComponent()
-      
+
       // Tab switching exercises TabPanel's hidden/visible logic
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
       expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
-      
+
       fireEvent.click(screen.getByText('org:usersTab'))
-      expect(screen.queryByText('Organization Details')).not.toBeInTheDocument() 
+      expect(screen.queryByText('Organization Details')).not.toBeInTheDocument()
       expect(screen.getByText('Organization Users')).toBeInTheDocument()
     })
   })
@@ -121,15 +226,15 @@ describe('OrganizationView', () => {
   describe('OrganizationView Component', () => {
     it('renders basic component structure', () => {
       renderComponent()
-      
+
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('org:usersTab')).toBeInTheDocument()  
+      expect(screen.getByText('org:usersTab')).toBeInTheDocument()
       expect(screen.getByText('org:creditLedgerTab')).toBeInTheDocument()
     })
 
     it('calls translation hook with correct namespace', () => {
       renderComponent()
-      
+
       expect(mockT).toHaveBeenCalledWith('org:dashboardTab', 'Dashboard')
       expect(mockT).toHaveBeenCalledWith('org:usersTab')
       expect(mockT).toHaveBeenCalledWith('org:creditLedgerTab')
@@ -140,30 +245,30 @@ describe('OrganizationView', () => {
     it('uses orgID from params when available (IDIR users)', () => {
       mockUseParams.mockReturnValue({ orgID: '123' })
       mockCurrentUser.mockReturnValue({
-        data: { organization: { organizationId: '456' }},
+        data: { organization: { organizationId: '456' } },
         hasRoles: vi.fn().mockReturnValue(true)
       })
-      
+
       renderComponent()
-      
+
       // Click on credit ledger tab to see organizationId prop
       fireEvent.click(screen.getByText('org:creditLedgerTab'))
-      
+
       expect(screen.getByText('Credit Ledger - Org: 123')).toBeInTheDocument()
     })
 
     it('uses currentUser organizationId when orgID not in params (BCeID users)', () => {
       mockUseParams.mockReturnValue({}) // No orgID
       mockCurrentUser.mockReturnValue({
-        data: { organization: { organizationId: '456' }},
+        data: { organization: { organizationId: '456' } },
         hasRoles: vi.fn().mockReturnValue(false)
       })
-      
+
       renderComponent()
-      
+
       // Click on credit ledger tab to see organizationId prop
       fireEvent.click(screen.getByText('org:creditLedgerTab'))
-      
+
       expect(screen.getByText('Credit Ledger - Org: 456')).toBeInTheDocument()
     })
   })
@@ -171,32 +276,38 @@ describe('OrganizationView', () => {
   describe('Alert State Management', () => {
     it('displays alert when location state has message', () => {
       mockUseLocation.mockReturnValue({
-        state: { 
+        state: {
           message: 'Test alert message',
-          severity: 'success' 
+          severity: 'success'
         }
       })
-      
+
       renderComponent()
-      
+
       expect(screen.getByText('Test alert message')).toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveAttribute(
+        'data-severity',
+        'success'
+      )
     })
 
     it('displays alert with default severity when not specified', () => {
       mockUseLocation.mockReturnValue({
         state: { message: 'Test message' }
       })
-      
+
       renderComponent()
-      
+
       expect(screen.getByText('Test message')).toBeInTheDocument()
+      // Default severity should be 'info'
+      expect(screen.getByRole('alert')).toBeInTheDocument()
     })
 
     it('does not display alert when no message in state', () => {
       mockUseLocation.mockReturnValue({ state: {} })
-      
+
       renderComponent()
-      
+
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
@@ -206,12 +317,12 @@ describe('OrganizationView', () => {
         pathname: mockPath,
         state: { message: 'Test message' }
       })
-      
+
       renderComponent()
-      
-      expect(mockNavigate).toHaveBeenCalledWith(mockPath, { 
-        replace: true, 
-        state: {} 
+
+      expect(mockNavigate).toHaveBeenCalledWith(mockPath, {
+        replace: true,
+        state: {}
       })
     })
   })
@@ -219,28 +330,37 @@ describe('OrganizationView', () => {
   describe('Window Resize Handling', () => {
     it('adds resize event listener on mount', () => {
       renderComponent()
-      
-      expect(global.addEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+
+      expect(global.addEventListener).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function)
+      )
     })
 
     it('removes resize event listener on unmount', () => {
       const { unmount } = renderComponent()
-      
+
       unmount()
-      
-      expect(global.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+
+      expect(global.removeEventListener).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function)
+      )
     })
 
     it('handles window resize events', () => {
-      Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true })
-      
+      Object.defineProperty(window, 'innerWidth', {
+        value: 400,
+        configurable: true
+      })
+
       let resizeHandler
       global.addEventListener = vi.fn((event, handler) => {
         if (event === 'resize') resizeHandler = handler
       })
-      
+
       renderComponent()
-      
+
       // Just verify the handler exists, don't trigger it
       expect(resizeHandler).toBeDefined()
       expect(typeof resizeHandler).toBe('function')
@@ -250,28 +370,28 @@ describe('OrganizationView', () => {
   describe('Tab Navigation', () => {
     it('changes tab when handleChangeTab is called', () => {
       renderComponent()
-      
+
       // Initially on first tab (Dashboard)
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
-      
+
       // Click on Users tab
       fireEvent.click(screen.getByText('org:usersTab'))
-      
+
       expect(screen.getByText('Organization Users')).toBeInTheDocument()
-      
+
       // Click on Credit Ledger tab
       fireEvent.click(screen.getByText('org:creditLedgerTab'))
-      
+
       expect(screen.getByText(/Credit Ledger - Org:/)).toBeInTheDocument()
     })
 
     it('shows correct tab content based on active tab', () => {
       renderComponent()
-      
+
       // Tab 0 - Dashboard (default)
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
       expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
-      
+
       // Click Users tab (tab 1)
       fireEvent.click(screen.getByText('org:usersTab'))
       expect(screen.getByText('Organization Users')).toBeInTheDocument()
@@ -282,21 +402,21 @@ describe('OrganizationView', () => {
   describe('Tab Content Rendering', () => {
     it('passes organizationId prop to CreditLedger component', () => {
       mockUseParams.mockReturnValue({ orgID: '789' })
-      
+
       renderComponent()
-      
+
       fireEvent.click(screen.getByText('org:creditLedgerTab'))
-      
+
       const creditLedger = screen.getByTestId('credit-ledger')
       expect(creditLedger).toHaveAttribute('data-organization-id', '789')
     })
 
     it('renders all three tabs with correct labels', () => {
       renderComponent()
-      
+
       const tabs = screen.getAllByRole('tab')
       expect(tabs).toHaveLength(3)
-      
+
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('org:usersTab')).toBeInTheDocument()
       expect(screen.getByText('org:creditLedgerTab')).toBeInTheDocument()
@@ -306,19 +426,19 @@ describe('OrganizationView', () => {
   describe('Current User Integration', () => {
     it('calls useCurrentUser hook', () => {
       renderComponent()
-      
+
       expect(mockCurrentUser).toHaveBeenCalled()
     })
 
     it('derives isIdir from hasRoles government check', () => {
       const mockHasRoles = vi.fn().mockReturnValue(true)
       mockCurrentUser.mockReturnValue({
-        data: { organization: { organizationId: '456' }},
+        data: { organization: { organizationId: '456' } },
         hasRoles: mockHasRoles
       })
-      
+
       renderComponent()
-      
+
       expect(mockHasRoles).toHaveBeenCalledWith(roles.government)
     })
   })

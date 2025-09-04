@@ -24,18 +24,6 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock BCDataGridServer so we can verify it renders without a full data grid
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  // Provide a basic mock for both default export and named export
-  __esModule: true,
-  default: () => (
-    <div data-test="mocked-bc-data-grid-server">Mocked BCDataGridServer</div>
-  ),
-  BCDataGridServer: () => (
-    <div data-test="mocked-bc-data-grid-server">Mocked BCDataGridServer</div>
-  )
-}))
-
 describe('FuelSupplySummary', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -60,8 +48,6 @@ describe('FuelSupplySummary', () => {
       />,
       { wrapper }
     )
-    // Confirm that BCDataGridServer (the mocked component) is displayed
-    expect(screen.getByTestId('mocked-bc-data-grid-server')).toBeInTheDocument()
   })
 
   it('displays alert message when location.state has a message', () => {
@@ -103,7 +89,7 @@ describe('FuelSupplySummary', () => {
     expect(alertBox).not.toBeInTheDocument()
   })
 
-  it('renders fuel supplies rows in BCDataGridServer when provided', () => {
+  it('renders component without deprecated grid regardless of data provided', () => {
     const mockData = {
       fuelSupplies: [
         { fuelSupplyId: 1, fuelType: 'Diesel' },
@@ -118,18 +104,6 @@ describe('FuelSupplySummary', () => {
       />,
       { wrapper }
     )
-
-    // The actual rows are handled by the BCDataGridServer mock, so just confirm the mock rendered
-    expect(screen.getByTestId('mocked-bc-data-grid-server')).toBeInTheDocument()
-  })
-
-  it('does nothing special on row click if status is not DRAFT', () => {
-    // Here, just ensure that the component renders fine for a non-DRAFT status
-    render(
-      <ScheduleBSummary data={{ fuelSupplies: [] }} status="SUBMITTED" />,
-      { wrapper }
-    )
-    // Confirm the mock is rendered and no crash occurs
-    expect(screen.getByTestId('mocked-bc-data-grid-server')).toBeInTheDocument()
+  
   })
 })

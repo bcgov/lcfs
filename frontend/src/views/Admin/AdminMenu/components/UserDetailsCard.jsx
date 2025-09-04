@@ -1,10 +1,10 @@
 import Loading from '@/components/Loading'
 import BCTypography from '@/components/BCTypography'
 import { BCAlert2, FloatingAlert } from '@/components/BCAlert'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useUser } from '@/hooks/useUser'
+import { useUser, useUserActivities } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import { phoneNumberFormatter } from '@/utils/formatters'
@@ -33,6 +33,14 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
   const gridRef = useRef()
   const alertRef = useRef()
 
+  // Pagination state
+  const [paginationOptions, setPaginationOptions] = useState({
+    page: 1,
+    size: 20,
+    sortOrders: defaultSortModel,
+    filters: []
+  })
+
   const gridOptions = {
     overlayNoRowsTemplate: t('admin:activitiesNotFound'),
     suppressHeaderMenuButton: false,
@@ -57,6 +65,9 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
   const canEdit = hasRoles(roles.administrator) || hasRoles(roles.manage_users)
   const apiEndpoint = apiRoutes.getUserActivities.replace(':userID', userID)
   const gridKey = `user-activity-grid-${userID}`
+
+  // Use the user activities hook
+  const queryData = useUserActivities(userID, paginationOptions)
 
   const getRowId = useCallback((params) => {
     return `${params.data.transactionType.toLowerCase()}-${
@@ -209,15 +220,16 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
             {t('admin:UserActivity')}
           </BCTypography>
           <BCBox sx={{ overflowX: 'auto' }}>
-            <BCDataGridServer
+            <BCGridViewer
               gridRef={gridRef}
-              apiEndpoint={apiEndpoint}
-              apiData="activities"
-              columnDefs={userActivityColDefs}
               gridKey={gridKey}
+              columnDefs={userActivityColDefs}
+              queryData={queryData}
+              dataKey="activities"
+              paginationOptions={paginationOptions}
+              onPaginationChange={setPaginationOptions}
               getRowId={getRowId}
               gridOptions={gridOptions}
-              defaultSortModel={defaultSortModel}
               enableCopyButton={false}
               defaultColDef={defaultColDef}
             />

@@ -3,6 +3,9 @@ import DataGridLoading from '@/components/DataGridLoading'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
+import { ModuleRegistry } from '@ag-grid-community/core'
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
+import { CsvExportModule } from '@ag-grid-community/csv-export'
 import {
   forwardRef,
   useCallback,
@@ -18,6 +21,7 @@ const ROW_HEIGHT = 45
 
 export const BCGridBase = forwardRef(
   ({ autoSizeStrategy, autoHeight, ...props }, forwardedRef) => {
+    ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
     const ref = useRef(null)

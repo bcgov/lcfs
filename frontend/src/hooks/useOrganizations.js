@@ -42,3 +42,33 @@ export const useRegExtOrgs = (options) => {
     ...options
   })
 }
+
+export const useOrganizationsList = (paginationOptions, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['organizations-list', paginationOptions],
+    queryFn: async () => {
+      const response = await client.post('/organizations/', paginationOptions)
+      return response.data
+    },
+    ...options
+  })
+}
+
+export const useOrganizationUsers = (orgID, paginationOptions, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['organization-users', orgID, paginationOptions],
+    queryFn: async () => {
+      const response = await client.post(
+        `/organization/${orgID}/users/list`,
+        paginationOptions
+      )
+      return response.data
+    },
+    enabled: !!orgID,
+    ...options
+  })
+}
