@@ -75,7 +75,7 @@ export const transactionsColDefs = (t) => [
     colId: 'compliancePeriod',
     field: 'compliancePeriod',
     headerName: t('txn:txnColLabels.compliancePeriod'),
-    width: 130,
+    width: 150,
     valueGetter: (params) => {
       return params.data?.compliancePeriod || 'N/A'
     },
@@ -124,7 +124,7 @@ export const transactionsColDefs = (t) => [
       })
     },
     suppressFloatingFilterButton: true,
-    width: 222
+    width: 250
   },
   {
     colId: 'fromOrganization',

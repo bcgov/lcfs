@@ -24,14 +24,28 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ gridRef, onPaginationChange, ...props }) => {
-    // Set up gridRef with clearFilters method for tests
+  BCGridViewer: ({
+    gridRef,
+    onPaginationChange,
+    queryData,
+    getRowId,
+    gridOptions,
+    defaultColDef,
+    handleGridKey,
+    ...otherProps
+  }) => {
+    // Set up gridRef with clearFilters method
     if (gridRef) {
       gridRef.current = {
         clearFilters: vi.fn()
       }
     }
-    return <div data-test="bc-grid-viewer">BCGridViewer</div>
+
+    return (
+      <div data-test="bc-grid-viewer" data-testid="grid" {...otherProps}>
+        BCGridViewer
+      </div>
+    )
   }
 }))
 
