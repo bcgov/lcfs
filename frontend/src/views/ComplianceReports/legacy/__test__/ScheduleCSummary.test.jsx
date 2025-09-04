@@ -35,9 +35,9 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   })
 }))
 
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   __esModule: true,
-  default: () => <div data-test="mockedBCDataGridServer"></div>
+  BCGridViewer: () => <div data-test="mockedBCGridViewer"></div>
 }))
 
 vi.mock('@/contexts/AuthorizationContext', () => ({

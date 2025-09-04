@@ -42,7 +42,9 @@
     "date": "Date",
     "fromAccount": "From account",
     "toAccount": "To account",
-    "comments": "Comments"
+    "comments": "Comments",
+    "isCanadaProduced": "Fuel produced in Canada?",
+    "isQ1Supplied": "Supplied in Q1?"
   },
   "validateMsg": {
     "isRequired": "{{field}} is required",

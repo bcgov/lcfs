@@ -49,7 +49,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'assignedAnalyst',
     headerName: t('report:reportColLabels.assignedAnalyst'),
-    width: 150,
+    width: 180,
     hide: isSupplier,
     valueGetter: ({ data }) => data.assignedAnalyst?.initials || '',
     cellRenderer: AssignedAnalystCell,

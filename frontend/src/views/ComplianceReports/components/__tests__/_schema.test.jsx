@@ -67,7 +67,7 @@ describe('ComplianceReports Schema', () => {
       expect(assignedAnalystCol).toBeDefined()
       expect(assignedAnalystCol.hide).toBe(false)
       expect(assignedAnalystCol.headerName).toBe('report:reportColLabels.assignedAnalyst')
-      expect(assignedAnalystCol.width).toBe(150)
+      expect(assignedAnalystCol.width).toBe(180)
     })
 
     it('should hide assigned analyst column for suppliers', () => {

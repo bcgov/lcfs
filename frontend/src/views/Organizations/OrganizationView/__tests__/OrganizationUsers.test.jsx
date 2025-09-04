@@ -47,51 +47,87 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockCurrentUserHook
 }))
 
-// Mock BCDataGridServer
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  __esModule: true,
-  default: ({ 
-    onSetResetGrid, 
+// ✅ FIXED: Mock useOrganizationUsers hook
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationUsers: vi.fn(() => ({
+    data: {
+      users: [
+        {
+          userProfileId: '1',
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john.doe@example.com'
+        }
+      ],
+      pagination: { total: 1, page: 1, size: 10 }
+    },
+    isLoading: false,
+    error: null
+  }))
+}))
+
+// ✅ FIXED: Mock BCGridViewer instead of BCDataGridServer
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({
     gridRef,
-    apiEndpoint,
-    apiData,
-    columnDefs,
-    gridKey,
+    onPaginationChange,
+    queryData,
     getRowId,
     gridOptions,
-    defaultSortModel,
-    handleGridKey,
     defaultColDef,
-    enableCopyButton,
-    enableResetButton,
-    ...otherProps 
+    handleGridKey,
+    ...otherProps
   }) => {
-    // Only simulate the callback once to avoid loops
-    const callbackExecuted = React.useRef(false)
-    React.useEffect(() => {
-      if (onSetResetGrid && !callbackExecuted.current) {
-        const mockResetFn = vi.fn()
-        onSetResetGrid(mockResetFn)
-        callbackExecuted.current = true
+    // Set up gridRef with clearFilters method
+    if (gridRef) {
+      gridRef.current = {
+        clearFilters: vi.fn()
       }
-    }, [onSetResetGrid])
-    
+    }
+
     return (
-      <div 
-        data-test="grid" 
-        data-testid="grid"
-        {...otherProps}
-      >
-        BCDataGridServer
+      <div data-test="bc-grid-viewer" data-test="grid" {...otherProps}>
+        BCGridViewer
       </div>
     )
   }
 }))
 
+// Mock UI components
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
+}))
+
+vi.mock('@/components/BCTypography', () => ({
+  default: ({ children, variant, ...props }) => (
+    <span data-test="bc-typography" data-variant={variant} {...props}>
+      {children}
+    </span>
+  )
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  default: ({ children, onClick, startIcon, ...props }) => (
+    <button data-test="bc-button" onClick={onClick} {...props}>
+      {startIcon && <span data-test="start-icon">{startIcon}</span>}
+      {children}
+    </button>
+  )
+}))
+
 // Mock other components
 vi.mock('@/components/ClearFiltersButton', () => ({
   ClearFiltersButton: ({ onClick, ...props }) => (
-    <button data-test="clear-filters-button" onClick={onClick} {...props}>
+    <button
+      data-test="clear-filters-button"
+      data-testid="clear-filters-button"
+      onClick={onClick}
+      {...props}
+    >
       Clear filters
     </button>
   )
@@ -112,8 +148,19 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
   )
 }))
 
+// Mock cell renderers
+vi.mock('@/utils/grid/cellRenderers', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    // Override specific renderers if needed for testing
+    LinkRenderer: () => <div data-test="link-renderer">Link</div>,
+    RoleRenderer: () => <div data-test="role-renderer">Role</div>
+  }
+})
+
 // Mock schema
-vi.mock('../_schema', () => ({
+vi.mock('./_schema', () => ({
   getUserColumnDefs: vi.fn(() => [
     { field: 'firstName', headerName: 'First Name' },
     { field: 'lastName', headerName: 'Last Name' }
@@ -193,26 +240,28 @@ describe('OrganizationUsers Component Tests', () => {
   describe('Component Rendering', () => {
     it('renders basic component structure', () => {
       renderComponent()
-      
+
       expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByTestId('grid')).toBeInTheDocument()
       expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
     })
 
     it('renders with supplier user role', () => {
-      mockCurrentUserHook.hasRoles = vi.fn().mockImplementation((role) => role === roles.supplier)
-      
+      mockCurrentUserHook.hasRoles = vi
+        .fn()
+        .mockImplementation((role) => role === roles.supplier)
+
       renderComponent()
-      
+
       expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
 
     it('renders when loading current user', () => {
       mockCurrentUserHook.isLoading = true
-      
+
       renderComponent()
-      
+
       expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
@@ -220,40 +269,24 @@ describe('OrganizationUsers Component Tests', () => {
 
   describe('handleGridKey Function', () => {
     it('updates gridKey when handleGridKey is called', () => {
-      const { rerender } = renderComponent()
-      
-      // Since handleGridKey is internal, we test its effect through component behavior
-      // The gridKey should change when the component re-renders
-      expect(screen.getByTestId('grid')).toBeInTheDocument()
-      
-      // Component re-renders automatically with state change
-      // The gridKey should change when the component state updates
-      
-      expect(screen.getByTestId('grid')).toBeInTheDocument()
-    })
-  })
-
-  describe('handleSetResetGrid Function', () => {
-    it('sets resetGridFn when handleSetResetGrid is called', () => {
       renderComponent()
-      
-      // The BCDataGridServer mock automatically calls onSetResetGrid
-      // This verifies that the callback mechanism works
+
+      // Since handleGridKey is internal, we test its effect through component behavior
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
   })
 
   describe('handleClearFilters Function', () => {
-    it('calls resetGridFn when handleClearFilters is called and resetGridFn exists', () => {
+    it('calls resetGridFn when handleClearFilters is called', () => {
       renderComponent()
-      
+
       const clearButton = screen.getByTestId('clear-filters-button')
       expect(() => fireEvent.click(clearButton)).not.toThrow()
     })
 
-    it('does not call resetGridFn when handleClearFilters is called and resetGridFn is null', () => {
+    it('does not throw when clearFilters is not available', () => {
       renderComponent()
-      
+
       const clearButton = screen.getByTestId('clear-filters-button')
       expect(() => fireEvent.click(clearButton)).not.toThrow()
     })
@@ -262,25 +295,27 @@ describe('OrganizationUsers Component Tests', () => {
   describe('handleNewUserClick Function', () => {
     it('navigates to government add user route for government user', () => {
       mockCurrentUserHook.isLoading = false
-      mockCurrentUserHook.hasRoles = vi.fn().mockImplementation((role) => role === roles.government)
-      
+      mockCurrentUserHook.hasRoles = vi
+        .fn()
+        .mockImplementation((role) => role === roles.government)
+
       renderComponent()
-      
-      const newUserButton = screen.getByText('New user')
+
+      const newUserButton = screen.getByText('New user') // Use translated text
       fireEvent.click(newUserButton)
-      
+
       expect(mockNavigate).toHaveBeenCalledWith('/organizations/123/add-user')
     })
 
     it('navigates to organization add user route for non-government user', () => {
       mockCurrentUserHook.isLoading = false
       mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(false)
-      
+
       renderComponent()
-      
-      const newUserButton = screen.getByText('New user')
+
+      const newUserButton = screen.getByText('New user') // Use translated text
       fireEvent.click(newUserButton)
-      
+
       expect(mockNavigate).toHaveBeenCalledWith('/organization/add-user')
     })
   })
@@ -288,28 +323,28 @@ describe('OrganizationUsers Component Tests', () => {
   describe('getRowId Function', () => {
     it('returns userProfileId from params', () => {
       renderComponent()
-      
-      // The getRowId function is passed to BCDataGridServer
-      // We verify it's being passed by checking the component renders
+
+      // The getRowId function is passed to BCGridViewer
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
   })
 
   describe('URL Function in cellRendererParams', () => {
     it('returns supplier route for supplier role', () => {
-      mockCurrentUserHook.hasRoles = vi.fn().mockImplementation((role) => role === roles.supplier)
-      
+      mockCurrentUserHook.hasRoles = vi
+        .fn()
+        .mockImplementation((role) => role === roles.supplier)
+
       renderComponent()
-      
-      // The defaultColDef with url function is passed to the grid
+
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
 
     it('returns organizations route for non-supplier role', () => {
       mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(false)
-      
+
       renderComponent()
-      
+
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
   })
@@ -317,54 +352,54 @@ describe('OrganizationUsers Component Tests', () => {
   describe('Memoized Values', () => {
     it('creates correct gridOptions', () => {
       renderComponent()
-      
+
       expect(screen.getByTestId('grid')).toBeInTheDocument()
-      // gridOptions should contain overlayNoRowsTemplate and includeHiddenColumnsInQuickFilter
     })
 
     it('creates correct defaultColDef', () => {
       renderComponent()
-      
+
       expect(screen.getByTestId('grid')).toBeInTheDocument()
-      // defaultColDef should contain cellRenderer and cellRendererParams
     })
   })
 
   describe('Component Integration', () => {
     it('handles clear filters button interaction', () => {
       renderComponent()
-      
+
       const clearButton = screen.getByTestId('clear-filters-button')
       expect(clearButton).toBeInTheDocument()
-      
+
       fireEvent.click(clearButton)
       // Should not throw error
     })
 
     it('handles new user button interaction with proper role', () => {
-      mockCurrentUserHook.hasRoles = vi.fn().mockImplementation((role) => 
-        role === roles.administrator || role === roles.manage_users
-      )
-      
+      mockCurrentUserHook.hasRoles = vi
+        .fn()
+        .mockImplementation(
+          (role) => role === roles.administrator || role === roles.manage_users
+        )
+
       renderComponent()
-      
-      const newUserButton = screen.getByText('New user')
+
+      const newUserButton = screen.getByText('New user') // Use translated text
       expect(newUserButton).toBeInTheDocument()
-      
+
       fireEvent.click(newUserButton)
       expect(mockNavigate).toHaveBeenCalled()
     })
 
     it('displays role-based new user button', () => {
       renderComponent()
-      
+
       // Should render Role component with proper roles
       expect(screen.getByTestId('role-wrapper')).toBeInTheDocument()
     })
 
     it('uses correct orgID fallback', () => {
       renderComponent()
-      
+
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
   })
