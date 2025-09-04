@@ -231,6 +231,8 @@ class OtherUsesRepository:
                     ou.provision_of_the_act.name if ou.provision_of_the_act else None
                 ),
                 fuel_code=(ou.fuel_code.fuel_code if ou.fuel_code else None),
+                is_canada_produced=ou.is_canada_produced,
+                is_q1_supplied=ou.is_q1_supplied,
                 expected_use=ou.expected_use.name,
                 units=ou.units,
                 rationale=ou.rationale,
@@ -411,6 +413,8 @@ class OtherUsesRepository:
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
                 "default_carbon_intensity": default_ci,
+                "fossil_derived": fuel_type.fossil_derived,
+                "renewable": fuel_type.renewable,
                 "units": fuel_type.units if fuel_type.units else None,
                 "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [
@@ -460,3 +464,61 @@ class OtherUsesRepository:
         await self.db.execute(
             delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
         )
+
+    @repo_handler
+    async def check_duplicate(self, other_use: OtherUsesSchema):
+        """Check if this would duplicate an existing row"""
+        # Get all compliance report IDs that belong to the same group in a subquery
+        from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+        cr_repo = ComplianceReportRepository(db=self.db)
+        related_report_ids = await cr_repo.get_related_compliance_report_ids(
+            other_use.compliance_report_id
+        )
+
+        # Get the IDs for fuel_type, fuel_category, etc. based on names
+        fuel_type = await self.fuel_code_repo.get_fuel_type_by_name(other_use.fuel_type)
+        fuel_category = await self.fuel_code_repo.get_fuel_category_by(
+            category=other_use.fuel_category
+        )
+        provision_of_the_act = (
+            await self.fuel_code_repo.get_provision_of_the_act_by_name(
+                other_use.provision_of_the_act
+            )
+        )
+        expected_use = await self.fuel_code_repo.get_expected_use_type_by_name(
+            other_use.expected_use
+        )
+        fuel_code = (
+            await self.fuel_code_repo.get_fuel_code_by_name(other_use.fuel_code)
+            if other_use.fuel_code
+            else None
+        )
+
+        # Type, Category, and Determine CI/Fuel codes are included
+        duplicate_query = select(OtherUses.other_uses_id).where(
+            OtherUses.compliance_report_id.in_(related_report_ids),
+            OtherUses.fuel_type_id == fuel_type.fuel_type_id,
+            OtherUses.fuel_category_id == fuel_category.fuel_category_id,
+            OtherUses.provision_of_the_act_id
+            == provision_of_the_act.provision_of_the_act_id,
+            OtherUses.fuel_code_id == (fuel_code.fuel_code_id if fuel_code else None),
+            OtherUses.expected_use_id == expected_use.expected_use_type_id,
+            OtherUses.is_canada_produced == other_use.is_canada_produced,
+            OtherUses.is_q1_supplied == other_use.is_q1_supplied,
+            OtherUses.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+            OtherUses.group_uuid != other_use.group_uuid,
+        )
+
+        # Add conditional filter for other_uses_id if it exists
+        if other_use.other_uses_id is not None:
+            duplicate_query = duplicate_query.where(
+                OtherUses.other_uses_id != other_use.other_uses_id
+            )
+
+        # Add ordering to get the most recent record
+        duplicate_query = duplicate_query.order_by(
+            OtherUses.create_date.desc(), OtherUses.version.desc()
+        )
+
+        result = await self.db.execute(duplicate_query)
+        return result.scalars().first()

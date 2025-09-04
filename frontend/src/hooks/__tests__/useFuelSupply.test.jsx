@@ -24,7 +24,7 @@ vi.mock('@/services/useApiService', () => ({
 
 vi.mock('@/constants/routes', () => ({
   apiRoutes: {
-    fuelSupplyOptions: '/fuel-supplies/options?',
+    fuelSupplyOptions: '/fuel-supply/table-options?',
     getAllFuelSupplies: '/fuel-supplies/list',
     saveFuelSupplies: '/fuel-supplies'
   }
@@ -63,7 +63,7 @@ describe('useFuelSupply', () => {
 
       expect(result.current.data).toEqual(mockOptions)
       expect(mockApiService.get).toHaveBeenCalledWith(
-        '/fuel-supplies/options?compliancePeriod=2024'
+        '/fuel-supply/table-options?compliancePeriod=2024'
       )
     })
 

@@ -120,6 +120,7 @@ def find_and_read_sql_file(sqlFile):
     possible_paths = [
         os.path.join(current_dir, "sql", "views", sqlFile),
         os.path.join(current_dir, "..", "..", "sql", "views", sqlFile),
+        os.path.join('/app', "lcfs", "db", "sql", "views", sqlFile),
     ]
 
     for path in possible_paths:

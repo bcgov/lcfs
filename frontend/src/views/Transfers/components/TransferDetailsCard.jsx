@@ -55,11 +55,13 @@ export const TransferDetailsCard = ({
                 )}`}
           </BCTypography>
           <BCBox
-            display="flex"
-            alignContent="center"
-            flexDirection="column"
-            alignItems="center"
-            py={1}
+            sx={{
+              display: 'flex',
+              alignContent: 'center',
+              flexDirection: 'column',
+              alignItems: 'center',
+              py: 1
+            }}
           >
             {isMobileSize ? (
               <SwapVert

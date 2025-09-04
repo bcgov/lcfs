@@ -203,11 +203,23 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_assessed_compliance_report_by_period(
-        self, organization_id: int, period: int
+        self, organization_id: int, period: int, exclude_report_id: int = None
     ):
         """
         Identify and retrieve the latest assessed compliance report of an organization for the given compliance period
         """
+        where_conditions = [
+            ComplianceReport.organization_id == organization_id,
+            CompliancePeriod.description == str(period),
+            ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed,
+        ]
+        
+        # Exclude the current report to avoid circular reference
+        if exclude_report_id:
+            where_conditions.append(
+                ComplianceReport.compliance_report_id != exclude_report_id
+            )
+        
         result = (
             (
                 await self.db.execute(
@@ -238,20 +250,13 @@ class ComplianceReportRepository:
                         ComplianceReport.compliance_report_id
                         == ComplianceReportSummary.compliance_report_id,
                     )
-                    .where(
-                        and_(
-                            ComplianceReport.organization_id == organization_id,
-                            CompliancePeriod.description == str(period),
-                            ComplianceReportStatus.status
-                            == ComplianceReportStatusEnum.Assessed,
-                        )
-                    )
+                    .where(and_(*where_conditions))
                     .order_by(ComplianceReport.version.desc())
                 )
             )
             .unique()
             .scalars()
-            .first()  # Gets the latest assessed report
+            .first()  # Gets the latest assessed report (excluding current)
         )
         return result
 

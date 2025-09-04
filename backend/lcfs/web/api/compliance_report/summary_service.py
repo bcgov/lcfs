@@ -642,12 +642,29 @@ class ComplianceReportSummaryService:
 
         fossil_quantities = self.repo.aggregate_quantities(all_fossil_records, True)
         # line 2
+        # Ensure non-Canadian renewable diesel volumes are not added into lines 1 or 2.
         filtered_renewable_fuel_supplies = [
-            fs for fs in effective_fuel_supplies if fs.fuel_type.renewable
+            fs
+            for fs in effective_fuel_supplies
+            if fs.fuel_type.renewable
+            and (
+                compliance_year < 2025
+                or fs.fuel_category.category != "Diesel"
+                or (fs.fuel_category.category == "Diesel" and fs.is_canada_produced)
+                or (fs.fuel_category.category == "Diesel" and fs.is_q1_supplied)
+            )
         ]
 
         filtered_renewable_other_uses = [
-            ou for ou in effective_other_uses if ou.fuel_type.renewable
+            ou
+            for ou in effective_other_uses
+            if ou.fuel_type.renewable
+            and (
+                compliance_year < 2025
+                or ou.fuel_category.category != "Diesel"
+                or (ou.fuel_category.category == "Diesel" and ou.is_canada_produced)
+                or (ou.fuel_category.category == "Diesel" and ou.is_q1_supplied)
+            )
         ]
 
         all_renewable_records = [
@@ -822,7 +839,7 @@ class ComplianceReportSummaryService:
         # Define constants as Decimal
         DECIMAL_ZERO = Decimal("0")
         GAS_PERC = Decimal("0.05")
-        DIESEL_PERC = Decimal("0.04")
+        DIESEL_PERC = Decimal("0.08") if compliance_period >= 2025 else Decimal("0.04")
         GAS_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["gasoline"]))
         DIESEL_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["diesel"]))
         JET_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["jet_fuel"]))
@@ -1107,14 +1124,11 @@ class ComplianceReportSummaryService:
         organization_id: int,
         compliance_report: ComplianceReport,
     ) -> Tuple[List[ComplianceReportSummaryRowSchema], int]:
-        previous_summary = None
-        if compliance_report.version > 0:
-            previous_summary = await self.repo.get_previous_summary(compliance_report)
-
         # For Line 15 and 16, we should only use values from assessed reports
         # Get the last assessed report for this organization and compliance period
+        # Exclude current report to avoid circular reference
         assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
-            organization_id, compliance_period_start.year
+            organization_id, compliance_period_start.year, compliance_report.compliance_report_id
         )
 
         compliance_units_transferred_out = int(

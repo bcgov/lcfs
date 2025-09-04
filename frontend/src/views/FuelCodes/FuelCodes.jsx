@@ -68,6 +68,13 @@ const FuelCodesBase = () => {
     }
   }, [location.state])
 
+  useEffect(() => {
+    if (queryData.isError && queryData.error) {
+      setAlertMessage(queryData.error.message || 'Failed to load fuel codes')
+      setAlertSeverity('error')
+    }
+  }, [queryData.isError, queryData.error])
+
   const getRowId = (params) => {
     return params.data.fuelCodeId.toString()
   }

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Enum, String, Numeric, BigInteger
+from sqlalchemy import Boolean, Column, Integer, ForeignKey, Enum, String, Numeric, BigInteger, text
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
@@ -60,6 +60,8 @@ class FuelSupply(BaseModel, Auditable, Versioning):
     fuel_type_other = Column(
         String(1000), nullable=True, comment="Other fuel type if one provided"
     )
+    is_canada_produced = Column(Boolean, server_default=text('false'), comment="Flag for Canada production fuels")
+    is_q1_supplied = Column(Boolean, server_default=text('false'), comment="Flag for Q1 supply of fuel")
 
     # Relational columns
     fuel_category_id = Column(
