@@ -2,6 +2,7 @@ from fastapi.routing import APIRouter
 
 from lcfs.web.api import (
     calculator,
+    charging_equipment,
     echo,
     fuel_supply,
     monitoring,
@@ -84,6 +85,11 @@ api_router.include_router(
     final_supply_equipment.router,
     prefix="/final-supply-equipments",
     tags=["final_supply_equipments"],
+)
+api_router.include_router(
+    charging_equipment.router,
+    prefix="/charging-equipment",
+    tags=["charging_equipment"],
 )
 api_router.include_router(
     fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]

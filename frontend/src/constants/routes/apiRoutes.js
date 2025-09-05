@@ -111,6 +111,20 @@ export const apiRoutes = {
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
 
+  // charging-equipment (new FSE system)
+  chargingEquipment: {
+    list: '/charging-equipment/list',
+    get: '/charging-equipment/:id',
+    create: '/charging-equipment/',
+    update: '/charging-equipment/:id',
+    delete: '/charging-equipment/:id',
+    bulkSubmit: '/charging-equipment/bulk/submit',
+    bulkDecommission: '/charging-equipment/bulk/decommission',
+    statuses: '/charging-equipment/statuses/list',
+    levels: '/charging-equipment/levels/list',
+    endUseTypes: '/charging-equipment/end-use-types/list'
+  },
+
   // fuel-supplies
   fuelSupplyOptions: '/fuel-supply/table-options?',
   getAllFuelSupplies: '/fuel-supply/list-all',

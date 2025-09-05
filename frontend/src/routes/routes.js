@@ -105,6 +105,13 @@ export const ROUTES = {
     EXPORT: '/fuel-codes/export'
   },
 
+  CHARGING_EQUIPMENT: {
+    LIST: '/charging-equipment',
+    NEW: '/charging-equipment/new',
+    EDIT: '/charging-equipment/edit/:id',
+    VIEW: '/charging-equipment/:id'
+  },
+
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'
