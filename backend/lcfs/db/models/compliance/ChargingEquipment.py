@@ -75,6 +75,11 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         index=True,
     )
 
+    organization_name = Column(
+        Text,
+        nullable=True,
+        comment="Name of the organization associated with the equipment",
+    )
     allocating_organization_id = Column(
         Integer,
         ForeignKey("organization.organization_id"),
@@ -83,19 +88,19 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     serial_number = Column(
-        String(100),
+        String(500),
         nullable=False,
         comment="Serial number of the equipment",
     )
 
     manufacturer = Column(
-        String(100),
+        String(500),
         nullable=False,
         comment="Manufacturer of the equipment",
     )
 
     model = Column(
-        String(100),
+        String(500),
         nullable=True,
         comment="Model of the equipment",
     )

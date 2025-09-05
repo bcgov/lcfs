@@ -26,7 +26,7 @@ depends_on = None
 
 
 def generate_site_code(
-    street_address, city, postal_code, organization_id, collision_count=0, length=12
+    street_address, city, postal_code, organization_id, collision_count=1, length=5
 ):
     """Generate a deterministic unique site code using SHA-256."""
     # Normalize inputs
@@ -41,7 +41,7 @@ def generate_site_code(
     input_string = f"{normalized_org_id}#{normalized_address}#{normalized_city}#{normalized_postal}#{collision_count}"
 
     # Generate SHA-256 hash
-    sha256_hash = hashlib.sha256(input_string.encode()).hexdigest()
+    sha256_hash = hashlib.sha256(input_string.encode()).hexdigest().upper()
 
     # Return truncated hash (length configurable)
     return sha256_hash[:length]
@@ -51,7 +51,7 @@ def get_unique_site_code(
     street_address, city, postal_code, organization_id, existing_codes
 ):
     """Generate a unique site code using multiple deterministic approaches."""
-    collision_count = organization_id
+    collision_count = 1
     site_code = generate_site_code(
         street_address,
         city,
@@ -84,13 +84,7 @@ def upgrade() -> None:
 
     try:
         # Add or alter columns as needed
-        op.add_column('charging_equipment', sa.Column('organization_name', sa.Text(), nullable=True, comment="External organization name."))
-        op.execute(
-            "ALTER TABLE charging_equipment ALTER COLUMN equipment_number TYPE VARCHAR(5);"
-        )
-        op.execute(
-            "ALTER TABLE charging_equipment ALTER COLUMN notes TYPE VARCHAR(1000);"
-        )
+        op.add_column('charging_equipment', sa.Column('organization_name', sa.String(500), nullable=True, comment="allocating organization name."))
         op.execute(
             "ALTER TABLE charging_equipment ALTER COLUMN manufacturer TYPE VARCHAR(500);"
         )
@@ -99,9 +93,6 @@ def upgrade() -> None:
         )
         op.execute(
             "ALTER TABLE charging_equipment ALTER COLUMN model TYPE VARCHAR(500);"
-        )
-        op.execute(
-            "ALTER TABLE compliance_report_charging_equipment ALTER COLUMN compliance_notes TYPE VARCHAR(1000);"
         )
         print("Starting comprehensive FSE to charging infrastructure migration...")
 
