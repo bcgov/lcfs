@@ -44,4 +44,4 @@ def next_base36(current: Optional[str], width: int = 5) -> str:
     if n > max_n:
         raise OverflowError(f"Exceeded maximum base-36 value for width={width}.")
 
-    return int_to_base36(n).zfill(width)
+    return int_to_base36(n).zfill(width).upper()
