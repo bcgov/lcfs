@@ -69,7 +69,7 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     equipment_number = Column(
-        String(3),
+        String(5),
         nullable=False,
         comment="Auto-generated 3-digit equipment number (suffix for registration)",
         index=True,
@@ -192,9 +192,9 @@ def generate_equipment_number(mapper, connection, target):
             # First equipment for this site
             next_seq = 1
 
-        if next_seq > 999:
+        if next_seq > 99999:
             raise ValueError(
-                "Exceeded maximum equipment numbers (999) for this charging site"
+                "Exceeded maximum equipment numbers (99,999) for this charging site"
             )
 
         target.equipment_number = f"{next_seq:03d}"
