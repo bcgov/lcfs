@@ -159,7 +159,7 @@ def upgrade() -> None:
             )
             SELECT 
                 fse.final_supply_equipment_id, cs.charging_site_id, :default_status_id,
-                LPAD(ROW_NUMBER() OVER (PARTITION BY cs.charging_site_id ORDER BY fse.final_supply_equipment_id)::text, 5, '0'),
+                LPAD(ROW_NUMBER() OVER (PARTITION BY cs.charging_site_id ORDER BY fse.final_supply_equipment_id)::text, 3, '0'),
                 fse.serial_nbr, fse.manufacturer, fse.model, fse.level_of_equipment_id, fse.ports,
                 CONCAT('Migrated from FSE ID: ', fse.final_supply_equipment_id,
                     CASE WHEN fse.registration_nbr IS NOT NULL THEN ' | Registration: ' || fse.registration_nbr ELSE '' END,
