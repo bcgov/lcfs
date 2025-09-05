@@ -13,8 +13,10 @@ This script populates all tables in the correct order:
 """
 
 import hashlib
+from typing import Optional
 import uuid
 from datetime import datetime, timezone
+from lcfs.utils.unique_key_generators import next_base36
 import sqlalchemy as sa
 from alembic import op
 
@@ -25,66 +27,21 @@ branch_labels = None
 depends_on = None
 
 
-def generate_site_code(
-    street_address, city, postal_code, organization_id, collision_count=1, length=5
-):
-    """Generate a deterministic unique site code using SHA-256."""
-    # Normalize inputs
-    normalized_address = (
-        str(street_address).upper().replace(" ", "").replace(".", "").replace(",", "")
-    )
-    normalized_city = str(city).upper().replace(" ", "")
-    normalized_postal = str(postal_code).upper().replace(" ", "").replace("-", "")
-    normalized_org_id = str(organization_id)
-
-    # Create consistent input string
-    input_string = f"{normalized_org_id}#{normalized_address}#{normalized_city}#{normalized_postal}#{collision_count}"
-
-    # Generate SHA-256 hash
-    sha256_hash = hashlib.sha256(input_string.encode()).hexdigest().upper()
-
-    # Return truncated hash (length configurable)
-    return sha256_hash[:length]
-
-
-def get_unique_site_code(
-    street_address, city, postal_code, organization_id, existing_codes
-):
-    """Generate a unique site code using multiple deterministic approaches."""
-    collision_count = 1
-    site_code = generate_site_code(
-        street_address,
-        city,
-        postal_code,
-        organization_id,
-        collision_count,
-        length=5,
-    )
-
-    # Try each hash source until we find a unique code
-    while site_code in existing_codes:
-        collision_count = organization_id + 1
-        site_code = generate_site_code(
-            street_address,
-            city,
-            postal_code,
-            organization_id,
-            collision_count,
-            length=5,
-        )
-        if site_code not in existing_codes:
-            return site_code
-
-    return site_code
-
-
 def upgrade() -> None:
     bind = op.get_bind()
     session = sa.orm.Session(bind=bind)
 
     try:
         # Add or alter columns as needed
-        op.add_column('charging_equipment', sa.Column('organization_name', sa.String(500), nullable=True, comment="allocating organization name."))
+        op.add_column(
+            "charging_equipment",
+            sa.Column(
+                "organization_name",
+                sa.String(500),
+                nullable=True,
+                comment="allocating organization name.",
+            ),
+        )
         op.execute(
             "ALTER TABLE charging_equipment ALTER COLUMN manufacturer TYPE VARCHAR(500);"
         )
@@ -115,11 +72,10 @@ def upgrade() -> None:
 
         # STEP 1: Create charging sites
         print("Step 1: Creating charging sites...")
-
-        existing_codes_result = session.execute(
-            sa.text("SELECT site_code FROM charging_site")
-        )
-        existing_codes = {row[0] for row in existing_codes_result.fetchall()}
+        # Get the current max site_code to continue sequence
+        site_code = session.execute(
+            sa.text("SELECT max(site_code) FROM charging_site limit 1")
+        ).scalar()
 
         site_locations_result = session.execute(
             sa.text(
@@ -146,10 +102,7 @@ def upgrade() -> None:
             organization_id, street_address, city, postal_code = location[:4]
             avg_latitude, avg_longitude, combined_notes, equipment_count = location[4:]
 
-            site_code = get_unique_site_code(
-                street_address, city, postal_code, organization_id, existing_codes
-            )
-            existing_codes.add(site_code)
+            site_code = next_base36(site_code, width=5)
 
             site_name = street_address
             notes = f"Extracted from {equipment_count} FSE records.; "
@@ -346,5 +299,5 @@ def downgrade() -> None:
         "DELETE FROM charging_equipment WHERE notes LIKE 'Migrated from FSE ID:%'"
     )
     op.execute("DELETE FROM charging_site WHERE create_user = 'system_migration'")
-    op.drop_column('charging_equipment', 'organization_name')
+    op.drop_column("charging_equipment", "organization_name")
     print("Downgrade completed - all migrated data removed")
