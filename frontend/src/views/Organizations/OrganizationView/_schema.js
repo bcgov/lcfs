@@ -13,7 +13,7 @@ export const organizationsColDefs = (t) => [
     colId: 'status',
     field: 'status',
     headerName: t('org:orgColLabels.status'),
-    width: 300,
+    width: 140,
     valueGetter: (params) => params.data.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',

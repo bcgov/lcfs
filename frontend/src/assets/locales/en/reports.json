@@ -291,5 +291,26 @@
   "notSubjectToAssessment": "Not Subject to Assessment",
   "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above.",
   "assignAnalyst": "Assign Analyst",
-  "unassign": "Unassign"
+  "unassign": "Unassign",
+  "tabs": {
+    "complianceReporting": "Compliance reporting",
+    "manageChargingSites": "Manage charging sites",
+    "manageFSE": "Manage FSE"
+  },
+  "chargingSites": {
+    "title": "Manage charging sites",
+    "description": "Create new charging site locations where you want to add FSE. Charging sites must be created before adding FSE.",
+    "newSiteBtn": "New charging site",
+    "addNewSite": "Add charging sites",
+    "templateDescriptor": "Download the charging-site template and upload the completed template to add multiple charging sites at once.",
+    "edit": "Edit charging site",
+    "delete": "Delete Charging Site",
+    "confirmDelete": "Are you sure you want to delete this charging site?",
+    "deleteSuccess": "Charging site deleted successfully.",
+    "deleteError": "Error deleting charging site.",
+    "noSites": "No charging sites found.",
+    "siteName": "Site Name",
+    "address": "Address",
+    "fseCount": "FSE Count"
+  }
 }
