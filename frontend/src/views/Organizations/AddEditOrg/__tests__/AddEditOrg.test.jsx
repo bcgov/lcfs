@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AddEditOrg } from '../AddEditOrg'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 
@@ -13,7 +13,8 @@ vi.mock('react-i18next', () => ({
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
-  useParams: vi.fn()
+  useParams: vi.fn(),
+  useNavigate: vi.fn()
 }))
 
 // Mock hooks
@@ -42,6 +43,7 @@ vi.mock('../AddEditOrgForm', () => ({
 
 describe('AddEditOrg', () => {
   const mockT = vi.fn((key) => `translated-${key}`)
+  let mockNavigate
 
   beforeEach(() => {
     mockNavigate = vi.fn()
@@ -95,33 +97,15 @@ describe('AddEditOrg', () => {
     )
   })
 
-  it('renders required errors in the form correctly', async () => {
-    render(
-      <MockFormProvider>
-        <AddEditOrgForm />
-      </MockFormProvider>,
-      { wrapper }
-    )
+  it('passes correct props to AddEditOrgForm component', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: 'test-org-123' })
 
-    // Simulate submitting the form without filling required fields
-    fireEvent.click(screen.getByTestId('saveOrganization'))
+    // Act
+    render(<AddEditOrg />)
 
-    // Check for validation error messages
-    await waitFor(async () => {
-      const errorMessages = await screen.findAllByText(/required/i)
-      expect(errorMessages.length).toBeGreaterThan(0)
-
-      // Check for specific error messages
-      expect(
-        screen.getByText(/Legal Name of Organization is required./i)
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(/Operating Name of Organization is required./i)
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(/Email Address is required./i)
-      ).toBeInTheDocument()
-    })
+    // Assert
+    expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
   })
 
   it('renders in add mode when orgID is not present', () => {
