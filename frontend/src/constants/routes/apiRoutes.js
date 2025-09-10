@@ -122,7 +122,9 @@ export const apiRoutes = {
     bulkDecommission: '/charging-equipment/bulk/decommission',
     statuses: '/charging-equipment/statuses/list',
     levels: '/charging-equipment/levels/list',
-    endUseTypes: '/charging-equipment/end-use-types/list'
+    endUseTypes: '/charging-equipment/end-use-types/list',
+    chargingSites: '/charging-equipment/charging-sites/list',
+    organizations: '/charging-equipment/organizations/list'
   },
 
   // fuel-supplies

@@ -265,7 +265,7 @@ class ChargingEquipmentServices:
             )
         
         # Update associated charging sites to Submitted if they are in Draft/Updated
-        # This would need additional logic in the charging_site repo
+        await self._update_charging_sites_status(equipment_ids, user.organization_id)
         
         # Log action
         await add_notification_msg(
@@ -392,3 +392,52 @@ class ChargingEquipmentServices:
             }
             for t in types
         ]
+
+    @service_handler
+    async def get_charging_sites(self, user: User):
+        """Get charging sites for the user's organization."""
+        if user.user_type != UserTypeEnum.SUPPLIER:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only suppliers can access charging sites",
+            )
+        
+        sites = await self.repo.get_charging_sites_by_organization(user.organization_id)
+        return [
+            {
+                "charging_site_id": s.charging_site_id,
+                "site_name": s.site_name,
+                "site_code": s.site_code,
+                "street_address": s.street_address,
+                "city": s.city,
+                "postal_code": s.postal_code,
+            }
+            for s in sites
+        ]
+
+    @service_handler
+    async def get_organizations(self):
+        """Get all organizations for allocating organization dropdown."""
+        organizations = await self.repo.get_organizations()
+        return [
+            {
+                "organization_id": org.organization_id,
+                "name": org.name,
+            }
+            for org in organizations
+        ]
+
+    async def _update_charging_sites_status(
+        self, equipment_ids: List[int], organization_id: int
+    ):
+        """Update charging sites to Submitted status when their equipment is submitted."""
+        # Get all unique charging site IDs from the submitted equipment
+        site_ids = await self.repo.get_charging_site_ids_from_equipment(
+            equipment_ids, organization_id
+        )
+        
+        if site_ids:
+            # Update sites that are in Draft or Updated status to Submitted
+            await self.repo.update_charging_sites_status(
+                site_ids, ["Draft", "Updated"], "Submitted"
+            )

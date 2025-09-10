@@ -220,3 +220,35 @@ async def get_end_use_types(
     Get all available end use types for intended use selection.
     """
     return await service.get_end_use_types()
+
+
+@router.get(
+    "/charging-sites/list",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def get_charging_sites(
+    request: Request,
+    service: ChargingEquipmentServices = Depends(),
+) -> List[dict]:
+    """
+    Get all charging sites for the supplier's organization.
+    """
+    return await service.get_charging_sites(request.user)
+
+
+@router.get(
+    "/organizations/list",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def get_organizations(
+    request: Request,
+    service: ChargingEquipmentServices = Depends(),
+) -> List[dict]:
+    """
+    Get all organizations for allocating organization selection.
+    """
+    return await service.get_organizations()

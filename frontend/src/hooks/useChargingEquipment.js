@@ -171,3 +171,29 @@ export const useChargingEquipmentMetadata = () => {
     isLoading: statusesQuery.isLoading || levelsQuery.isLoading || endUseTypesQuery.isLoading
   }
 }
+
+// Get charging sites for dropdown
+export const useChargingSites = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-sites'],
+    queryFn: async () => {
+      const response = await apiService.get(apiRoutes.chargingEquipment.chargingSites)
+      return response.data
+    }
+  })
+}
+
+// Get organizations for dropdown
+export const useOrganizations = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['organizations-list'],
+    queryFn: async () => {
+      const response = await apiService.get(apiRoutes.chargingEquipment.organizations)
+      return response.data
+    }
+  })
+}

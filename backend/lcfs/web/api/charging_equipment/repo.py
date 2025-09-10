@@ -293,3 +293,87 @@ class ChargingEquipmentRepository:
         query = select(EndUseType).order_by(EndUseType.display_order)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def get_charging_sites_by_organization(
+        self, organization_id: int
+    ) -> List[ChargingSite]:
+        """Get all charging sites for an organization."""
+        query = (
+            select(ChargingSite)
+            .where(ChargingSite.organization_id == organization_id)
+            .order_by(ChargingSite.site_name)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_organizations(self) -> List[Organization]:
+        """Get all organizations for allocating organization dropdown."""
+        query = select(Organization).order_by(Organization.name)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_charging_site_ids_from_equipment(
+        self, equipment_ids: List[int], organization_id: int
+    ) -> List[int]:
+        """Get unique charging site IDs from equipment list."""
+        query = (
+            select(ChargingEquipment.charging_site_id)
+            .distinct()
+            .join(ChargingSite)
+            .where(
+                and_(
+                    ChargingEquipment.charging_equipment_id.in_(equipment_ids),
+                    ChargingSite.organization_id == organization_id
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def update_charging_sites_status(
+        self, site_ids: List[int], current_statuses: List[str], new_status: str
+    ) -> int:
+        """Update charging sites status if they are in specified current statuses."""
+        from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
+        
+        # Get the new status ID
+        status_query = select(ChargingSiteStatus).where(
+            ChargingSiteStatus.status == new_status
+        )
+        status_result = await self.db.execute(status_query)
+        new_status_obj = status_result.scalar_one_or_none()
+        
+        if not new_status_obj:
+            return 0
+        
+        # Get current status IDs
+        current_status_query = select(ChargingSiteStatus).where(
+            ChargingSiteStatus.status.in_(current_statuses)
+        )
+        current_status_result = await self.db.execute(current_status_query)
+        current_status_objs = current_status_result.scalars().all()
+        current_status_ids = [s.charging_site_status_id for s in current_status_objs]
+        
+        if not current_status_ids:
+            return 0
+        
+        # Update sites
+        update_query = (
+            update(ChargingSite)
+            .where(
+                and_(
+                    ChargingSite.charging_site_id.in_(site_ids),
+                    ChargingSite.status_id.in_(current_status_ids)
+                )
+            )
+            .values(status_id=new_status_obj.charging_site_status_id)
+        )
+        
+        result = await self.db.execute(update_query)
+        await self.db.flush()
+        
+        return result.rowcount

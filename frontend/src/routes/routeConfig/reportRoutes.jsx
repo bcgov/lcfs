@@ -1,4 +1,5 @@
 import { ComplianceReports, CreditCalculator } from '@/views/ComplianceReports'
+import { ComplianceReporting } from '@/views/ComplianceReporting'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import ROUTES from '../routes'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
@@ -11,7 +12,7 @@ import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
 export const reportRoutes = [
   {
     path: ROUTES.REPORTS.LIST,
-    element: <ComplianceReports />,
+    element: <ComplianceReporting />,
     handle: { title: 'Compliance reporting' }
   },
   {
