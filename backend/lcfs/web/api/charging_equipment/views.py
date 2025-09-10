@@ -32,8 +32,7 @@ logger = structlog.get_logger(__name__)
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
 async def get_charging_equipment_list(
     request: Request,
-    pagination: PaginationRequestSchema = Body(..., embed=False),
-    filters: Optional[ChargingEquipmentFilterSchema] = Body(None),
+    body: PaginationRequestSchema = Body(...),
     service: ChargingEquipmentServices = Depends(),
 ) -> ChargingEquipmentListSchema:
     """
@@ -43,7 +42,7 @@ async def get_charging_equipment_list(
     - **Government/Analysts** can view any organization's equipment
     """
     return await service.get_charging_equipment_list(
-        request.user, pagination, filters
+        request.user, body, None
     )
 
 

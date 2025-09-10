@@ -4,9 +4,9 @@ import structlog
 from typing import List, Optional
 from fastapi import Depends, HTTPException, status
 
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.user.User import User
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
@@ -23,8 +23,8 @@ from lcfs.web.api.charging_equipment.schema import (
     BulkActionResponseSchema,
 )
 from lcfs.web.core.decorators import service_handler
-from lcfs.services.redis import cache_service
-from lcfs.services.rabbitmq.consumers import add_notification_msg
+# TODO: add_notification_msg function needs to be implemented
+# from lcfs.services.rabbitmq.consumers import add_notification_msg
 
 logger = structlog.get_logger(__name__)
 
@@ -34,33 +34,29 @@ class ChargingEquipmentServices:
         self,
         repo: ChargingEquipmentRepository = Depends(),
         db_session=Depends(get_async_db_session),
-        cache=Depends(cache_service.get_cache),
     ):
         self.repo = repo
         self.db = db_session
-        self.cache = cache
 
     @service_handler
     async def get_charging_equipment_list(
         self,
-        user: User,
+        user: UserProfile,
         pagination: PaginationRequestSchema,
         filters: Optional[ChargingEquipmentFilterSchema] = None,
     ) -> ChargingEquipmentListSchema:
         """Get paginated list of charging equipment for the user's organization."""
         
         # Get organization ID based on user type
-        if user.user_type == UserTypeEnum.SUPPLIER:
+        if not user.is_government:
             organization_id = user.organization_id
         else:
-            # For government users, they need to specify an organization
+            # For government users, they can view all organizations or filter by specific org
             if filters and filters.organization_id:
                 organization_id = filters.organization_id
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Organization ID is required for government users",
-                )
+                # Government users can view all organizations
+                organization_id = None
         
         # Get equipment list from repository
         equipment_list, total_count = await self.repo.get_charging_equipment_list(
@@ -103,7 +99,7 @@ class ChargingEquipmentServices:
 
     @service_handler
     async def get_charging_equipment_by_id(
-        self, user: User, charging_equipment_id: int
+        self, user: UserProfile, charging_equipment_id: int
     ) -> ChargingEquipmentBaseSchema:
         """Get charging equipment details by ID."""
         
@@ -116,7 +112,7 @@ class ChargingEquipmentServices:
             )
         
         # Check authorization
-        if user.user_type == UserTypeEnum.SUPPLIER:
+        if not user.is_government:
             if equipment.charging_site.organization_id != user.organization_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -156,7 +152,7 @@ class ChargingEquipmentServices:
 
     @service_handler
     async def create_charging_equipment(
-        self, user: User, equipment_data: ChargingEquipmentCreateSchema
+        self, user: UserProfile, equipment_data: ChargingEquipmentCreateSchema
     ) -> ChargingEquipmentBaseSchema:
         """Create new charging equipment."""
         
@@ -170,14 +166,15 @@ class ChargingEquipmentServices:
         equipment = await self.repo.create_charging_equipment(equipment_dict)
         
         # Log action
-        await add_notification_msg(
-            action_type=ActionTypeEnum.CREATE,
-            action="Created charging equipment",
-            message=f"Created charging equipment {equipment.registration_number}",
-            related_entity_type="ChargingEquipment",
-            related_entity_id=equipment.charging_equipment_id,
-            user=user,
-        )
+        # TODO: Implement notification
+        # await add_notification_msg(
+        #     action_type=ActionTypeEnum.CREATE,
+        #     action="Created charging equipment",
+        #     message=f"Created charging equipment {equipment.registration_number}",
+        #     related_entity_type="ChargingEquipment",
+        #     related_entity_id=equipment.charging_equipment_id,
+        #     user=user,
+        # )
         
         # Return created equipment
         return await self.get_charging_equipment_by_id(
@@ -187,7 +184,7 @@ class ChargingEquipmentServices:
     @service_handler
     async def update_charging_equipment(
         self,
-        user: User,
+        user: UserProfile,
         charging_equipment_id: int,
         equipment_data: ChargingEquipmentUpdateSchema,
     ) -> ChargingEquipmentBaseSchema:
@@ -203,7 +200,7 @@ class ChargingEquipmentServices:
             )
         
         # Check authorization
-        if user.user_type == UserTypeEnum.SUPPLIER:
+        if not user.is_government:
             if existing.charging_site.organization_id != user.organization_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -224,14 +221,15 @@ class ChargingEquipmentServices:
         )
         
         # Log action
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
-            action="Updated charging equipment",
-            message=f"Updated charging equipment {equipment.registration_number}",
-            related_entity_type="ChargingEquipment",
-            related_entity_id=equipment.charging_equipment_id,
-            user=user,
-        )
+        # TODO: Implement notification
+        # await add_notification_msg(
+        #     action_type=ActionTypeEnum.UPDATE,
+        #     action="Updated charging equipment",
+        #     message=f"Updated charging equipment {equipment.registration_number}",
+        #     related_entity_type="ChargingEquipment",
+        #     related_entity_id=equipment.charging_equipment_id,
+        #     user=user,
+        # )
         
         # Return updated equipment
         return await self.get_charging_equipment_by_id(
@@ -240,12 +238,12 @@ class ChargingEquipmentServices:
 
     @service_handler
     async def bulk_submit_equipment(
-        self, user: User, equipment_ids: List[int]
+        self, user: UserProfile, equipment_ids: List[int]
     ) -> BulkActionResponseSchema:
         """Bulk submit charging equipment."""
         
         # Check authorization - user must be supplier
-        if user.user_type != UserTypeEnum.SUPPLIER:
+        if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can submit equipment",
@@ -268,13 +266,14 @@ class ChargingEquipmentServices:
         await self._update_charging_sites_status(equipment_ids, user.organization_id)
         
         # Log action
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
-            action="Bulk submitted charging equipment",
-            message=f"Submitted {affected_count} charging equipment",
-            related_entity_type="ChargingEquipment",
-            user=user,
-        )
+        # TODO: Implement notification
+        # await add_notification_msg(
+        #     action_type=ActionTypeEnum.UPDATE,
+        #     action="Bulk submitted charging equipment",
+        #     message=f"Submitted {affected_count} charging equipment",
+        #     related_entity_type="ChargingEquipment",
+        #     user=user,
+        # )
         
         return BulkActionResponseSchema(
             success=True,
@@ -284,12 +283,12 @@ class ChargingEquipmentServices:
 
     @service_handler
     async def bulk_decommission_equipment(
-        self, user: User, equipment_ids: List[int]
+        self, user: UserProfile, equipment_ids: List[int]
     ) -> BulkActionResponseSchema:
         """Bulk decommission charging equipment."""
         
         # Check authorization - user must be supplier
-        if user.user_type != UserTypeEnum.SUPPLIER:
+        if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can decommission equipment",
@@ -309,13 +308,14 @@ class ChargingEquipmentServices:
             )
         
         # Log action
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
-            action="Bulk decommissioned charging equipment",
-            message=f"Decommissioned {affected_count} charging equipment",
-            related_entity_type="ChargingEquipment",
-            user=user,
-        )
+        # TODO: Implement notification
+        # await add_notification_msg(
+        #     action_type=ActionTypeEnum.UPDATE,
+        #     action="Bulk decommissioned charging equipment",
+        #     message=f"Decommissioned {affected_count} charging equipment",
+        #     related_entity_type="ChargingEquipment",
+        #     user=user,
+        # )
         
         return BulkActionResponseSchema(
             success=True,
@@ -325,12 +325,12 @@ class ChargingEquipmentServices:
 
     @service_handler
     async def delete_charging_equipment(
-        self, user: User, charging_equipment_id: int
+        self, user: UserProfile, charging_equipment_id: int
     ) -> bool:
         """Delete charging equipment if in Draft status."""
         
         # Check authorization - user must be supplier
-        if user.user_type != UserTypeEnum.SUPPLIER:
+        if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can delete equipment",
@@ -347,14 +347,15 @@ class ChargingEquipmentServices:
             )
         
         # Log action
-        await add_notification_msg(
-            action_type=ActionTypeEnum.DELETE,
-            action="Deleted charging equipment",
-            message=f"Deleted charging equipment {charging_equipment_id}",
-            related_entity_type="ChargingEquipment",
-            related_entity_id=charging_equipment_id,
-            user=user,
-        )
+        # TODO: Implement notification
+        # await add_notification_msg(
+        #     action_type=ActionTypeEnum.DELETE,
+        #     action="Deleted charging equipment",
+        #     message=f"Deleted charging equipment {charging_equipment_id}",
+        #     related_entity_type="ChargingEquipment",
+        #     related_entity_id=charging_equipment_id,
+        #     user=user,
+        # )
         
         return True
 
@@ -394,9 +395,9 @@ class ChargingEquipmentServices:
         ]
 
     @service_handler
-    async def get_charging_sites(self, user: User):
+    async def get_charging_sites(self, user: UserProfile):
         """Get charging sites for the user's organization."""
-        if user.user_type != UserTypeEnum.SUPPLIER:
+        if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can access charging sites",

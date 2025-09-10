@@ -11,7 +11,7 @@ from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentS
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.organization.Organization import Organization
-from lcfs.db.models.compliance.EndUseType import EndUseType
+from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentFilterSchema,

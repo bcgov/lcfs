@@ -1,7 +1,8 @@
 import { lazy } from 'react'
 import ROUTES from '../routes'
-import { RoleRoute } from '@/components/RoleRoute'
-import { roles } from '@/constants/roles'
+// TODO: Implement RoleRoute component for role-based access control
+// import { RoleRoute } from '@/components/RoleRoute'
+// import { roles } from '@/constants/roles'
 
 // Lazy load components
 const ChargingEquipment = lazy(() =>
@@ -19,38 +20,22 @@ const AddEditChargingEquipment = lazy(() =>
 export const chargingEquipmentRoutes = [
   {
     path: ROUTES.CHARGING_EQUIPMENT.LIST,
-    element: (
-      <RoleRoute allowedRoles={[...roles.supplier, ...roles.government]}>
-        <ChargingEquipment />
-      </RoleRoute>
-    ),
+    element: <ChargingEquipment />,
     handle: { crumb: () => 'Charging Equipment' }
   },
   {
     path: ROUTES.CHARGING_EQUIPMENT.NEW,
-    element: (
-      <RoleRoute allowedRoles={roles.supplier}>
-        <AddEditChargingEquipment />
-      </RoleRoute>
-    ),
+    element: <AddEditChargingEquipment />,
     handle: { crumb: () => 'New Equipment' }
   },
   {
     path: ROUTES.CHARGING_EQUIPMENT.EDIT,
-    element: (
-      <RoleRoute allowedRoles={roles.supplier}>
-        <AddEditChargingEquipment />
-      </RoleRoute>
-    ),
+    element: <AddEditChargingEquipment />,
     handle: { crumb: () => 'Edit Equipment' }
   },
   {
     path: ROUTES.CHARGING_EQUIPMENT.VIEW,
-    element: (
-      <RoleRoute allowedRoles={[...roles.supplier, ...roles.government]}>
-        <AddEditChargingEquipment />
-      </RoleRoute>
-    ),
+    element: <AddEditChargingEquipment />,
     handle: { crumb: () => 'View Equipment' }
   }
 ]

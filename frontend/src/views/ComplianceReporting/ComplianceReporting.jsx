@@ -24,10 +24,10 @@ function TabPanel({ children, value, index }) {
 }
 
 export const ComplianceReporting = () => {
-  const { t } = useTranslation(['common', 'report', 'chargingEquipment'])
+  const { t } = useTranslation(['common', 'reports', 'chargingEquipment'])
   const navigate = useNavigate()
   const location = useLocation()
-  const { hasRoles } = useCurrentUser()
+  const { hasRoles, hasAnyRole } = useCurrentUser()
   
   const [searchParams, setSearchParams] = useSearchParams()
   const currentTab = searchParams.get('tab') || 'reports'
@@ -37,28 +37,28 @@ export const ComplianceReporting = () => {
   const tabs = [
     {
       id: 'reports',
-      label: t('report:complianceReporting'),
+      label: t('reports:title'),
       component: <ComplianceReports />,
-      roles: [...roles.government, ...roles.supplier]
+      roles: [roles.government, roles.supplier]
     },
     {
       id: 'charging-sites',
       label: t('chargingEquipment:manageChargingSites'),
       component: <div>{t('chargingEquipment:chargingSitesComingSoon')}</div>,
-      roles: roles.supplier,
+      roles: [roles.supplier],
       disabled: true // Will enable when charging sites management is implemented
     },
     {
       id: 'manage-fse',
       label: t('chargingEquipment:manageFSE'),
       component: <ChargingEquipment />,
-      roles: roles.supplier
+      roles: [roles.supplier]
     }
   ]
 
   // Filter tabs based on user roles
   const availableTabs = tabs.filter(tab => 
-    hasRoles(tab.roles) && !tab.disabled
+    hasAnyRole(...tab.roles) && !tab.disabled
   )
 
   const currentTabIndex = availableTabs.findIndex(tab => tab.id === currentTab)
@@ -102,7 +102,7 @@ export const ComplianceReporting = () => {
   return (
     <Box sx={{ width: '100%' }}>
       <BCTypography variant="h4" gutterBottom>
-        {t('report:complianceReporting')}
+        {t('reports:title')}
       </BCTypography>
       
       <AppBar position="static" sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>

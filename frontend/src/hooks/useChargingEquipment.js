@@ -10,12 +10,17 @@ export const useChargingEquipment = (paginationOptions) => {
   const equipmentQuery = useQuery({
     queryKey: ['charging-equipment', paginationOptions],
     queryFn: async () => {
+      // Convert frontend pagination format to backend format
+      const requestData = {
+        page: paginationOptions?.page || 1,
+        size: paginationOptions?.size || 25,
+        sort_orders: paginationOptions?.sortOrders || [],
+        filters: paginationOptions?.filters || []
+      }
+      
       const response = await apiService.post(
         apiRoutes.chargingEquipment.list,
-        {
-          ...paginationOptions,
-          filters: paginationOptions?.filters || {}
-        }
+        requestData
       )
       return response.data
     },
