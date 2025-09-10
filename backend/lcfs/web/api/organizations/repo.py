@@ -342,6 +342,17 @@ class OrganizationsRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_organization_type(self, type_id: int) -> OrganizationType:
+        """
+        Get organization type by ID.
+        """
+        query = select(OrganizationType).where(
+            OrganizationType.organization_type_id == type_id
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_organization_names(self, conditions=None, order_by=("name", "asc")):
         """
         Fetches organization names and details based on provided conditions and dynamic ordering.
