@@ -112,7 +112,7 @@ async def create_charging_site_row(
 
 
 @router.put(
-    "/organization/{organization_id}/save/{chargingSiteId}",
+    "/organization/{organization_id}/save/{charging_site_id}",
     response_model=Union[ChargingSiteSchema, DeleteChargingSiteResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
@@ -143,17 +143,12 @@ async def delete_charging_site_row(
     request: Request,
     organization_id: int,
     charging_site_id: int,
-    request_data: ChargingSiteCreateSchema = Body(...),
+    request_data: ChargingSiteCreateSchema = Body(None),
     cs_service: ChargingSiteService = Depends(),
 ):
     """Endpoint to delete single charging site row"""
-    if request_data.deleted:
-        # Delete existing charging site row
-        await cs_service.delete_charging_site(charging_site_id)
-        return DeleteChargingSiteResponseSchema(
-            message="Charging site deleted successfully"
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request"
-        )
+    # Delete existing charging site row
+    await cs_service.delete_charging_site(charging_site_id)
+    return DeleteChargingSiteResponseSchema(
+        message="Charging site deleted successfully"
+    )

@@ -300,10 +300,12 @@
   "chargingSites": {
     "title": "Manage charging sites",
     "description": "Create new charging site locations where you want to add FSE. Charging sites must be created before adding FSE.",
+    "noSitesFound": "No charging sites found",
     "newSiteBtn": "New charging site",
     "addNewSite": "Add charging sites",
     "templateDescriptor": "Download the charging-site template and upload the completed template to add multiple charging sites at once.",
     "columnLabels": {
+      "organizationId": "Organization ID",
       "chargingSiteId": "Charging site ID",
       "siteName": "Site name",
       "streetAddress": "Street address",

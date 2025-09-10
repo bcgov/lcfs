@@ -128,7 +128,7 @@ class ChargingSiteService:
                     "deleted",
                     "intended_users",
                 ],
-                exclude_unset=True,  # Only include fields that were actually provided
+                exclude_unset=True,
             )
 
             # Update each field on the existing object
@@ -150,7 +150,7 @@ class ChargingSiteService:
                     intended_users = await self.repo.get_end_user_types_by_ids(
                         intended_user_ids
                     )
-                    existing_charging_site.intended_users = intended_users
+                    setattr(existing_charging_site, "intended_users", intended_users)
                 else:
                     # Clear intended users if empty list is provided
                     existing_charging_site.intended_users = []

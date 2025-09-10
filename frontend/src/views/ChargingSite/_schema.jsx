@@ -15,7 +15,6 @@ import {
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -56,7 +55,6 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
 
 export const chargingSiteColDefs = (
   intendedUsers,
-  compliancePeriod,
   errors,
   warnings,
   gridReady
@@ -77,7 +75,7 @@ export const chargingSiteColDefs = (
     },
     {
       field: 'chargingSiteId',
-      headerName: i18n.t('reports:chargingSites.columnLables.chargingSiteId'),
+      headerName: i18n.t('report:chargingSites.columnLabels.chargingSiteId'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       hide: true

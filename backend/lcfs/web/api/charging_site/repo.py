@@ -1,16 +1,16 @@
-from lcfs.db.models.compliance import ChargingSiteStatus
-from lcfs.db.models.compliance.ChargingSite import ChargingSite
 import structlog
 from typing import List, Sequence
 from fastapi import Depends
-from sqlalchemy import delete, select, update
+from sqlalchemy import asc, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
 from lcfs.db.models.compliance.EndUserType import EndUserType
+from lcfs.db.models.compliance import ChargingSiteStatus
+from lcfs.db.models.compliance.ChargingSite import ChargingSite
+
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
-from sqlalchemy import desc
-from sqlalchemy.orm import joinedload, selectinload
 
 
 logger = structlog.get_logger(__name__)
@@ -85,7 +85,7 @@ class ChargingSiteRepo:
                 selectinload(ChargingSite.intended_users),
             )
             .where(ChargingSite.organization_id == organization_id)
-            .order_by(desc(ChargingSite.update_date))
+            .order_by(asc(ChargingSite.create_date))
         )
         results = await self.db.execute(query)
 
@@ -97,7 +97,7 @@ class ChargingSiteRepo:
         Update an existing charging site in the database using merge
         """
         merged_site = await self.db.merge(charging_site)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(merged_site)
         return merged_site
 
@@ -109,9 +109,12 @@ class ChargingSiteRepo:
         return (
             (
                 await self.db.execute(
-                    select(ChargingSite).where(
-                        ChargingSite.charging_site_id == charging_site_id
+                    select(ChargingSite)
+                    .options(
+                        joinedload(ChargingSite.status),
+                        selectinload(ChargingSite.intended_users),
                     )
+                    .where(ChargingSite.charging_site_id == charging_site_id)
                 )
             )
             .scalars()
@@ -121,10 +124,32 @@ class ChargingSiteRepo:
     @repo_handler
     async def delete_charging_site(self, charging_site_id: int) -> None:
         """
-        Delete a charging site from the database by its ID
+        Delete charging site using SQLAlchemy relationship management
         """
-        await self.db.execute(
-            delete(ChargingSite).where(
-                ChargingSite.charging_site_id == charging_site_id
+        # Get the charging site object
+        result = await self.db.execute(
+            select(ChargingSite)
+            .where(ChargingSite.charging_site_id == charging_site_id)
+            .options(
+                selectinload(ChargingSite.intended_users),
+                selectinload(ChargingSite.documents),
+                selectinload(ChargingSite.charging_equipment)
             )
         )
+        charging_site = result.scalar_one_or_none()
+        
+        if not charging_site:
+            raise ValueError(f"Charging site with ID {charging_site_id} not found")
+        
+        # Clear many-to-many relationships
+        charging_site.intended_users.clear()
+        charging_site.documents.clear()
+        
+        # Delete related charging equipment
+        for equipment in charging_site.charging_equipment:
+            await self.db.delete(equipment)
+        
+        # Delete the charging site
+        await self.db.delete(charging_site)
+        await self.db.flush()
+        await self.db.commit()

@@ -58,7 +58,7 @@ class ChargingSiteCreateSchema(BaseSchema):
     longitude: float
     intended_users: List[EndUserTypeSchema] = []
     notes: Optional[str] = None
-    deleted: Optional[bool] = False
+    deleted: Optional[bool] = None
 
 
 class CommonPaginatedCSRequestSchema(BaseSchema):
