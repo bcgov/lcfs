@@ -33,6 +33,7 @@ import {
   useGetAllChargingSitesByOrg,
   useGetIntendedUsers
 } from '@/hooks/useChargingSite'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const AddEditChargingSite = () => {
   const [rowData, setRowData] = useState([])
@@ -55,7 +56,18 @@ export const AddEditChargingSite = () => {
   const location = useLocation()
   const { t } = useTranslation(['common', 'finalSupplyEquipment', 'report'])
 
-  const { complianceReportId = 62, organizationId = 3 } = useParams()
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles,
+    hasAnyRole
+  } = useCurrentUser()
+
+  const organizationId = useMemo(
+    () => currentUser.organization?.organizationId,
+    [currentUser]
+  )
+  const { complianceReportId = 62 } = useParams()
   const navigate = useNavigate()
 
   const {
