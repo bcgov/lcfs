@@ -5,10 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
+import { defaultColDef, chargingSiteColDefs } from './_schema'
 import {
   useFinalSupplyEquipmentOptions,
-  useGetFinalSupplyEquipments,
   useSaveFinalSupplyEquipment,
   useImportFinalSupplyEquipment,
   useGetFinalSupplyEquipmentImportJobStatus
@@ -31,6 +30,10 @@ import {
   getCurrentQuarter,
   getQuarterDateRange
 } from '@/utils/dateQuarterUtils'
+import {
+  useGetAllChargingSitesByOrg,
+  useGetIntendedUsers
+} from '@/hooks/useChargingSite'
 
 export const AddEditChargingSite = () => {
   const [rowData, setRowData] = useState([])
@@ -52,38 +55,18 @@ export const AddEditChargingSite = () => {
     returnObjects: true
   })
 
-  const { complianceReportId = 62, compliancePeriod = 2025 } = useParams()
+  const {
+    complianceReportId = 62,
+    compliancePeriod = 2025,
+    organizationId = 3
+  } = useParams()
   const navigate = useNavigate()
 
-  const { data: currentReport, isLoading } =
-    useComplianceReportWithCache(complianceReportId)
-
   const {
-    data: optionsData,
+    data: intendedUserTypes,
     isLoading: optionsLoading,
     isFetched
-  } = useFinalSupplyEquipmentOptions()
-
-  const version = currentReport?.report?.version ?? 0
-  const isOriginalReport = version === 0
-
-  // Determine if this is an early issuance report and get current quarter
-  const isEarlyIssuance =
-    currentReport?.report?.reportingFrequency === 'Quarterly'
-  const currentQuarter = isEarlyIssuance
-    ? getCurrentQuarter(compliancePeriod)
-    : null
-
-  // Calculate default dates based on report type
-  const defaultDates = useMemo(() => {
-    if (isEarlyIssuance && currentQuarter) {
-      return getQuarterDateRange(currentQuarter, compliancePeriod)
-    }
-    return {
-      from: `${compliancePeriod}-01-01`,
-      to: `${compliancePeriod}-12-31`
-    }
-  }, [isEarlyIssuance, currentQuarter, compliancePeriod])
+  } = useGetIntendedUsers()
 
   const { mutateAsync: saveRow } =
     useSaveFinalSupplyEquipment(complianceReportId)
@@ -91,17 +74,7 @@ export const AddEditChargingSite = () => {
     data,
     isLoading: equipmentsLoading,
     refetch
-  } = useGetFinalSupplyEquipments(complianceReportId)
-
-  // Decide when to hide or show Overwrite based on isOriginalReport + existing data
-  useEffect(() => {
-    const hasData = data?.finalSupplyEquipments?.length > 0
-    if (!isOriginalReport && hasData) {
-      setHideOverwrite(true)
-    } else {
-      setHideOverwrite(false)
-    }
-  }, [data, isOriginalReport])
+  } = useGetAllChargingSitesByOrg(organizationId)
 
   const gridOptions = useMemo(
     () => ({
@@ -133,57 +106,54 @@ export const AddEditChargingSite = () => {
 
   useEffect(() => {
     if (isGridReady && data) {
-      const defaultOrgName = optionsData?.organizationNames?.[0] || ''
+      const defaultOrgName = ''
 
       if (isArrayEmpty(data)) {
         setRowData([
           {
             id: uuid(),
-            complianceReportId,
-            supplyFromDate: defaultDates.from,
-            supplyToDate: defaultDates.to,
-            organizationName: defaultOrgName
+            complianceReportId
+            // supplyFromDate: defaultDates.from,
+            // supplyToDate: defaultDates.to,
+            // organizationName: defaultOrgName
           }
         ])
       } else {
         setRowData([
-          ...data.finalSupplyEquipments.map((item) => ({
+          ...data.chargingSites.map((item) => ({
             ...item,
             id: uuid()
           })),
           {
             id: uuid(),
-            complianceReportId,
-            supplyFromDate: defaultDates.from,
-            supplyToDate: defaultDates.to,
-            organizationName: defaultOrgName
+            complianceReportId
+            // supplyFromDate: defaultDates.from,
+            // supplyToDate: defaultDates.to,
+            // organizationName: defaultOrgName
           }
         ])
       }
-      gridRef.current.api.sizeColumnsToFit()
+      gridRef?.current?.api.sizeColumnsToFit()
 
       setTimeout(() => {
-        const lastRowIndex = gridRef.current.api.getLastDisplayedRowIndex()
-        gridRef.current.api.startEditingCell({
+        const lastRowIndex = gridRef?.current?.api.getLastDisplayedRowIndex()
+        gridRef?.current?.api.startEditingCell({
           rowIndex: lastRowIndex,
-          colKey: 'organizationName'
+          colKey: 'siteName'
         })
       }, 100)
     }
-  }, [
-    compliancePeriod,
-    complianceReportId,
-    data,
-    isGridReady,
-    gridRef,
-    defaultDates,
-    optionsData?.organizationNames
-  ])
+  }, [compliancePeriod, complianceReportId, data, isGridReady, gridRef, ''])
 
   useEffect(() => {
-    if (optionsData?.levelsOfEquipment?.length > 0) {
-      const updatedColumnDefs = finalSupplyEquipmentColDefs(
-        optionsData,
+    console.log(intendedUserTypes)
+    if (
+      !optionsLoading &&
+      Array.isArray(intendedUserTypes) &&
+      intendedUserTypes.length > 0
+    ) {
+      const updatedColumnDefs = chargingSiteColDefs(
+        intendedUserTypes,
         compliancePeriod,
         errors,
         warnings,
@@ -191,7 +161,7 @@ export const AddEditChargingSite = () => {
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
+  }, [compliancePeriod, errors, warnings, intendedUserTypes, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.autoSizeAllColumns()
@@ -240,7 +210,7 @@ export const AddEditChargingSite = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete') {
-      const defaultOrgName = optionsData?.organizationNames?.[0] || ''
+      const defaultOrgName = ''
       await handleScheduleDelete(
         params,
         'finalSupplyEquipmentId',
@@ -248,10 +218,10 @@ export const AddEditChargingSite = () => {
         alertRef,
         setRowData,
         {
-          complianceReportId,
-          supplyFromDate: defaultDates.from,
-          supplyToDate: defaultDates.to,
-          organizationName: defaultOrgName
+          complianceReportId
+          // supplyFromDate: defaultDates.from,
+          // supplyToDate: defaultDates.to,
+          // organizationName: defaultOrgName
         }
       )
     }
@@ -333,20 +303,20 @@ export const AddEditChargingSite = () => {
 
   const onAddRows = useCallback(
     (numRows) => {
-      const defaultOrgName = optionsData?.organizationNames?.[0] || ''
+      const defaultOrgName = ''
       return Array(numRows)
         .fill()
         .map(() => ({
           id: uuid(),
-          complianceReportId,
-          supplyFromDate: defaultDates.from,
-          supplyToDate: defaultDates.to,
-          organizationName: defaultOrgName,
+          // complianceReportId,
+          // supplyFromDate: defaultDates.from,
+          // supplyToDate: defaultDates.to,
+          // organizationName: defaultOrgName,
           validationStatus: 'error',
           modified: true
         }))
     },
-    [complianceReportId, defaultDates, optionsData?.organizationNames]
+    [complianceReportId]
   )
 
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
@@ -368,9 +338,8 @@ export const AddEditChargingSite = () => {
 
   return (
     isFetched &&
-    !equipmentsLoading &&
-    !isLoading && (
-      <Grid2 className="add-edit-charging-site-container"F>
+    !equipmentsLoading && (
+      <Grid2 className="add-edit-charging-site-container" F>
         <div className="header">
           <BCTypography variant="h5" color="primary">
             {t('report:chargingSites.addNewSite')}
@@ -499,7 +468,7 @@ export const AddEditChargingSite = () => {
             showAddRowsButton={true}
             saveButtonProps={{
               enabled: true,
-              text: t('report:saveReturn'),
+              text: t('common:saveReturnBtn'),
               onSave: handleNavigateBack,
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')

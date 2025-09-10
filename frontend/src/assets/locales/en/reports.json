@@ -303,14 +303,16 @@
     "newSiteBtn": "New charging site",
     "addNewSite": "Add charging sites",
     "templateDescriptor": "Download the charging-site template and upload the completed template to add multiple charging sites at once.",
-    "edit": "Edit charging site",
-    "delete": "Delete Charging Site",
-    "confirmDelete": "Are you sure you want to delete this charging site?",
-    "deleteSuccess": "Charging site deleted successfully.",
-    "deleteError": "Error deleting charging site.",
-    "noSites": "No charging sites found.",
-    "siteName": "Site Name",
-    "address": "Address",
-    "fseCount": "FSE Count"
+    "columnLabels": {
+      "chargingSiteId": "Charging site ID",
+      "siteName": "Site name",
+      "streetAddress": "Street address",
+      "city": "City",
+      "postalCode": "Postal code",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "intendedUserTypes": "Intended user types",
+      "notes": "Site notes"
+    }
   }
 }

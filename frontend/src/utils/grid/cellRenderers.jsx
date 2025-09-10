@@ -422,18 +422,26 @@ const GenericChipRenderer = ({
   const [visibleChips, setVisibleChips] = useState([])
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
-  const options = useMemo(
-    () =>
-      Array.isArray(value)
-        ? value.filter((item) => item !== '')
-        : value && value !== ''
-          ? value
-              .split(',')
-              .map((item) => item.trim())
-              .filter((item) => item !== '')
-          : [],
-    [value]
-  )
+  const options = useMemo(() => {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => item?.label || item)
+        .filter((item) => item && item !== '')
+    }
+
+    if (value?.label) {
+      return [value.label]
+    }
+
+    if (typeof value === 'string' && value) {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+
+    return []
+  }, [value])
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
