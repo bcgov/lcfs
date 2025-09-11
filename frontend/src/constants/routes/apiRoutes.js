@@ -110,6 +110,10 @@ export const apiRoutes = {
   downloadFinalSupplyEquipmentsTemplate:
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
+  // charging sites
+  intendedUsers: '/charging-sites/intended-users',
+  getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
+  saveChargingSite: '/charging-sites/organization/:orgID/save',
 
   // charging-equipment (new FSE system)
   chargingEquipment: {

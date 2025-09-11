@@ -3,6 +3,7 @@
 import structlog
 from typing import List, Optional
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
@@ -33,10 +34,10 @@ class ChargingEquipmentServices:
     def __init__(
         self,
         repo: ChargingEquipmentRepository = Depends(),
-        db_session=Depends(get_async_db_session),
+        session: AsyncSession = Depends(get_async_db_session),
     ):
         self.repo = repo
-        self.db = db_session
+        self.db = session
 
     @service_handler
     async def get_charging_equipment_list(

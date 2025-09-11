@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AddEditOrg } from '../AddEditOrg'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 
@@ -13,7 +13,8 @@ vi.mock('react-i18next', () => ({
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
-  useParams: vi.fn()
+  useParams: vi.fn(),
+  useNavigate: vi.fn()
 }))
 
 // Mock hooks
@@ -42,12 +43,34 @@ vi.mock('../AddEditOrgForm', () => ({
 
 describe('AddEditOrg', () => {
   const mockT = vi.fn((key) => `translated-${key}`)
+  let mockNavigate
 
   beforeEach(() => {
+    mockNavigate = vi.fn()
+    useNavigate.mockReturnValue(mockNavigate)
+    useParams.mockReturnValue({ orgID: undefined })
+
+    // Mocking the useOrganization hook
+    useOrganization.mockReturnValue({
+      isFetched: true
+    })
+
+    // Mock organization types with BCeID required type for validation testing
     vi.clearAllMocks()
     useTranslation.mockReturnValue({ t: mockT })
     useOrganizationTypes.mockReturnValue({
-      data: [],
+      data: [
+        {
+          organizationTypeId: 1,
+          organizationTypeName: 'Fuel Supplier',
+          isBceidUser: true
+        },
+        {
+          organizationTypeId: 2,
+          organizationTypeName: 'Initiative Agreement Holder',
+          isBceidUser: false
+        }
+      ],
       isLoading: false,
       error: null
     })
@@ -72,6 +95,17 @@ describe('AddEditOrg', () => {
       'data-title',
       'translated-org:editOrgTitle'
     )
+  })
+
+  it('passes correct props to AddEditOrgForm component', () => {
+    // Arrange
+    useParams.mockReturnValue({ orgID: 'test-org-123' })
+
+    // Act
+    render(<AddEditOrg />)
+
+    // Assert
+    expect(screen.getByTestId('add-edit-org-form')).toBeInTheDocument()
   })
 
   it('renders in add mode when orgID is not present', () => {

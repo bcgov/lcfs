@@ -2,10 +2,13 @@
 
 import structlog
 from typing import List, Optional, Dict, Any
+from fastapi import Depends
 from sqlalchemy import select, func, and_, or_, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.exc import DatabaseError
 
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
@@ -23,7 +26,7 @@ logger = structlog.get_logger(__name__)
 
 
 class ChargingEquipmentRepository:
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
     @repo_handler

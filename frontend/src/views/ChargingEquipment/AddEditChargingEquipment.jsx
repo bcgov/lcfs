@@ -1,7 +1,8 @@
 import {
   faArrowLeft,
   faFloppyDisk,
-  faTrashCan
+  faTrashCan,
+  faPlus
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -29,9 +30,11 @@ import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { chargingEquipmentSchema } from './_formSchema'
+import { bulkChargingEquipmentColDefs, defaultBulkColDef } from './_bulkSchema'
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
+import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
 import {
@@ -44,15 +47,20 @@ import {
   useOrganizations
 } from '@/hooks/useChargingEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { ExcelUpload } from './components/ExcelUpload'
 
-export const AddEditChargingEquipment = () => {
+export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
   const navigate = useNavigate()
   const alertRef = useRef(null)
   const location = useLocation()
   const { id } = useParams()
   
-  const isEditMode = Boolean(id)
+  // Determine mode: 'single' (edit existing), 'bulk' (mass input)
+  const operationMode = mode || (id ? 'single' : 'bulk')
+  const isEditMode = operationMode === 'single' && Boolean(id)
+  const isBulkMode = operationMode === 'bulk'
+  
   const { data: currentUser } = useCurrentUser()
   
   // Hooks for data and mutations
@@ -75,6 +83,10 @@ export const AddEditChargingEquipment = () => {
   const createMutation = useCreateChargingEquipment()
   const updateMutation = useUpdateChargingEquipment()
   const deleteMutation = useDeleteChargingEquipment()
+  
+  // Bulk mode state
+  const [bulkData, setBulkData] = useState([])
+  const gridRef = useRef(null)
   
   // Form setup with react-hook-form and yup validation
   const {
@@ -136,7 +148,7 @@ export const AddEditChargingEquipment = () => {
           severity: 'success'
         })
         // Navigate to edit mode for the new equipment
-        navigate(ROUTES.CHARGING_EQUIPMENT.EDIT.replace(':id', result.charging_equipment_id))
+        navigate(`${ROUTES.REPORTS.LIST}/manage-fse/${result.charging_equipment_id}/edit`)
       }
     } catch (error) {
       alertRef.current?.triggerAlert({
@@ -154,7 +166,7 @@ export const AddEditChargingEquipment = () => {
     
     try {
       await deleteMutation.mutateAsync(parseInt(id))
-      navigate(ROUTES.CHARGING_EQUIPMENT.LIST, {
+      navigate(`${ROUTES.REPORTS.LIST}/manage-fse`, {
         state: {
           message: t('chargingEquipment:deleteSuccess'),
           severity: 'success'
@@ -169,7 +181,61 @@ export const AddEditChargingEquipment = () => {
   }
 
   const handleCancel = () => {
-    navigate(ROUTES.CHARGING_EQUIPMENT.LIST)
+    navigate(`${ROUTES.REPORTS.LIST}/manage-fse`)
+  }
+
+  // Bulk mode handlers
+  const handleAddRow = () => {
+    const newRow = {
+      id: Date.now(), // Temporary ID for new rows
+      charging_site_id: '',
+      allocating_organization_id: '',
+      serial_number: '',
+      manufacturer: '',
+      model: '',
+      level_of_equipment_id: '',
+      ports: 'Single port',
+      notes: '',
+      intended_use_ids: []
+    }
+    setBulkData([...bulkData, newRow])
+  }
+
+  const handleBulkSave = async () => {
+    try {
+      // Filter out rows with missing required fields
+      const validRows = bulkData.filter(row => 
+        row.charging_site_id && 
+        row.serial_number && 
+        row.manufacturer &&
+        row.level_of_equipment_id
+      )
+      
+      if (validRows.length === 0) {
+        alertRef.current?.triggerAlert({
+          message: 'No valid rows to save. Please fill in required fields.',
+          severity: 'warning'
+        })
+        return
+      }
+
+      // Save all valid rows
+      const promises = validRows.map(row => createMutation.mutateAsync(row))
+      await Promise.all(promises)
+      
+      alertRef.current?.triggerAlert({
+        message: `Successfully created ${validRows.length} charging equipment entries.`,
+        severity: 'success'
+      })
+      
+      // Navigate back to list
+      navigate(`${ROUTES.REPORTS.LIST}/manage-fse`)
+    } catch (error) {
+      alertRef.current?.triggerAlert({
+        message: error.message || 'Error saving bulk data',
+        severity: 'error'
+      })
+    }
   }
 
   if (equipmentLoading || metadataLoading || sitesLoading || orgsLoading) {
@@ -189,6 +255,96 @@ export const AddEditChargingEquipment = () => {
   
   const canDelete = isEditMode && equipment?.status === 'Draft'
 
+  // Render bulk mode
+  if (isBulkMode) {
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <BCTypography variant="h4">
+              {t('chargingEquipment:newFSE')}
+            </BCTypography>
+            <Box display="flex" gap={1}>
+              <BCButton
+                variant="outlined"
+                startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
+                onClick={handleCancel}
+              >
+                {t('common:back')}
+              </BCButton>
+            </Box>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <BCAlert ref={alertRef} />
+        </Grid>
+
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <BCTypography variant="h6" gutterBottom>
+              Bulk FSE Input
+            </BCTypography>
+            <BCTypography variant="body2" color="text.secondary" paragraph>
+              Add multiple FSE entries using the grid below or upload from Excel.
+            </BCTypography>
+
+            {/* Excel Upload */}
+            <ExcelUpload
+              onDataParsed={setBulkData}
+              chargingSites={chargingSites}
+              organizations={organizations}
+              levels={levels}
+              endUseTypes={endUseTypes}
+            />
+
+            {/* Action buttons */}
+            <Box display="flex" gap={2} mb={2}>
+              <BCButton
+                variant="outlined"
+                startIcon={<FontAwesomeIcon icon={faPlus} />}
+                onClick={handleAddRow}
+              >
+                Add Row
+              </BCButton>
+              <BCButton
+                variant="contained"
+                color="primary"
+                onClick={handleBulkSave}
+                disabled={createMutation.isLoading || bulkData.length === 0}
+              >
+                Save All
+              </BCButton>
+            </Box>
+
+            {/* AG Grid */}
+            <BCGridEditor
+              gridRef={gridRef}
+              rowData={bulkData}
+              columnDefs={bulkChargingEquipmentColDefs(
+                chargingSites,
+                organizations,
+                levels,
+                endUseTypes
+              )}
+              defaultColDef={defaultBulkColDef}
+              onCellValueChanged={(params) => {
+                const updatedData = [...bulkData]
+                const rowIndex = updatedData.findIndex(row => row.id === params.data.id)
+                if (rowIndex >= 0) {
+                  updatedData[rowIndex] = params.data
+                  setBulkData(updatedData)
+                }
+              }}
+              suppressRowClickSelection={true}
+            />
+          </Paper>
+        </Grid>
+      </Grid>
+    )
+  }
+
+  // Render single edit mode
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>

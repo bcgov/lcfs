@@ -687,14 +687,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               }
             />
           </Stack>
-          <ReportDetails
-            canEdit={canEdit}
-            currentStatus={currentStatus}
-            hasRoles={hasRoles}
-            complianceReportData={reportData}
-          />
           {!location.state?.newReport && (
             <>
+              <ReportDetails
+                canEdit={canEdit}
+                currentStatus={currentStatus}
+                hasRoles={hasRoles}
+                complianceReportData={reportData}
+              />
               {!showEarlyIssuanceSummary &&
                 !reportData?.report?.isNonAssessment && (
                   <ComplianceReportSummary

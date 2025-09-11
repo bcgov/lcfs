@@ -1,5 +1,4 @@
 import { ComplianceReports, CreditCalculator } from '@/views/ComplianceReports'
-import { ComplianceReporting } from '@/views/ComplianceReporting'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import ROUTES from '../routes'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
@@ -8,12 +7,53 @@ import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from '@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
+import { ReportsMenu } from '@/views/ComplianceReports/ReportsMenu'
+import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
+import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
+import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
+import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
 
 export const reportRoutes = [
   {
     path: ROUTES.REPORTS.LIST,
-    element: <ComplianceReporting />,
-    handle: { title: 'Compliance reporting' }
+    element: <ReportsMenu />,
+    handle: { title: 'Compliance reporting' },
+    children: [
+      {
+        path: 'manage-charging-sites',
+        element: <ChargingSitesList />,
+        handle: { title: 'Manage charging sites' },
+        children: [
+          {
+            path: 'new',
+            element: <AddEditChargingSite mode="add" />,
+            handle: { title: 'Add charging sites' }
+          },
+          {
+            path: ':id/edit',
+            element: <AddEditChargingSite mode="edit" />,
+            handle: { title: 'Edit charging site' }
+          }
+        ]
+      },
+      {
+        path: 'manage-fse',
+        element: <ChargingEquipmentList />,
+        handle: { title: 'Manage FSE' },
+        children: [
+          {
+            path: 'new',
+            element: <AddEditChargingEquipment mode="bulk" />,
+            handle: { title: 'Add FSE' }
+          },
+          {
+            path: ':id/edit',
+            element: <AddEditChargingEquipment mode="single" />,
+            handle: { title: 'Edit FSE' }
+          }
+        ]
+      }
+    ]
   },
   {
     path: ROUTES.REPORTS.CALCULATOR,

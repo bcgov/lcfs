@@ -8,6 +8,8 @@
   "editEquipment": "Edit Equipment",
   "submitSelected": "Submit selected",
   "setToDecommissioned": "Set to Decommissioned",
+  "selectAllDraftUpdated": "Select all Draft/Updated",
+  "selectAllValidated": "Select all Validated",
   "clearFilters": "Clear filters",
   "errorLoadingEquipment": "Error loading charging equipment",
   

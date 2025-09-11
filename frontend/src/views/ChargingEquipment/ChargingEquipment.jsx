@@ -39,6 +39,7 @@ export const ChargingEquipment = () => {
   const [selectedRows, setSelectedRows] = useState([])
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [showDecommissionModal, setShowDecommissionModal] = useState(false)
+  const [selectMode, setSelectMode] = useState(null) // 'draft-updated' or 'validated'
 
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
@@ -77,21 +78,68 @@ export const ChargingEquipment = () => {
   )
 
   const handleNewFSE = () => {
-    navigate(ROUTES.CHARGING_EQUIPMENT.NEW)
+    navigate(`${ROUTES.REPORTS.LIST}/manage-fse/new`)
+  }
+
+  const handleSelectAllDraftUpdated = () => {
+    if (selectMode === 'draft-updated') {
+      // Deselect all
+      gridRef.current?.api?.deselectAll()
+      setSelectMode(null)
+    } else {
+      // Select all Draft and Updated rows
+      gridRef.current?.api?.forEachNode((node) => {
+        if (node.data.status === 'Draft' || node.data.status === 'Updated') {
+          node.setSelected(true)
+        } else {
+          node.setSelected(false)
+        }
+      })
+      setSelectMode('draft-updated')
+    }
+  }
+
+  const handleSelectAllValidated = () => {
+    if (selectMode === 'validated') {
+      // Deselect all
+      gridRef.current?.api?.deselectAll()
+      setSelectMode(null)
+    } else {
+      // Select all Validated rows
+      gridRef.current?.api?.forEachNode((node) => {
+        if (node.data.status === 'Validated') {
+          node.setSelected(true)
+        } else {
+          node.setSelected(false)
+        }
+      })
+      setSelectMode('validated')
+    }
   }
 
   const handleRowClick = (params) => {
     const { status, charging_equipment_id } = params.data
     if (status === 'Draft' || status === 'Updated' || status === 'Validated') {
-      navigate(ROUTES.CHARGING_EQUIPMENT.EDIT.replace(':id', charging_equipment_id))
+      navigate(`${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`)
     } else {
-      navigate(ROUTES.CHARGING_EQUIPMENT.VIEW.replace(':id', charging_equipment_id))
+      navigate(`${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`)
     }
   }
 
   const handleSelectionChanged = (event) => {
     const selectedNodes = event.api.getSelectedNodes()
     setSelectedRows(selectedNodes.map(node => node.data))
+    
+    // Clear select mode if manual selection doesn't match the mode
+    const selectedData = selectedNodes.map(node => node.data)
+    const allDraftUpdated = selectedData.every(row => row.status === 'Draft' || row.status === 'Updated')
+    const allValidated = selectedData.every(row => row.status === 'Validated')
+    
+    if (!allDraftUpdated && selectMode === 'draft-updated') {
+      setSelectMode(null)
+    } else if (!allValidated && selectMode === 'validated') {
+      setSelectMode(null)
+    }
   }
 
   const handleBulkSubmit = async () => {
@@ -101,6 +149,7 @@ export const ChargingEquipment = () => {
       setAlertMessage(result.message)
       setAlertSeverity('success')
       setShowSubmitModal(false)
+      setSelectMode(null)
       refetch()
       gridRef.current?.api?.deselectAll()
     } catch (error) {
@@ -116,6 +165,7 @@ export const ChargingEquipment = () => {
       setAlertMessage(result.message)
       setAlertSeverity('success')
       setShowDecommissionModal(false)
+      setSelectMode(null)
       refetch()
       gridRef.current?.api?.deselectAll()
     } catch (error) {
@@ -140,9 +190,18 @@ export const ChargingEquipment = () => {
   if (isLoading) return <Loading />
   if (isError) {
     return (
-      <BCAlert severity="error">
-        {t('chargingEquipment:errorLoadingEquipment')}
-      </BCAlert>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <BCTypography variant="h5" gutterBottom>
+            {t('chargingEquipment:manageFSE')}
+          </BCTypography>
+          <BCAlert severity="error">
+            {t('chargingEquipment:errorLoadingEquipment')}
+            <br />
+            <small>Please check if the backend charging equipment service is running properly.</small>
+          </BCAlert>
+        </Grid>
+      </Grid>
     )
   }
 
@@ -180,6 +239,30 @@ export const ChargingEquipment = () => {
                 onClick={handleNewFSE}
               >
                 {t('chargingEquipment:newFSE')}
+              </BCButton>
+              
+              <BCButton
+                variant={selectMode === 'draft-updated' ? 'contained' : 'outlined'}
+                color="secondary"
+                size="medium"
+                onClick={handleSelectAllDraftUpdated}
+              >
+                {selectMode === 'draft-updated' 
+                  ? t('common:deselectAll') 
+                  : t('chargingEquipment:selectAllDraftUpdated')
+                }
+              </BCButton>
+              
+              <BCButton
+                variant={selectMode === 'validated' ? 'contained' : 'outlined'}
+                color="secondary"
+                size="medium"
+                onClick={handleSelectAllValidated}
+              >
+                {selectMode === 'validated' 
+                  ? t('common:deselectAll') 
+                  : t('chargingEquipment:selectAllValidated')
+                }
               </BCButton>
               
               <BulkActionButtons

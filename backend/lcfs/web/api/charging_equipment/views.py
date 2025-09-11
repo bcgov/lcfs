@@ -4,6 +4,7 @@ import structlog
 from fastapi import APIRouter, Body, Depends, Query, status, Request
 from typing import List, Optional
 
+from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.schema import (
@@ -22,6 +23,7 @@ from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
+get_async_db = dependencies.get_async_db_session
 
 
 @router.post(
