@@ -34,7 +34,7 @@ import { RequiredHeader } from '@/components/BCDataGrid/components'
  * @returns {JSX.Element}
  */
 export const BCGridEditor = ({
-  gridRef,
+  gridRef = useRef(null),
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -423,7 +423,7 @@ export const BCGridEditor = ({
 }
 
 BCGridEditor.propTypes = {
-  gridRef: PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
+  gridRef: PropTypes.shape({ current: PropTypes.any }),
   alertRef: PropTypes.shape({ current: PropTypes.any }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,
