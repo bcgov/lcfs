@@ -5,10 +5,7 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreditMarketListings } from '@/hooks/useOrganization'
-import { 
-  creditMarketColDefs, 
-  defaultSortModel 
-} from './_schema'
+import { creditMarketColDefs, defaultSortModel } from './_schema'
 
 const initialPaginationOptions = {
   page: 1,
@@ -22,37 +19,43 @@ export const CreditMarketTable = () => {
   const { data: currentUser } = useCurrentUser()
   const gridRef = useRef()
 
-  const [paginationOptions, setPaginationOptions] = useState(initialPaginationOptions)
+  const [paginationOptions, setPaginationOptions] = useState(
+    initialPaginationOptions
+  )
 
   // Fetch real credit market listings
-  const { data: creditMarketData, isLoading, isError, error } = useCreditMarketListings()
+  const {
+    data: creditMarketData,
+    isLoading,
+    isError,
+    error
+  } = useCreditMarketListings()
 
   // Transform and sort data - show current user's organization at top
   const sortedData = useCallback(() => {
     if (!creditMarketData) return []
-    
+
     const userOrgId = currentUser?.organization?.organizationId
-    
+
     // Transform API data to match frontend schema (no longer exclude current user's org)
-    const transformedData = creditMarketData
-      .map(org => ({
-        id: org.organizationId,
-        organizationName: org.organizationName,
-        creditsToSell: org.creditsToSell,
-        displayInCreditMarket: org.displayInCreditMarket,
-        isSeller: org.creditMarketIsSeller,
-        isBuyer: org.creditMarketIsBuyer,
-        contactPerson: org.creditMarketContactName,
-        email: org.creditMarketContactEmail,
-        phone: org.creditMarketContactPhone
-      }))
+    const transformedData = creditMarketData.map((org) => ({
+      id: org.organizationId,
+      organizationName: org.organizationName,
+      creditsToSell: org.creditsToSell,
+      displayInCreditMarket: org.displayInCreditMarket,
+      isSeller: org.creditMarketIsSeller,
+      isBuyer: org.creditMarketIsBuyer,
+      contactPerson: org.creditMarketContactName,
+      email: org.creditMarketContactEmail,
+      phone: org.creditMarketContactPhone
+    }))
 
     // Sort with current user's organization at top, then alphabetically
     transformedData.sort((a, b) => {
       // If user has an organization, put it at the top
       if (userOrgId) {
         if (a.id === userOrgId) return -1 // a is user's org, put it first
-        if (b.id === userOrgId) return 1  // b is user's org, put it first
+        if (b.id === userOrgId) return 1 // b is user's org, put it first
       }
       // Otherwise, sort alphabetically
       return a.organizationName.localeCompare(b.organizationName)
@@ -83,10 +86,10 @@ export const CreditMarketTable = () => {
 
   return (
     <Box>
-      <Box 
-        component="div" 
-        sx={{ 
-          height: '100%', 
+      <Box
+        component="div"
+        sx={{
+          height: '100%',
           width: '100%',
           overflowX: 'auto',
           minWidth: '800px' // Ensure minimum width for proper table display
@@ -97,9 +100,16 @@ export const CreditMarketTable = () => {
           gridKey="credit-market-grid"
           columnDefs={creditMarketColDefs(t)}
           getRowId={getRowId}
-          overlayNoRowsTemplate={t('creditMarket:noListingsFound', 'No credit market listings found')}
+          overlayNoRowsTemplate={t(
+            'creditMarket:noListingsFound',
+            'No credit market listings found'
+          )}
           queryData={queryData}
           dataKey="creditMarketListings"
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50
+          }}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

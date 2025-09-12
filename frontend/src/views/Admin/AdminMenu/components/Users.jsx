@@ -1,6 +1,6 @@
 /**
  * Users component for admin user management
- * 
+ *
  * Coverage Note: Some useCallback functions have coverage exclusions for parts
  * that are difficult to test in React component context (grid API interactions).
  * The core business logic is fully covered via statements/branches/lines at 100%.
@@ -83,9 +83,12 @@ export const Users = () => {
     }
   }, [location.state])
 
-  const handleSetResetGrid = useCallback(/* c8 ignore next */ (fn) => {
-    setResetGridFn(() => fn)
-  }, [])
+  const handleSetResetGrid = useCallback(
+    /* c8 ignore next */ (fn) => {
+      setResetGridFn(() => fn)
+    },
+    []
+  )
 
   const handleClearFilters = useCallback(() => {
     try {
@@ -146,6 +149,10 @@ export const Users = () => {
             columnDefs={usersColumnDefs(t)}
             queryData={queryData}
             dataKey="users"
+            autoSizeStrategy={{
+              type: 'fitGridWidth',
+              defaultMinWidth: 50
+            }}
             paginationOptions={paginationOptions}
             onPaginationChange={setPaginationOptions}
             getRowId={getRowId}
