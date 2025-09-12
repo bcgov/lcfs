@@ -16,7 +16,8 @@ export const config = {
     fseImportExport: true,
     allocationAgreementImportExport: true,
     governmentAdjustment: true,
-    obfuscatedLinks: true
+    obfuscatedLinks: true,
+    reporting2025Enabled: true
   }
 }
 
