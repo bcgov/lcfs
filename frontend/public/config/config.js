@@ -17,7 +17,7 @@ export const config = {
     allocationAgreementImportExport: true,
     governmentAdjustment: true,
     obfuscatedLinks: true,
-    reporting2025Enabled: true
+    reporting2025Enabled: false
   }
 }
 
