@@ -178,6 +178,10 @@ export const Organizations = () => {
           columnDefs={organizationsColDefs(t)}
           queryData={queryData}
           dataKey="organizations"
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50
+          }}
           paginationOptions={paginationOptions}
           onPaginationChange={setPaginationOptions}
           getRowId={getRowId}
