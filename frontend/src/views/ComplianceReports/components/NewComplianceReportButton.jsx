@@ -12,6 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
+import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config.js'
 
 export const NewComplianceReportButton = forwardRef((props, ref) => {
   const { handleNewReport, isButtonLoading, setIsButtonLoading } = props
@@ -102,38 +103,41 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
               onClick={() => handleComplianceOptionClick(period)}
               disabled={
                 reportedPeriodIDs?.includes(period.compliancePeriodId) ||
-                period.description === '2025'
+                (period.description === '2025' &&
+                  !isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED))
               }
               className={`compliance-period-${period.description}`}
             >
               {period.description}
             </MenuItem>
           ))}
-          {/* Temporary block - disabling 2025 reporting until regulatory updates */}
-          <Box
-            sx={{
-              px: 2,
-              py: 1,
-              borderTop: '1px solid #e0e0e0',
-              backgroundColor: '#f5f5f5',
-              cursor: 'default'
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <FontAwesomeIcon
-                icon={faInfoCircle}
-                style={{
-                  fontSize: '0.875rem',
-                  color: '#666',
-                  marginRight: '4px'
-                }}
-              />
-              <BCTypography variant="caption" color="text.secondary">
-                2025 reporting is temporarily unavailable due to regulatory
-                updates
-              </BCTypography>
+          {/* Show info message only when 2025 reporting is disabled */}
+          {!isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED) && (
+            <Box
+              sx={{
+                px: 2,
+                py: 1,
+                borderTop: '1px solid #e0e0e0',
+                backgroundColor: '#f5f5f5',
+                cursor: 'default'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <FontAwesomeIcon
+                  icon={faInfoCircle}
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    marginRight: '4px'
+                  }}
+                />
+                <BCTypography variant="caption" color="text.secondary">
+                  2025 reporting is temporarily unavailable due to regulatory
+                  updates
+                </BCTypography>
+              </Box>
             </Box>
-          </Box>
+          )}
         </Menu>
       )}
     </div>
