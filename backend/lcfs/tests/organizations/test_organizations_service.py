@@ -230,6 +230,9 @@ async def test_create_organization_with_early_issuance(
 
     mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=1))
     mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.get_organization_type = AsyncMock(
+        return_value=MagicMock(is_bceid_user=True)
+    )
 
     with patch(
         "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
@@ -281,6 +284,9 @@ async def test_update_organization_with_early_issuance_change(
     mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
     mock_repo.update_early_issuance_by_year = AsyncMock()
     mock_repo.update_organization = AsyncMock()
+    mock_repo.get_organization_type = AsyncMock(
+        return_value=MagicMock(is_bceid_user=True)
+    )
 
     with patch(
         "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",

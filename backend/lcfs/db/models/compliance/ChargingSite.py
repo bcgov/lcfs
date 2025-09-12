@@ -1,4 +1,5 @@
 from lcfs.db.base import BaseModel, Auditable, Versioning
+from lcfs.utils.unique_key_generators import next_base36
 from sqlalchemy import (
     Column,
     Integer,
@@ -179,16 +180,6 @@ def generate_site_code(mapper, connection, target):
             .limit(1)
         ).scalar_one_or_none()
 
-        n = (int(str(max_code), 36) + 1) if max_code else 1
-        if n > 36**5 - 1:
-            raise ValueError("Exceeded maximum site codes globally")
-
-        alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        s = ""
-        while n:
-            n, r = divmod(n, 36)
-            s = alphabet[r] + s
-
-        target.site_code = s.zfill(5)
+        target.site_code = next_base36(max_code, width=5)
     finally:
         session.close()
