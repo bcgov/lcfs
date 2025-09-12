@@ -958,132 +958,230 @@ export const defaultColDef = {
   singleClickEdit: true
 }
 
-export const changelogCommonColDefs = (highlight = true) => [
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
-    field: 'complianceUnits',
-    valueFormatter: formatNumberWithCommas,
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'complianceUnits')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
-    field: 'fuelType.fuelType',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
-    field: 'fuelCategory.category',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategory')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
-    field: 'endUseType.type',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
-  },
-  {
-    headerName: i18n.t(
-      'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
-    ),
-    field: 'provisionOfTheAct.name',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheAct')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
-    field: 'fuelCode.fuelCode',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
-    field: 'isCanadaProduced',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
-    field: 'isQ1Supplied',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-    field: 'quantity',
-    valueFormatter: formatNumberWithCommas,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
-    field: 'units',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
-    field: 'targetCi',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
-    field: 'ciOfFuel',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
-    field: 'uci',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
-    field: 'energyDensity',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'energyDensity')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
-    field: 'eer',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
-  },
-  {
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
-    field: 'energy',
-    valueFormatter: formatNumberWithCommas,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
-  }
-]
+export const changelogCommonColDefs = (
+  highlight = true,
+  isEarlyIssuance = false
+) => {
+  const baseColumns = [
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+      field: 'complianceUnits',
+      valueFormatter: formatNumberWithCommas,
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'complianceUnits')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
+      field: 'fuelType.fuelType',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
+      field: 'fuelCategory.category',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'fuelCategory')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
+      field: 'endUseType.type',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'endUseType')
+    },
+    {
+      headerName: i18n.t(
+        'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
+      ),
+      field: 'provisionOfTheAct.name',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'provisionOfTheAct')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
+      field: 'fuelCode.fuelCode',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      field: 'isCanadaProduced',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      field: 'isQ1Supplied',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
+      field: 'quantity',
+      valueFormatter: formatNumberWithCommas,
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
+      field: 'units',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
+      field: 'targetCi',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+      field: 'ciOfFuel',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
+      field: 'uci',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
+      field: 'energyDensity',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'energyDensity')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
+      field: 'eer',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
+      field: 'energy',
+      valueFormatter: formatNumberWithCommas,
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
+    }
+  ]
+  if (isEarlyIssuance) {
+    return baseColumns.flatMap((item) => {
+      if (item.field === 'quantity') {
+        return [
+          {
+            field: 'q1Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'q2Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'q3Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'q4Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'totalQuantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
+            valueFormatter: formatNumberWithCommas,
+            valueGetter: (params) => {
+              const data = params.data
+              return (
+                data.q1Quantity +
+                data.q2Quantity +
+                data.q3Quantity +
+                data.q4Quantity
+              )
+            }
+          }
+        ]
+      }
 
-export const changelogColDefs = (highlight = true) => [
-  {
-    field: 'groupUuid',
-    hide: true,
-    sort: 'desc',
-    sortIndex: 3
-  },
-  { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
-  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
-  {
-    field: 'actionType',
-    valueGetter: (params) => {
-      if (params.data.actionType === 'UPDATE') {
-        if (params.data.updated) {
-          return 'Edited old'
-        } else {
-          return 'Edited new'
+      return [item]
+    })
+  }
+  return baseColumns
+}
+
+export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
+  const baseColumns = [
+    {
+      field: 'groupUuid',
+      hide: true,
+      sort: 'desc',
+      sortIndex: 3
+    },
+    { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
+    { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+    {
+      field: 'actionType',
+      valueGetter: (params) => {
+        if (params.data.actionType === 'UPDATE') {
+          if (params.data.updated) {
+            return 'Edited old'
+          } else {
+            return 'Edited new'
+          }
+        }
+        if (params.data.actionType === 'DELETE') {
+          return 'Deleted'
+        }
+        if (params.data.actionType === 'CREATE') {
+          return 'Added'
+        }
+      },
+      cellStyle: (params) => {
+        if (highlight && params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
         }
       }
-      if (params.data.actionType === 'DELETE') {
-        return 'Deleted'
-      }
-      if (params.data.actionType === 'CREATE') {
-        return 'Added'
-      }
     },
-    cellStyle: (params) => {
-      if (highlight && params.data.actionType === 'UPDATE') {
-        return { backgroundColor: colors.alerts.warning.background }
+    ...changelogCommonColDefs(highlight)
+  ]
+  if (isEarlyIssuance) {
+    return baseColumns.flatMap((item) => {
+      if (item.field === 'quantity') {
+        return [
+          {
+            field: 'q1Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'q2Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'q3Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'q4Quantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
+            valueFormatter: formatNumberWithCommas
+          },
+          {
+            field: 'totalQuantity',
+            headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
+            valueFormatter: formatNumberWithCommas,
+            valueGetter: (params) => {
+              const data = params.data
+              return (
+                data.q1Quantity +
+                data.q2Quantity +
+                data.q3Quantity +
+                data.q4Quantity
+              )
+            }
+          }
+        ]
       }
-    }
-  },
-  ...changelogCommonColDefs(highlight)
-]
+
+      return [item]
+    })
+  }
+  return baseColumns
+}
 
 export const changelogDefaultColDefs = {
   floatingFilter: false,
