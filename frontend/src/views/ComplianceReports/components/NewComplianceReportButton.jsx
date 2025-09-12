@@ -132,8 +132,7 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
                   }}
                 />
                 <BCTypography variant="caption" color="text.secondary">
-                  2025 reporting is temporarily unavailable due to regulatory
-                  updates
+                  2025 reporting is temporarily unavailable due to regulatory updates
                 </BCTypography>
               </Box>
             </Box>
