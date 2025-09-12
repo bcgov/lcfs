@@ -255,6 +255,68 @@ export const chargingSiteColDefs = (
   ]
 }
 
+export const fseColDefs = (t, currentUser) => {
+  return [
+    {
+      ...actions({ enableDelete: true }),
+      headerName: 'Delete',
+      pinned: ''
+    },
+    {
+      field: 'status',
+      headerName: t('fseColumnLabels.status')
+    },
+    {
+      field: 'siteName',
+      headerName: t('fseColumnLabels.siteName')
+    },
+    {
+      field: 'registrationNbr',
+      headerName: t('fseColumnLabels.registrationNbr')
+    },
+    {
+      field: 'version',
+      headerName: t('fseColumnLabels.version')
+    },
+    {
+      field: 'allocatingOrg',
+      headerName: t('fseColumnLabels.allocatingOrg')
+    },
+    {
+      field: 'serialNbr',
+      headerName: t('fseColumnLabels.serialNbr')
+    },
+    {
+      field: 'manufacturer',
+      headerName: t('fseColumnLabels.manufacturer')
+    },
+    {
+      field: 'model',
+      headerName: t('fseColumnLabels.model')
+    },
+    {
+      field: 'levelOfEquipment',
+      headerName: t('fseColumnLabels.levelOfEquipment')
+    },
+    {
+      field: 'ports',
+      headerName: t('fseColumnLabels.ports')
+    },
+    {
+      field: 'fuelMeasurementType',
+      headerName: t('fseColumnLabels.fuelMeasurementType')
+    },
+    {
+      field: 'intendedUse',
+      headerName: t('fseColumnLabels.intendedUse')
+    },
+    {
+      field: 'notes',
+      headerName: t('fseColumnLabels.notes')
+    }
+  ]
+}
+
 export const defaultColDef = {
   editable: true,
   resizable: true,

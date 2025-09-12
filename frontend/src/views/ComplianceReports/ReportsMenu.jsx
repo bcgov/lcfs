@@ -97,7 +97,10 @@ export function ReportsMenu() {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{
+            background: 'rgb(0, 0, 0, 0.08)',
+            width: { xs: '100%', md: '50%' }
+          }}
           orientation={tabsOrientation}
           value={tabIndex}
           aria-label="Tabs for selection of administration options"

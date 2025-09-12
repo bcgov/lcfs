@@ -10,6 +10,7 @@ import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
 import { ReportsMenu } from '@/views/ComplianceReports/ReportsMenu'
 import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
 import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
+import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 
 export const reportRoutes = [
   {
@@ -22,6 +23,11 @@ export const reportRoutes = [
         element: <ChargingSitesList />,
         handle: { title: 'Manage charging sites' },
         children: [
+          {
+            path: ':id',
+            element: <ViewChargingSite />,
+            handle: { title: 'View charging site' }
+          },
           {
             path: 'new',
             element: <AddEditChargingSite mode="add" />,
