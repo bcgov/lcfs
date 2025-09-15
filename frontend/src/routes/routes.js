@@ -105,6 +105,10 @@ export const ROUTES = {
     EXPORT: '/fuel-codes/export'
   },
 
+  CHARGING_SITES: {
+    EQUIPMENT_PROCESSING: '/charging-sites/:siteId/equipment-processing'
+  },
+
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'

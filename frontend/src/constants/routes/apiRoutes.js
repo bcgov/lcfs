@@ -174,5 +174,8 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache'
+  geocoderClearCache: '/geocoder/cache',
+
+  // charging sites
+  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment'
 }
