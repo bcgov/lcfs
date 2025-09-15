@@ -1,5 +1,6 @@
 import string
 import random
+import secrets
 from sqlalchemy import (
     Column,
     BigInteger,
@@ -25,6 +26,11 @@ def generate_unique_code(session):
         )
         if not result.scalar():
             return code
+
+
+def generate_secure_link_key():
+    """Generates a cryptographically secure 64-character URL-safe link key."""
+    return secrets.token_urlsafe(48)
 
 
 class Organization(BaseModel, Auditable, EffectiveDates):
@@ -175,6 +181,16 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     )
     early_issuance_by_years = relationship(
         "OrganizationEarlyIssuanceByYear", back_populates="organization"
+    )
+    link_keys = relationship(
+        "OrganizationLinkKey",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+
+    charging_sites = relationship("ChargingSite", back_populates="organization")
+    charging_equipment_compliance_associations = relationship(
+        "ComplianceReportChargingEquipment", back_populates="organization"
     )
 
 

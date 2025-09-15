@@ -20,7 +20,7 @@ export const handlers = [
   ),
   
   // Organizations
-  http.get(api + apiRoutes.organizationSearch, () =>
+  http.get(api + '/organizations/search', () =>
     HttpResponse.json([])
   ),
   
@@ -177,6 +177,33 @@ export const handlers = [
     return HttpResponse.json({}, { status: 200 })
   }),
   http.delete(`${api}/*`, () => {
+    return HttpResponse.json({}, { status: 200 })
+  }),
+  
+  // Catch-all handlers for any external requests to prevent AggregateErrors
+  http.get('*', ({ request }) => {
+    // Only handle external requests, not our API
+    if (request.url.startsWith(api)) {
+      return
+    }
+    return HttpResponse.json({}, { status: 200 })
+  }),
+  http.post('*', ({ request }) => {
+    if (request.url.startsWith(api)) {
+      return
+    }
+    return HttpResponse.json({}, { status: 200 })
+  }),
+  http.put('*', ({ request }) => {
+    if (request.url.startsWith(api)) {
+      return
+    }
+    return HttpResponse.json({}, { status: 200 })
+  }),
+  http.delete('*', ({ request }) => {
+    if (request.url.startsWith(api)) {
+      return
+    }
     return HttpResponse.json({}, { status: 200 })
   })
 ]

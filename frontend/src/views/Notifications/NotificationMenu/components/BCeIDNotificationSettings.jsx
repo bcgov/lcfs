@@ -8,6 +8,8 @@ const BCeIDNotificationSettings = () => {
   const categories = {
     'bceid.categories.transfers': {
       title: 'bceid.categories.transfers.title',
+      BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
+        'bceid.categories.transfers.creditsListedForSale',
       BCEID__TRANSFER__PARTNER_ACTIONS:
         'bceid.categories.transfers.partnerActions',
       BCEID__TRANSFER__DIRECTOR_DECISION:
@@ -29,7 +31,7 @@ const BCeIDNotificationSettings = () => {
     <NotificationSettingsForm
       categories={categories}
       showEmailField
-      initialEmail={currentUser.email}
+      initialEmail={currentUser?.email}
     />
   )
 }

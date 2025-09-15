@@ -33,7 +33,7 @@ import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/index.js'
 import colors from '@/themes/base/colors'
@@ -41,7 +41,7 @@ import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
 
 // Component for adding a new organization
-export const AddEditOrgForm = () => {
+export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const alertRef = useRef(null)
@@ -61,6 +61,7 @@ export const AddEditOrgForm = () => {
     enabled: !!orgID,
     retry: false
   })
+  const { data: orgTypes } = useOrganizationTypes()
   const dismissBox = (boxType) => {
     setDismissedBoxes((prev) => ({
       ...prev,
@@ -105,13 +106,12 @@ export const AddEditOrgForm = () => {
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
-        orgSupplierType:
+        orgType:
           data.organizationTypeId?.toString() ||
           data.orgType?.organizationTypeId?.toString() ||
           '1',
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
-        orgCreditTradingEnabled: data.creditTradingEnabled ? 'yes' : 'no',
         orgStreetAddress: data.orgAddress?.streetAddress || '',
         orgAddressOther: data.orgAddress?.addressOther || '',
         orgCity: data.orgAddress?.city || '',
@@ -190,7 +190,7 @@ export const AddEditOrgForm = () => {
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
-      organizationTypeId: parseInt(data.orgSupplierType),
+      organizationTypeId: parseInt(data.orgType),
       creditTradingEnabled: data.orgCreditTradingEnabled === 'yes',
       address: {
         name: data.orgOperatingName,
@@ -228,14 +228,11 @@ export const AddEditOrgForm = () => {
   } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
-    onSuccess: () => {
+    onSuccess: (response) => {
       // Redirect to Organization route on success
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully added.',
-          severity: 'success'
-        }
-      })
+      if (handleSaveSuccess) {
+        handleSaveSuccess(response?.data?.organizationId)
+      }
     },
     onError: (error) => {
       // Error handling logic
@@ -252,12 +249,9 @@ export const AddEditOrgForm = () => {
     mutationFn: async (payload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
     onSuccess: () => {
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully updated.',
-          severity: 'success'
-        }
-      })
+      if (handleSaveSuccess) {
+        handleSaveSuccess()
+      }
     },
     onError: (error) => {
       console.error('Error posting data:', error)
@@ -332,7 +326,15 @@ export const AddEditOrgForm = () => {
 
   // Conditional rendering for loading
   if (isCreateOrgPending || isUpdateOrgPending) {
-    return <Loading message="Adding Organization..." />
+    return (
+      <Loading
+        message={
+          isCreateOrgPending
+            ? 'Adding Organization...'
+            : 'Updating Organization...'
+        }
+      />
+    )
   }
 
   // Form layout and structure
@@ -487,35 +489,47 @@ export const AddEditOrgForm = () => {
                   <FormControl fullWidth>
                     <Grid container>
                       <Grid item xs={6}>
-                        <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
+                        <FormLabel id="orgType" sx={{ pb: 1 }}>
                           <BCTypography variant="body4">
-                            {t('org:supplierTypLabel')}:
+                            {t('org:orgTypeLabel')}:
                           </BCTypography>
                         </FormLabel>
                       </Grid>
                       <Grid item xs={6} mt={0.5}>
-                        <RadioGroup
-                          row
-                          id="orgSupplierType"
-                          name="orgSupplierType"
+                        <Controller
+                          control={control}
+                          name="orgType"
                           defaultValue="1"
-                        >
-                          <FormControlLabel
-                            value="1"
-                            control={
-                              <Radio
-                                {...register('orgSupplierType')}
-                                data-test="orgSupplierType1"
-                              />
-                            }
-                            label={
-                              <BCTypography variant="body4">
-                                {t('supplier')}
-                              </BCTypography>
-                            }
-                          />
-                        </RadioGroup>
-                        {renderError('orgSupplierType')}
+                          render={({ field }) => (
+                            <TextField
+                              id="orgType"
+                              name="orgType"
+                              data-test="orgType"
+                              select
+                              fullWidth
+                              variant="outlined"
+                              SelectProps={{ native: true }}
+                              {...field}
+                              error={!!errors.orgType}
+                              helperText={errors.orgType?.message}
+                            >
+                              {(orgTypes || []).map((t) => {
+                                const suffix = t.isBceidUser
+                                  ? ' (BCeID user)'
+                                  : ' (non-BCeID user)'
+                                const label = `${t.description || t.orgType}${suffix}`
+                                return (
+                                  <option
+                                    key={t.organizationTypeId}
+                                    value={t.organizationTypeId}
+                                  >
+                                    {label}
+                                  </option>
+                                )
+                              })}
+                            </TextField>
+                          )}
+                        />
                       </Grid>
                     </Grid>
                   </FormControl>
@@ -634,72 +648,7 @@ export const AddEditOrgForm = () => {
                     </Grid>
                   </FormControl>
                 </Box>
-                <Box mb={2}>
-                  <FormControl fullWidth>
-                    <Grid container>
-                      <Grid item xs={6} mt={0.5}>
-                        <FormLabel id="orgCreditTradingEnabled" sx={{ pb: 1 }}>
-                          <BCTypography variant="body4">
-                            Credit trading market participation:
-                          </BCTypography>
-                        </FormLabel>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Controller
-                          control={control}
-                          name="orgCreditTradingEnabled"
-                          defaultValue=""
-                          render={({ field }) => (
-                            <RadioGroup
-                              row
-                              id="orgCreditTradingEnabled"
-                              name="orgCreditTradingEnabled"
-                              sx={{ pt: 1 }}
-                              {...field}
-                            >
-                              <FormControlLabel
-                                value="yes"
-                                control={
-                                  <Radio data-test="orgCreditTradingEnabledYes" />
-                                }
-                                label={
-                                  <BCTypography variant="body4">
-                                    {t('yes')}
-                                  </BCTypography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="no"
-                                sx={{ ml: 2 }}
-                                control={
-                                  <Radio data-test="orgCreditTradingEnabledNo" />
-                                }
-                                label={
-                                  <BCTypography variant="body4">
-                                    {t('no')}
-                                  </BCTypography>
-                                }
-                              />
-                            </RadioGroup>
-                          )}
-                        >
-                          /
-                        </Controller>
-                        {renderError('orgCreditTradingEnabled')}
-                      </Grid>
-                    </Grid>
-                  </FormControl>
-                </Box>
-                <Box
-                  mb={2}
-                  sx={{
-                    mt: {
-                      sm: 0,
-                      md: 0,
-                      lg: dismissedBoxes?.organizationInfo ? 11 : 37
-                    }
-                  }}
-                >
+                <Box mb={2} sx={{ mt: { sm: 0, md: 9.5, xl: 17.5 } }}>
                   <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
                     {t('org:edrmsLabel')}:
                   </InputLabel>
@@ -1052,16 +1001,10 @@ export const AddEditOrgForm = () => {
                     backgroundColor: 'white.main',
                     ml: 2
                   }}
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faArrowLeft}
-                      className="small-icon"
-                    />
-                  }
-                  onClick={() => navigate(ROUTES.ORGANIZATIONS.LIST)}
+                  onClick={() => handleCancelEdit()}
                 >
                   <BCTypography variant="subtitle2" textTransform="none">
-                    {t('backBtn')}
+                    {t('cancelBtn')}
                   </BCTypography>
                 </BCButton>
               </Box>

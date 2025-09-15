@@ -157,9 +157,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       submissionDeadline = updateDate.plus({ days: 30 })
       daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
       warningText = t('report:supplementalExpiryWarningText', {
-        deadlineDate: submissionDeadline.toLocaleString(DateTime.DATE_FULL),
-        daysRemaining: daysRemaining,
-        s: daysRemaining !== 1 ? 's' : ''
+        deadlineDate: submissionDeadline.toLocaleString(DateTime.DATE_FULL)
       })
       console.log(warningText)
     }
@@ -684,6 +682,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               hasSupplemental={reportData?.report?.hasSupplemental}
               chain={reportData?.chain}
               setModalData={setModalData}
+              hasGovernmentReassessmentInProgress={
+                reportData?.hasGovernmentReassessmentInProgress
+              }
             />
           </Stack>
           <ReportDetails

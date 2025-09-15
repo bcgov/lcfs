@@ -155,7 +155,8 @@ export const renewableFuelColumns = (
   t,
   data,
   editable,
-  compliancePeriodYear
+  compliancePeriodYear,
+  lines7And9Locked = false
 ) => {
   /**
    * Editable Lines Logic:
@@ -262,17 +263,17 @@ export const renewableFuelColumns = (
   }
 
   if (parseInt(compliancePeriodYear) === 2024) {
-    // by default enable in editing mode for compliance period 2024
-    gasolineEditableCells = [
-      ...gasolineEditableCells,
-      SUMMARY.LINE_7,
-      SUMMARY.LINE_9
-    ]
-    dieselEditableCells = [
-      ...dieselEditableCells,
-      SUMMARY.LINE_7,
-      SUMMARY.LINE_9
-    ]
+    // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
+    if (!lines7And9Locked) {
+      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    }
+  } else if (parseInt(compliancePeriodYear) >= 2025) {
+    // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
+    if (!lines7And9Locked) {
+      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    }
   }
   if (parseInt(compliancePeriodYear) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
@@ -392,5 +393,5 @@ export const earlyIssuanceColumns = (t) => [
 ]
 
 export const defaultSortModel = [
-  { field: 'compliancePeriod', direction: 'desc' }
+  { field: 'updateDate', direction: 'desc' }
 ]

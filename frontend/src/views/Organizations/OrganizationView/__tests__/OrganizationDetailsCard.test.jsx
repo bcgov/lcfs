@@ -44,7 +44,10 @@ vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
   useOrganizationBalance: () => ({
     data: { totalBalance: 200, reservedBalance: 25 }
-  })
+  }),
+  useOrganizationLinkKeys: () => ({ data: [] }),
+  useGenerateLinkKey: () => ({ mutate: vi.fn(), isLoading: false }),
+  useRegenerateLinkKey: () => ({ mutate: vi.fn(), isLoading: false })
 }))
 
 const govUser = {
@@ -188,5 +191,55 @@ describe('OrganizationDetailsCard', () => {
     expect(
       screen.queryByText(/Early issuance reporting enabled for/)
     ).not.toBeInTheDocument()
+  })
+
+  it('renders loading state', () => {
+    useOrganization.mockReturnValue({
+      data: null,
+      isLoading: true
+    })
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
+    expect(screen.getByTestId('loading')).toBeInTheDocument()
+  })
+
+  it('renders records address when present', () => {
+    useOrganization.mockReturnValue({
+      data: { ...baseOrg, recordsAddress: '456 Records St' },
+      isLoading: false
+    })
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
+    expect(screen.getByText('456 Records St')).toBeInTheDocument()
+  })
+
+  it('shows credit trading disabled', () => {
+    useOrganization.mockReturnValue({
+      data: { 
+        ...baseOrg, 
+        orgStatus: { status: 'Registered' },
+        creditTradingEnabled: false
+      },
+      isLoading: false
+    })
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
+    const noElements = screen.getAllByText('No')
+    expect(noElements.length).toBeGreaterThan(0)
   })
 })

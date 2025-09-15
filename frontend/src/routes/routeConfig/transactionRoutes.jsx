@@ -9,7 +9,16 @@ export const transactionRoutes = [
   {
     path: ROUTES.TRANSACTIONS.LIST,
     element: <Transactions />,
-    handle: { title: 'Transactions', crumb: () => 'Transactions' }
+    handle: {
+      title: ({ params, location }) => {
+        const searchParams = new URLSearchParams(location?.search || '')
+        const tab = searchParams.get('tab')
+        return tab === 'credit-trading-market'
+          ? 'Credit trading market'
+          : 'Transactions'
+      },
+      crumb: () => 'Transactions'
+    }
   },
   {
     path: ROUTES.TRANSACTIONS.ADD,

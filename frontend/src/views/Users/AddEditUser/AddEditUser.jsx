@@ -47,7 +47,11 @@ import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
-export const AddEditUser = ({ userType = 'idir' }) => {
+export const AddEditUser = ({
+  handleSaveSuccess,
+  handleCancelEdit,
+  userType = 'idir'
+}) => {
   const {
     data: currentUser,
     hasRoles,
@@ -131,7 +135,7 @@ export const AddEditUser = ({ userType = 'idir' }) => {
     isPending: isUpdating,
     isError: isUpdateError
   } = useUpdateUser({
-    onSuccess: onUserOperationSuccess,
+    onSuccess: handleSaveSuccess,
     onError: onUserOperationError,
     isSupplier: hasRoles(roles.supplier),
     organizationId: orgID || currentUser?.organization?.organizationId
@@ -143,7 +147,7 @@ export const AddEditUser = ({ userType = 'idir' }) => {
     isPending: isCreating,
     isError: isCreateError
   } = useCreateUser({
-    onSuccess: onUserOperationSuccess,
+    onSuccess: handleSaveSuccess,
     onError: onUserOperationError,
     isSupplier: hasRoles(roles.supplier),
     organizationId: orgID || currentUser?.organization?.organizationId
@@ -312,10 +316,6 @@ export const AddEditUser = ({ userType = 'idir' }) => {
           {t('common:submitError')}
         </BCAlert>
       )}
-      <BCTypography variant="h5" color={colors.primary.main} mb={2}>
-        {userID ? 'Edit' : 'Add'} user&nbsp;
-        {userType === 'bceid' && `to ${orgName}`}
-      </BCTypography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)} id={'user-form'}>
         <FormProvider {...{ control, setValue }}>
           <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
@@ -324,7 +324,7 @@ export const AddEditUser = ({ userType = 'idir' }) => {
               size={{
                 xs: 12,
                 md: 5,
-                lg: 4
+                lg: 6
               }}
             >
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
@@ -370,128 +370,118 @@ export const AddEditUser = ({ userType = 'idir' }) => {
                   />
                 )}
               </Stack>
-            </Grid2>
-            <Grid2
-              size={{
-                xs: 12,
-                md: 5,
-                lg: 4
-              }}
-            >
-              <Box
-                bgcolor={colors.background.grey}
-                p={3}
-                display="flex"
-                justifyContent="space-between"
+              <Grid2
+                size={{
+                  xs: 12,
+                  md: 12,
+                  lg: 12
+                }}
               >
-                <BCButton
-                  variant="outlined"
-                  size="medium"
-                  color="primary"
-                  data-test="back-btn"
-                  sx={{
-                    backgroundColor: 'white.main'
-                  }}
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faArrowLeft}
-                      className="small-icon"
-                    />
-                  }
-                  onClick={() =>
-                    hasRoles(roles.supplier)
-                      ? navigate(ROUTES.ORGANIZATION.ORG)
-                      : navigate(
-                          userType === 'idir'
-                            ? ROUTES.ADMIN.USERS.LIST
-                            : ROUTES.ORGANIZATIONS.LIST
-                        )
-                  }
+                <Box
+                  p={3}
+                  display="flex"
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  gap={{ xs: 2, sm: 0 }}
                 >
-                  <BCTypography variant="subtitle2" textTransform="none">
-                    {t('backBtn')}
-                  </BCTypography>
-                </BCButton>
-                {/* Only render delete button for BCeID users */}
-                {userID &&
-                  !isEditingGovernmentUser &&
-                  isCurrentUserGovernment &&
-                  (safeToDelete ? (
-                    <BCButton
-                      variant="outlined"
-                      size="medium"
-                      sx={{
-                        backgroundColor: 'white.main',
-                        borderColor: colors.error.main,
-                        color: colors.error.main
-                      }}
-                      data-test="delete-user-btn"
-                      startIcon={
-                        <FontAwesomeIcon
-                          icon={faTrash}
-                          className="small-icon"
-                        />
-                      }
-                      onClick={handleDelete}
-                    >
-                      <BCTypography variant="subtitle2" textTransform="none">
-                        {t('admin:deleteUser.button')}
-                      </BCTypography>
-                    </BCButton>
-                  ) : (
-                    <Tooltip title={t('admin:deleteUser.notSafe')}>
-                      <span>
-                        <BCButton
-                          variant="outlined"
-                          size="medium"
-                          sx={{
-                            backgroundColor: 'white.main',
-                            borderColor: colors.error.main,
-                            color: colors.error.main,
-                            '&.Mui-disabled': {
+                  <BCButton
+                    type="submit"
+                    variant="contained"
+                    size="medium"
+                    color="primary"
+                    data-test="saveUser"
+                    fullWidth={{ xs: true, sm: false }}
+                    sx={{ ml: { xs: 0, sm: 2 } }}
+                    startIcon={
+                      <FontAwesomeIcon
+                        icon={faFloppyDisk}
+                        className="small-icon"
+                      />
+                    }
+                  >
+                    <BCTypography variant="button">{t('saveBtn')}</BCTypography>
+                  </BCButton>
+                  {/* Only render delete button for BCeID users */}
+                  {userID &&
+                    !isEditingGovernmentUser &&
+                    isCurrentUserGovernment &&
+                    (safeToDelete ? (
+                      <BCButton
+                        variant="outlined"
+                        size="medium"
+                        sx={{
+                          backgroundColor: 'white.main',
+                          borderColor: colors.error.main,
+                          color: colors.error.main
+                        }}
+                        data-test="delete-user-btn"
+                        startIcon={
+                          <FontAwesomeIcon
+                            icon={faTrash}
+                            className="small-icon"
+                          />
+                        }
+                        onClick={handleDelete}
+                      >
+                        <BCTypography variant="subtitle2" textTransform="none">
+                          {t('admin:deleteUser.button')}
+                        </BCTypography>
+                      </BCButton>
+                    ) : (
+                      <Tooltip title={t('admin:deleteUser.notSafe')}>
+                        <span style={{ display: 'inline-block' }}>
+                          <BCButton
+                            variant="outlined"
+                            size="medium"
+                            sx={{
                               backgroundColor: 'white.main',
                               borderColor: colors.error.main,
                               color: colors.error.main,
-                              opacity: 0.5, // slightly faded to indicate disabled state
-                              cursor: 'not-allowed'
+                              '&.Mui-disabled': {
+                                backgroundColor: 'white.main',
+                                borderColor: colors.error.main,
+                                color: colors.error.main,
+                                opacity: 0.5, // slightly faded to indicate disabled state
+                                cursor: 'not-allowed',
+                                width: '100%'
+                              }
+                            }}
+                            disabled
+                            data-test="delete-user-btn"
+                            startIcon={
+                              <FontAwesomeIcon
+                                icon={faTrash}
+                                className="small-icon"
+                              />
                             }
-                          }}
-                          disabled
-                          data-test="delete-user-btn"
-                          startIcon={
-                            <FontAwesomeIcon
-                              icon={faTrash}
-                              className="small-icon"
-                            />
-                          }
-                        >
-                          <BCTypography
-                            variant="subtitle2"
-                            textTransform="none"
                           >
-                            {t('admin:deleteUser.button')}
-                          </BCTypography>
-                        </BCButton>
-                      </span>
-                    </Tooltip>
-                  ))}
-                <BCButton
-                  type="submit"
-                  variant="contained"
-                  size="medium"
-                  color="primary"
-                  data-test="saveUser"
-                  sx={{ ml: 2 }}
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faFloppyDisk}
-                      className="small-icon"
-                    />
-                  }
-                >
-                  <BCTypography variant="button">{t('saveBtn')}</BCTypography>
-                </BCButton>
-              </Box>
+                            <BCTypography
+                              variant="subtitle2"
+                              textTransform="none"
+                            >
+                              {t('admin:deleteUser.button')}
+                            </BCTypography>
+                          </BCButton>
+                        </span>
+                      </Tooltip>
+                    ))}
+                  <BCButton
+                    variant="outlined"
+                    size="medium"
+                    color="primary"
+                    data-test="cancel-btn"
+                    fullWidth={{ xs: true, sm: false }}
+                    sx={{
+                      backgroundColor: 'white.main'
+                    }}
+                    onClick={() => handleCancelEdit()}
+                  >
+                    <BCTypography variant="subtitle2" textTransform="none">
+                      {t('cancelBtn')}
+                    </BCTypography>
+                  </BCButton>
+                </Box>
+              </Grid2>
             </Grid2>
           </Grid2>
         </FormProvider>
@@ -500,7 +490,7 @@ export const AddEditUser = ({ userType = 'idir' }) => {
       {/* Confirmation Dialog for deletion */}
       <Dialog open={openConfirm} onClose={handleCancelDelete}>
         <DialogTitle>
-          <BCTypography variant="h6" color={colors.primary.main}>
+          <BCTypography variant="subtitle1" component="span" color={colors.primary.main}>
             {t('admin:deleteUser.confirmTitle')}
           </BCTypography>
         </DialogTitle>

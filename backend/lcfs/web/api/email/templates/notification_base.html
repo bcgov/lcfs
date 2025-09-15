@@ -28,6 +28,30 @@
                 color: #666;
                 font-size: 12px;
             }
+            .fuel-codes-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 12px;
+            }
+            .fuel-codes-table th {
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                padding: 10px 8px;
+                text-align: left;
+                font-weight: bold;
+            }
+            .fuel-codes-table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            .fuel-codes-table tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .fuel-codes-table tr:hover {
+                background-color: #f1f1f1;
+            }
         </style>
     </head>
     <body>
@@ -74,6 +98,10 @@
                                     </a>
                                 {% endif %}
                             </p>
+
+                            {% block additional_content %}
+                            {# This block can be overridden in extending templates #}
+                            {% endblock %}
 
                             <p>
                                 You received this email because you subscribed at the

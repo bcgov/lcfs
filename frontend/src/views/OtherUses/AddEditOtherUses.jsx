@@ -343,6 +343,7 @@ export const AddEditOtherUses = () => {
           severity: 'error'
         })
       }
+      params.api.autoSizeAllColumns()
     },
     [numericComplianceReportId, saveRow, t, validate]
   )
@@ -395,6 +396,10 @@ export const AddEditOtherUses = () => {
     []
   )
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
+
   // Show loading state
   if (optionsLoading || usesLoading || complianceReportLoading) {
     return <Loading />
@@ -425,6 +430,7 @@ export const AddEditOtherUses = () => {
         onAction={onAction}
         onCellValueChanged={onCellValueChanged}
         onCellEditingStopped={onCellEditingStopped}
+        onFirstDataRendered={onFirstDataRendered}
         showAddRowsButton
         stopEditingWhenCellsLoseFocus
         saveButtonProps={saveButtonProps}

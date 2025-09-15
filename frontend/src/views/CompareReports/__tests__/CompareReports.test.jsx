@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
@@ -19,6 +19,114 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('CompareReports Component', () => {
+  const mockReportChain = [
+    {
+      nickname: 'Original Report',
+      complianceReportId: 1,
+      timestamp: '2021-01-01'
+    },
+    {
+      nickname: 'Supplemental Report 1',
+      complianceReportId: 2,
+      timestamp: '2021-02-01'
+    },
+    {
+      nickname: 'Government Adjustment 2',
+      complianceReportId: 3,
+      timestamp: '2021-03-01'
+    }
+  ]
+
+  const reportData1 = {
+    data: {
+      complianceReportId: 1,
+      renewableFuelTargetSummary: [
+        {
+          line: 1,
+          description: 'renewableFuelTargetSummary',
+          format: 'number',
+          gasoline: 100
+        }
+      ],
+      lowCarbonFuelTargetSummary: [
+        {
+          line: 1,
+          description: 'lowCarbonFuelTargetSummary',
+          format: 'number',
+          value: 50
+        }
+      ],
+      nonCompliancePenaltySummary: [
+        {
+          line: 1,
+          description: 'nonCompliancePenaltySummary',
+          format: 'number',
+          value: 98
+        }
+      ]
+    }
+  }
+
+  const reportData2 = {
+    data: {
+      complianceReportId: 2,
+      renewableFuelTargetSummary: [
+        {
+          line: 1,
+          description: 'renewableFuelTargetSummary',
+          format: 'number',
+          gasoline: 250
+        }
+      ],
+      lowCarbonFuelTargetSummary: [
+        {
+          line: 1,
+          description: 'lowCarbonFuelTargetSummary',
+          format: 'number',
+          value: 70
+        }
+      ],
+      nonCompliancePenaltySummary: [
+        {
+          line: 1,
+          description: 'nonCompliancePenaltySummary',
+          format: 'number',
+          value: 99
+        }
+      ]
+    }
+  }
+
+  const reportData3 = {
+    data: {
+      complianceReportId: 3,
+      renewableFuelTargetSummary: [
+        {
+          line: 1,
+          description: 'renewableFuelTargetSummary',
+          format: 'number',
+          gasoline: 250
+        }
+      ],
+      lowCarbonFuelTargetSummary: [
+        {
+          line: 1,
+          description: 'lowCarbonFuelTargetSummary',
+          format: 'number',
+          value: 70
+        }
+      ],
+      nonCompliancePenaltySummary: [
+        {
+          line: 1,
+          description: 'nonCompliancePenaltySummary',
+          format: 'number',
+          value: 99
+        }
+      ]
+    }
+  }
+
   beforeEach(() => {
     useCurrentUser.mockReturnValue({
       hasRoles: true,
@@ -29,119 +137,13 @@ describe('CompareReports Component', () => {
     // Mock the compliance report store with currentReport
     useComplianceReportStore.mockReturnValue({
       currentReport: {
-        chain: [
-          {
-            nickname: 'Original Report',
-            complianceReportId: 1,
-            timestamp: '2021-01-01'
-          },
-          {
-            nickname: 'Supplemental Report 1',
-            complianceReportId: 2,
-            timestamp: '2021-02-01'
-          },
-          {
-            nickname: 'Government Adjustment 2',
-            complianceReportId: 3,
-            timestamp: '2021-03-01'
-          }
-        ],
+        chain: mockReportChain,
         report: {
           compliancePeriod: '2021',
           complianceReportId: 3
         }
       }
     })
-
-    const reportData1 = {
-      data: {
-        complianceReportId: 1,
-        renewableFuelTargetSummary: [
-          {
-            line: 1,
-            description: 'renewableFuelTargetSummary',
-            format: 'number',
-            gasoline: 100
-          }
-        ],
-        lowCarbonFuelTargetSummary: [
-          {
-            line: 1,
-            description: 'lowCarbonFuelTargetSummary',
-            format: 'number',
-            value: 50
-          }
-        ],
-        nonCompliancePenaltySummary: [
-          {
-            line: 1,
-            description: 'nonCompliancePenaltySummary',
-            format: 'number',
-            value: 98
-          }
-        ]
-      }
-    }
-
-    const reportData2 = {
-      data: {
-        complianceReportId: 2,
-        renewableFuelTargetSummary: [
-          {
-            line: 1,
-            description: 'renewableFuelTargetSummary',
-            format: 'number',
-            gasoline: 250
-          }
-        ],
-        lowCarbonFuelTargetSummary: [
-          {
-            line: 1,
-            description: 'lowCarbonFuelTargetSummary',
-            format: 'number',
-            value: 70
-          }
-        ],
-        nonCompliancePenaltySummary: [
-          {
-            line: 1,
-            description: 'nonCompliancePenaltySummary',
-            format: 'number',
-            value: 99
-          }
-        ]
-      }
-    }
-
-    const reportData3 = {
-      data: {
-        complianceReportId: 3,
-        renewableFuelTargetSummary: [
-          {
-            line: 1,
-            description: 'renewableFuelTargetSummary',
-            format: 'number',
-            gasoline: 250
-          }
-        ],
-        lowCarbonFuelTargetSummary: [
-          {
-            line: 1,
-            description: 'lowCarbonFuelTargetSummary',
-            format: 'number',
-            value: 70
-          }
-        ],
-        nonCompliancePenaltySummary: [
-          {
-            line: 1,
-            description: 'nonCompliancePenaltySummary',
-            format: 'number',
-            value: 99
-          }
-        ]
-      }
-    }
 
     useGetComplianceReportSummary.mockImplementation((id) => {
       if (id === 1) {
@@ -300,5 +302,225 @@ describe('CompareReports Component', () => {
     expect(value250Elements.length).toBeGreaterThan(0)
     expect(value50Elements.length).toBeGreaterThan(0)
     expect(value70Elements.length).toBeGreaterThan(0)
+  })
+
+  it('shows loading state when isLoading is true', () => {
+    // Mock loading state
+    useComplianceReportStore.mockReturnValue({ currentReport: null })
+    
+    render(<CompareReports />, { wrapper })
+    
+    // Should show loading component
+    expect(screen.getByTestId('loading')).toBeInTheDocument()
+  })
+
+  it('handles no currentReport scenario', () => {
+    useComplianceReportStore.mockReturnValue({ currentReport: null })
+    
+    render(<CompareReports />, { wrapper })
+    
+    // Should show loading when no currentReport
+    expect(screen.getByTestId('loading')).toBeInTheDocument()
+  })
+
+  it('handles report chain with less than 2 reports', async () => {
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [mockReportChain[0]], // Only one report
+        report: { compliancePeriod: '2021', complianceReportId: 1 }
+      }
+    })
+
+    await act(async () => {
+      render(<CompareReports />, { wrapper })
+    })
+
+    // Should render selects but with no default selections
+    const selects = screen.getAllByRole('combobox')
+    expect(selects).toHaveLength(2)
+  })
+
+  it('handles empty report chain', async () => {
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [], // Empty chain
+        report: { compliancePeriod: '2021', complianceReportId: 1 }
+      }
+    })
+
+    await act(async () => {
+      render(<CompareReports />, { wrapper })
+    })
+
+    // Should render selects but with no options
+    const selects = screen.getAllByRole('combobox')
+    expect(selects).toHaveLength(2)
+  })
+
+  it('handles data processing with missing matching rows', () => {
+    // Mock report data where second report has no matching rows
+    const incompleteReportData2 = {
+      data: {
+        complianceReportId: 2,
+        renewableFuelTargetSummary: [], // Empty
+        lowCarbonFuelTargetSummary: [], // Empty
+        nonCompliancePenaltySummary: [] // Empty
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation((id) => {
+      if (id === 1) return { data: reportData1.data }
+      if (id === 2) return incompleteReportData2
+      if (id === 3) return { data: reportData3.data }
+      return { data: null }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    // Should render without errors even with incomplete data
+    expect(screen.getAllByText(/renewableFuelTargetSummary/i).length).toBeGreaterThan(0)
+  })
+
+
+  it('handles conflict resolution when no available alternatives exist', async () => {
+    // Test with only 2 reports to force edge case
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: mockReportChain.slice(0, 2), // Only 2 reports
+        report: { compliancePeriod: '2021', complianceReportId: 2 }
+      }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    // Should handle the case with limited options
+    expect(report1Select).toBeInTheDocument()
+    expect(report2Select).toBeInTheDocument()
+  })
+
+  it('processes different fuel types correctly', async () => {
+    render(<CompareReports />, { wrapper })
+
+    // Should render fuel control buttons and allow fuel type changes
+    const renewableTable = screen.getByText('report:renewableFuelTargetSummary')
+    expect(renewableTable).toBeInTheDocument()
+  })
+
+  it('handles null/undefined data values in processing', () => {
+    // Mock data with null/undefined values
+    const nullValueReportData = {
+      data: {
+        complianceReportId: 1,
+        renewableFuelTargetSummary: [{
+          line: 1,
+          description: 'test',
+          format: 'number',
+          gasoline: null
+        }],
+        lowCarbonFuelTargetSummary: [{
+          line: 1,
+          description: 'test',
+          format: 'number',
+          value: null
+        }],
+        nonCompliancePenaltySummary: [{
+          line: 1,
+          description: 'test',
+          format: 'number',
+          value: null,
+          totalValue: null,
+          amount: null
+        }]
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation((id) => {
+      if (id === 1) return nullValueReportData
+      if (id === 2) return { data: reportData2.data }
+      return { data: null }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    // Should handle null values without errors
+    expect(screen.getAllByText(/renewableFuelTargetSummary/i).length).toBeGreaterThan(0)
+  })
+
+  it('displays correct report names when reports are selected', () => {
+    render(<CompareReports />, { wrapper })
+
+    // Report names should be resolved correctly from the chain
+    const tables = screen.getAllByRole('table')
+    expect(tables.length).toBeGreaterThan(0)
+  })
+
+  it('handles non-compliance penalty data with different field names', () => {
+    // Test different field combinations for non-compliance penalty
+    const diverseReportData = {
+      data: {
+        complianceReportId: 1,
+        renewableFuelTargetSummary: [],
+        lowCarbonFuelTargetSummary: [],
+        nonCompliancePenaltySummary: [
+          {
+            line: 1,
+            description: 'test1',
+            format: 'number',
+            value: 100 // Using value field
+          },
+          {
+            line: 2,
+            description: 'test2', 
+            format: 'number',
+            totalValue: 200 // Using totalValue field
+          },
+          {
+            line: 3,
+            description: 'test3',
+            format: 'number',
+            amount: 300 // Using amount field
+          },
+          {
+            line: 4,
+            description: 'test4',
+            format: 'number',
+            gasoline: 400 // Using gasoline field (fuelType)
+          }
+        ]
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation((id) => {
+      if (id === 1) return diverseReportData
+      if (id === 2) return { data: reportData2.data }
+      return { data: null }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    // Should process all different field types without errors
+    expect(screen.getAllByText(/nonCompliancePenaltySummary/i).length).toBeGreaterThan(0)
+  })
+
+  it('handles report selection with single report available', async () => {
+    // Test edge case where only one report is available for selection
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [mockReportChain[0]], // Only one report
+        report: { compliancePeriod: '2021', complianceReportId: 1 }
+      }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    const selects = screen.getAllByRole('combobox')
+    expect(selects).toHaveLength(2)
+    
+    // Each select should be present but may have limited options
+    expect(selects[0]).toBeInTheDocument()
+    expect(selects[1]).toBeInTheDocument()
   })
 })

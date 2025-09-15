@@ -11,6 +11,9 @@ from lcfs.db.models.compliance.ComplianceReport import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     initiative_agreement_document_association,
 )
+from lcfs.db.models.compliance.ChargingSite import (
+    charging_site_document_association,
+)
 
 
 class Document(BaseModel, Auditable):
@@ -46,5 +49,11 @@ class Document(BaseModel, Auditable):
     admin_adjustments = relationship(
         "AdminAdjustment",
         secondary=admin_adjustment_document_association,
+        back_populates="documents",
+    )
+
+    charging_sites = relationship(
+        "ChargingSite",
+        secondary=charging_site_document_association,
         back_populates="documents",
     )

@@ -46,6 +46,12 @@ const SummaryTable = ({
     )
   }
 
+  const isCellLocked = (rowIndex, row) => {
+    // Check if this is Line 7 or 9 and Lines 7&9 are locked
+    const lineNumber = parseInt(row.line)
+    return props.lines7And9Locked && (lineNumber === 7 || lineNumber === 9)
+  }
+
   const getCellConstraints = (rowIndex, columnId) => {
     const column = columns.find((col) => col.id === columnId)
     if (column.cellConstraints && column.cellConstraints[rowIndex]) {
@@ -64,8 +70,9 @@ const SummaryTable = ({
       // For currency inputs (penalty fields), store as string to preserve decimal input
       value = enteredValue.replace(/[^0-9.]/g, '')
     } else {
-      // integer
-      value = enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
+      // integer - parse as float first to handle decimals correctly, then convert to int
+      const cleanedValue = enteredValue.replace(/[^0-9.-]/g, '') // Keep digits, decimal, and minus
+      value = cleanedValue === '' ? 0 : Math.floor(parseFloat(cleanedValue) || 0)
 
       if (constraints.max !== undefined && value > constraints.max) {
         value = constraints.max
@@ -155,7 +162,7 @@ const SummaryTable = ({
         <TableBody>
           {data?.map((row, rowIndex) => (
             <TableRow
-              key={row.line}
+              key={`${row.line ?? 'row'}-${rowIndex}`}
               sx={{
                 '&:last-child td, &:last-child th': { borderBottom: 0 },
                 backgroundColor: '#fcfcfc'
@@ -176,7 +183,13 @@ const SummaryTable = ({
                         : 'none',
                     maxWidth: column.maxWidth || 'none',
                     width: column.width || 'auto',
-                    padding: isCellEditable(rowIndex, column.id) ? 0 : undefined
+                    padding: isCellEditable(rowIndex, column.id) ? 0 : undefined,
+                    backgroundColor: isCellLocked(rowIndex, row) && column.id !== 'line' && column.id !== 'description' 
+                      ? '#f5f5f5' 
+                      : undefined,
+                    opacity: isCellLocked(rowIndex, row) && column.id !== 'line' && column.id !== 'description'
+                      ? 0.7
+                      : 1
                   }}
                 >
                   {isCellEditable(rowIndex, column.id) ? (

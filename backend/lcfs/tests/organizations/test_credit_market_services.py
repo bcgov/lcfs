@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.api.base import NotificationTypeEnum
 
 
 class TestCreditMarketServices:
@@ -21,12 +22,18 @@ class TestCreditMarketServices:
         return AsyncMock()
 
     @pytest.fixture
-    def credit_market_service(self, mock_repo, mock_transaction_repo):
+    def mock_notification_service(self):
+        """Mock notification service"""
+        return AsyncMock()
+
+    @pytest.fixture
+    def credit_market_service(self, mock_repo, mock_transaction_repo, mock_notification_service):
         """Create service instance with mocked dependencies"""
         service = OrganizationsService()
         service.repo = mock_repo
         service.transaction_repo = mock_transaction_repo
         service.redis_balance_service = AsyncMock()
+        service.notification_service = mock_notification_service
         return service
 
     @pytest.fixture
@@ -382,3 +389,272 @@ class TestCreditMarketServices:
         
         assert result.total_balance == 125
         assert result.reserved_balance == 25
+
+    @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    async def test_credit_market_notification_sent_on_new_listing(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification is sent when new credits are listed for sale"""
+        
+        # Set up organization without display initially
+        sample_organization.display_in_credit_market = False
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with new listing
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 100
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "display_in_credit_market": True,
+            "credits_to_sell": 100
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify notification was sent
+        mock_notification_service.send_notification.assert_called_once()
+        call_args = mock_notification_service.send_notification.call_args[0][0]
+        
+        assert NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE in call_args.notification_types
+        assert "LCFS Credit Market - New Credits Available from Test Organization" in call_args.notification_context["subject"]
+        assert call_args.notification_data.related_organization_id == 1
+
+    @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    async def test_credit_market_notification_sent_when_credits_added_to_existing_listing(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification is sent when credits are added to existing display=True org with no credits"""
+        
+        # Set up organization with display=True but no credits
+        sample_organization.display_in_credit_market = True
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with credits now available
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 50
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "credits_to_sell": 50
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify notification was sent
+        mock_notification_service.send_notification.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_credit_market_notification_not_sent_for_existing_listing(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification is NOT sent when updating existing listing with credits"""
+        
+        # Set up organization already displayed with credits
+        sample_organization.display_in_credit_market = True
+        sample_organization.credits_to_sell = 100
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with just contact info changes
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 150  # Updated but still had credits before
+        updated_org.credit_market_contact_name = "Updated Contact"
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "credits_to_sell": 150,
+            "credit_market_contact_name": "Updated Contact"
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify notification was NOT sent
+        mock_notification_service.send_notification.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_credit_market_notification_not_sent_when_not_displayed(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification is NOT sent when credits are added but not displayed in market"""
+        
+        # Set up organization not displayed in market
+        sample_organization.display_in_credit_market = False
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with credits but still not displayed
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = False
+        updated_org.credits_to_sell = 100
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "credits_to_sell": 100
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify notification was NOT sent
+        mock_notification_service.send_notification.assert_not_called()
+
+    @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    async def test_credit_market_notification_handles_errors_gracefully(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification errors don't break the main update operation"""
+        
+        # Set up organization without display initially
+        sample_organization.display_in_credit_market = False
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with new listing
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 100
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock notification service to raise an error
+        mock_notification_service.send_notification.side_effect = Exception("Notification service error")
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "display_in_credit_market": True,
+            "credits_to_sell": 100
+        }
+
+        # This should not raise an exception despite notification failure
+        result = await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify the update still succeeded
+        assert result.organization_id == 1
+        assert result.display_in_credit_market is True
+        assert result.credits_to_sell == 100
+        
+        # Verify notification was attempted
+        mock_notification_service.send_notification.assert_called_once()
+
+    @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', False)
+    async def test_credit_market_notification_not_sent_when_flag_disabled(
+        self, 
+        credit_market_service, 
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notification is NOT sent when the feature flag is disabled"""
+        
+        # Set up organization without display initially
+        sample_organization.display_in_credit_market = False
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+        
+        # Set up updated organization with new listing
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 100
+        mock_repo.update_organization.return_value = updated_org
+        
+        # Mock balance calculation
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+        
+        # Mock user
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 123
+        
+        credit_market_data = {
+            "display_in_credit_market": True,
+            "credits_to_sell": 100
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1, credit_market_data, mock_user
+        )
+
+        # Verify notification was NOT sent because the flag is disabled
+        mock_notification_service.send_notification.assert_not_called()
