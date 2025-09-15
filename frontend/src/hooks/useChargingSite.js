@@ -1,11 +1,11 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
-const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
+const OPTIONS_STALE_TIME = 60 * 60 * 1000 // 1 hr (options change less frequently)
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
 export const useGetIntendedUsers = (options = {}) => {
@@ -85,59 +85,39 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
       if (data.deleted) {
         // Delete operation
         if (!chargingSiteId) {
-          throw new Error('Equipment ID is required for deletion')
+          throw new Error('Charging site ID is required for deletion')
         }
         return await client.delete(
-          `${apiRoutes.saveChargingSite}/${chargingSiteId}`
+          `${apiRoutes.saveChargingSite.replace(':orgID', organizationId)}/${chargingSiteId}`,
+          data
         )
       } else if (data.chargingSiteId) {
         // Update operation (has ID and not explicitly creating)
-        const modifiedData = {
-          ...data,
-          levelOfEquipment:
-            data.levelOfEquipment?.name || data.levelOfEquipment,
-          complianceReportId
-        }
         return await client.put(
-          `${apiRoutes.saveChargingSite}/${chargingSiteId}`,
-          modifiedData
+          `${apiRoutes.saveChargingSite.replace(':orgID', organizationId)}/${chargingSiteId}`,
+          data
         )
       } else {
         // Create operation (no ID or explicitly creating)
-        const modifiedData = {
-          ...data,
-          levelOfEquipment:
-            data.levelOfEquipment?.name || data.levelOfEquipment,
-          complianceReportId
-        }
-        return await client.post(apiRoutes.saveChargingSite, modifiedData)
+        return await client.post(
+          apiRoutes.saveChargingSite.replace(':orgID', organizationId),
+          data
+        )
       }
     },
     onSuccess: (data, variables, context) => {
       // Handle cache invalidation
       if (clearCache) {
-        queryClient.removeQueries([
-          'final-supply-equipments',
-          complianceReportId
-        ])
+        queryClient.removeQueries(['chargingSitesByOrg', organizationId])
       } else {
         queryClient.invalidateQueries({
           predicate: (query) => {
             return (
-              query.queryKey[0] === 'final-supply-equipments' &&
-              query.queryKey[1] === complianceReportId
+              query.queryKey[0] === 'chargingSitesByOrg' &&
+              query.queryKey[1] === organizationId
             )
           }
         })
-      }
-
-      // Invalidate related queries if requested
-      if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries([
-          'compliance-report-summary',
-          complianceReportId
-        ])
-        queryClient.invalidateQueries(['compliance-report', complianceReportId])
       }
 
       onSuccess?.(data, variables, context)
@@ -147,8 +127,8 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
       queryClient.invalidateQueries({
         predicate: (query) => {
           return (
-            query.queryKey[0] === 'final-supply-equipments' &&
-            query.queryKey[1] === complianceReportId
+            query.queryKey[0] === 'chargingSitesByOrg' &&
+            query.queryKey[1] === organizationId
           )
         }
       })

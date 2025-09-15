@@ -251,7 +251,12 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.fuelSupplies)
               }
-              onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
+              onComponent={
+                <FuelSupplyChangelog
+                  canEdit={canEdit}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
+                />
+              }
               offComponent={
                 <FuelSupplySummary
                   status={currentStatus}
@@ -285,7 +290,12 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.allocationAgreements)
               }
-              onComponent={<AllocationAgreementChangelog canEdit={canEdit} />}
+              onComponent={
+                <AllocationAgreementChangelog
+                  canEdit={canEdit}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
+                />
+              }
               offComponent={
                 <AllocationAgreementSummary
                   status={currentStatus}

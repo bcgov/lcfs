@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
 
-export const FuelSupplyChangelog = () => {
+export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
@@ -170,8 +170,8 @@ export const FuelSupplyChangelog = () => {
                 gridKey={`fuel-supply-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false)
-                    : changelogColDefs()
+                    ? changelogCommonColDefs(false, isEarlyIssuance)
+                    : changelogColDefs(true, isEarlyIssuance)
                 }
                 queryData={queryData}
                 getRowId={getRowId}

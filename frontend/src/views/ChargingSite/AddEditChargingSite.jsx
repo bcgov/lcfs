@@ -7,8 +7,6 @@ import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, chargingSiteColDefs } from './_schema'
 import {
-  useFinalSupplyEquipmentOptions,
-  useSaveFinalSupplyEquipment,
   useImportFinalSupplyEquipment,
   useGetFinalSupplyEquipmentImportJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
@@ -31,9 +29,11 @@ import {
   getQuarterDateRange
 } from '@/utils/dateQuarterUtils'
 import {
+  useChargingSiteMutation,
   useGetAllChargingSitesByOrg,
   useGetIntendedUsers
 } from '@/hooks/useChargingSite'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const AddEditChargingSite = () => {
   const [rowData, setRowData] = useState([])
@@ -46,20 +46,28 @@ export const AddEditChargingSite = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isOverwrite, setIsOverwrite] = useState(false)
   const [hideOverwrite, setHideOverwrite] = useState(false)
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
+  const [importAnchorEl, setImportAnchorEl] = useState(null)
+  const isDownloadOpen = Boolean(downloadAnchorEl)
+  const isImportOpen = Boolean(importAnchorEl)
   const apiService = useApiService()
 
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'finalSupplyEquipment', 'reports'])
-  const guides = t('finalSupplyEquipment:reportingResponsibilityInfo', {
-    returnObjects: true
-  })
+  const { t } = useTranslation(['common', 'finalSupplyEquipment', 'report'])
 
   const {
-    complianceReportId = 62,
-    compliancePeriod = 2025,
-    organizationId = 3
-  } = useParams()
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles,
+    hasAnyRole
+  } = useCurrentUser()
+
+  const organizationId = useMemo(
+    () => currentUser.organization?.organizationId,
+    [currentUser]
+  )
+  const { complianceReportId = 62 } = useParams()
   const navigate = useNavigate()
 
   const {
@@ -68,19 +76,16 @@ export const AddEditChargingSite = () => {
     isFetched
   } = useGetIntendedUsers()
 
-  const { mutateAsync: saveRow } =
-    useSaveFinalSupplyEquipment(complianceReportId)
+  const { mutateAsync: saveRow } = useChargingSiteMutation(organizationId)
   const {
     data,
-    isLoading: equipmentsLoading,
+    isLoading: sitesLoading,
     refetch
   } = useGetAllChargingSitesByOrg(organizationId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t(
-        'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
-      ),
+      overlayNoRowsTemplate: t('report:chargingSites.noSitesFound'),
       stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
@@ -112,10 +117,7 @@ export const AddEditChargingSite = () => {
         setRowData([
           {
             id: uuid(),
-            complianceReportId
-            // supplyFromDate: defaultDates.from,
-            // supplyToDate: defaultDates.to,
-            // organizationName: defaultOrgName
+            organizationId
           }
         ])
       } else {
@@ -126,10 +128,7 @@ export const AddEditChargingSite = () => {
           })),
           {
             id: uuid(),
-            complianceReportId
-            // supplyFromDate: defaultDates.from,
-            // supplyToDate: defaultDates.to,
-            // organizationName: defaultOrgName
+            organizationId
           }
         ])
       }
@@ -143,10 +142,9 @@ export const AddEditChargingSite = () => {
         })
       }, 100)
     }
-  }, [compliancePeriod, complianceReportId, data, isGridReady, gridRef, ''])
+  }, [data, isGridReady, gridRef, ''])
 
   useEffect(() => {
-    console.log(intendedUserTypes)
     if (
       !optionsLoading &&
       Array.isArray(intendedUserTypes) &&
@@ -154,14 +152,13 @@ export const AddEditChargingSite = () => {
     ) {
       const updatedColumnDefs = chargingSiteColDefs(
         intendedUserTypes,
-        compliancePeriod,
         errors,
         warnings,
         isGridReady
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [compliancePeriod, errors, warnings, intendedUserTypes, isGridReady])
+  }, [errors, warnings, intendedUserTypes, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.autoSizeAllColumns()
@@ -182,17 +179,22 @@ export const AddEditChargingSite = () => {
       })
 
       // clean up any null or empty string values
-      const updatedData = Object.entries(params.node.data)
-        .filter(([, value]) => value !== null && value !== '')
-        .reduce((acc, [key, value]) => {
-          acc[key] = value
-          return acc
-        }, {})
+      const updatedData = {
+        ...Object.entries(params.node.data)
+          .filter(
+            ([, value]) => value !== null && value !== '' && value !== undefined
+          )
+          .reduce((acc, [key, value]) => {
+            acc[key] = value
+            return acc
+          }, {}),
+        status: 'Draft'
+      }
 
       const responseData = await handleScheduleSave({
         alertRef,
-        idField: 'finalSupplyEquipmentId',
-        labelPrefix: 'finalSupplyEquipment:finalSupplyEquipmentColLabels',
+        idField: 'chargingSiteId',
+        labelPrefix: 'report:chargingSites.columnLabels',
         params,
         setErrors,
         setWarnings,
@@ -213,45 +215,14 @@ export const AddEditChargingSite = () => {
       const defaultOrgName = ''
       await handleScheduleDelete(
         params,
-        'finalSupplyEquipmentId',
+        'chargingSiteId',
         saveRow,
         alertRef,
         setRowData,
         {
-          complianceReportId
-          // supplyFromDate: defaultDates.from,
-          // supplyToDate: defaultDates.to,
-          // organizationName: defaultOrgName
+          organizationId
         }
       )
-    }
-    if (action === 'duplicate') {
-      const newRowID = uuid()
-      const rowData = {
-        ...params.node.data,
-        id: newRowID,
-        kwhUsage: null,
-        serialNbr: null,
-        latitude: null,
-        longitude: null,
-        finalSupplyEquipmentId: null,
-        finalSupplyEquipment: null,
-        validationStatus: 'error',
-        modified: true
-      }
-
-      const transaction = {
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      }
-
-      setErrors({ [newRowID]: 'finalSupplyEquipment' })
-
-      alertRef.current?.triggerAlert({
-        message: 'Unable to save row: Fuel supply equipment fields required',
-        severity: 'error'
-      })
-      return transaction
     }
   }
 
@@ -285,21 +256,21 @@ export const AddEditChargingSite = () => {
     handleCloseDownloadMenu()
   }
 
-  const handleNavigateBack = useCallback(() => {
-    navigate(
-      buildPath(ROUTES.REPORTS.VIEW, {
-        compliancePeriod,
-        complianceReportId
-      }),
-      {
-        state: {
-          expandedSchedule: 'finalSupplyEquipments',
-          message: t('finalSupplyEquipment:scheduleUpdated'),
-          severity: 'success'
-        }
-      }
-    )
-  }, [navigate, compliancePeriod, complianceReportId, t])
+  // const handleNavigateBack = useCallback(() => {
+  //   navigate(
+  //     buildPath(ROUTES.REPORTS.VIEW, {
+  //       compliancePeriod,
+  //       complianceReportId
+  //     }),
+  //     {
+  //       state: {
+  //         expandedSchedule: 'finalSupplyEquipments',
+  //         message: t('finalSupplyEquipment:scheduleUpdated'),
+  //         severity: 'success'
+  //       }
+  //     }
+  //   )
+  // }, [navigate, compliancePeriod, complianceReportId, t])
 
   const onAddRows = useCallback(
     (numRows) => {
@@ -308,21 +279,13 @@ export const AddEditChargingSite = () => {
         .fill()
         .map(() => ({
           id: uuid(),
-          // complianceReportId,
-          // supplyFromDate: defaultDates.from,
-          // supplyToDate: defaultDates.to,
-          // organizationName: defaultOrgName,
+          organizationId,
           validationStatus: 'error',
           modified: true
         }))
     },
-    [complianceReportId]
+    [organizationId]
   )
-
-  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
-  const [importAnchorEl, setImportAnchorEl] = useState(null)
-  const isDownloadOpen = Boolean(downloadAnchorEl)
-  const isImportOpen = Boolean(importAnchorEl)
   const handleDownloadClick = (event) => {
     setDownloadAnchorEl(event.currentTarget)
   }
@@ -338,7 +301,7 @@ export const AddEditChargingSite = () => {
 
   return (
     isFetched &&
-    !equipmentsLoading && (
+    !sitesLoading && (
       <Grid2 className="add-edit-charging-site-container" F>
         <div className="header">
           <BCTypography variant="h5" color="primary">
@@ -461,7 +424,7 @@ export const AddEditChargingSite = () => {
             rowData={rowData}
             onAddRows={onAddRows}
             gridOptions={gridOptions}
-            loading={optionsLoading || equipmentsLoading}
+            loading={optionsLoading || sitesLoading}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             onFirstDataRendered={onFirstDataRendered}
@@ -469,7 +432,7 @@ export const AddEditChargingSite = () => {
             saveButtonProps={{
               enabled: true,
               text: t('common:saveReturnBtn'),
-              onSave: handleNavigateBack,
+              // onSave: handleNavigateBack,
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')
             }}
