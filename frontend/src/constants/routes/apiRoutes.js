@@ -112,6 +112,7 @@ export const apiRoutes = {
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
   // charging sites
   intendedUsers: '/charging-sites/intended-users',
+  getChargingSite: '/charging-sites/:chargingSiteId',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save',
 

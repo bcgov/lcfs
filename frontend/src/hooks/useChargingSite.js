@@ -32,6 +32,32 @@ export const useGetIntendedUsers = (options = {}) => {
   })
 }
 
+export const useGetChargingSiteById = (chargingSiteId, options = {}) => {
+  const client = useApiService()
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingSite', chargingSiteId],
+    queryFn: async () => {
+      const response = await client.get(
+        apiRoutes.getChargingSite.replace(':chargingSiteId', chargingSiteId)
+      )
+      return response.data
+    },
+    staleTime,
+    cacheTime,
+    enabled: enabled && !!chargingSiteId,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 export const useGetAllChargingSitesByOrg = (
   organizationId,
   pagination,
@@ -136,5 +162,66 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
       onError?.(error, variables, context)
     },
     ...restOptions
+  })
+}
+
+export const useChargingSiteStatuses = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-site-statuses'],
+    queryFn: () => apiService.get('/charging-sites/statuses/'),
+    select: (response) => response.data,
+    staleTime: 60 * 60 * 1000 // 60 minutes
+  })
+}
+
+export const useBulkUpdateEquipmentStatus = () => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ siteId, equipment_ids, new_status }) =>
+      apiService.post(
+        `/charging-sites/${siteId}/equipment/bulk-status-update`,
+        {
+          equipment_ids,
+          new_status
+        }
+      ),
+    onSuccess: (_, { siteId }) => {
+      // Invalidate and refetch charging site data
+      queryClient.invalidateQueries({ queryKey: ['charging-site', siteId] })
+      queryClient.invalidateQueries({ queryKey: ['charging-sites'] })
+      queryClient.invalidateQueries({
+        queryKey: ['charging-site-equipment-paginated', siteId]
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to bulk update equipment status:', error)
+    }
+  })
+}
+
+export const useChargingSiteEquipmentPaginated = (
+  siteId,
+  paginationOptions,
+  options
+) => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-site-equipment-paginated', siteId, paginationOptions],
+    queryFn: async () => {
+      const url = apiRoutes.getChargingSiteEquipmentPaginated.replace(
+        ':siteId',
+        siteId
+      )
+      const response = await apiService.post(url, paginationOptions)
+      return response.data
+    },
+    enabled: !!siteId,
+    staleTime: 30000, // 30 seconds
+    ...options
   })
 }

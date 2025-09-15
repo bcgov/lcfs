@@ -1,7 +1,6 @@
 from http.client import HTTPException
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 import structlog
 from typing import List
 
@@ -56,6 +55,7 @@ async def upload_file(
     cr_validate: ComplianceReportValidation = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
+    cs_validate: ChargingSiteValidation = Depends(),
 ) -> FileResponseSchema:
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -65,6 +65,9 @@ async def upload_file(
 
     if parent_type == "adminAdjustment":
         await aa_validate.validate_organization_access(parent_id)
+
+    if parent_type == "charging_site":
+        await cs_validate.validate_organization_access(parent_id)
 
     document = await document_service.upload_file(
         file, parent_id, parent_type, request.user
@@ -85,6 +88,7 @@ async def stream_document(
     cr_validate: ComplianceReportValidation = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
+    cs_validate: ChargingSiteValidation = Depends(),
 ):
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -94,6 +98,9 @@ async def stream_document(
 
     if parent_type == "adminAdjustment":
         await aa_validate.validate_organization_access(parent_id)
+
+    if parent_type == "charging_site":
+        await cs_validate.validate_organization_access(parent_id)
 
     file, document = await document_service.get_object(document_id)
 
@@ -119,6 +126,7 @@ async def delete_file(
     cr_validate: ComplianceReportValidation = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
+    cs_validate: ChargingSiteValidation = Depends(),
 ):
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -126,6 +134,8 @@ async def delete_file(
         await ia_validate.validate_organization_access(parent_id)
     elif parent_type == "administrativeAdjustment":
         await aa_validate.validate_organization_access(parent_id)
+    elif parent_type == "charging_site":
+        await cs_validate.validate_organization_access(parent_id)
     else:
         raise HTTPException(403, "Unable to verify authorization for document download")
 

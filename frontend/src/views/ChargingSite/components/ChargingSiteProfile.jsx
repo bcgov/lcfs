@@ -1,14 +1,26 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import Loading from '@/components/Loading'
+import { useGetChargingSiteById } from '@/hooks/useChargingSite'
+import { constructAddress } from '@/utils/constructAddress'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-export const ChargingSiteProfile = () => {
-  const { t } = useTranslation('chargingSite')
+import { useParams } from 'react-router-dom'
 
+export const ChargingSiteProfile = ({ alertRef = useRef(null) }) => {
+  const { t } = useTranslation('chargingSite')
+  const { chargingSiteId } = useParams()
+  const { data, isLoading, isError } = useGetChargingSiteById(chargingSiteId)
+
+  if (isLoading) {
+    return <Loading message="Loading site data" />
+  }
+  const { streetAddress, city, postalCode } = data
   return (
     <BCBox p={1}>
       <BCTypography variant="h6" color="primary">
-        {'The Bay'} {/* Site Name */}
+        {data?.siteName || ''} {/* Site Name */}
       </BCTypography>
       <BCBox
         display="grid"
@@ -23,21 +35,21 @@ export const ChargingSiteProfile = () => {
             <BCTypography variant="label">
               {t('cardLabels.status')}:
             </BCTypography>{' '}
-            {' Validated'}
+            {data?.status?.status || ''}
           </BCTypography>
 
           <BCTypography variant="body4">
             <BCTypography variant="label">
               {t('cardLabels.version')}:
-            </BCTypography>
-            {' 1'}
+            </BCTypography>{' '}
+            {String(data?.version) || ''}
           </BCTypography>
 
           <BCTypography variant="body4">
             <BCTypography variant="label">
               {t('cardLabels.siteNum')}:
             </BCTypography>{' '}
-            {' 00321'}
+            {data?.siteCode || ''}
           </BCTypography>
         </BCBox>
 
@@ -46,8 +58,8 @@ export const ChargingSiteProfile = () => {
           <BCTypography variant="body4">
             <BCTypography variant="label">
               {t('cardLabels.siteAddr')}:
-            </BCTypography>
-            {' 123 Douglas St., Victoria B.C., V8Z 0B1'}
+            </BCTypography>{' '}
+            {[streetAddress, city, postalCode].join(', ')}
           </BCTypography>
 
           <BCTypography
@@ -67,7 +79,7 @@ export const ChargingSiteProfile = () => {
               {t('cardLabels.intendedUserTypes')}:
             </BCTypography>{' '}
             <CommonArrayRenderer
-              value={['Multi-unit residential building', 'Employee']}
+              value={data?.intendedUsers?.map((i) => i.typeName)}
               disableLink={true}
             />
           </BCTypography>
@@ -75,8 +87,8 @@ export const ChargingSiteProfile = () => {
           <BCTypography variant="body4">
             <BCTypography variant="label">
               {t('cardLabels.notes')}:
-            </BCTypography>
-            {' NE Corner'}
+            </BCTypography>{' '}
+            {data?.notes}
           </BCTypography>
         </BCBox>
       </BCBox>

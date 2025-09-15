@@ -25,7 +25,7 @@ const initialPaginationOptions = {
   filters: []
 }
 
-export const ChargingSiteGrid = () => {
+export const ChargingSiteFSEGrid = () => {
   const gridRef = useRef(null)
   const alertRef = useRef(null)
   const [gridApi, setGridApi] = useState(null)
@@ -242,7 +242,7 @@ export const ChargingSiteGrid = () => {
         dataKey="notifications"
         overlayNoRowsTemplate={t('notifications:noNotificationsFound')}
         autoSizeStrategy={{
-          type: 'fitGridWidth',
+          type: 'fitCellContents',
           defaultMinWidth: 100,
           defaultMaxWidth: 600
         }}
