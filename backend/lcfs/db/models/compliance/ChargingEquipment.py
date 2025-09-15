@@ -114,7 +114,9 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     ports = Column(
-        Enum(PortsEnum, name="ports_enum"),
+        Enum(
+            PortsEnum, name="ports_enum", values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=True,
         comment="Port configuration of the equipment",
     )

@@ -13,7 +13,19 @@ class ChargingSiteValidation:
         self.request = request
         self.cs_repo = cs_repo
 
-    async def validate_charging_site_create_access(
+    async def get_charging_site(
+        self, organization_id: int, charging_site_id: int
+    ):
+        """
+        Validates if the user has access to create the charging site.
+        """
+        if self.request.user.organization and self.request.user.organization.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Validation for authorization failed.",
+            )
+
+    async def charging_site_create_access(
         self, organization_id: int, data: ChargingSiteCreateSchema
     ):
         """
@@ -34,7 +46,7 @@ class ChargingSiteValidation:
 
         return True
 
-    async def validate_charging_site_delete_update_access(
+    async def charging_site_delete_update_access(
         self, charging_site_id: int, organization_id: int
     ):
         """

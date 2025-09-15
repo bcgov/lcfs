@@ -2,7 +2,7 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { ChargingSiteCard } from './components/ChargingSiteCard'
 import { ChargingSiteDocument } from './components/ChargingSiteDocument'
-import { ChargingSiteGrid } from './components/ChargingSiteGrid'
+import { ChargingSiteFSEGrid } from './components/ChargingSiteFSEGrid'
 
 export const ViewChargingSite = () => {
   const { t } = useTranslation('chargingSite')
@@ -13,7 +13,7 @@ export const ViewChargingSite = () => {
       </BCTypography>
       <ChargingSiteCard />
       <ChargingSiteDocument />
-      <ChargingSiteGrid />
+      <ChargingSiteFSEGrid />
     </div>
   )
 }
