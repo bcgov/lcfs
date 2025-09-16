@@ -8,19 +8,14 @@ import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 
-export const ChargingSiteProfile = ({ alertRef = useRef(null) }) => {
+export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
   const { t } = useTranslation('chargingSite')
-  const { chargingSiteId } = useParams()
-  const { data, isLoading, isError } = useGetChargingSiteById(chargingSiteId)
 
-  if (isLoading) {
-    return <Loading message="Loading site data" />
-  }
   const { streetAddress, city, postalCode } = data
   return (
     <BCBox p={1}>
       <BCTypography variant="h6" color="primary">
-        {data?.siteName || ''} {/* Site Name */}
+        {data?.siteName || ''}
       </BCTypography>
       <BCBox
         display="grid"

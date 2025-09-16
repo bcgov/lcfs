@@ -9,7 +9,7 @@ import { roles } from '@/constants/roles'
 import Loading from '@/components/Loading'
 import ROUTES from '@/routes/routes'
 
-export const ChargingSiteCard = ({ addMode = false }) => {
+export const ChargingSiteCard = ({ addMode = false, data }) => {
   const alertRef = useRef(null)
   const { t } = useTranslation('chargingSite')
   const [isEditMode, setIsEditMode] = useState(addMode)
@@ -84,7 +84,7 @@ export const ChargingSiteCard = ({ addMode = false }) => {
         title={t('cardTitle')}
         color="nav"
         editButton={undefined}
-        content={<ChargingSiteProfile />}
+        content={<ChargingSiteProfile data={data} />}
       />
     </BCBox>
   )

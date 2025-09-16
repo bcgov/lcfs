@@ -1,4 +1,6 @@
 from datetime import datetime
+from enum import Enum
+from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -7,7 +9,7 @@ from lcfs.web.api.base import (
 )
 from typing import List, Optional
 
-from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
+from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from pydantic import Field
 
 
@@ -36,6 +38,7 @@ class ChargingSiteSchema(BaseSchema):
     latitude: float
     longitude: float
     intended_users: List[EndUserTypeSchema] = []
+    documents: Optional[List[FileResponseSchema]] = []
     notes: Optional[str] = None
     create_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
@@ -56,7 +59,7 @@ class ChargingSiteCreateSchema(BaseSchema):
     charging_site_id: Optional[int] = 0
     organization_id: int
     status_id: Optional[int] = None
-    status: Optional[str] = None
+    current_status: Optional[str] = None
     site_name: str
     site_code: Optional[str] = None
     street_address: str
@@ -97,22 +100,41 @@ class ChargingSiteStatusSchema(BaseSchema):
     description: Optional[str] = None
 
 
+class ChargingEquipmentStatusSchema(BaseSchema):
+    charging_equipment_status_id: int
+    status: str
+    description: Optional[str] = None
+
+
+class LevelOfEquipmentSchema(BaseSchema):
+    level_of_equipment_id: int
+    name: str
+    description: Optional[str] = None
+    display_order: int
+
+
+class PortsEnum(str, Enum):
+    SINGLE = "Single port"
+    DUAL = "Dual port"
+
+
 class ChargingEquipmentForSiteSchema(BaseSchema):
     charging_equipment_id: int
+    charging_site_id: Optional[int]
+    status: Optional[ChargingEquipmentStatusSchema] = None
     equipment_number: str
+    organization_name: Optional[str] = None
+    allocating_organization: Optional[OrganizationSchema] = None
     registration_number: str
     version: int = 1
-    allocating_organization: Optional[str] = None
     serial_number: str
     manufacturer: str
     model: Optional[str] = None
-    level_of_equipment: str
-    ports: Optional[str] = None
-    intended_use_types: List[str] = Field(default_factory=list)
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    status: str
-    equipment_notes: Optional[str] = None
+    level_of_equipment: Optional[LevelOfEquipmentSchema] = None
+    ports: Optional[PortsEnum] = None
+    intended_use_types: List[EndUseTypeSchema] = Field(default_factory=list)
+    notes: Optional[str] = None
+    charging_site: Optional[ChargingSiteCreateSchema] = None
 
 
 class ChargingSiteWithAttachmentsSchema(ChargingSiteBaseSchema):

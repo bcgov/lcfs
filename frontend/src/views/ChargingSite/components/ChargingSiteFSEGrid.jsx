@@ -1,22 +1,20 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Grid, Stack } from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
+import { Grid2 as Grid, Stack } from '@mui/material'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { fseColDefs } from './_schema'
-import {
-  useDeleteNotificationMessages,
-  useGetNotificationMessages,
-  useMarkNotificationAsRead
-} from '@/hooks/useNotifications'
+import { chargingEquipmentColDefs, defaultColDef } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import {
+  useBulkUpdateEquipmentStatus,
+  useChargingSiteEquipmentPaginated
+} from '@/hooks/useChargingSite'
+import { equipmentButtonConfigFn, buildButtonContext } from './buttonConfig'
 
 const initialPaginationOptions = {
   page: 1,
@@ -26,240 +24,302 @@ const initialPaginationOptions = {
 }
 
 export const ChargingSiteFSEGrid = () => {
+  const { t } = useTranslation(['chargingSite'])
+  const navigate = useNavigate()
   const gridRef = useRef(null)
   const alertRef = useRef(null)
+
+  const [selectedRows, setSelectedRows] = useState([])
   const [gridApi, setGridApi] = useState(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
-
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
 
-  const { t } = useTranslation(['chargingSite'])
-  const navigate = useNavigate()
-  const { data: currentUser } = useCurrentUser()
-  const { refetch } = useGetNotificationMessages()
-  const markAsReadMutation = useMarkNotificationAsRead()
-  const deleteMutation = useDeleteNotificationMessages()
+  const { chargingSiteId } = useParams()
+  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
-  const queryData = useGetNotificationMessages(paginationOptions, {
-    cacheTime: 0,
-    staleTime: 0
-  })
-
-  // row class rules for unread messages
-  const rowClassRules = useMemo(
-    () => ({
-      'unread-row': (params) => !params.data.isRead
-    }),
-    []
+  const equipmentQuery = useChargingSiteEquipmentPaginated(
+    chargingSiteId,
+    paginationOptions
   )
-  const selectionColumnDef = useMemo(() => {
-    return {
-      sortable: false,
-      resizable: false,
-      suppressHeaderMenuButton: true,
-      headerTooltip: 'Checkboxes indicate selection'
-    }
-  }, [])
-  const rowSelection = useMemo(() => {
-    return {
-      mode: 'multiRow'
-    }
+  const { data: equipmentData, isLoading } = equipmentQuery
+
+  const { mutateAsync: bulkUpdateStatus, isPending: isUpdating } =
+    useBulkUpdateEquipmentStatus()
+
+  const equipmentList = equipmentData?.equipment || []
+
+  // Check if selected equipment can be submitted (only from Draft status)
+  const canSubmit = useMemo(() => {
+    if (selectedRows.length === 0) return false
+    const selectedEquipment = equipmentList.filter((eq) =>
+      selectedRows.includes(eq.chargingEquipmentId)
+    )
+    return selectedEquipment.every((eq) => eq.status.status === 'Draft')
+  }, [selectedRows, equipmentList])
+
+  // Check if selected equipment can be returned to draft (only from Submitted status)
+  const canReturnToDraft = useMemo(() => {
+    if (selectedRows.length === 0) return false
+    const selectedEquipment = equipmentList.filter((eq) =>
+      selectedRows.includes(eq.chargingEquipmentId)
+    )
+    return selectedEquipment.every((eq) => eq.status.status === 'Submitted')
+  }, [selectedRows, equipmentList])
+
+  // Check if selected equipment can be returned to submitted (undo validation - only from Validated status)
+  const canUndoValidation = useMemo(() => {
+    if (selectedRows.length === 0) return false
+    const selectedEquipment = equipmentList.filter((eq) =>
+      selectedRows.includes(eq.chargingEquipmentId)
+    )
+    return selectedEquipment.every((eq) => eq.status.status === 'Validated')
+  }, [selectedRows, equipmentList])
+
+  // Check if selected equipment can be validated (only from Submitted status)
+  const canValidate = useMemo(() => {
+    if (selectedRows.length === 0) return false
+    const selectedEquipment = equipmentList.filter((eq) =>
+      selectedRows.includes(eq.chargingEquipmentId)
+    )
+    return selectedEquipment.every((eq) => eq.status.status === 'Submitted')
+  }, [selectedRows, equipmentList])
+
+  // Check if selected equipment can be decommissioned (only from Validated status)
+  const canSetToDecommision = useMemo(() => {
+    if (selectedRows.length === 0) return false
+    const selectedEquipment = equipmentList.filter((eq) =>
+      selectedRows.includes(eq.chargingEquipmentId)
+    )
+    return selectedEquipment.every((eq) => eq.status.status === 'Validated')
+  }, [selectedRows, equipmentList])
+
+  // Handle row selection for bulk operations
+  const handleSelectionChanged = useCallback((api) => {
+    const selectedNodes = api.getSelectedNodes()
+    const selectedIds = selectedNodes.map(
+      (node) => node.data.chargingEquipmentId
+    )
+    setSelectedRows(selectedIds)
   }, [])
 
-  // Consolidated mutation handler
-  const handleMutation = useCallback(
-    (mutation, selectedNotifications, successMessage, errorMessage) => {
-      if (selectedNotifications.length === 0) {
-        alertRef.current?.triggerAlert({
-          message: t('notifications:noNotificationsSelectedText'),
-          severity: 'warning'
+  // Toggle select all equipment by status - NEW IMPLEMENTATION
+  const handleToggleSelectByStatus = useCallback(
+    (status) => {
+      const equipmentWithStatus = equipmentList.filter(
+        (equipment) => equipment.status.status === status
+      )
+      const equipmentIds = equipmentWithStatus.map(
+        (equipment) => equipment.chargingEquipmentId
+      )
+
+      // Check if all equipment of this status is already selected
+      const allSelected =
+        equipmentIds.length > 0 &&
+        equipmentIds.every((id) => selectedRows.includes(id))
+
+      let newSelection
+      if (allSelected) {
+        // Unselect all equipment of this status
+        newSelection = selectedRows.filter((id) => !equipmentIds.includes(id))
+      } else {
+        // Select all equipment of this status (merge with existing selection)
+        newSelection = [...new Set([...selectedRows, ...equipmentIds])]
+      }
+
+      setSelectedRows(newSelection)
+
+      // Update grid selection
+      if (gridRef.current) {
+        gridRef.current.api.forEachNode((node) => {
+          const isSelected = newSelection.includes(
+            node.data.chargingEquipmentId
+          )
+          node.setSelected(isSelected)
         })
-        return
-      }
-      mutation.mutate(selectedNotifications, {
-        onSuccess: () => {
-          // eslint-disable-next-line chai-friendly/no-unused-expressions
-          successMessage &&
-            alertRef.current?.triggerAlert({
-              message: t(successMessage),
-              severity: 'success'
-            })
-          refetch()
-        },
-        onError: (error) => {
-          alertRef.current?.triggerAlert({
-            message: t(errorMessage, { error: error.message }),
-            severity: 'error'
-          })
-        }
-      })
-    },
-    [t, refetch]
-  )
-
-  const onGridReady = useCallback((params) => {
-    setGridApi(params.api)
-  }, [])
-
-  // Toggle selection for visible rows
-  const toggleSelectVisibleRows = useCallback(() => {
-    if (!gridApi) return
-    gridApi.forEachNodeAfterFilterAndSort((node) => {
-      node.setSelected(!isAllSelected)
-    })
-    setIsAllSelected(!isAllSelected)
-  }, [gridApi, isAllSelected])
-
-  // event handlers for delete, markAsRead, and row-level deletes
-  const handleMarkAsRead = useCallback(() => {
-    if (!gridApi) return
-    const payload = isAllSelected
-      ? { applyToAll: true }
-      : {
-          notification_ids: gridApi
-            .getSelectedNodes()
-            .map((n) => n.data.notificationMessageId)
-        }
-    handleMutation(
-      markAsReadMutation,
-      payload,
-      'notifications:markAsReadSuccessText',
-      'notifications:markAsReadErrorText'
-    )
-  }, [gridApi, isAllSelected, handleMutation, markAsReadMutation])
-
-  const handleDelete = useCallback(() => {
-    if (!gridApi) return
-    const payload = isAllSelected
-      ? { applyToAll: true }
-      : {
-          notification_ids: gridApi
-            .getSelectedNodes()
-            .map((n) => n.data.notificationMessageId)
-        }
-    handleMutation(
-      deleteMutation,
-      payload,
-      'notifications:deleteSuccessText',
-      'notifications:deleteErrorText'
-    )
-  }, [gridApi, isAllSelected, handleMutation, deleteMutation])
-
-  const onCellClicked = useCallback(
-    (params) => {
-      if (
-        params.column.colId === 'action' &&
-        params.event.target.dataset.action
-      ) {
-        handleMutation(
-          deleteMutation,
-          { notification_ids: [params.data.notificationMessageId] },
-          'notifications:deleteSuccessText',
-          'notifications:deleteErrorText'
-        )
       }
     },
-    [handleMutation, deleteMutation]
+    [equipmentList, selectedRows]
   )
 
-  const onSelectionChanged = useCallback((params) => {
-    const { api } = params
-    const visibleRows = []
-    api.forEachNodeAfterFilterAndSort((node) => {
-      visibleRows.push(node)
-    })
-    const selectedRows = visibleRows.filter((node) => node.isSelected())
-    setSelectedRowCount(selectedRows.length)
-    setIsAllSelected(
-      visibleRows.length > 0 && visibleRows.length === selectedRows.length
-    )
+  // Handle pagination changes
+  const handlePaginationChange = useCallback((newPaginationOptions) => {
+    setPaginationOptions(newPaginationOptions)
+    setSelectedRows([])
   }, [])
 
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
+  // Clear all selections and filters
+  const handleClearFilters = useCallback(() => {
+    setSelectedRows([])
+    setPaginationOptions((prev) => ({
+      ...prev,
+      page: 1,
+      filters: [],
+      sortOrders: []
+    }))
+    if (gridRef.current && gridRef.current.api) {
+      gridRef.current.api.setFilterModel(null)
+      gridRef.current.api.deselectAll()
+      gridRef.current.api.setSortModel(null)
     }
-  }
-  return (
-    <BCBox mt={2}>
-      <BCTypography variant="h6" color="primary">
-        {t('gridTitle')}
-      </BCTypography>
-      <BCTypography variant="body4" color="text" mt={1} component="div">
-        {t('gridDescription')}
-      </BCTypography>
+  }, [setPaginationOptions])
 
-      {/* Buttons */}
-      <Stack direction="row" spacing={1} component="div" my={2}>
-        <BCButton
-          data-test="select-all"
-          variant={isAllSelected ? 'outlined' : 'contained'}
-          color="primary"
-          startIcon={
-            <FontAwesomeIcon
-              icon={faSquareCheck}
-              className="small-icon fa-regular"
-            />
-          }
-          onClick={toggleSelectVisibleRows}
-        >
-          {isAllSelected
-            ? t('notifications:buttonStack.unselectAll')
-            : t('notifications:buttonStack.selectAll')}
-        </BCButton>
-        <BCButton
-          data-test="mark-as-read"
-          variant="contained"
-          color="primary"
-          onClick={handleMarkAsRead}
-          disabled={selectedRowCount === 0}
-        >
-          {t('notifications:buttonStack.markAsRead')}
-        </BCButton>
-        <BCButton
-          data-test="mark-as-unread"
-          variant="outlined"
-          color="error"
-          onClick={handleDelete}
-          disabled={selectedRowCount === 0}
-        >
-          {t('notifications:buttonStack.deleteSelected')}
-        </BCButton>
-        <ClearFiltersButton onClick={handleClearFilters} />
-      </Stack>
-      <BCGridViewer
-        gridKey="notifications-grid"
-        onGridReady={onGridReady}
-        gridRef={gridRef}
-        alertRef={alertRef}
-        columnDefs={fseColDefs(t, currentUser)}
-        defaultColDefs={{ minWidth: 50, maxWidth: 600 }}
-        queryData={queryData}
-        dataKey="notifications"
-        overlayNoRowsTemplate={t('notifications:noNotificationsFound')}
-        autoSizeStrategy={{
-          type: 'fitCellContents',
-          defaultMinWidth: 100,
-          defaultMaxWidth: 600
-        }}
-        rowSelection={rowSelection}
-        rowClassRules={rowClassRules}
-        onCellClicked={onCellClicked}
-        selectionColumnDef={selectionColumnDef}
-        onSelectionChanged={onSelectionChanged}
-        // onRowClicked={handleRowClicked}
-        paginationOptions={paginationOptions}
-        onPaginationChange={(newPagination) =>
-          setPaginationOptions((prev) => ({
-            ...prev,
-            ...newPagination
-          }))
-        }
-      />
-    </BCBox>
+  // Export selected equipment
+  const handleExportSelected = useCallback(() => {
+    console.log('Exporting selected equipment:', selectedRows)
+  }, [selectedRows])
+
+  // Bulk status update handlers
+  const handleBulkStatusUpdate = useCallback(
+    async (newStatus) => {
+      if (selectedRows.length === 0) return
+
+      try {
+        await bulkUpdateStatus({
+          chargingSiteId: parseInt(chargingSiteId),
+          equipment_ids: selectedRows,
+          new_status: newStatus
+        })
+        handleClearFilters()
+      } catch (error) {
+        console.error('Failed to update equipment status:', error)
+      }
+    },
+    [selectedRows, chargingSiteId, bulkUpdateStatus, handleClearFilters]
+  )
+
+  const gridOptions = useMemo(
+    () => ({
+      rowSelection: 'multiple',
+      suppressRowClickSelection: true,
+      onSelectionChanged: (event) => handleSelectionChanged(event.api),
+      getRowId: (params) => params.data.chargingEquipmentId
+    }),
+    [handleSelectionChanged]
+  )
+
+  const handleAddEquipment = useCallback(() => {
+    navigate(`/charging-sites/${chargingSiteId}/add-equipment`)
+  }, [navigate, chargingSiteId])
+
+  // Build context for button configuration
+  const buttonContext = useMemo(() => {
+    return buildButtonContext({
+      t,
+      equipmentList,
+      selectedRows,
+      isUpdating,
+      canValidate,
+      canUndoValidation,
+      canReturnToDraft,
+      canSubmit,
+      canSetToDecommision,
+      chargingSiteStatus: equipmentData?.status?.status || 'Draft',
+      organizationId: equipmentData?.organizationId || null,
+      currentUser,
+      hasAnyRole,
+      hasRoles,
+      handleAddEquipment,
+      handleToggleSelectByStatus,
+      handleBulkStatusUpdate,
+      handleExportSelected,
+      handleClearFilters
+    })
+  }, [
+    equipmentList,
+    selectedRows,
+    isUpdating,
+    canValidate,
+    canUndoValidation,
+    canReturnToDraft,
+    canSubmit,
+    canSetToDecommision,
+    equipmentData?.chargingSiteStatus,
+    equipmentData?.organizationId,
+    currentUser?.userId,
+    handleAddEquipment,
+    handleToggleSelectByStatus,
+    handleBulkStatusUpdate,
+    handleExportSelected,
+    handleClearFilters
+  ])
+
+  // Get configured buttons based on user role and context
+  const availableButtons = useMemo(
+    () => equipmentButtonConfigFn(buttonContext),
+    [buttonContext]
+  )
+
+  return (
+    <>
+      {/* Equipment Processing Section */}
+      <Grid size={12} sx={{ mt: { xs: 2, md: 4 } }}>
+        <BCBox sx={{ mb: 3 }}>
+          <BCTypography variant="h6" color="primary">
+            {t('gridTitle')}
+          </BCTypography>
+          <BCTypography variant="body4" color="text" mt={1} component="div">
+            {t('gridDescription')}
+          </BCTypography>
+        </BCBox>
+
+        {/* Dynamic Action Buttons Based on Role */}
+        {availableButtons.length > 0 && (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            sx={{ mb: 3, flexWrap: 'wrap' }}
+          >
+            {availableButtons.map((button) => (
+              <BCButton
+                key={button.id}
+                variant={button.variant}
+                color={button.color}
+                type="button"
+                startIcon={button.startIcon}
+                onClick={button.handler}
+                disabled={button.disabled}
+                title={button.title}
+              >
+                {button.label}
+              </BCButton>
+            ))}
+          </Stack>
+        )}
+
+        {/* Data Grid */}
+        <BCBox sx={{ width: '100%' }}>
+          <BCGridViewer
+            gridRef={gridRef}
+            alertRef={alertRef}
+            columnDefs={chargingEquipmentColDefs(t)}
+            queryData={equipmentQuery}
+            dataKey="equipment"
+            getRowId={(params) => params.data.chargingEquipmentId}
+            paginationOptions={paginationOptions}
+            onPaginationChange={handlePaginationChange}
+            overlayNoRowsTemplate={t('chargingSite:noChargingEquipmentsFnd')}
+            gridOptions={gridOptions}
+            enableCopyButton={false}
+            gridKey="charging-site-equipment"
+            autoSizeStrategy={{
+              type: 'fitCellContents',
+              defaultMinWidth: 100,
+              defaultMaxWidth: 600
+            }}
+            defaultColDef={{
+              filter: false,
+              sortable: true,
+              resizable: true,
+              minWidth: 100,
+              width: 140,
+              flex: 0
+            }}
+          />
+        </BCBox>
+      </Grid>
+    </>
   )
 }
