@@ -28,18 +28,20 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   ))
 }))
 
-// Reusable mocks
-const mockUseOrgNames = (data = [], isLoading = false) => {
-  vi.mock('@/hooks/useOrganizations', () => ({
-    useOrganizationNames: () => ({ data, isLoading })
-  }))
-}
+// Module-scoped controllable mocks (avoid hoisting issues)
+let orgNamesData = []
+let orgNamesLoading = false
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationNames: () => ({ data: orgNamesData, isLoading: orgNamesLoading })
+}))
 
-const mockUseChargingSites = (data = { chargingSites: [], pagination: { page: 1, size: 10, total: 0, totalPages: 1 } }) => {
-  vi.mock('@/hooks/useChargingSite', () => ({
-    useGetAllChargingSites: () => ({ data, isLoading: false })
-  }))
+let chargingSitesData = {
+  chargingSites: [],
+  pagination: { page: 1, size: 10, total: 0, totalPages: 1 }
 }
+vi.mock('@/hooks/useChargingSite', () => ({
+  useGetAllChargingSites: () => ({ data: chargingSitesData, isLoading: false })
+}))
 
 vi.mock('@/hooks/useCurrentUser')
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -48,8 +50,12 @@ describe('ChargingSitesList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default mocks
-    mockUseOrgNames([{ organizationId: 1, name: 'Org 1' }], false)
-    mockUseChargingSites()
+    orgNamesData = [{ organizationId: 1, name: 'Org 1' }]
+    orgNamesLoading = false
+    chargingSitesData = {
+      chargingSites: [],
+      pagination: { page: 1, size: 10, total: 0, totalPages: 1 }
+    }
   })
 
   it('renders IDIR view with description, clear filters, org dropdown, and grid', () => {
@@ -61,9 +67,10 @@ describe('ChargingSitesList', () => {
     expect(screen.getByText('tabs.chargingSites')).toBeInTheDocument()
     expect(screen.getByText('idirChargingSites.description')).toBeInTheDocument()
 
-    // Clear filters button label (mocked component renders its own text or translated key)
-    // Using the real ClearFiltersButton renders localized label; assert button exists by role
-    expect(screen.getByRole('button')).toBeInTheDocument()
+    // Clear Filters button should be present
+    expect(
+      screen.getByRole('button', { name: /common:ClearFilters/i })
+    ).toBeInTheDocument()
 
     // Org dropdown exists (placeholder text key)
     expect(
@@ -84,7 +91,9 @@ describe('ChargingSitesList', () => {
     expect(screen.getByText('chargingSites.description')).toBeInTheDocument()
 
     // New charging site button
-    const newBtn = screen.getByRole('button')
+    const newBtn = screen.getByRole('button', {
+      name: 'chargingSites.newSiteBtn'
+    })
     expect(newBtn).toBeInTheDocument()
 
     // Clicking should navigate to add path
