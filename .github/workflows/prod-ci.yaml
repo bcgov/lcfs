@@ -299,7 +299,7 @@ jobs:
           cmd: |
             yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
             yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-prod.yaml
-            yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-dynamic-schedule/values-prod.yaml
+            yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-dynamic-scheduler/values-prod.yaml
 
       - name: GitHub Commit & Push
         run: |
