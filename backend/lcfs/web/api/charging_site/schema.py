@@ -136,6 +136,13 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
     notes: Optional[str] = None
     charging_site: Optional[ChargingSiteCreateSchema] = None
 
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        # Map intended_uses to intended_use_types if needed
+        if hasattr(obj, "intended_uses") and not hasattr(obj, "intended_use_types"):
+            obj.intended_use_types = obj.intended_uses
+        return super().model_validate(obj, **kwargs)
+
 
 class ChargingSiteWithAttachmentsSchema(ChargingSiteBaseSchema):
     attachments: List[FileResponseSchema] = Field(default_factory=list)
