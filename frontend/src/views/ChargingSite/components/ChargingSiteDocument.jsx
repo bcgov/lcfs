@@ -7,13 +7,16 @@ import {
   IconButton,
   List
 } from '@mui/material'
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import colors from '@/themes/base/colors'
 import { Edit, ExpandMore } from '@mui/icons-material'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import BCBox from '@/components/BCBox'
 import { timezoneFormatter } from '@/utils/formatters'
+import { useParams } from 'react-router-dom'
+import { useDownloadDocument } from '@/hooks/useDocuments'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 
 const accordionStyles = {
   '& .Mui-disabled': {
@@ -40,13 +43,29 @@ const data = [
     createUser: 'John Doe'
   }
 ]
-export const ChargingSiteDocument = () => {
+export const ChargingSiteDocument = ({ attachments }) => {
   const { t } = useTranslation('chargingSite')
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(
+    attachments?.length ? 'document' : ''
+  )
+  const [isFileDialogOpen, setFileDialogOpen] = useState(false)
+  const { chargingSiteId } = useParams()
+  const downloadDocument = useDownloadDocument('charging_site', chargingSiteId)
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false)
   }
+  // Handle attachments accordion toggle
+  const handleAttachmentsAccordionChange = useCallback((event, isExpanded) => {
+    setIsAttachmentsExpanded(isExpanded)
+  }, [])
+
+  const handleFileDialogOpen = useCallback(() => {
+    setFileDialogOpen(true)
+  }, [])
+  const handleFileDialogClose = useCallback(() => {
+    setFileDialogOpen(false)
+  }, [])
 
   return (
     <>
@@ -79,6 +98,7 @@ export const ChargingSiteDocument = () => {
                 className="small-icon"
                 onClick={(e) => {
                   e.stopPropagation()
+                  handleFileDialogOpen()
                 }}
               >
                 <Edit />
@@ -92,7 +112,7 @@ export const ChargingSiteDocument = () => {
               component="div"
               sx={{ maxWidth: '100%', listStyleType: 'disc' }}
             >
-              {data.map((file) => (
+              {attachments?.map((file) => (
                 <BCBox
                   sx={{
                     display: 'list-item',
@@ -130,6 +150,13 @@ export const ChargingSiteDocument = () => {
           </BCBox>
         </AccordionDetails>
       </Accordion>
+      {/* Document Upload Dialog */}
+      <DocumentUploadDialog
+        parentID={chargingSiteId}
+        parentType="charging_site"
+        open={isFileDialogOpen}
+        close={handleFileDialogClose}
+      />
     </>
   )
 }

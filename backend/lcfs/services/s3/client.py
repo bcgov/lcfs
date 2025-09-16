@@ -244,9 +244,11 @@ class DocumentService:
             or RoleEnum.GOVERNMENT in user.role_names
         ):
             return
+        if user.organization.organization_id == charging_site.organization_id:
+            return
         raise HTTPException(
             status_code=400,
-            detail="Only Analysts and Government Staff can upload files to Charging Sites.",
+            detail="Only Analysts and Government Staff and related Organization users can upload files to Charging Sites.",
         )
 
     @repo_handler

@@ -23,7 +23,7 @@ from lcfs.web.core.decorators import repo_handler
 logger = structlog.get_logger(__name__)
 
 
-class ChargingSiteRepo:
+class ChargingSiteRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
@@ -163,6 +163,7 @@ class ChargingSiteRepo:
                         joinedload(ChargingSite.status),
                         joinedload(ChargingSite.intended_users),
                         joinedload(ChargingSite.organization),
+                        joinedload(ChargingSite.documents),
                     )
                     .where(ChargingSite.charging_site_id == charging_site_id)
                 )
@@ -261,16 +262,6 @@ class ChargingSiteRepo:
         return equipment_list
 
     @repo_handler
-    async def get_documents_for_charging_site(self, site_id: int) -> Sequence[Document]:
-        """
-        Get all documents associated with a charging site
-        """
-        charging_site = await self.get_charging_site_by_id(site_id)
-        if charging_site:
-            return charging_site.documents
-        return []
-
-    @repo_handler
     async def get_equipment_for_charging_site_paginated(
         self, site_id: int, pagination: PaginationRequestSchema
     ):
@@ -281,10 +272,12 @@ class ChargingSiteRepo:
 
         # Base query for equipment
         query = select(ChargingEquipment).options(
-            joinedload(ChargingEquipment.charging_site),
+            joinedload(ChargingEquipment.charging_site).selectinload(
+                ChargingSite.intended_users
+            ),
             joinedload(ChargingEquipment.status),
             joinedload(ChargingEquipment.level_of_equipment),
-            joinedload(ChargingEquipment.intended_uses),
+            selectinload(ChargingEquipment.intended_uses),
             joinedload(ChargingEquipment.allocating_organization),
         )
 

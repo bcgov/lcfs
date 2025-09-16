@@ -3,6 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
+  BCSelectFloatingFilter,
   RequiredHeader,
   TextCellEditor
 } from '@/components/BCDataGrid/components'
@@ -255,47 +256,95 @@ export const chargingSiteColDefs = (
   ]
 }
 
-export const fseColDefs = (t, currentUser) => {
+export const chargingEquipmentColDefs = (t, currentUser) => {
   return [
     {
-      ...actions({ enableDelete: true }),
-      headerName: 'Delete',
-      pinned: ''
+      headerName: '',
+      field: 'select',
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      width: 50,
+      pinned: 'left',
+      lockPinned: true,
+      filter: false
     },
     {
       field: 'status',
-      headerName: t('fseColumnLabels.status')
+      minWidth: 175,
+      filter: true,
+      headerName: t('fseColumnLabels.status'),
+      valueGetter: (params) => {
+        return params.data?.status?.status || ''
+      },
+      cellClass: 'vertical-middle',
+      floatingFilterComponent: BCSelectFloatingFilter,
+      floatingFilterComponentParams: {
+        valueKey: 'status',
+        labelKey: 'status',
+        optionsQuery: () => ({
+          data: [
+            { status: 'Draft' },
+            { status: 'Submitted' },
+            { status: 'Rejected' },
+            { status: 'Approved' },
+            { status: 'Deleted' }
+          ],
+          isLoading: false
+        })
+      },
+      suppressFloatingFilterButton: true,
+      filterParams: {
+        textMatcher: () => {
+          return true
+        }
+      }
     },
     {
       field: 'siteName',
-      headerName: t('fseColumnLabels.siteName')
+      headerName: t('fseColumnLabels.siteName'),
+      valueGetter: (params) => params.data?.chargingSite?.siteName || ''
     },
     {
-      field: 'registrationNbr',
-      headerName: t('fseColumnLabels.registrationNbr')
+      field: 'registrationNumber',
+      minWidth: 160,
+      headerName: t('fseColumnLabels.registrationNumber')
     },
     {
       field: 'version',
       headerName: t('fseColumnLabels.version')
     },
     {
-      field: 'allocatingOrg',
-      headerName: t('fseColumnLabels.allocatingOrg')
+      field: 'allocatingOrganization',
+      minWidth: 250,
+      headerName: t('fseColumnLabels.allocatingOrg'),
+      valueGetter: (params) => {
+        return (
+          params.data?.allocatingOrganization?.name ||
+          params.data?.organizationName
+        )
+      }
     },
     {
-      field: 'serialNbr',
-      headerName: t('fseColumnLabels.serialNbr')
+      field: 'serialNumber',
+      minWidth: 220,
+      headerName: t('fseColumnLabels.serialNumber')
     },
     {
       field: 'manufacturer',
+      minWidth: 320,
       headerName: t('fseColumnLabels.manufacturer')
     },
     {
       field: 'model',
+      minWidth: 220,
       headerName: t('fseColumnLabels.model')
     },
     {
       field: 'levelOfEquipment',
+      minWidth: 400,
+      valueGetter: (params) => {
+        return params.data?.levelOfEquipment?.name || ''
+      },
       headerName: t('fseColumnLabels.levelOfEquipment')
     },
     {
@@ -304,14 +353,31 @@ export const fseColDefs = (t, currentUser) => {
     },
     {
       field: 'fuelMeasurementType',
+      minWidth: 250,
       headerName: t('fseColumnLabels.fuelMeasurementType')
     },
     {
       field: 'intendedUse',
-      headerName: t('fseColumnLabels.intendedUse')
+      headerName: t('fseColumnLabels.intendedUse'),
+      minWidth: 380,
+      valueGetter: (params) =>
+        params.data?.intendedUseTypes?.map((i) => i.type),
+      cellRenderer: CommonArrayRenderer,
+      cellRendererParams: { disableLink: true }
+    },
+    {
+      field: 'latitude',
+      headerName: t('fseColumnLabels.latitude'),
+      valueGetter: (params) => params.data?.chargingSite?.latitude || ''
+    },
+    {
+      field: 'longitude',
+      headerName: t('fseColumnLabels.longitude'),
+      valueGetter: (params) => params.data?.chargingSite?.longitude || ''
     },
     {
       field: 'notes',
+      minWidth: 600,
       headerName: t('fseColumnLabels.notes')
     }
   ]

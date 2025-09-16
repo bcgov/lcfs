@@ -257,6 +257,10 @@
   "reportAssessed": "Compliance report, Assessed",
   "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):",
+  "documents": {
+    "uploadTitle": "Upload supporting documents for your compliance report",
+    "returnButton": "Return to compliance report"
+  },
   "assessmentRecommendation": "Assessment recommendation",
   "directorStatement": "Director assessment statement to the organization (optional)",
   "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",

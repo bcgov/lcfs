@@ -115,6 +115,7 @@ export const apiRoutes = {
   getChargingSite: '/charging-sites/:chargingSiteId',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save',
+  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment',
 
   // charging-equipment (new FSE system)
   chargingEquipment: {

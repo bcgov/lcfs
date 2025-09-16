@@ -24,7 +24,7 @@ from lcfs.web.core.decorators import service_handler
 import structlog
 from fastapi import Depends, HTTPException, Request
 
-from lcfs.web.api.charging_site.repo import ChargingSiteRepo
+from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 
 
 logger = structlog.get_logger(__name__)
@@ -33,7 +33,7 @@ logger = structlog.get_logger(__name__)
 class ChargingSiteService:
     def __init__(
         self,
-        repo: ChargingSiteRepo = Depends(),
+        repo: ChargingSiteRepository = Depends(),
         request: Request = None,
     ):
         self.repo = repo
@@ -232,29 +232,7 @@ class ChargingSiteService:
         if not site:
             return None
 
-        documents = await self.repo.get_documents_for_charging_site(site_id)
-
-        return ChargingSiteWithAttachmentsSchema(
-            charging_site_id=site.charging_site_id,
-            site_code=site.site_code,
-            site_name=site.site_name,
-            street_address=site.street_address,
-            city=site.city,
-            postal_code=site.postal_code,
-            notes=site.notes,
-            status=site.status.status if site.status else "Unknown",
-            organization_name=site.organization.name if site.organization else "",
-            version=site.version,
-            intended_users=[
-                EndUserTypeSchema(
-                    end_user_type_id=user.end_user_type_id,
-                    type_name=user.type_name,
-                    intended_use=user.intended_use,
-                )
-                for user in site.intended_users
-            ],
-            attachments=[FileResponseSchema.model_validate(doc) for doc in documents],
-        )
+        return ChargingSiteSchema.model_validate(site)
 
     @service_handler
     async def get_charging_site_statuses(self) -> List[ChargingSiteStatusSchema]:
@@ -404,46 +382,10 @@ class ChargingSiteService:
         )
 
         # Convert equipment records to schema
-        equipment_list = []
-        for equipment in equipment_records:
-            equipment_schema = ChargingEquipmentForSiteSchema(
-                charging_equipment_id=equipment.charging_equipment_id,
-                equipment_number=equipment.equipment_number,
-                registration_number=equipment.registration_number or "",
-                version=equipment.version,
-                allocating_organization=(
-                    equipment.allocating_organization.name
-                    if equipment.allocating_organization
-                    else equipment.organization_name or ""
-                ),
-                serial_number=equipment.serial_number,
-                manufacturer=equipment.manufacturer,
-                model=equipment.model,
-                level_of_equipment=(
-                    equipment.level_of_equipment.name
-                    if equipment.level_of_equipment
-                    else ""
-                ),
-                ports=equipment.ports.value if equipment.ports else None,
-                intended_use_types=(
-                    [use_type.type for use_type in equipment.intended_uses]
-                    if equipment.intended_uses
-                    else []
-                ),
-                latitude=(
-                    equipment.charging_site.latitude
-                    if equipment.charging_site
-                    else None
-                ),
-                longitude=(
-                    equipment.charging_site.longitude
-                    if equipment.charging_site
-                    else None
-                ),
-                status=equipment.status.status if equipment.status else "Unknown",
-                equipment_notes=equipment.notes,
-            )
-            equipment_list.append(equipment_schema)
+        equipment_list = [
+            ChargingEquipmentForSiteSchema.model_validate(equipment)
+            for equipment in equipment_records
+        ]
 
         return ChargingEquipmentPaginatedSchema(
             equipment=equipment_list,
