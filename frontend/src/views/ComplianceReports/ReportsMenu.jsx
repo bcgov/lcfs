@@ -10,6 +10,7 @@ import { roles } from '@/constants/roles'
 import { ComplianceReports } from './ComplianceReports'
 import { ChargingEquipment } from '@/views/ChargingEquipment'
 import { FloatingAlert } from '@/components/BCAlert'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 function a11yProps(index) {
   return {
@@ -24,24 +25,31 @@ export function ReportsMenu() {
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
   const location = useLocation()
+  const { hasRoles } = useCurrentUser()
 
-  const paths = useMemo(
-    () => [
-      ROUTES.REPORTS.LIST,
-      `${ROUTES.REPORTS.LIST}/manage-charging-sites`,
-      `${ROUTES.REPORTS.LIST}/manage-fse`
-    ],
-    []
-  )
+  // Only Supplier users should see equipment management tabs
+  const showSupplierTabs = hasRoles(roles.supplier)
+
+  const paths = useMemo(() => {
+    const base = [ROUTES.REPORTS.LIST]
+    if (showSupplierTabs) {
+      base.push(`${ROUTES.REPORTS.LIST}/manage-charging-sites`)
+      base.push(`${ROUTES.REPORTS.LIST}/manage-fse`)
+    }
+    return base
+  }, [showSupplierTabs])
 
   const tabIndex = useMemo(() => {
     // Check for charging sites management routes
-    if (location.pathname.includes('/manage-charging-sites')) {
+    if (
+      showSupplierTabs &&
+      location.pathname.includes('/manage-charging-sites')
+    ) {
       return 1
     }
 
     // Check for FSE management routes
-    if (location.pathname.includes('/manage-fse')) {
+    if (showSupplierTabs && location.pathname.includes('/manage-fse')) {
       return 2
     }
 
@@ -55,7 +63,7 @@ export function ReportsMenu() {
 
     // Default to compliance reports tab
     return 0
-  }, [location.pathname])
+  }, [location.pathname, showSupplierTabs])
 
   useEffect(() => {
     function handleTabsOrientation() {
@@ -75,8 +83,12 @@ export function ReportsMenu() {
   // Determine what content to render based on current route
   const renderContent = () => {
     if (location.pathname.includes('/manage-charging-sites')) {
+      if (!showSupplierTabs) {
+        navigate(ROUTES.REPORTS.LIST, { replace: true })
+        return <ComplianceReports />
+      }
       return (
-        <Role roles={[roles.supplier, roles.analyst]}>
+        <Role roles={[roles.supplier]}>
           <Outlet alertRef={alertRef} />
         </Role>
       )
@@ -84,16 +96,23 @@ export function ReportsMenu() {
 
     if (location.pathname.includes('/manage-fse')) {
       // Check if we're on a nested route (new or edit)
-      if (location.pathname.includes('/new') || location.pathname.includes('/edit')) {
+      if (
+        location.pathname.includes('/new') ||
+        location.pathname.includes('/edit')
+      ) {
+        if (!showSupplierTabs) {
+          navigate(ROUTES.REPORTS.LIST, { replace: true })
+          return <ComplianceReports />
+        }
         return (
-          <Role roles={[roles.supplier, roles.analyst]}>
+          <Role roles={[roles.supplier]}>
             <Outlet alertRef={alertRef} />
           </Role>
         )
       }
       // Otherwise show the ChargingEquipment list
       return (
-        <Role roles={[roles.supplier, roles.analyst]}>
+        <Role roles={[roles.supplier]}>
           <ChargingEquipment alertRef={alertRef} />
         </Role>
       )
@@ -118,8 +137,12 @@ export function ReportsMenu() {
             wrapped
             {...a11yProps(0)}
           />
-          <Tab label={t('tabs.manageChargingSites')} {...a11yProps(1)} />
-          <Tab label={t('tabs.manageFSE')} {...a11yProps(2)} />
+          {showSupplierTabs && (
+            <Tab label={t('tabs.manageChargingSites')} {...a11yProps(1)} />
+          )}
+          {showSupplierTabs && (
+            <Tab label={t('tabs.manageFSE')} {...a11yProps(2)} />
+          )}
         </Tabs>
       </AppBar>
       <FloatingAlert ref={alertRef} data-test="alert-box" />

@@ -39,13 +39,11 @@ async def get_charging_equipment_list(
 ) -> ChargingEquipmentListSchema:
     """
     Get paginated list of charging equipment (FSE) for the organization.
-    
+
     - **Suppliers** can view their own organization's equipment
     - **Government/Analysts** can view any organization's equipment
     """
-    return await service.get_charging_equipment_list(
-        request.user, body, None
-    )
+    return await service.get_charging_equipment_list(request.user, body, None)
 
 
 @router.get(
@@ -80,7 +78,7 @@ async def create_charging_equipment(
 ) -> ChargingEquipmentBaseSchema:
     """
     Create new charging equipment in Draft status.
-    
+
     - Equipment number will be auto-generated
     - Initial status will be "Draft"
     - Version will be set to 1
@@ -102,7 +100,7 @@ async def update_charging_equipment(
 ) -> ChargingEquipmentBaseSchema:
     """
     Update existing charging equipment.
-    
+
     - Only equipment in Draft, Updated, or Validated status can be edited
     - Validated equipment will create a new version when edited
     """
@@ -123,7 +121,7 @@ async def delete_charging_equipment(
 ):
     """
     Delete charging equipment.
-    
+
     - Only equipment in Draft status can be deleted
     """
     await service.delete_charging_equipment(request.user, charging_equipment_id)
@@ -143,7 +141,7 @@ async def bulk_submit_equipment(
 ) -> BulkActionResponseSchema:
     """
     Bulk submit charging equipment for validation.
-    
+
     - Changes status from Draft/Updated to Submitted
     - Also sets associated charging sites to Submitted if applicable
     - No further edits allowed after submission
@@ -166,7 +164,7 @@ async def bulk_decommission_equipment(
 ) -> BulkActionResponseSchema:
     """
     Bulk decommission charging equipment.
-    
+
     - Changes status from Validated to Decommissioned
     - Equipment will no longer be available in future compliance reports
     """
@@ -253,3 +251,17 @@ async def get_organizations(
     Get all organizations for allocating organization selection.
     """
     return await service.get_organizations()
+
+
+@router.get(
+    "/organizations/has-allocation-agreements",
+    response_model=bool,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def has_allocation_agreements(
+    request: Request,
+    service: ChargingEquipmentServices = Depends(),
+) -> bool:
+    """Boolean flag indicating if the supplier has any allocation agreements."""
+    return await service.has_allocation_agreements(request.user)

@@ -3,7 +3,7 @@
 import structlog
 from typing import List, Optional, Dict, Any
 from fastapi import Depends
-from sqlalchemy import select, func, and_, or_, update, delete
+from sqlalchemy import select, func, and_, or_, update, delete, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.exc import DatabaseError
@@ -12,6 +12,8 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.EndUseType import EndUseType
@@ -56,14 +58,29 @@ class ChargingEquipmentRepository:
         filters: Optional[ChargingEquipmentFilterSchema] = None,
     ) -> tuple[List[ChargingEquipment], int]:
         """Get paginated list of charging equipment for an organization."""
-        
+
         # Base query with joins
         query = (
             select(ChargingEquipment)
-            .join(ChargingSite, ChargingEquipment.charging_site_id == ChargingSite.charging_site_id)
-            .join(ChargingEquipmentStatus, ChargingEquipment.status_id == ChargingEquipmentStatus.charging_equipment_status_id)
-            .join(LevelOfEquipment, ChargingEquipment.level_of_equipment_id == LevelOfEquipment.level_of_equipment_id)
-            .outerjoin(Organization, ChargingEquipment.allocating_organization_id == Organization.organization_id)
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .join(
+                LevelOfEquipment,
+                ChargingEquipment.level_of_equipment_id
+                == LevelOfEquipment.level_of_equipment_id,
+            )
+            .outerjoin(
+                Organization,
+                ChargingEquipment.allocating_organization_id
+                == Organization.organization_id,
+            )
             .options(
                 joinedload(ChargingEquipment.charging_site),
                 joinedload(ChargingEquipment.status),
@@ -79,15 +96,17 @@ class ChargingEquipmentRepository:
             if filters.status:
                 status_names = [s.value for s in filters.status]
                 query = query.where(ChargingEquipmentStatus.status.in_(status_names))
-            
+
             if filters.charging_site_id:
-                query = query.where(ChargingEquipment.charging_site_id == filters.charging_site_id)
-            
+                query = query.where(
+                    ChargingEquipment.charging_site_id == filters.charging_site_id
+                )
+
             if filters.manufacturer:
                 query = query.where(
                     ChargingEquipment.manufacturer.ilike(f"%{filters.manufacturer}%")
                 )
-            
+
             if filters.search_term:
                 search_pattern = f"%{filters.search_term}%"
                 query = query.where(
@@ -133,14 +152,14 @@ class ChargingEquipmentRepository:
         self, equipment_data: Dict[str, Any]
     ) -> ChargingEquipment:
         """Create new charging equipment."""
-        
+
         # Get Draft status ID
         status_query = select(ChargingEquipmentStatus).where(
             ChargingEquipmentStatus.status == "Draft"
         )
         status_result = await self.db.execute(status_query)
         draft_status = status_result.scalar_one()
-        
+
         # Create charging equipment
         charging_equipment = ChargingEquipment(
             charging_site_id=equipment_data["charging_site_id"],
@@ -154,7 +173,7 @@ class ChargingEquipmentRepository:
             notes=equipment_data.get("notes"),
             version=1,
         )
-        
+
         # Add intended uses if provided
         if equipment_data.get("intended_use_ids"):
             intended_uses_query = select(EndUseType).where(
@@ -163,11 +182,11 @@ class ChargingEquipmentRepository:
             intended_uses_result = await self.db.execute(intended_uses_query)
             intended_uses = intended_uses_result.scalars().all()
             charging_equipment.intended_uses = intended_uses
-        
+
         self.db.add(charging_equipment)
         await self.db.flush()
         await self.db.refresh(charging_equipment)
-        
+
         return charging_equipment
 
     @repo_handler
@@ -175,18 +194,18 @@ class ChargingEquipmentRepository:
         self, charging_equipment_id: int, equipment_data: Dict[str, Any]
     ) -> Optional[ChargingEquipment]:
         """Update existing charging equipment."""
-        
+
         # Get existing equipment
         equipment = await self.get_charging_equipment_by_id(charging_equipment_id)
         if not equipment:
             return None
-        
+
         # Check if status allows editing
         if equipment.status.status not in ["Draft", "Updated"]:
             # If Validated, create a new version
             if equipment.status.status == "Validated":
                 equipment.version += 1
-                
+
                 # Get Updated status ID
                 status_query = select(ChargingEquipmentStatus).where(
                     ChargingEquipmentStatus.status == "Updated"
@@ -194,12 +213,12 @@ class ChargingEquipmentRepository:
                 status_result = await self.db.execute(status_query)
                 updated_status = status_result.scalar_one()
                 equipment.status_id = updated_status.charging_equipment_status_id
-        
+
         # Update fields
         for field, value in equipment_data.items():
             if field != "intended_use_ids" and value is not None:
                 setattr(equipment, field, value)
-        
+
         # Update intended uses if provided
         if "intended_use_ids" in equipment_data:
             if equipment_data["intended_use_ids"] is not None:
@@ -209,10 +228,10 @@ class ChargingEquipmentRepository:
                 intended_uses_result = await self.db.execute(intended_uses_query)
                 intended_uses = intended_uses_result.scalars().all()
                 equipment.intended_uses = intended_uses
-        
+
         await self.db.flush()
         await self.db.refresh(equipment)
-        
+
         return equipment
 
     @repo_handler
@@ -220,17 +239,17 @@ class ChargingEquipmentRepository:
         self, equipment_ids: List[int], new_status: str, organization_id: int
     ) -> int:
         """Bulk update status for multiple charging equipment."""
-        
+
         # Get the status ID
         status_query = select(ChargingEquipmentStatus).where(
             ChargingEquipmentStatus.status == new_status
         )
         status_result = await self.db.execute(status_query)
         status = status_result.scalar_one_or_none()
-        
+
         if not status:
             raise ValueError(f"Invalid status: {new_status}")
-        
+
         # Update equipment status
         update_query = (
             update(ChargingEquipment)
@@ -244,10 +263,10 @@ class ChargingEquipmentRepository:
             )
             .values(status_id=status.charging_equipment_status_id)
         )
-        
+
         result = await self.db.execute(update_query)
         await self.db.flush()
-        
+
         return result.rowcount
 
     @repo_handler
@@ -255,23 +274,23 @@ class ChargingEquipmentRepository:
         self, charging_equipment_id: int, organization_id: int
     ) -> bool:
         """Delete charging equipment if in Draft status."""
-        
+
         # Check if equipment exists and is in Draft status
         equipment = await self.get_charging_equipment_by_id(charging_equipment_id)
-        
+
         if not equipment:
             return False
-        
+
         if equipment.status.status != "Draft":
             raise ValueError("Only Draft equipment can be deleted")
-        
+
         if equipment.charging_site.organization_id != organization_id:
             raise ValueError("Unauthorized to delete this equipment")
-        
+
         # Delete the equipment
         await self.db.delete(equipment)
         await self.db.flush()
-        
+
         return True
 
     @repo_handler
@@ -282,6 +301,38 @@ class ChargingEquipmentRepository:
         )
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def get_equipment_status_map(
+        self, equipment_ids: List[int], organization_id: int
+    ) -> Dict[int, str]:
+        """Return a mapping of equipment_id -> current status string for the given org."""
+        if not equipment_ids:
+            return {}
+        query = (
+            select(
+                ChargingEquipment.charging_equipment_id,
+                ChargingEquipmentStatus.status,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .where(
+                and_(
+                    ChargingEquipment.charging_equipment_id.in_(equipment_ids),
+                    ChargingSite.organization_id == organization_id,
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        rows = result.all()
+        return {row[0]: row[1] for row in rows}
 
     @repo_handler
     async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
@@ -318,6 +369,27 @@ class ChargingEquipmentRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def has_allocation_agreements_for_organization(
+        self, organization_id: int
+    ) -> bool:
+        """Return True if the supplier org has any allocation agreements in any of its reports."""
+        if not organization_id:
+            return False
+        query = (
+            select(func.count())
+            .select_from(AllocationAgreement)
+            .join(
+                ComplianceReport,
+                AllocationAgreement.compliance_report_id
+                == ComplianceReport.compliance_report_id,
+            )
+            .where(ComplianceReport.organization_id == organization_id)
+        )
+        result = await self.db.execute(query)
+        count = result.scalar() or 0
+        return count > 0
+
+    @repo_handler
     async def get_charging_site_ids_from_equipment(
         self, equipment_ids: List[int], organization_id: int
     ) -> List[int]:
@@ -329,7 +401,7 @@ class ChargingEquipmentRepository:
             .where(
                 and_(
                     ChargingEquipment.charging_equipment_id.in_(equipment_ids),
-                    ChargingSite.organization_id == organization_id
+                    ChargingSite.organization_id == organization_id,
                 )
             )
         )
@@ -342,17 +414,17 @@ class ChargingEquipmentRepository:
     ) -> int:
         """Update charging sites status if they are in specified current statuses."""
         from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
-        
+
         # Get the new status ID
         status_query = select(ChargingSiteStatus).where(
             ChargingSiteStatus.status == new_status
         )
         status_result = await self.db.execute(status_query)
         new_status_obj = status_result.scalar_one_or_none()
-        
+
         if not new_status_obj:
             return 0
-        
+
         # Get current status IDs
         current_status_query = select(ChargingSiteStatus).where(
             ChargingSiteStatus.status.in_(current_statuses)
@@ -360,23 +432,23 @@ class ChargingEquipmentRepository:
         current_status_result = await self.db.execute(current_status_query)
         current_status_objs = current_status_result.scalars().all()
         current_status_ids = [s.charging_site_status_id for s in current_status_objs]
-        
+
         if not current_status_ids:
             return 0
-        
+
         # Update sites
         update_query = (
             update(ChargingSite)
             .where(
                 and_(
                     ChargingSite.charging_site_id.in_(site_ids),
-                    ChargingSite.status_id.in_(current_status_ids)
+                    ChargingSite.status_id.in_(current_status_ids),
                 )
             )
             .values(status_id=new_status_obj.charging_site_status_id)
         )
-        
+
         result = await self.db.execute(update_query)
         await self.db.flush()
-        
+
         return result.rowcount

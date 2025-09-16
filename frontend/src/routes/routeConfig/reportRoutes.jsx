@@ -12,6 +12,7 @@ import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
 import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
 import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
 import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
+import { Outlet } from 'react-router-dom'
 
 export const reportRoutes = [
   {
@@ -38,9 +39,14 @@ export const reportRoutes = [
       },
       {
         path: 'manage-fse',
-        element: <ChargingEquipmentList />,
+        element: <Outlet />,
         handle: { title: 'Manage FSE' },
         children: [
+          {
+            index: true,
+            element: <ChargingEquipmentList />,
+            handle: { title: 'Manage FSE' }
+          },
           {
             path: 'new',
             element: <AddEditChargingEquipment mode="bulk" />,

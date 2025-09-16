@@ -44,7 +44,8 @@ import {
   useDeleteChargingEquipment,
   useChargingEquipmentMetadata,
   useChargingSites,
-  useOrganizations
+  useOrganizations,
+  useHasAllocationAgreements
 } from '@/hooks/useChargingEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ExcelUpload } from './components/ExcelUpload'
@@ -55,39 +56,40 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const alertRef = useRef(null)
   const location = useLocation()
   const { id } = useParams()
-  
+
   // Determine mode: 'single' (edit existing), 'bulk' (mass input)
   const operationMode = mode || (id ? 'single' : 'bulk')
   const isEditMode = operationMode === 'single' && Boolean(id)
   const isBulkMode = operationMode === 'bulk'
-  
+
   const { data: currentUser } = useCurrentUser()
-  
+
   // Hooks for data and mutations
   const {
     data: equipment,
     isLoading: equipmentLoading,
     isError: equipmentError
   } = useGetChargingEquipment(id, { enabled: isEditMode })
-  
+
   const {
     statuses,
     levels,
     endUseTypes,
     isLoading: metadataLoading
   } = useChargingEquipmentMetadata()
-  
+
   const { data: chargingSites, isLoading: sitesLoading } = useChargingSites()
   const { data: organizations, isLoading: orgsLoading } = useOrganizations()
-  
+  const { data: hasAllocationAgreements } = useHasAllocationAgreements()
+
   const createMutation = useCreateChargingEquipment()
   const updateMutation = useUpdateChargingEquipment()
   const deleteMutation = useDeleteChargingEquipment()
-  
+
   // Bulk mode state
   const [bulkData, setBulkData] = useState([])
   const gridRef = useRef(null)
-  
+
   // Form setup with react-hook-form and yup validation
   const {
     register,
@@ -124,7 +126,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
         level_of_equipment_id: equipment.level_of_equipment_id || '',
         ports: equipment.ports || '',
         notes: equipment.notes || '',
-        intended_use_ids: equipment.intended_uses?.map(use => use.end_use_type_id) || []
+        intended_use_ids:
+          equipment.intended_uses?.map((use) => use.end_use_type_id) || []
       })
     }
   }, [equipment, reset, isEditMode])
@@ -148,7 +151,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
           severity: 'success'
         })
         // Navigate to edit mode for the new equipment
-        navigate(`${ROUTES.REPORTS.LIST}/manage-fse/${result.charging_equipment_id}/edit`)
+        navigate(
+          `${ROUTES.REPORTS.LIST}/manage-fse/${result.charging_equipment_id}/edit`
+        )
       }
     } catch (error) {
       alertRef.current?.triggerAlert({
@@ -163,7 +168,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
     if (!window.confirm(t('chargingEquipment:deleteConfirmation'))) {
       return
     }
-    
+
     try {
       await deleteMutation.mutateAsync(parseInt(id))
       navigate(`${ROUTES.REPORTS.LIST}/manage-fse`, {
@@ -201,16 +206,24 @@ export const AddEditChargingEquipment = ({ mode }) => {
     setBulkData([...bulkData, newRow])
   }
 
+  // Auto-create one row on load to match Charging Site UX
+  useEffect(() => {
+    if (isBulkMode && bulkData.length === 0) {
+      handleAddRow()
+    }
+  }, [isBulkMode, bulkData.length])
+
   const handleBulkSave = async () => {
     try {
       // Filter out rows with missing required fields
-      const validRows = bulkData.filter(row => 
-        row.charging_site_id && 
-        row.serial_number && 
-        row.manufacturer &&
-        row.level_of_equipment_id
+      const validRows = bulkData.filter(
+        (row) =>
+          row.charging_site_id &&
+          row.serial_number &&
+          row.manufacturer &&
+          row.level_of_equipment_id
       )
-      
+
       if (validRows.length === 0) {
         alertRef.current?.triggerAlert({
           message: 'No valid rows to save. Please fill in required fields.',
@@ -220,14 +233,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
       }
 
       // Save all valid rows
-      const promises = validRows.map(row => createMutation.mutateAsync(row))
+      const promises = validRows.map((row) => createMutation.mutateAsync(row))
       await Promise.all(promises)
-      
+
       alertRef.current?.triggerAlert({
         message: `Successfully created ${validRows.length} charging equipment entries.`,
         severity: 'success'
       })
-      
+
       // Navigate back to list
       navigate(`${ROUTES.REPORTS.LIST}/manage-fse`)
     } catch (error) {
@@ -244,15 +257,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   if (isEditMode && equipmentError) {
     return (
-      <BCAlert severity="error">
-        {t('chargingEquipment:loadError')}
-      </BCAlert>
+      <BCAlert severity="error">{t('chargingEquipment:loadError')}</BCAlert>
     )
   }
 
-  const canEdit = !isEditMode || 
-    (equipment?.status && ['Draft', 'Updated', 'Validated'].includes(equipment.status))
-  
+  const canEdit =
+    !isEditMode ||
+    (equipment?.status &&
+      ['Draft', 'Updated', 'Validated'].includes(equipment.status))
+
   const canDelete = isEditMode && equipment?.status === 'Draft'
 
   // Render bulk mode
@@ -260,7 +273,12 @@ export const AddEditChargingEquipment = ({ mode }) => {
     return (
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
             <BCTypography variant="h4">
               {t('chargingEquipment:newFSE')}
             </BCTypography>
@@ -286,7 +304,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
               Bulk FSE Input
             </BCTypography>
             <BCTypography variant="body2" color="text.secondary" paragraph>
-              Add multiple FSE entries using the grid below or upload from Excel.
+              Add multiple FSE entries using the grid below or upload from
+              Excel.
             </BCTypography>
 
             {/* Excel Upload */}
@@ -298,26 +317,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
               endUseTypes={endUseTypes}
             />
 
-            {/* Action buttons */}
-            <Box display="flex" gap={2} mb={2}>
-              <BCButton
-                variant="outlined"
-                startIcon={<FontAwesomeIcon icon={faPlus} />}
-                onClick={handleAddRow}
-              >
-                Add Row
-              </BCButton>
-              <BCButton
-                variant="contained"
-                color="primary"
-                onClick={handleBulkSave}
-                disabled={createMutation.isLoading || bulkData.length === 0}
-              >
-                Save All
-              </BCButton>
-            </Box>
-
-            {/* AG Grid */}
+            {/* AG Grid aligned with Charging Site UI */}
             <BCGridEditor
               gridRef={gridRef}
               rowData={bulkData}
@@ -330,11 +330,36 @@ export const AddEditChargingEquipment = ({ mode }) => {
               defaultColDef={defaultBulkColDef}
               onCellValueChanged={(params) => {
                 const updatedData = [...bulkData]
-                const rowIndex = updatedData.findIndex(row => row.id === params.data.id)
+                const rowIndex = updatedData.findIndex(
+                  (row) => row.id === params.data.id
+                )
                 if (rowIndex >= 0) {
                   updatedData[rowIndex] = params.data
                   setBulkData(updatedData)
                 }
+              }}
+              onAddRows={(numRows) =>
+                Array(numRows)
+                  .fill()
+                  .map(() => ({
+                    id: Date.now() + Math.random(),
+                    charging_site_id: '',
+                    allocating_organization_id: '',
+                    serial_number: '',
+                    manufacturer: '',
+                    model: '',
+                    level_of_equipment_id: '',
+                    ports: 'Single port',
+                    notes: '',
+                    intended_use_ids: []
+                  }))
+              }
+              saveButtonProps={{
+                enabled: true,
+                text: 'Save All',
+                onSave: handleBulkSave,
+                confirmText: 'You have unsaved or invalid rows.',
+                confirmLabel: 'Save and return'
               }}
               suppressRowClickSelection={true}
             />
@@ -348,12 +373,16 @@ export const AddEditChargingEquipment = ({ mode }) => {
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <BCTypography variant="h4">
-            {isEditMode 
-              ? t('chargingEquipment:editEquipment') 
-              : t('chargingEquipment:newEquipment')
-            }
+            {isEditMode
+              ? t('chargingEquipment:editEquipment')
+              : t('chargingEquipment:newEquipment')}
           </BCTypography>
           <Box display="flex" gap={1}>
             <BCButton
@@ -368,14 +397,19 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
         {isEditMode && equipment && (
           <Box mb={2}>
-            <Chip 
-              label={equipment.status} 
+            <Chip
+              label={equipment.status}
               color={equipment.status === 'Draft' ? 'warning' : 'success'}
               variant="outlined"
             />
             {equipment.registration_number && (
-              <BCTypography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {t('chargingEquipment:registrationNumber')}: {equipment.registration_number}
+              <BCTypography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 1 }}
+              >
+                {t('chargingEquipment:registrationNumber')}:{' '}
+                {equipment.registration_number}
               </BCTypography>
             )}
           </Box>
@@ -393,7 +427,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
               {/* Charging Site Selection */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth error={!!errors.charging_site_id}>
-                  <InputLabel>{t('chargingEquipment:chargingSite')} *</InputLabel>
+                  <InputLabel>
+                    {t('chargingEquipment:chargingSite')} *
+                  </InputLabel>
                   <Controller
                     name="charging_site_id"
                     control={control}
@@ -404,7 +440,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
                         disabled={!canEdit}
                       >
                         {chargingSites.map((site) => (
-                          <MenuItem key={site.charging_site_id} value={site.charging_site_id}>
+                          <MenuItem
+                            key={site.charging_site_id}
+                            value={site.charging_site_id}
+                          >
                             {site.site_name} ({site.site_code})
                           </MenuItem>
                         ))}
@@ -422,7 +461,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
               {/* Allocating Organization */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>{t('chargingEquipment:allocatingOrganization')}</InputLabel>
+                  <InputLabel>
+                    {t('chargingEquipment:allocatingOrganization')}
+                  </InputLabel>
                   <Controller
                     name="allocating_organization_id"
                     control={control}
@@ -430,13 +471,16 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       <Select
                         {...field}
                         label={t('chargingEquipment:allocatingOrganization')}
-                        disabled={!canEdit}
+                        disabled={!canEdit || hasAllocationAgreements === false}
                       >
                         <MenuItem value="">
                           <em>{t('common:none')}</em>
                         </MenuItem>
                         {organizations.map((org) => (
-                          <MenuItem key={org.organization_id} value={org.organization_id}>
+                          <MenuItem
+                            key={org.organization_id}
+                            value={org.organization_id}
+                          >
                             {org.name}
                           </MenuItem>
                         ))}
@@ -487,7 +531,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
               {/* Level of Equipment */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth error={!!errors.level_of_equipment_id}>
-                  <InputLabel>{t('chargingEquipment:levelOfEquipment')} *</InputLabel>
+                  <InputLabel>
+                    {t('chargingEquipment:levelOfEquipment')} *
+                  </InputLabel>
                   <Controller
                     name="level_of_equipment_id"
                     control={control}
@@ -498,7 +544,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
                         disabled={!canEdit}
                       >
                         {levels?.map((level) => (
-                          <MenuItem key={level.level_of_equipment_id} value={level.level_of_equipment_id}>
+                          <MenuItem
+                            key={level.level_of_equipment_id}
+                            value={level.level_of_equipment_id}
+                          >
                             {level.name}
                           </MenuItem>
                         ))}
@@ -521,11 +570,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     name="ports"
                     control={control}
                     render={({ field }) => (
-                      <RadioGroup
-                        {...field}
-                        row
-                        disabled={!canEdit}
-                      >
+                      <RadioGroup {...field} row disabled={!canEdit}>
                         <FormControlLabel
                           value="Single port"
                           control={<Radio />}
@@ -553,10 +598,16 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       <Select
                         {...field}
                         multiple
-                        input={<OutlinedInput label={t('chargingEquipment:intendedUses')} />}
+                        input={
+                          <OutlinedInput
+                            label={t('chargingEquipment:intendedUses')}
+                          />
+                        }
                         disabled={!canEdit}
                         renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          <Box
+                            sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                          >
                             {selected.map((value) => {
                               const endUseType = endUseTypes?.find(
                                 (type) => type.end_use_type_id === value
@@ -578,7 +629,11 @@ export const AddEditChargingEquipment = ({ mode }) => {
                             value={endUseType.end_use_type_id}
                           >
                             <Checkbox
-                              checked={field.value.indexOf(endUseType.end_use_type_id) > -1}
+                              checked={
+                                field.value.indexOf(
+                                  endUseType.end_use_type_id
+                                ) > -1
+                              }
                             />
                             <ListItemText primary={endUseType.type} />
                           </MenuItem>
@@ -612,19 +667,16 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       type="submit"
                       startIcon={<FontAwesomeIcon icon={faFloppyDisk} />}
                       disabled={
-                        !canEdit || 
-                        !isDirty || 
-                        createMutation.isLoading || 
+                        !canEdit ||
+                        !isDirty ||
+                        createMutation.isLoading ||
                         updateMutation.isLoading
                       }
                     >
                       {isEditMode ? t('common:save') : t('common:create')}
                     </BCButton>
-                    
-                    <BCButton
-                      variant="outlined"
-                      onClick={handleCancel}
-                    >
+
+                    <BCButton variant="outlined" onClick={handleCancel}>
                       {t('common:cancel')}
                     </BCButton>
                   </Box>

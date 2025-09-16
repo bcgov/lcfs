@@ -13,39 +13,36 @@ export const BulkActionButtons = ({
 }) => {
   const { t } = useTranslation(['chargingEquipment'])
 
-  if (selectedRows.length === 0) {
-    return null
-  }
+  const draftUpdatedCount = selectedRows.filter(
+    (r) => r.status === 'Draft' || r.status === 'Updated'
+  ).length
+  const validatedCount = selectedRows.filter(
+    (r) => r.status === 'Validated'
+  ).length
 
   return (
     <Box display="flex" gap={2}>
-      {canSubmit && (
-        <BCButton
-          variant="contained"
-          color="primary"
-          size="medium"
-          startIcon={<FontAwesomeIcon icon={faCheck} />}
-          onClick={onSubmitClick}
-        >
-          {t('chargingEquipment:submitSelected')} ({selectedRows.filter(r => 
-            r.status === 'Draft' || r.status === 'Updated'
-          ).length})
-        </BCButton>
-      )}
-      
-      {canDecommission && (
-        <BCButton
-          variant="outlined"
-          color="error"
-          size="medium"
-          startIcon={<FontAwesomeIcon icon={faBan} />}
-          onClick={onDecommissionClick}
-        >
-          {t('chargingEquipment:setToDecommissioned')} ({selectedRows.filter(r => 
-            r.status === 'Validated'
-          ).length})
-        </BCButton>
-      )}
+      <BCButton
+        variant="contained"
+        color="primary"
+        size="medium"
+        startIcon={<FontAwesomeIcon icon={faCheck} />}
+        onClick={onSubmitClick}
+        disabled={draftUpdatedCount === 0}
+      >
+        {t('chargingEquipment:submitSelected')}
+      </BCButton>
+
+      <BCButton
+        variant="outlined"
+        color="primary"
+        size="medium"
+        startIcon={<FontAwesomeIcon icon={faBan} />}
+        onClick={onDecommissionClick}
+        disabled={validatedCount === 0}
+      >
+        {t('chargingEquipment:setToDecommissioned')}
+      </BCButton>
     </Box>
   )
 }

@@ -24,6 +24,7 @@ from lcfs.web.api.charging_equipment.schema import (
     BulkActionResponseSchema,
 )
 from lcfs.web.core.decorators import service_handler
+
 # TODO: add_notification_msg function needs to be implemented
 # from lcfs.services.rabbitmq.consumers import add_notification_msg
 
@@ -47,7 +48,7 @@ class ChargingEquipmentServices:
         filters: Optional[ChargingEquipmentFilterSchema] = None,
     ) -> ChargingEquipmentListSchema:
         """Get paginated list of charging equipment for the user's organization."""
-        
+
         # Get organization ID based on user type
         if not user.is_government:
             organization_id = user.organization_id
@@ -58,12 +59,12 @@ class ChargingEquipmentServices:
             else:
                 # Government users can view all organizations
                 organization_id = None
-        
+
         # Get equipment list from repository
         equipment_list, total_count = await self.repo.get_charging_equipment_list(
             organization_id, pagination, filters
         )
-        
+
         # Transform to schema
         items = []
         for equipment in equipment_list:
@@ -71,7 +72,8 @@ class ChargingEquipmentServices:
                 charging_equipment_id=equipment.charging_equipment_id,
                 status=equipment.status.status,
                 site_name=equipment.charging_site.site_name,
-                registration_number=equipment.registration_number or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
+                registration_number=equipment.registration_number
+                or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
                 version=equipment.version,
                 allocating_organization_name=(
                     equipment.allocating_organization.name
@@ -86,10 +88,10 @@ class ChargingEquipmentServices:
                 updated_date=equipment.update_date,
             )
             items.append(item)
-        
+
         # Calculate pagination info
         total_pages = (total_count + pagination.size - 1) // pagination.size
-        
+
         return ChargingEquipmentListSchema(
             items=items,
             total_count=total_count,
@@ -103,15 +105,15 @@ class ChargingEquipmentServices:
         self, user: UserProfile, charging_equipment_id: int
     ) -> ChargingEquipmentBaseSchema:
         """Get charging equipment details by ID."""
-        
+
         equipment = await self.repo.get_charging_equipment_by_id(charging_equipment_id)
-        
+
         if not equipment:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Charging equipment not found",
             )
-        
+
         # Check authorization
         if not user.is_government:
             if equipment.charging_site.organization_id != user.organization_id:
@@ -119,7 +121,7 @@ class ChargingEquipmentServices:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Not authorized to view this equipment",
                 )
-        
+
         # Transform to schema
         return ChargingEquipmentBaseSchema(
             charging_equipment_id=equipment.charging_equipment_id,
@@ -156,16 +158,16 @@ class ChargingEquipmentServices:
         self, user: UserProfile, equipment_data: ChargingEquipmentCreateSchema
     ) -> ChargingEquipmentBaseSchema:
         """Create new charging equipment."""
-        
+
         # Check authorization for the charging site
         # This would need a charging_site repo method to verify ownership
         # For now, we'll trust the site_id is valid for the user
-        
+
         equipment_dict = equipment_data.model_dump()
-        
+
         # Create equipment
         equipment = await self.repo.create_charging_equipment(equipment_dict)
-        
+
         # Log action
         # TODO: Implement notification
         # await add_notification_msg(
@@ -176,7 +178,7 @@ class ChargingEquipmentServices:
         #     related_entity_id=equipment.charging_equipment_id,
         #     user=user,
         # )
-        
+
         # Return created equipment
         return await self.get_charging_equipment_by_id(
             user, equipment.charging_equipment_id
@@ -190,16 +192,16 @@ class ChargingEquipmentServices:
         equipment_data: ChargingEquipmentUpdateSchema,
     ) -> ChargingEquipmentBaseSchema:
         """Update existing charging equipment."""
-        
+
         # Get existing equipment to check authorization
         existing = await self.repo.get_charging_equipment_by_id(charging_equipment_id)
-        
+
         if not existing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Charging equipment not found",
             )
-        
+
         # Check authorization
         if not user.is_government:
             if existing.charging_site.organization_id != user.organization_id:
@@ -207,20 +209,20 @@ class ChargingEquipmentServices:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Not authorized to update this equipment",
                 )
-        
+
         # Check if status allows editing
         if existing.status.status not in ["Draft", "Updated", "Validated"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Cannot edit equipment in {existing.status.status} status",
             )
-        
+
         # Update equipment
         equipment_dict = equipment_data.model_dump(exclude_unset=True)
         equipment = await self.repo.update_charging_equipment(
             charging_equipment_id, equipment_dict
         )
-        
+
         # Log action
         # TODO: Implement notification
         # await add_notification_msg(
@@ -231,7 +233,7 @@ class ChargingEquipmentServices:
         #     related_entity_id=equipment.charging_equipment_id,
         #     user=user,
         # )
-        
+
         # Return updated equipment
         return await self.get_charging_equipment_by_id(
             user, equipment.charging_equipment_id
@@ -242,30 +244,50 @@ class ChargingEquipmentServices:
         self, user: UserProfile, equipment_ids: List[int]
     ) -> BulkActionResponseSchema:
         """Bulk submit charging equipment."""
-        
+
         # Check authorization - user must be supplier
         if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can submit equipment",
             )
-        
-        # Update status to Submitted
-        affected_count = await self.repo.bulk_update_status(
-            equipment_ids, "Submitted", user.organization_id
+        # Validate current statuses: only Draft/Updated are eligible
+        status_map = await self.repo.get_equipment_status_map(
+            equipment_ids, user.organization_id
         )
-        
+        eligible_ids = [
+            eid for eid, status in status_map.items() if status in ("Draft", "Updated")
+        ]
+        ineligible_ids = [
+            eid
+            for eid, status in status_map.items()
+            if status not in ("Draft", "Updated")
+        ]
+
+        # Update status to Submitted for eligible ones
+        affected_count = 0
+        if eligible_ids:
+            affected_count = await self.repo.bulk_update_status(
+                eligible_ids, "Submitted", user.organization_id
+            )
+
         if affected_count == 0:
             return BulkActionResponseSchema(
                 success=False,
                 message="No equipment could be submitted",
                 affected_count=0,
-                errors=["No valid equipment found or already submitted"],
+                errors=[
+                    "No valid equipment found or already submitted",
+                    *[
+                        f"Equipment {eid} not in Draft/Updated"
+                        for eid in ineligible_ids
+                    ],
+                ],
             )
-        
+
         # Update associated charging sites to Submitted if they are in Draft/Updated
-        await self._update_charging_sites_status(equipment_ids, user.organization_id)
-        
+        await self._update_charging_sites_status(eligible_ids, user.organization_id)
+
         # Log action
         # TODO: Implement notification
         # await add_notification_msg(
@@ -275,7 +297,7 @@ class ChargingEquipmentServices:
         #     related_entity_type="ChargingEquipment",
         #     user=user,
         # )
-        
+
         return BulkActionResponseSchema(
             success=True,
             message=f"Successfully submitted {affected_count} equipment",
@@ -287,27 +309,42 @@ class ChargingEquipmentServices:
         self, user: UserProfile, equipment_ids: List[int]
     ) -> BulkActionResponseSchema:
         """Bulk decommission charging equipment."""
-        
+
         # Check authorization - user must be supplier
         if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can decommission equipment",
             )
-        
-        # Update status to Decommissioned
-        affected_count = await self.repo.bulk_update_status(
-            equipment_ids, "Decommissioned", user.organization_id
+        # Validate current statuses: only Validated are eligible
+        status_map = await self.repo.get_equipment_status_map(
+            equipment_ids, user.organization_id
         )
-        
+        eligible_ids = [
+            eid for eid, status in status_map.items() if status == "Validated"
+        ]
+        ineligible_ids = [
+            eid for eid, status in status_map.items() if status != "Validated"
+        ]
+
+        # Update status to Decommissioned
+        affected_count = 0
+        if eligible_ids:
+            affected_count = await self.repo.bulk_update_status(
+                eligible_ids, "Decommissioned", user.organization_id
+            )
+
         if affected_count == 0:
             return BulkActionResponseSchema(
                 success=False,
                 message="No equipment could be decommissioned",
                 affected_count=0,
-                errors=["No valid equipment found or already decommissioned"],
+                errors=[
+                    "No valid equipment found or already decommissioned",
+                    *[f"Equipment {eid} not in Validated" for eid in ineligible_ids],
+                ],
             )
-        
+
         # Log action
         # TODO: Implement notification
         # await add_notification_msg(
@@ -317,7 +354,7 @@ class ChargingEquipmentServices:
         #     related_entity_type="ChargingEquipment",
         #     user=user,
         # )
-        
+
         return BulkActionResponseSchema(
             success=True,
             message=f"Successfully decommissioned {affected_count} equipment",
@@ -325,28 +362,38 @@ class ChargingEquipmentServices:
         )
 
     @service_handler
+    async def has_allocation_agreements(self, user: UserProfile) -> bool:
+        """Returns True if the supplier has any allocation agreements."""
+        if user.is_government:
+            # Only meaningful for suppliers; gov/analyst callers get False
+            return False
+        return await self.repo.has_allocation_agreements_for_organization(
+            user.organization_id
+        )
+
+    @service_handler
     async def delete_charging_equipment(
         self, user: UserProfile, charging_equipment_id: int
     ) -> bool:
         """Delete charging equipment if in Draft status."""
-        
+
         # Check authorization - user must be supplier
         if user.is_government:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can delete equipment",
             )
-        
+
         success = await self.repo.delete_charging_equipment(
             charging_equipment_id, user.organization_id
         )
-        
+
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Equipment not found or cannot be deleted",
             )
-        
+
         # Log action
         # TODO: Implement notification
         # await add_notification_msg(
@@ -357,7 +404,7 @@ class ChargingEquipmentServices:
         #     related_entity_id=charging_equipment_id,
         #     user=user,
         # )
-        
+
         return True
 
     @service_handler
@@ -403,7 +450,7 @@ class ChargingEquipmentServices:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only suppliers can access charging sites",
             )
-        
+
         sites = await self.repo.get_charging_sites_by_organization(user.organization_id)
         return [
             {
@@ -437,7 +484,7 @@ class ChargingEquipmentServices:
         site_ids = await self.repo.get_charging_site_ids_from_equipment(
             equipment_ids, organization_id
         )
-        
+
         if site_ids:
             # Update sites that are in Draft or Updated status to Submitted
             await self.repo.update_charging_sites_status(

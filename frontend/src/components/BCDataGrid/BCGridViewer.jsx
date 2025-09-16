@@ -88,7 +88,7 @@ export const BCGridViewer = forwardRef(
     },
     ref
   ) => {
-    const { data, error, isError, isLoading } = queryData
+    const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
     const previousGridKey = useRef(gridKey)
     const isRestoringFromCache = useRef(false)
@@ -459,9 +459,9 @@ export const BCGridViewer = forwardRef(
               }}
             >
               <BCPagination
-                page={data?.pagination.page || 1}
-                size={data?.pagination.size || 10}
-                total={data?.pagination.total || 0}
+                page={data?.pagination?.page || paginationOptions.page || 1}
+                size={data?.pagination?.size || paginationOptions.size || 10}
+                total={data?.pagination?.total ?? data?.total_count ?? 0}
                 handleChangePage={handleChangePage}
                 handleChangeRowsPerPage={handleChangeRowsPerPage}
                 enableResetButton={enableResetButton}
@@ -476,7 +476,7 @@ export const BCGridViewer = forwardRef(
             {/* Floating pagination container */}
             {isPaginationFloating &&
               enableFloatingPagination &&
-              data?.pagination?.size > 10 && (
+              (data?.pagination?.size || paginationOptions.size || 10) > 10 && (
                 <BCBox
                   className="ag-grid-pagination-container-floating"
                   display="flex"
@@ -520,9 +520,11 @@ export const BCGridViewer = forwardRef(
                     </div>
                   )}
                   <BCPagination
-                    page={data?.pagination.page || 1}
-                    size={data?.pagination.size || 10}
-                    total={data?.pagination.total || 0}
+                    page={data?.pagination?.page || paginationOptions.page || 1}
+                    size={
+                      data?.pagination?.size || paginationOptions.size || 10
+                    }
+                    total={data?.pagination?.total ?? data?.total_count ?? 0}
                     handleChangePage={handleChangePage}
                     handleChangeRowsPerPage={handleChangeRowsPerPage}
                     enableResetButton={enableResetButton}

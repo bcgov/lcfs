@@ -202,3 +202,18 @@ export const useOrganizations = () => {
     }
   })
 }
+
+// Boolean flag indicating whether the supplier has any allocation agreements
+export const useHasAllocationAgreements = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['has-allocation-agreements'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.hasAllocationAgreements
+      )
+      return Boolean(response.data)
+    }
+  })
+}

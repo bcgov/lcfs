@@ -49,6 +49,7 @@ export const ChargingEquipment = () => {
     data: equipmentData,
     isLoading,
     isError,
+    error,
     refetch
   } = useChargingEquipment(paginationOptions)
 
@@ -120,21 +121,27 @@ export const ChargingEquipment = () => {
   const handleRowClick = (params) => {
     const { status, charging_equipment_id } = params.data
     if (status === 'Draft' || status === 'Updated' || status === 'Validated') {
-      navigate(`${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`)
+      navigate(
+        `${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`
+      )
     } else {
-      navigate(`${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`)
+      navigate(
+        `${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`
+      )
     }
   }
 
   const handleSelectionChanged = (event) => {
     const selectedNodes = event.api.getSelectedNodes()
-    setSelectedRows(selectedNodes.map(node => node.data))
-    
+    setSelectedRows(selectedNodes.map((node) => node.data))
+
     // Clear select mode if manual selection doesn't match the mode
-    const selectedData = selectedNodes.map(node => node.data)
-    const allDraftUpdated = selectedData.every(row => row.status === 'Draft' || row.status === 'Updated')
-    const allValidated = selectedData.every(row => row.status === 'Validated')
-    
+    const selectedData = selectedNodes.map((node) => node.data)
+    const allDraftUpdated = selectedData.every(
+      (row) => row.status === 'Draft' || row.status === 'Updated'
+    )
+    const allValidated = selectedData.every((row) => row.status === 'Validated')
+
     if (!allDraftUpdated && selectMode === 'draft-updated') {
       setSelectMode(null)
     } else if (!allValidated && selectMode === 'validated') {
@@ -143,7 +150,7 @@ export const ChargingEquipment = () => {
   }
 
   const handleBulkSubmit = async () => {
-    const equipmentIds = selectedRows.map(row => row.charging_equipment_id)
+    const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
     try {
       const result = await submitEquipment(equipmentIds)
       setAlertMessage(result.message)
@@ -159,7 +166,7 @@ export const ChargingEquipment = () => {
   }
 
   const handleBulkDecommission = async () => {
-    const equipmentIds = selectedRows.map(row => row.charging_equipment_id)
+    const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
     try {
       const result = await decommissionEquipment(equipmentIds)
       setAlertMessage(result.message)
@@ -179,13 +186,11 @@ export const ChargingEquipment = () => {
     gridRef.current?.api?.setFilterModel(null)
   }
 
-  const canSubmit = selectedRows.some(row => 
-    row.status === 'Draft' || row.status === 'Updated'
+  const canSubmit = selectedRows.some(
+    (row) => row.status === 'Draft' || row.status === 'Updated'
   )
 
-  const canDecommission = selectedRows.some(row => 
-    row.status === 'Validated'
-  )
+  const canDecommission = selectedRows.some((row) => row.status === 'Validated')
 
   if (isLoading) return <Loading />
   if (isError) {
@@ -198,7 +203,10 @@ export const ChargingEquipment = () => {
           <BCAlert severity="error">
             {t('chargingEquipment:errorLoadingEquipment')}
             <br />
-            <small>Please check if the backend charging equipment service is running properly.</small>
+            <small>
+              Please check if the backend charging equipment service is running
+              properly.
+            </small>
           </BCAlert>
         </Grid>
       </Grid>
@@ -218,10 +226,7 @@ export const ChargingEquipment = () => {
 
       {alertMessage && (
         <Grid item xs={12}>
-          <BCAlert 
-            severity={alertSeverity}
-            onClose={() => setAlertMessage('')}
-          >
+          <BCAlert severity={alertSeverity} onClose={() => setAlertMessage('')}>
             {alertMessage}
           </BCAlert>
         </Grid>
@@ -240,31 +245,25 @@ export const ChargingEquipment = () => {
               >
                 {t('chargingEquipment:newFSE')}
               </BCButton>
-              
+
               <BCButton
-                variant={selectMode === 'draft-updated' ? 'contained' : 'outlined'}
-                color="secondary"
+                variant="outlined"
+                color="primary"
                 size="medium"
                 onClick={handleSelectAllDraftUpdated}
               >
-                {selectMode === 'draft-updated' 
-                  ? t('common:deselectAll') 
-                  : t('chargingEquipment:selectAllDraftUpdated')
-                }
+                {t('chargingEquipment:selectAllDraftUpdated')}
               </BCButton>
-              
+
               <BCButton
-                variant={selectMode === 'validated' ? 'contained' : 'outlined'}
-                color="secondary"
+                variant="outlined"
+                color="primary"
                 size="medium"
                 onClick={handleSelectAllValidated}
               >
-                {selectMode === 'validated' 
-                  ? t('common:deselectAll') 
-                  : t('chargingEquipment:selectAllValidated')
-                }
+                {t('chargingEquipment:selectAllValidated')}
               </BCButton>
-              
+
               <BulkActionButtons
                 selectedRows={selectedRows}
                 canSubmit={canSubmit}
@@ -279,26 +278,15 @@ export const ChargingEquipment = () => {
 
           <BCGridViewer
             gridRef={gridRef}
-            rowData={equipmentData?.items || []}
             columnDefs={chargingEquipmentColDefs}
             defaultColDef={defaultColDef}
             getRowId={getRowId}
             overlayLoadingTemplate="Loading FSE data..."
             overlayNoRowsTemplate="No FSE found"
-            pagination={true}
-            paginationPageSize={paginationOptions.size}
-            currentPage={paginationOptions.page}
-            totalPages={equipmentData?.total_pages || 1}
-            totalCount={equipmentData?.total_count || 0}
-            onPaginationChanged={(page, size) => {
-              setPaginationOptions(prev => ({ ...prev, page, size }))
-            }}
-            onSortChanged={(sortModel) => {
-              setPaginationOptions(prev => ({ ...prev, sortOrders: sortModel }))
-            }}
-            onFilterChanged={(filterModel) => {
-              setPaginationOptions(prev => ({ ...prev, filters: filterModel }))
-            }}
+            gridKey="charging-equipment"
+            paginationOptions={paginationOptions}
+            onPaginationChange={(opts) => setPaginationOptions(opts)}
+            queryData={{ data: equipmentData, isLoading, isError, error }}
             onRowClicked={handleRowClick}
             rowSelection="multiple"
             onSelectionChanged={handleSelectionChanged}

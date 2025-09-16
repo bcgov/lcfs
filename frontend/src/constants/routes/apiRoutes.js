@@ -129,6 +129,8 @@ export const apiRoutes = {
     endUseTypes: '/charging-equipment/end-use-types/list',
     chargingSites: '/charging-equipment/charging-sites/list',
     organizations: '/charging-equipment/organizations/list'
+    ,
+    hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements'
   },
 
   // fuel-supplies
