@@ -563,15 +563,23 @@ const defaultRenderChip = (chip) => (
       backgroundColor: `${colors.input.main}`,
       color: '#fff',
       margin: '0 2px',
-      width: `${chip.width}px`,
+      minWidth: `${Math.max(chip.width || 60, 40)}px`,
+      maxWidth: `${chip.maxWidth || 200}px`,
       fontSize: '0.8125rem',
       boxSizing: 'border-box',
       height: '32px',
       borderRadius: '16px',
       whiteSpace: 'nowrap',
       textOverflow: 'ellipsis',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      flexShrink: 0,
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        transform: 'scale(1.05)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }
     }}
+    title={chip.text}
   >
     {chip.text}
   </span>
@@ -587,18 +595,26 @@ const defaultRenderOverflowChip = (hiddenChipsCount) =>
         borderRadius: '16px',
         padding: '0.5rem',
         color: `${colors.text.main}`,
-        cursor: 'text',
+        cursor: 'pointer',
         margin: '0 2px',
         fontSize: '0.8125rem',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         boxSizing: 'border-box',
-        width: '40px',
+        minWidth: '40px',
+        maxWidth: '60px',
         height: '32px',
         whiteSpace: 'nowrap',
         textOverflow: 'ellipsis',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        flexShrink: 0,
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+          transform: 'scale(1.05)'
+        }
       }}
       title={`+${hiddenChipsCount} more`}
     >

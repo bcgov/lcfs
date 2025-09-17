@@ -138,7 +138,7 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
 
     @classmethod
     def model_validate(cls, obj, **kwargs):
-        # Map intended_uses to intended_use_types if needed
+        # Map intended_uses to intended_use_types
         if hasattr(obj, "intended_uses") and not hasattr(obj, "intended_use_types"):
             obj.intended_use_types = obj.intended_uses
         return super().model_validate(obj, **kwargs)

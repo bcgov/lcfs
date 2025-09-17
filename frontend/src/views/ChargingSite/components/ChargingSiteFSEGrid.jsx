@@ -15,10 +15,13 @@ import {
   useChargingSiteEquipmentPaginated
 } from '@/hooks/useChargingSite'
 import { equipmentButtonConfigFn, buildButtonContext } from './buttonConfig'
+import BCModal from '@/components/BCModal'
+import { Role } from '@/components/Role'
+import { roles } from '@/constants/roles'
 
 const initialPaginationOptions = {
   page: 1,
-  size: 10,
+  size: 25,
   sortOrders: [],
   filters: []
 }
@@ -29,6 +32,7 @@ export const ChargingSiteFSEGrid = () => {
   const gridRef = useRef(null)
   const alertRef = useRef(null)
 
+  const [modalData, setModalData] = useState(null)
   const [selectedRows, setSelectedRows] = useState([])
   const [gridApi, setGridApi] = useState(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
@@ -44,7 +48,7 @@ export const ChargingSiteFSEGrid = () => {
     chargingSiteId,
     paginationOptions
   )
-  const { data: equipmentData, isLoading } = equipmentQuery
+  const { data: equipmentData, isLoading, refetch } = equipmentQuery
 
   const { mutateAsync: bulkUpdateStatus, isPending: isUpdating } =
     useBulkUpdateEquipmentStatus()
@@ -88,7 +92,7 @@ export const ChargingSiteFSEGrid = () => {
   }, [selectedRows, equipmentList])
 
   // Check if selected equipment can be decommissioned (only from Validated status)
-  const canSetToDecommision = useMemo(() => {
+  const canSetToDecommission = useMemo(() => {
     if (selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
@@ -156,6 +160,7 @@ export const ChargingSiteFSEGrid = () => {
     setPaginationOptions((prev) => ({
       ...prev,
       page: 1,
+      size: 25,
       filters: [],
       sortOrders: []
     }))
@@ -182,9 +187,12 @@ export const ChargingSiteFSEGrid = () => {
           equipment_ids: selectedRows,
           new_status: newStatus
         })
+        refetch()
         handleClearFilters()
       } catch (error) {
         console.error('Failed to update equipment status:', error)
+      } finally {
+        setModalData(null)
       }
     },
     [selectedRows, chargingSiteId, bulkUpdateStatus, handleClearFilters]
@@ -208,6 +216,7 @@ export const ChargingSiteFSEGrid = () => {
   const buttonContext = useMemo(() => {
     return buildButtonContext({
       t,
+      setModalData,
       equipmentList,
       selectedRows,
       isUpdating,
@@ -215,7 +224,7 @@ export const ChargingSiteFSEGrid = () => {
       canUndoValidation,
       canReturnToDraft,
       canSubmit,
-      canSetToDecommision,
+      canSetToDecommission,
       chargingSiteStatus: equipmentData?.status?.status || 'Draft',
       organizationId: equipmentData?.organizationId || null,
       currentUser,
@@ -228,6 +237,7 @@ export const ChargingSiteFSEGrid = () => {
       handleClearFilters
     })
   }, [
+    setModalData,
     equipmentList,
     selectedRows,
     isUpdating,
@@ -235,7 +245,7 @@ export const ChargingSiteFSEGrid = () => {
     canUndoValidation,
     canReturnToDraft,
     canSubmit,
-    canSetToDecommision,
+    canSetToDecommission,
     equipmentData?.chargingSiteStatus,
     equipmentData?.organizationId,
     currentUser?.userId,
@@ -258,13 +268,21 @@ export const ChargingSiteFSEGrid = () => {
       <Grid size={12} sx={{ mt: { xs: 2, md: 4 } }}>
         <BCBox sx={{ mb: 3 }}>
           <BCTypography variant="h6" color="primary">
-            {t('gridTitle')}
+            {hasRoles(roles.government)
+              ? t('equipmentProcessingTitle')
+              : t('gridTitle')}
           </BCTypography>
           <BCTypography variant="body4" color="text" mt={1} component="div">
-            {t('gridDescription')}
+            {hasRoles(roles.government)
+              ? t('equipmentProcessingDescription')
+              : t('gridDescription')}
           </BCTypography>
         </BCBox>
-
+        <BCModal
+          open={!!modalData}
+          onClose={() => setModalData(null)}
+          data={modalData}
+        />
         {/* Dynamic Action Buttons Based on Role */}
         {availableButtons.length > 0 && (
           <Stack

@@ -89,7 +89,13 @@ export const ChargingSiteDocument = ({ attachments }) => {
             component="div"
           >
             {t('documentTitle')}
-            <Role roles={[roles.signing_authority, roles.compliance_reporting]}>
+            <Role
+              roles={[
+                roles.signing_authority,
+                roles.compliance_reporting,
+                roles.analyst
+              ]}
+            >
               <IconButton
                 color="primary"
                 label="edit"

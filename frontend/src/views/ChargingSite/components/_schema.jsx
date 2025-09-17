@@ -16,6 +16,7 @@ import {
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
+import { useChargingEquipmentStatuses } from '@/hooks/useChargingSite'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -266,7 +267,8 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
       width: 50,
       pinned: 'left',
       lockPinned: true,
-      filter: false
+      filter: false,
+      sortable: false
     },
     {
       field: 'status',
@@ -281,16 +283,7 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
       floatingFilterComponentParams: {
         valueKey: 'status',
         labelKey: 'status',
-        optionsQuery: () => ({
-          data: [
-            { status: 'Draft' },
-            { status: 'Submitted' },
-            { status: 'Rejected' },
-            { status: 'Approved' },
-            { status: 'Deleted' }
-          ],
-          isLoading: false
-        })
+        optionsQuery: useChargingEquipmentStatuses
       },
       suppressFloatingFilterButton: true,
       filterParams: {
@@ -302,10 +295,12 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
     {
       field: 'siteName',
       headerName: t('fseColumnLabels.siteName'),
+      sortable: false,
       valueGetter: (params) => params.data?.chargingSite?.siteName || ''
     },
     {
       field: 'registrationNumber',
+      sortable: false,
       minWidth: 160,
       headerName: t('fseColumnLabels.registrationNumber')
     },
@@ -342,6 +337,7 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
     {
       field: 'levelOfEquipment',
       minWidth: 400,
+      sortable: false,
       valueGetter: (params) => {
         return params.data?.levelOfEquipment?.name || ''
       },
@@ -359,6 +355,7 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
     {
       field: 'intendedUse',
       headerName: t('fseColumnLabels.intendedUse'),
+      sortable: false,
       minWidth: 380,
       valueGetter: (params) =>
         params.data?.intendedUseTypes?.map((i) => i.type),
@@ -367,11 +364,13 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
     },
     {
       field: 'latitude',
+      sortable: false,
       headerName: t('fseColumnLabels.latitude'),
       valueGetter: (params) => params.data?.chargingSite?.latitude || ''
     },
     {
       field: 'longitude',
+      sortable: false,
       headerName: t('fseColumnLabels.longitude'),
       valueGetter: (params) => params.data?.chargingSite?.longitude || ''
     },

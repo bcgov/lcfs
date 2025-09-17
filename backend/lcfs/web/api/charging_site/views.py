@@ -1,6 +1,6 @@
 """Charging Site API."""
 
-from typing import List, Optional, Union
+from typing import List, Union
 from fastapi import (
     APIRouter,
     Body,
@@ -11,14 +11,14 @@ from fastapi import (
     Response,
     status,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.charging_site.schema import (
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentPaginatedSchema,
+    ChargingEquipmentStatusSchema,
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
     ChargingSiteStatusSchema,
-    ChargingSiteWithAttachmentsSchema,
     ChargingSitesSchema,
     CommonPaginatedCSRequestSchema,
     DeleteChargingSiteResponseSchema,
@@ -53,11 +53,26 @@ async def get_intended_users(
 
 
 @router.get(
+    "/equipment/statuses/",
+    response_model=List[ChargingEquipmentStatusSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.SUPPLIER])
+async def get_charging_equipment_statuses(
+    request: Request, service: ChargingSiteService = Depends()
+) -> List[ChargingEquipmentStatusSchema]:
+    """
+    Get all available charging site statuses
+    """
+    return await service.get_charging_equipment_statuses()
+
+
+@router.get(
     "/statuses/",
     response_model=List[ChargingSiteStatusSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.SUPPLIER])
 async def get_charging_site_statuses(
     request: Request, service: ChargingSiteService = Depends()
 ) -> List[ChargingSiteStatusSchema]:
@@ -209,7 +224,7 @@ async def get_charging_site(
 
 @router.post(
     "/{site_id}/equipment/bulk-status-update",
-    response_model=List[ChargingSiteWithAttachmentsSchema],
+    response_model=bool,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.SUPPLIER])
@@ -224,21 +239,10 @@ async def bulk_update_equipment_status(
     Bulk update status for equipment records associated with a charging site.
     """
     await validate.validate_organization_access(site_id)
-    # Validate new status
-    valid_statuses = ["Draft", "Submitted", "Validated", "Decommissioned"]
-    if bulk_update.new_status not in valid_statuses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid status '{bulk_update.new_status}'. Must be one of: {valid_statuses}",
-        )
-
     try:
-        await service.bulk_update_equipment_status(bulk_update, site_id, request.user)
-
-        # Return updated charging site data
-        updated_site = await service.get_charging_site_with_attachments(site_id)
-        return [updated_site] if updated_site else []
-
+        return await service.bulk_update_equipment_status(
+            bulk_update, site_id, request.user
+        )
     except Exception as e:
         logger.error(f"Error during bulk equipment status update: {str(e)}")
         raise HTTPException(
@@ -261,4 +265,10 @@ async def get_charging_site_equipment_paginated(
     Supports filtering, sorting, and pagination.
     """
     await validate.validate_organization_access(site_id)
+    if request.user.is_government:
+        pagination.filters.append(
+            FilterModel(
+                field="status", filter_type="text", type="not_equals", filter="Draft"
+            )
+        )
     return await service.get_charging_site_equipment_paginated(site_id, pagination)
