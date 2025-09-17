@@ -1,5 +1,8 @@
 import { AddCircleOutlineRounded, CheckBox } from '@mui/icons-material'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { roles, govRoles } from '@/constants/roles'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
 
 // =============================================================================
 // USER TYPE DETECTION
@@ -91,7 +94,7 @@ class ButtonActionFactory {
         : BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-submitted-btn',
       label: allSubmittedSelected
-        ? this.context.t('chargingSite:buttons.unselectAll')
+        ? this.context.t('chargingSite:buttons.unselectAllSubmitted')
         : this.context.t('chargingSite:buttons.selectAllSubmitted'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: submittedEquipment.length === 0,
@@ -114,7 +117,7 @@ class ButtonActionFactory {
         : BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-draft-btn',
       label: allDraftSelected
-        ? this.context.t('chargingSite:buttons.unselectAll')
+        ? this.context.t('chargingSite:buttons.unselectAllDraft')
         : this.context.t('chargingSite:buttons.selectAllDraft'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: draftEquipment.length === 0,
@@ -137,7 +140,7 @@ class ButtonActionFactory {
         : BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-validated-btn',
       label: allValidatedSelected
-        ? this.context.t('chargingSite:buttons.unselectAll')
+        ? this.context.t('chargingSite:buttons.unselectAllValidated')
         : this.context.t('chargingSite:buttons.selectAllValidated'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: validatedEquipment.length === 0,
@@ -159,7 +162,19 @@ class ButtonActionFactory {
         this.context.selectedRows.length > 0 && !this.context.canSubmit
           ? this.context.t('chargingSite:tooltips.onlyDraftCanBeSubmitted')
           : '',
-      handler: () => this.context.handleBulkStatusUpdate('Submitted')
+      handler: (formData) =>
+        this.context.setModalData({
+          primaryButtonAction: () =>
+            this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.SUBMITTED),
+          primaryButtonText: this.context.t(
+            'chargingSite:buttons.setSelectedAsSubmitted'
+          ),
+          secondaryButtonText: this.context.t('cancelBtn'),
+          title: this.context.t('confirmation'),
+          content: this.context.t(
+            'chargingSite:setSelectedAsSubmittedConfirmTxt'
+          )
+        })
     })
   }
   setSelectedAsValidated() {
@@ -175,7 +190,8 @@ class ButtonActionFactory {
         this.context.selectedRows.length > 0 && !this.context.canValidate
           ? this.context.t('chargingSite:tooltips.onlySubmittedCanBeValidated')
           : '',
-      handler: () => this.context.handleBulkStatusUpdate('Validated')
+      handler: () =>
+        this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.VALIDATED)
     })
   }
   setToDecommission() {
@@ -186,15 +202,28 @@ class ButtonActionFactory {
       disabled:
         this.context.selectedRows.length === 0 ||
         this.context.isUpdating ||
-        !this.context.canSetToDecommision,
+        !this.context.canSetToDecommission,
       tooltip:
         this.context.selectedRows.length > 0 &&
-        !this.context.canSetToDecommision
+        !this.context.canSetToDecommission
           ? this.context.t(
               'chargingSite:tooltips.onlyValidatedCanBeDecommissioned'
             )
           : '',
-      handler: () => this.context.handleBulkStatusUpdate('Decommision')
+      handler: (formData) =>
+        this.context.setModalData({
+          primaryButtonAction: () =>
+            this.context.handleBulkStatusUpdate(
+              EQUIPMENT_STATUSES.DECOMMISSIONED
+            ),
+          primaryButtonText: this.context.t(
+            'chargingSite:buttons.setToDecommission'
+          ),
+          primaryButtonColor: 'error',
+          secondaryButtonText: this.context.t('cancelBtn'),
+          title: this.context.t('confirmation'),
+          content: this.context.t('chargingSite:setToDecommissionConfirmTxt')
+        })
     })
   }
   undoValidation() {
@@ -210,7 +239,8 @@ class ButtonActionFactory {
         this.context.selectedRows.length > 0 && !this.context.canUndoValidation
           ? this.context.t('chargingSite:tooltips.onlyValidatedCanBeReturned')
           : '',
-      handler: () => this.context.handleBulkStatusUpdate('Submitted')
+      handler: () =>
+        this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.SUBMITTED)
     })
   }
 
@@ -227,46 +257,14 @@ class ButtonActionFactory {
         this.context.selectedRows.length > 0 && !this.context.canReturnToDraft
           ? this.context.t('chargingSite:tooltips.onlySubmittedCanBeDraft')
           : '',
-      handler: () => this.context.handleBulkStatusUpdate('Draft')
+      handler: () =>
+        this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.DRAFT)
     })
   }
-
-  // Administrative Actions
-  bulkApprove() {
-    return this.createButton({
-      style: BUTTON_STYLES.PRIMARY_CONTAINED,
-      id: 'bulk-approve-btn',
-      label: this.context.t('chargingSite:buttons.bulkApprove'),
-      disabled:
-        this.context.selectedRows.length === 0 || this.context.isUpdating,
-      handler: () => this.context.handleBulkStatusUpdate('Approved')
-    })
-  }
-
-  bulkReject() {
-    return this.createButton({
-      style: BUTTON_STYLES.ERROR_OUTLINED,
-      id: 'bulk-reject-btn',
-      label: this.context.t('chargingSite:buttons.bulkReject'),
-      disabled:
-        this.context.selectedRows.length === 0 || this.context.isUpdating,
-      handler: () => this.context.handleBulkStatusUpdate('Rejected')
-    })
-  }
-
-  exportSelected() {
-    return this.createButton({
-      style: BUTTON_STYLES.PRIMARY_OUTLINED,
-      id: 'export-selected-btn',
-      label: this.context.t('chargingSite:buttons.exportSelected'),
-      disabled: this.context.selectedRows.length === 0,
-      handler: this.context.handleExportSelected
-    })
-  }
-
   clearFilters() {
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
+      icon: <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />,
       id: 'clear-filters-btn',
       label: this.context.t('chargingSite:buttons.clearFilters'),
       handler: this.context.handleClearFilters
@@ -282,8 +280,7 @@ const EQUIPMENT_STATUSES = {
   DRAFT: 'Draft',
   SUBMITTED: 'Submitted',
   VALIDATED: 'Validated',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
+  UPDATED: 'Updated',
   DECOMMISSIONED: 'Decommissioned'
 }
 
@@ -313,7 +310,6 @@ const BUTTON_RULES = {
       'setSelectedAsValidated',
       'undoValidation',
       'returnSelectedToDraft',
-      'exportSelected',
       'clearFilters'
     ],
     [USER_TYPES.IDIR_MANAGER]: [
@@ -321,9 +317,6 @@ const BUTTON_RULES = {
       'setSelectedAsValidated',
       'undoValidation',
       'returnSelectedToDraft',
-      'bulkApprove',
-      'bulkReject',
-      'exportSelected',
       'clearFilters'
     ],
     [USER_TYPES.IDIR_ADMIN]: [
@@ -331,9 +324,6 @@ const BUTTON_RULES = {
       'setSelectedAsValidated',
       'undoValidation',
       'returnSelectedToDraft',
-      'bulkApprove',
-      'bulkReject',
-      'exportSelected',
       'clearFilters'
     ]
   }
@@ -349,7 +339,7 @@ function shouldShowButton(buttonName, context) {
   switch (buttonName) {
     case 'selectAllSubmitted':
       // Only show if there are submitted equipment
-      return context.equipmentList.some((eq) => eq.status === 'Submitted')
+      return context.isGovernmentUser
     case 'selectAllDraft':
     case 'selectAllValidated':
       if (!context.isGovernmentUser) {
@@ -359,29 +349,28 @@ function shouldShowButton(buttonName, context) {
     case 'setSelectedAsValidated':
       // Only analysts and above can validate
       // Only show if some equipment is selected and can be validated
-      return context.selectedRows.length > 0 && context.canValidate
+      return (
+        (context.selectedRows.length > 0 && context.canValidate) ||
+        context.isGovernmentUser
+      )
 
     case 'undoValidation':
       // Only analysts and above can undo validation
       // Only show if some equipment is selected and can be undone
-      return context.selectedRows.length > 0 && context.canUndoValidation
+      return (
+        (context.selectedRows.length > 0 && context.canUndoValidation) ||
+        context.isGovernmentUser
+      )
 
     case 'returnSelectedToDraft':
       // BCeID users can only modify their own organization's equipment
       if (!context.isGovernmentUser) {
         return false
       }
-      return context.selectedRows.length > 0 && context.canReturnToDraft
-
-    case 'bulkApprove':
-    case 'bulkReject':
-      // Only managers and above can approve/reject
-      // Only show if charging site is in submitted or validated status
-      return ['Submitted', 'Validated'].includes(chargingSiteStatus)
-
-    case 'exportSelected':
-      // Show export if any equipment is selected
-      return context.selectedRows.length > 0
+      return (
+        (context.selectedRows.length > 0 && context.canReturnToDraft) ||
+        context.isGovernmentUser
+      )
 
     case 'clearFilters':
       // Always show clear filters
@@ -428,6 +417,7 @@ export const equipmentButtonConfigFn = (context) => {
 
 export const buildButtonContext = ({
   t,
+  setModalData,
   equipmentList,
   selectedRows,
   isUpdating,
@@ -435,7 +425,7 @@ export const buildButtonContext = ({
   canUndoValidation,
   canReturnToDraft,
   canSubmit,
-  canSetToDecommision,
+  canSetToDecommission,
   chargingSiteStatus,
   organizationId,
   currentUser,
@@ -451,6 +441,7 @@ export const buildButtonContext = ({
 
   return {
     t,
+    setModalData,
     equipmentList,
     selectedRows,
     isUpdating,
@@ -458,7 +449,7 @@ export const buildButtonContext = ({
     canUndoValidation,
     canReturnToDraft,
     canSubmit,
-    canSetToDecommision,
+    canSetToDecommission,
     chargingSiteStatus,
     organizationId,
     currentUser,

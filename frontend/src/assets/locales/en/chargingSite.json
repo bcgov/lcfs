@@ -1,7 +1,10 @@
 {
   "viewTitle": "Charging Site/FSE list",
   "cardTitle": "Charging site",
+  "equipmentProcessingTitle": "Equipment processing",
+  "equipmentProcessingDescription": "Set equipment as validated or return to draft for the supplier to make further changes. The Set/Return button will only apply to the visible rows. Use the site name filter and/or paging to assist.",
   "cardLabels": {
+    "organization": "Organization",
     "status": "Status",
     "version": "Version number",
     "siteNum": "Site number",
@@ -50,9 +53,11 @@
   },
   "buttons": {
     "newFSE": "New FSE",
+    "unselectAllSubmitted": "Unselect all submitted",
     "selectAllSubmitted": "Select all submitted",
-    "unselectAll": "Unselect all",
+    "unselectAllDraft": "Unselect all draft/updated",
     "selectAllDraft": "Select all draft/updated",
+    "unselectAllValidated": "Unselect all validated",
     "selectAllValidated": "Select all validated",
     "setSelectedAsSubmitted": "Submit selected",
     "setSelectedAsValidated": "Set selected as validated",
@@ -66,5 +71,9 @@
     "uploadTitle": "Upload supporting documents for charging site",
     "documentLabel": "Supporting documents help provide additional context and evidence for this charging site.",
     "returnButton": "Return to charging site"
-  }
+  },
+  "confirmation": "Confirmation",
+  "cancelBtn": "Cancel",
+  "setToDecommissionConfirmTxt": "This will set the selected FSE to Decommissioned status. They will no longer be available in future compliance reports. Do you want to proceed?",
+  "setSelectedAsSubmittedConfirmTxt": "This will set the selected FSE to Submitted status. No more edits will be possible. Do you want to proceed?"
 }

@@ -188,6 +188,16 @@ export const useChargingSiteStatuses = () => {
     staleTime: 60 * 60 * 1000 // 60 minutes
   })
 }
+export const useChargingEquipmentStatuses = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-equipment-statuses'],
+    queryFn: () => apiService.get('/charging-sites/equipment/statuses/'),
+    select: (response) => response.data,
+    staleTime: 60 * 60 * 1000 // 60 minutes
+  })
+}
 
 export const useBulkUpdateEquipmentStatus = (options = {}) => {
   const apiService = useApiService()

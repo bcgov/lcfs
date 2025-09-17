@@ -1,6 +1,8 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
+import { Role } from '@/components/Role'
+import { roles } from '@/constants/roles'
 import { useGetChargingSiteById } from '@/hooks/useChargingSite'
 import { constructAddress } from '@/utils/constructAddress'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
@@ -87,6 +89,14 @@ export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
           </BCTypography>
         </BCBox>
       </BCBox>
+      <Role roles={[roles.government]}>
+        <BCTypography variant="body4">
+          <BCTypography variant="label">
+            {t('cardLabels.organization')}:
+          </BCTypography>{' '}
+          {data?.organization?.name || ''}
+        </BCTypography>
+      </Role>
     </BCBox>
   )
 }

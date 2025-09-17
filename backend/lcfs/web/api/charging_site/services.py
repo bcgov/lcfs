@@ -1,6 +1,8 @@
 import math
 from typing import List, Optional
+from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
+from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
 from lcfs.db.models.compliance.EndUserType import EndUserType
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.services.s3.schema import FileResponseSchema
@@ -13,6 +15,7 @@ from lcfs.web.api.charging_site.schema import (
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentForSiteSchema,
     ChargingEquipmentPaginatedSchema,
+    ChargingEquipmentStatusSchema,
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
     ChargingSiteStatusSchema,
@@ -235,6 +238,23 @@ class ChargingSiteService:
         return ChargingSiteSchema.model_validate(site)
 
     @service_handler
+    async def get_charging_equipment_statuses(
+        self,
+    ) -> List[ChargingEquipmentStatusSchema]:
+        """
+        Get all available charging equipment statuses
+        """
+        statuses = await self.repo.get_charging_equipment_statuses()
+        return [
+            ChargingEquipmentStatusSchema(
+                charging_equipment_status_id=status.charging_equipment_status_id,
+                status=status.status,
+                description=status.description,
+            )
+            for status in statuses
+        ]
+
+    @service_handler
     async def get_charging_site_statuses(self) -> List[ChargingSiteStatusSchema]:
         """
         Get all available charging site statuses
@@ -259,112 +279,68 @@ class ChargingSiteService:
         """
         Bulk update status for charging equipment records and handle charging site status changes
         """
-        # Validate status transition rules
-        from sqlalchemy import select
-        from sqlalchemy.orm import joinedload
-        from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
+        # Get all equipment statuses
+        statuses = await self.repo.get_charging_equipment_statuses()
+        status_ids = self._get_equipment_status_ids(statuses)
+        # Define valid status transitions: new_status -> (from_status, error_message)
+        valid_transitions = {
+            "Draft": ["Submitted"],  # Return to Draft (from Submitted)
+            "Submitted": [
+                "Draft",
+                "Validated",
+            ],  # Submit (from Draft) or Undo Validation (from Validated)
+            "Validated": ["Submitted"],  # Validate (from Submitted)
+            "Decommissioned": ["Validated"],  # Decommission (from Validated)
+        }
+        # Validate the new status
+        if bulk_update.new_status not in valid_transitions:
+            raise ValueError(f"Invalid status: {bulk_update.new_status}")
 
-        if bulk_update.new_status == "Draft":
-            # Equipment can only be returned to Draft from Submitted status
-            query = (
-                select(ChargingEquipment)
-                .options(joinedload(ChargingEquipment.status))
-                .where(
-                    ChargingEquipment.charging_equipment_id.in_(
-                        bulk_update.equipment_ids
-                    )
-                )
-            )
-            result = await self.repo.db.execute(query)
-            equipment_to_update = result.unique().scalars().all()
+        allowed_source_statuses = valid_transitions[bulk_update.new_status]
+        source_status_ids = [status_ids[status] for status in allowed_source_statuses]
 
-            invalid_equipment = [
-                eq for eq in equipment_to_update if eq.status.status != "Submitted"
-            ]
-
-            if invalid_equipment:
-                invalid_serials = [eq.serial_number for eq in invalid_equipment]
-                invalid_statuses = [
-                    f"{eq.serial_number}({eq.status.status})"
-                    for eq in invalid_equipment
-                ]
-                raise ValueError(
-                    f"Equipment can only be returned to Draft from Submitted status. "
-                    f"Invalid equipment: {', '.join(invalid_serials)} (current statuses: {', '.join(invalid_statuses)})"
-                )
-
-        elif bulk_update.new_status == "Validated":
-            # Equipment can only be validated from Submitted status
-            query = (
-                select(ChargingEquipment)
-                .options(joinedload(ChargingEquipment.status))
-                .where(
-                    ChargingEquipment.charging_equipment_id.in_(
-                        bulk_update.equipment_ids
-                    )
-                )
-            )
-            result = await self.repo.db.execute(query)
-            equipment_to_update = result.unique().scalars().all()
-
-            invalid_equipment = [
-                eq for eq in equipment_to_update if eq.status.status != "Submitted"
-            ]
-
-            if invalid_equipment:
-                invalid_serials = [eq.serial_number for eq in invalid_equipment]
-                invalid_statuses = [
-                    f"{eq.serial_number}({eq.status.status})"
-                    for eq in invalid_equipment
-                ]
-                raise ValueError(
-                    f"Equipment can only be validated from Submitted status. "
-                    f"Invalid equipment: {', '.join(invalid_serials)} (current statuses: {', '.join(invalid_statuses)})"
-                )
-
-        # Update equipment status
-        updated_equipment = await self.repo.bulk_update_equipment_status(
-            bulk_update.equipment_ids, bulk_update.new_status
+        # Perform the bulk update
+        updated_ids = await self.repo.bulk_update_equipment_status(
+            bulk_update.equipment_ids,
+            status_ids[bulk_update.new_status],  # new status id
+            source_status_ids,  # from status id
         )
-
-        if bulk_update.new_status == "Validated":
-            # Get current site status
-            site = await self.repo.get_charging_site_by_id(charging_site_id)
-            if site:
-                # Find "Validated" status ID (would need to be implemented properly)
-                validated_status_id = 2  # Assuming this is the validated status ID
-                await self.repo.update_charging_site_status(
-                    charging_site_id, validated_status_id
-                )
-
-        # Convert updated equipment to schema format
-        result = []
-        for equipment in updated_equipment:
-            equipment_schema = ChargingEquipmentForSiteSchema(
-                charging_equipment_id=equipment.charging_equipment_id,
-                equipment_number=equipment.equipment_number,
-                registration_number=equipment.registration_number or "",
-                version=equipment.version,
-                allocating_organization=(
-                    equipment.allocating_organization.name
-                    if equipment.allocating_organization
-                    else equipment.organization_name or ""
-                ),
-                serial_number=equipment.serial_number,
-                manufacturer=equipment.manufacturer,
-                model=equipment.model,
-                level_of_equipment=(
-                    equipment.level_of_equipment.name
-                    if equipment.level_of_equipment
-                    else ""
-                ),
-                ports=equipment.ports.value if equipment.ports else None,
-                status=bulk_update.new_status,  # Use the new status
-                notes=equipment.notes,
+        # Validate that all equipment was updated
+        if set(updated_ids) != set(bulk_update.equipment_ids):
+            # Create a more helpful error message
+            allowed_statuses_str = " or ".join(allowed_source_statuses)
+            raise ValueError(
+                f"Equipment can only be changed to {bulk_update.new_status} "
+                f"from {allowed_statuses_str} status. Some equipment may not "
+                f"be in the required status."
             )
-            result.append(equipment_schema)
 
-        return result
+        # Update charging site status if equipment status is Submitted or Validated
+        if bulk_update.new_status in ["Submitted", "Validated"]:
+            # Get charging site statuses and find the corresponding status ID
+            site_statuses = await self.repo.get_charging_site_statuses()
+            site_status_ids = self._get_site_status_ids(site_statuses)
+
+            await self.repo.update_charging_site_status(
+                charging_site_id, site_status_ids[bulk_update.new_status]
+            )
+        return True
+
+    def _get_equipment_status_ids(
+        self, statuses: List[ChargingEquipmentStatus]
+    ) -> dict:
+        """
+        Get equipment status IDs mapped by status name
+        """
+        return {
+            status.status: status.charging_equipment_status_id for status in statuses
+        }
+
+    def _get_site_status_ids(self, statuses: List[ChargingSiteStatus]) -> dict:
+        """
+        Get site status IDs mapped by status name
+        """
+        return {status.status: status.charging_site_status_id for status in statuses}
 
     @service_handler
     async def get_charging_site_equipment_paginated(

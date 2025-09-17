@@ -71,21 +71,11 @@ export const ChargingSiteCard = ({ addMode = false, data }) => {
     return <Loading />
   }
   return (
-    <BCBox
-      sx={{
-        mt: 5,
-        width: {
-          md: '100%',
-          lg: '60%'
-        }
-      }}
-    >
-      <BCWidgetCard
-        title={t('cardTitle')}
-        color="nav"
-        editButton={undefined}
-        content={<ChargingSiteProfile data={data} />}
-      />
-    </BCBox>
+    <BCWidgetCard
+      title={t('cardTitle')}
+      color="nav"
+      editButton={undefined}
+      content={<ChargingSiteProfile data={data} />}
+    />
   )
 }

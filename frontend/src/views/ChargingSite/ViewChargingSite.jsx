@@ -8,6 +8,9 @@ import { useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import { useRef } from 'react'
 import Loading from '@/components/Loading'
+import ChargingSitesMap from './components/ChargingSitesMap'
+import BCBox from '@/components/BCBox'
+import { Grid2 } from '@mui/material'
 
 export const ViewChargingSite = () => {
   const { t } = useTranslation('chargingSite')
@@ -36,7 +39,23 @@ export const ViewChargingSite = () => {
       <BCTypography variant="h5" color="primary">
         {t('viewTitle')}
       </BCTypography>
-      <ChargingSiteCard data={chargingSiteData} />
+      <BCBox sx={{ my: 3 }}>
+        <Grid2 container spacing={1}>
+          {/* Card Section - 7 parts (58.33%) */}
+          <Grid2 size={{ xs: 12, md: 7 }}>
+            <ChargingSiteCard data={chargingSiteData} />
+          </Grid2>
+
+          {/* Map Section - 3 parts (25%) */}
+          <Grid2 size={{ xs: 12, md: 5 }}>
+            <ChargingSitesMap
+              sites={[chargingSiteData]}
+              showLegend={false}
+              height={225} // Adjust height as needed
+            />
+          </Grid2>
+        </Grid2>
+      </BCBox>
       <ChargingSiteDocument attachments={chargingSiteData?.documents} />
       <ChargingSiteFSEGrid />
     </div>
