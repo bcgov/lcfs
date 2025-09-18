@@ -1,10 +1,14 @@
 import math
 from typing import List, Optional
+from lcfs.db.models.compliance.ChargingSite import ChargingSit
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
+from lcfs.db.models.compliance.EndUserType import EndUserType
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
     validate_pagination,
+    get_field_for_filter,
+    apply_filter_conditions,
 )
 from lcfs.web.api.charging_site.schema import (
     ChargingSiteCreateSchema,
@@ -294,7 +298,82 @@ class ChargingSiteService:
     async def get_charging_sites_paginated(
         self, pagination: PaginationRequestSchema, organization_id: int
     ):
-        return None
+        """
+        Paginated list of charging sites for a specific organization.
+        """
+        conditions = []
+        pagination = validate_pagination(pagination)
+
+        # Apply filters
+        for f in pagination.sort_orders:
+            # normalize fields to snake_case handled by schema
+            pass
+
+        if pagination.filters:
+            for f in pagination.filters:
+                field = get_field_for_filter(ChargingSite, f.field)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field,
+                        f.filter,
+                        f.type,
+                        f.filter_type,
+                    )
+                    if condition is not None:
+                        conditions.append(condition)
+
+        offset = (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        rows, total = await self.repo.get_charging_sites_paginated(
+            offset, limit, conditions, pagination.sort_orders, organization_id
+        )
+        return ChargingSitesSchema(
+            charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
+            pagination=PaginationResponseSchema(
+                page=pagination.page,
+                size=pagination.size,
+                total=total,
+                total_pages=math.ceil(total / pagination.size) if pagination.size else 1,
+            ),
+        )
+
+    @service_handler
+    async def get_all_charging_sites_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> ChargingSitesSchema:
+        """
+        Paginated list of all charging sites.
+        """
+        conditions = []
+        pagination = validate_pagination(pagination)
+
+        if pagination.filters:
+            for f in pagination.filters:
+                field = get_field_for_filter(ChargingSite, f.field)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field,
+                        f.filter,
+                        f.type,
+                        f.filter_type,
+                    )
+                    if condition is not None:
+                        conditions.append(condition)
+
+        offset = (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        rows, total = await self.repo.get_all_charging_sites_paginated(
+            offset, limit, conditions, pagination.sort_orders
+        )
+        return ChargingSitesSchema(
+            charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
+            pagination=PaginationResponseSchema(
+                page=pagination.page,
+                size=pagination.size,
+                total=total,
+                total_pages=math.ceil(total / pagination.size) if pagination.size else 1,
+            ),
+        )
 
     @service_handler
     async def get_cs_list(self, organization_id: int):

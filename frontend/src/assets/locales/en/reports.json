@@ -299,7 +299,9 @@
   "tabs": {
     "complianceReporting": "Compliance reporting",
     "manageChargingSites": "Manage charging sites",
-    "manageFSE": "Manage FSE"
+    "manageFSE": "Manage FSE",
+    "chargingSites": "Charging sites",
+    "fseIndex": "FSE index"
   },
   "chargingSites": {
     "title": "Manage charging sites",
@@ -319,6 +321,22 @@
       "longitude": "Longitude",
       "intendedUserTypes": "Intended user types",
       "notes": "Site notes"
+    }
+  }
+  ,
+  "idirChargingSites": {
+    "description": "Open charging sites to view file attachments and process FSE by site.",
+    "filtersLabel": "Show charging sites for:",
+    "selectOrgPlaceholder": "Select organization",
+    "columnLabels": {
+      "status": "Status",
+      "organization": "Organization",
+      "siteName": "Site name",
+      "siteNumber": "Site number",
+      "intendedUsers": "Intended users",
+      "streetAddress": "Street address",
+      "city": "City",
+      "postalCode": "Postal code"
     }
   }
 }

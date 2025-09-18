@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, select, func
+from sqlalchemy import asc, delete, select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -93,6 +93,59 @@ class ChargingSiteRepo:
         )
         results = await self.db.execute(query)
         return results.scalars().all()
+
+    @repo_handler
+    async def get_all_charging_sites_paginated(
+        self, offset: int, limit: int, conditions: list, sort_orders: list
+    ) -> tuple[list[ChargingSite], int]:
+        """
+        Retrieve all charging sites with pagination, filtering, and sorting.
+        """
+        stmt = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.status),
+                selectinload(ChargingSite.intended_users),
+            )
+            .where(and_(*conditions) if conditions else True)
+        )
+
+        # Apply sort orders
+        for order in sort_orders or []:
+            direction = asc if getattr(order, 'direction', 'asc') == 'asc' else desc
+            field = getattr(ChargingSite, getattr(order, 'field', 'create_date'), None)
+            if field is not None:
+                stmt = stmt.order_by(direction(field))
+
+        if not sort_orders:
+            stmt = stmt.order_by(ChargingSite.create_date.asc())
+
+        # Count total
+        total = await self.db.scalar(select(func.count()).select_from(stmt.subquery()))
+
+        # Pagination
+        stmt = stmt.offset(offset).limit(limit)
+        results = await self.db.execute(stmt)
+        rows = results.scalars().all()
+        return rows, total or 0
+
+    @repo_handler
+    async def get_charging_sites_paginated(
+        self,
+        offset: int,
+        limit: int,
+        conditions: list,
+        sort_orders: list,
+        organization_id: int,
+    ) -> tuple[list[ChargingSite], int]:
+        """
+        Retrieve charging sites for a specific organization with pagination.
+        """
+        org_condition = ChargingSite.organization_id == organization_id
+        all_conditions = [org_condition] + (conditions or [])
+        return await self.get_all_charging_sites_paginated(
+            offset, limit, all_conditions, sort_orders
+        )
 
     @repo_handler
     async def update_charging_site(self, charging_site: ChargingSite) -> ChargingSite:
