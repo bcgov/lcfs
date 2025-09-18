@@ -391,3 +391,53 @@ export const defaultColDef = {
   sortable: false,
   singleClickEdit: true
 }
+
+// Column defs for IDIR Charging Sites viewer grid
+export const idirChargingSitesColDefs = (orgIdToName = {}) => [
+  {
+    field: 'status',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.status'),
+    valueGetter: (params) => params.data?.status?.status || ''
+  },
+  {
+    field: 'organization',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.organization'),
+    valueGetter: (params) =>
+      params.data?.organization?.name ||
+      orgIdToName[params.data?.organizationId] ||
+      ''
+  },
+  {
+    field: 'siteName',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.siteName')
+  },
+  {
+    field: 'chargingSiteId',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.siteNumber')
+  },
+  {
+    field: 'intendedUsers',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.intendedUsers'),
+    valueGetter: (params) =>
+      params.data?.intendedUsers?.map((u) => u.typeName) || [],
+    cellRenderer: CommonArrayRenderer
+  },
+  {
+    field: 'streetAddress',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.streetAddress')
+  },
+  {
+    field: 'city',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.city')
+  },
+  {
+    field: 'postalCode',
+    headerName: i18n.t('report:idirChargingSites.columnLabels.postalCode')
+  }
+]
+
+export const idirDefaultColDef = {
+  resizable: true,
+  sortable: true,
+  filter: true
+}

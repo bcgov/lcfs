@@ -1,9 +1,12 @@
+import structlog
 """Charging Site API."""
 
 from typing import List, Union
 from fastapi import (
     APIRouter,
-    Body,
+    status,
+    Request,
+    Response,
     Depends,
     File,
     Form,
@@ -13,13 +16,21 @@ from fastapi import (
     Response,
     UploadFile,
     status,
+    Body,
 )
+from typing import List, Union
+
+from lcfs.db.models.user.Role import RoleEnum
 from fastapi.responses import JSONResponse, StreamingResponse
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.charging_site.schema import (
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentPaginatedSchema,
     ChargingEquipmentStatusSchema,
+    ChargingSiteWithAttachmentsSchema,
+    ChargingSiteStatusSchema,
+    BulkEquipmentStatusUpdateSchema,
+    ChargingEquipmentPaginatedSchema,
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
     ChargingSiteStatusSchema,
@@ -27,6 +38,7 @@ from lcfs.web.api.charging_site.schema import (
     CommonPaginatedCSRequestSchema,
     DeleteChargingSiteResponseSchema,
 )
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_site.services import ChargingSiteService
 from lcfs.web.api.charging_site.export import ChargingSiteExporter
 from lcfs.web.api.charging_site.importer import ChargingSiteImporter
@@ -34,8 +46,6 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db import dependencies
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
-from lcfs.web.core.decorators import view_handler
-import structlog
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -88,6 +98,97 @@ async def get_charging_site_statuses(
     return await service.get_charging_site_statuses()
 
 
+@router.get(
+    "/{site_id}",
+    response_model=ChargingSiteWithAttachmentsSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def get_charging_site(
+    request: Request,
+    site_id: int = Path(..., description="Charging site ID"),
+    service: ChargingSiteService = Depends(),
+) -> ChargingSiteWithAttachmentsSchema:
+    """
+    Get a specific charging site with its attachments
+    """
+    result = await service.get_charging_site_with_attachments(site_id)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Charging site with ID {site_id} not found",
+        )
+    return result
+
+
+@router.get(
+    "/statuses/",
+    response_model=List[ChargingSiteStatusSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def get_charging_site_statuses(
+    request: Request, service: ChargingSiteService = Depends()
+) -> List[ChargingSiteStatusSchema]:
+    """
+    Get all available charging site statuses
+    """
+    return await service.get_charging_site_statuses()
+
+
+@router.post(
+    "/{site_id}/equipment/bulk-status-update",
+    response_model=List[ChargingSiteWithAttachmentsSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def bulk_update_equipment_status(
+    request: Request,
+    site_id: int = Path(..., description="Charging site ID"),
+    bulk_update: BulkEquipmentStatusUpdateSchema = Body(...),
+    service: ChargingSiteService = Depends(),
+):
+    """
+    Bulk update status for equipment records associated with a charging site.
+    """
+    # Validate new status
+    valid_statuses = ["Draft", "Submitted", "Validated"]
+    if bulk_update.new_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status '{bulk_update.new_status}'. Must be one of: {valid_statuses}",
+        )
+
+    try:
+        await service.bulk_update_equipment_status(bulk_update, site_id, request.user)
+
+        # Return updated charging site data
+        updated_site = await service.get_charging_site_with_attachments(site_id)
+        return [updated_site] if updated_site else []
+
+    except Exception as e:
+        logger.error(f"Error during bulk equipment status update: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update equipment status: {str(e)}",
+        )
+
+
+@router.post("/{site_id}/equipment", response_model=ChargingEquipmentPaginatedSchema)
+@view_handler([RoleEnum.ANALYST, RoleEnum.GOVERNMENT])
+async def get_charging_site_equipment_paginated(
+    request: Request,
+    site_id: int = Path(..., description="Charging site ID"),
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: ChargingSiteService = Depends(),
+) -> ChargingEquipmentPaginatedSchema:
+    """
+    Get paginated charging equipment for a specific charging site.
+    Supports filtering, sorting, and pagination.
+    """
+    return await service.get_charging_site_equipment_paginated(site_id, pagination)
+
+
 @router.post(
     "/organization/{organization_id}/list-all",
     response_model=ChargingSitesSchema,
@@ -131,6 +232,76 @@ async def get_charging_sites(
                     ),
                 )
             return result
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        logger.exception("Error occurred", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing your request",
+        )
+
+
+@router.post(
+    "/list-all",
+    response_model=ChargingSitesSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_all_charging_sites(
+    request: Request,
+    request_data: CommonPaginatedCSRequestSchema = Body(...),
+    response: Response = None,
+    service: ChargingSiteService = Depends(),
+) -> ChargingSitesSchema:
+    """
+    Endpoint to get paginated list of all charging sites (IDIR use).
+    """
+    try:
+        pagination = PaginationRequestSchema(
+            page=request_data.page,
+            size=request_data.size,
+            sort_orders=request_data.sort_orders,
+            filters=request_data.filters,
+        )
+        return await service.get_all_charging_sites_paginated(pagination)
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        logger.exception("Error occurred", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing your request",
+        )
+
+
+@router.post(
+    "/list-all",
+    response_model=ChargingSitesSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_all_charging_sites(
+    request: Request,
+    request_data: CommonPaginatedCSRequestSchema = Body(...),
+    response: Response = None,
+    service: ChargingSiteService = Depends(),
+) -> ChargingSitesSchema:
+    """
+    Endpoint to get paginated list of all charging sites (IDIR use).
+    """
+    try:
+        pagination = PaginationRequestSchema(
+            page=request_data.page,
+            size=request_data.size,
+            sort_orders=request_data.sort_orders,
+            filters=request_data.filters,
+        )
+        return await service.get_all_charging_sites_paginated(pagination)
     except HTTPException as http_ex:
         raise http_ex
     except Exception as e:

@@ -30,6 +30,27 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
 
   const modalTexts = getModalTexts()
 
+  // Get dynamic text based on parent type
+  const getModalTexts = () => {
+    switch (parentType) {
+      case 'charging_site':
+        return {
+          title: t('chargingSite:documents.uploadTitle'),
+          documentLabel: t('chargingSite:documents.documentLabel'),
+          returnButton: t('chargingSite:documents.returnButton')
+        }
+      case 'compliance_report':
+      default:
+        return {
+          title: t('report:documents.uploadTitle'),
+          documentLabel: t('report:documentLabel'),
+          returnButton: t('report:documents.returnButton')
+        }
+    }
+  }
+
+  const modalTexts = getModalTexts()
+
   const content = (
     <Box
       sx={{

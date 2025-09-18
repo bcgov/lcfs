@@ -6,8 +6,9 @@ from lcfs.web.api.base import (
 )
 import structlog
 from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, func, select
+from sqlalchemy import asc, func, select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
 
@@ -50,14 +51,10 @@ class ChargingSiteRepository:
     @repo_handler
     async def get_intended_user_types(self) -> Sequence[EndUserType]:
         """
-        Retrieve a list of intended user types from the database
+        Retrieve all end user types that are marked as intended use
         """
         return (
-            (
-                await self.db.execute(
-                    select(EndUserType).where(EndUserType.intended_use == True)
-                )
-            )
+            (await self.db.execute(select(EndUserType).where(EndUserType.intended_use)))
             .scalars()
             .all()
         )
@@ -67,7 +64,7 @@ class ChargingSiteRepository:
         self, status_name: str
     ) -> ChargingSiteStatus:
         """
-        Retrieve a charging site status by its name from the database
+        Retrieve a charging site status by its name
         """
         return (
             (
@@ -114,7 +111,9 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_end_user_types_by_ids(self, ids: List[int]) -> List[EndUserType]:
-        """Get EndUserType objects by their IDs"""
+        """
+        Retrieve end user types by their IDs
+        """
         result = await self.db.execute(
             select(EndUserType).where(EndUserType.end_user_type_id.in_(ids))
         )
@@ -134,7 +133,7 @@ class ChargingSiteRepository:
         self, organization_id: int
     ) -> Sequence[ChargingSite]:
         """
-        Retrieve all charging sites from the database
+        Retrieve all charging sites for a specific organization, ordered by creation date
         """
         query = (
             select(ChargingSite)
@@ -146,13 +145,65 @@ class ChargingSiteRepository:
             .order_by(asc(ChargingSite.create_date))
         )
         results = await self.db.execute(query)
-
         return results.scalars().all()
+
+    @repo_handler
+    async def get_all_charging_sites_paginated(
+        self, offset: int, limit: int, conditions: list, sort_orders: list
+    ) -> tuple[list[ChargingSite], int]:
+        """
+        Retrieve all charging sites with pagination, filtering, and sorting.
+        """
+        stmt = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.status),
+                selectinload(ChargingSite.intended_users),
+            )
+            .where(and_(*conditions) if conditions else True)
+        )
+
+        # Apply sort orders
+        for order in sort_orders or []:
+            direction = asc if getattr(order, 'direction', 'asc') == 'asc' else desc
+            field = getattr(ChargingSite, getattr(order, 'field', 'create_date'), None)
+            if field is not None:
+                stmt = stmt.order_by(direction(field))
+
+        if not sort_orders:
+            stmt = stmt.order_by(ChargingSite.create_date.asc())
+
+        # Count total
+        total = await self.db.scalar(select(func.count()).select_from(stmt.subquery()))
+
+        # Pagination
+        stmt = stmt.offset(offset).limit(limit)
+        results = await self.db.execute(stmt)
+        rows = results.scalars().all()
+        return rows, total or 0
+
+    @repo_handler
+    async def get_charging_sites_paginated(
+        self,
+        offset: int,
+        limit: int,
+        conditions: list,
+        sort_orders: list,
+        organization_id: int,
+    ) -> tuple[list[ChargingSite], int]:
+        """
+        Retrieve charging sites for a specific organization with pagination.
+        """
+        org_condition = ChargingSite.organization_id == organization_id
+        all_conditions = [org_condition] + (conditions or [])
+        return await self.get_all_charging_sites_paginated(
+            offset, limit, all_conditions, sort_orders
+        )
 
     @repo_handler
     async def update_charging_site(self, charging_site: ChargingSite) -> ChargingSite:
         """
-        Update an existing charging site in the database using merge
+        Update an existing charging site in the database
         """
         merged_site = await self.db.merge(charging_site)
         await self.db.flush()
@@ -160,9 +211,11 @@ class ChargingSiteRepository:
         return merged_site
 
     @repo_handler
-    async def get_charging_site_by_id(self, charging_site_id: int) -> ChargingSite:
+    async def get_charging_site_by_id(
+        self, charging_site_id: int
+    ) -> Optional[ChargingSite]:
         """
-        Retrieve a charging site by its ID from the database
+        Retrieve a charging site by its ID with related data preloaded
         """
         return (
             (
@@ -177,16 +230,15 @@ class ChargingSiteRepository:
                     .where(ChargingSite.charging_site_id == charging_site_id)
                 )
             )
-            .scalars()
-            .first()
+            .where(ChargingSite.charging_site_id == charging_site_id)
         )
+        return result.scalars().first()
 
     @repo_handler
     async def delete_charging_site(self, charging_site_id: int) -> None:
         """
-        Delete charging site using SQLAlchemy relationship management
+        Delete a charging site and all its related data (equipment, documents, user associations)
         """
-        # Get the charging site object
         result = await self.db.execute(
             select(ChargingSite)
             .where(ChargingSite.charging_site_id == charging_site_id)
@@ -194,9 +246,11 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
+                selectinload(ChargingSite.charging_equipment),
             )
         )
         charging_site = result.scalar_one_or_none()
+
 
         if not charging_site:
             raise ValueError(f"Charging site with ID {charging_site_id} not found")

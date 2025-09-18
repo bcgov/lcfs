@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ComplianceReports } from './ComplianceReports'
 import { FloatingAlert } from '@/components/BCAlert'
 
@@ -23,38 +24,31 @@ export function ReportsMenu() {
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
   const location = useLocation()
+  const { hasAnyRole } = useCurrentUser()
+  const isIDIR = hasAnyRole(...govRoles)
 
   const paths = useMemo(
     () => [
       ROUTES.REPORTS.LIST,
-      `${ROUTES.REPORTS.LIST}/manage-charging-sites`,
-      `${ROUTES.REPORTS.LIST}/manage-fse`
+      ROUTES.REPORTS.CHARGING_SITE,
+      ROUTES.REPORTS.MANAGE_FSE
     ],
     []
   )
 
   const tabIndex = useMemo(() => {
-    // Check for charging sites management routes
-    if (location.pathname.includes('/manage-charging-sites')) {
-      return 1
-    }
+    // Map paths to the three tabs
+    if (location.pathname.includes('/charging-sites')) return 1
+    if (location.pathname.includes('/fse')) return 2
 
-    // Check for FSE management routes
-    if (location.pathname.includes('/manage-fse')) {
-      return 2
-    }
-
-    // Check if we're on the exact reports list path or index route
     if (
       location.pathname === ROUTES.REPORTS.LIST ||
       location.pathname === `${ROUTES.REPORTS.LIST}/`
-    ) {
+    )
       return 0
-    }
 
-    // Default to compliance reports tab
     return 0
-  }, [location.pathname])
+  }, [isIDIR, location.pathname])
 
   useEffect(() => {
     function handleTabsOrientation() {
@@ -73,17 +67,17 @@ export function ReportsMenu() {
 
   // Determine what content to render based on current route
   const renderContent = () => {
-    if (location.pathname.includes('/manage-charging-sites')) {
+    if (location.pathname.includes('/charging-sites')) {
       return (
-        <Role roles={[roles.supplier, roles.analyst]}>
+        <Role roles={[...govRoles, roles.supplier]}>
           <Outlet alertRef={alertRef} />
         </Role>
       )
     }
 
-    if (location.pathname.includes('/manage-fse')) {
+    if (location.pathname.includes('/fse')) {
       return (
-        <Role roles={[roles.supplier, roles.analyst]}>
+        <Role roles={[...govRoles, roles.supplier]}>
           <Outlet alertRef={alertRef} />
         </Role>
       )
@@ -111,8 +105,16 @@ export function ReportsMenu() {
             wrapped
             {...a11yProps(0)}
           />
-          <Tab label={t('tabs.manageChargingSites')} {...a11yProps(1)} />
-          <Tab label={t('tabs.manageFSE')} {...a11yProps(2)} />
+          {isIDIR ? (
+            <Tab label={t('tabs.chargingSites')} {...a11yProps(1)} />
+          ) : (
+            <Tab label={t('tabs.manageChargingSites')} {...a11yProps(1)} />
+          )}
+          {isIDIR ? (
+            <Tab label={t('tabs.fseIndex')} {...a11yProps(2)} />
+          ) : (
+            <Tab label={t('tabs.manageFSE')} {...a11yProps(2)} />
+          )}
         </Tabs>
       </AppBar>
       <FloatingAlert ref={alertRef} data-test="alert-box" />
