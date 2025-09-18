@@ -49,11 +49,15 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => {
       const translations = {
-        'report:documentLabel': 'Add file attachments (maximum file size: 50 MB):',
-        'report:documents.uploadTitle': 'Upload supporting documents for your compliance report',
+        'report:documentLabel':
+          'Add file attachments (maximum file size: 50 MB):',
+        'report:documents.uploadTitle':
+          'Upload supporting documents for your compliance report',
         'report:documents.returnButton': 'Return to compliance report',
-        'chargingSite:documents.uploadTitle': 'Upload supporting documents for charging site',
-        'chargingSite:documents.documentLabel': 'Supporting documents help provide additional context and evidence for this charging site.',
+        'chargingSite:documents.uploadTitle':
+          'Upload supporting documents for charging site',
+        'chargingSite:documents.documentLabel':
+          'Supporting documents help provide additional context and evidence for this charging site.',
         'chargingSite:documents.returnButton': 'Return to charging site'
       }
       return translations[key] || key
