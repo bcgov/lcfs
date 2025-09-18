@@ -416,18 +416,18 @@ export const CreditMarketDetailsCard = () => {
                       </BCTypography>
 
                       <BCTypography variant="body4">
-                        <strong>{t('creditMarket:email', 'Email')}:</strong>{' '}
-                        {organizationData?.creditMarketContactEmail ||
-                          organizationData?.email ||
-                          t('common:notAvailable', 'Not available')}
-                      </BCTypography>
-
-                      <BCTypography variant="body4">
                         <strong>
                           {t('creditMarket:telephone', 'Telephone')}:
                         </strong>{' '}
                         {organizationData?.creditMarketContactPhone ||
                           organizationData?.phone ||
+                          t('common:notAvailable', 'Not available')}
+                      </BCTypography>
+
+                      <BCTypography variant="body4">
+                        <strong>{t('creditMarket:email', 'Email')}:</strong>{' '}
+                        {organizationData?.creditMarketContactEmail ||
+                          organizationData?.email ||
                           t('common:notAvailable', 'Not available')}
                       </BCTypography>
                     </BCBox>

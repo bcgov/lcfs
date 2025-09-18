@@ -48,7 +48,8 @@ const FileTable = styled(Box)(({ theme }) => ({
   width: '100%',
   maxWidth: '100%',
   display: 'grid',
-  gridTemplateColumns: 'minmax(150px, 1fr) 220px minmax(80px, 120px) minmax(100px, 140px) minmax(50px, 80px)',
+  gridTemplateColumns:
+    'minmax(150px, 1fr) 220px minmax(80px, 120px) minmax(100px, 140px) minmax(50px, 80px)',
   gridColumnGap: '8px',
   overflow: 'hidden'
 }))
@@ -61,7 +62,7 @@ const TableCell = styled(Box)({
 })
 
 function DocumentTable({ parentType, parentID }) {
-  const { t } = useTranslation(['report'])
+  const { t } = useTranslation(['report', 'common'])
   const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
@@ -359,16 +360,19 @@ function DocumentTable({ parentType, parentID }) {
               {prettyBytes(file.fileSize)}
             </TableCell>
             <TableCell style={{ justifyContent: 'center' }}>
-              {!file.scanning && !file.virus && !file.oversize && !file.error && (
-                <Icon style={{ color: colors.success.main }}>check</Icon>
-              )}
+              {!file.scanning &&
+                !file.virus &&
+                !file.oversize &&
+                !file.error && (
+                  <Icon style={{ color: colors.success.main }}>check</Icon>
+                )}
               {file.scanning && <CircularProgress size={22} />}
               {(file.virus || file.error) && (
                 <Icon style={{ color: colors.error.main }}>close</Icon>
               )}
             </TableCell>
             <TableCell>
-              <Tooltip title="Delete">
+              <Tooltip title={t('common:deleteBtn')}>
                 <div>
                   {!file.deleting &&
                     !file.virus &&

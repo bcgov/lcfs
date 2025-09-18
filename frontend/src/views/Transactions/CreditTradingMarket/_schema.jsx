@@ -56,19 +56,19 @@ export const creditMarketColDefs = (t) => [
     floatingFilter: true
   },
   {
-    headerName: t('creditMarket:email', 'Email'),
-    field: 'email',
-    flex: 2,
-    minWidth: 200,
+    headerName: t('creditMarket:phone', 'Phone'),
+    field: 'phone',
+    flex: 1.5,
+    minWidth: 150,
     sortable: true,
     filter: 'agTextColumnFilter',
     floatingFilter: true
   },
   {
-    headerName: t('creditMarket:phone', 'Phone'),
-    field: 'phone',
-    flex: 1.5,
-    minWidth: 150,
+    headerName: t('creditMarket:email', 'Email'),
+    field: 'email',
+    flex: 2,
+    minWidth: 200,
     sortable: true,
     filter: 'agTextColumnFilter',
     floatingFilter: true
