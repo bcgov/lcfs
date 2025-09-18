@@ -64,10 +64,7 @@ export const BCGridViewer = forwardRef(
       gridKey,
       getRowId,
       onRowClicked,
-      autoSizeStrategy = {
-        type: 'fitGridWidth',
-        defaultMinWidth: 50
-      },
+      autoSizeStrategy = {},
 
       paginationOptions = {
         page: 1,

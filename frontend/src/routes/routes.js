@@ -61,12 +61,12 @@ export const ROUTES = {
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
     CALCULATOR: '/compliance-reporting/credit-calculator',
-    CHARGING_SITE: '/compliance-reporting/manage-charging-sites',
-    ADD_CHARGING_SITE: '/compliance-reporting/manage-charging-sites/add',
-    EDIT_CHARGING_SITE: '/compliance-reporting/manage-charging-sites/:siteId/edit',
-    MANAGE_FSE: '/compliance-reporting/manage-fse',
-    ADD_FSE: '/compliance-reporting/manage-fse/add',
-    EDIT_FSE: '/compliance-reporting/manage-fse/:fseId/edit',
+    CHARGING_SITE: '/compliance-reporting/charging-sites',
+    ADD_CHARGING_SITE: '/compliance-reporting/charging-sites/add',
+    EDIT_CHARGING_SITE: '/compliance-reporting/charging-sites/:siteId/edit',
+    MANAGE_FSE: '/compliance-reporting/fse',
+    ADD_FSE: '/compliance-reporting/fse/add',
+    EDIT_FSE: '/compliance-reporting/fse/:fseId/edit',
     ADD: {
       SUPPLY_OF_FUEL:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/supply-of-fuel',
@@ -109,6 +109,10 @@ export const ROUTES = {
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID',
     EXPORT: '/fuel-codes/export'
+  },
+
+  CHARGING_SITES: {
+    EQUIPMENT_PROCESSING: '/charging-sites/:siteId/equipment-processing'
   },
 
   FORMS: {
