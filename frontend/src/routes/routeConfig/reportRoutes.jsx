@@ -18,26 +18,26 @@ export const reportRoutes = [
     handle: { title: 'Compliance reporting' },
     children: [
       {
-        path: 'manage-charging-sites',
+        path: 'charging-sites',
         element: <ChargingSitesList />,
-        handle: { title: 'Manage charging sites' },
+        handle: { title: 'Charging sites' },
         children: [
           {
-            path: 'new',
+            path: 'add',
             element: <AddEditChargingSite mode="add" />,
-            handle: { title: 'Add charging sites' }
+            handle: { title: 'Add charging site' }
           },
           {
-            path: ':id/edit',
+            path: ':siteId/edit',
             element: <AddEditChargingSite mode="edit" />,
             handle: { title: 'Edit charging site' }
           }
         ]
       },
       {
-        path: 'manage-fse',
-        element: <>Manage FSE</>,
-        handle: { title: 'Manage FSE' },
+        path: 'fse',
+        element: <>FSE index</>,
+        handle: { title: 'FSE index' },
         children: [
           // Add FSE management routes here as needed
         ]
