@@ -263,7 +263,6 @@ describe('ActivityLinksList', () => {
     })
   })
 
-
   describe('Navigation Functionality', () => {
     it('navigates to supply of fuel when clicked', async () => {
       const user = userEvent.setup()
@@ -472,8 +471,8 @@ describe('ActivityLinksList', () => {
         screen.getByText('report:activityLists.supplyOfFuel')
       ).toBeInTheDocument()
       expect(
-        screen.getByText('report:activityLists.fuelsOtherUse')
-      ).toBeInTheDocument()
+        screen.queryByText('report:activityLists.fuelsOtherUse')
+      ).not.toBeInTheDocument()
     })
 
     it('handles missing currentUser organization', () => {
