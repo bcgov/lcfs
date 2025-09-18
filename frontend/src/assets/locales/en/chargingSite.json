@@ -1,0 +1,67 @@
+{
+  "title": "Charging site/Equipment processing",
+  "chargingSiteTitle": "Charging site",
+  "equipmentProcessingTitle": "Equipment processing",
+  "attachmentsTitle": "Charging site/Equipment attachments",
+  "equipmentProcessingDescription": "Set equipment as validated or return to draft for the supplier to make further changes. The Set/Return button will only apply to the visible rows. Use the site name filter and/or paging to assist.",
+  "noAttachments": "No attachments available",
+  "noIntendedUsers": "No intended users specified",
+  "manage": "Manage",
+  "buttons": {
+    "selectAllSubmitted": "Select all submitted",
+    "setSelectedAsValidated": "Set selected as validated",
+    "undoValidation": "Undo validation",
+    "returnSelectedToDraft": "Return selected to draft",
+    "clearFilters": "Clear filters"
+  },
+
+  "tooltips": {
+    "onlySubmittedCanBeValidated": "Only equipment with Submitted status can be validated",
+    "onlyValidatedCanBeReturned": "Only equipment with Validated status can be returned to Submitted",
+    "onlySubmittedCanBeDraft": "Only equipment with Submitted status can be returned to Draft"
+  },
+  "site": {
+    "status": "Status",
+    "versionNumber": "Version number",
+    "siteNumber": "Site number",
+    "siteName": "Site name",
+    "siteNotes": "Site notes",
+    "organization": "Organization",
+    "siteAddress": "Site address",
+    "intendedUsers": "Intended users"
+  },
+  "equipment": {
+    "select": "Select",
+    "status": "Status",
+    "registrationNumber": "Registration #",
+    "versionNumber": "Version number",
+    "allocatingOrganization": "Allocating organization",
+    "serialNumber": "Serial #",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "levelOfEquipment": "Level of equipment",
+    "ports": "Ports",
+    "intendedUseTypes": "Intended use",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "equipmentNotes": "Equipment notes"
+  },
+  "status": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "validated": "Validated",
+    "updated": "Updated",
+    "decommissioned": "Decommissioned"
+  },
+  "messages": {
+    "siteNotFound": "Charging site not found",
+    "noEquipmentFound": "No equipment records found for this charging site",
+    "bulkUpdateSuccess": "Equipment status updated successfully",
+    "bulkUpdateError": "Failed to update equipment status"
+  },
+  "documents": {
+    "uploadTitle": "Upload supporting documents for charging site",
+    "documentLabel": "Supporting documents help provide additional context and evidence for this charging site.",
+    "returnButton": "Return to charging site"
+  }
+}
