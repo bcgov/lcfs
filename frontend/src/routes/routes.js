@@ -63,8 +63,8 @@ export const ROUTES = {
     CALCULATOR: '/compliance-reporting/credit-calculator',
     CHARGING_SITE: {
       INDEX: '/compliance-reporting/charging-sites',
-      VIEW: '/compliance-reporting/charging-sites/:chargingSiteId',
-      EDIT: '/compliance-reporting/charging-sites/:chargingSiteId/edit',
+      VIEW: '/compliance-reporting/charging-sites/:siteId',
+      EDIT: '/compliance-reporting/charging-sites/:siteId/edit',
       ADD: '/compliance-reporting/manage-charging-sites/add'
     },
     MANAGE_FSE: '/compliance-reporting/fse',

@@ -320,10 +320,7 @@ class DocumentService:
         else:  # Delete the association
             await self.db.execute(
                 delete(association_table).where(
-                delete(association_table).where(
                     and_(
-                        parent_id == getattr(association_table.c, parent_column),
-                        document_id == association_table.c.document_id,
                         parent_id == getattr(association_table.c, parent_column),
                         document_id == association_table.c.document_id,
                     )
@@ -345,10 +342,6 @@ class DocumentService:
             "initiativeAgreement": (
                 initiative_agreement_document_association,
                 "initiative_agreement_id",
-            ),
-            "charging_site": (
-                charging_site_document_association,
-                "charging_site_id",
             ),
             "charging_site": (
                 charging_site_document_association,
