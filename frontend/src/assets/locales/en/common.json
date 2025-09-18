@@ -11,6 +11,7 @@
   "cancelBtn": "Cancel",
   "saveBtn": "Save",
   "deleteBtn": "Delete",
+  "saveReturnBtn": "Save & return",
   "supplier": "Fuel Supplier",
   "balance": "Balance",
   "logout": "Logout",

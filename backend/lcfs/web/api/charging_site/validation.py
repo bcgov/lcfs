@@ -1,9 +1,9 @@
 from fastapi import Depends, HTTPException
-from lcfs.web.api.charging_site.repo import ChargingSiteRepository
+from lcfs.web.api.charging_site.repo import ChargingSiteRepo
 
 
 class ChargingSiteValidation:
-    def __init__(self, repo: ChargingSiteRepository = Depends()):
+    def __init__(self, repo: ChargingSiteRepo = Depends()):
         self.repo = repo
 
     async def validate_organization_access(self, charging_site_id: int):

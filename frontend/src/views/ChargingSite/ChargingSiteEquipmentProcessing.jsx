@@ -94,7 +94,7 @@ export const ChargingSiteEquipmentProcessing = () => {
     if (selectedRows.length === 0) return false
 
     const selectedEquipment = equipmentList.filter((eq) =>
-      selectedRows.includes(eq.charging_equipment_id)
+      selectedRows.includes(eq.chargingEquipmentId)
     )
 
     return selectedEquipment.every((eq) => eq.status === 'Submitted')
@@ -105,7 +105,7 @@ export const ChargingSiteEquipmentProcessing = () => {
     if (selectedRows.length === 0) return false
 
     const selectedEquipment = equipmentList.filter((eq) =>
-      selectedRows.includes(eq.charging_equipment_id)
+      selectedRows.includes(eq.chargingEquipmentId)
     )
 
     return selectedEquipment.every((eq) => eq.status === 'Validated')
@@ -116,7 +116,7 @@ export const ChargingSiteEquipmentProcessing = () => {
     if (selectedRows.length === 0) return false
 
     const selectedEquipment = equipmentList.filter((eq) =>
-      selectedRows.includes(eq.charging_equipment_id)
+      selectedRows.includes(eq.chargingEquipmentId)
     )
 
     return selectedEquipment.every((eq) => eq.status === 'Submitted')
@@ -126,7 +126,7 @@ export const ChargingSiteEquipmentProcessing = () => {
   const handleSelectionChanged = useCallback((api) => {
     const selectedNodes = api.getSelectedNodes()
     const selectedIds = selectedNodes.map(
-      (node) => node.data.charging_equipment_id
+      (node) => node.data.chargingEquipmentId
     )
     setSelectedRows(selectedIds)
   }, [])
@@ -137,16 +137,14 @@ export const ChargingSiteEquipmentProcessing = () => {
       (equipment) => equipment.status === 'Submitted'
     )
     const submittedIds = submittedEquipment.map(
-      (equipment) => equipment.charging_equipment_id
+      (equipment) => equipment.chargingEquipmentId
     )
     setSelectedRows(submittedIds)
 
     // Update grid selection
     if (gridRef.current) {
       gridRef.current.api.forEachNode((node) => {
-        const isSelected = submittedIds.includes(
-          node.data.charging_equipment_id
-        )
+        const isSelected = submittedIds.includes(node.data.chargingEquipmentId)
         node.setSelected(isSelected)
       })
     }
@@ -233,7 +231,7 @@ export const ChargingSiteEquipmentProcessing = () => {
       },
       {
         headerName: t('chargingSite:equipment.registrationNumber'),
-        field: 'registration_number',
+        field: 'registrationNumber',
         width: 160,
         filter: false
       },
@@ -246,13 +244,13 @@ export const ChargingSiteEquipmentProcessing = () => {
       },
       {
         headerName: t('chargingSite:equipment.allocatingOrganization'),
-        field: 'allocating_organization',
+        field: 'allocatingOrganization',
         width: 250,
         filter: true
       },
       {
         headerName: t('chargingSite:equipment.serialNumber'),
-        field: 'serial_number',
+        field: 'serialNumber',
         width: 200,
         filter: true
       },
@@ -270,7 +268,7 @@ export const ChargingSiteEquipmentProcessing = () => {
       },
       {
         headerName: t('chargingSite:equipment.levelOfEquipment'),
-        field: 'level_of_equipment',
+        field: 'levelOfEquipment',
         width: 375,
         filter: false
       },
@@ -282,12 +280,12 @@ export const ChargingSiteEquipmentProcessing = () => {
       },
       {
         colId: 'intendedUseTypes',
-        field: 'intended_use_types',
+        field: 'intendedUseTypes',
         headerName: t('chargingSite:equipment.intendedUseTypes'),
         valueGetter: (params) =>
-          params.data.intended_use_types &&
-          params.data.intended_use_types.length > 0
-            ? params.data.intended_use_types.join(', ')
+          params.data.intendedUseTypes &&
+          params.data.intendedUseTypes.length > 0
+            ? params.data.intendedUseTypes.join(', ')
             : '',
         width: 400,
         sortable: false,
@@ -312,7 +310,7 @@ export const ChargingSiteEquipmentProcessing = () => {
       },
       {
         headerName: t('chargingSite:equipment.equipmentNotes'),
-        field: 'equipment_notes',
+        field: 'equipmentNotes',
         width: 500,
         filter: false
       }
@@ -325,7 +323,7 @@ export const ChargingSiteEquipmentProcessing = () => {
       rowSelection: 'multiple',
       suppressRowClickSelection: true,
       onSelectionChanged: (event) => handleSelectionChanged(event.api),
-      getRowId: (params) => params.data.charging_equipment_id
+      getRowId: (params) => params.data.chargingEquipmentId
     }),
     [handleSelectionChanged]
   )
@@ -370,7 +368,7 @@ export const ChargingSiteEquipmentProcessing = () => {
                   <Stack spacing={0.5} sx={{ mt: 1 }}>
                     <BCTypography variant="body2">
                       <strong>{t('chargingSite:site.status')}:</strong>{' '}
-                      {chargingSite.status}
+                      {chargingSite.status?.status || chargingSite.status}
                     </BCTypography>
                     <BCTypography variant="body2">
                       <strong>{t('chargingSite:site.versionNumber')}:</strong>{' '}
@@ -378,7 +376,7 @@ export const ChargingSiteEquipmentProcessing = () => {
                     </BCTypography>
                     <BCTypography variant="body2">
                       <strong>{t('chargingSite:site.siteNumber')}:</strong>{' '}
-                      {chargingSite.site_code}
+                      {chargingSite.siteCode}
                     </BCTypography>
                     <BCTypography variant="body2">
                       <strong>{t('chargingSite:site.siteNotes')}:</strong>{' '}
@@ -390,12 +388,12 @@ export const ChargingSiteEquipmentProcessing = () => {
                   <Stack spacing={0.5}>
                     <BCTypography variant="body2">
                       <strong>{t('chargingSite:site.organization')}:</strong>{' '}
-                      {chargingSite.organization_name}
+                      {chargingSite.organizationName}
                     </BCTypography>
                     <BCTypography variant="body2">
                       <strong>{t('chargingSite:site.siteAddress')}:</strong>{' '}
-                      {chargingSite.street_address}, {chargingSite.city},{' '}
-                      {chargingSite.postal_code}
+                      {chargingSite.streetAddress}, {chargingSite.city},{' '}
+                      {chargingSite.postalCode}
                     </BCTypography>
                     <Box
                       sx={{
@@ -408,11 +406,11 @@ export const ChargingSiteEquipmentProcessing = () => {
                       <BCTypography variant="body2">
                         <strong>{t('chargingSite:site.intendedUsers')}:</strong>
                       </BCTypography>
-                      {chargingSite.intended_users &&
-                      chargingSite.intended_users.length > 0 ? (
-                        chargingSite.intended_users.map((user, index) => (
+                      {chargingSite.intendedUsers &&
+                      chargingSite.intendedUsers.length > 0 ? (
+                        chargingSite.intendedUsers.map((user, index) => (
                           <BCBadge
-                            key={user.end_user_type_id}
+                            key={user.endUserTypeId}
                             sx={{
                               '& .MuiBadge-badge': {
                                 fontWeight: 'regular',
@@ -421,7 +419,7 @@ export const ChargingSiteEquipmentProcessing = () => {
                               },
                               margin: '2px'
                             }}
-                            badgeContent={user.type_name}
+                            badgeContent={user.typeName}
                             color="primary"
                             variant="outlined"
                             size="md"

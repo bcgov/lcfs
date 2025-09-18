@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
 
-export const AllocationAgreementChangelog = () => {
+export const AllocationAgreementChangelog = ({ isEarlyIssuance = false }) => {
   const { t } = useTranslation(['common', 'allocationAgreement', 'report'])
   // State for pagination - one per changelog item
   const [paginationStates, setPaginationStates] = useState({})
@@ -170,8 +170,8 @@ export const AllocationAgreementChangelog = () => {
                 gridKey={`allocation-agreements-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false)
-                    : changelogColDefs()
+                    ? changelogCommonColDefs(false, isEarlyIssuance)
+                    : changelogColDefs(true, isEarlyIssuance)
                 }
                 queryData={queryData}
                 getRowId={getRowId}

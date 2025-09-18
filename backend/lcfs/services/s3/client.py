@@ -27,7 +27,7 @@ from lcfs.db.models.document import Document
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
-from lcfs.web.api.charging_site.repo import ChargingSiteRepository
+from lcfs.web.api.charging_site.repo import ChargingSiteRepo
 from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import ServiceException
@@ -47,7 +47,7 @@ class DocumentService:
         fuel_supply_repo: FuelSupplyRepository = Depends(),
         admin_adjustment_service: AdminAdjustmentServices = Depends(),
         initiative_agreement_service: InitiativeAgreementServices = Depends(),
-        charging_site_repo: ChargingSiteRepository = Depends(),
+        charging_site_repo: ChargingSiteRepo = Depends(),
     ):
         self.initiative_agreement_service = initiative_agreement_service
         self.admin_adjustment_service = admin_adjustment_service

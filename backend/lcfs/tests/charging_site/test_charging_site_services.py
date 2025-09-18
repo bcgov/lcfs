@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.web.api.charging_site.services import ChargingSiteServices
-from lcfs.web.api.charging_site.repo import ChargingSiteRepository
+from lcfs.web.api.charging_site.services import ChargingSiteService
+from lcfs.web.api.charging_site.repo import ChargingSiteRepo
 from lcfs.web.api.charging_site.schema import (
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentForSiteSchema,
@@ -22,21 +22,21 @@ def mock_user():
 @pytest.fixture
 def mock_repo():
     """Mock repository for testing"""
-    repo = AsyncMock(spec=ChargingSiteRepository)
+    repo = AsyncMock(spec=ChargingSiteRepo)
     repo.db = AsyncMock()  # Add the db attribute that services expect
     return repo
 
 
 @pytest.fixture
 def charging_site_service(mock_repo):
-    """ChargingSiteServices instance with mocked repository"""
-    service = ChargingSiteServices()
+    """ChargingSiteService instance with mocked repository"""
+    service = ChargingSiteService()
     service.repo = mock_repo
     return service
 
 
-class TestChargingSiteServices:
-    """Test class for ChargingSiteServices bulk update functionality"""
+class TestChargingSiteService:
+    """Test class for ChargingSiteService bulk update functionality"""
 
     @pytest.mark.anyio
     async def test_bulk_update_to_validated_success(

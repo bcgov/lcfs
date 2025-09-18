@@ -115,9 +115,7 @@ class ComplianceReportServices:
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
         period = await self.repo.get_compliance_period(report_data.compliance_period)
-        if (
-            not period or period.description == "2025"
-        ):  # Temporarily block 2025 reporting until regulatory changes are finalized
+        if not period:
             raise DataNotFoundException("Compliance period not found.")
 
         draft_status = await self.repo.get_compliance_report_status_by_desc(
