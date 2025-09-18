@@ -496,3 +496,37 @@ export const useGetAllocationAgreementImportJobStatus = (
     ...restOptions
   })
 }
+
+export const useGetAllocationAgreementImportResult = (
+  jobID,
+  options = {}
+) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['import-result', 'allocation-agreement', jobID],
+    queryFn: async () => {
+      if (!jobID) {
+        throw new Error('Job ID is required')
+      }
+
+      const response = await client.get(
+        `/allocation-agreements/import-result/${jobID}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!jobID,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}

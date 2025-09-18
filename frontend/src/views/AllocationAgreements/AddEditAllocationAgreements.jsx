@@ -15,7 +15,8 @@ import {
   useGetAllocationAgreementsList,
   useSaveAllocationAgreement,
   useImportAllocationAgreement,
-  useGetAllocationAgreementImportJobStatus
+  useGetAllocationAgreementImportJobStatus,
+  useGetAllocationAgreementImportResult
 } from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
@@ -33,6 +34,7 @@ import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
+  const [pendingRejectedRows, setPendingRejectedRows] = useState([])
   const gridRef = useRef(null)
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
@@ -76,6 +78,8 @@ export const AddEditAllocationAgreements = () => {
   const { mutateAsync: saveRow } = useSaveAllocationAgreement({
     complianceReportId
   })
+  // Note: importFile is not used directly anymore since ImportDialog
+  // expects the hook itself, not the mutation function
 
   const {
     data,
@@ -222,19 +226,32 @@ export const AddEditAllocationAgreements = () => {
           id: matchingRow ? matchingRow.id : uuid()
         }
       })
-      setRowData([
+      // Merge with pending rejected rows
+      // The pendingRejectedRows state is managed separately and cleared when a row is saved
+      const allRows = [
         ...updatedRowData,
+        ...pendingRejectedRows,
         { id: uuid(), complianceReportId, compliancePeriod }
-      ])
+      ]
+      console.log('Setting rowData with rejected rows merged:', allRows)
+      console.log('Pending rejected rows:', pendingRejectedRows.length)
+      setRowData(allRows)
     } else {
-      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+      // Even if no data from server, include pending rejected rows
+      const allRows = [
+        ...pendingRejectedRows,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ]
+      console.log('Setting rowData with only rejected rows:', allRows)
+      setRowData(allRows)
     }
   }, [
     data,
     allocationAgreementsLoading,
     isSupplemental,
     complianceReportId,
-    compliancePeriod
+    compliancePeriod,
+    pendingRejectedRows
   ])
 
   const onFirstDataRendered = useCallback((params) => {
@@ -244,6 +261,16 @@ export const AddEditAllocationAgreements = () => {
   const onCellValueChanged = useCallback(
     async (params) => {
       setWarnings({}) // Reset warnings
+
+      // If this is a rejected row being edited, clear its validation status
+      if (params.data.isRejected) {
+        params.node.setDataValue('validationStatus', 'pending')
+        params.node.setDataValue('validationErrors', null)
+        params.node.setDataValue('validationMsg', null)
+
+        // Mark row as modified so it can be re-validated on save
+        params.node.setDataValue('modified', true)
+      }
 
       if (params.colDef.field === 'provisionOfTheAct') {
         params.node.setDataValue('fuelCode', '') // Reset fuelCode if provisionOfTheAct changes
@@ -393,6 +420,24 @@ export const AddEditAllocationAgreements = () => {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
       }
 
+      // Clear temporary rejected row flags before saving
+      if (updatedData.isRejected) {
+        delete updatedData.isRejected
+        delete updatedData.validationErrors
+        delete updatedData.validationMsg
+        delete updatedData.rowNumber
+        // Remove temporary ID for rejected rows
+        if (
+          !updatedData.allocationAgreementId ||
+          updatedData.allocationAgreementId === null
+        ) {
+          delete updatedData.allocationAgreementId
+        }
+      }
+
+      const wasRejected = params.node.data.isRejected
+      const originalId = params.node.data.id
+
       updatedData = await handleScheduleSave({
         alertRef,
         idField: 'allocationAgreementId',
@@ -406,10 +451,46 @@ export const AddEditAllocationAgreements = () => {
       })
 
       updatedData.ciOfFuel = params.node.data.ciOfFuel
-      params.node.updateData(updatedData)
+
+      // If this was a rejected row that's now saved successfully
+      if (
+        wasRejected &&
+        updatedData.allocationAgreementId &&
+        updatedData.validationStatus === 'success'
+      ) {
+        console.log(
+          'Successfully saved rejected row, removing from pendingRejectedRows',
+          originalId
+        )
+        // Remove from pendingRejectedRows
+        setPendingRejectedRows((prev) => {
+          const filtered = prev.filter((row) => row.id !== originalId)
+          console.log('Filtered pendingRejectedRows:', filtered)
+          return filtered
+        })
+
+        // Remove the rejected row from the grid immediately
+        const rowNode = params.api.getRowNode(originalId)
+        if (rowNode) {
+          const transaction = {
+            remove: [rowNode.data]
+          }
+          params.api.applyTransaction(transaction)
+          console.log('Removed rejected row from grid')
+        }
+
+        // Trigger a refetch to get the properly saved data from server
+        setTimeout(() => {
+          refetch()
+        }, 500)
+      } else {
+        // Only update the row if it wasn't a successfully saved rejected row
+        params.node.updateData(updatedData)
+      }
+
       params.api.autoSizeAllColumns()
     },
-    [saveRow, t]
+    [saveRow, t, refetch]
   )
 
   const onAction = async (action, params) => {
@@ -472,6 +553,57 @@ export const AddEditAllocationAgreements = () => {
   const handleCloseImportMenu = () => {
     setImportAnchorEl(null)
   }
+
+  const handleImportRejectedRows = useCallback(
+    (rejectedRows) => {
+      console.log('handleImportRejectedRows called with:', rejectedRows)
+
+      // Transform rejected rows into the format expected by the AG Grid
+      const formattedRejectedRows = rejectedRows.map((rejectedRow, index) => {
+        const { data, errors, row_number } = rejectedRow
+        console.log('Processing rejected row:', rejectedRow)
+
+        // Map backend field names to frontend field names
+        // Backend uses the _row_to_dict mapping from importer.py
+        const mappedRow = {
+          id: `rejected-${Date.now()}-${index}`, // Temporary ID for rejected rows
+          allocationAgreementId: null, // No backend ID yet for rejected rows
+          complianceReportId: complianceReportId,
+          allocationTransactionType: data.allocationTransactionType || 'Sold', // Default to 'Sold'
+          transactionPartner: data.transactionPartner || '',
+          postalAddress: data.postalAddress || '',
+          transactionPartnerEmail: data.transactionPartnerEmail || '',
+          transactionPartnerPhone: data.transactionPartnerPhone || '',
+          fuelType: data.fuelType || '',
+          fuelTypeOther: data.fuelTypeOther || '',
+          fuelCategory: data.fuelCategory || '',
+          provisionOfTheAct: data.provisionOfTheAct || '',
+          fuelCode: data.fuelCode || '',
+          ciOfFuel: '', // This will be calculated from fuelCode
+          quantity: data.quantity || 0,
+          units: 'L', // Default units
+          // These IDs will be resolved by AG Grid's autocomplete editors
+          fuelTypeId: null,
+          fuelCategoryId: null,
+          provisionOfTheActId: null,
+          fuelCodeId: null,
+          // Add validation metadata
+          validationStatus: 'error',
+          validationErrors: errors,
+          validationMsg: errors.map((e) => e.message).join('; '),
+          isRejected: true,
+          rowNumber: row_number
+        }
+
+        return mappedRow
+      })
+
+      // Store rejected rows separately to prevent them from being lost on refetch
+      console.log('Storing formatted rejected rows:', formattedRejectedRows)
+      setPendingRejectedRows(formattedRejectedRows)
+    },
+    [complianceReportId]
+  )
 
   const handleNavigateBack = useCallback(() => {
     navigate(
@@ -638,12 +770,15 @@ export const AddEditAllocationAgreements = () => {
           open={isImportDialogOpen}
           close={() => {
             setIsImportDialogOpen(false)
-            refetch()
+            refetch() // Refresh the data after import completion
           }}
           complianceReportId={complianceReportId}
           isOverwrite={isOverwrite}
           importHook={useImportAllocationAgreement}
           getJobStatusHook={useGetAllocationAgreementImportJobStatus}
+          onImportComplete={(rejectedRows) => {
+            handleImportRejectedRows(rejectedRows)
+          }}
         />
       </Grid2>
     )
