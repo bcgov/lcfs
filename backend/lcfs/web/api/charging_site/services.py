@@ -1,6 +1,5 @@
 import math
 from typing import List, Optional
-from lcfs.db.models.compliance.ChargingSite import ChargingSit
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.EndUserType import EndUserType
 from lcfs.web.api.base import (
@@ -333,7 +332,9 @@ class ChargingSiteService:
                 page=pagination.page,
                 size=pagination.size,
                 total=total,
-                total_pages=math.ceil(total / pagination.size) if pagination.size else 1,
+                total_pages=(
+                    math.ceil(total / pagination.size) if pagination.size else 1
+                ),
             ),
         )
 
@@ -371,7 +372,9 @@ class ChargingSiteService:
                 page=pagination.page,
                 size=pagination.size,
                 total=total,
-                total_pages=math.ceil(total / pagination.size) if pagination.size else 1,
+                total_pages=(
+                    math.ceil(total / pagination.size) if pagination.size else 1
+                ),
             ),
         )
 
