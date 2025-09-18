@@ -46,7 +46,7 @@ export const useGetAllChargingSitesByOrg = (
   } = options
 
   return useQuery({
-    queryKey: ['chargingSitesByOrg'],
+    queryKey: ['chargingSitesByOrg', organizationId, pagination],
     queryFn: async () => {
       const response = await client.post(
         apiRoutes.getAllChargingSitesByOrg.replace(':orgID', organizationId),
@@ -57,6 +57,32 @@ export const useGetAllChargingSitesByOrg = (
     staleTime,
     cacheTime,
     enabled: enabled && !!organizationId,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useGetAllChargingSites = (pagination, options = {}) => {
+  const client = useApiService()
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingSitesAll', pagination],
+    queryFn: async () => {
+      const response = await client.post(apiRoutes.getAllChargingSites, {
+        ...pagination
+      })
+      return response.data
+    },
+    staleTime,
+    cacheTime,
+    enabled,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions

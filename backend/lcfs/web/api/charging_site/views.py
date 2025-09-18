@@ -93,6 +93,41 @@ async def get_charging_sites(
 
 
 @router.post(
+    "/list-all",
+    response_model=ChargingSitesSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_all_charging_sites(
+    request: Request,
+    request_data: CommonPaginatedCSRequestSchema = Body(...),
+    response: Response = None,
+    service: ChargingSiteService = Depends(),
+) -> ChargingSitesSchema:
+    """
+    Endpoint to get paginated list of all charging sites (IDIR use).
+    """
+    try:
+        pagination = PaginationRequestSchema(
+            page=request_data.page,
+            size=request_data.size,
+            sort_orders=request_data.sort_orders,
+            filters=request_data.filters,
+        )
+        return await service.get_all_charging_sites_paginated(pagination)
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as e:
+        logger.exception("Error occurred", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing your request",
+        )
+
+
+@router.post(
     "/organization/{organization_id}/save",
     response_model=Union[ChargingSiteSchema, DeleteChargingSiteResponseSchema],
     status_code=status.HTTP_201_CREATED,
