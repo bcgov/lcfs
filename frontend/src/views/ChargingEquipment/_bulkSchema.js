@@ -42,6 +42,12 @@ export const bulkChargingEquipmentColDefs = (
       })),
       openOnFocus: true
     },
+    valueSetter: (params) => {
+      const incoming = params.newValue
+      const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
+      params.data.charging_site_id = raw ?? ''
+      return true
+    },
     valueFormatter: (params) => {
       const site = chargingSites.find(s => s.charging_site_id === params.value)
       return site ? site.site_name : ''
@@ -61,6 +67,12 @@ export const bulkChargingEquipmentColDefs = (
       })),
       openOnFocus: true,
       allowEmpty: true
+    },
+    valueSetter: (params) => {
+      const incoming = params.newValue
+      const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
+      params.data.allocating_organization_id = raw ?? ''
+      return true
     },
     valueFormatter: (params) => {
       const org = organizations.find(o => o.organization_id === params.value)
@@ -109,6 +121,12 @@ export const bulkChargingEquipmentColDefs = (
       })),
       openOnFocus: true
     },
+    valueSetter: (params) => {
+      const incoming = params.newValue
+      const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
+      params.data.level_of_equipment_id = raw ?? ''
+      return true
+    },
     valueFormatter: (params) => {
       const level = levels.find(l => l.level_of_equipment_id === params.value)
       return level ? level.name : ''
@@ -128,6 +146,12 @@ export const bulkChargingEquipmentColDefs = (
       ],
       openOnFocus: true
     },
+    valueSetter: (params) => {
+      const incoming = params.newValue
+      const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
+      params.data.ports = raw ?? ''
+      return true
+    },
     minWidth: 120,
     editable: true
   },
@@ -145,6 +169,15 @@ export const bulkChargingEquipmentColDefs = (
       openOnFocus: true
     },
     cellRenderer: MultiSelectRenderer,
+    valueSetter: (params) => {
+      const incoming = params.newValue
+      let raw = []
+      if (Array.isArray(incoming)) {
+        raw = incoming.map((v) => (typeof v === 'object' ? v.value : v)).filter((v) => v != null)
+      }
+      params.data.intended_use_ids = raw
+      return true
+    },
     valueFormatter: (params) => {
       if (!params.value || !Array.isArray(params.value)) return ''
       const selectedTypes = endUseTypes.filter(type => 

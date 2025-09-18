@@ -49,6 +49,7 @@ import {
 } from '@/hooks/useChargingEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ExcelUpload } from './components/ExcelUpload'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 
 export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
@@ -86,8 +87,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const updateMutation = useUpdateChargingEquipment()
   const deleteMutation = useDeleteChargingEquipment()
 
-  // Bulk mode state
+  // Bulk mode state (grid-based input like Charging Site/FSE)
   const [bulkData, setBulkData] = useState([])
+  const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
   const gridRef = useRef(null)
 
   // Form setup with react-hook-form and yup validation
@@ -213,6 +216,28 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }, [isBulkMode, bulkData.length])
 
+  // Unified save handler for grid rows (create/update/delete)
+  const saveRow = async (data) => {
+    // Map API shape; when editing existing, backend uses id param
+    if (data.deleted) {
+      if (data.charging_equipment_id) {
+        await deleteMutation.mutateAsync(parseInt(data.charging_equipment_id))
+      }
+      return { data: { charging_equipment_id: data.charging_equipment_id } }
+    }
+
+    if (data.charging_equipment_id) {
+      const updated = await updateMutation.mutateAsync({
+        id: parseInt(data.charging_equipment_id),
+        data
+      })
+      return { data: updated }
+    }
+
+    const created = await createMutation.mutateAsync(data)
+    return { data: created }
+  }
+
   const handleBulkSave = async () => {
     try {
       // Filter out rows with missing required fields
@@ -325,9 +350,48 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 chargingSites,
                 organizations,
                 levels,
-                endUseTypes
+                endUseTypes,
+                errors,
+                warnings
               )}
               defaultColDef={defaultBulkColDef}
+              onCellEditingStopped={async (params) => {
+                if (params.oldValue === params.newValue) return
+
+                params.node.updateData({
+                  ...params.node.data,
+                  validationStatus: 'pending'
+                })
+
+                // Clean up null/empty fields
+                const updatedData = {
+                  ...Object.entries(params.node.data)
+                    .filter(
+                      ([, value]) =>
+                        value !== null && value !== '' && value !== undefined
+                    )
+                    .reduce((acc, [key, value]) => {
+                      acc[key] = value
+                      return acc
+                    }, {}),
+                  status: 'Draft'
+                }
+
+                const responseData = await handleScheduleSave({
+                  alertRef,
+                  idField: 'charging_equipment_id',
+                  labelPrefix: 'chargingEquipment',
+                  params,
+                  setErrors,
+                  setWarnings,
+                  saveRow,
+                  t,
+                  updatedData
+                })
+
+                alertRef.current?.clearAlert()
+                params.node.updateData(responseData)
+              }}
               onCellValueChanged={(params) => {
                 const updatedData = [...bulkData]
                 const rowIndex = updatedData.findIndex(
@@ -336,6 +400,28 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 if (rowIndex >= 0) {
                   updatedData[rowIndex] = params.data
                   setBulkData(updatedData)
+                }
+              }}
+              onAction={async (action, params) => {
+                if (action === 'delete') {
+                  await handleScheduleDelete(
+                    params,
+                    'charging_equipment_id',
+                    saveRow,
+                    alertRef,
+                    setBulkData,
+                    {
+                      charging_site_id: '',
+                      allocating_organization_id: '',
+                      serial_number: '',
+                      manufacturer: '',
+                      model: '',
+                      level_of_equipment_id: '',
+                      ports: 'Single port',
+                      notes: '',
+                      intended_use_ids: []
+                    }
+                  )
                 }
               }}
               onAddRows={(numRows) =>

@@ -3,7 +3,8 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useImperativeHandle
+  useImperativeHandle,
+  useMemo
 } from 'react'
 import PropTypes from 'prop-types'
 import {
@@ -37,20 +38,53 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onPaste
   } = props
 
-  // Fix initial value parsing
-  const parseInitialValue = (initialValue) => {
-    if (!initialValue) return multiple ? [] : null
-    if (Array.isArray(initialValue)) return initialValue
-    if (typeof initialValue === 'string') {
-      const values = initialValue.split(',').map((v) => v.trim())
-      return multiple ? values : values[0]
+  // Helpers to map between raw values (ids/strings) and option objects
+  const getRawValue = (optionOrValue) => {
+    if (optionOrValue == null) return null
+    if (typeof optionOrValue === 'object') {
+      // Expect shape { value, label }
+      return Object.prototype.hasOwnProperty.call(optionOrValue, 'value')
+        ? optionOrValue.value
+        : optionOrValue
     }
-    return multiple ? [initialValue] : initialValue
+    return optionOrValue
   }
 
-  const [selectedValues, setSelectedValues] = useState(() =>
-    parseInitialValue(value)
-  )
+  const findOptionByRaw = (raw) => {
+    if (raw == null) return null
+    // Options can be primitives or { value, label }
+    return options.find((opt) => {
+      if (typeof opt === 'object') {
+        return opt?.value === raw
+      }
+      return opt === raw
+    })
+  }
+
+  // Store editor state as RAW values; map to option objects for Autocomplete's value prop
+  const [selectedValues, setSelectedValues] = useState(() => {
+    if (multiple) {
+      if (Array.isArray(value)) return value
+      if (value == null || value === '') return []
+      if (typeof value === 'string') {
+        return value
+          .split(',')
+          .map((v) => v.trim())
+          .filter((v) => v !== '')
+      }
+      return [value]
+    }
+    return value ?? null
+  })
+
+  const selectedOptions = useMemo(() => {
+    if (multiple) {
+      return Array.isArray(selectedValues)
+        ? selectedValues.map((rv) => findOptionByRaw(rv)).filter(Boolean)
+        : []
+    }
+    return findOptionByRaw(selectedValues)
+  }, [multiple, selectedValues, options])
   const [isOpen, setIsOpen] = useState(false)
   const inputRef = useRef()
 
@@ -77,7 +111,11 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   }, [])
 
   const handleChange = (event, newValue) => {
-    const processedValue = multiple ? newValue : newValue || ''
+    const processedValue = multiple
+      ? Array.isArray(newValue)
+        ? newValue.map((v) => getRawValue(v))
+        : []
+      : getRawValue(newValue)
     setSelectedValues(processedValue)
     if (onValueChange) {
       onValueChange(processedValue)
@@ -107,7 +145,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
 
     if (event.key === 'Tab') {
       event.preventDefault()
-      onValueChange(selectedValues)
+      if (onValueChange) onValueChange(selectedValues)
       api.stopEditing()
 
       if (event.shiftKey) {
@@ -128,25 +166,10 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   }
 
   const isOptionEqualToValue = (option, value) => {
-    if (!option || !value) return false
-
-    if (typeof option === 'string' && typeof value === 'string') {
-      return option === value
-    }
-
-    if (typeof option === 'object' && typeof value === 'object') {
-      return option.label === value.label
-    }
-
-    if (typeof option === 'object' && typeof value === 'string') {
-      return option.label === value
-    }
-
-    if (typeof option === 'string' && typeof value === 'object') {
-      return option === value.label
-    }
-
-    return false
+    // Compare using underlying raw values when possible
+    const optRaw = getRawValue(option)
+    const valRaw = getRawValue(value)
+    return optRaw === valRaw
   }
 
   return (
@@ -170,7 +193,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
         onOpen={() => setIsOpen(true)}
         onClose={() => setIsOpen(false)}
         openOnFocus={openOnFocus}
-        value={selectedValues}
+        value={selectedOptions}
         onInputChange={freeSolo ? handleChange : null}
         onChange={handleChange}
         multiple={multiple}
