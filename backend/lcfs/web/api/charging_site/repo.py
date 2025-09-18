@@ -409,3 +409,44 @@ class ChargingSiteRepository:
         equipment = result.unique().scalars().all()
 
         return equipment, total_count
+
+    @repo_handler
+    async def get_charging_site_options(self, organization):
+        """
+        Get options for charging site dropdowns (statuses and intended users)
+        """
+        statuses = await self.get_charging_site_statuses()
+        intended_users = await self.get_intended_user_types()
+        return [statuses, intended_users]
+
+    @repo_handler
+    async def delete_all_charging_sites_by_organization(self, organization_id: int):
+        """
+        Delete all charging sites for an organization (used for overwrite import)
+        """
+        # Get all charging sites for the organization
+        result = await self.db.execute(
+            select(ChargingSite)
+            .where(ChargingSite.organization_id == organization_id)
+            .options(
+                selectinload(ChargingSite.intended_users),
+                selectinload(ChargingSite.documents),
+                selectinload(ChargingSite.charging_equipment),
+            )
+        )
+        charging_sites = result.scalars().all()
+
+        # Delete each charging site and its relationships
+        for charging_site in charging_sites:
+            # Clear many-to-many relationships
+            charging_site.intended_users.clear()
+            charging_site.documents.clear()
+
+            # Delete related charging equipment
+            for equipment in charging_site.charging_equipment:
+                await self.db.delete(equipment)
+
+            # Delete the charging site
+            await self.db.delete(charging_site)
+
+        await self.db.flush()

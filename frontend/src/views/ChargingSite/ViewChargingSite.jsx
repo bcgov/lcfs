@@ -39,7 +39,7 @@ export const ViewChargingSite = () => {
       <BCTypography variant="h5" color="primary">
         {t('viewTitle')}
       </BCTypography>
-      <BCBox sx={{ my: 3 }}>
+      <BCBox sx={{ mt: 4, mb: -1 }}>
         <Grid2 container spacing={1}>
           {/* Card Section - 7 parts (58.33%) */}
           <Grid2 size={{ xs: 12, md: 7 }}>

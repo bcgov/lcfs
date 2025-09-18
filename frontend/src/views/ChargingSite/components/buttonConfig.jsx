@@ -98,7 +98,7 @@ class ButtonActionFactory {
         : this.context.t('chargingSite:buttons.selectAllSubmitted'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: submittedEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus('Submitted')
+      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.SUBMITTED)
     })
   }
 
@@ -121,7 +121,7 @@ class ButtonActionFactory {
         : this.context.t('chargingSite:buttons.selectAllDraft'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: draftEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus('Draft')
+      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.DRAFT)
     })
   }
 
@@ -144,7 +144,7 @@ class ButtonActionFactory {
         : this.context.t('chargingSite:buttons.selectAllValidated'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: validatedEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus('Validated')
+      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.VALIDATED)
     })
   }
 
@@ -290,6 +290,7 @@ const EQUIPMENT_STATUSES = {
 
 const BUTTON_RULES = {
   // When equipment has mixed statuses or general view
+  // TODO: Modify the rules as required based on workflow
   DEFAULT: {
     [USER_TYPES.BCEID_USER]: [
       'addEquipment',
@@ -434,7 +435,6 @@ export const buildButtonContext = ({
   handleAddEquipment,
   handleToggleSelectByStatus,
   handleBulkStatusUpdate,
-  handleExportSelected,
   handleClearFilters
 }) => {
   const isGovernmentUser = hasAnyRole && hasAnyRole(...govRoles)
@@ -459,7 +459,6 @@ export const buildButtonContext = ({
     handleAddEquipment,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
-    handleExportSelected,
     handleClearFilters
   }
 }

@@ -24,11 +24,6 @@ export const reportRoutes = [
         handle: { title: 'Manage charging sites' },
         children: [
           {
-            path: ':chargingSiteId',
-            element: <ViewChargingSite />,
-            handle: { title: 'View charging site' }
-          },
-          {
             path: 'add',
             element: <AddEditChargingSite mode="add" />,
             handle: { title: 'Add charging sites' }
@@ -37,6 +32,11 @@ export const reportRoutes = [
             path: ':chargingSiteId/edit',
             element: <AddEditChargingSite mode="edit" />,
             handle: { title: 'Edit charging site' }
+          },
+          {
+            path: ':chargingSiteId',
+            element: <ViewChargingSite />,
+            handle: { title: 'View charging site' }
           }
         ]
       },

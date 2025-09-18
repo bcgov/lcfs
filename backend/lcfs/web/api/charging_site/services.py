@@ -3,9 +3,7 @@ from typing import List, Optional
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
-from lcfs.db.models.compliance.EndUserType import EndUserType
 from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -120,9 +118,7 @@ class ChargingSiteService:
         Service method to create a new charging site
         """
         logger.info("Creating charging site")
-        status = await self.repo.get_charging_site_status_by_name(
-            charging_site_data.status or ""
-        )
+        status = await self.repo.get_charging_site_status_by_name("Draft")
         try:
             intended_users = []
             if (
@@ -138,11 +134,19 @@ class ChargingSiteService:
             charging_site = await self.repo.create_charging_site(
                 ChargingSite(
                     **charging_site_data.model_dump(
-                        exclude={"status_id", "status", "deleted", "intended_users"}
+                        exclude={
+                            "status_id",
+                            "current_status",
+                            "deleted",
+                            "intended_users",
+                        }
                     ),
                     status=status,
                     intended_users=intended_users,
                 )
+            )
+            charging_site = await self.repo.get_charging_site_by_id(
+                charging_site.charging_site_id
             )
             return ChargingSiteSchema.model_validate(charging_site)
         except Exception as e:
@@ -160,8 +164,12 @@ class ChargingSiteService:
         )
         if not existing_charging_site:
             raise HTTPException(status_code=404, detail="Charging site not found")
+        if existing_charging_site.status.status != "Draft":
+            raise HTTPException(
+                status_code=400, detail="Charging site is not in draft state"
+            )
         status = await self.repo.get_charging_site_status_by_name(
-            charging_site_data.status.status if charging_site_data.status else ""
+            charging_site_data.current_status if charging_site_data.current_status else "Draft"
         )
 
         try:
@@ -222,6 +230,18 @@ class ChargingSiteService:
             await self.repo.delete_charging_site(charging_site_id)
         except Exception as e:
             logger.error("Error deleting charging site", error=str(e))
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    @service_handler
+    async def delete_all_charging_sites(self, organization_id: int):
+        """
+        Service method to delete all charging sites for an organization
+        """
+        logger.info("Deleting all charging sites for organization")
+        try:
+            await self.repo.delete_all_charging_sites_by_organization(organization_id)
+        except Exception as e:
+            logger.error("Error deleting all charging sites", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler

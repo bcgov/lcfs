@@ -353,6 +353,77 @@ export const useChargingSiteEquipmentPaginated = (
   })
 }
 
+// Charging site import/export hooks
+export const useImportChargingSites = (options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ organizationId, file, overwrite }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('overwrite', overwrite)
+
+      const response = await client.post(
+        apiRoutes.importChargingSites.replace(':orgID', organizationId),
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      )
+      return response.data
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate charging site queries after import
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
+  const client = useApiService()
+  const {
+    staleTime = JOB_STATUS_STALE_TIME,
+    cacheTime = 0,
+    enabled = true,
+    refetchInterval = 2000,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingSitesImportJobStatus', jobId],
+    queryFn: async () => {
+      const response = await client.get(
+        apiRoutes.getImportChargingSitesJobStatus.replace(':jobID', jobId)
+      )
+      return response.data
+    },
+    staleTime,
+    cacheTime,
+    enabled: enabled && !!jobId,
+    refetchInterval: (data) => {
+      // Stop polling when job is complete
+      if (data?.progress === 100) {
+        return false
+      }
+      return refetchInterval
+    },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 // Helper function to invalidate all charging site related queries
 export const useInvalidateChargingSiteQueries = () => {
   const queryClient = useQueryClient()

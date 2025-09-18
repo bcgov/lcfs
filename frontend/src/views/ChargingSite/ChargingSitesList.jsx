@@ -11,7 +11,7 @@ export const ChargingSitesList = ({ alertRef }) => {
   const { t } = useTranslation(['report'])
 
   const handleNewSite = () => {
-    navigate(`${ROUTES.REPORTS.LIST}/manage-charging-sites/new`)
+    navigate(`${ROUTES.REPORTS.LIST}/manage-charging-sites/add`)
   }
 
   // Check if we're on a nested route (like /new or /edit)

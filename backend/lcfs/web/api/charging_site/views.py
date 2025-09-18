@@ -5,12 +5,16 @@ from fastapi import (
     APIRouter,
     Body,
     Depends,
+    File,
+    Form,
     HTTPException,
     Path,
     Request,
     Response,
+    UploadFile,
     status,
 )
+from fastapi.responses import JSONResponse, StreamingResponse
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.charging_site.schema import (
     BulkEquipmentStatusUpdateSchema,
@@ -24,6 +28,8 @@ from lcfs.web.api.charging_site.schema import (
     DeleteChargingSiteResponseSchema,
 )
 from lcfs.web.api.charging_site.services import ChargingSiteService
+from lcfs.web.api.charging_site.export import ChargingSiteExporter
+from lcfs.web.api.charging_site.importer import ChargingSiteImporter
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db import dependencies
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
@@ -272,3 +278,128 @@ async def get_charging_site_equipment_paginated(
             )
         )
     return await service.get_charging_site_equipment_paginated(site_id, pagination)
+
+
+@router.get(
+    "/export/{organization_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def export_charging_sites(
+    request: Request,
+    organization_id: str,
+    exporter: ChargingSiteExporter = Depends(),
+):
+    """
+    Endpoint to export information of all charging sites for an organization
+    """
+    try:
+        org_id = int(organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid organization id. Must be an integer."
+        )
+
+    organization = request.user.organization
+    if organization.organization_id != org_id:
+        raise HTTPException(
+            status_code=403, detail="Access denied to this organization"
+        )
+
+    return await exporter.export(org_id, request.user, organization, True)
+
+
+@router.post(
+    "/import/{organization_id}",
+    response_class=JSONResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def import_charging_sites(
+    request: Request,
+    organization_id: str,
+    file: UploadFile = File(...),
+    importer: ChargingSiteImporter = Depends(),
+    overwrite: bool = Form(...),
+):
+    """
+    Endpoint to import Charging Site data from an uploaded Excel file.
+    """
+    try:
+        org_id = int(organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid organization id. Must be an integer."
+        )
+
+    organization = request.user.organization
+    if organization.organization_id != org_id:
+        raise HTTPException(
+            status_code=403, detail="Access denied to this organization"
+        )
+
+    job_id = await importer.import_data(
+        org_id,
+        request.user,
+        organization.organization_code,
+        file,
+        overwrite,
+    )
+    return JSONResponse(content={"jobId": job_id})
+
+
+@router.get(
+    "/template/{organization_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_charging_site_template(
+    request: Request,
+    organization_id: str,
+    exporter: ChargingSiteExporter = Depends(),
+):
+    """
+    Endpoint to export a template for charging sites
+    """
+    try:
+        org_id = int(organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid organization id. Must be an integer."
+        )
+
+    organization = request.user.organization
+    if organization.organization_id != org_id:
+        raise HTTPException(
+            status_code=403, detail="Access denied to this organization"
+        )
+
+    return await exporter.export(org_id, request.user, organization, False)
+
+
+@router.get(
+    "/status/{job_id}",
+    response_class=JSONResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_import_job_status(
+    request: Request,
+    job_id: str,
+    importer: ChargingSiteImporter = Depends(),
+):
+    """
+    Endpoint to get the current progress of a running charging site import job
+    """
+    status_result = await importer.get_status(job_id)
+    return JSONResponse(content=status_result)

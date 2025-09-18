@@ -116,6 +116,10 @@ export const apiRoutes = {
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save',
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment',
+  exportChargingSites: '/charging-sites/export/:orgID',
+  importChargingSites: '/charging-sites/import/:orgID',
+  getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
+  downloadChargingSitesTemplate: '/charging-sites/template/:orgID',
 
   // fuel-supplies
   fuelSupplyOptions: '/fuel-supply/table-options?',

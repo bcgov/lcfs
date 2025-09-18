@@ -18,6 +18,7 @@ import { equipmentButtonConfigFn, buildButtonContext } from './buttonConfig'
 import BCModal from '@/components/BCModal'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
+import { BCAlert2 } from '@/components/BCAlert'
 
 const initialPaginationOptions = {
   page: 1,
@@ -189,8 +190,16 @@ export const ChargingSiteFSEGrid = () => {
         })
         refetch()
         handleClearFilters()
+        alertRef.current?.triggerAlert({
+          message: t('equipmentBulkUpdateSuccess'),
+          severity: 'success'
+        })
       } catch (error) {
         console.error('Failed to update equipment status:', error)
+        alertRef.current?.triggerAlert({
+          message: error.response?.data?.detail || error.message,
+          severity: 'success'
+        })
       } finally {
         setModalData(null)
       }
@@ -233,7 +242,6 @@ export const ChargingSiteFSEGrid = () => {
       handleAddEquipment,
       handleToggleSelectByStatus,
       handleBulkStatusUpdate,
-      handleExportSelected,
       handleClearFilters
     })
   }, [
@@ -252,7 +260,6 @@ export const ChargingSiteFSEGrid = () => {
     handleAddEquipment,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
-    handleExportSelected,
     handleClearFilters
   ])
 
@@ -306,6 +313,7 @@ export const ChargingSiteFSEGrid = () => {
             ))}
           </Stack>
         )}
+        <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
 
         {/* Data Grid */}
         <BCBox sx={{ width: '100%' }}>

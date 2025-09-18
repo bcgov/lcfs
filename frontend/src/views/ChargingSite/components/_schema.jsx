@@ -262,7 +262,8 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
     {
       headerName: '',
       field: 'select',
-      checkboxSelection: true,
+      checkboxSelection: (params) =>
+        params.data?.status?.status !== 'Submitted',
       headerCheckboxSelection: true,
       width: 50,
       pinned: 'left',
