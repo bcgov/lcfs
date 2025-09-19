@@ -394,7 +394,7 @@ export const AddEditOtherUses = () => {
           severity: 'error'
         })
       }
-      params.api.autoSizeAllColumns()
+      params.api?.autoSizeAllColumns?.()
     },
     [numericComplianceReportId, saveRow, t, validate]
   )
@@ -452,7 +452,7 @@ export const AddEditOtherUses = () => {
   }, [rowData, optionsData, updateGridColumnsVisibility])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   // Show loading state
