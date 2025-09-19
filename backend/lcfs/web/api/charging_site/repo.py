@@ -248,8 +248,8 @@ class ChargingSiteRepository:
         query = select(ChargingSite).options(
             joinedload(ChargingSite.organization),
             joinedload(ChargingSite.status),
-            joinedload(ChargingSite.documents),
-            joinedload(ChargingSite.charging_equipment),
+            selectinload(ChargingSite.documents),
+            selectinload(ChargingSite.charging_equipment),
         )
 
         if organization_id:
@@ -388,7 +388,6 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
-                selectinload(ChargingSite.charging_equipment),
             )
         )
         charging_site = result.scalar_one_or_none()
@@ -467,6 +466,7 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
+                joinedload(ChargingEquipment.allocating_organization),
             )
         )
         charging_sites = result.scalars().all()

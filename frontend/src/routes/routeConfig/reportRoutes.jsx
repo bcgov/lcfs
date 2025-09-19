@@ -25,12 +25,12 @@ export const reportRoutes = [
         children: [
           {
             path: 'add',
-            element: <AddEditChargingSite mode="add" />,
+            element: <AddEditChargingSite isEditMode={false} />,
             handle: { title: 'Add charging site' }
           },
           {
             path: ':siteId/edit',
-            element: <AddEditChargingSite mode="edit" />,
+            element: <AddEditChargingSite isEditMode={true} />,
             handle: { title: 'Edit charging site' }
           },
           {
