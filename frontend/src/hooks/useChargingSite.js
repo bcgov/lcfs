@@ -128,7 +128,7 @@ export const useGetAllChargingSites = (
   })
 }
 
-export const useChargingSiteMutation = (organizationId, options = {}) => {
+export const useSaveChargingSite = (organizationId, options = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -136,7 +136,7 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
     onSuccess,
     onError,
     invalidateRelatedQueries = true,
-    clearCache = false,
+    clearCache = true,
     ...restOptions
   } = options
 

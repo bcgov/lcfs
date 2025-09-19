@@ -329,7 +329,7 @@ class ChargingSiteService:
         Service method to create a new charging site
         """
         logger.info("Creating charging site")
-        status = await self.repo.get_charging_site_status_by_name("Draft")
+        status = await self.repo.get_charging_site_status_by_name(ChargingSiteStatusEnum.DRAFT)
         try:
             intended_users = []
             if (
@@ -375,14 +375,14 @@ class ChargingSiteService:
         )
         if not existing_charging_site:
             raise HTTPException(status_code=404, detail="Charging site not found")
-        if existing_charging_site.status.status != "Draft":
+        if existing_charging_site.status.status != ChargingSiteStatusEnum.DRAFT:
             raise HTTPException(
                 status_code=400, detail="Charging site is not in draft state"
             )
         status = await self.repo.get_charging_site_status_by_name(
             charging_site_data.current_status
             if charging_site_data.current_status
-            else "Draft"
+            else ChargingSiteStatusEnum.DRAFT
         )
 
         try:

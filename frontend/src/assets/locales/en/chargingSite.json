@@ -1,5 +1,5 @@
 {
-  "title": "Charging site/Equipment processing",
+  "idirSitetitle": "Charging site/Equipment processing",
   "chargingSitesTitle": "Charging sites",
   "mngTitle": "Manage charging sites",
   "mngCSdescription": "Create new charging site locations where you want to add FSE. Charging sites must be created before adding FSE.",

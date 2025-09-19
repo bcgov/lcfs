@@ -119,7 +119,7 @@ export const apiRoutes = {
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
-  bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-update',
+  bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
   importChargingSites: '/charging-sites/import/:orgID',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
@@ -189,7 +189,4 @@ export const apiRoutes = {
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
   geocoderClearCache: '/geocoder/cache',
-
-  // charging sites
-  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment'
 }

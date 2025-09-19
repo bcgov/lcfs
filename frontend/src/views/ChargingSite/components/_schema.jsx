@@ -81,7 +81,7 @@ export const chargingSiteColDefs = (
     },
     {
       field: 'chargingSiteId',
-      headerName: i18n.t('report:chargingSites.columnLabels.chargingSiteId'),
+      headerName: i18n.t('chargingSite:columnLabels.chargingSiteId'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       hide: true
@@ -89,7 +89,7 @@ export const chargingSiteColDefs = (
     {
       field: 'siteName',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.siteName'),
+      headerName: i18n.t('chargingSite:columnLabels.siteName'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       minWidth: 310,
@@ -102,7 +102,7 @@ export const chargingSiteColDefs = (
     {
       field: 'streetAddress',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.streetAddress'),
+      headerName: i18n.t('chargingSite:columnLabels.streetAddress'),
       cellEditor: AsyncSuggestionEditor,
       cellEditorParams: (params) => ({
         queryKey: 'address-autocomplete',
@@ -148,7 +148,7 @@ export const chargingSiteColDefs = (
     {
       field: 'city',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.city'),
+      headerName: i18n.t('chargingSite:columnLabels.city'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       cellStyle: (params) =>
@@ -159,7 +159,7 @@ export const chargingSiteColDefs = (
     {
       field: 'postalCode',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.postalCode'),
+      headerName: i18n.t('chargingSite:columnLabels.postalCode'),
       valueSetter: (params) => {
         const newValue = params.newValue.toUpperCase()
         params.data[params.colDef.field] = newValue
@@ -183,7 +183,7 @@ export const chargingSiteColDefs = (
     {
       field: 'latitude',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.latitude'),
+      headerName: i18n.t('chargingSite:columnLabels.latitude'),
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: {
         precision: 6,
@@ -200,7 +200,7 @@ export const chargingSiteColDefs = (
     {
       field: 'longitude',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.longitude'),
+      headerName: i18n.t('chargingSite:columnLabels.longitude'),
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: {
         precision: 6,
@@ -217,7 +217,7 @@ export const chargingSiteColDefs = (
     {
       field: 'intendedUsers',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('report:chargingSites.columnLabels.intendedUserTypes'),
+      headerName: i18n.t('chargingSite:columnLabels.intendedUserTypes'),
       valueGetter: (params) =>
         params.data?.intendedUsers?.map((i) => ({
           ...i,
@@ -253,7 +253,7 @@ export const chargingSiteColDefs = (
     },
     {
       field: 'notes',
-      headerName: i18n.t('report:chargingSites.columnLabels.notes'),
+      headerName: i18n.t('chargingSite:columnLabels.notes'),
       cellEditor: 'agTextCellEditor',
       minWidth: 500,
       editable: true
@@ -261,13 +261,14 @@ export const chargingSiteColDefs = (
   ]
 }
 
-export const chargingEquipmentColDefs = (t, currentUser) => {
+export const chargingEquipmentColDefs = (t, isIDIR = false) => {
   return [
     {
       headerName: '',
       field: 'select',
       checkboxSelection: (params) =>
-        params.data?.status?.status !== 'Submitted',
+        (params.data?.status?.status === 'Submitted' && isIDIR) ||
+        (params.data?.status?.status !== 'Submitted' && !isIDIR),
       headerCheckboxSelection: true,
       width: 50,
       pinned: 'left',
@@ -391,7 +392,7 @@ export const defaultColDef = {
   editable: false,
   resizable: true,
   filter: false,
-  floatingFilter: true,
+  floatingFilter: false,
   sortable: false,
   singleClickEdit: true
 }

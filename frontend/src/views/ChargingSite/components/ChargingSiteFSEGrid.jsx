@@ -6,7 +6,7 @@ import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { chargingEquipmentColDefs, defaultColDef } from './_schema'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -17,7 +17,7 @@ import {
 import { equipmentButtonConfigFn, buildButtonContext } from './buttonConfig'
 import BCModal from '@/components/BCModal'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
 import { BCAlert2 } from '@/components/BCAlert'
 
 const initialPaginationOptions = {
@@ -27,7 +27,12 @@ const initialPaginationOptions = {
   filters: []
 }
 
-export const ChargingSiteFSEGrid = () => {
+export const ChargingSiteFSEGrid = ({
+  hasAnyRole,
+  hasRoles,
+  isIDIR,
+  currentUser
+}) => {
   const { t } = useTranslation(['chargingSite'])
   const navigate = useNavigate()
   const gridRef = useRef(null)
@@ -42,11 +47,9 @@ export const ChargingSiteFSEGrid = () => {
     initialPaginationOptions
   )
 
-  const { chargingSiteId } = useParams()
-  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
-
+  const { siteId } = useParams()
   const equipmentQuery = useChargingSiteEquipmentPaginated(
-    chargingSiteId,
+    siteId,
     paginationOptions
   )
   const { data: equipmentData, isLoading, refetch } = equipmentQuery
@@ -54,7 +57,7 @@ export const ChargingSiteFSEGrid = () => {
   const { mutateAsync: bulkUpdateStatus, isPending: isUpdating } =
     useBulkUpdateEquipmentStatus()
 
-  const equipmentList = equipmentData?.equipment || []
+  const equipmentList = equipmentData?.equipments || []
 
   // Check if selected equipment can be submitted (only from Draft status)
   const canSubmit = useMemo(() => {
@@ -110,7 +113,7 @@ export const ChargingSiteFSEGrid = () => {
     setSelectedRows(selectedIds)
   }, [])
 
-  // Toggle select all equipment by status - NEW IMPLEMENTATION
+  // Toggle select all equipment by status
   const handleToggleSelectByStatus = useCallback(
     (status) => {
       const equipmentWithStatus = equipmentList.filter(
@@ -168,7 +171,6 @@ export const ChargingSiteFSEGrid = () => {
     if (gridRef.current && gridRef.current.api) {
       gridRef.current.api.setFilterModel(null)
       gridRef.current.api.deselectAll()
-      gridRef.current.api.setSortModel(null)
     }
   }, [setPaginationOptions])
 
@@ -184,9 +186,9 @@ export const ChargingSiteFSEGrid = () => {
 
       try {
         await bulkUpdateStatus({
-          chargingSiteId: parseInt(chargingSiteId),
-          equipment_ids: selectedRows,
-          new_status: newStatus
+          siteId: parseInt(siteId),
+          equipmentIds: selectedRows,
+          newStatus
         })
         refetch()
         handleClearFilters()
@@ -198,13 +200,13 @@ export const ChargingSiteFSEGrid = () => {
         console.error('Failed to update equipment status:', error)
         alertRef.current?.triggerAlert({
           message: error.response?.data?.detail || error.message,
-          severity: 'success'
+          severity: 'error'
         })
       } finally {
         setModalData(null)
       }
     },
-    [selectedRows, chargingSiteId, bulkUpdateStatus, handleClearFilters]
+    [selectedRows, siteId, bulkUpdateStatus, handleClearFilters]
   )
 
   const gridOptions = useMemo(
@@ -218,8 +220,19 @@ export const ChargingSiteFSEGrid = () => {
   )
 
   const handleAddEquipment = useCallback(() => {
-    navigate(`/charging-sites/${chargingSiteId}/add-equipment`)
-  }, [navigate, chargingSiteId])
+    // TODO: fix navigation
+    navigate(`/charging-sites/${siteId}/add-equipment`)
+  }, [navigate, siteId])
+
+  const handleRowClicked = useCallback(
+    (params) => {
+      // TODO: fix navigation
+      navigate(
+        `/charging-sites/${siteId}/${params.data.chargingEquipmentId}/edit-equipment`
+      )
+    },
+    [navigate, siteId]
+  )
 
   // Build context for button configuration
   const buttonContext = useMemo(() => {
@@ -275,12 +288,10 @@ export const ChargingSiteFSEGrid = () => {
       <Grid size={12} sx={{ mt: { xs: 2, md: 4 } }}>
         <BCBox sx={{ mb: 3 }}>
           <BCTypography variant="h6" color="primary">
-            {hasRoles(roles.government)
-              ? t('equipmentProcessingTitle')
-              : t('gridTitle')}
+            {isIDIR ? t('equipmentProcessingTitle') : t('gridTitle')}
           </BCTypography>
           <BCTypography variant="body4" color="text" mt={1} component="div">
-            {hasRoles(roles.government)
+            {isIDIR
               ? t('equipmentProcessingDescription')
               : t('gridDescription')}
           </BCTypography>
@@ -292,26 +303,30 @@ export const ChargingSiteFSEGrid = () => {
         />
         {/* Dynamic Action Buttons Based on Role */}
         {availableButtons.length > 0 && (
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            sx={{ mb: 3, flexWrap: 'wrap' }}
-          >
+          <Grid container spacing={2} sx={{ mb: 3 }}>
             {availableButtons.map((button) => (
-              <BCButton
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={12 / availableButtons.length}
                 key={button.id}
-                variant={button.variant}
-                color={button.color}
-                type="button"
-                startIcon={button.startIcon}
-                onClick={button.handler}
-                disabled={button.disabled}
-                title={button.title}
               >
-                {button.label}
-              </BCButton>
+                <BCButton
+                  variant={button.variant}
+                  color={button.color}
+                  type="button"
+                  startIcon={button.startIcon}
+                  onClick={button.handler}
+                  disabled={button.disabled}
+                  title={button.title}
+                  fullWidth
+                >
+                  {button.label}
+                </BCButton>
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
         )}
         <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
 
@@ -320,12 +335,13 @@ export const ChargingSiteFSEGrid = () => {
           <BCGridViewer
             gridRef={gridRef}
             alertRef={alertRef}
-            columnDefs={chargingEquipmentColDefs(t)}
+            columnDefs={chargingEquipmentColDefs(t, isIDIR)}
             queryData={equipmentQuery}
-            dataKey="equipment"
+            dataKey="equipments"
             getRowId={(params) => params.data.chargingEquipmentId}
             paginationOptions={paginationOptions}
             onPaginationChange={handlePaginationChange}
+            onRowClicked={handleRowClicked}
             overlayNoRowsTemplate={t('chargingSite:noChargingEquipmentsFnd')}
             gridOptions={gridOptions}
             enableCopyButton={false}

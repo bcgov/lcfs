@@ -67,7 +67,7 @@ class ChargingSiteCreateSchema(BaseSchema):
     postal_code: str
     latitude: float
     longitude: float
-    intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
+    intended_users: List[EndUserTypeSchema]
     notes: Optional[str] = None
     deleted: Optional[bool] = None
 

@@ -28,29 +28,14 @@ const accordionStyles = {
   }
 }
 
-// Temporary data:
-const data = [
-  {
-    documentId: '1',
-    fileName: '0032100321-001Hydrobill.pdf',
-    createDate: '2023-01-01',
-    createUser: 'John Doe'
-  },
-  {
-    documentId: '2',
-    fileName: 'test2.pdf',
-    createDate: '2023-01-01',
-    createUser: 'John Doe'
-  }
-]
 export const ChargingSiteDocument = ({ attachments }) => {
   const { t } = useTranslation('chargingSite')
   const [expanded, setExpanded] = useState(
     attachments?.length ? 'document' : ''
   )
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const { chargingSiteId } = useParams()
-  const downloadDocument = useDownloadDocument('charging_site', chargingSiteId)
+  const { siteId } = useParams()
+  const downloadDocument = useDownloadDocument('charging_site', siteId)
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false)
@@ -158,7 +143,7 @@ export const ChargingSiteDocument = ({ attachments }) => {
       </Accordion>
       {/* Document Upload Dialog */}
       <DocumentUploadDialog
-        parentID={chargingSiteId}
+        parentID={siteId}
         parentType="charging_site"
         open={isFileDialogOpen}
         close={handleFileDialogClose}

@@ -25,7 +25,7 @@ import {
   getQuarterDateRange
 } from '@/utils/dateQuarterUtils'
 import {
-  useChargingSiteMutation,
+  useSaveChargingSite,
   useGetIntendedUsers,
   useImportChargingSites,
   useGetChargingSitesImportJobStatus
@@ -72,11 +72,11 @@ export const AddEditChargingSite = () => {
     isFetched
   } = useGetIntendedUsers()
 
-  const { mutateAsync: saveRow } = useChargingSiteMutation(organizationId)
+  const { mutateAsync: saveRow } = useSaveChargingSite(organizationId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('noSitesFound'),
+      overlayNoRowsTemplate: t('chargingSite:noSitesFound'),
       stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
@@ -281,11 +281,11 @@ export const AddEditChargingSite = () => {
       <Grid2 className="add-edit-charging-site-container">
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('addNewSite')}
+            {t('chargingSite:addNewSite')}
           </BCTypography>
           <BCBox my={2.5} component="div">
             <BCTypography variant="body4" color="text" mt={0.5} component="div">
-              {t('templateDescriptor')}
+              {t('chargingSite:templateDescriptor')}
             </BCTypography>
           </BCBox>
         </div>
@@ -409,8 +409,8 @@ export const AddEditChargingSite = () => {
               enabled: true,
               text: t('common:saveReturnBtn'),
               // onSave: handleNavigateBack,
-              confirmText: t('report:incompleteReport'),
-              confirmLabel: t('report:returnToReport')
+              // confirmText: t('report:incompleteReport'),
+              // confirmLabel: t('report:returnToReport')
             }}
           />
         </BCBox>

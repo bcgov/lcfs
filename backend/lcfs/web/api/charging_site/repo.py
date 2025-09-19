@@ -436,6 +436,25 @@ class ChargingSiteRepository:
         return [statuses, intended_users]
 
     @repo_handler
+    async def get_charging_site_status_by_name(
+        self, status_name: str
+    ) -> ChargingSiteStatus:
+        """
+        Retrieve a charging site status by its name from the database
+        """
+        return (
+            (
+                await self.db.execute(
+                    select(ChargingSiteStatus).where(
+                        ChargingSiteStatus.status == status_name
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+
+    @repo_handler
     async def delete_all_charging_sites_by_organization(self, organization_id: int):
         """
         Delete all charging sites for an organization (used for overwrite import)
