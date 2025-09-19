@@ -258,6 +258,10 @@
   "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):",
   "assessmentRecommendation": "Assessment recommendation",
+  "documents": {
+    "uploadTitle": "Upload supporting documents for your compliance report",
+    "returnButton": "Return to compliance report"
+  },
   "directorStatement": "Director assessment statement to the organization (optional)",
   "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",
   "saveStatement": "Save statement",
@@ -295,7 +299,9 @@
   "tabs": {
     "complianceReporting": "Compliance reporting",
     "manageChargingSites": "Manage charging sites",
-    "manageFSE": "Manage FSE"
+    "manageFSE": "Manage FSE",
+    "chargingSites": "Charging sites",
+    "fseIndex": "FSE index"
   },
   "chargingSites": {
     "title": "Manage charging sites",
@@ -315,6 +321,22 @@
       "longitude": "Longitude",
       "intendedUserTypes": "Intended user types",
       "notes": "Site notes"
+    }
+  }
+  ,
+  "idirChargingSites": {
+    "description": "Open charging sites to view file attachments and process FSE by site.",
+    "filtersLabel": "Show charging sites for:",
+    "selectOrgPlaceholder": "Select organization",
+    "columnLabels": {
+      "status": "Status",
+      "organization": "Organization",
+      "siteName": "Site name",
+      "siteNumber": "Site number",
+      "intendedUsers": "Intended users",
+      "streetAddress": "Street address",
+      "city": "City",
+      "postalCode": "Postal code"
     }
   }
 }

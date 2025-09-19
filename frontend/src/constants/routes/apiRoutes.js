@@ -112,6 +112,7 @@ export const apiRoutes = {
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
   // charging sites
   intendedUsers: '/charging-sites/intended-users',
+  getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save',
 
@@ -178,5 +179,8 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache'
+  geocoderClearCache: '/geocoder/cache',
+
+  // charging sites
+  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment'
 }
