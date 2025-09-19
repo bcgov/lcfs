@@ -209,6 +209,11 @@ export const AddEditNotionalTransfers = () => {
       })
 
       params.node.updateData(updatedData)
+
+      // Auto-resize columns after data update
+      setTimeout(() => {
+        params.api.autoSizeAllColumns()
+      }, 0)
     },
     [saveRow, t, complianceReportId]
   )
@@ -304,6 +309,10 @@ export const AddEditNotionalTransfers = () => {
       api.autoSizeAllColumns()
     }
   })
+
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
   const onCellValueChanged = useCallback(async () => {
     setTimeout(() => {
       updateGridColumnsVisibility()
@@ -353,6 +362,7 @@ export const AddEditNotionalTransfers = () => {
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
+            onFirstDataRendered={onFirstDataRendered}
             rowData={rowData}
             overlayNoRowsTemplate={t(
               'notionalTransfer:noNotionalTransfersFound'
@@ -362,9 +372,9 @@ export const AddEditNotionalTransfers = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             autoSizeStrategy={{
-              type: 'fitGridWidth',
-              defaultMinWidth: 50,
-              defaultMaxWidth: 600
+              type: 'fitCellContents',
+              defaultMinWidth: 80,
+              defaultMaxWidth: 800
             }}
             showAddRowsButton={true}
             stopEditingWhenCellsLoseFocus
