@@ -153,7 +153,7 @@ export const AddEditFuelExports = () => {
   ])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   const onCellValueChanged = useCallback(
@@ -230,7 +230,7 @@ export const AddEditFuelExports = () => {
           columns: ['ciOfFuel', 'targetCi', 'uci', 'complianceUnits']
         })
       }
-      params.api.autoSizeAllColumns()
+      params.api?.autoSizeAllColumns?.()
     },
     [optionsData]
   )

@@ -87,7 +87,7 @@ export const notionalTransferColDefs = (
           <BCTypography variant="body4">Enter or search a name</BCTypography>
         )),
       suppressKeyboardEvent,
-      minWidth: 300,
+      minWidth: 320,
       valueSetter: (params) => {
         const { newValue: selectedName, node, data } = params
         if (typeof selectedName === 'object') {
@@ -108,7 +108,7 @@ export const notionalTransferColDefs = (
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.addressForService'
       ),
-      minWidth: 260,
+      minWidth: 280,
       headerComponent: RequiredHeader,
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
@@ -134,7 +134,7 @@ export const notionalTransferColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       cellRenderer: SelectRenderer,
-      minWidth: 150
+      minWidth: 160
     },
     {
       field: 'isCanadaProduced',
@@ -159,7 +159,7 @@ export const notionalTransferColDefs = (
         }
         return true
       },
-      minWidth: 240
+      minWidth: 250
     },
     {
       field: 'isQ1Supplied',
@@ -184,7 +184,7 @@ export const notionalTransferColDefs = (
         }
         return true
       },
-      minWidth: 160
+      minWidth: 170
     },
     {
       field: 'receivedOrTransferred',
@@ -205,14 +205,14 @@ export const notionalTransferColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       cellRenderer: SelectRenderer,
-      minWidth: 240
+      minWidth: 250
     },
     {
       field: 'quantity',
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
       headerComponent: RequiredHeader,
       cellEditor: NumberEditor,
-      minWidth: 170,
+      minWidth: 180,
       cellEditorParams: {
         precision: 0,
         min: 0,
@@ -251,7 +251,8 @@ export const notionalTransferColDefs = (
               ),
             editable: () => {
               return isQuarterEditable(1, compliancePeriod)
-            }
+            },
+            minWidth: 130
           },
           {
             field: 'q2Quantity',
@@ -275,7 +276,8 @@ export const notionalTransferColDefs = (
               ),
             editable: () => {
               return isQuarterEditable(2, compliancePeriod)
-            }
+            },
+            minWidth: 130
           },
           {
             field: 'q3Quantity',
@@ -299,7 +301,8 @@ export const notionalTransferColDefs = (
               ),
             editable: () => {
               return isQuarterEditable(3, compliancePeriod)
-            }
+            },
+            minWidth: 130
           },
           {
             field: 'q4Quantity',
@@ -323,7 +326,8 @@ export const notionalTransferColDefs = (
               ),
             editable: () => {
               return isQuarterEditable(4, compliancePeriod)
-            }
+            },
+            minWidth: 130
           },
           {
             field: 'totalQuantity',
@@ -347,7 +351,8 @@ export const notionalTransferColDefs = (
                 (data.q4Quantity || 0)
               )
             },
-            editable: false
+            editable: false,
+            minWidth: 150
           }
         ]
       }
@@ -366,30 +371,28 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.legalName'
       ),
       field: 'legalName',
-      flex: 1,
-      minWidth: 300
+      minWidth: 320
     },
     {
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.addressForService'
       ),
       field: 'addressForService',
-      flex: 1,
-      minWidth: 200
+      minWidth: 280
     },
     {
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.fuelCategory'
       ),
-      field: 'fuelCategory'
+      field: 'fuelCategory',
+      minWidth: 160
     },
     {
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.isCanadaProduced'
       ),
       field: 'isCanadaProduced',
-      flex: 1,
-      minWidth: 240,
+      minWidth: 250,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
@@ -397,8 +400,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
       ),
       field: 'isQ1Supplied',
-      flex: 1,
-      minWidth: 180,
+      minWidth: 170,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
     {
@@ -406,13 +408,13 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
       ),
       field: 'receivedOrTransferred',
-      flex: 1,
-      minWidth: 240
+      minWidth: 250
     },
     {
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
       field: 'quantity',
-      valueFormatter
+      valueFormatter,
+      minWidth: 180
     }
   ]
 
@@ -425,28 +427,32 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q1Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            minWidth: 130
           },
           {
             field: 'q2Quantity',
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q2Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            minWidth: 130
           },
           {
             field: 'q3Quantity',
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q3Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            minWidth: 130
           },
           {
             field: 'q4Quantity',
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q4Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            minWidth: 130
           },
           {
             field: 'totalQuantity',
@@ -454,6 +460,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
               'notionalTransfer:notionalTransferColLabels.totalQuantity'
             ),
             valueFormatter,
+            minWidth: 150,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -480,7 +487,8 @@ export const defaultColDef = {
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true,
-  flex: 1
+  wrapHeaderText: true,
+  autoHeaderHeight: true
 }
 
 export const changelogCommonColDefs = (highlight = true) => [
