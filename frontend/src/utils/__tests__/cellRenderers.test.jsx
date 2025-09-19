@@ -13,6 +13,13 @@ import {
 } from '../grid/cellRenderers'
 import { wrapper } from '@/tests/utils/wrapper'
 
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn()
+}))
+
 vi.mock('react-router-dom', () => ({
   Link: ({ children, to }) => <a href={to}>{children}</a>,
   useLocation: () => ({ pathname: '/test' })
