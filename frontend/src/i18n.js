@@ -20,6 +20,7 @@ import allocationAgreementEn from '@/assets/locales/en/allocationAgreement.json'
 import notificationsEn from '@/assets/locales/en/notifications.json'
 import legacyEn from '@/assets/locales/en/legacy.json'
 import creditMarketEn from '@/assets/locales/en/creditMarket.json'
+import chargingEquipmentEn from '@/assets/locales/en/chargingEquipment.json'
 import chargingSiteEn from '@/assets/locales/en/chargingSite.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
@@ -29,6 +30,8 @@ const resources = {
     common: commonEn,
     admin: adminEn,
     report: reportEn,
+    // Alias to support components referencing `reports:` keys
+    reports: reportEn,
     fuelCode: fuelCodeEn,
     org: orgEn,
     txn: txnEn,
@@ -46,6 +49,7 @@ const resources = {
     notifications: notificationsEn,
     legacy: legacyEn,
     creditMarket: creditMarketEn,
+    chargingEquipment: chargingEquipmentEn,
     chargingSite: chargingSiteEn
   }
 }

@@ -10,6 +10,9 @@ import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
 import { ReportsMenu } from '@/views/ComplianceReports/ReportsMenu'
 import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
 import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
+import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
+import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
+import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 
 export const reportRoutes = [
   {
@@ -31,15 +34,29 @@ export const reportRoutes = [
             path: ':siteId/edit',
             element: <AddEditChargingSite mode="edit" />,
             handle: { title: 'Edit charging site' }
+          },
+          {
+            path: ':siteId',
+            element: <ViewChargingSite />,
+            handle: { title: 'View charging site' }
           }
         ]
       },
       {
-        path: 'fse',
-        element: <>FSE index</>,
-        handle: { title: 'FSE index' },
+        path: 'manage-fse',
+        element: <ChargingEquipmentList />,
+        handle: { title: 'Manage FSE' },
         children: [
-          // Add FSE management routes here as needed
+          {
+            path: 'new',
+            element: <AddEditChargingEquipment mode="bulk" />,
+            handle: { title: 'Add FSE' }
+          },
+          {
+            path: ':id/edit',
+            element: <AddEditChargingEquipment mode="single" />,
+            handle: { title: 'Edit FSE' }
+          }
         ]
       }
     ]

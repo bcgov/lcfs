@@ -105,7 +105,7 @@ vi.mock('@/services/useApiService', () => ({
 }))
 
 vi.mock('../../../hooks/useChargingSite', () => ({
-  useChargingSite: vi.fn(() => ({
+  useGetChargingSiteById: vi.fn(() => ({
     data: mockChargingSiteData,
     isLoading: false,
     isError: false

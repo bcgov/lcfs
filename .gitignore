@@ -136,6 +136,7 @@ frontend/cucumber-report.html
 
 # AI Assistant Files
 CLAUDE.md
+AGENTS.md
 .cursorrules
 cursor.md
 .github/copilot-instructions.md

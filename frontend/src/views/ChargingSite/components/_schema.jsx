@@ -3,18 +3,24 @@ import BCTypography from '@/components/BCTypography'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
+  BCSelectFloatingFilter,
   RequiredHeader,
   TextCellEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
+  ChargingSiteStatusRenderer,
   CommonArrayRenderer,
   MultiSelectRenderer
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
+import {
+  useChargingEquipmentStatuses,
+  useChargingSiteStatuses
+} from '@/hooks/useChargingSite'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -255,25 +261,166 @@ export const chargingSiteColDefs = (
   ]
 }
 
+export const chargingEquipmentColDefs = (t, currentUser) => {
+  return [
+    {
+      headerName: '',
+      field: 'select',
+      checkboxSelection: (params) =>
+        params.data?.status?.status !== 'Submitted',
+      headerCheckboxSelection: true,
+      width: 50,
+      pinned: 'left',
+      lockPinned: true,
+      filter: false,
+      sortable: false
+    },
+    {
+      field: 'status',
+      minWidth: 175,
+      filter: true,
+      headerName: t('fseColumnLabels.status'),
+      valueGetter: (params) => {
+        return params.data?.status?.status || ''
+      },
+      cellClass: 'vertical-middle',
+      floatingFilterComponent: BCSelectFloatingFilter,
+      floatingFilterComponentParams: {
+        valueKey: 'status',
+        labelKey: 'status',
+        optionsQuery: useChargingEquipmentStatuses
+      },
+      suppressFloatingFilterButton: true,
+      filterParams: {
+        textMatcher: () => {
+          return true
+        }
+      }
+    },
+    {
+      field: 'siteName',
+      headerName: t('fseColumnLabels.siteName'),
+      sortable: false,
+      valueGetter: (params) => params.data?.chargingSite?.siteName || ''
+    },
+    {
+      field: 'registrationNumber',
+      sortable: false,
+      minWidth: 160,
+      headerName: t('fseColumnLabels.registrationNumber')
+    },
+    {
+      field: 'version',
+      headerName: t('fseColumnLabels.version')
+    },
+    {
+      field: 'allocatingOrganization',
+      minWidth: 250,
+      headerName: t('fseColumnLabels.allocatingOrg'),
+      valueGetter: (params) => {
+        return (
+          params.data?.allocatingOrganization?.name ||
+          params.data?.organizationName
+        )
+      }
+    },
+    {
+      field: 'serialNumber',
+      minWidth: 220,
+      headerName: t('fseColumnLabels.serialNumber')
+    },
+    {
+      field: 'manufacturer',
+      minWidth: 320,
+      headerName: t('fseColumnLabels.manufacturer')
+    },
+    {
+      field: 'model',
+      minWidth: 220,
+      headerName: t('fseColumnLabels.model')
+    },
+    {
+      field: 'levelOfEquipment',
+      minWidth: 400,
+      sortable: false,
+      valueGetter: (params) => {
+        return params.data?.levelOfEquipment?.name || ''
+      },
+      headerName: t('fseColumnLabels.levelOfEquipment')
+    },
+    {
+      field: 'ports',
+      headerName: t('fseColumnLabels.ports')
+    },
+    {
+      field: 'fuelMeasurementType',
+      minWidth: 250,
+      headerName: t('fseColumnLabels.fuelMeasurementType')
+    },
+    {
+      field: 'intendedUse',
+      headerName: t('fseColumnLabels.intendedUse'),
+      sortable: false,
+      minWidth: 380,
+      valueGetter: (params) =>
+        params.data?.intendedUseTypes?.map((i) => i.type),
+      cellRenderer: CommonArrayRenderer,
+      cellRendererParams: { disableLink: true }
+    },
+    {
+      field: 'latitude',
+      sortable: false,
+      headerName: t('fseColumnLabels.latitude'),
+      valueGetter: (params) => params.data?.chargingSite?.latitude || ''
+    },
+    {
+      field: 'longitude',
+      sortable: false,
+      headerName: t('fseColumnLabels.longitude'),
+      valueGetter: (params) => params.data?.chargingSite?.longitude || ''
+    },
+    {
+      field: 'notes',
+      minWidth: 600,
+      headerName: t('fseColumnLabels.notes')
+    }
+  ]
+}
+
 export const defaultColDef = {
-  editable: true,
+  editable: false,
   resizable: true,
   filter: false,
-  floatingFilter: false,
+  floatingFilter: true,
   sortable: false,
   singleClickEdit: true
 }
 
 // Column defs for IDIR Charging Sites viewer grid
-export const idirChargingSitesColDefs = (orgIdToName = {}) => [
+export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
   {
     field: 'status',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.status'),
-    valueGetter: (params) => params.data?.status?.status || ''
+    minWidth: 130,
+    filter: true,
+    sortable: true,
+    headerName: i18n.t('chargingSite:columnLabels.status'),
+    valueGetter: (params) => params.data?.status?.status || '',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      suppressFilterButton: true,
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useChargingSiteStatuses
+    },
+    cellRenderer: ChargingSiteStatusRenderer
   },
   {
     field: 'organization',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.organization'),
+    headerName: i18n.t('chargingSite:columnLabels.organization'),
+    hide: !isIDIR,
+    minWidth: 310,
+    filter: true,
+    sortable: true,
     valueGetter: (params) =>
       params.data?.organization?.name ||
       orgIdToName[params.data?.organizationId] ||
@@ -281,35 +428,53 @@ export const idirChargingSitesColDefs = (orgIdToName = {}) => [
   },
   {
     field: 'siteName',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.siteName')
+    filter: true,
+    sortable: true,
+    minWidth: 310,
+    headerName: i18n.t('chargingSite:columnLabels.siteName')
   },
   {
-    field: 'chargingSiteId',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.siteNumber')
+    field: 'siteCode',
+    minWidth: 140,
+    headerName: i18n.t('chargingSite:columnLabels.siteNumber')
+  },
+  {
+    field: 'streetAddress',
+    minWidth: 260,
+    headerName: i18n.t('chargingSite:columnLabels.streetAddress')
+  },
+  {
+    field: 'city',
+    filter: true,
+    sortable: true,
+    minWidth: 220,
+    headerName: i18n.t('chargingSite:columnLabels.city')
+  },
+  {
+    field: 'postalCode',
+    minWidth: 135,
+    headerName: i18n.t('chargingSite:columnLabels.postalCode')
   },
   {
     field: 'intendedUsers',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.intendedUsers'),
+    headerName: i18n.t('chargingSite:columnLabels.intendedUsers'),
+    minWidth: 315,
     valueGetter: (params) =>
       params.data?.intendedUsers?.map((u) => u.typeName) || [],
     cellRenderer: CommonArrayRenderer
   },
   {
-    field: 'streetAddress',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.streetAddress')
-  },
-  {
-    field: 'city',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.city')
-  },
-  {
-    field: 'postalCode',
-    headerName: i18n.t('report:idirChargingSites.columnLabels.postalCode')
+    field: 'notes',
+    minWidth: 500,
+    headerName: i18n.t('chargingSite:columnLabels.notes')
   }
 ]
 
-export const idirDefaultColDef = {
+export const indexDefaultColDef = {
+  editable: false,
   resizable: true,
-  sortable: true,
-  filter: true
+  filter: false,
+  floatingFilter: true,
+  suppressFloatingFilterButton: true,
+  sortable: false
 }

@@ -495,7 +495,7 @@ export const useGetComplianceReportList = (
   return useQuery({
     queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
     queryFn: async () => {
-      if (hasRoles(roles.supplier)) {
+      if (hasRoles(roles.compliance_reporting, roles.signing_authority)) {
         const orgId = currentUser?.organization?.organizationId
         if (!orgId) {
           throw new Error('Organization ID not found for supplier')
@@ -503,17 +503,19 @@ export const useGetComplianceReportList = (
 
         const response = await client.post(
           apiRoutes.getOrgComplianceReports.replace(':orgID', orgId),
-          { page, size, sortOrders, filters }
+          { page, size, sort_orders: sortOrders, filters }
         )
         return response.data
-      } else {
+      } else if (hasRoles(roles.government)) {
         const response = await client.post(apiRoutes.getComplianceReports, {
           page,
           size,
-          sortOrders,
+          sort_orders: sortOrders,
           filters
         })
         return response.data
+      } else {
+        throw new Error('User does not have permission to view compliance reports')
       }
     },
     enabled: enabled && !isLoading,
