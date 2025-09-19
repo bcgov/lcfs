@@ -6,10 +6,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, chargingSiteColDefs } from './components/_schema'
-import {
-  useImportFinalSupplyEquipment,
-  useGetFinalSupplyEquipmentImportJobStatus
-} from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
@@ -23,15 +19,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportDialog from '@/components/ImportDialog'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import {
   getCurrentQuarter,
   getQuarterDateRange
 } from '@/utils/dateQuarterUtils'
 import {
   useChargingSiteMutation,
-  useGetAllChargingSitesByOrg,
-  useGetIntendedUsers
+  useGetIntendedUsers,
+  useImportChargingSites,
+  useGetChargingSitesImportJobStatus
 } from '@/hooks/useChargingSite'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
@@ -54,7 +50,7 @@ export const AddEditChargingSite = () => {
 
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'finalSupplyEquipment', 'report'])
+  const { t } = useTranslation(['common', 'chargingSite'])
 
   const {
     data: currentUser,
@@ -67,7 +63,6 @@ export const AddEditChargingSite = () => {
     () => currentUser.organization?.organizationId,
     [currentUser]
   )
-  const { complianceReportId = 62 } = useParams()
   const navigate = useNavigate()
 
   const {
@@ -77,15 +72,10 @@ export const AddEditChargingSite = () => {
   } = useGetIntendedUsers()
 
   const { mutateAsync: saveRow } = useChargingSiteMutation(organizationId)
-  const {
-    data,
-    isLoading: sitesLoading,
-    refetch
-  } = useGetAllChargingSitesByOrg(organizationId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('report:chargingSites.noSitesFound'),
+      overlayNoRowsTemplate: t('noSitesFound'),
       stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
@@ -110,24 +100,14 @@ export const AddEditChargingSite = () => {
   }
 
   useEffect(() => {
-    if (isGridReady && data) {
+    if (isGridReady) {
       const defaultOrgName = ''
 
-      if (isArrayEmpty(data)) {
+      if (isArrayEmpty(rowData)) {
         setRowData([
           {
             id: uuid(),
-            organizationId
-          }
-        ])
-      } else {
-        setRowData([
-          ...data.chargingSites.map((item) => ({
-            ...item,
-            id: uuid()
-          })),
-          {
-            id: uuid(),
+            chargingSiteId: null,
             organizationId
           }
         ])
@@ -142,7 +122,7 @@ export const AddEditChargingSite = () => {
         })
       }, 100)
     }
-  }, [data, isGridReady, gridRef, ''])
+  }, [rowData, isGridReady, gridRef, ''])
 
   useEffect(() => {
     if (
@@ -188,13 +168,14 @@ export const AddEditChargingSite = () => {
             acc[key] = value
             return acc
           }, {}),
-        status: 'Draft'
+        currentStatus: 'Draft',
+        organizationId
       }
 
       const responseData = await handleScheduleSave({
         alertRef,
         idField: 'chargingSiteId',
-        labelPrefix: 'report:chargingSites.columnLabels',
+        labelPrefix: 'columnLabels',
         params,
         setErrors,
         setWarnings,
@@ -202,9 +183,8 @@ export const AddEditChargingSite = () => {
         t,
         updatedData
       })
-
       alertRef.current?.clearAlert()
-      params.node.updateData(responseData)
+      params.node.updateData({ ...responseData, validationStatus: 'valid' })
       params.api.autoSizeAllColumns()
     },
     [saveRow, t]
@@ -231,13 +211,10 @@ export const AddEditChargingSite = () => {
       handleCloseDownloadMenu()
       setIsDownloading(true)
       const endpoint = includeData
-        ? apiRoutes.exportFinalSupplyEquipments.replace(
-            ':reportID',
-            complianceReportId
-          )
-        : apiRoutes.downloadFinalSupplyEquipmentsTemplate.replace(
-            ':reportID',
-            complianceReportId
+        ? apiRoutes.exportChargingSites.replace(':orgID', organizationId)
+        : apiRoutes.downloadChargingSitesTemplate.replace(
+            ':orgID',
+            organizationId
           )
       await apiService.download({ url: endpoint })
     } catch (error) {
@@ -274,7 +251,6 @@ export const AddEditChargingSite = () => {
 
   const onAddRows = useCallback(
     (numRows) => {
-      const defaultOrgName = ''
       return Array(numRows)
         .fill()
         .map(() => ({
@@ -300,16 +276,15 @@ export const AddEditChargingSite = () => {
   }
 
   return (
-    isFetched &&
-    !sitesLoading && (
-      <Grid2 className="add-edit-charging-site-container" F>
+    isFetched && (
+      <Grid2 className="add-edit-charging-site-container">
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('report:chargingSites.addNewSite')}
+            {t('addNewSite')}
           </BCTypography>
           <BCBox my={2.5} component="div">
             <BCTypography variant="body4" color="text" mt={0.5} component="div">
-              {t('report:chargingSites.templateDescriptor')}
+              {t('templateDescriptor')}
             </BCTypography>
           </BCBox>
         </div>
@@ -424,7 +399,7 @@ export const AddEditChargingSite = () => {
             rowData={rowData}
             onAddRows={onAddRows}
             gridOptions={gridOptions}
-            loading={optionsLoading || sitesLoading}
+            loading={optionsLoading}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             onFirstDataRendered={onFirstDataRendered}
@@ -442,12 +417,11 @@ export const AddEditChargingSite = () => {
           open={isImportDialogOpen}
           close={() => {
             setIsImportDialogOpen(false)
-            refetch()
           }}
-          complianceReportId={complianceReportId}
+          organizationId={organizationId}
           isOverwrite={isOverwrite}
-          importHook={useImportFinalSupplyEquipment}
-          getJobStatusHook={useGetFinalSupplyEquipmentImportJobStatus}
+          importHook={useImportChargingSites}
+          getJobStatusHook={useGetChargingSitesImportJobStatus}
         />
       </Grid2>
     )

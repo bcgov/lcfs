@@ -1,33 +1,37 @@
 import math
-from typing import List, Optional
-from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
-from lcfs.db.models.compliance.ChargingSite import ChargingSite
-from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
-from lcfs.db.models.compliance.EndUserType import EndUserType
-from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.services.s3.schema import FileResponseSchema
+from typing import List
+import structlog
+from fastapi import Depends, HTTPException, Request, status
+
+from lcfs.db.models.compliance import (
+    ChargingEquipmentStatus,
+    ChargingSite,
+    ChargingSiteStatus,
+)
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
     validate_pagination,
+    get_field_for_filter,
+    apply_filter_conditions,
 )
+from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.api.charging_site.schema import (
-    BulkEquipmentStatusUpdateSchema,
-    ChargingEquipmentForSiteSchema,
-    ChargingEquipmentPaginatedSchema,
     ChargingEquipmentStatusSchema,
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
-    ChargingSiteStatusSchema,
-    ChargingSiteWithAttachmentsSchema,
+    ChargingSiteStatusEnum,
     ChargingSitesSchema,
+    ChargingSiteStatusSchema,
+    ChargingEquipmentForSiteSchema,
+    BulkEquipmentStatusUpdateSchema,
+    ChargingEquipmentPaginatedSchema,
 )
+from lcfs.db.models.user import UserProfile
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
-import structlog
-from fastapi import Depends, HTTPException, Request
-
-from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 
 
 logger = structlog.get_logger(__name__)
@@ -36,7 +40,7 @@ logger = structlog.get_logger(__name__)
 class ChargingSiteService:
     def __init__(
         self,
-        repo: ChargingSiteRepository = Depends(),
+        repo: ChargingSiteRepository = Depends(ChargingSiteRepository),
         request: Request = None,
     ):
         self.repo = repo
@@ -56,18 +60,241 @@ class ChargingSiteService:
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
+    async def get_charging_equipment_statuses(
+        self,
+    ) -> List[ChargingEquipmentStatusSchema]:
+        """
+        Get all available charging equipment statuses
+        """
+        statuses = await self.repo.get_charging_equipment_statuses()
+        return [
+            ChargingEquipmentStatusSchema(
+                charging_equipment_status_id=status.charging_equipment_status_id,
+                status=status.status,
+                description=status.description,
+            )
+            for status in statuses
+        ]
+
+    @service_handler
+    async def get_charging_site_statuses(self) -> List[ChargingSiteStatusSchema]:
+        """
+        Get all available charging site statuses
+        """
+        statuses = await self.repo.get_charging_site_statuses()
+        return [
+            ChargingSiteStatusSchema(
+                charging_site_status_id=status.charging_site_status_id,
+                status=status.status,
+                description=status.description,
+            )
+            for status in statuses
+        ]
+
+    @service_handler
+    async def get_charging_site_by_id(self, site_id: int):
+        """
+        Service method to get a charging site by ID
+        """
+        logger.info("Getting charging site by ID")
+        charging_site = await self.repo.get_charging_site_by_id(site_id)
+
+        if not charging_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {site_id} not found",
+            )
+        organization_id = charging_site.organization_id
+        user_organization_id = (
+            self.request.user.organization.organization_id
+            if self.request.user.organization
+            else None
+        )
+        if (
+            not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+            and organization_id != user_organization_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this site.",
+            )
+
+        return ChargingSiteSchema.model_validate(charging_site)
+
+    @service_handler
+    async def get_charging_site_equipment_paginated(
+        self, site_id: int, pagination: PaginationRequestSchema
+    ) -> ChargingEquipmentPaginatedSchema:
+        """
+        Get paginated charging equipment for a specific site
+        """
+        pagination = validate_pagination(pagination)
+
+        equipment_records, total_count = (
+            await self.repo.get_equipment_for_charging_site_paginated(
+                site_id, pagination
+            )
+        )
+
+        # Convert equipment records to schema
+        equipment_list = [
+            ChargingEquipmentForSiteSchema.model_validate(equipment)
+            for equipment in equipment_records
+        ]
+
+        return ChargingEquipmentPaginatedSchema(
+            equipments=equipment_list,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+        )
+
+    @service_handler
+    async def bulk_update_equipment_status(
+        self,
+        bulk_update: BulkEquipmentStatusUpdateSchema,
+        charging_site_id: int,
+        user: UserProfile,
+    ) -> List[ChargingEquipmentForSiteSchema]:
+        """
+        Bulk update status for charging equipment records and handle charging site status changes
+        """
+        # Get all equipment statuses
+        statuses = await self.repo.get_charging_equipment_statuses()
+        status_ids = self._get_equipment_status_ids(statuses)
+        # Define valid status transitions: new_status -> (from_status, error_message)
+        valid_transitions = {
+            "Draft": ["Submitted"],  # Return to Draft (from Submitted)
+            "Submitted": [
+                "Draft",
+                "Validated",
+            ],  # Submit (from Draft) or Undo Validation (from Validated)
+            "Validated": ["Submitted"],  # Validate (from Submitted)
+            "Decommissioned": ["Validated"],  # Decommission (from Validated)
+        }
+        # Validate the new status
+        if bulk_update.new_status not in valid_transitions:
+            raise ValueError(f"Invalid status: {bulk_update.new_status}")
+
+        allowed_source_statuses = valid_transitions[bulk_update.new_status]
+        source_status_ids = [status_ids[status] for status in allowed_source_statuses]
+
+        # Perform the bulk update
+        updated_ids = await self.repo.bulk_update_equipment_status(
+            bulk_update.equipment_ids,
+            status_ids[bulk_update.new_status],  # new status id
+            source_status_ids,  # from status id
+        )
+        # Validate that all equipment was updated
+        if set(updated_ids) != set(bulk_update.equipment_ids):
+            # Create a more helpful error message
+            allowed_statuses_str = " or ".join(allowed_source_statuses)
+            raise ValueError(
+                f"Equipment can only be changed to {bulk_update.new_status} "
+                f"from {allowed_statuses_str} status. Some equipment may not "
+                f"be in the required status."
+            )
+
+        # Update charging site status if equipment status is Submitted or Validated
+        if bulk_update.new_status in ["Submitted", "Validated"]:
+            # Get charging site statuses and find the corresponding status ID
+            site_statuses = await self.repo.get_charging_site_statuses()
+            site_status_ids = self._get_site_status_ids(site_statuses)
+
+            await self.repo.update_charging_site_status(
+                charging_site_id, site_status_ids[bulk_update.new_status]
+            )
+        return True
+
+    @service_handler
     async def get_charging_sites_paginated(
         self, pagination: PaginationRequestSchema, organization_id: int
     ):
-        # TODO: Implement pagination, filter and sorting logics
-        logger.info("Getting charging sites")
+        """
+        Paginated list of charging sites for a specific organization.
+        """
+        conditions = []
+        pagination = validate_pagination(pagination)
+
+        # Apply filters
+        for f in pagination.sort_orders:
+            # normalize fields to snake_case handled by schema
+            pass
+
+        if pagination.filters:
+            for f in pagination.filters:
+                field = get_field_for_filter(ChargingSite, f.field)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field,
+                        f.filter,
+                        f.type,
+                        f.filter_type,
+                    )
+                    if condition is not None:
+                        conditions.append(condition)
+
+        offset = (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        rows, total = await self.repo.get_charging_sites_paginated(
+            offset, limit, conditions, pagination.sort_orders, organization_id
+        )
         return ChargingSitesSchema(
-            charging_sites=[],
+            charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
             pagination=PaginationResponseSchema(
-                page=1,
-                total_pages=1,
-                size=len([]),
-                total=len([]),
+                page=pagination.page,
+                size=pagination.size,
+                total=total,
+                total_pages=(
+                    math.ceil(total / pagination.size) if pagination.size else 1
+                ),
+            ),
+        )
+
+    @service_handler
+    async def get_all_charging_sites_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> ChargingSitesSchema:
+        """
+        Paginated list of all charging sites.
+        """
+        conditions = []
+        pagination = validate_pagination(pagination)
+
+        if pagination.filters:
+            for f in pagination.filters:
+                field = get_field_for_filter(ChargingSite, f.field)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field,
+                        f.filter,
+                        f.type,
+                        f.filter_type,
+                    )
+                    if condition is not None:
+                        conditions.append(condition)
+        conditions.append(
+            ~ChargingSite.status.has(
+                ChargingSiteStatus.status == ChargingSiteStatusEnum.DRAFT
+            )
+        )
+        offset = (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        rows, total = await self.repo.get_all_charging_sites_paginated(
+            offset, limit, conditions, pagination.sort_orders
+        )
+        return ChargingSitesSchema(
+            charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
+            pagination=PaginationResponseSchema(
+                page=pagination.page,
+                size=pagination.size,
+                total=total,
+                total_pages=(
+                    math.ceil(total / pagination.size) if pagination.size else 1
+                ),
             ),
         )
 
@@ -120,9 +347,7 @@ class ChargingSiteService:
         Service method to create a new charging site
         """
         logger.info("Creating charging site")
-        status = await self.repo.get_charging_site_status_by_name(
-            charging_site_data.status or ""
-        )
+        status = await self.repo.get_charging_site_status_by_name("Draft")
         try:
             intended_users = []
             if (
@@ -138,11 +363,19 @@ class ChargingSiteService:
             charging_site = await self.repo.create_charging_site(
                 ChargingSite(
                     **charging_site_data.model_dump(
-                        exclude={"status_id", "status", "deleted", "intended_users"}
+                        exclude={
+                            "status_id",
+                            "current_status",
+                            "deleted",
+                            "intended_users",
+                        }
                     ),
                     status=status,
                     intended_users=intended_users,
                 )
+            )
+            charging_site = await self.repo.get_charging_site_by_id(
+                charging_site.charging_site_id
             )
             return ChargingSiteSchema.model_validate(charging_site)
         except Exception as e:
@@ -160,8 +393,14 @@ class ChargingSiteService:
         )
         if not existing_charging_site:
             raise HTTPException(status_code=404, detail="Charging site not found")
+        if existing_charging_site.status.status != "Draft":
+            raise HTTPException(
+                status_code=400, detail="Charging site is not in draft state"
+            )
         status = await self.repo.get_charging_site_status_by_name(
-            charging_site_data.status.status if charging_site_data.status else ""
+            charging_site_data.current_status
+            if charging_site_data.current_status
+            else "Draft"
         )
 
         try:
@@ -225,106 +464,16 @@ class ChargingSiteService:
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
-    async def get_charging_site_with_attachments(
-        self, site_id: int
-    ) -> Optional[ChargingSiteWithAttachmentsSchema]:
+    async def delete_all_charging_sites(self, organization_id: int):
         """
-        Get a specific charging site with its attachments
+        Service method to delete all charging sites for an organization
         """
-        site = await self.repo.get_charging_site_by_id(site_id)
-        if not site:
-            return None
-
-        return ChargingSiteSchema.model_validate(site)
-
-    @service_handler
-    async def get_charging_equipment_statuses(
-        self,
-    ) -> List[ChargingEquipmentStatusSchema]:
-        """
-        Get all available charging equipment statuses
-        """
-        statuses = await self.repo.get_charging_equipment_statuses()
-        return [
-            ChargingEquipmentStatusSchema(
-                charging_equipment_status_id=status.charging_equipment_status_id,
-                status=status.status,
-                description=status.description,
-            )
-            for status in statuses
-        ]
-
-    @service_handler
-    async def get_charging_site_statuses(self) -> List[ChargingSiteStatusSchema]:
-        """
-        Get all available charging site statuses
-        """
-        statuses = await self.repo.get_charging_site_statuses()
-        return [
-            ChargingSiteStatusSchema(
-                charging_site_status_id=status.charging_site_status_id,
-                status=status.status,
-                description=status.description,
-            )
-            for status in statuses
-        ]
-
-    @service_handler
-    async def bulk_update_equipment_status(
-        self,
-        bulk_update: BulkEquipmentStatusUpdateSchema,
-        charging_site_id: int,
-        user: UserProfile,
-    ) -> List[ChargingEquipmentForSiteSchema]:
-        """
-        Bulk update status for charging equipment records and handle charging site status changes
-        """
-        # Get all equipment statuses
-        statuses = await self.repo.get_charging_equipment_statuses()
-        status_ids = self._get_equipment_status_ids(statuses)
-        # Define valid status transitions: new_status -> (from_status, error_message)
-        valid_transitions = {
-            "Draft": ["Submitted"],  # Return to Draft (from Submitted)
-            "Submitted": [
-                "Draft",
-                "Validated",
-            ],  # Submit (from Draft) or Undo Validation (from Validated)
-            "Validated": ["Submitted"],  # Validate (from Submitted)
-            "Decommissioned": ["Validated"],  # Decommission (from Validated)
-        }
-        # Validate the new status
-        if bulk_update.new_status not in valid_transitions:
-            raise ValueError(f"Invalid status: {bulk_update.new_status}")
-
-        allowed_source_statuses = valid_transitions[bulk_update.new_status]
-        source_status_ids = [status_ids[status] for status in allowed_source_statuses]
-
-        # Perform the bulk update
-        updated_ids = await self.repo.bulk_update_equipment_status(
-            bulk_update.equipment_ids,
-            status_ids[bulk_update.new_status],  # new status id
-            source_status_ids,  # from status id
-        )
-        # Validate that all equipment was updated
-        if set(updated_ids) != set(bulk_update.equipment_ids):
-            # Create a more helpful error message
-            allowed_statuses_str = " or ".join(allowed_source_statuses)
-            raise ValueError(
-                f"Equipment can only be changed to {bulk_update.new_status} "
-                f"from {allowed_statuses_str} status. Some equipment may not "
-                f"be in the required status."
-            )
-
-        # Update charging site status if equipment status is Submitted or Validated
-        if bulk_update.new_status in ["Submitted", "Validated"]:
-            # Get charging site statuses and find the corresponding status ID
-            site_statuses = await self.repo.get_charging_site_statuses()
-            site_status_ids = self._get_site_status_ids(site_statuses)
-
-            await self.repo.update_charging_site_status(
-                charging_site_id, site_status_ids[bulk_update.new_status]
-            )
-        return True
+        logger.info("Deleting all charging sites for organization")
+        try:
+            await self.repo.delete_all_charging_sites_by_organization(organization_id)
+        except Exception as e:
+            logger.error("Error deleting all charging sites", error=str(e))
+            raise HTTPException(status_code=500, detail="Internal Server Error")
 
     def _get_equipment_status_ids(
         self, statuses: List[ChargingEquipmentStatus]
@@ -341,34 +490,3 @@ class ChargingSiteService:
         Get site status IDs mapped by status name
         """
         return {status.status: status.charging_site_status_id for status in statuses}
-
-    @service_handler
-    async def get_charging_site_equipment_paginated(
-        self, site_id: int, pagination: PaginationRequestSchema
-    ) -> ChargingEquipmentPaginatedSchema:
-        """
-        Get paginated charging equipment for a specific site
-        """
-        pagination = validate_pagination(pagination)
-
-        equipment_records, total_count = (
-            await self.repo.get_equipment_for_charging_site_paginated(
-                site_id, pagination
-            )
-        )
-
-        # Convert equipment records to schema
-        equipment_list = [
-            ChargingEquipmentForSiteSchema.model_validate(equipment)
-            for equipment in equipment_records
-        ]
-
-        return ChargingEquipmentPaginatedSchema(
-            equipment=equipment_list,
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
-            ),
-        )

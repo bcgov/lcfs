@@ -767,3 +767,92 @@ export const LastCommentRenderer = (props) => {
     </Link>
   )
 }
+
+export const createStatusRenderer = (colorMap, options = {}) => {
+  const {
+    statusField = 'status',
+    defaultColor = 'info',
+    variant = 'contained',
+    size = 'lg',
+    minWidth = '120px',
+    fontSize = '0.875rem',
+    padding = '0.4em 0.6em',
+    fontWeight = 'regular',
+    textTransform = null,
+    replaceUnderscores = false,
+    margin = 1,
+    enableLink = false,
+    urlGenerator = null
+  } = options
+
+  return (props) => {
+    const { data, node } = props
+    const location = useLocation()
+
+    // Get the status value from the specified field path
+    const statusValue = statusField.includes('.')
+      ? statusField.split('.').reduce((obj, key) => obj?.[key], data)
+      : data[statusField]
+
+    // Get the display text
+    let displayText = statusValue
+    if (replaceUnderscores && typeof displayText === 'string') {
+      displayText = displayText.replaceAll('_', ' ')
+    }
+
+    const badgeColor = colorMap[statusValue] || defaultColor
+
+    const component = (
+      <BCBox
+        m={margin}
+        sx={{
+          display: 'flex',
+          justifyContent: 'center'
+        }}
+      >
+        <BCBadge
+          badgeContent={displayText}
+          color={badgeColor}
+          variant={variant}
+          size={size}
+          sx={{
+            '& .MuiBadge-badge': {
+              minWidth,
+              fontWeight,
+              fontSize,
+              padding,
+              ...(textTransform && { textTransform })
+            }
+          }}
+        />
+      </BCBox>
+    )
+
+    // If link is enabled, wrap in Link
+    if (enableLink) {
+      const targetUrl = urlGenerator
+        ? urlGenerator({ data, node })
+        : `${location.pathname}/${node?.id}`
+
+      return (
+        <Link to={targetUrl} style={{ color: '#000' }}>
+          {component}
+        </Link>
+      )
+    }
+
+    return component
+  }
+}
+
+export const ChargingSiteStatusRenderer = createStatusRenderer(
+  {
+    Draft: 'info',
+    Submitted: 'warning',
+    Validated: 'success',
+    Updated: 'info'
+  },
+  {
+    statusField: 'status.status'
+  }
+)

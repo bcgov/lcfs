@@ -10,13 +10,17 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
+  ChargingSiteStatusRenderer,
   CommonArrayRenderer,
   MultiSelectRenderer
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
-import { useChargingEquipmentStatuses } from '@/hooks/useChargingSite'
+import {
+  useChargingEquipmentStatuses,
+  useChargingSiteStatuses
+} from '@/hooks/useChargingSite'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -262,7 +266,8 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
     {
       headerName: '',
       field: 'select',
-      checkboxSelection: true,
+      checkboxSelection: (params) =>
+        params.data?.status?.status !== 'Submitted',
       headerCheckboxSelection: true,
       width: 50,
       pinned: 'left',
@@ -383,10 +388,93 @@ export const chargingEquipmentColDefs = (t, currentUser) => {
 }
 
 export const defaultColDef = {
-  editable: true,
+  editable: false,
   resizable: true,
   filter: false,
-  floatingFilter: false,
+  floatingFilter: true,
   sortable: false,
   singleClickEdit: true
+}
+
+// Column defs for IDIR Charging Sites viewer grid
+export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
+  {
+    field: 'status',
+    minWidth: 130,
+    filter: true,
+    sortable: true,
+    headerName: i18n.t('chargingSite:columnLabels.status'),
+    valueGetter: (params) => params.data?.status?.status || '',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      suppressFilterButton: true,
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useChargingSiteStatuses
+    },
+    cellRenderer: ChargingSiteStatusRenderer
+  },
+  {
+    field: 'organization',
+    headerName: i18n.t('chargingSite:columnLabels.organization'),
+    hide: !isIDIR,
+    minWidth: 310,
+    filter: true,
+    sortable: true,
+    valueGetter: (params) =>
+      params.data?.organization?.name ||
+      orgIdToName[params.data?.organizationId] ||
+      ''
+  },
+  {
+    field: 'siteName',
+    filter: true,
+    sortable: true,
+    minWidth: 310,
+    headerName: i18n.t('chargingSite:columnLabels.siteName')
+  },
+  {
+    field: 'siteCode',
+    minWidth: 140,
+    headerName: i18n.t('chargingSite:columnLabels.siteNumber')
+  },
+  {
+    field: 'streetAddress',
+    minWidth: 260,
+    headerName: i18n.t('chargingSite:columnLabels.streetAddress')
+  },
+  {
+    field: 'city',
+    filter: true,
+    sortable: true,
+    minWidth: 220,
+    headerName: i18n.t('chargingSite:columnLabels.city')
+  },
+  {
+    field: 'postalCode',
+    minWidth: 135,
+    headerName: i18n.t('chargingSite:columnLabels.postalCode')
+  },
+  {
+    field: 'intendedUsers',
+    headerName: i18n.t('chargingSite:columnLabels.intendedUsers'),
+    minWidth: 315,
+    valueGetter: (params) =>
+      params.data?.intendedUsers?.map((u) => u.typeName) || [],
+    cellRenderer: CommonArrayRenderer
+  },
+  {
+    field: 'notes',
+    minWidth: 500,
+    headerName: i18n.t('chargingSite:columnLabels.notes')
+  }
+]
+
+export const indexDefaultColDef = {
+  editable: false,
+  resizable: true,
+  filter: false,
+  floatingFilter: true,
+  suppressFloatingFilterButton: true,
+  sortable: false
 }

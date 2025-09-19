@@ -10,6 +10,7 @@
   "backBtn": "Back",
   "cancelBtn": "Cancel",
   "saveBtn": "Save",
+  "deleteBtn": "Delete",
   "saveReturnBtn": "Save & return",
   "downloadTemplate": "Download template",
   "uploadFile": "Upload file",

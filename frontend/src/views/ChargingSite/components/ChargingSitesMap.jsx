@@ -22,6 +22,8 @@ import {
 import BCTypography from '@/components/BCTypography'
 import { fixLeafletIcons, markerIcons } from './utils'
 import 'leaflet/dist/leaflet.css'
+import { useTranslation } from 'react-i18next'
+import colors from '@/themes/base/colors'
 
 // Fix Leaflet icon issue
 fixLeafletIcons()
@@ -138,6 +140,7 @@ const MapBoundsHandler = ({ sites }) => {
 
 // Legend component
 const ChargingSitesLegend = ({ sites, isFullscreen }) => {
+  const { t } = useTranslation(['chargingSite'])
   const validSites = sites.filter(
     (site) =>
       site.latitude != null &&
@@ -168,11 +171,11 @@ const ChargingSitesLegend = ({ sites, isFullscreen }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
-        return '#4caf50' // Green
+        return colors.badgeColors.success.background // Green
       case 'draft':
-        return '#ff9800' // Orange
+        return colors.badgeColors.info.background // Blue
       case 'submitted':
-        return '#2196f3' // Blue
+        return colors.badgeColors.warning.background // Orange
       case 'decommissioned':
         return '#f44336' // Red
       default:
@@ -265,6 +268,7 @@ const ChargingSitesLegend = ({ sites, isFullscreen }) => {
 
 // Individual marker component
 const ChargingSiteMarker = ({ site, isFullscreen }) => {
+  const { t } = useTranslation('chargingSite')
   // Skip invalid coordinates
   if (
     site.latitude == null ||
@@ -283,11 +287,11 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   const getMarkerIcon = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
-        return markerIcons.default // Blue
+        return markerIcons.green
       case 'draft':
-        return markerIcons.orange
+        return markerIcons.default
       case 'submitted':
-        return markerIcons.default // Blue
+        return markerIcons.orange
       case 'rejected':
         return markerIcons.red
       default:
@@ -298,11 +302,11 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
-        return '#4caf50'
+        return colors.badgeColors.success.background
       case 'draft':
-        return '#ff9800'
+        return colors.badgeColors.info.background
       case 'submitted':
-        return '#2196f3'
+        return colors.badgeColors.warning.background
       case 'rejected':
         return '#f44336'
       default:
@@ -350,28 +354,28 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
 
           {/* Organization */}
           <BCTypography variant="caption" component="div" sx={{ mb: 1 }}>
-            <strong>Organization:</strong>{' '}
+            <strong>{t('cardLabels.organization')}:</strong>{' '}
             {site.organization?.name || 'Unknown'}
           </BCTypography>
 
           {/* Site Code */}
           {site.siteCode && (
             <BCTypography variant="caption" component="div" sx={{ mb: 1 }}>
-              <strong>Site Code:</strong> {site.siteCode}
+              <strong>{t('cardLabels.siteNum')}:</strong> {site.siteCode}
             </BCTypography>
           )}
 
           {/* Address */}
           <BCTypography variant="caption" component="div" sx={{ mb: 1 }}>
-            <strong>Address:</strong> {site.streetAddress}
+            <strong>{t('cardLabels.siteAddr')}:</strong> {site.streetAddress}
             {site.city && `, ${site.city}`}
             {site.postalCode && ` ${site.postalCode}`}
           </BCTypography>
 
           {/* Coordinates */}
           <BCTypography variant="caption" component="div" sx={{ mb: 2 }}>
-            <strong>Coordinates:</strong> {site.latitude?.toFixed(6)},{' '}
-            {site.longitude?.toFixed(6)}
+            <strong>{t('cardLabels.coordinates')}:</strong>{' '}
+            {site.latitude?.toFixed(6)}, {site.longitude?.toFixed(6)}
           </BCTypography>
 
           {/* Intended Users */}
@@ -383,7 +387,7 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
                 component="div"
                 sx={{ mb: 1 }}
               >
-                Intended Users:
+                {t('cardLabels.intendedUserTypes')}:
               </BCTypography>
               {site.intendedUsers.map((user, index) => (
                 <BCTypography
@@ -398,13 +402,6 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
             </>
           )}
 
-          {/* Documents Count */}
-          {site.documents && site.documents.length > 0 && (
-            <BCTypography variant="caption" component="div" sx={{ mt: 2 }}>
-              <strong>Documents:</strong> {site.documents.length} file(s)
-            </BCTypography>
-          )}
-
           {/* Notes */}
           {site.notes && (
             <BCTypography
@@ -412,7 +409,7 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
               component="div"
               sx={{ mt: 2, fontStyle: 'italic' }}
             >
-              <strong>Notes:</strong> {site.notes}
+              <strong>{t('cardLabels.notes')}:</strong> {site.notes}
             </BCTypography>
           )}
 
@@ -422,10 +419,12 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
             component="div"
             sx={{ mt: 2, color: '#666' }}
           >
-            Created: {new Date(site.createDate).toLocaleDateString()} by{' '}
+            {t('cardLabels.created')}:{' '}
+            {new Date(site.createDate).toLocaleDateString()} by{' '}
             {site.createUser}
             <br />
-            Updated: {new Date(site.updateDate).toLocaleDateString()} by{' '}
+            {t('cardLabels.updated')}:{' '}
+            {new Date(site.updateDate).toLocaleDateString()} by{' '}
             {site.updateUser}
           </BCTypography>
         </div>
@@ -502,6 +501,9 @@ const ChargingSitesMap = ({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isFullscreen])
 
+  if (sites && sites.length < 1) {
+    return <></>
+  }
   return (
     <>
       {/* Normal view */}

@@ -12,7 +12,6 @@ import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
 import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
 import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
 import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
-import { Outlet } from 'react-router-dom'
 import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 
 export const reportRoutes = [
@@ -22,24 +21,24 @@ export const reportRoutes = [
     handle: { title: 'Compliance reporting' },
     children: [
       {
-        path: 'manage-charging-sites',
+        path: 'charging-sites',
         element: <ChargingSitesList />,
-        handle: { title: 'Manage charging sites' },
+        handle: { title: 'Charging sites' },
         children: [
-          {
-            path: ':chargingSiteId',
-            element: <ViewChargingSite />,
-            handle: { title: 'View charging site' }
-          },
           {
             path: 'add',
             element: <AddEditChargingSite mode="add" />,
-            handle: { title: 'Add charging sites' }
+            handle: { title: 'Add charging site' }
           },
           {
-            path: ':chargingSiteId/edit',
+            path: ':siteId/edit',
             element: <AddEditChargingSite mode="edit" />,
             handle: { title: 'Edit charging site' }
+          },
+          {
+            path: ':siteId',
+            element: <ViewChargingSite />,
+            handle: { title: 'View charging site' }
           }
         ]
       },

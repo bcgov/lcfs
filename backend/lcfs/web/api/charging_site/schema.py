@@ -1,16 +1,15 @@
 from datetime import datetime
-from enum import Enum
+from typing import List, Optional
+from pydantic import Field
 from lcfs.services.s3.schema import FileResponseSchema
+from enum import Enum
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     PaginationResponseSchema,
     SortOrder,
 )
-from typing import List, Optional
-
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
-from pydantic import Field
 
 
 class OrganizationSchema(BaseSchema):
@@ -27,8 +26,9 @@ class ChargingSiteSchema(BaseSchema):
     charging_site_id: int
     organization_id: int
     organization: Optional[OrganizationSchema] = None
-    status: Optional[ChargingSiteStatusSchema] = None
     status_id: int
+    status: Optional[ChargingSiteStatusSchema] = None
+
     version: int
     site_code: str
     site_name: str
@@ -37,8 +37,8 @@ class ChargingSiteSchema(BaseSchema):
     postal_code: str
     latitude: float
     longitude: float
-    intended_users: List[EndUserTypeSchema] = []
-    documents: Optional[List[FileResponseSchema]] = []
+    intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
+    documents: Optional[List[FileResponseSchema]] = Field(default_factory=list)
     notes: Optional[str] = None
     create_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
@@ -51,7 +51,7 @@ class DeleteChargingSiteResponseSchema(BaseSchema):
 
 
 class ChargingSitesSchema(BaseSchema):
-    charging_sites: Optional[list[ChargingSiteSchema]] = []
+    charging_sites: List[ChargingSiteSchema] = Field(default_factory=list)
     pagination: PaginationResponseSchema
 
 
@@ -67,8 +67,7 @@ class ChargingSiteCreateSchema(BaseSchema):
     postal_code: str
     latitude: float
     longitude: float
-    intended_users: List[EndUserTypeSchema] = []
-
+    intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
     notes: Optional[str] = None
     deleted: Optional[bool] = None
 
@@ -92,12 +91,6 @@ class ChargingSiteBaseSchema(BaseSchema):
     organization_name: str
     version: int
     intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
-
-
-class ChargingSiteStatusSchema(BaseSchema):
-    charging_site_status_id: int
-    status: str
-    description: Optional[str] = None
 
 
 class ChargingEquipmentStatusSchema(BaseSchema):
@@ -144,18 +137,9 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
         return super().model_validate(obj, **kwargs)
 
 
-class ChargingSiteWithAttachmentsSchema(ChargingSiteBaseSchema):
-    attachments: List[FileResponseSchema] = Field(default_factory=list)
-
-
 class BulkEquipmentStatusUpdateSchema(BaseSchema):
     equipment_ids: List[int]
     new_status: str
-
-
-class ChargingEquipmentPaginatedSchema(BaseSchema):
-    equipment: List[ChargingEquipmentForSiteSchema]
-    pagination: PaginationResponseSchema
 
 
 class ChargingSiteStatusEnum:
@@ -171,3 +155,8 @@ class EquipmentStatusEnum:
     VALIDATED = "Validated"
     UPDATED = "Updated"
     DECOMMISSIONED = "Decommissioned"
+
+
+class ChargingEquipmentPaginatedSchema(BaseSchema):
+    equipments: List[ChargingEquipmentForSiteSchema]
+    pagination: PaginationResponseSchema

@@ -33,6 +33,7 @@ from lcfs.web.api import (
     credit_ledger,
     forms,
     geocoder,
+    charging_site,
 )
 
 api_router = APIRouter()

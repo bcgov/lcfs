@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ComplianceReports } from './ComplianceReports'
 import { ChargingEquipment } from '@/views/ChargingEquipment'
 import { FloatingAlert } from '@/components/BCAlert'
@@ -25,45 +26,31 @@ export function ReportsMenu() {
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
   const location = useLocation()
-  const { hasRoles } = useCurrentUser()
+  const { hasAnyRole } = useCurrentUser()
+  const isIDIR = hasAnyRole(...govRoles)
 
-  // Only Supplier users should see equipment management tabs
-  const showSupplierTabs = hasRoles(roles.supplier)
-
-  const paths = useMemo(() => {
-    const base = [ROUTES.REPORTS.LIST]
-    if (showSupplierTabs) {
-      base.push(`${ROUTES.REPORTS.LIST}/manage-charging-sites`)
-      base.push(`${ROUTES.REPORTS.LIST}/manage-fse`)
-    }
-    return base
-  }, [showSupplierTabs])
+  const paths = useMemo(
+    () => [
+      ROUTES.REPORTS.LIST,
+      ROUTES.REPORTS.CHARGING_SITE.INDEX,
+      ROUTES.REPORTS.MANAGE_FSE
+    ],
+    []
+  )
 
   const tabIndex = useMemo(() => {
-    // Check for charging sites management routes
-    if (
-      showSupplierTabs &&
-      location.pathname.includes('/manage-charging-sites')
-    ) {
-      return 1
-    }
+    // Map paths to the three tabs
+    if (location.pathname.includes('/charging-sites')) return 1
+    if (location.pathname.includes('/fse')) return 2
 
-    // Check for FSE management routes
-    if (showSupplierTabs && location.pathname.includes('/manage-fse')) {
-      return 2
-    }
-
-    // Check if we're on the exact reports list path or index route
     if (
       location.pathname === ROUTES.REPORTS.LIST ||
       location.pathname === `${ROUTES.REPORTS.LIST}/`
-    ) {
+    )
       return 0
-    }
 
-    // Default to compliance reports tab
     return 0
-  }, [location.pathname, showSupplierTabs])
+  }, [isIDIR, location.pathname])
 
   useEffect(() => {
     function handleTabsOrientation() {
@@ -82,38 +69,18 @@ export function ReportsMenu() {
 
   // Determine what content to render based on current route
   const renderContent = () => {
-    if (location.pathname.includes('/manage-charging-sites')) {
-      if (!showSupplierTabs) {
-        navigate(ROUTES.REPORTS.LIST, { replace: true })
-        return <ComplianceReports />
-      }
+    if (location.pathname.includes('/charging-sites')) {
       return (
-        <Role roles={[roles.supplier]}>
-          <Outlet alertRef={alertRef} />
+        <Role roles={[...govRoles, roles.supplier]}>
+          <Outlet context={{ alertRef }} />
         </Role>
       )
     }
 
-    if (location.pathname.includes('/manage-fse')) {
-      // Check if we're on a nested route (new or edit)
-      if (
-        location.pathname.includes('/new') ||
-        location.pathname.includes('/edit')
-      ) {
-        if (!showSupplierTabs) {
-          navigate(ROUTES.REPORTS.LIST, { replace: true })
-          return <ComplianceReports />
-        }
-        return (
-          <Role roles={[roles.supplier]}>
-            <Outlet alertRef={alertRef} />
-          </Role>
-        )
-      }
-      // Otherwise show the ChargingEquipment list
+    if (location.pathname.includes('/fse')) {
       return (
-        <Role roles={[roles.supplier]}>
-          <ChargingEquipment alertRef={alertRef} />
+        <Role roles={[...govRoles, roles.supplier]}>
+          <Outlet context={{ alertRef }} />
         </Role>
       )
     }
@@ -140,10 +107,14 @@ export function ReportsMenu() {
             wrapped
             {...a11yProps(0)}
           />
-          {showSupplierTabs && (
+          {isIDIR ? (
+            <Tab label={t('tabs.chargingSites')} {...a11yProps(1)} />
+          ) : (
             <Tab label={t('tabs.manageChargingSites')} {...a11yProps(1)} />
           )}
-          {showSupplierTabs && (
+          {isIDIR ? (
+            <Tab label={t('tabs.fseIndex')} {...a11yProps(2)} />
+          ) : (
             <Tab label={t('tabs.manageFSE')} {...a11yProps(2)} />
           )}
         </Tabs>

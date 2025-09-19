@@ -15,12 +15,12 @@ import { Grid2 } from '@mui/material'
 export const ViewChargingSite = () => {
   const { t } = useTranslation('chargingSite')
   const alertRef = useRef(null)
-  const { chargingSiteId } = useParams()
+  const { siteId } = useParams()
   const {
     data: chargingSiteData,
     isLoading,
     isError
-  } = useGetChargingSiteById(chargingSiteId)
+  } = useGetChargingSiteById(siteId)
 
   if (isLoading) {
     return <Loading />
@@ -39,7 +39,7 @@ export const ViewChargingSite = () => {
       <BCTypography variant="h5" color="primary">
         {t('viewTitle')}
       </BCTypography>
-      <BCBox sx={{ my: 3 }}>
+      <BCBox sx={{ mt: 4, mb: -1 }}>
         <Grid2 container spacing={1}>
           {/* Card Section - 7 parts (58.33%) */}
           <Grid2 size={{ xs: 12, md: 7 }}>
