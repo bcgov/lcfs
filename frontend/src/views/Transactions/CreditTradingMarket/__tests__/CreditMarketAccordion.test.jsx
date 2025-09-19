@@ -9,23 +9,38 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, fallback) => {
       const translations = {
-        'creditMarket:informationBulletin': 'Information Bulletin RLCF-013 (Credit trading market)',
+        'creditMarket:informationBulletin':
+          'Information Bulletin RLCF-013 (Credit trading market)',
         'creditMarket:background': 'Background',
-        'creditMarket:backgroundText1': 'Beginning in 2024, to participate in the credit market...',
-        'creditMarket:backgroundText2': 'Compliance with the low carbon fuel requirements...',
-        'creditMarket:backgroundText3': 'The Low Carbon Fuel Standard has historically...',
-        'creditMarket:complianceUnitsIssued': 'Compliance units issued by the director',
-        'creditMarket:complianceUnitsText': 'Before credits can be transferred...',
+        'creditMarket:backgroundText1':
+          'Beginning in 2024, to participate in the credit market...',
+        'creditMarket:backgroundText2':
+          'Compliance with the low carbon fuel requirements...',
+        'creditMarket:backgroundText3':
+          'The Low Carbon Fuel Standard has historically...',
+        'creditMarket:creditsIssuedByDirector':
+          'Credits issued by the director',
+        'creditMarket:creditsIssuedText':
+          'Before credits can be transferred...',
+        'creditMarket:allocationAgreements': 'Allocation agreements',
+        'creditMarket:allocationAgreementsText':
+          'Allocation agreements allow fuel suppliers...',
         'creditMarket:fairMarketValue': 'Fair market value',
-        'creditMarket:fairMarketValueText1': 'All transfers must include a "fair market value"...',
-        'creditMarket:fairMarketValueText2': 'The "fair market value" is generally accepted...',
+        'creditMarket:fairMarketValueText1':
+          'All transfers must include a "fair market value"...',
+        'creditMarket:fairMarketValueText2':
+          'The "fair market value" is generally accepted...',
         'creditMarket:approvalOfTransfers': 'Approval of transfers',
-        'creditMarket:approvalOfTransfersText': 'All transfers must be approved by the director...',
+        'creditMarket:approvalOfTransfersText':
+          'All transfers must be approved by the director...',
         'creditMarket:applicationOfCredits': 'Application of credits',
-        'creditMarket:applicationOfCreditsText': 'Only those credits held on the reporting deadline...',
+        'creditMarket:applicationOfCreditsText':
+          'Only those credits held on the reporting deadline...',
         'creditMarket:needMoreInformation': 'Need more information?',
-        'creditMarket:needMoreInformationText': 'Please visit the Low Carbon Fuels website...',
-        'creditMarket:legalDisclaimer': 'This information is for your convenience and guidance only...'
+        'creditMarket:needMoreInformationText':
+          'Please visit the Low Carbon Fuels website...',
+        'creditMarket:legalDisclaimer':
+          'This information is for your convenience and guidance only...'
       }
       return translations[key] || fallback || key
     }
@@ -40,7 +55,9 @@ describe('CreditMarketAccordion', () => {
   it('renders the component with correct title', () => {
     render(<CreditMarketAccordion />, { wrapper })
 
-    expect(screen.getByText('Information Bulletin RLCF-013 (Credit trading market)')).toBeInTheDocument()
+    expect(
+      screen.getByText('Information Bulletin RLCF-013 (Credit trading market)')
+    ).toBeInTheDocument()
   })
 
   it('starts expanded by default', () => {
@@ -48,14 +65,19 @@ describe('CreditMarketAccordion', () => {
 
     // Check if accordion is expanded by looking for the content
     expect(screen.getByText('Background')).toBeInTheDocument()
-    expect(screen.getByText(/Beginning in 2024, to participate in the credit market/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Beginning in 2024, to participate in the credit market/)
+    ).toBeInTheDocument()
   })
 
   it('renders all section headings', () => {
     render(<CreditMarketAccordion />, { wrapper })
 
     expect(screen.getByText('Background')).toBeInTheDocument()
-    expect(screen.getByText('Compliance units issued by the director')).toBeInTheDocument()
+    expect(
+      screen.getByText('Credits issued by the director')
+    ).toBeInTheDocument()
+    expect(screen.getByText('Allocation agreements')).toBeInTheDocument()
     expect(screen.getByText('Fair market value')).toBeInTheDocument()
     expect(screen.getByText('Approval of transfers')).toBeInTheDocument()
     expect(screen.getByText('Application of credits')).toBeInTheDocument()
@@ -65,21 +87,46 @@ describe('CreditMarketAccordion', () => {
   it('renders all section content', () => {
     render(<CreditMarketAccordion />, { wrapper })
 
-    expect(screen.getByText(/Beginning in 2024, to participate in the credit market/)).toBeInTheDocument()
-    expect(screen.getByText(/Compliance with the low carbon fuel requirements/)).toBeInTheDocument()
-    expect(screen.getByText(/The Low Carbon Fuel Standard has historically/)).toBeInTheDocument()
-    expect(screen.getByText(/Before credits can be transferred/)).toBeInTheDocument()
-    expect(screen.getByText(/All transfers must include a "fair market value"/)).toBeInTheDocument()
-    expect(screen.getByText(/The "fair market value" is generally accepted/)).toBeInTheDocument()
-    expect(screen.getByText(/All transfers must be approved by the director/)).toBeInTheDocument()
-    expect(screen.getByText(/Only those credits held on the reporting deadline/)).toBeInTheDocument()
-    expect(screen.getByText(/Please visit the Low Carbon Fuels website/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Beginning in 2024, to participate in the credit market/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Compliance with the low carbon fuel requirements/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/The Low Carbon Fuel Standard has historically/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Before credits can be transferred/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/All transfers must include a "fair market value"/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/The "fair market value" is generally accepted/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/All transfers must be approved by the director/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Only those credits held on the reporting deadline/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Allocation agreements allow fuel suppliers/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Please visit the Low Carbon Fuels website/)
+    ).toBeInTheDocument()
   })
 
   it('renders legal disclaimer', () => {
     render(<CreditMarketAccordion />, { wrapper })
 
-    expect(screen.getByText(/This information is for your convenience and guidance only/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /This information is for your convenience and guidance only/
+      )
+    ).toBeInTheDocument()
   })
 
   it('can be collapsed and expanded by clicking on the accordion header', () => {
@@ -87,13 +134,13 @@ describe('CreditMarketAccordion', () => {
 
     // Find the accordion button
     const accordionButton = screen.getByRole('button')
-    
+
     // Initially expanded - content should be visible
     expect(screen.getByText('Background')).toBeInTheDocument()
 
     // Click to collapse
     fireEvent.click(accordionButton)
-    
+
     // Wait for animation and check that content is hidden
     // In MUI, collapsed content is still in DOM but hidden
     const backgroundText = screen.queryByText('Background')
@@ -114,7 +161,9 @@ describe('CreditMarketAccordion', () => {
 
     // Should still render with translation keys working
     expect(screen.getByRole('button')).toBeInTheDocument()
-    expect(screen.getByText('Information Bulletin RLCF-013 (Credit trading market)')).toBeInTheDocument()
+    expect(
+      screen.getByText('Information Bulletin RLCF-013 (Credit trading market)')
+    ).toBeInTheDocument()
   })
 
   it('maintains proper component structure', () => {
@@ -122,7 +171,7 @@ describe('CreditMarketAccordion', () => {
 
     // Should have accordion structure
     expect(screen.getByRole('button')).toBeInTheDocument()
-    
+
     // Should have content sections
     expect(screen.getByText('Background')).toBeInTheDocument()
     expect(screen.getByText('Fair market value')).toBeInTheDocument()
