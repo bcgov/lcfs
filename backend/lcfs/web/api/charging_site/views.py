@@ -331,11 +331,15 @@ async def export_charging_sites(
             status_code=400, detail="Invalid organization id. Must be an integer."
         )
 
-    organization = request.user.organization
-    if organization.organization_id != org_id:
-        raise HTTPException(
-            status_code=403, detail="Access denied to this organization"
-        )
+    # Government users can access any organization
+    if not request.user.is_government:
+        organization = request.user.organization
+        if organization.organization_id != org_id:
+            raise HTTPException(
+                status_code=403, detail="Access denied to this organization"
+            )
+    else:
+        organization = request.user.organization
 
     return await exporter.export(org_id, request.user, organization, True)
 
@@ -365,11 +369,15 @@ async def import_charging_sites(
             status_code=400, detail="Invalid organization id. Must be an integer."
         )
 
-    organization = request.user.organization
-    if organization.organization_id != org_id:
-        raise HTTPException(
-            status_code=403, detail="Access denied to this organization"
-        )
+    # Government users can access any organization
+    if not request.user.is_government:
+        organization = request.user.organization
+        if organization.organization_id != org_id:
+            raise HTTPException(
+                status_code=403, detail="Access denied to this organization"
+            )
+    else:
+        organization = request.user.organization
 
     job_id = await importer.import_data(
         org_id,
@@ -404,11 +412,15 @@ async def get_charging_site_template(
             status_code=400, detail="Invalid organization id. Must be an integer."
         )
 
-    organization = request.user.organization
-    if organization.organization_id != org_id:
-        raise HTTPException(
-            status_code=403, detail="Access denied to this organization"
-        )
+    # Government users can access any organization
+    if not request.user.is_government:
+        organization = request.user.organization
+        if organization.organization_id != org_id:
+            raise HTTPException(
+                status_code=403, detail="Access denied to this organization"
+            )
+    else:
+        organization = request.user.organization
 
     return await exporter.export(org_id, request.user, organization, False)
 
