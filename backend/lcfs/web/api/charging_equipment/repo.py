@@ -148,6 +148,42 @@ class ChargingEquipmentRepository:
         return items, total_count
 
     @repo_handler
+    async def get_all_equipment_by_organization_id(
+        self, organization_id: int
+    ) -> List[ChargingEquipment]:
+        """Return all charging equipment for a supplier organization with relationships loaded."""
+        query = (
+            select(ChargingEquipment)
+            .join(ChargingSite)
+            .options(
+                joinedload(ChargingEquipment.charging_site),
+                joinedload(ChargingEquipment.status),
+                joinedload(ChargingEquipment.level_of_equipment),
+                joinedload(ChargingEquipment.allocating_organization),
+                selectinload(ChargingEquipment.intended_uses),
+            )
+            .where(ChargingSite.organization_id == organization_id)
+            .order_by(ChargingEquipment.update_date.desc())
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def delete_all_equipment_for_organization(self, organization_id: int) -> int:
+        """Delete all charging equipment records for a supplier organization."""
+        subq = (
+            select(ChargingEquipment.charging_equipment_id)
+            .join(ChargingSite)
+            .where(ChargingSite.organization_id == organization_id)
+        )
+        del_stmt = delete(ChargingEquipment).where(
+            ChargingEquipment.charging_equipment_id.in_(subq)
+        )
+        result = await self.db.execute(del_stmt)
+        await self.db.flush()
+        return result.rowcount or 0
+
+    @repo_handler
     async def create_charging_equipment(
         self, equipment_data: Dict[str, Any]
     ) -> ChargingEquipment:

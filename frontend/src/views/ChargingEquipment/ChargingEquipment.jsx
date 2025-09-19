@@ -4,9 +4,15 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCirclePlus,
+  faCheck,
+  faBan,
+  faSquareCheck,
+  faFilterCircleXmark
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Grid } from '@mui/material'
+import { Box, Grid, Stack } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Outlet,
@@ -19,7 +25,7 @@ import { defaultSortModel, chargingEquipmentColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import Loading from '@/components/Loading'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { BulkActionButtons } from './components/BulkActionButtons'
+import { BCAlert2 } from '@/components/BCAlert'
 import { BulkActionModals } from './components/BulkActionModals'
 import { useChargingEquipment } from '@/hooks/useChargingEquipment'
 
@@ -35,13 +41,14 @@ export const ChargingEquipment = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const gridRef = useRef()
+  const alertRef = useRef(null)
+  const isProgrammaticSelection = useRef(false)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
   const [searchParams, setSearchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
 
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
+  // Alerts now use BCAlert2 via alertRef
   const [selectedRows, setSelectedRows] = useState([])
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [showDecommissionModal, setShowDecommissionModal] = useState(false)
@@ -67,8 +74,7 @@ export const ChargingEquipment = () => {
   } = useChargingEquipment()
 
   // Check if we're on a nested route (like /new or /:id/edit)
-  const isOnNestedRoute =
-    location.pathname !== `${ROUTES.REPORTS.LIST}/manage-fse`
+  const isOnNestedRoute = location.pathname !== `${ROUTES.REPORTS.LIST}/fse`
 
   const getRowId = useCallback((params) => {
     return params.data.charging_equipment_id
@@ -89,7 +95,7 @@ export const ChargingEquipment = () => {
   )
 
   const handleNewFSE = () => {
-    navigate(`${ROUTES.REPORTS.LIST}/manage-fse/new`)
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`)
   }
 
   const handleSelectAllDraftUpdated = () => {
@@ -99,6 +105,7 @@ export const ChargingEquipment = () => {
       setSelectMode(null)
     } else {
       // Select all Draft and Updated rows
+      isProgrammaticSelection.current = true
       gridRef.current?.api?.forEachNode((node) => {
         if (node.data.status === 'Draft' || node.data.status === 'Updated') {
           node.setSelected(true)
@@ -107,6 +114,10 @@ export const ChargingEquipment = () => {
         }
       })
       setSelectMode('draft-updated')
+      // Let ag-Grid finish emitting selection events before re-enabling handler logic
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 0)
     }
   }
 
@@ -117,6 +128,7 @@ export const ChargingEquipment = () => {
       setSelectMode(null)
     } else {
       // Select all Validated rows
+      isProgrammaticSelection.current = true
       gridRef.current?.api?.forEachNode((node) => {
         if (node.data.status === 'Validated') {
           node.setSelected(true)
@@ -125,25 +137,26 @@ export const ChargingEquipment = () => {
         }
       })
       setSelectMode('validated')
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 0)
     }
   }
 
   const handleRowClick = (params) => {
-    const { status, charging_equipment_id } = params.data
-    if (status === 'Draft' || status === 'Updated' || status === 'Validated') {
-      navigate(
-        `${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`
-      )
-    } else {
-      navigate(
-        `${ROUTES.REPORTS.LIST}/manage-fse/${charging_equipment_id}/edit`
-      )
-    }
+    // Ignore clicks on the checkbox selection column
+    const colId = params?.column?.getColId?.()
+    if (colId === '__select__') return
+    const { charging_equipment_id } = params.data
+    navigate(`${ROUTES.REPORTS.LIST}/fse/${charging_equipment_id}/edit`)
   }
 
   const handleSelectionChanged = (event) => {
     const selectedNodes = event.api.getSelectedNodes()
     setSelectedRows(selectedNodes.map((node) => node.data))
+
+    // Skip mode reconciliation while running programmatic select-all
+    if (isProgrammaticSelection.current) return
 
     // Clear select mode if manual selection doesn't match the mode
     const selectedData = selectedNodes.map((node) => node.data)
@@ -163,15 +176,28 @@ export const ChargingEquipment = () => {
     const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
     try {
       const result = await submitEquipment(equipmentIds)
-      setAlertMessage(result.message)
-      setAlertSeverity('success')
+      alertRef.current?.triggerAlert({
+        message: result.message,
+        severity: 'success'
+      })
+      // Optimistically update grid statuses
+      gridRef.current?.api?.forEachNode((node) => {
+        if (
+          equipmentIds.includes(node.data.charging_equipment_id) &&
+          (node.data.status === 'Draft' || node.data.status === 'Updated')
+        ) {
+          node.updateData({ ...node.data, status: 'Submitted' })
+        }
+      })
       setShowSubmitModal(false)
       setSelectMode(null)
       refetch()
       gridRef.current?.api?.deselectAll()
     } catch (error) {
-      setAlertMessage(error.message || 'Failed to submit equipment')
-      setAlertSeverity('error')
+      alertRef.current?.triggerAlert({
+        message: error.message || 'Failed to submit equipment',
+        severity: 'error'
+      })
     }
   }
 
@@ -179,15 +205,28 @@ export const ChargingEquipment = () => {
     const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
     try {
       const result = await decommissionEquipment(equipmentIds)
-      setAlertMessage(result.message)
-      setAlertSeverity('success')
+      alertRef.current?.triggerAlert({
+        message: result.message,
+        severity: 'success'
+      })
+      // Optimistically update grid statuses
+      gridRef.current?.api?.forEachNode((node) => {
+        if (
+          equipmentIds.includes(node.data.charging_equipment_id) &&
+          node.data.status === 'Validated'
+        ) {
+          node.updateData({ ...node.data, status: 'Decommissioned' })
+        }
+      })
       setShowDecommissionModal(false)
       setSelectMode(null)
       refetch()
       gridRef.current?.api?.deselectAll()
     } catch (error) {
-      setAlertMessage(error.message || 'Failed to decommission equipment')
-      setAlertSeverity('error')
+      alertRef.current?.triggerAlert({
+        message: error.message || 'Failed to decommission equipment',
+        severity: 'error'
+      })
     }
   }
 
@@ -236,11 +275,9 @@ export const ChargingEquipment = () => {
         </Grid>
       )}
 
-      {!isOnNestedRoute && alertMessage && (
+      {!isOnNestedRoute && (
         <Grid item xs={12}>
-          <BCAlert severity={alertSeverity} onClose={() => setAlertMessage('')}>
-            {alertMessage}
-          </BCAlert>
+          <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
         </Grid>
       )}
 
@@ -248,7 +285,11 @@ export const ChargingEquipment = () => {
         <Grid item xs={12}>
           <BCBox>
             <Box display="flex" justifyContent="space-between" mb={2}>
-              <Box display="flex" gap={2}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={2}
+                sx={{ flexWrap: 'wrap' }}
+              >
                 <BCButton
                   variant="contained"
                   color="primary"
@@ -260,37 +301,54 @@ export const ChargingEquipment = () => {
                 </BCButton>
 
                 <BCButton
-                  variant="outlined"
+                  variant="contained"
                   color="primary"
                   size="medium"
+                  startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
                   onClick={handleSelectAllDraftUpdated}
                 >
                   {t('chargingEquipment:selectAllDraftUpdated')}
                 </BCButton>
 
                 <BCButton
-                  variant="outlined"
+                  variant="contained"
                   color="primary"
                   size="medium"
+                  startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
                   onClick={handleSelectAllValidated}
                 >
                   {t('chargingEquipment:selectAllValidated')}
                 </BCButton>
 
-                <BulkActionButtons
-                  selectedRows={selectedRows}
-                  canSubmit={canSubmit}
-                  canDecommission={canDecommission}
-                  onSubmitClick={() => setShowSubmitModal(true)}
-                  onDecommissionClick={() => setShowDecommissionModal(true)}
-                />
-              </Box>
+                <BCButton
+                  variant="outlined"
+                  color="primary"
+                  size="medium"
+                  startIcon={<FontAwesomeIcon icon={faCheck} />}
+                  onClick={() => setShowSubmitModal(true)}
+                  disabled={selectedRows.length === 0 || !canSubmit}
+                >
+                  {t('chargingEquipment:submitSelected')}
+                </BCButton>
+
+                <BCButton
+                  variant="outlined"
+                  color="error"
+                  size="medium"
+                  startIcon={<FontAwesomeIcon icon={faBan} />}
+                  onClick={() => setShowDecommissionModal(true)}
+                  disabled={selectedRows.length === 0 || !canDecommission}
+                >
+                  {t('chargingEquipment:setToDecommissioned')}
+                </BCButton>
+              </Stack>
 
               <ClearFiltersButton onClick={handleClearFilters} />
             </Box>
 
             <BCGridViewer
               gridRef={gridRef}
+              alertRef={alertRef}
               columnDefs={chargingEquipmentColDefs}
               defaultColDef={defaultColDef}
               getRowId={getRowId}
@@ -304,7 +362,6 @@ export const ChargingEquipment = () => {
               rowSelection="multiple"
               onSelectionChanged={handleSelectionChanged}
               suppressRowClickSelection={true}
-              checkboxSelection={true}
               rowMultiSelectWithClick={false}
               highlightedRowId={highlightedId}
             />

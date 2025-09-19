@@ -56,11 +56,12 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const navigate = useNavigate()
   const alertRef = useRef(null)
   const location = useLocation()
-  const { id } = useParams()
+  // Route param is defined as :fseId in routes; use that
+  const { fseId } = useParams()
 
   // Determine mode: 'single' (edit existing), 'bulk' (mass input)
-  const operationMode = mode || (id ? 'single' : 'bulk')
-  const isEditMode = operationMode === 'single' && Boolean(id)
+  const operationMode = mode || (fseId ? 'single' : 'bulk')
+  const isEdit = operationMode === 'single' && Boolean(fseId)
   const isBulkMode = operationMode === 'bulk'
 
   const { data: currentUser } = useCurrentUser()
@@ -70,7 +71,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
     data: equipment,
     isLoading: equipmentLoading,
     isError: equipmentError
-  } = useGetChargingEquipment(id, { enabled: isEditMode })
+  } = useGetChargingEquipment(fseId)
 
   const {
     statuses,
@@ -119,7 +120,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   // Load equipment data into form when editing
   useEffect(() => {
-    if (isEditMode && equipment) {
+    if (isEdit && equipment) {
       reset({
         charging_site_id: equipment.charging_site_id || '',
         allocating_organization_id: equipment.allocating_organization_id || '',
@@ -133,14 +134,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
           equipment.intended_uses?.map((use) => use.end_use_type_id) || []
       })
     }
-  }, [equipment, reset, isEditMode])
+  }, [equipment, reset, isEdit])
 
   // Handle form submission
   const onSubmit = async (formData) => {
     try {
-      if (isEditMode) {
+      if (isEdit) {
         await updateMutation.mutateAsync({
-          id: parseInt(id),
+          id: parseInt(fseId),
           data: formData
         })
         alertRef.current?.triggerAlert({
@@ -155,7 +156,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         })
         // Navigate to edit mode for the new equipment
         navigate(
-          `${ROUTES.REPORTS.LIST}/manage-fse/${result.charging_equipment_id}/edit`
+          `${ROUTES.REPORTS.LIST}/fse/${result.charging_equipment_id}/edit`
         )
       }
     } catch (error) {
@@ -173,8 +174,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
 
     try {
-      await deleteMutation.mutateAsync(parseInt(id))
-      navigate(`${ROUTES.REPORTS.LIST}/manage-fse`, {
+      await deleteMutation.mutateAsync(parseInt(fseId))
+      navigate(`${ROUTES.REPORTS.LIST}/fse`, {
         state: {
           message: t('chargingEquipment:deleteSuccess'),
           severity: 'success'
@@ -189,7 +190,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
   }
 
   const handleCancel = () => {
-    navigate(`${ROUTES.REPORTS.LIST}/manage-fse`)
+    navigate(`${ROUTES.REPORTS.LIST}/fse`)
   }
 
   // Bulk mode handlers
@@ -267,7 +268,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
       })
 
       // Navigate back to list
-      navigate(`${ROUTES.REPORTS.LIST}/manage-fse`)
+      navigate(`${ROUTES.REPORTS.LIST}/fse`)
     } catch (error) {
       alertRef.current?.triggerAlert({
         message: error.message || 'Error saving bulk data',
@@ -280,18 +281,18 @@ export const AddEditChargingEquipment = ({ mode }) => {
     return <Loading />
   }
 
-  if (isEditMode && equipmentError) {
+  if (isEdit && equipmentError) {
     return (
       <BCAlert severity="error">{t('chargingEquipment:loadError')}</BCAlert>
     )
   }
 
   const canEdit =
-    !isEditMode ||
+    !isEdit ||
     (equipment?.status &&
       ['Draft', 'Updated', 'Validated'].includes(equipment.status))
 
-  const canDelete = isEditMode && equipment?.status === 'Draft'
+  const canDelete = isEdit && equipment?.status === 'Draft'
 
   // Render bulk mode
   if (isBulkMode) {
@@ -355,6 +356,43 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 gridWarnings
               )}
               defaultColDef={defaultBulkColDef}
+              stopEditingWhenCellsLoseFocus
+              onCellEditingStopped={async (params) => {
+                if (params.oldValue === params.newValue) return
+
+                params.node.updateData({
+                  ...params.node.data,
+                  validationStatus: 'pending'
+                })
+
+                const updatedData = {
+                  ...Object.entries(params.node.data)
+                    .filter(
+                      ([, value]) =>
+                        value !== null && value !== '' && value !== undefined
+                    )
+                    .reduce((acc, [key, value]) => {
+                      acc[key] = value
+                      return acc
+                    }, {}),
+                  status: 'Draft'
+                }
+
+                const responseData = await handleScheduleSave({
+                  alertRef,
+                  idField: 'charging_equipment_id',
+                  labelPrefix: 'chargingEquipment',
+                  params,
+                  setErrors: setGridErrors,
+                  setWarnings: setGridWarnings,
+                  saveRow,
+                  t,
+                  updatedData
+                })
+
+                alertRef.current?.clearAlert()
+                params.node.updateData(responseData)
+              }}
               onCellValueChanged={(params) => {
                 const updatedData = [...bulkData]
                 const rowIndex = updatedData.findIndex(
@@ -418,50 +456,21 @@ export const AddEditChargingEquipment = ({ mode }) => {
     )
   }
 
-  // Render single edit mode (grid-based like Charging Site)
+  // Render single edit mode (simpler styling and conditional read-only per status)
+  // Match Charging Site add/edit container layout
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={2} className="add-edit-charging-site-container">
       <Grid item xs={12}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={2}
-        >
-          <BCTypography variant="h4">
-            {isEditMode
-              ? t('chargingEquipment:editEquipment')
-              : t('chargingEquipment:newEquipment')}
+        <BCTypography variant="h4" gutterBottom sx={{ mt: 0.5, mb: 0.5 }}>
+          {isEdit
+            ? t('chargingEquipment:editFSEShort')
+            : t('chargingEquipment:newFSE')}
+        </BCTypography>
+        {isEdit && equipment && (
+          <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {equipment.status} • {t('chargingEquipment:registrationNumber')}:{' '}
+            {equipment.registration_number || ''}
           </BCTypography>
-          <Box display="flex" gap={1}>
-            <BCButton
-              variant="outlined"
-              startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
-              onClick={handleCancel}
-            >
-              {t('common:back')}
-            </BCButton>
-          </Box>
-        </Box>
-
-        {isEditMode && equipment && (
-          <Box mb={2}>
-            <Chip
-              label={equipment.status}
-              color={equipment.status === 'Draft' ? 'warning' : 'success'}
-              variant="outlined"
-            />
-            {equipment.registration_number && (
-              <BCTypography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 1 }}
-              >
-                {t('chargingEquipment:registrationNumber')}:{' '}
-                {equipment.registration_number}
-              </BCTypography>
-            )}
-          </Box>
         )}
       </Grid>
 
@@ -470,7 +479,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
       </Grid>
 
       <Grid item xs={12}>
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 2 }}>
           <BCGridEditor
             gridRef={gridRef}
             rowData={[
@@ -499,16 +508,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
               endUseTypes,
               gridErrors,
               gridWarnings,
-              { enableDelete: canDelete }
+              { enableDelete: isEdit && equipment?.status === 'Draft' },
+              true,
+              false
             )}
-            defaultColDef={defaultBulkColDef}
+            defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
+            readOnlyEdit={!canEdit}
             onCellEditingStopped={async (params) => {
               if (params.oldValue === params.newValue) return
-
-              params.node.updateData({
-                ...params.node.data,
-                validationStatus: 'pending'
-              })
 
               const updatedData = {
                 ...Object.entries(params.node.data)
@@ -524,6 +531,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 status: equipment?.status || 'Draft'
               }
 
+              if (!canEdit) return
+
               const responseData = await handleScheduleSave({
                 alertRef,
                 idField: 'charging_equipment_id',
@@ -536,11 +545,18 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 updatedData
               })
 
-              alertRef.current?.clearAlert()
               params.node.updateData(responseData)
+              alertRef.current?.triggerAlert({
+                message: t('chargingEquipment:updateSuccess'),
+                severity: 'success'
+              })
             }}
             onAction={async (action, params) => {
-              if (action === 'delete' && canDelete) {
+              if (
+                action === 'delete' &&
+                isEdit &&
+                equipment?.status === 'Draft'
+              ) {
                 await handleScheduleDelete(
                   params,
                   'charging_equipment_id',

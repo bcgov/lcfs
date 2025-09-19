@@ -135,8 +135,11 @@ export const apiRoutes = {
   getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
+  // Charging-site specific equipment endpoints
+  // Backend: POST /charging-sites/{site_id}/equipment/list-all
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
-  bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-update',
+  // Backend: POST /charging-sites/{site_id}/equipment/bulk-status-update
+  bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
   importChargingSites: '/charging-sites/import/:orgID',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
@@ -207,6 +210,4 @@ export const apiRoutes = {
   geocoderHealth: '/geocoder/health',
   geocoderClearCache: '/geocoder/cache',
 
-  // charging sites
-  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment'
 }

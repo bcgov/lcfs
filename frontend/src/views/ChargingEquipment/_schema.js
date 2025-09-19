@@ -1,13 +1,43 @@
-import { StatusRenderer } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 
 export const defaultSortModel = [{ field: 'updated_date', direction: 'desc' }]
 
 export const chargingEquipmentColDefs = [
+  // First column: dedicated checkbox selection column pinned left
+  {
+    headerName: '',
+    field: '__select__',
+    width: 52,
+    minWidth: 52,
+    maxWidth: 60,
+    pinned: 'left',
+    lockPinned: true,
+    filter: false,
+    sortable: false,
+    suppressHeaderMenuButton: true,
+    checkboxSelection: (params) => {
+      const status = params.data?.status
+      // allow selecting Draft/Updated/Validated; disallow Submitted/Decommissioned for submit
+      return status !== 'Decommissioned'
+    },
+    headerCheckboxSelection: true,
+    headerCheckboxSelectionFilteredOnly: true,
+    suppressSizeToFit: true
+  },
   {
     field: 'status',
     headerName: 'Status',
-    width: 120,
-    cellRenderer: StatusRenderer,
+    width: 150,
+    cellRenderer: createStatusRenderer(
+      {
+        Draft: 'info',
+        Updated: 'info',
+        Submitted: 'warning',
+        Validated: 'success',
+        Decommissioned: 'smoky'
+      },
+      { statusField: 'status', replaceUnderscores: false }
+    ),
     filter: 'agSetColumnFilter',
     filterParams: {
       values: ['Draft', 'Updated', 'Submitted', 'Validated', 'Decommissioned']

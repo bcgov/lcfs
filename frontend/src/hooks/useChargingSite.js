@@ -246,11 +246,16 @@ export const useBulkUpdateEquipmentStatus = (options = {}) => {
   const { onSuccess, onError, invalidateAll = true, ...restOptions } = options
 
   return useMutation({
-    mutationFn: ({ siteId, equipmentIds, newStatus }) => {
+    mutationFn: (vars) => {
+      const { siteId } = vars || {}
       // Validate siteId before making the API call
       if (!siteId || siteId === 'undefined') {
         throw new Error('Invalid charging site ID provided')
       }
+
+      // Support both snake_case and camelCase from callers
+      const equipmentIds = vars?.equipmentIds || vars?.equipment_ids || []
+      const newStatus = vars?.newStatus || vars?.new_status
 
       return apiService.post(
         apiRoutes.bulkUpdateEquipmentStatus.replace(':siteId', siteId),
@@ -348,8 +353,44 @@ export const useChargingSiteEquipmentPaginated = (
         ':siteId',
         siteId
       )
-      const response = await apiService.post(url, paginationOptions)
-      return response.data
+      const payload = {
+        page: paginationOptions?.page ?? 1,
+        size: paginationOptions?.size ?? 10,
+        sortOrders: paginationOptions?.sortOrders ?? [],
+        filters: paginationOptions?.filters ?? []
+      }
+
+      const response = await apiService.post(url, payload)
+
+      // Map backend keys to the grid's expected shape.
+      const data = response.data || {}
+      const items = data.equipments || data.equipment || []
+      return {
+        // The grid expects "equipment" list
+        equipment: items.map((e) => ({
+          chargingEquipmentId: e.chargingEquipmentId ?? e.charging_equipment_id,
+          registrationNumber: e.registrationNumber ?? e.registration_number,
+          version: e.version,
+          allocatingOrganization:
+            e.allocatingOrganization?.name ?? e.allocating_organization?.name ?? e.allocatingOrganization ?? e.allocating_organization,
+          serialNumber: e.serialNumber ?? e.serial_number,
+          manufacturer: e.manufacturer,
+          model: e.model,
+          levelOfEquipment:
+            e.levelOfEquipment?.name ?? e.level_of_equipment?.name ?? e.levelOfEquipment ?? e.level_of_equipment,
+          ports: e.ports,
+          intendedUseTypes:
+            e.intendedUseTypes?.map((t) => t?.type || t) ||
+            e.intended_use_types?.map((t) => t?.type || t) ||
+            [],
+          latitude: e.chargingSite?.latitude ?? e.charging_site?.latitude ?? e.latitude,
+          longitude: e.chargingSite?.longitude ?? e.charging_site?.longitude ?? e.longitude,
+          equipmentNotes: e.notes,
+          status:
+            e.status?.status || e.status || e.currentStatus || e.current_status || ''
+        })),
+        pagination: data.pagination
+      }
     },
     enabled: !!siteId && siteId !== 'undefined',
     staleTime: 30000, // 30 seconds

@@ -25,16 +25,23 @@ export const bulkChargingEquipmentColDefs = (
   errors = {},
   warnings = {},
   actionsOptions = null,
-  allowAllocatingOrg = true
-) => [
-  validation,
-  actions((params) => ({
-    enableDuplicate: false,
-    enableDelete: true,
-    enableUndo: false,
-    enableStatus: false,
-    ...(actionsOptions || {})
-  })),
+  allowAllocatingOrg = true,
+  showActions = true
+) => {
+  const cols = [validation]
+  if (showActions) {
+    cols.push(
+      actions((params) => ({
+        enableDuplicate: false,
+        enableDelete: true,
+        enableUndo: false,
+        enableStatus: false,
+        ...(actionsOptions || {})
+      }))
+    )
+  }
+  return [
+    ...cols,
   {
     field: 'id',
     hide: true
@@ -51,6 +58,7 @@ export const bulkChargingEquipmentColDefs = (
       })),
       openOnFocus: true
     },
+    valueGetter: (params) => params.data.charging_site_id,
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
@@ -84,6 +92,7 @@ export const bulkChargingEquipmentColDefs = (
       openOnFocus: true,
       allowEmpty: true
     },
+    valueGetter: (params) => params.data.allocating_organization_id,
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
@@ -140,6 +149,7 @@ export const bulkChargingEquipmentColDefs = (
       })),
       openOnFocus: true
     },
+    valueGetter: (params) => params.data.level_of_equipment_id,
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
@@ -168,6 +178,7 @@ export const bulkChargingEquipmentColDefs = (
       ],
       openOnFocus: true
     },
+    valueGetter: (params) => params.data.ports,
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
@@ -193,6 +204,7 @@ export const bulkChargingEquipmentColDefs = (
       openOnFocus: true
     },
     cellRenderer: MultiSelectRenderer,
+    valueGetter: (params) => params.data.intended_use_ids,
     editable: isEditableByStatus,
     valueSetter: (params) => {
       const incoming = params.newValue
@@ -226,6 +238,7 @@ export const bulkChargingEquipmentColDefs = (
     editable: isEditableByStatus
   }
 ]
+}
 
 export const defaultBulkColDef = {
   editable: true,

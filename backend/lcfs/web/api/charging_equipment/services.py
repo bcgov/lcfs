@@ -408,6 +408,11 @@ class ChargingEquipmentServices:
         return True
 
     @service_handler
+    async def delete_all_for_organization(self, organization_id: int) -> int:
+        """Delete all charging equipment for an organization (admin utility)."""
+        return await self.repo.delete_all_equipment_for_organization(organization_id)
+
+    @service_handler
     async def get_equipment_statuses(self):
         """Get all available equipment statuses."""
         statuses = await self.repo.get_statuses()

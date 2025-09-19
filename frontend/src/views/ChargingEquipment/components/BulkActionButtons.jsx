@@ -1,5 +1,9 @@
 import BCButton from '@/components/BCButton'
-import { faCheck, faBan } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCheck,
+  faBan,
+  faSquareCheck
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -22,6 +26,16 @@ export const BulkActionButtons = ({
 
   return (
     <Box display="flex" gap={2}>
+      <BCButton
+        variant="outlined"
+        color="primary"
+        size="medium"
+        startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
+        disabled
+        title={t('chargingEquipment:useHeaderCheckboxes')}
+      >
+        {t('chargingEquipment:selectBoxes')}
+      </BCButton>
       <BCButton
         variant="contained"
         color="primary"

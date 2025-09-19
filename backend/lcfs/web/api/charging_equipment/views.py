@@ -1,7 +1,19 @@
 """API views for Charging Equipment management."""
 
 import structlog
-from fastapi import APIRouter, Body, Depends, Query, status, Request
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Query,
+    status,
+    Request,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+)
+from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Optional
 
 from lcfs.db import dependencies
@@ -20,6 +32,8 @@ from lcfs.web.api.charging_equipment.schema import (
 )
 from lcfs.web.api.charging_equipment.services import ChargingEquipmentServices
 from lcfs.web.core.decorators import view_handler
+from lcfs.web.api.charging_equipment.export import ChargingEquipmentExporter
+from lcfs.web.api.charging_equipment.importer import ChargingEquipmentImporter
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -265,3 +279,120 @@ async def has_allocation_agreements(
 ) -> bool:
     """Boolean flag indicating if the supplier has any allocation agreements."""
     return await service.has_allocation_agreements(request.user)
+
+
+@router.get(
+    "/export/{organization_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def export_charging_equipment(
+    request: Request,
+    organization_id: str,
+    exporter: ChargingEquipmentExporter = Depends(),
+):
+    """
+    Export all charging equipment for an organization.
+    """
+    try:
+        org_id = int(organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid organization id. Must be an integer."
+        )
+
+    organization = request.user.organization
+    if not request.user.is_government and organization.organization_id != org_id:
+        raise HTTPException(
+            status_code=403, detail="Access denied to this organization"
+        )
+
+    return await exporter.export(org_id, request.user, organization, True)
+
+
+@router.get(
+    "/template/{organization_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_charging_equipment_template(
+    request: Request,
+    organization_id: str,
+    exporter: ChargingEquipmentExporter = Depends(),
+):
+    """
+    Export a template for charging equipment without data.
+    """
+    try:
+        org_id = int(organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid organization id. Must be an integer."
+        )
+
+    organization = request.user.organization
+    if not request.user.is_government and organization.organization_id != org_id:
+        raise HTTPException(
+            status_code=403, detail="Access denied to this organization"
+        )
+
+    return await exporter.export(org_id, request.user, organization, False)
+
+
+@router.post(
+    "/import/{organization_id}",
+    response_class=JSONResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def import_charging_equipment(
+    request: Request,
+    organization_id: str,
+    file: UploadFile = File(...),
+    importer: ChargingEquipmentImporter = Depends(),
+    overwrite: bool = Form(...),
+):
+    """
+    Import charging equipment from an uploaded Excel file.
+    """
+    try:
+        org_id = int(organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid organization id. Must be an integer."
+        )
+
+    organization = request.user.organization
+    if not request.user.is_government and organization.organization_id != org_id:
+        raise HTTPException(
+            status_code=403, detail="Access denied to this organization"
+        )
+
+    job_id = await importer.import_data(
+        org_id,
+        request.user,
+        organization.organization_code,
+        file,
+        overwrite,
+    )
+    return JSONResponse(content={"jobId": job_id})
+
+
+@router.get(
+    "/status/{job_id}",
+    response_class=JSONResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_import_job_status(
+    request: Request,
+    job_id: str,
+    importer: ChargingEquipmentImporter = Depends(),
+):
+    """
+    Get the current progress of a running charging equipment import job.
+    """
+    status_result = await importer.get_status(job_id)
+    return JSONResponse(content=status_result)

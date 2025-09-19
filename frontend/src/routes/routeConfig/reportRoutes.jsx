@@ -43,17 +43,17 @@ export const reportRoutes = [
         ]
       },
       {
-        path: 'manage-fse',
+        path: 'fse',
         element: <ChargingEquipmentList />,
         handle: { title: 'Manage FSE' },
         children: [
           {
-            path: 'new',
+            path: 'add',
             element: <AddEditChargingEquipment mode="bulk" />,
             handle: { title: 'Add FSE' }
           },
           {
-            path: ':id/edit',
+            path: ':fseId/edit',
             element: <AddEditChargingEquipment mode="single" />,
             handle: { title: 'Edit FSE' }
           }
