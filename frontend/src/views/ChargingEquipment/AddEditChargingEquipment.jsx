@@ -25,6 +25,7 @@ import {
   ListItemText
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
+import BCBox from '@/components/BCBox'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -461,17 +462,26 @@ export const AddEditChargingEquipment = ({ mode }) => {
   return (
     <Grid container spacing={2} className="add-edit-charging-site-container">
       <Grid item xs={12}>
-        <BCTypography variant="h4" gutterBottom sx={{ mt: 0.5, mb: 0.5 }}>
-          {isEdit
-            ? t('chargingEquipment:editFSEShort')
-            : t('chargingEquipment:newFSE')}
-        </BCTypography>
-        {isEdit && equipment && (
-          <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {equipment.status} • {t('chargingEquipment:registrationNumber')}:{' '}
-            {equipment.registration_number || ''}
+        <div className="header">
+          <BCTypography variant="h5" color="primary">
+            {isEdit
+              ? t('chargingEquipment:editFSEShort')
+              : t('chargingEquipment:newFSE')}
           </BCTypography>
-        )}
+          {isEdit && equipment && (
+            <BCBox my={2.5} component="div">
+              <BCTypography
+                variant="body4"
+                color="text"
+                mt={0.5}
+                component="div"
+              >
+                {equipment.status} • {t('chargingEquipment:registrationNumber')}
+                : {equipment.registration_number || ''}
+              </BCTypography>
+            </BCBox>
+          )}
+        </div>
       </Grid>
 
       <Grid item xs={12}>
@@ -510,7 +520,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
               gridWarnings,
               { enableDelete: isEdit && equipment?.status === 'Draft' },
               true,
-              false
+              isEdit && equipment?.status === 'Draft'
             )}
             defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
             readOnlyEdit={!canEdit}
