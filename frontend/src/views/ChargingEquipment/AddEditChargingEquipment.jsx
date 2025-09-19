@@ -89,15 +89,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   // Bulk mode state (grid-based input like Charging Site/FSE)
   const [bulkData, setBulkData] = useState([])
-  const [errors, setErrors] = useState({})
-  const [warnings, setWarnings] = useState({})
+  const [gridErrors, setGridErrors] = useState({})
+  const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
 
   // Form setup with react-hook-form and yup validation
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors: formErrors, isDirty },
     watch,
     setValue,
     control,
@@ -351,47 +351,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 organizations,
                 levels,
                 endUseTypes,
-                errors,
-                warnings
+                gridErrors,
+                gridWarnings
               )}
               defaultColDef={defaultBulkColDef}
-              onCellEditingStopped={async (params) => {
-                if (params.oldValue === params.newValue) return
-
-                params.node.updateData({
-                  ...params.node.data,
-                  validationStatus: 'pending'
-                })
-
-                // Clean up null/empty fields
-                const updatedData = {
-                  ...Object.entries(params.node.data)
-                    .filter(
-                      ([, value]) =>
-                        value !== null && value !== '' && value !== undefined
-                    )
-                    .reduce((acc, [key, value]) => {
-                      acc[key] = value
-                      return acc
-                    }, {}),
-                  status: 'Draft'
-                }
-
-                const responseData = await handleScheduleSave({
-                  alertRef,
-                  idField: 'charging_equipment_id',
-                  labelPrefix: 'chargingEquipment',
-                  params,
-                  setErrors,
-                  setWarnings,
-                  saveRow,
-                  t,
-                  updatedData
-                })
-
-                alertRef.current?.clearAlert()
-                params.node.updateData(responseData)
-              }}
               onCellValueChanged={(params) => {
                 const updatedData = [...bulkData]
                 const rowIndex = updatedData.findIndex(
@@ -455,7 +418,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
     )
   }
 
-  // Render single edit mode
+  // Render single edit mode (grid-based like Charging Site)
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
@@ -508,280 +471,94 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
       <Grid item xs={12}>
         <Paper sx={{ p: 3 }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container spacing={3}>
-              {/* Charging Site Selection */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.charging_site_id}>
-                  <InputLabel>
-                    {t('chargingEquipment:chargingSite')} *
-                  </InputLabel>
-                  <Controller
-                    name="charging_site_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        label={t('chargingEquipment:chargingSite')}
-                        disabled={!canEdit}
-                      >
-                        {chargingSites.map((site) => (
-                          <MenuItem
-                            key={site.charging_site_id}
-                            value={site.charging_site_id}
-                          >
-                            {site.site_name} ({site.site_code})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                  {errors.charging_site_id && (
-                    <BCTypography variant="caption" color="error">
-                      {errors.charging_site_id.message}
-                    </BCTypography>
-                  )}
-                </FormControl>
-              </Grid>
+          <BCGridEditor
+            gridRef={gridRef}
+            rowData={[
+              {
+                id: equipment?.charging_equipment_id || Date.now(),
+                charging_equipment_id: equipment?.charging_equipment_id,
+                charging_site_id: equipment?.charging_site_id || '',
+                allocating_organization_id:
+                  equipment?.allocating_organization_id || '',
+                serial_number: equipment?.serial_number || '',
+                manufacturer: equipment?.manufacturer || '',
+                model: equipment?.model || '',
+                level_of_equipment_id: equipment?.level_of_equipment_id || '',
+                ports: equipment?.ports || 'Single port',
+                notes: equipment?.notes || '',
+                intended_use_ids:
+                  equipment?.intended_uses?.map((use) => use.end_use_type_id) ||
+                  [],
+                status: equipment?.status || 'Draft'
+              }
+            ]}
+            columnDefs={bulkChargingEquipmentColDefs(
+              chargingSites,
+              organizations,
+              levels,
+              endUseTypes,
+              gridErrors,
+              gridWarnings,
+              { enableDelete: canDelete }
+            )}
+            defaultColDef={defaultBulkColDef}
+            onCellEditingStopped={async (params) => {
+              if (params.oldValue === params.newValue) return
 
-              {/* Allocating Organization */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>
-                    {t('chargingEquipment:allocatingOrganization')}
-                  </InputLabel>
-                  <Controller
-                    name="allocating_organization_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        label={t('chargingEquipment:allocatingOrganization')}
-                        disabled={!canEdit || hasAllocationAgreements === false}
-                      >
-                        <MenuItem value="">
-                          <em>{t('common:none')}</em>
-                        </MenuItem>
-                        {organizations.map((org) => (
-                          <MenuItem
-                            key={org.organization_id}
-                            value={org.organization_id}
-                          >
-                            {org.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                </FormControl>
-              </Grid>
+              params.node.updateData({
+                ...params.node.data,
+                validationStatus: 'pending'
+              })
 
-              {/* Serial Number */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('serial_number')}
-                  label={t('chargingEquipment:serialNumber')}
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  error={!!errors.serial_number}
-                  helperText={errors.serial_number?.message}
-                />
-              </Grid>
+              const updatedData = {
+                ...Object.entries(params.node.data)
+                  .filter(
+                    ([, value]) =>
+                      value !== null && value !== '' && value !== undefined
+                  )
+                  .reduce((acc, [key, value]) => {
+                    acc[key] = value
+                    return acc
+                  }, {}),
+                charging_equipment_id: equipment?.charging_equipment_id,
+                status: equipment?.status || 'Draft'
+              }
 
-              {/* Manufacturer */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('manufacturer')}
-                  label={t('chargingEquipment:manufacturer')}
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  error={!!errors.manufacturer}
-                  helperText={errors.manufacturer?.message}
-                />
-              </Grid>
+              const responseData = await handleScheduleSave({
+                alertRef,
+                idField: 'charging_equipment_id',
+                labelPrefix: 'chargingEquipment',
+                params,
+                setErrors: setGridErrors,
+                setWarnings: setGridWarnings,
+                saveRow,
+                t,
+                updatedData
+              })
 
-              {/* Model */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  {...register('model')}
-                  label={t('chargingEquipment:model')}
-                  fullWidth
-                  disabled={!canEdit}
-                  error={!!errors.model}
-                  helperText={errors.model?.message}
-                />
-              </Grid>
-
-              {/* Level of Equipment */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={!!errors.level_of_equipment_id}>
-                  <InputLabel>
-                    {t('chargingEquipment:levelOfEquipment')} *
-                  </InputLabel>
-                  <Controller
-                    name="level_of_equipment_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        label={t('chargingEquipment:levelOfEquipment')}
-                        disabled={!canEdit}
-                      >
-                        {levels?.map((level) => (
-                          <MenuItem
-                            key={level.level_of_equipment_id}
-                            value={level.level_of_equipment_id}
-                          >
-                            {level.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                  {errors.level_of_equipment_id && (
-                    <BCTypography variant="caption" color="error">
-                      {errors.level_of_equipment_id.message}
-                    </BCTypography>
-                  )}
-                </FormControl>
-              </Grid>
-
-              {/* Ports */}
-              <Grid item xs={12} md={6}>
-                <FormControl>
-                  <FormLabel>{t('chargingEquipment:ports')}</FormLabel>
-                  <Controller
-                    name="ports"
-                    control={control}
-                    render={({ field }) => (
-                      <RadioGroup {...field} row disabled={!canEdit}>
-                        <FormControlLabel
-                          value="Single port"
-                          control={<Radio />}
-                          label={t('chargingEquipment:singlePort')}
-                        />
-                        <FormControlLabel
-                          value="Dual port"
-                          control={<Radio />}
-                          label={t('chargingEquipment:dualPort')}
-                        />
-                      </RadioGroup>
-                    )}
-                  />
-                </FormControl>
-              </Grid>
-
-              {/* Intended Uses */}
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>{t('chargingEquipment:intendedUses')}</InputLabel>
-                  <Controller
-                    name="intended_use_ids"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        multiple
-                        input={
-                          <OutlinedInput
-                            label={t('chargingEquipment:intendedUses')}
-                          />
-                        }
-                        disabled={!canEdit}
-                        renderValue={(selected) => (
-                          <Box
-                            sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
-                          >
-                            {selected.map((value) => {
-                              const endUseType = endUseTypes?.find(
-                                (type) => type.end_use_type_id === value
-                              )
-                              return (
-                                <Chip
-                                  key={value}
-                                  label={endUseType?.type || value}
-                                  size="small"
-                                />
-                              )
-                            })}
-                          </Box>
-                        )}
-                      >
-                        {endUseTypes?.map((endUseType) => (
-                          <MenuItem
-                            key={endUseType.end_use_type_id}
-                            value={endUseType.end_use_type_id}
-                          >
-                            <Checkbox
-                              checked={
-                                field.value.indexOf(
-                                  endUseType.end_use_type_id
-                                ) > -1
-                              }
-                            />
-                            <ListItemText primary={endUseType.type} />
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                </FormControl>
-              </Grid>
-
-              {/* Notes */}
-              <Grid item xs={12}>
-                <TextField
-                  {...register('notes')}
-                  label={t('chargingEquipment:notes')}
-                  fullWidth
-                  multiline
-                  rows={4}
-                  disabled={!canEdit}
-                  error={!!errors.notes}
-                  helperText={errors.notes?.message}
-                />
-              </Grid>
-
-              {/* Action Buttons */}
-              <Grid item xs={12}>
-                <Box display="flex" justifyContent="space-between" mt={2}>
-                  <Box display="flex" gap={2}>
-                    <BCButton
-                      variant="contained"
-                      type="submit"
-                      startIcon={<FontAwesomeIcon icon={faFloppyDisk} />}
-                      disabled={
-                        !canEdit ||
-                        !isDirty ||
-                        createMutation.isLoading ||
-                        updateMutation.isLoading
-                      }
-                    >
-                      {isEditMode ? t('common:save') : t('common:create')}
-                    </BCButton>
-
-                    <BCButton variant="outlined" onClick={handleCancel}>
-                      {t('common:cancel')}
-                    </BCButton>
-                  </Box>
-
-                  {canDelete && (
-                    <BCButton
-                      variant="outlined"
-                      color="error"
-                      startIcon={<FontAwesomeIcon icon={faTrashCan} />}
-                      onClick={handleDelete}
-                      disabled={deleteMutation.isLoading}
-                    >
-                      {t('common:delete')}
-                    </BCButton>
-                  )}
-                </Box>
-              </Grid>
-            </Grid>
-          </form>
+              alertRef.current?.clearAlert()
+              params.node.updateData(responseData)
+            }}
+            onAction={async (action, params) => {
+              if (action === 'delete' && canDelete) {
+                await handleScheduleDelete(
+                  params,
+                  'charging_equipment_id',
+                  saveRow,
+                  alertRef,
+                  () => {},
+                  {}
+                )
+                handleCancel()
+              }
+            }}
+            showAddRowsButton={false}
+          />
+          <Box display="flex" gap={2} mt={2}>
+            <BCButton variant="outlined" onClick={handleCancel}>
+              {t('common:back')}
+            </BCButton>
+          </Box>
         </Paper>
       </Grid>
     </Grid>

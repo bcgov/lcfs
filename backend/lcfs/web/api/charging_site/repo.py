@@ -34,11 +34,15 @@ class ChargingSiteRepository:
         """
         Retrieve all charging sites, optionally filtered by organization
         """
-        query = select(ChargingSite).options(
-            joinedload(ChargingSite.organization),
-            joinedload(ChargingSite.status),
-            joinedload(ChargingSite.documents),
-            joinedload(ChargingSite.charging_equipment),
+        query = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.organization),
+                joinedload(ChargingSite.status),
+                selectinload(ChargingSite.documents),
+                selectinload(ChargingSite.intended_users),
+            )
+            .order_by(asc(ChargingSite.create_date))
         )
 
         if organization_id:
@@ -105,7 +109,14 @@ class ChargingSiteRepository:
         return (
             (
                 await self.db.execute(
-                    select(ChargingSite).where(ChargingSite.site_name == site_name)
+                    select(ChargingSite)
+                    .options(
+                        joinedload(ChargingSite.status),
+                        joinedload(ChargingSite.intended_users),
+                        joinedload(ChargingSite.organization),
+                        joinedload(ChargingSite.documents),
+                    )
+                    .where(ChargingSite.site_name == site_name)
                 )
             )
             .scalars()
@@ -140,6 +151,8 @@ class ChargingSiteRepository:
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.status),
+                joinedload(ChargingSite.organization),
+                selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.intended_users),
             )
             .where(ChargingSite.organization_id == organization_id)

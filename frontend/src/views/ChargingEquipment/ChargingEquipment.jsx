@@ -8,7 +8,12 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box, Grid } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+  useSearchParams
+} from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { defaultSortModel, chargingEquipmentColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -28,6 +33,7 @@ const initialPaginationOptions = {
 export const ChargingEquipment = () => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
   const navigate = useNavigate()
+  const location = useLocation()
   const gridRef = useRef()
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
@@ -59,6 +65,10 @@ export const ChargingEquipment = () => {
     isSubmitting,
     isDecommissioning
   } = useChargingEquipment()
+
+  // Check if we're on a nested route (like /new or /:id/edit)
+  const isOnNestedRoute =
+    location.pathname !== `${ROUTES.REPORTS.LIST}/manage-fse`
 
   const getRowId = useCallback((params) => {
     return params.data.charging_equipment_id
@@ -215,16 +225,18 @@ export const ChargingEquipment = () => {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <BCTypography variant="h5" gutterBottom>
-          {t('chargingEquipment:manageFSE')}
-        </BCTypography>
-        <BCTypography variant="body1" color="text.secondary" paragraph>
-          {t('chargingEquipment:manageFSEDescription')}
-        </BCTypography>
-      </Grid>
+      {!isOnNestedRoute && (
+        <Grid item xs={12}>
+          <BCTypography variant="h5" gutterBottom>
+            {t('chargingEquipment:manageFSE')}
+          </BCTypography>
+          <BCTypography variant="body1" color="text.secondary" paragraph>
+            {t('chargingEquipment:manageFSEDescription')}
+          </BCTypography>
+        </Grid>
+      )}
 
-      {alertMessage && (
+      {!isOnNestedRoute && alertMessage && (
         <Grid item xs={12}>
           <BCAlert severity={alertSeverity} onClose={() => setAlertMessage('')}>
             {alertMessage}
@@ -232,83 +244,90 @@ export const ChargingEquipment = () => {
         </Grid>
       )}
 
-      <Grid item xs={12}>
-        <BCBox>
-          <Box display="flex" justifyContent="space-between" mb={2}>
-            <Box display="flex" gap={2}>
-              <BCButton
-                variant="contained"
-                color="primary"
-                size="medium"
-                startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-                onClick={handleNewFSE}
-              >
-                {t('chargingEquipment:newFSE')}
-              </BCButton>
+      {!isOnNestedRoute && (
+        <Grid item xs={12}>
+          <BCBox>
+            <Box display="flex" justifyContent="space-between" mb={2}>
+              <Box display="flex" gap={2}>
+                <BCButton
+                  variant="contained"
+                  color="primary"
+                  size="medium"
+                  startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
+                  onClick={handleNewFSE}
+                >
+                  {t('chargingEquipment:newFSE')}
+                </BCButton>
 
-              <BCButton
-                variant="outlined"
-                color="primary"
-                size="medium"
-                onClick={handleSelectAllDraftUpdated}
-              >
-                {t('chargingEquipment:selectAllDraftUpdated')}
-              </BCButton>
+                <BCButton
+                  variant="outlined"
+                  color="primary"
+                  size="medium"
+                  onClick={handleSelectAllDraftUpdated}
+                >
+                  {t('chargingEquipment:selectAllDraftUpdated')}
+                </BCButton>
 
-              <BCButton
-                variant="outlined"
-                color="primary"
-                size="medium"
-                onClick={handleSelectAllValidated}
-              >
-                {t('chargingEquipment:selectAllValidated')}
-              </BCButton>
+                <BCButton
+                  variant="outlined"
+                  color="primary"
+                  size="medium"
+                  onClick={handleSelectAllValidated}
+                >
+                  {t('chargingEquipment:selectAllValidated')}
+                </BCButton>
 
-              <BulkActionButtons
-                selectedRows={selectedRows}
-                canSubmit={canSubmit}
-                canDecommission={canDecommission}
-                onSubmitClick={() => setShowSubmitModal(true)}
-                onDecommissionClick={() => setShowDecommissionModal(true)}
-              />
+                <BulkActionButtons
+                  selectedRows={selectedRows}
+                  canSubmit={canSubmit}
+                  canDecommission={canDecommission}
+                  onSubmitClick={() => setShowSubmitModal(true)}
+                  onDecommissionClick={() => setShowDecommissionModal(true)}
+                />
+              </Box>
+
+              <ClearFiltersButton onClick={handleClearFilters} />
             </Box>
 
-            <ClearFiltersButton onClick={handleClearFilters} />
-          </Box>
+            <BCGridViewer
+              gridRef={gridRef}
+              columnDefs={chargingEquipmentColDefs}
+              defaultColDef={defaultColDef}
+              getRowId={getRowId}
+              overlayLoadingTemplate="Loading FSE data..."
+              overlayNoRowsTemplate="No FSE found"
+              gridKey="charging-equipment"
+              paginationOptions={paginationOptions}
+              onPaginationChange={(opts) => setPaginationOptions(opts)}
+              queryData={{ data: equipmentData, isLoading, isError, error }}
+              onRowClicked={handleRowClick}
+              rowSelection="multiple"
+              onSelectionChanged={handleSelectionChanged}
+              suppressRowClickSelection={true}
+              checkboxSelection={true}
+              rowMultiSelectWithClick={false}
+              highlightedRowId={highlightedId}
+            />
+          </BCBox>
+        </Grid>
+      )}
 
-          <BCGridViewer
-            gridRef={gridRef}
-            columnDefs={chargingEquipmentColDefs}
-            defaultColDef={defaultColDef}
-            getRowId={getRowId}
-            overlayLoadingTemplate="Loading FSE data..."
-            overlayNoRowsTemplate="No FSE found"
-            gridKey="charging-equipment"
-            paginationOptions={paginationOptions}
-            onPaginationChange={(opts) => setPaginationOptions(opts)}
-            queryData={{ data: equipmentData, isLoading, isError, error }}
-            onRowClicked={handleRowClick}
-            rowSelection="multiple"
-            onSelectionChanged={handleSelectionChanged}
-            suppressRowClickSelection={true}
-            checkboxSelection={true}
-            rowMultiSelectWithClick={false}
-            highlightedRowId={highlightedId}
-          />
-        </BCBox>
-      </Grid>
+      {!isOnNestedRoute && (
+        <BulkActionModals
+          showSubmitModal={showSubmitModal}
+          showDecommissionModal={showDecommissionModal}
+          selectedCount={selectedRows.length}
+          onSubmitConfirm={handleBulkSubmit}
+          onDecommissionConfirm={handleBulkDecommission}
+          onSubmitCancel={() => setShowSubmitModal(false)}
+          onDecommissionCancel={() => setShowDecommissionModal(false)}
+          isSubmitting={isSubmitting}
+          isDecommissioning={isDecommissioning}
+        />
+      )}
 
-      <BulkActionModals
-        showSubmitModal={showSubmitModal}
-        showDecommissionModal={showDecommissionModal}
-        selectedCount={selectedRows.length}
-        onSubmitConfirm={handleBulkSubmit}
-        onDecommissionConfirm={handleBulkDecommission}
-        onSubmitCancel={() => setShowSubmitModal(false)}
-        onDecommissionCancel={() => setShowDecommissionModal(false)}
-        isSubmitting={isSubmitting}
-        isDecommissioning={isDecommissioning}
-      />
+      {/* Render nested routes (bulk add, single edit) */}
+      <Outlet />
     </Grid>
   )
 }

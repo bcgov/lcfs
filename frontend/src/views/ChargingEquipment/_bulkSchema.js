@@ -11,20 +11,29 @@ import {
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import i18n from '@/i18n'
 
+const isEditableByStatus = (params) => {
+  const status = params?.data?.status
+  if (!status) return true
+  return ['Draft', 'Updated', 'Validated'].includes(status)
+}
+
 export const bulkChargingEquipmentColDefs = (
   chargingSites = [],
   organizations = [],
   levels = [],
   endUseTypes = [],
   errors = {},
-  warnings = {}
+  warnings = {},
+  actionsOptions = null,
+  allowAllocatingOrg = true
 ) => [
   validation,
   actions((params) => ({
     enableDuplicate: false,
     enableDelete: true,
     enableUndo: false,
-    enableStatus: false
+    enableStatus: false,
+    ...(actionsOptions || {})
   })),
   {
     field: 'id',
@@ -45,16 +54,23 @@ export const bulkChargingEquipmentColDefs = (
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
-      params.data.charging_site_id = raw ?? ''
+      const next = raw === '' || raw == null ? '' : Number(raw)
+      params.data.charging_site_id = next
+      params.newValue = next
       return true
     },
+    editable: (params) =>
+      isEditableByStatus(params) &&
+      (!params.data?.charging_equipment_id || params.data?.status === 'Draft'),
     valueFormatter: (params) => {
       const site = chargingSites.find(s => s.charging_site_id === params.value)
       return site ? site.site_name : ''
     },
     cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 200,
-    editable: true
+    editable: (params) =>
+      isEditableByStatus(params) &&
+      (!params.data?.charging_equipment_id || params.data?.status === 'Draft')
   },
   {
     field: 'allocating_organization_id',
@@ -71,15 +87,18 @@ export const bulkChargingEquipmentColDefs = (
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
-      params.data.allocating_organization_id = raw ?? ''
+      const next = raw === '' || raw == null ? '' : Number(raw)
+      params.data.allocating_organization_id = next
+      params.newValue = next
       return true
     },
+    editable: () => Boolean(allowAllocatingOrg),
     valueFormatter: (params) => {
       const org = organizations.find(o => o.organization_id === params.value)
       return org ? (org.legal_name || org.name) : ''
     },
     minWidth: 200,
-    editable: true
+    editable: () => Boolean(allowAllocatingOrg)
   },
   {
     field: 'serial_number',
@@ -89,7 +108,7 @@ export const bulkChargingEquipmentColDefs = (
     cellDataType: 'text',
     cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150,
-    editable: true
+    editable: isEditableByStatus
   },
   {
     field: 'manufacturer',
@@ -99,7 +118,7 @@ export const bulkChargingEquipmentColDefs = (
     cellDataType: 'text',
     cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150,
-    editable: true
+    editable: isEditableByStatus
   },
   {
     field: 'model',
@@ -107,7 +126,7 @@ export const bulkChargingEquipmentColDefs = (
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     minWidth: 120,
-    editable: true
+    editable: isEditableByStatus
   },
   {
     field: 'level_of_equipment_id',
@@ -124,16 +143,19 @@ export const bulkChargingEquipmentColDefs = (
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
-      params.data.level_of_equipment_id = raw ?? ''
+      const next = raw === '' || raw == null ? '' : Number(raw)
+      params.data.level_of_equipment_id = next
+      params.newValue = next
       return true
     },
+    editable: isEditableByStatus,
     valueFormatter: (params) => {
       const level = levels.find(l => l.level_of_equipment_id === params.value)
       return level ? level.name : ''
     },
     cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 180,
-    editable: true
+    editable: isEditableByStatus
   },
   {
     field: 'ports',
@@ -149,11 +171,13 @@ export const bulkChargingEquipmentColDefs = (
     valueSetter: (params) => {
       const incoming = params.newValue
       const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
-      params.data.ports = raw ?? ''
+      const next = raw ?? ''
+      params.data.ports = next
+      params.newValue = next
       return true
     },
     minWidth: 120,
-    editable: true
+    editable: isEditableByStatus
   },
   {
     field: 'intended_use_ids',
@@ -169,13 +193,18 @@ export const bulkChargingEquipmentColDefs = (
       openOnFocus: true
     },
     cellRenderer: MultiSelectRenderer,
+    editable: isEditableByStatus,
     valueSetter: (params) => {
       const incoming = params.newValue
       let raw = []
       if (Array.isArray(incoming)) {
-        raw = incoming.map((v) => (typeof v === 'object' ? v.value : v)).filter((v) => v != null)
+        raw = incoming
+          .map((v) => (typeof v === 'object' ? v.value : v))
+          .filter((v) => v != null && v !== '')
+          .map((v) => Number(v))
       }
       params.data.intended_use_ids = raw
+      params.newValue = raw
       return true
     },
     valueFormatter: (params) => {
@@ -186,7 +215,7 @@ export const bulkChargingEquipmentColDefs = (
       return selectedTypes.map(type => type.type).join(', ')
     },
     minWidth: 200,
-    editable: true
+    editable: isEditableByStatus
   },
   {
     field: 'notes',
@@ -194,7 +223,7 @@ export const bulkChargingEquipmentColDefs = (
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     minWidth: 200,
-    editable: true
+    editable: isEditableByStatus
   }
 ]
 
