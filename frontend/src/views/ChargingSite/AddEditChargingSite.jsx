@@ -148,7 +148,7 @@ export const AddEditChargingSite = ({
   }, [errors, warnings, intendedUserTypes, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   const onCellEditingStopped = useCallback(
@@ -192,7 +192,7 @@ export const AddEditChargingSite = ({
       })
       alertRef.current?.clearAlert()
       params.node.updateData({ ...responseData, validationStatus: 'valid' })
-      params.api.autoSizeAllColumns()
+      params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
   )
