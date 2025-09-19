@@ -9,7 +9,6 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
   const onClose = () => {
     close()
   }
-
   // Get dynamic text based on parent type
   const getModalTexts = () => {
     switch (parentType) {

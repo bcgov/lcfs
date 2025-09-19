@@ -30,7 +30,7 @@ export function ReportsMenu() {
   const paths = useMemo(
     () => [
       ROUTES.REPORTS.LIST,
-      ROUTES.REPORTS.CHARGING_SITE,
+      ROUTES.REPORTS.CHARGING_SITE.INDEX,
       ROUTES.REPORTS.MANAGE_FSE
     ],
     []
@@ -70,7 +70,7 @@ export function ReportsMenu() {
     if (location.pathname.includes('/charging-sites')) {
       return (
         <Role roles={[...govRoles, roles.supplier]}>
-          <Outlet alertRef={alertRef} />
+          <Outlet context={{ alertRef }} />
         </Role>
       )
     }
@@ -78,7 +78,7 @@ export function ReportsMenu() {
     if (location.pathname.includes('/fse')) {
       return (
         <Role roles={[...govRoles, roles.supplier]}>
-          <Outlet alertRef={alertRef} />
+          <Outlet context={{ alertRef }} />
         </Role>
       )
     }
@@ -91,7 +91,10 @@ export function ReportsMenu() {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{
+            background: 'rgb(0, 0, 0, 0.08)',
+            width: { xs: '100%', md: '50%' }
+          }}
           orientation={tabsOrientation}
           value={tabIndex}
           aria-label="Tabs for selection of administration options"
