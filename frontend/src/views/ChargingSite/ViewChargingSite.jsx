@@ -27,7 +27,8 @@ export const ViewChargingSite = () => {
   const {
     data: chargingSiteData,
     isLoading,
-    isError
+    isError,
+    refetch
   } = useGetChargingSiteById(siteId)
 
   if (isLoading || isCurrentUserLoading) {
@@ -54,6 +55,7 @@ export const ViewChargingSite = () => {
         hasAnyRole={hasAnyRole}
         hasRoles={hasRoles}
         isIDIR={isIDIR}
+        refetch={refetch}
       />
       <ChargingSiteDocument attachments={chargingSiteData?.documents} />
       <ChargingSiteFSEGrid

@@ -17,7 +17,8 @@ export const ChargingSiteCard = ({
   data,
   hasAnyRole,
   hasRoles,
-  isIDIR
+  isIDIR,
+  refetch
 }) => {
   const alertRef = useRef(null)
   const { t } = useTranslation('chargingSite')
@@ -31,41 +32,6 @@ export const ChargingSiteCard = ({
 
   const handleEditClick = useCallback(() => {
     setIsEditMode(true)
-  }, [])
-
-  const handleCancelEdit = useCallback(() => {
-    if (addMode) {
-      navigate(ROUTES.ORGANIZATIONS.LIST)
-    } else {
-      setIsEditMode(false)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [])
-
-  const handleSaveSuccess = useCallback((organizationId) => {
-    if (addMode) {
-      const successMessage = {
-        state: {
-          message: t('org:addSuccessMessage'),
-          severity: 'success'
-        }
-      }
-      setIsEditMode(false)
-      organizationId
-        ? navigate(
-            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
-            successMessage
-          )
-        : navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
-    } else {
-      alertRef.current?.triggerAlert({
-        message: t('org:editSuccessMessage'),
-        severity: 'success'
-      })
-      setIsEditMode(false)
-      refetch()
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
   }, [])
 
   return (
@@ -92,6 +58,7 @@ export const ChargingSiteCard = ({
                     isEditMode={isEditMode}
                     setIsEditMode={setIsEditMode}
                     data={data}
+                    refetch={refetch}
                   />
                 </>
               ) : (

@@ -35,7 +35,8 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 export const AddEditChargingSite = ({
   isEditMode = false,
   setIsEditMode,
-  data
+  data,
+  refetch
 }) => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
@@ -240,9 +241,12 @@ export const AddEditChargingSite = ({
   }
 
   const handleNavigateBack = useCallback(() => {
-    isEditMode
-      ? setIsEditMode(false)
-      : navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+    if (isEditMode) {
+      setIsEditMode(false)
+      refetch && refetch()
+    } else {
+      navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+    }
   }, [navigate, t])
 
   const onAddRows = useCallback(

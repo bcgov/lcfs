@@ -73,7 +73,9 @@ export const useGetAllChargingSites = (
   } = options
 
   return useQuery({
-    queryKey: ['chargingSitesAll', pagination],
+    queryKey: isIDIR
+      ? ['chargingSitesAll', pagination]
+      : ['chargingSitesByOrg', organizationId, pagination],
     queryFn: async () => {
       const response = await client.post(
         isIDIR
@@ -144,6 +146,7 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
       if (clearCache) {
         // Remove all charging site related queries
         queryClient.removeQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.removeQueries({ queryKey: ['chargingSitesAll'] })
         queryClient.removeQueries({ queryKey: ['chargingSite'] })
         queryClient.removeQueries({
           queryKey: ['charging-site-equipment-paginated']
@@ -151,6 +154,7 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
       } else {
         // Invalidate all related queries
         queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
         queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
         queryClient.invalidateQueries({
           queryKey: ['charging-site-equipment-paginated']
@@ -175,6 +179,7 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
     onError: (error, variables, context) => {
       // Always invalidate on error to ensure fresh data on retry
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
       queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
       queryClient.invalidateQueries({
         queryKey: ['charging-site-equipment-paginated']
@@ -408,7 +413,6 @@ export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
   })
 }
 
-// Helper function to invalidate all charging site related queries
 export const useInvalidateChargingSiteQueries = () => {
   const queryClient = useQueryClient()
 
@@ -416,6 +420,7 @@ export const useInvalidateChargingSiteQueries = () => {
     invalidateAll: () => {
       queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
       queryClient.invalidateQueries({
         queryKey: ['charging-site-equipment-paginated']
       })
@@ -429,6 +434,11 @@ export const useInvalidateChargingSiteQueries = () => {
     },
     invalidateForOrganization: (orgId) => {
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg', orgId] })
+    },
+    // Add method to invalidate all lists
+    invalidateAllLists: () => {
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
     }
   }
 }
