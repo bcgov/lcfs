@@ -30,7 +30,7 @@ export function ReportsMenu() {
   const paths = useMemo(
     () => [
       ROUTES.REPORTS.LIST,
-      ROUTES.REPORTS.CHARGING_SITE,
+      ROUTES.REPORTS.CHARGING_SITE.INDEX,
       ROUTES.REPORTS.MANAGE_FSE
     ],
     []

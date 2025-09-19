@@ -34,7 +34,7 @@ import colors from '@/themes/base/colors'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import {
-  useChargingSite,
+  useGetChargingSiteById,
   useBulkUpdateEquipmentStatus,
   useChargingSiteEquipmentPaginated
 } from '@/hooks/useChargingSite'
@@ -71,7 +71,7 @@ export const ChargingSiteEquipmentProcessing = () => {
     []
   )
 
-  const chargingSiteQuery = useChargingSite(siteId)
+  const chargingSiteQuery = useGetChargingSiteById(siteId)
   const { data: chargingSite, isLoading: isSiteLoading } = chargingSiteQuery
 
   const equipmentQuery = useChargingSiteEquipmentPaginated(

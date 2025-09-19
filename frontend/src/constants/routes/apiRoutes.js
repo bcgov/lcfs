@@ -111,12 +111,15 @@ export const apiRoutes = {
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
   // charging sites
+  getSiteStatuses: '/charging-sites/statuses',
+  getEquipmentStatuses: '/charging-sites/equipment/statuses',
   intendedUsers: '/charging-sites/intended-users',
   getChargingSite: '/charging-sites/:siteId',
   getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
-  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment',
+  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
+  bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-update',
   exportChargingSites: '/charging-sites/export/:orgID',
   importChargingSites: '/charging-sites/import/:orgID',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',

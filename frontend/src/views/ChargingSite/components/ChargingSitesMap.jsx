@@ -23,6 +23,7 @@ import BCTypography from '@/components/BCTypography'
 import { fixLeafletIcons, markerIcons } from './utils'
 import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
+import colors from '@/themes/base/colors'
 
 // Fix Leaflet icon issue
 fixLeafletIcons()
@@ -170,11 +171,11 @@ const ChargingSitesLegend = ({ sites, isFullscreen }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
-        return '#4caf50' // Green
+        return colors.badgeColors.success.background // Green
       case 'draft':
-        return '#ff9800' // Orange
+        return colors.badgeColors.info.background // Blue
       case 'submitted':
-        return '#2196f3' // Blue
+        return colors.badgeColors.warning.background // Orange
       case 'decommissioned':
         return '#f44336' // Red
       default:
@@ -286,11 +287,11 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   const getMarkerIcon = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
-        return markerIcons.default // Blue
+        return markerIcons.green
       case 'draft':
-        return markerIcons.orange
+        return markerIcons.default
       case 'submitted':
-        return markerIcons.default // Blue
+        return markerIcons.orange
       case 'rejected':
         return markerIcons.red
       default:
@@ -301,11 +302,11 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
-        return '#4caf50'
+        return colors.badgeColors.success.background
       case 'draft':
-        return '#ff9800'
+        return colors.badgeColors.info.background
       case 'submitted':
-        return '#2196f3'
+        return colors.badgeColors.warning.background
       case 'rejected':
         return '#f44336'
       default:
@@ -500,6 +501,9 @@ const ChargingSitesMap = ({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isFullscreen])
 
+  if (sites && sites.length < 1) {
+    return <></>
+  }
   return (
     <>
       {/* Normal view */}

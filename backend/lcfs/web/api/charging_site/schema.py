@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List, Optional
 from pydantic import Field
 from lcfs.services.s3.schema import FileResponseSchema
 from enum import Enum
@@ -43,10 +44,6 @@ class ChargingSiteSchema(BaseSchema):
     update_date: Optional[datetime] = None
     create_user: Optional[str] = None
     update_user: Optional[str] = None
-
-
-class ChargingSiteWithAttachmentsSchema(ChargingSiteSchema):
-    attachments: List[FileResponseSchema] = Field(default_factory=list)
 
 
 class DeleteChargingSiteResponseSchema(BaseSchema):
@@ -96,12 +93,6 @@ class ChargingSiteBaseSchema(BaseSchema):
     intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
 
 
-class ChargingSiteStatusSchema(BaseSchema):
-    charging_site_status_id: int
-    status: str
-    description: Optional[str] = None
-
-
 class ChargingEquipmentStatusSchema(BaseSchema):
     charging_equipment_status_id: int
     status: str
@@ -146,59 +137,6 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
         return super().model_validate(obj, **kwargs)
 
 
-class ChargingSiteWithAttachmentsSchema(ChargingSiteBaseSchema):
-    attachments: List[FileResponseSchema] = Field(default_factory=list)
-
-
-class BulkEquipmentStatusUpdateSchema(BaseSchema):
-    equipment_ids: List[int]
-    new_status: str
-
-
-class ChargingEquipmentPaginatedSchema(BaseSchema):
-    equipment: List[ChargingEquipmentForSiteSchema]
-    pagination: PaginationResponseSchema
-
-
-class ChargingSiteStatusEnum:
-    DRAFT = "Draft"
-    SUBMITTED = "Submitted"
-    VALIDATED = "Validated"
-    UPDATED = "Updated"
-
-
-class EquipmentStatusEnum:
-    DRAFT = "Draft"
-    SUBMITTED = "Submitted"
-    VALIDATED = "Validated"
-    UPDATED = "Updated"
-    DECOMMISSIONED = "Decommissioned"
-
-
-# from HEAD, conformed to BaseSchema naming and style
-class ChargingEquipmentForSiteSchema(BaseSchema):
-    charging_equipment_id: int
-    equipment_number: str
-    registration_number: str
-    version: int = 1
-    allocating_organization: Optional[str] = None
-    serial_number: str
-    manufacturer: str
-    model: Optional[str] = None
-    level_of_equipment: str
-    ports: Optional[str] = None
-    intended_use_types: List[str] = Field(default_factory=list)
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    status: str
-    equipment_notes: Optional[str] = None
-
-
-class ChargingEquipmentPaginatedSchema(BaseSchema):
-    equipment: List[ChargingEquipmentForSiteSchema]
-    pagination: PaginationResponseSchema
-
-
 class BulkEquipmentStatusUpdateSchema(BaseSchema):
     equipment_ids: List[int]
     new_status: str
@@ -217,3 +155,8 @@ class EquipmentStatusEnum:
     VALIDATED = "Validated"
     UPDATED = "Updated"
     DECOMMISSIONED = "Decommissioned"
+
+
+class ChargingEquipmentPaginatedSchema(BaseSchema):
+    equipments: List[ChargingEquipmentForSiteSchema]
+    pagination: PaginationResponseSchema

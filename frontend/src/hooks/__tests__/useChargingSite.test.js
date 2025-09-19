@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '../../services/useApiService'
 import { wrapper } from '../../tests/utils/wrapper'
 import {
-  useChargingSite,
+  useGetChargingSiteById,
   useChargingSiteStatuses,
   useBulkUpdateEquipmentStatus,
   useChargingSiteEquipmentPaginated
@@ -39,7 +39,7 @@ describe('useChargingSite', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useChargingSite(1), {
+      const { result } = renderHook(() => useGetChargingSiteById(1), {
         wrapper
       })
 
@@ -55,7 +55,7 @@ describe('useChargingSite', () => {
       const mockError = new Error('Failed to fetch charging site')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useChargingSite(1), {
+      const { result } = renderHook(() => useGetChargingSiteById(1), {
         wrapper
       })
 
@@ -67,7 +67,7 @@ describe('useChargingSite', () => {
     })
 
     it('should not fetch when siteId is undefined', () => {
-      renderHook(() => useChargingSite(undefined), {
+      renderHook(() => useGetChargingSiteById(undefined), {
         wrapper
       })
 

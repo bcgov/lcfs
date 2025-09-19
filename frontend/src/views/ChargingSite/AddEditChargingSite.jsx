@@ -27,7 +27,6 @@ import {
 } from '@/utils/dateQuarterUtils'
 import {
   useChargingSiteMutation,
-  useGetAllChargingSitesByOrg,
   useGetIntendedUsers,
   useImportChargingSites,
   useGetChargingSitesImportJobStatus
@@ -216,7 +215,10 @@ export const AddEditChargingSite = () => {
       setIsDownloading(true)
       const endpoint = includeData
         ? apiRoutes.exportChargingSites.replace(':orgID', organizationId)
-        : apiRoutes.downloadChargingSitesTemplate.replace(':orgID', organizationId)
+        : apiRoutes.downloadChargingSitesTemplate.replace(
+            ':orgID',
+            organizationId
+          )
       await apiService.download({ url: endpoint })
     } catch (error) {
       console.error(
