@@ -161,7 +161,7 @@ export const AddEditFuelSupplies = () => {
   }, [])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   const updateRowDataValues = useCallback((node, updates) => {
@@ -186,7 +186,7 @@ export const AddEditFuelSupplies = () => {
       // Trigger column visibility update and auto-size
       setTimeout(() => {
         updateColumnsVisibility()
-        params.api.autoSizeAllColumns()
+        params.api?.autoSizeAllColumns?.()
       }, 0)
     },
     [optionsData, updateColumnsVisibility, updateRowDataValues]

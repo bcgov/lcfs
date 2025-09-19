@@ -72,6 +72,11 @@ const OrganizationList = ({
           getOptionLabel={(option) => option.name}
           getOptionKey={(option) => option.organizationId}
           onChange={onInputBoxChanged}
+          value={
+            optionsList.find(
+              (option) => option.organizationId === selectedOrg?.id
+            ) || null
+          }
           sx={({ functions: { pxToRem }, palette: { primary, light } }) => ({
             width: 300,
             '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
@@ -81,11 +86,6 @@ const OrganizationList = ({
               {...params}
               placeholder={t('txn:selectOrganizationName')}
               aria-label={t('txn:selectOrganizationName')}
-              value={
-                optionsList.find(
-                  (option) => option.organizationId === selectedOrg?.id
-                ) || null
-              }
               slotProps={{
                 htmlInput: {
                   ...params.inputProps,
