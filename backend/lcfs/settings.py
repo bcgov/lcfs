@@ -152,6 +152,11 @@ class Settings(BaseSettings):
             path=path,
         )
 
+    # Chat service settings
+    OLLAMA_URL: str = "http://ollama:11434"
+    RAG_SERVICE_URL: str = "http://rag-llm:1416"
+    CHAT_RAG_ENABLED: bool = True
+
     class Config:
         env_file = ".env"
         env_prefix = "LCFS_"

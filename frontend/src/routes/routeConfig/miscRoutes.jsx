@@ -1,6 +1,7 @@
 import ROUTES from '../routes'
 import { Dashboard } from '@/views/Dashboard'
 import FormView from '@/views/Forms/FormView'
+import { Chat } from '@/views/Chat'
 
 export const miscRoutes = [
   {
@@ -19,5 +20,12 @@ export const miscRoutes = [
     path: ROUTES.FORMS.VIEW_AUTHENTICATED,
     element: <FormView />,
     handle: { title: 'Form' }
+  },
+  {
+    name: 'Chat',
+    key: 'chat',
+    path: ROUTES.CHAT,
+    element: <Chat />,
+    handle: { title: 'LCFS Assistant' }
   }
 ]

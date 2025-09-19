@@ -108,7 +108,9 @@ export const ROUTES = {
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'
-  }
+  },
+
+  CHAT: '/chat'
 }
 
 /**

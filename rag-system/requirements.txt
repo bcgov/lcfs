@@ -1,0 +1,29 @@
+# RAG System Dependencies
+# Generated from Dockerfile pip install commands
+
+# Core ML/AI dependencies
+torch
+transformers
+sentence-transformers
+accelerate
+nltk
+
+# Haystack and integrations
+ollama-haystack
+qdrant-client
+qdrant-haystack
+
+# Document processing dependencies
+lxml>=5.3.0
+pypdf==6.0.0
+markdown-it-py
+mdit_plain
+python-pptx
+python-docx
+jq
+openpyxl
+tabulate
+pandas
+trafilatura
+
+# Note: hayhooks is included in the base image (deepset/hayhooks:v0.10.1)
