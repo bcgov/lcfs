@@ -112,7 +112,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
   )
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   return (

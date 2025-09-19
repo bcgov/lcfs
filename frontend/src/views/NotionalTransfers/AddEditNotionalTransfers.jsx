@@ -212,7 +212,7 @@ export const AddEditNotionalTransfers = () => {
 
       // Auto-resize columns after data update
       setTimeout(() => {
-        params.api.autoSizeAllColumns()
+        params.api?.autoSizeAllColumns?.()
       }, 0)
     },
     [saveRow, t, complianceReportId]
@@ -306,12 +306,12 @@ export const AddEditNotionalTransfers = () => {
     api.setColumnsVisible(['isCanadaProduced'], showColumns)
     api.setColumnsVisible(['isQ1Supplied'], showColumns)
     if (showColumns) {
-      api.autoSizeAllColumns()
+      api?.autoSizeAllColumns?.()
     }
   })
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
   const onCellValueChanged = useCallback(async () => {
     setTimeout(() => {
