@@ -20,7 +20,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportDialog from '@/components/ImportDialog'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import {
   getCurrentQuarter,
   getQuarterDateRange
@@ -52,7 +51,7 @@ export const AddEditChargingSite = () => {
 
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'finalSupplyEquipment', 'report'])
+  const { t } = useTranslation(['common', 'chargingSite'])
 
   const {
     data: currentUser,
@@ -65,7 +64,6 @@ export const AddEditChargingSite = () => {
     () => currentUser.organization?.organizationId,
     [currentUser]
   )
-  const { complianceReportId = 62 } = useParams()
   const navigate = useNavigate()
 
   const {
@@ -78,7 +76,7 @@ export const AddEditChargingSite = () => {
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('report:chargingSites.noSitesFound'),
+      overlayNoRowsTemplate: t('noSitesFound'),
       stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
@@ -178,7 +176,7 @@ export const AddEditChargingSite = () => {
       const responseData = await handleScheduleSave({
         alertRef,
         idField: 'chargingSiteId',
-        labelPrefix: 'report:chargingSites.columnLabels',
+        labelPrefix: 'columnLabels',
         params,
         setErrors,
         setWarnings,
@@ -283,11 +281,11 @@ export const AddEditChargingSite = () => {
       <Grid2 className="add-edit-charging-site-container">
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('report:chargingSites.addNewSite')}
+            {t('addNewSite')}
           </BCTypography>
           <BCBox my={2.5} component="div">
             <BCTypography variant="body4" color="text" mt={0.5} component="div">
-              {t('report:chargingSites.templateDescriptor')}
+              {t('templateDescriptor')}
             </BCTypography>
           </BCBox>
         </div>

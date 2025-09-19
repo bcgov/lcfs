@@ -65,7 +65,7 @@ export const ROUTES = {
       INDEX: '/compliance-reporting/charging-sites',
       VIEW: '/compliance-reporting/charging-sites/:siteId',
       EDIT: '/compliance-reporting/charging-sites/:siteId/edit',
-      ADD: '/compliance-reporting/manage-charging-sites/add'
+      ADD: '/compliance-reporting/charging-sites/add'
     },
     MANAGE_FSE: '/compliance-reporting/fse',
     ADD_FSE: '/compliance-reporting/fse/add',

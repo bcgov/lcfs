@@ -20,6 +20,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingEquipmentStatusSchema,
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
+    ChargingSiteStatusEnum,
     ChargingSitesSchema,
     ChargingSiteStatusSchema,
     ChargingEquipmentForSiteSchema,
@@ -205,7 +206,7 @@ class ChargingSiteService:
 
             await self.repo.update_charging_site_status(
                 charging_site_id, site_status_ids[bulk_update.new_status]
-        )
+            )
         return True
 
     @service_handler
@@ -275,7 +276,9 @@ class ChargingSiteService:
                     )
                     if condition is not None:
                         conditions.append(condition)
-
+        conditions.append(
+            ~ChargingSite.status.has(ChargingSiteStatus.status == ChargingSiteStatusEnum.DRAFT)
+        )
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_all_charging_sites_paginated(

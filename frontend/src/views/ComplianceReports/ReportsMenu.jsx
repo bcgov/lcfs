@@ -70,7 +70,7 @@ export function ReportsMenu() {
     if (location.pathname.includes('/charging-sites')) {
       return (
         <Role roles={[...govRoles, roles.supplier]}>
-          <Outlet alertRef={alertRef} />
+          <Outlet context={{ alertRef }} />
         </Role>
       )
     }
@@ -78,7 +78,7 @@ export function ReportsMenu() {
     if (location.pathname.includes('/fse')) {
       return (
         <Role roles={[...govRoles, roles.supplier]}>
-          <Outlet alertRef={alertRef} />
+          <Outlet context={{ alertRef }} />
         </Role>
       )
     }

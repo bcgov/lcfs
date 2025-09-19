@@ -53,12 +53,21 @@ export const ChargingSitesList = ({ alertRef }) => {
   }
 
   const organizationId = currentUser?.organization?.organizationId
-  const isOnNestedRoute = location.pathname !== ROUTES.REPORTS.CHARGING_SITE
+  const isOnNestedRoute = location.pathname !== ROUTES.REPORTS.CHARGING_SITE.INDEX
 
   const { data: orgNames = [], isLoading: orgLoading } = useOrganizationNames(
     null,
     { enabled: isIDIR }
   )
+
+  const onRowClicked = (params) => {
+    navigate(
+      ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(
+        ':siteId',
+        params.data.chargingSiteId
+      )
+    )
+  }
 
   const orgIdToName = useMemo(() => {
     try {
@@ -168,105 +177,108 @@ export const ChargingSitesList = ({ alertRef }) => {
     }
   }, [selectedOrg.id, orgNames])
 
+  // Show nested route component when on nested route
+  if (isOnNestedRoute) {
+    return <Outlet />
+  }
+
   return (
     <>
-      <>
-        <BCTypography variant="h5" color="primary">
-          {isIDIR ? t('chargingSitesTitle') : t('mngTitle')}
-        </BCTypography>
-        <BCTypography variant="body2" color="text.secondary" my={2}>
-          {isIDIR ? t('csDescription') : t('mngCSdescription')}
-        </BCTypography>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} lg={7}>
-            <Stack spacing={1} direction={'row'}>
-              {!isIDIR && (
-                <BCButton
-                  id="new-site-button"
-                  variant="contained"
-                  size="small"
-                  color="primary"
-                  onClick={handleNewSite}
-                >
-                  <BCTypography variant="subtitle2">
-                    {t('newSiteBtn')}
-                  </BCTypography>
-                </BCButton>
-              )}
-              <ClearFiltersButton onClick={handleClearFilters} />
-            </Stack>
-          </Grid>
-          {isIDIR && (
-            <Grid
-              item
-              xs={12}
-              lg={5}
-              sx={{
-                display: 'flex',
-                justifyContent: { xs: 'flex-start', lg: 'flex-end' },
-                alignItems: 'center'
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <BCTypography variant="body2" color="primary">
-                  {t('filtersLabel')}
+      <BCTypography variant="h5" color="primary">
+        {isIDIR ? t('chargingSitesTitle') : t('mngTitle')}
+      </BCTypography>
+      <BCTypography variant="body2" color="text.secondary" my={2}>
+        {isIDIR ? t('csDescription') : t('mngCSdescription')}
+      </BCTypography>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} lg={7}>
+          <Stack spacing={1} direction={'row'}>
+            {!isIDIR && (
+              <BCButton
+                id="new-site-button"
+                variant="contained"
+                size="small"
+                color="primary"
+                onClick={handleNewSite}
+              >
+                <BCTypography variant="subtitle2">
+                  {t('newSiteBtn')}
                 </BCTypography>
-                <Autocomplete
-                  disablePortal
-                  id="idir-orgs"
-                  loading={orgLoading}
-                  options={orgNames}
-                  value={selectedOrgOption}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) =>
-                    option.organizationId === value.organizationId
-                  }
-                  onChange={handleOrganizationChange}
-                  sx={({ functions: { pxToRem } }) => ({
-                    width: 300,
-                    '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
-                  })}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={t(
-                        'selectOrgPlaceholder',
-                        'Select organization'
-                      )}
-                      slotProps={{
-                        htmlInput: {
-                          ...params.inputProps,
-                          style: { fontSize: 16, padding: '8px' }
-                        }
-                      }}
-                    />
-                  )}
-                />
-              </Box>
-            </Grid>
-          )}
+              </BCButton>
+            )}
+            <ClearFiltersButton onClick={handleClearFilters} />
+          </Stack>
         </Grid>
-        <BCBox component="div" sx={{ mt: 2, height: '100%', width: '100%' }}>
-          <BCGridViewer
-            gridRef={gridRef}
-            gridKey="idir-charging-sites-grid"
-            columnDefs={idirColumnDefs}
-            defaultColDef={indexDefaultColDef}
-            queryData={queryData}
-            dataKey="chargingSites"
-            autoSizeStrategy={{ type: 'fitGridWidth', defaultMinWidth: 80 }}
-            paginationOptions={paginationOptions}
-            onPaginationChange={setPaginationOptions}
-            getRowId={(p) => String(p.data?.chargingSiteId || p.node?.id)}
-          />
-        </BCBox>
-        <ChargingSitesMap
-          sites={queryData?.data?.chargingSites || []}
-          showLegend={false}
-          height={500}
+        {isIDIR && (
+          <Grid
+            item
+            xs={12}
+            lg={5}
+            sx={{
+              display: 'flex',
+              justifyContent: { xs: 'flex-start', lg: 'flex-end' },
+              alignItems: 'center'
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              <BCTypography variant="body2" color="primary">
+                {t('filtersLabel')}
+              </BCTypography>
+              <Autocomplete
+                disablePortal
+                id="idir-orgs"
+                loading={orgLoading}
+                options={orgNames}
+                value={selectedOrgOption}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) =>
+                  option.organizationId === value.organizationId
+                }
+                onChange={handleOrganizationChange}
+                sx={({ functions: { pxToRem } }) => ({
+                  width: 300,
+                  '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
+                })}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={t(
+                      'selectOrgPlaceholder',
+                      'Select organization'
+                    )}
+                    slotProps={{
+                      htmlInput: {
+                        ...params.inputProps,
+                        style: { fontSize: 16, padding: '8px' }
+                      }
+                    }}
+                  />
+                )}
+              />
+            </Box>
+          </Grid>
+        )}
+      </Grid>
+      <BCBox component="div" sx={{ mt: 2, height: '100%', width: '100%' }}>
+        <BCGridViewer
+          gridRef={gridRef}
+          gridKey="idir-charging-sites-grid"
+          onRowClicked={onRowClicked}
+          columnDefs={idirColumnDefs}
+          defaultColDef={indexDefaultColDef}
+          queryData={queryData}
+          dataKey="chargingSites"
+          autoSizeStrategy={{ type: 'fitGridWidth', defaultMinWidth: 80 }}
+          paginationOptions={paginationOptions}
+          onPaginationChange={setPaginationOptions}
+          getRowId={(p) => String(p.data?.chargingSiteId || p.node?.id)}
         />
-      </>
-      <Outlet />
+      </BCBox>
+      <ChargingSitesMap
+        sites={queryData?.data?.chargingSites || []}
+        showLegend={false}
+        height={500}
+      />
     </>
   )
 }

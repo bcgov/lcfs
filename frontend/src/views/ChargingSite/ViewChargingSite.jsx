@@ -15,12 +15,12 @@ import { Grid2 } from '@mui/material'
 export const ViewChargingSite = () => {
   const { t } = useTranslation('chargingSite')
   const alertRef = useRef(null)
-  const { chargingSiteId } = useParams()
+  const { siteId } = useParams()
   const {
     data: chargingSiteData,
     isLoading,
     isError
-  } = useGetChargingSiteById(chargingSiteId)
+  } = useGetChargingSiteById(siteId)
 
   if (isLoading) {
     return <Loading />
