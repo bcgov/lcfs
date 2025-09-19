@@ -13,6 +13,7 @@ import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
 import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
 import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
 import { Outlet } from 'react-router-dom'
+import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 
 export const reportRoutes = [
   {
@@ -25,6 +26,11 @@ export const reportRoutes = [
         element: <ChargingSitesList />,
         handle: { title: 'Manage charging sites' },
         children: [
+          {
+            path: ':id',
+            element: <ViewChargingSite />,
+            handle: { title: 'View charging site' }
+          },
           {
             path: 'new',
             element: <AddEditChargingSite mode="add" />,

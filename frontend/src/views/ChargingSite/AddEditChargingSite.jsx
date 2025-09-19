@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, chargingSiteColDefs } from './_schema'
+import { defaultColDef, chargingSiteColDefs } from './components/_schema'
 import {
   useImportFinalSupplyEquipment,
   useGetFinalSupplyEquipmentImportJobStatus

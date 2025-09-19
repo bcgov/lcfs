@@ -299,6 +299,7 @@
   },
   "chargingSites": {
     "title": "Manage charging sites",
+    "viewTitle": "Charging site/FSE list",
     "description": "Create new charging site locations where you want to add FSE. Charging sites must be created before adding FSE.",
     "noSitesFound": "No charging sites found",
     "newSiteBtn": "New charging site",
