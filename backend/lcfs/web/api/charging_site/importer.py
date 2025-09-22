@@ -292,12 +292,16 @@ async def import_async(
                     await _update_progress(
                         redis_client, job_id, 100, "Import process failed.", 0, 0
                     )
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Could not import charging site data: {str(e)}",
-                    )
+                    # Don't raise from background task; record failure and return
+                    logger.error(f"Charging site import failed: {e}")
+                    return {
+                        "success": False,
+                        "created": 0,
+                        "errors": [str(e)],
+                        "rejected": 0,
+                    }
                 finally:
-                    await redis_client.aclose()
+                    await redis_client.close()
     finally:
         await engine.dispose()
 

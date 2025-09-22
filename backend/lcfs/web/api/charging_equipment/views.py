@@ -387,6 +387,7 @@ async def import_charging_equipment(
     "/status/{job_id}",
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
+    name="get_charging_equipment_import_job_status",
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_import_job_status(

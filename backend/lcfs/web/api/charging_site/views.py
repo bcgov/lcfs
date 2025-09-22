@@ -386,6 +386,7 @@ async def import_charging_sites(
     if site_ids:
         try:
             import json
+
             parsed_site_ids = json.loads(site_ids)
         except (json.JSONDecodeError, TypeError):
             raise HTTPException(
@@ -443,6 +444,7 @@ async def get_charging_site_template(
     "/status/{job_id}",
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
+    name="get_import_job_status",
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
