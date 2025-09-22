@@ -24,14 +24,19 @@ import {
   getQuarterDateRange
 } from '@/utils/dateQuarterUtils'
 import {
-  useChargingSiteMutation,
+  useSaveChargingSite,
   useGetIntendedUsers,
   useImportChargingSites,
   useGetChargingSitesImportJobStatus
 } from '@/hooks/useChargingSite'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-export const AddEditChargingSite = () => {
+export const AddEditChargingSite = ({
+  isEditMode = false,
+  setIsEditMode,
+  data,
+  refetch
+}) => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [errors, setErrors] = useState({})
@@ -71,11 +76,11 @@ export const AddEditChargingSite = () => {
     isFetched
   } = useGetIntendedUsers()
 
-  const { mutateAsync: saveRow } = useChargingSiteMutation(organizationId)
+  const { mutateAsync: saveRow } = useSaveChargingSite(organizationId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('noSitesFound'),
+      overlayNoRowsTemplate: t('chargingSite:noSitesFound'),
       stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
@@ -102,8 +107,9 @@ export const AddEditChargingSite = () => {
   useEffect(() => {
     if (isGridReady) {
       const defaultOrgName = ''
-
-      if (isArrayEmpty(rowData)) {
+      if (isEditMode) {
+        setRowData([{ ...data, id: uuid() }])
+      } else if (isArrayEmpty(rowData)) {
         setRowData([
           {
             id: uuid(),
@@ -122,7 +128,7 @@ export const AddEditChargingSite = () => {
         })
       }, 100)
     }
-  }, [rowData, isGridReady, gridRef, ''])
+  }, [isGridReady, gridRef, isEditMode])
 
   useEffect(() => {
     if (
@@ -184,7 +190,11 @@ export const AddEditChargingSite = () => {
         updatedData
       })
       alertRef.current?.clearAlert()
+<<<<<<< HEAD
       params.node.updateData(responseData)
+=======
+      params.node.updateData({ ...responseData, validationStatus: 'valid' })
+>>>>>>> develop
       params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
@@ -216,7 +226,19 @@ export const AddEditChargingSite = () => {
             ':orgID',
             organizationId
           )
-      await apiService.download({ url: endpoint })
+      
+      if (includeData) {
+        const siteIds = rowData
+          .filter(row => row.chargingSiteId)
+          .map(row => row.chargingSiteId)
+        await apiService.download({ 
+          url: endpoint, 
+          method: 'post',
+          data: siteIds
+        })
+      } else {
+        await apiService.download({ url: endpoint })
+      }
     } catch (error) {
       console.error(
         'Error downloading final supply equipment information:',
@@ -233,21 +255,14 @@ export const AddEditChargingSite = () => {
     handleCloseDownloadMenu()
   }
 
-  // const handleNavigateBack = useCallback(() => {
-  //   navigate(
-  //     buildPath(ROUTES.REPORTS.VIEW, {
-  //       compliancePeriod,
-  //       complianceReportId
-  //     }),
-  //     {
-  //       state: {
-  //         expandedSchedule: 'finalSupplyEquipments',
-  //         message: t('finalSupplyEquipment:scheduleUpdated'),
-  //         severity: 'success'
-  //       }
-  //     }
-  //   )
-  // }, [navigate, compliancePeriod, complianceReportId, t])
+  const handleNavigateBack = useCallback(() => {
+    if (isEditMode) {
+      setIsEditMode(false)
+      refetch && refetch()
+    } else {
+      navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+    }
+  }, [navigate, t])
 
   const onAddRows = useCallback(
     (numRows) => {
@@ -280,15 +295,22 @@ export const AddEditChargingSite = () => {
       <Grid2 className="add-edit-charging-site-container">
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('addNewSite')}
+            {isEditMode ? data.siteName : t('chargingSite:addNewSite')}
           </BCTypography>
-          <BCBox my={2.5} component="div">
-            <BCTypography variant="body4" color="text" mt={0.5} component="div">
-              {t('templateDescriptor')}
-            </BCTypography>
-          </BCBox>
+          {!isEditMode && (
+            <BCBox my={2.5} component="div">
+              <BCTypography
+                variant="body4"
+                color="text"
+                mt={0.5}
+                component="div"
+              >
+                {t('chargingSite:templateDescriptor')}
+              </BCTypography>
+            </BCBox>
+          )}
         </div>
-        {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+        {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && !isEditMode && (
           <BCBox>
             <BCButton
               color="primary"
@@ -403,13 +425,13 @@ export const AddEditChargingSite = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             onFirstDataRendered={onFirstDataRendered}
-            showAddRowsButton={true}
+            showAddRowsButton={!isEditMode}
             saveButtonProps={{
               enabled: true,
               text: t('common:saveReturnBtn'),
-              // onSave: handleNavigateBack,
-              confirmText: t('report:incompleteReport'),
-              confirmLabel: t('report:returnToReport')
+              onSave: handleNavigateBack
+              // confirmText: t('report:incompleteReport'),
+              // confirmLabel: t('report:returnToReport')
             }}
           />
         </BCBox>

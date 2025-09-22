@@ -138,7 +138,6 @@ export const apiRoutes = {
   // Charging-site specific equipment endpoints
   // Backend: POST /charging-sites/{site_id}/equipment/list-all
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
-  // Backend: POST /charging-sites/{site_id}/equipment/bulk-status-update
   bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
   importChargingSites: '/charging-sites/import/:orgID',
@@ -209,5 +208,8 @@ export const apiRoutes = {
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
   geocoderClearCache: '/geocoder/cache',
+<<<<<<< HEAD
 
+=======
+>>>>>>> develop
 }

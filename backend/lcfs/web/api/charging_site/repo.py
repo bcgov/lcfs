@@ -237,6 +237,54 @@ class ChargingSiteRepository:
         return equipment, total_count
 
     @repo_handler
+<<<<<<< HEAD
+=======
+    async def bulk_update_equipment_status(
+        self,
+        equipment_ids: List[int],
+        new_status_id: int,
+        allowed_source_status_ids: List[int],
+    ) -> List[int]:
+        """
+        Bulk update equipment status, only updating equipment that's in one of the allowed source statuses
+        """
+        # Update only equipment that's currently in one of the allowed source statuses
+        stmt = (
+            update(ChargingEquipment)
+            .where(
+                ChargingEquipment.charging_equipment_id.in_(equipment_ids),
+                ChargingEquipment.status_id.in_(allowed_source_status_ids),
+            )
+            .values(status_id=new_status_id)
+            .returning(ChargingEquipment.charging_equipment_id)
+        )
+
+        result = await self.db.execute(stmt)
+        updated_ids = [row[0] for row in result.fetchall()]
+        return updated_ids
+
+    @repo_handler
+    async def get_charging_sites(
+        self, organization_id: Optional[int] = None
+    ) -> Sequence[ChargingSite]:
+        """
+        Retrieve all charging sites, optionally filtered by organization
+        """
+        query = select(ChargingSite).options(
+            joinedload(ChargingSite.organization),
+            joinedload(ChargingSite.status),
+            selectinload(ChargingSite.documents),
+            selectinload(ChargingSite.charging_equipment),
+        )
+
+        if organization_id:
+            query = query.where(ChargingSite.organization_id == organization_id)
+
+        result = await self.db.execute(query)
+        return result.unique().scalars().all()
+
+    @repo_handler
+>>>>>>> develop
     async def get_all_charging_sites_by_organization_id(
         self, organization_id: int
     ) -> Sequence[ChargingSite]:
@@ -250,6 +298,26 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.intended_users),
             )
             .where(ChargingSite.organization_id == organization_id)
+            .order_by(asc(ChargingSite.create_date))
+        )
+        results = await self.db.execute(query)
+        return results.scalars().all()
+
+    @repo_handler
+    async def get_charging_sites_by_ids(
+        self, charging_site_ids: List[int]
+    ) -> Sequence[ChargingSite]:
+        """
+        Retrieve charging sites by their IDs, ordered by creation date
+        """
+        query = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.organization),
+                joinedload(ChargingSite.status),
+                selectinload(ChargingSite.intended_users),
+            )
+            .where(ChargingSite.charging_site_id.in_(charging_site_ids))
             .order_by(asc(ChargingSite.create_date))
         )
         results = await self.db.execute(query)
@@ -341,7 +409,6 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
-                selectinload(ChargingSite.charging_equipment),
             )
         )
         charging_site = result.scalar_one_or_none()
@@ -387,6 +454,25 @@ class ChargingSiteRepository:
         return [statuses, intended_users]
 
     @repo_handler
+    async def get_charging_site_status_by_name(
+        self, status_name: str
+    ) -> ChargingSiteStatus:
+        """
+        Retrieve a charging site status by its name from the database
+        """
+        return (
+            (
+                await self.db.execute(
+                    select(ChargingSiteStatus).where(
+                        ChargingSiteStatus.status == status_name
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+
+    @repo_handler
     async def delete_all_charging_sites_by_organization(self, organization_id: int):
         """
         Delete all charging sites for an organization (used for overwrite import)
@@ -399,6 +485,7 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
+                joinedload(ChargingEquipment.allocating_organization),
             )
         )
         charging_sites = result.scalars().all()

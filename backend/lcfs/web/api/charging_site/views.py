@@ -308,7 +308,7 @@ async def delete_charging_site_row(
     )
 
 
-@router.get(
+@router.post(
     "/export/{organization_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
@@ -319,10 +319,11 @@ async def delete_charging_site_row(
 async def export_charging_sites(
     request: Request,
     organization_id: str,
+    site_ids: List[int] = Body(None),
     exporter: ChargingSiteExporter = Depends(),
 ):
     """
-    Endpoint to export information of all charging sites for an organization
+    Endpoint to export information of charging sites for an organization
     """
     try:
         org_id = int(organization_id)
@@ -331,13 +332,17 @@ async def export_charging_sites(
             status_code=400, detail="Invalid organization id. Must be an integer."
         )
 
-    organization = request.user.organization
-    if organization.organization_id != org_id:
-        raise HTTPException(
-            status_code=403, detail="Access denied to this organization"
-        )
+    # Government users can access any organization
+    if not request.user.is_government:
+        organization = request.user.organization
+        if organization.organization_id != org_id:
+            raise HTTPException(
+                status_code=403, detail="Access denied to this organization"
+            )
+    else:
+        organization = request.user.organization
 
-    return await exporter.export(org_id, request.user, organization, True)
+    return await exporter.export(org_id, request.user, organization, True, site_ids)
 
 
 @router.post(
@@ -354,6 +359,7 @@ async def import_charging_sites(
     file: UploadFile = File(...),
     importer: ChargingSiteImporter = Depends(),
     overwrite: bool = Form(...),
+    site_ids: str = Form(None),
 ):
     """
     Endpoint to import Charging Site data from an uploaded Excel file.
@@ -365,11 +371,26 @@ async def import_charging_sites(
             status_code=400, detail="Invalid organization id. Must be an integer."
         )
 
-    organization = request.user.organization
-    if organization.organization_id != org_id:
-        raise HTTPException(
-            status_code=403, detail="Access denied to this organization"
-        )
+    # Government users can access any organization
+    if not request.user.is_government:
+        organization = request.user.organization
+        if organization.organization_id != org_id:
+            raise HTTPException(
+                status_code=403, detail="Access denied to this organization"
+            )
+    else:
+        organization = request.user.organization
+
+    # Parse site_ids if provided
+    parsed_site_ids = None
+    if site_ids:
+        try:
+            import json
+            parsed_site_ids = json.loads(site_ids)
+        except (json.JSONDecodeError, TypeError):
+            raise HTTPException(
+                status_code=400, detail="Invalid site_ids format. Must be a JSON array."
+            )
 
     job_id = await importer.import_data(
         org_id,
@@ -377,6 +398,7 @@ async def import_charging_sites(
         organization.organization_code,
         file,
         overwrite,
+        parsed_site_ids,
     )
     return JSONResponse(content={"jobId": job_id})
 
@@ -404,11 +426,15 @@ async def get_charging_site_template(
             status_code=400, detail="Invalid organization id. Must be an integer."
         )
 
-    organization = request.user.organization
-    if organization.organization_id != org_id:
-        raise HTTPException(
-            status_code=403, detail="Access denied to this organization"
-        )
+    # Government users can access any organization
+    if not request.user.is_government:
+        organization = request.user.organization
+        if organization.organization_id != org_id:
+            raise HTTPException(
+                status_code=403, detail="Access denied to this organization"
+            )
+    else:
+        organization = request.user.organization
 
     return await exporter.export(org_id, request.user, organization, False)
 

@@ -26,7 +26,7 @@ export const useGetIntendedUsers = (options = {}) => {
     staleTime: OPTIONS_STALE_TIME,
     cacheTime,
     enabled,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
@@ -52,6 +52,7 @@ export const useGetChargingSiteById = (siteId, options = {}) => {
     staleTime,
     cacheTime,
     enabled: enabled && !!siteId,
+<<<<<<< HEAD
     retry: 0,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
@@ -84,6 +85,9 @@ export const useGetAllChargingSitesByOrg = (
     cacheTime,
     enabled: enabled && !!organizationId,
     retry: 3,
+=======
+    retry: 2,
+>>>>>>> develop
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
@@ -104,7 +108,9 @@ export const useGetAllChargingSites = (
   } = options
 
   return useQuery({
-    queryKey: ['chargingSitesAll', pagination],
+    queryKey: isIDIR
+      ? ['chargingSitesAll', pagination]
+      : ['chargingSitesByOrg', organizationId, pagination],
     queryFn: async () => {
       const response = await client.post(
         isIDIR
@@ -122,13 +128,13 @@ export const useGetAllChargingSites = (
     staleTime,
     cacheTime,
     enabled,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
 }
 
-export const useChargingSiteMutation = (organizationId, options = {}) => {
+export const useSaveChargingSite = (organizationId, options = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -136,7 +142,7 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
     onSuccess,
     onError,
     invalidateRelatedQueries = true,
-    clearCache = false,
+    clearCache = true,
     ...restOptions
   } = options
 
@@ -175,6 +181,7 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
       if (clearCache) {
         // Remove all charging site related queries
         queryClient.removeQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.removeQueries({ queryKey: ['chargingSitesAll'] })
         queryClient.removeQueries({ queryKey: ['chargingSite'] })
         queryClient.removeQueries({
           queryKey: ['charging-site-equipment-paginated']
@@ -182,6 +189,7 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
       } else {
         // Invalidate all related queries
         queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
         queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
         queryClient.invalidateQueries({
           queryKey: ['charging-site-equipment-paginated']
@@ -206,6 +214,7 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
     onError: (error, variables, context) => {
       // Always invalidate on error to ensure fresh data on retry
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
       queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
       queryClient.invalidateQueries({
         queryKey: ['charging-site-equipment-paginated']
@@ -380,10 +389,10 @@ export const useImportChargingSites = (options = {}) => {
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ organizationId, file, overwrite }) => {
+    mutationFn: async ({ organizationId, file, isOverwrite }) => {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('overwrite', overwrite)
+      formData.append('overwrite', isOverwrite)
 
       const response = await client.post(
         apiRoutes.importChargingSites.replace(':orgID', organizationId),
@@ -431,19 +440,18 @@ export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
     cacheTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      // Stop polling when job is complete
-      if (data?.progress === 100) {
+      // Stop polling when job is complete or failed
+      if (data?.status === 'Completed' || data?.status === 'Failed' || data?.progress === 100) {
         return false
       }
       return refetchInterval
     },
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
 }
 
-// Helper function to invalidate all charging site related queries
 export const useInvalidateChargingSiteQueries = () => {
   const queryClient = useQueryClient()
 
@@ -451,6 +459,7 @@ export const useInvalidateChargingSiteQueries = () => {
     invalidateAll: () => {
       queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
       queryClient.invalidateQueries({
         queryKey: ['charging-site-equipment-paginated']
       })
@@ -464,6 +473,11 @@ export const useInvalidateChargingSiteQueries = () => {
     },
     invalidateForOrganization: (orgId) => {
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg', orgId] })
+    },
+    // Add method to invalidate all lists
+    invalidateAllLists: () => {
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
     }
   }
 }

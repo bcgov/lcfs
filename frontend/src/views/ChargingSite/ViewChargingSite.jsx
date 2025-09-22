@@ -11,23 +11,37 @@ import Loading from '@/components/Loading'
 import ChargingSitesMap from './components/ChargingSitesMap'
 import BCBox from '@/components/BCBox'
 import { Grid2 } from '@mui/material'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { govRoles } from '@/constants/roles'
 
 export const ViewChargingSite = () => {
   const { t } = useTranslation('chargingSite')
   const alertRef = useRef(null)
   const { siteId } = useParams()
   const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles,
+    hasAnyRole
+  } = useCurrentUser()
+  const {
     data: chargingSiteData,
     isLoading,
-    isError
+    isError,
+    error,
+    refetch
   } = useGetChargingSiteById(siteId)
 
-  if (isLoading) {
+  if (isLoading || isCurrentUserLoading) {
     return <Loading />
   }
+  const orgID = currentUser?.organization?.organizationId
+  const isIDIR = hasAnyRole(...govRoles)
   if (isError) {
+    const errorMessage =
+      error?.response?.data?.detail || error?.message || 'Unknown error'
     alertRef.current?.triggerAlert({
-      message: t('error'),
+      message: errorMessage,
       severity: 'error'
     })
   }
@@ -37,27 +51,22 @@ export const ViewChargingSite = () => {
   ) : (
     <div data-test="view-charging-site-fse">
       <BCTypography variant="h5" color="primary">
-        {t('viewTitle')}
+        {isIDIR ? t('idirSitetitle') : t('viewTitle')}
       </BCTypography>
-      <BCBox sx={{ mt: 4, mb: -1 }}>
-        <Grid2 container spacing={1}>
-          {/* Card Section - 7 parts (58.33%) */}
-          <Grid2 size={{ xs: 12, md: 7 }}>
-            <ChargingSiteCard data={chargingSiteData} />
-          </Grid2>
-
-          {/* Map Section - 3 parts (25%) */}
-          <Grid2 size={{ xs: 12, md: 5 }}>
-            <ChargingSitesMap
-              sites={[chargingSiteData]}
-              showLegend={false}
-              height={225} // Adjust height as needed
-            />
-          </Grid2>
-        </Grid2>
-      </BCBox>
+      <ChargingSiteCard
+        data={chargingSiteData}
+        hasAnyRole={hasAnyRole}
+        hasRoles={hasRoles}
+        isIDIR={isIDIR}
+        refetch={refetch}
+      />
       <ChargingSiteDocument attachments={chargingSiteData?.documents} />
-      <ChargingSiteFSEGrid />
+      <ChargingSiteFSEGrid
+        hasAnyRole={hasAnyRole}
+        hasRoles={hasRoles}
+        isIDIR={isIDIR}
+        currentUser={currentUser}
+      />
     </div>
   )
 }
