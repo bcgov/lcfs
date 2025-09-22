@@ -196,7 +196,7 @@ export const useChargingSiteStatuses = () => {
 
   return useQuery({
     queryKey: ['charging-site-statuses'],
-    queryFn: () => apiService.get(`${apiRoutes.getSiteStatuses}/`),
+    queryFn: () => apiService.get(apiRoutes.getSiteStatuses),
     select: (response) => response.data,
     staleTime: OPTIONS_STALE_TIME,
     retry: 0
@@ -316,7 +316,7 @@ export const useChargingSiteEquipmentPaginated = (
         throw new Error('Invalid site ID provided')
       }
 
-      const url = `/charging-sites/${siteId}/equipment`
+      const url = `/charging-sites/${siteId}/equipment/list-all`
       const payload = {
         page: paginationOptions?.page ?? 1,
         size: paginationOptions?.size ?? 10,
