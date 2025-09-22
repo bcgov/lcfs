@@ -332,22 +332,6 @@ class ChargingSiteService:
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
-    async def get_charging_site_by_id(self, charging_site_id: int):
-        """
-        Service method to get a charging site by ID
-        """
-        logger.info("Getting charging site by ID")
-        charging_site = await self.repo.get_charging_site_by_id(charging_site_id)
-        if not charging_site:
-            raise HTTPException(status_code=404, detail="Charging site not found")
-        if (
-            charging_site.organization_id
-            != self.request.user.organization.organization_id
-        ):
-            raise HTTPException(status_code=403, detail="Forbidden")
-        return ChargingSiteSchema.model_validate(charging_site)
-
-    @service_handler
     async def create_charging_site(
         self, charging_site_data: ChargingSiteCreateSchema, organization_id: int
     ):

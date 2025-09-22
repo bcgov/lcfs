@@ -56,7 +56,7 @@ class ChargingSitesSchema(BaseSchema):
 
 
 class ChargingSiteCreateSchema(BaseSchema):
-    charging_site_id: Optional[int] = 0
+    charging_site_id: Optional[int] = None
     organization_id: int
     status_id: Optional[int] = None
     current_status: Optional[str] = None
