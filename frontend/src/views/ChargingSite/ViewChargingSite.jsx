@@ -28,6 +28,7 @@ export const ViewChargingSite = () => {
     data: chargingSiteData,
     isLoading,
     isError,
+    error,
     refetch
   } = useGetChargingSiteById(siteId)
 
@@ -37,8 +38,10 @@ export const ViewChargingSite = () => {
   const orgID = currentUser?.organization?.organizationId
   const isIDIR = hasAnyRole(...govRoles)
   if (isError) {
+    const errorMessage =
+      error?.response?.data?.detail || error?.message || 'Unknown error'
     alertRef.current?.triggerAlert({
-      message: t('error'),
+      message: errorMessage,
       severity: 'error'
     })
   }

@@ -278,6 +278,26 @@ class ChargingSiteRepository:
         return results.scalars().all()
 
     @repo_handler
+    async def get_charging_sites_by_ids(
+        self, charging_site_ids: List[int]
+    ) -> Sequence[ChargingSite]:
+        """
+        Retrieve charging sites by their IDs, ordered by creation date
+        """
+        query = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.organization),
+                joinedload(ChargingSite.status),
+                selectinload(ChargingSite.intended_users),
+            )
+            .where(ChargingSite.charging_site_id.in_(charging_site_ids))
+            .order_by(asc(ChargingSite.create_date))
+        )
+        results = await self.db.execute(query)
+        return results.scalars().all()
+
+    @repo_handler
     async def get_all_charging_sites_paginated(
         self, offset: int, limit: int, conditions: list, sort_orders: list
     ) -> tuple[list[ChargingSite], int]:

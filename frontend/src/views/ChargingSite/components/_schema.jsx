@@ -267,8 +267,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false) => {
       headerName: '',
       field: 'select',
       checkboxSelection: (params) =>
-        (params.data?.status?.status === 'Submitted' && isIDIR) ||
-        (params.data?.status?.status !== 'Submitted' && !isIDIR),
+        params.data?.status?.status !== 'Submitted' || isIDIR,
       headerCheckboxSelection: true,
       width: 50,
       pinned: 'left',

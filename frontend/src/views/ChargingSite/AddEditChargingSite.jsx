@@ -223,7 +223,19 @@ export const AddEditChargingSite = ({
             ':orgID',
             organizationId
           )
-      await apiService.download({ url: endpoint })
+      
+      if (includeData) {
+        const siteIds = rowData
+          .filter(row => row.chargingSiteId)
+          .map(row => row.chargingSiteId)
+        await apiService.download({ 
+          url: endpoint, 
+          method: 'post',
+          data: siteIds
+        })
+      } else {
+        await apiService.download({ url: endpoint })
+      }
     } catch (error) {
       console.error(
         'Error downloading final supply equipment information:',

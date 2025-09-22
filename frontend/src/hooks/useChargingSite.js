@@ -26,7 +26,7 @@ export const useGetIntendedUsers = (options = {}) => {
     staleTime: OPTIONS_STALE_TIME,
     cacheTime,
     enabled,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
@@ -52,7 +52,7 @@ export const useGetChargingSiteById = (siteId, options = {}) => {
     staleTime,
     cacheTime,
     enabled: enabled && !!siteId,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
@@ -93,7 +93,7 @@ export const useGetAllChargingSites = (
     staleTime,
     cacheTime,
     enabled,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
@@ -350,10 +350,10 @@ export const useImportChargingSites = (options = {}) => {
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ organizationId, file, overwrite }) => {
+    mutationFn: async ({ organizationId, file, isOverwrite }) => {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('overwrite', overwrite)
+      formData.append('overwrite', isOverwrite)
 
       const response = await client.post(
         apiRoutes.importChargingSites.replace(':orgID', organizationId),
@@ -401,13 +401,13 @@ export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
     cacheTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      // Stop polling when job is complete
-      if (data?.progress === 100) {
+      // Stop polling when job is complete or failed
+      if (data?.status === 'Completed' || data?.status === 'Failed' || data?.progress === 100) {
         return false
       }
       return refetchInterval
     },
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })

@@ -17,7 +17,13 @@ from lcfs.db.models import UserProfile
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
-from lcfs.utils.constants import POSTAL_REGEX, ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB
+from lcfs.utils.constants import (
+    POSTAL_REGEX,
+    ALLOWED_MIME_TYPES,
+    ALLOWED_FILE_TYPES,
+    MAX_FILE_SIZE_BYTES,
+    MAX_FILE_SIZE_MB,
+)
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.api.charging_site.schema import ChargingSiteCreateSchema
 from lcfs.web.api.charging_site.services import ChargingSiteService
@@ -51,6 +57,7 @@ class ChargingSiteImporter:
         org_code: str,
         file: UploadFile,
         overwrite: bool,
+        site_ids: List[int] = None,
     ) -> str:
         """
         Initiates the import job in a separate thread executor.
@@ -86,19 +93,17 @@ class ChargingSiteImporter:
         buffer.seek(0)
         copied_file = UploadFile(filename=file.filename, file=buffer)
 
-        loop = asyncio.get_running_loop()
-        loop.run_in_executor(
-            self.executor,
-            lambda: asyncio.run(
-                import_async(
-                    organization_id,
-                    user,
-                    org_code,
-                    copied_file,
-                    job_id,
-                    overwrite,
-                )
-            ),
+        # Start the import task without blocking
+        asyncio.create_task(
+            import_async(
+                organization_id,
+                user,
+                org_code,
+                copied_file,
+                job_id,
+                overwrite,
+                site_ids,
+            )
         )
 
         return job_id
@@ -107,12 +112,17 @@ class ChargingSiteImporter:
         """
         Retrieves and returns the job's progress and status from Redis.
         """
+        logger.debug(f"Getting status for job_id: {job_id}")
         progress_data_str = await self.redis_client.get(f"jobs/{job_id}")
+        logger.debug(f"Redis data for job {job_id}: {progress_data_str}")
+
         if not progress_data_str:
+            logger.warning(f"No job found with ID: {job_id}")
             return {"progress": 0, "status": "No job found with this ID."}
 
         try:
             progress_data = json.loads(progress_data_str)
+            logger.debug(f"Parsed progress data: {progress_data}")
             return {
                 "progress": progress_data.get("progress", 0),
                 "status": progress_data.get("status", "No status available."),
@@ -120,7 +130,8 @@ class ChargingSiteImporter:
                 "rejected": progress_data.get("rejected", 0),
                 "errors": progress_data.get("errors", []),
             }
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error for job {job_id}: {e}")
             return {"progress": 0, "status": "Invalid status data found."}
 
 
@@ -131,12 +142,12 @@ async def import_async(
     file: UploadFile,
     job_id: str,
     overwrite: bool,
+    site_ids: List[int] = None,
 ):
     """
     Performs the actual import in an async context.
-    This is offloaded to a thread pool to avoid blocking.
     """
-    logger.debug("Importing Charging Site Data...")
+    logger.debug(f"Starting import_async for job_id: {job_id}")
 
     engine = create_async_engine(db_url, future=True)
     try:
@@ -148,26 +159,27 @@ async def import_async(
                 org_repo = OrganizationsRepository(session)
                 cs_service = ChargingSiteService(repo=cs_repo)
                 clamav_service = ClamAVService()
+                # Use a new Redis client for this async context
                 redis_client = Redis(
                     host=settings.redis_host,
                     port=settings.redis_port,
                     password=settings.redis_pass,
                     db=settings.redis_base or 0,
                     decode_responses=True,
-                    max_connections=10,
-                    socket_timeout=5,
-                    socket_connect_timeout=5,
                 )
 
+                logger.debug(f"About to update progress for job {job_id}")
                 await _update_progress(
                     redis_client, job_id, 5, "Initializing services..."
                 )
+                logger.debug(f"Progress updated for job {job_id}")
 
                 if overwrite:
                     await _update_progress(
                         redis_client, job_id, 10, "Deleting old data..."
                     )
-                    await cs_service.delete_all_charging_sites(organization_id)
+                    if site_ids:
+                        await cs_service.delete_charging_sites_by_ids(site_ids)
 
                 # Optional: Scan the file with ClamAV if enabled
                 if settings.clamav_enabled:
@@ -240,7 +252,9 @@ async def import_async(
                         # Parse row data and insert into DB
                         try:
                             cs_data = _parse_row(row, organization_id)
-                            await cs_service.create_charging_site(cs_data, organization_id)
+                            await cs_service.create_charging_site(
+                                cs_data, organization_id
+                            )
                             created += 1
                         except Exception as ex:
                             logger.error(str(ex))
@@ -267,7 +281,6 @@ async def import_async(
                         "errors": errors,
                         "rejected": rejected,
                     }
-
                 except DataNotFoundException as dnfe:
                     await _update_progress(
                         redis_client, job_id, 100, "Data not found error.", 0, 0
@@ -283,6 +296,8 @@ async def import_async(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Could not import charging site data: {str(e)}",
                     )
+                finally:
+                    await redis_client.aclose()
     finally:
         await engine.dispose()
 
@@ -346,7 +361,9 @@ def _validate_row(
         return f"Row {row_idx}: Invalid postal code"
 
     # Validate intended users
-    invalid_users = [user for user in intended_user_types if user not in valid_user_types]
+    invalid_users = [
+        user for user in intended_user_types if user not in valid_user_types
+    ]
     if invalid_users:
         return f"Row {row_idx}: Invalid intended user(s): {', '.join(invalid_users)}"
 
@@ -410,4 +427,11 @@ async def _update_progress(
         "rejected": rejected,
         "errors": errors,
     }
-    await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=60)
+    logger.debug(f"Updating progress for job {job_id}: {data}")
+    try:
+        result = await redis_client.set(
+            f"jobs/{job_id}", json.dumps(data), ex=300
+        )  # 5 minutes
+        logger.debug(f"Redis set result for job {job_id}: {result}")
+    except Exception as e:
+        logger.error(f"Failed to update progress for job {job_id}: {e}")

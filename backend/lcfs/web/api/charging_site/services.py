@@ -118,6 +118,14 @@ class ChargingSiteService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have access to this site.",
             )
+        if (
+            user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+            and charging_site.status.status == ChargingSiteStatusEnum.DRAFT
+        ):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {site_id} not found",
+            )
 
         return ChargingSiteSchema.model_validate(charging_site)
 
@@ -277,7 +285,9 @@ class ChargingSiteService:
                     if condition is not None:
                         conditions.append(condition)
         conditions.append(
-            ~ChargingSite.status.has(ChargingSiteStatus.status == ChargingSiteStatusEnum.DRAFT)
+            ~ChargingSite.status.has(
+                ChargingSiteStatus.status == ChargingSiteStatusEnum.DRAFT
+            )
         )
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
@@ -329,7 +339,9 @@ class ChargingSiteService:
         Service method to create a new charging site
         """
         logger.info("Creating charging site")
-        status = await self.repo.get_charging_site_status_by_name(ChargingSiteStatusEnum.DRAFT)
+        status = await self.repo.get_charging_site_status_by_name(
+            ChargingSiteStatusEnum.DRAFT
+        )
         try:
             intended_users = []
             if (
@@ -455,6 +467,19 @@ class ChargingSiteService:
             await self.repo.delete_all_charging_sites_by_organization(organization_id)
         except Exception as e:
             logger.error("Error deleting all charging sites", error=str(e))
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    @service_handler
+    async def delete_charging_sites_by_ids(self, site_ids: List[int]):
+        """
+        Service method to delete charging sites by their IDs
+        """
+        logger.info(f"Deleting charging sites by IDs: {site_ids}")
+        try:
+            for site_id in site_ids:
+                await self.repo.delete_charging_site(site_id)
+        except Exception as e:
+            logger.error("Error deleting charging sites by IDs", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     def _get_equipment_status_ids(
