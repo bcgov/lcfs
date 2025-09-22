@@ -480,10 +480,25 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       >
         {/* Form Fields */}
         <BCAlert2 ref={alertRef} dismissable={true} noFade={true} />
-        <Grid container spacing={3}>
+        <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
           <Grid item xs={12} md={6}>
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Box sx={{ mr: { sm: 0, md: 4 } }}>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Box
+                sx={{
+                  mr: { sm: 0, md: 4 },
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
                 {organizationSnapshot && !dismissedBoxes.organizationInfo && (
                   <ReferenceCompareBox
                     title="Organization Details"
@@ -601,8 +616,16 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Box>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Box mb={2}>
                   <FormControl fullWidth>
                     <Grid container>
@@ -766,7 +789,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                     </Grid>
                   </FormControl>
                 </Box>
-                <Box mb={2} sx={{ mt: { sm: 0, md: 9.5, xl: 17.5 } }}>
+                <Box mb={2} sx={{ mt: 2 }}>
                   <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
                     {t('org:edrmsLabel')}:
                   </InputLabel>
@@ -785,7 +808,15 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
             </Box>
           </Grid>
           <Grid item xs={12} md={6} data-test="service-address-section">
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
               <BCTypography
                 variant="h6"
                 sx={{
@@ -948,7 +979,15 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
             </Box>
           </Grid>
           <Grid item xs={12} md={6} data-test="head-office-address-section">
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
               <BCTypography
                 variant="h6"
                 sx={{ pb: 2, color: colors.primary.main }}
@@ -1088,48 +1127,45 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 />
               </Box>
             </Box>
-            {/* Action Buttons */}
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  bgcolor: 'background.white.main',
-                  p: 3,
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  mt: { md: 11, xl: 6 }
-                }}
+          </Grid>
+          {/* Action Buttons */}
+          <Grid item xs={12}>
+            <Box
+              sx={{
+                bgcolor: 'background.white.main',
+                p: 3,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                mt: 3
+              }}
+            >
+              <BCButton
+                type="submit"
+                variant="contained"
+                size="medium"
+                color="primary"
+                data-test="saveOrganization"
+                startIcon={
+                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+                }
               >
-                <BCButton
-                  type="submit"
-                  variant="contained"
-                  size="medium"
-                  color="primary"
-                  data-test="saveOrganization"
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faFloppyDisk}
-                      className="small-icon"
-                    />
-                  }
-                >
-                  <BCTypography variant="button">{t('saveBtn')}</BCTypography>
-                </BCButton>
-                <BCButton
-                  variant="outlined"
-                  size="medium"
-                  color="primary"
-                  sx={{
-                    backgroundColor: 'white.main',
-                    ml: 2
-                  }}
-                  onClick={() => handleCancelEdit()}
-                >
-                  <BCTypography variant="subtitle2" textTransform="none">
-                    {t('cancelBtn')}
-                  </BCTypography>
-                </BCButton>
-              </Box>
-            </Grid>
+                <BCTypography variant="button">{t('saveBtn')}</BCTypography>
+              </BCButton>
+              <BCButton
+                variant="outlined"
+                size="medium"
+                color="primary"
+                sx={{
+                  backgroundColor: 'white.main',
+                  ml: 2
+                }}
+                onClick={() => handleCancelEdit()}
+              >
+                <BCTypography variant="subtitle2" textTransform="none">
+                  {t('cancelBtn')}
+                </BCTypography>
+              </BCButton>
+            </Box>
           </Grid>
         </Grid>
       </Box>

@@ -28,7 +28,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 from sqlalchemy import asc, delete, desc, or_, select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload, joinedload, aliased
 
 from lcfs.web.core.decorators import repo_handler
 from sqlalchemy import and_
@@ -82,12 +82,14 @@ class NotificationRepository:
         # Import locally to avoid circular import
         from lcfs.db.models.user.UserProfile import UserProfile
         from lcfs.db.models.user.UserRole import UserRole
-        
+
         query = (
             select(NotificationMessage)
             .options(
                 joinedload(NotificationMessage.related_organization),
-                selectinload(NotificationMessage.origin_user_profile).selectinload(UserProfile.user_roles).joinedload(UserRole.role),
+                selectinload(NotificationMessage.origin_user_profile)
+                .selectinload(UserProfile.user_roles)
+                .joinedload(UserRole.role),
             )
             .where(NotificationMessage.related_user_profile_id == user_profile_id)
         )
@@ -105,7 +107,7 @@ class NotificationRepository:
     ):
         # Import locally to avoid circular import
         from lcfs.db.models.user.UserProfile import UserProfile
-        
+
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
@@ -167,7 +169,7 @@ class NotificationRepository:
         # Import locally to avoid circular import
         from lcfs.db.models.user.UserProfile import UserProfile
         from lcfs.db.models.user.UserRole import UserRole
-        
+
         conditions = [NotificationMessage.related_user_profile_id == user_id]
         pagination = validate_pagination(pagination)
 
@@ -176,12 +178,29 @@ class NotificationRepository:
 
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
+
+        # Create aliases for proper sorting
+        org_alias = aliased(Organization)
+        user_alias = aliased(UserProfile)
+
         # Start building the query
         query = (
             select(NotificationMessage)
             .options(
                 joinedload(NotificationMessage.related_organization),
-                selectinload(NotificationMessage.origin_user_profile).selectinload(UserProfile.user_roles).joinedload(UserRole.role),
+                selectinload(NotificationMessage.origin_user_profile)
+                .selectinload(UserProfile.user_roles)
+                .joinedload(UserRole.role),
+            )
+            .outerjoin(
+                org_alias,
+                NotificationMessage.related_organization_id
+                == org_alias.organization_id,
+            )
+            .outerjoin(
+                user_alias,
+                NotificationMessage.origin_user_profile_id
+                == user_alias.user_profile_id,
             )
             .where(and_(*conditions))
         )
@@ -196,9 +215,9 @@ class NotificationRepository:
                 if order.field == "date":
                     field = NotificationMessage.create_date
                 elif order.field == "user":
-                    field = UserProfile.first_name
+                    field = user_alias.first_name
                 elif order.field == "organization":
-                    field = Organization.name
+                    field = org_alias.name
                 elif order.field == "transaction_id":
                     field = NotificationMessage.related_transaction_id
                 elif order.field == "action":
@@ -489,7 +508,7 @@ class NotificationRepository:
         """
         # Import locally to avoid circular import
         from lcfs.db.models.user.UserProfile import UserProfile
-        
+
         query = (
             select(NotificationChannelSubscription)
             .options(
@@ -518,15 +537,18 @@ class NotificationRepository:
                 NotificationChannel.channel_name == channel.value,
             )
         )
-        
+
         # Apply organization filtering based on audience type
         if organization_id is not None:
             if audience_type == AudienceType.OTHER_ORGANIZATIONS:
                 # Notify all other organizations (exclude posting org + government)
                 query = query.filter(
                     and_(
-                        UserProfile.organization_id != organization_id,  # Exclude posting org
-                        UserProfile.organization_id.is_not(None),       # Exclude government users
+                        UserProfile.organization_id
+                        != organization_id,  # Exclude posting org
+                        UserProfile.organization_id.is_not(
+                            None
+                        ),  # Exclude government users
                     )
                 )
             elif audience_type == AudienceType.GOVERNMENT_ONLY:
