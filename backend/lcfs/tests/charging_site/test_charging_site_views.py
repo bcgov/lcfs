@@ -430,7 +430,7 @@ async def test_export_charging_sites_success(
         user_details = {"organization_id": 3, "organization_name": "Test Organization"}
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT], user_details)
         url = fastapi_app.url_path_for("export_charging_sites", organization_id="3")
-        response = await client.get(url)
+        response = await client.post(url, json=[])
 
         assert response.status_code == 200
         mock_export.assert_called_once()
@@ -447,7 +447,7 @@ async def test_export_charging_sites_access_denied(
 
     set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING], mock_user)
     url = fastapi_app.url_path_for("export_charging_sites", organization_id="3")
-    response = await client.get(url)
+    response = await client.post(url, json=[])
 
     assert response.status_code == 403
     assert "Insufficient permissions" in response.json()["detail"]
