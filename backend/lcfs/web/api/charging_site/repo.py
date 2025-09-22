@@ -5,27 +5,20 @@ from lcfs.web.api.base import (
     get_field_for_filter,
 )
 import structlog
-from typing import List, Optional, Sequence
+from typing import Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, func, select, func, and_, desc, update
+from sqlalchemy import asc, func, select, and_, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
-
 
 from lcfs.db.models.compliance import (
     EndUserType,
     ChargingSite,
     ChargingEquipment,
     ChargingSiteStatus,
-    ChargingEquipmentStatus,
 )
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-    apply_filter_conditions,
-    get_field_for_filter,
-)
 
 
 logger = structlog.get_logger(__name__)
@@ -244,51 +237,6 @@ class ChargingSiteRepository:
         return equipment, total_count
 
     @repo_handler
-    async def bulk_update_equipment_status(
-        self,
-        equipment_ids: List[int],
-        new_status_id: int,
-        allowed_source_status_ids: List[int],
-    ) -> List[int]:
-        """
-        Bulk update equipment status, only updating equipment that's in one of the allowed source statuses
-        """
-        # Update only equipment that's currently in one of the allowed source statuses
-        stmt = (
-            update(ChargingEquipment)
-            .where(
-                ChargingEquipment.charging_equipment_id.in_(equipment_ids),
-                ChargingEquipment.status_id.in_(allowed_source_status_ids),
-            )
-            .values(status_id=new_status_id)
-            .returning(ChargingEquipment.charging_equipment_id)
-        )
-
-        result = await self.db.execute(stmt)
-        updated_ids = [row[0] for row in result.fetchall()]
-        return updated_ids
-
-    @repo_handler
-    async def get_charging_sites(
-        self, organization_id: Optional[int] = None
-    ) -> Sequence[ChargingSite]:
-        """
-        Retrieve all charging sites, optionally filtered by organization
-        """
-        query = select(ChargingSite).options(
-            joinedload(ChargingSite.organization),
-            joinedload(ChargingSite.status),
-            joinedload(ChargingSite.documents),
-            joinedload(ChargingSite.charging_equipment),
-        )
-
-        if organization_id:
-            query = query.where(ChargingSite.organization_id == organization_id)
-
-        result = await self.db.execute(query)
-        return result.unique().scalars().all()
-
-    @repo_handler
     async def get_all_charging_sites_by_organization_id(
         self, organization_id: int
     ) -> Sequence[ChargingSite]:
@@ -363,69 +311,6 @@ class ChargingSiteRepository:
         )
 
     @repo_handler
-    async def get_charging_site_by_site_name(self, site_name: str) -> ChargingSite:
-        """
-        Retrieve a charging site by its name from the database
-        """
-        return (
-            (
-                await self.db.execute(
-                    select(ChargingSite).where(ChargingSite.site_name == site_name)
-                )
-            )
-            .scalars()
-            .first()
-        )
-
-    @repo_handler
-    async def get_charging_equipment_statuses(
-        self,
-    ) -> Sequence[ChargingEquipmentStatus]:
-        """
-        Retrieve a list of charging equipment statuses from the database
-        """
-        return (await self.db.execute(select(ChargingEquipmentStatus))).scalars().all()
-
-    @repo_handler
-    async def get_charging_site_statuses(self) -> Sequence[ChargingSiteStatus]:
-        """
-        Retrieve a list of charging site statuses from the database
-        """
-        return (await self.db.execute(select(ChargingSiteStatus))).scalars().all()
-
-    @repo_handler
-    async def get_charging_site_by_site_name(self, site_name: str) -> ChargingSite:
-        """
-        Retrieve a charging site by its name from the database
-        """
-        return (
-            (
-                await self.db.execute(
-                    select(ChargingSite)
-                    .options(
-                        joinedload(ChargingSite.status),
-                        joinedload(ChargingSite.intended_users),
-                        joinedload(ChargingSite.organization),
-                        joinedload(ChargingSite.documents),
-                    )
-                    .where(ChargingSite.site_name == site_name)
-                )
-            )
-            .scalars()
-            .first()
-        )
-
-    @repo_handler
-    async def get_end_user_types_by_ids(self, ids: List[int]) -> List[EndUserType]:
-        """
-        Retrieve end user types by their IDs
-        """
-        result = await self.db.execute(
-            select(EndUserType).where(EndUserType.end_user_type_id.in_(ids))
-        )
-        return result.scalars().all()
-
-    @repo_handler
     async def create_charging_site(self, charging_site: ChargingSite) -> ChargingSite:
         """
         Create a new charging site in the database
@@ -479,9 +364,7 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def update_charging_site_status(
-        self,
-        charging_site_id: int,
-        status_id: int,
+        self, charging_site_id: int, status_id: int
     ) -> None:
         """
         Update the status of a charging site

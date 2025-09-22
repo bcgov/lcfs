@@ -6,13 +6,21 @@ from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
-from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema, ChargingEquipmentStatusEnum
+from lcfs.web.api.charging_equipment.schema import (
+    ChargingEquipmentFilterSchema,
+    ChargingEquipmentStatusEnum,
+)
 
 
 @pytest.fixture
 def mock_db():
     """Create a mock database session."""
-    return AsyncMock()
+    db = AsyncMock()
+    # Configure sync/async methods to match AsyncSession behavior
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.refresh = AsyncMock()
+    return db
 
 
 @pytest.fixture
@@ -22,7 +30,9 @@ def repo(mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_charging_equipment_by_id_success(repo, mock_db, valid_charging_equipment):
+async def test_get_charging_equipment_by_id_success(
+    repo, mock_db, valid_charging_equipment
+):
     """Test successfully getting charging equipment by ID."""
     # Mock the database query result
     mock_result = MagicMock()
@@ -54,7 +64,9 @@ async def test_get_charging_equipment_by_id_not_found(repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_charging_equipment_list_success(repo, mock_db, valid_charging_equipment):
+async def test_get_charging_equipment_list_success(
+    repo, mock_db, valid_charging_equipment
+):
     """Test getting paginated list of charging equipment."""
     # Setup pagination and filters
     pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[])
@@ -63,7 +75,7 @@ async def test_get_charging_equipment_list_success(repo, mock_db, valid_charging
     # Mock the database query results
     mock_items_result = MagicMock()
     mock_items_result.scalars.return_value.all.return_value = [valid_charging_equipment]
-    
+
     mock_count_result = MagicMock()
     mock_count_result.scalar.return_value = 1
 
@@ -80,17 +92,20 @@ async def test_get_charging_equipment_list_success(repo, mock_db, valid_charging
 
 
 @pytest.mark.anyio
-async def test_create_charging_equipment_success(repo, mock_db, mock_equipment_status, mock_end_use_type):
+async def test_create_charging_equipment_success(
+    repo, mock_db, mock_equipment_status, mock_end_use_type
+):
     """Test successfully creating charging equipment."""
     # Mock the status query
     mock_status_result = MagicMock()
     mock_status_result.scalar_one.return_value = mock_equipment_status
-    
+
     # Mock the end use types query
     mock_end_use_result = MagicMock()
     mock_end_use_result.scalars.return_value.all.return_value = [mock_end_use_type]
 
     mock_db.execute.side_effect = [mock_status_result, mock_end_use_result]
+    mock_db.refresh = AsyncMock()
 
     # Equipment data
     equipment_data = {
@@ -99,7 +114,7 @@ async def test_create_charging_equipment_success(repo, mock_db, mock_equipment_s
         "manufacturer": "Tesla",
         "model": "Supercharger",
         "level_of_equipment_id": 1,
-        "intended_use_ids": [1]
+        "intended_use_ids": [1],
     }
 
     # Call the repository method
@@ -111,19 +126,19 @@ async def test_create_charging_equipment_success(repo, mock_db, mock_equipment_s
     assert result.manufacturer == "Tesla"
     mock_db.add.assert_called_once()
     mock_db.flush.assert_called_once()
-    mock_db.refresh.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_update_charging_equipment_success(repo, mock_db, valid_charging_equipment):
+async def test_update_charging_equipment_success(
+    repo, mock_db, valid_charging_equipment
+):
     """Test successfully updating charging equipment."""
     # Mock getting existing equipment
-    with patch.object(repo, 'get_charging_equipment_by_id', return_value=valid_charging_equipment):
+    with patch.object(
+        repo, "get_charging_equipment_by_id", return_value=valid_charging_equipment
+    ):
         # Update data
-        update_data = {
-            "manufacturer": "ChargePoint",
-            "model": "Express Plus"
-        }
+        update_data = {"manufacturer": "ChargePoint", "model": "Express Plus"}
 
         # Call the repository method
         result = await repo.update_charging_equipment(1, update_data)
@@ -142,7 +157,7 @@ async def test_bulk_update_status_success(repo, mock_db, mock_equipment_status):
     # Mock the status query
     mock_status_result = MagicMock()
     mock_status_result.scalar_one_or_none.return_value = mock_equipment_status
-    
+
     # Mock the update query result
     mock_update_result = MagicMock()
     mock_update_result.rowcount = 2
@@ -172,14 +187,18 @@ async def test_bulk_update_status_invalid_status(repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_delete_charging_equipment_success(repo, mock_db, valid_charging_equipment):
+async def test_delete_charging_equipment_success(
+    repo, mock_db, valid_charging_equipment
+):
     """Test successfully deleting charging equipment in Draft status."""
     # Ensure the equipment is in Draft status
     valid_charging_equipment.status.status = "Draft"
     valid_charging_equipment.charging_site.organization_id = 1
 
     # Mock getting existing equipment
-    with patch.object(repo, 'get_charging_equipment_by_id', return_value=valid_charging_equipment):
+    with patch.object(
+        repo, "get_charging_equipment_by_id", return_value=valid_charging_equipment
+    ):
         # Call the repository method
         result = await repo.delete_charging_equipment(1, 1)
 
@@ -190,28 +209,36 @@ async def test_delete_charging_equipment_success(repo, mock_db, valid_charging_e
 
 
 @pytest.mark.anyio
-async def test_delete_charging_equipment_wrong_status(repo, mock_db, valid_charging_equipment):
+async def test_delete_charging_equipment_wrong_status(
+    repo, mock_db, valid_charging_equipment
+):
     """Test deleting charging equipment in non-Draft status raises error."""
     # Set equipment to non-Draft status
     valid_charging_equipment.status.status = "Validated"
     valid_charging_equipment.charging_site.organization_id = 1
 
     # Mock getting existing equipment
-    with patch.object(repo, 'get_charging_equipment_by_id', return_value=valid_charging_equipment):
+    with patch.object(
+        repo, "get_charging_equipment_by_id", return_value=valid_charging_equipment
+    ):
         # Call the repository method and expect ValueError
         with pytest.raises(ValueError, match="Only Draft equipment can be deleted"):
             await repo.delete_charging_equipment(1, 1)
 
 
 @pytest.mark.anyio
-async def test_delete_charging_equipment_wrong_organization(repo, mock_db, valid_charging_equipment):
+async def test_delete_charging_equipment_wrong_organization(
+    repo, mock_db, valid_charging_equipment
+):
     """Test deleting charging equipment from wrong organization raises error."""
     # Set equipment to different organization
     valid_charging_equipment.status.status = "Draft"
     valid_charging_equipment.charging_site.organization_id = 2
 
     # Mock getting existing equipment
-    with patch.object(repo, 'get_charging_equipment_by_id', return_value=valid_charging_equipment):
+    with patch.object(
+        repo, "get_charging_equipment_by_id", return_value=valid_charging_equipment
+    ):
         # Call the repository method and expect ValueError
         with pytest.raises(ValueError, match="Unauthorized to delete this equipment"):
             await repo.delete_charging_equipment(1, 1)

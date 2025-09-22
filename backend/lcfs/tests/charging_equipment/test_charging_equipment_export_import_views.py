@@ -55,7 +55,7 @@ async def test_export_charging_equipment_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = "/charging-equipment/export/1"
+    url = "/api/charging-equipment/export/1"
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
@@ -72,7 +72,7 @@ async def test_template_charging_equipment_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = "/charging-equipment/template/1"
+    url = "/api/charging-equipment/template/1"
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
@@ -88,7 +88,7 @@ async def test_export_charging_equipment_wrong_org_forbidden(
     # Supplier attempting to export another organization's equipment should be forbidden
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = "/charging-equipment/export/999"
+    url = "/api/charging-equipment/export/999"
     response = await client.get(url)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -99,7 +99,7 @@ async def test_import_charging_equipment_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = "/charging-equipment/import/1"
+    url = "/api/charging-equipment/import/1"
     files = {
         "file": (
             "upload.xlsx",
@@ -121,7 +121,7 @@ async def test_import_charging_equipment_wrong_org_forbidden(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = "/charging-equipment/import/999"
+    url = "/api/charging-equipment/import/999"
     files = {
         "file": (
             "upload.xlsx",
@@ -140,7 +140,7 @@ async def test_get_import_job_status_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = "/charging-equipment/status/job-123"
+    url = "/api/charging-equipment/status/job-123"
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK

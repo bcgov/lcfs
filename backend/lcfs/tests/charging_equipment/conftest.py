@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime
 from unittest.mock import MagicMock
+from sqlalchemy.orm import make_transient
 
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment, PortsEnum
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
@@ -19,59 +20,54 @@ from lcfs.web.api.charging_equipment.schema import (
 @pytest.fixture
 def mock_charging_site():
     """Create a mock charging site."""
-    site = MagicMock(spec=ChargingSite)
-    site.charging_site_id = 1
-    site.organization_id = 1
-    site.site_code = "TEST1"
-    site.site_name = "Test Charging Site"
+    site = ChargingSite(
+        charging_site_id=1,
+        organization_id=1,
+        site_code="TEST1",
+        site_name="Test Charging Site",
+    )
     return site
 
 
 @pytest.fixture
 def mock_equipment_status():
     """Create a mock equipment status."""
-    status = MagicMock(spec=ChargingEquipmentStatus)
-    status.charging_equipment_status_id = 1
-    status.status = "Draft"
+    status = ChargingEquipmentStatus(charging_equipment_status_id=1, status="Draft")
     return status
 
 
 @pytest.fixture
 def mock_level_of_equipment():
     """Create a mock level of equipment."""
-    level = MagicMock(spec=LevelOfEquipment)
-    level.level_of_equipment_id = 1
-    level.name = "Level 2"
-    level.description = "Level 2 charging equipment"
+    level = LevelOfEquipment(
+        level_of_equipment_id=1,
+        name="Level 2",
+        description="Level 2 charging equipment",
+    )
     return level
 
 
 @pytest.fixture
 def mock_organization():
     """Create a mock organization."""
-    org = MagicMock(spec=Organization)
-    org.organization_id = 1
-    org.name = "Test Organization"
+    org = Organization(organization_id=1, name="Test Organization")
     return org
 
 
 @pytest.fixture
 def mock_end_use_type():
     """Create a mock end use type."""
-    end_use = MagicMock(spec=EndUseType)
-    end_use.end_use_type_id = 1
-    end_use.type = "Commercial"
-    end_use.sub_type = "Fleet"
+    end_use = EndUseType(end_use_type_id=1, type="Commercial", sub_type="Fleet")
     return end_use
 
 
 @pytest.fixture
 def valid_charging_equipment(
-    mock_charging_site, 
-    mock_equipment_status, 
+    mock_charging_site,
+    mock_equipment_status,
     mock_level_of_equipment,
     mock_organization,
-    mock_end_use_type
+    mock_end_use_type,
 ):
     """Create a valid charging equipment instance."""
     equipment = ChargingEquipment(
@@ -86,9 +82,9 @@ def valid_charging_equipment(
         level_of_equipment_id=1,
         ports=PortsEnum.DUAL_PORT,
         notes="Test equipment",
-        version=1
+        version=1,
     )
-    
+
     # Set up relationships
     equipment.charging_site = mock_charging_site
     equipment.status = mock_equipment_status
@@ -97,7 +93,7 @@ def valid_charging_equipment(
     equipment.intended_uses = [mock_end_use_type]
     equipment.create_date = datetime(2024, 1, 1)
     equipment.update_date = datetime(2024, 1, 2)
-    
+
     return equipment
 
 
@@ -113,7 +109,7 @@ def valid_charging_equipment_create_schema():
         level_of_equipment_id=1,
         ports=PortsEnum.DUAL_PORT,
         notes="Test equipment",
-        intended_use_ids=[1]
+        intended_use_ids=[1],
     )
 
 
@@ -128,7 +124,7 @@ def valid_charging_equipment_update_schema():
         level_of_equipment_id=2,
         ports=PortsEnum.SINGLE_PORT,
         notes="Updated equipment",
-        intended_use_ids=[1, 2]
+        intended_use_ids=[1, 2],
     )
 
 
@@ -150,10 +146,8 @@ def valid_charging_equipment_base_schema():
         level_of_equipment_name="Level 2",
         ports=PortsEnum.DUAL_PORT,
         notes="Test equipment",
-        intended_uses=[{
-            "end_use_type_id": 1,
-            "type": "Commercial",
-            "description": "Fleet"
-        }],
-        version=1
+        intended_uses=[
+            {"end_use_type_id": 1, "type": "Commercial", "description": "Fleet"}
+        ],
+        version=1,
     )

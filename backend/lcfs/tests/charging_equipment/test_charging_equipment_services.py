@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.db.models.user.User import User
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.services import ChargingEquipmentServices
@@ -19,18 +19,18 @@ from lcfs.web.api.charging_equipment.schema import (
 @pytest.fixture
 def mock_user():
     """Create a mock user."""
-    user = MagicMock(spec=User)
-    user.user_type = UserTypeEnum.SUPPLIER
+    user = MagicMock(spec=UserProfile)
     user.organization_id = 1
+    user.is_government = False
     return user
 
 
 @pytest.fixture
 def mock_government_user():
     """Create a mock government user."""
-    user = MagicMock(spec=User)
-    user.user_type = UserTypeEnum.GOVERNMENT
+    user = MagicMock(spec=UserProfile)
     user.organization_id = None
+    user.is_government = True
     return user
 
 
@@ -55,11 +55,11 @@ def mock_cache():
 @pytest.fixture
 def service(mock_repo, mock_db_session, mock_cache):
     """Create service instance with mocked dependencies."""
-    return ChargingEquipmentServices(
-        repo=mock_repo,
-        db_session=mock_db_session,
-        cache=mock_cache
-    )
+    service = ChargingEquipmentServices(repo=mock_repo)
+    # Inject mocked session and cache to align with tests
+    service.db = mock_db_session
+    service.cache = mock_cache
+    return service
 
 
 @pytest.fixture(autouse=True)
@@ -83,8 +83,11 @@ async def test_get_charging_equipment_list_supplier_success(
     # Verify the result
     assert result.total_count == 1
     assert len(result.items) == 1
-    assert result.items[0].charging_equipment_id == valid_charging_equipment.charging_equipment_id
-    
+    assert (
+        result.items[0].charging_equipment_id
+        == valid_charging_equipment.charging_equipment_id
+    )
+
     # Verify repo was called with correct organization_id
     mock_repo.get_charging_equipment_list.assert_called_once_with(
         mock_user.organization_id, pagination, None
@@ -102,12 +105,14 @@ async def test_get_charging_equipment_list_government_with_org_filter(
     mock_repo.get_charging_equipment_list.return_value = ([valid_charging_equipment], 1)
 
     # Call the service method
-    result = await service.get_charging_equipment_list(mock_government_user, pagination, filters)
+    result = await service.get_charging_equipment_list(
+        mock_government_user, pagination, filters
+    )
 
     # Verify the result
     assert result.total_count == 1
     assert len(result.items) == 1
-    
+
     # Verify repo was called with filtered organization_id
     mock_repo.get_charging_equipment_list.assert_called_once_with(
         2, pagination, filters
@@ -125,7 +130,7 @@ async def test_get_charging_equipment_list_government_no_org_filter_fails(
     # Call the service method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
         await service.get_charging_equipment_list(mock_government_user, pagination)
-    
+
     assert exc_info.value.status_code == 400
     assert "Organization ID is required" in str(exc_info.value.detail)
 
@@ -142,15 +147,15 @@ async def test_get_charging_equipment_by_id_success(
     result = await service.get_charging_equipment_by_id(mock_user, 1)
 
     # Verify the result
-    assert result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
+    assert (
+        result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
+    )
     assert result.serial_number == valid_charging_equipment.serial_number
     mock_repo.get_charging_equipment_by_id.assert_called_once_with(1)
 
 
 @pytest.mark.anyio
-async def test_get_charging_equipment_by_id_not_found(
-    service, mock_repo, mock_user
-):
+async def test_get_charging_equipment_by_id_not_found(service, mock_repo, mock_user):
     """Test getting equipment by ID when not found."""
     # Mock the repository response
     mock_repo.get_charging_equipment_by_id.return_value = None
@@ -158,7 +163,7 @@ async def test_get_charging_equipment_by_id_not_found(
     # Call the service method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
         await service.get_charging_equipment_by_id(mock_user, 999)
-    
+
     assert exc_info.value.status_code == 404
     assert "Charging equipment not found" in str(exc_info.value.detail)
 
@@ -175,16 +180,20 @@ async def test_get_charging_equipment_by_id_unauthorized(
     # Call the service method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
         await service.get_charging_equipment_by_id(mock_user, 1)
-    
+
     assert exc_info.value.status_code == 403
     assert "Not authorized to view this equipment" in str(exc_info.value.detail)
 
 
 @pytest.mark.anyio
-@patch('lcfs.web.api.charging_equipment.services.add_notification_msg')
+@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_create_charging_equipment_success(
-    mock_notification, service, mock_repo, mock_user, valid_charging_equipment,
-    valid_charging_equipment_create_schema
+    mock_notification,
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+    valid_charging_equipment_create_schema,
 ):
     """Test creating charging equipment successfully."""
     # Mock the repository responses
@@ -192,19 +201,27 @@ async def test_create_charging_equipment_success(
     mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
 
     # Call the service method
-    result = await service.create_charging_equipment(mock_user, valid_charging_equipment_create_schema)
+    result = await service.create_charging_equipment(
+        mock_user, valid_charging_equipment_create_schema
+    )
 
     # Verify the result
-    assert result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
+    assert (
+        result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
+    )
     mock_repo.create_charging_equipment.assert_called_once()
     mock_notification.assert_called_once()
 
 
 @pytest.mark.anyio
-@patch('lcfs.web.api.charging_equipment.services.add_notification_msg')
+@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_update_charging_equipment_success(
-    mock_notification, service, mock_repo, mock_user, valid_charging_equipment,
-    valid_charging_equipment_update_schema
+    mock_notification,
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+    valid_charging_equipment_update_schema,
 ):
     """Test updating charging equipment successfully."""
     # Mock the repository responses
@@ -217,7 +234,9 @@ async def test_update_charging_equipment_success(
     )
 
     # Verify the result
-    assert result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
+    assert (
+        result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
+    )
     mock_repo.update_charging_equipment.assert_called_once()
     mock_notification.assert_called_once()
 
@@ -232,15 +251,21 @@ async def test_update_charging_equipment_not_found(
 
     # Call the service method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
-        await service.update_charging_equipment(mock_user, 999, valid_charging_equipment_update_schema)
-    
+        await service.update_charging_equipment(
+            mock_user, 999, valid_charging_equipment_update_schema
+        )
+
     assert exc_info.value.status_code == 404
     assert "Charging equipment not found" in str(exc_info.value.detail)
 
 
 @pytest.mark.anyio
 async def test_update_charging_equipment_wrong_status(
-    service, mock_repo, mock_user, valid_charging_equipment, valid_charging_equipment_update_schema
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+    valid_charging_equipment_update_schema,
 ):
     """Test updating equipment in wrong status."""
     # Set equipment to Decommissioned status
@@ -249,19 +274,24 @@ async def test_update_charging_equipment_wrong_status(
 
     # Call the service method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
-        await service.update_charging_equipment(mock_user, 1, valid_charging_equipment_update_schema)
-    
+        await service.update_charging_equipment(
+            mock_user, 1, valid_charging_equipment_update_schema
+        )
+
     assert exc_info.value.status_code == 400
-    assert "Cannot edit equipment in Decommissioned status" in str(exc_info.value.detail)
+    assert "Cannot edit equipment in Decommissioned status" in str(
+        exc_info.value.detail
+    )
 
 
 @pytest.mark.anyio
-@patch('lcfs.web.api.charging_equipment.services.add_notification_msg')
+@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_bulk_submit_equipment_success(
     mock_notification, service, mock_repo, mock_user
 ):
     """Test bulk submitting equipment successfully."""
-    # Mock the repository response
+    # Mock the repository responses
+    mock_repo.get_equipment_status_map.return_value = {1: "Draft", 2: "Updated"}
     mock_repo.bulk_update_status.return_value = 2
 
     # Call the service method
@@ -271,17 +301,18 @@ async def test_bulk_submit_equipment_success(
     assert result.success is True
     assert result.affected_count == 2
     assert "Successfully submitted 2 equipment" in result.message
-    
-    mock_repo.bulk_update_status.assert_called_once_with([1, 2], "Submitted", mock_user.organization_id)
+
+    mock_repo.bulk_update_status.assert_called_once_with(
+        [1, 2], "Submitted", mock_user.organization_id
+    )
     mock_notification.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_bulk_submit_equipment_no_changes(
-    service, mock_repo, mock_user
-):
+async def test_bulk_submit_equipment_no_changes(service, mock_repo, mock_user):
     """Test bulk submitting equipment with no changes."""
-    # Mock the repository response
+    # Mock the repository responses
+    mock_repo.get_equipment_status_map.return_value = {1: "Submitted", 2: "Validated"}
     mock_repo.bulk_update_status.return_value = 0
 
     # Call the service method
@@ -294,12 +325,17 @@ async def test_bulk_submit_equipment_no_changes(
 
 
 @pytest.mark.anyio
-@patch('lcfs.web.api.charging_equipment.services.add_notification_msg')
+@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_bulk_decommission_equipment_success(
     mock_notification, service, mock_repo, mock_user
 ):
     """Test bulk decommissioning equipment successfully."""
     # Mock the repository response
+    mock_repo.get_equipment_status_map.return_value = {
+        1: "Validated",
+        2: "Validated",
+        3: "Validated",
+    }
     mock_repo.bulk_update_status.return_value = 3
 
     # Call the service method
@@ -309,8 +345,10 @@ async def test_bulk_decommission_equipment_success(
     assert result.success is True
     assert result.affected_count == 3
     assert "Successfully decommissioned 3 equipment" in result.message
-    
-    mock_repo.bulk_update_status.assert_called_once_with([1, 2, 3], "Decommissioned", mock_user.organization_id)
+
+    mock_repo.bulk_update_status.assert_called_once_with(
+        [1, 2, 3], "Decommissioned", mock_user.organization_id
+    )
     mock_notification.assert_called_once()
 
 
@@ -322,20 +360,20 @@ async def test_bulk_actions_government_user_forbidden(
     # Call submit method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
         await service.bulk_submit_equipment(mock_government_user, [1, 2])
-    
+
     assert exc_info.value.status_code == 403
     assert "Only suppliers can submit equipment" in str(exc_info.value.detail)
 
     # Call decommission method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
         await service.bulk_decommission_equipment(mock_government_user, [1, 2])
-    
+
     assert exc_info.value.status_code == 403
     assert "Only suppliers can decommission equipment" in str(exc_info.value.detail)
 
 
 @pytest.mark.anyio
-@patch('lcfs.web.api.charging_equipment.services.add_notification_msg')
+@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_delete_charging_equipment_success(
     mock_notification, service, mock_repo, mock_user
 ):
@@ -348,14 +386,14 @@ async def test_delete_charging_equipment_success(
 
     # Verify the result
     assert result is True
-    mock_repo.delete_charging_equipment.assert_called_once_with(1, mock_user.organization_id)
+    mock_repo.delete_charging_equipment.assert_called_once_with(
+        1, mock_user.organization_id
+    )
     mock_notification.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_delete_charging_equipment_not_found(
-    service, mock_repo, mock_user
-):
+async def test_delete_charging_equipment_not_found(service, mock_repo, mock_user):
     """Test deleting equipment that doesn't exist or can't be deleted."""
     # Mock the repository response
     mock_repo.delete_charging_equipment.return_value = False
@@ -363,7 +401,7 @@ async def test_delete_charging_equipment_not_found(
     # Call the service method and expect HTTPException
     with pytest.raises(HTTPException) as exc_info:
         await service.delete_charging_equipment(mock_user, 999)
-    
+
     assert exc_info.value.status_code == 404
     assert "Equipment not found or cannot be deleted" in str(exc_info.value.detail)
 
@@ -394,7 +432,10 @@ async def test_get_levels_of_equipment(service, mock_repo, mock_level_of_equipme
 
     # Verify the result
     assert len(result) == 1
-    assert result[0]["level_of_equipment_id"] == mock_level_of_equipment.level_of_equipment_id
+    assert (
+        result[0]["level_of_equipment_id"]
+        == mock_level_of_equipment.level_of_equipment_id
+    )
     assert result[0]["name"] == mock_level_of_equipment.name
 
 

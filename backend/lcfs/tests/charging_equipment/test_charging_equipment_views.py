@@ -16,34 +16,47 @@ async def test_get_charging_equipment_list_success(
     client: AsyncClient,
     fastapi_app,
     set_mock_user,
-    valid_charging_equipment_base_schema
+    valid_charging_equipment_base_schema,
 ):
     """Test GET /charging-equipment/list endpoint successfully."""
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     # Mock service response
-    mock_list_schema = ChargingEquipmentListSchema(
-        items=[valid_charging_equipment_base_schema],
-        total_count=1,
-        current_page=1,
-        total_pages=1,
-        page_size=10
-    )
+    mock_list_schema = {
+        "items": [
+            {
+                "charging_equipment_id": 1,
+                "status": "Draft",
+                "site_name": "Test Charging Site",
+                "registration_number": "TEST1-001",
+                "version": 1,
+                "allocating_organization_name": "Test Organization",
+                "serial_number": "ABC123456",
+                "manufacturer": "Tesla",
+                "model": "Supercharger V3",
+                "level_of_equipment_name": "Level 2",
+                "created_date": "2024-01-01T00:00:00Z",
+                "updated_date": "2024-01-02T00:00:00Z",
+            }
+        ],
+        "total_count": 1,
+        "current_page": 1,
+        "total_pages": 1,
+        "page_size": 10,
+    }
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.get_charging_equipment_list.return_value = mock_list_schema
         mock_service_class.return_value = mock_service
 
         # Make request
         response = await client.post(
-            "/charging-equipment/list",
-            json={
-                "page": 1,
-                "size": 10,
-                "sort_orders": []
-            }
+            "/api/charging-equipment/list",
+            json={"page": 1, "size": 10, "sort_orders": []},
         )
 
         # Verify response
@@ -59,19 +72,23 @@ async def test_get_charging_equipment_by_id_success(
     client: AsyncClient,
     fastapi_app,
     set_mock_user,
-    valid_charging_equipment_base_schema
+    valid_charging_equipment_base_schema,
 ):
     """Test GET /charging-equipment/{id} endpoint successfully."""
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
-        mock_service.get_charging_equipment_by_id.return_value = valid_charging_equipment_base_schema
+        mock_service.get_charging_equipment_by_id.return_value = (
+            valid_charging_equipment_base_schema
+        )
         mock_service_class.return_value = mock_service
 
         # Make request
-        response = await client.get("/charging-equipment/1")
+        response = await client.get("/api/charging-equipment/1")
 
         # Verify response
         assert response.status_code == status.HTTP_200_OK
@@ -86,21 +103,25 @@ async def test_create_charging_equipment_success(
     fastapi_app,
     set_mock_user,
     valid_charging_equipment_base_schema,
-    valid_charging_equipment_create_schema
+    valid_charging_equipment_create_schema,
 ):
     """Test POST /charging-equipment/ endpoint successfully."""
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
-        mock_service.create_charging_equipment.return_value = valid_charging_equipment_base_schema
+        mock_service.create_charging_equipment.return_value = (
+            valid_charging_equipment_base_schema
+        )
         mock_service_class.return_value = mock_service
 
         # Make request
         response = await client.post(
-            "/charging-equipment/",
-            json=valid_charging_equipment_create_schema.model_dump()
+            "/api/charging-equipment/",
+            json=valid_charging_equipment_create_schema.model_dump(),
         )
 
         # Verify response
@@ -116,21 +137,25 @@ async def test_update_charging_equipment_success(
     fastapi_app,
     set_mock_user,
     valid_charging_equipment_base_schema,
-    valid_charging_equipment_update_schema
+    valid_charging_equipment_update_schema,
 ):
     """Test PUT /charging-equipment/{id} endpoint successfully."""
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
-        mock_service.update_charging_equipment.return_value = valid_charging_equipment_base_schema
+        mock_service.update_charging_equipment.return_value = (
+            valid_charging_equipment_base_schema
+        )
         mock_service_class.return_value = mock_service
 
         # Make request
         response = await client.put(
-            "/charging-equipment/1",
-            json=valid_charging_equipment_update_schema.model_dump(exclude_unset=True)
+            "/api/charging-equipment/1",
+            json=valid_charging_equipment_update_schema.model_dump(exclude_unset=True),
         )
 
         # Verify response
@@ -141,21 +166,21 @@ async def test_update_charging_equipment_success(
 
 @pytest.mark.anyio
 async def test_delete_charging_equipment_success(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test DELETE /charging-equipment/{id} endpoint successfully."""
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.delete_charging_equipment.return_value = True
         mock_service_class.return_value = mock_service
 
         # Make request
-        response = await client.delete("/charging-equipment/1")
+        response = await client.delete("/api/charging-equipment/1")
 
         # Verify response
         assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -163,9 +188,7 @@ async def test_delete_charging_equipment_success(
 
 @pytest.mark.anyio
 async def test_bulk_submit_equipment_success(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test POST /charging-equipment/bulk/submit endpoint successfully."""
     # Mock user with supplier role
@@ -175,18 +198,20 @@ async def test_bulk_submit_equipment_success(
         success=True,
         message="Successfully submitted 2 equipment",
         affected_count=2,
-        errors=[]
+        errors=[],
     )
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.bulk_submit_equipment.return_value = mock_response
         mock_service_class.return_value = mock_service
 
         # Make request
         response = await client.post(
-            "/charging-equipment/bulk/submit",
-            json={"charging_equipment_ids": [1, 2]}
+            "/api/charging-equipment/bulk/submit",
+            json={"charging_equipment_ids": [1, 2]},
         )
 
         # Verify response
@@ -198,9 +223,7 @@ async def test_bulk_submit_equipment_success(
 
 @pytest.mark.anyio
 async def test_bulk_decommission_equipment_success(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test POST /charging-equipment/bulk/decommission endpoint successfully."""
     # Mock user with supplier role
@@ -210,18 +233,20 @@ async def test_bulk_decommission_equipment_success(
         success=True,
         message="Successfully decommissioned 1 equipment",
         affected_count=1,
-        errors=[]
+        errors=[],
     )
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.bulk_decommission_equipment.return_value = mock_response
         mock_service_class.return_value = mock_service
 
         # Make request
         response = await client.post(
-            "/charging-equipment/bulk/decommission",
-            json={"charging_equipment_ids": [1]}
+            "/api/charging-equipment/bulk/decommission",
+            json={"charging_equipment_ids": [1]},
         )
 
         # Verify response
@@ -233,9 +258,7 @@ async def test_bulk_decommission_equipment_success(
 
 @pytest.mark.anyio
 async def test_get_equipment_statuses_success(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test GET /charging-equipment/statuses/list endpoint successfully."""
     # Mock user with supplier role
@@ -243,16 +266,18 @@ async def test_get_equipment_statuses_success(
 
     mock_statuses = [
         {"status_id": 1, "status": "Draft"},
-        {"status_id": 2, "status": "Submitted"}
+        {"status_id": 2, "status": "Submitted"},
     ]
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.get_equipment_statuses.return_value = mock_statuses
         mock_service_class.return_value = mock_service
 
         # Make request
-        response = await client.get("/charging-equipment/statuses/list")
+        response = await client.get("/api/charging-equipment/statuses/list")
 
         # Verify response
         assert response.status_code == status.HTTP_200_OK
@@ -263,9 +288,7 @@ async def test_get_equipment_statuses_success(
 
 @pytest.mark.anyio
 async def test_get_levels_of_equipment_success(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test GET /charging-equipment/levels/list endpoint successfully."""
     # Mock user with supplier role
@@ -273,16 +296,22 @@ async def test_get_levels_of_equipment_success(
 
     mock_levels = [
         {"level_of_equipment_id": 1, "name": "Level 1", "description": "Fast charging"},
-        {"level_of_equipment_id": 2, "name": "Level 2", "description": "Standard charging"}
+        {
+            "level_of_equipment_id": 2,
+            "name": "Level 2",
+            "description": "Standard charging",
+        },
     ]
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.get_levels_of_equipment.return_value = mock_levels
         mock_service_class.return_value = mock_service
 
         # Make request
-        response = await client.get("/charging-equipment/levels/list")
+        response = await client.get("/api/charging-equipment/levels/list")
 
         # Verify response
         assert response.status_code == status.HTTP_200_OK
@@ -293,9 +322,7 @@ async def test_get_levels_of_equipment_success(
 
 @pytest.mark.anyio
 async def test_get_end_use_types_success(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test GET /charging-equipment/end-use-types/list endpoint successfully."""
     # Mock user with supplier role
@@ -303,16 +330,18 @@ async def test_get_end_use_types_success(
 
     mock_end_use_types = [
         {"end_use_type_id": 1, "type": "Commercial", "sub_type": "Fleet"},
-        {"end_use_type_id": 2, "type": "Residential", "sub_type": "Private"}
+        {"end_use_type_id": 2, "type": "Residential", "sub_type": "Private"},
     ]
 
-    with patch('lcfs.web.api.charging_equipment.views.ChargingEquipmentServices') as mock_service_class:
+    with patch(
+        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
+    ) as mock_service_class:
         mock_service = AsyncMock()
         mock_service.get_end_use_types.return_value = mock_end_use_types
         mock_service_class.return_value = mock_service
 
         # Make request
-        response = await client.get("/charging-equipment/end-use-types/list")
+        response = await client.get("/api/charging-equipment/end-use-types/list")
 
         # Verify response
         assert response.status_code == status.HTTP_200_OK
@@ -323,9 +352,7 @@ async def test_get_end_use_types_success(
 
 @pytest.mark.anyio
 async def test_unauthorized_access_government_role(
-    client: AsyncClient,
-    fastapi_app,
-    set_mock_user
+    client: AsyncClient, fastapi_app, set_mock_user
 ):
     """Test that only authorized roles can access supplier-only endpoints."""
     # Mock user with government role (should fail for supplier-only endpoints)
@@ -333,19 +360,18 @@ async def test_unauthorized_access_government_role(
 
     # Test create endpoint (supplier only)
     response = await client.post(
-        "/charging-equipment/",
+        "/api/charging-equipment/",
         json={
             "charging_site_id": 1,
             "serial_number": "TEST123",
             "manufacturer": "Tesla",
-            "level_of_equipment_id": 1
-        }
+            "level_of_equipment_id": 1,
+        },
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
     # Test bulk submit endpoint (supplier only)
     response = await client.post(
-        "/charging-equipment/bulk/submit",
-        json={"charging_equipment_ids": [1, 2]}
+        "/api/charging-equipment/bulk/submit", json={"charging_equipment_ids": [1, 2]}
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN

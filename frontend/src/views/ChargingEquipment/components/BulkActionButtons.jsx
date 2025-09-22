@@ -24,39 +24,38 @@ export const BulkActionButtons = ({
     (r) => r.status === 'Validated'
   ).length
 
+  // Render nothing if no actions are available
+  if (!canSubmit && !canDecommission) {
+    return null
+  }
+
   return (
     <Box display="flex" gap={2}>
-      <BCButton
-        variant="outlined"
-        color="primary"
-        size="medium"
-        startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
-        disabled
-        title={t('chargingEquipment:useHeaderCheckboxes')}
-      >
-        {t('chargingEquipment:selectBoxes')}
-      </BCButton>
-      <BCButton
-        variant="contained"
-        color="primary"
-        size="medium"
-        startIcon={<FontAwesomeIcon icon={faCheck} />}
-        onClick={onSubmitClick}
-        disabled={draftUpdatedCount === 0}
-      >
-        {t('chargingEquipment:submitSelected')}
-      </BCButton>
+      {canSubmit && (
+        <BCButton
+          variant="contained"
+          color="primary"
+          size="medium"
+          startIcon={<FontAwesomeIcon icon={faCheck} />}
+          onClick={onSubmitClick}
+          disabled={draftUpdatedCount === 0}
+        >
+          {`${t('chargingEquipment:submitSelected')} (${draftUpdatedCount})`}
+        </BCButton>
+      )}
 
-      <BCButton
-        variant="outlined"
-        color="primary"
-        size="medium"
-        startIcon={<FontAwesomeIcon icon={faBan} />}
-        onClick={onDecommissionClick}
-        disabled={validatedCount === 0}
-      >
-        {t('chargingEquipment:setToDecommissioned')}
-      </BCButton>
+      {canDecommission && (
+        <BCButton
+          variant="outlined"
+          color="primary"
+          size="medium"
+          startIcon={<FontAwesomeIcon icon={faBan} />}
+          onClick={onDecommissionClick}
+          disabled={validatedCount === 0}
+        >
+          {`${t('chargingEquipment:setToDecommissioned')} (${validatedCount})`}
+        </BCButton>
+      )}
     </Box>
   )
 }

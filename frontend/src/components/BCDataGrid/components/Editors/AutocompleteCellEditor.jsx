@@ -74,7 +74,12 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
       }
       return [value]
     }
-    return value ?? null
+    if (value == null) return ''
+    if (typeof value === 'string') {
+      const first = value.split(',')[0]?.trim() ?? ''
+      return first
+    }
+    return value
   })
 
   const selectedOptions = useMemo(() => {
@@ -112,9 +117,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
 
   const handleChange = (event, newValue) => {
     const processedValue = multiple
-      ? Array.isArray(newValue)
-        ? newValue.map((v) => getRawValue(v))
-        : []
+      ? getRawValue(newValue)
       : getRawValue(newValue)
     setSelectedValues(processedValue)
     if (onValueChange) {

@@ -32,7 +32,10 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 let orgNamesData = []
 let orgNamesLoading = false
 vi.mock('@/hooks/useOrganizations', () => ({
-  useOrganizationNames: () => ({ data: orgNamesData, isLoading: orgNamesLoading })
+  useOrganizationNames: () => ({
+    data: orgNamesData,
+    isLoading: orgNamesLoading
+  })
 }))
 
 let chargingSitesData = {
@@ -40,7 +43,9 @@ let chargingSitesData = {
   pagination: { page: 1, size: 10, total: 0, totalPages: 1 }
 }
 vi.mock('@/hooks/useChargingSite', () => ({
-  useGetAllChargingSites: () => ({ data: chargingSitesData, isLoading: false })
+  useGetAllChargingSites: () => ({ data: chargingSitesData, isLoading: false }),
+  useChargingSiteStatuses: () => ({ data: [], isLoading: false }),
+  useChargingEquipmentStatuses: () => ({ data: [], isLoading: false })
 }))
 
 vi.mock('@/hooks/useCurrentUser')
@@ -64,8 +69,8 @@ describe('ChargingSitesList', () => {
     render(<ChargingSitesList />, { wrapper })
 
     // Title and description
-    expect(screen.getByText('tabs.chargingSites')).toBeInTheDocument()
-    expect(screen.getByText('idirChargingSites.description')).toBeInTheDocument()
+    expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
+    expect(screen.getByText('csDescription')).toBeInTheDocument()
 
     // Clear Filters button should be present
     expect(
@@ -87,12 +92,12 @@ describe('ChargingSitesList', () => {
     render(<ChargingSitesList />, { wrapper })
 
     // Title and description for BCeID
-    expect(screen.getByText('chargingSites.title')).toBeInTheDocument()
-    expect(screen.getByText('chargingSites.description')).toBeInTheDocument()
+    expect(screen.getByText('mngTitle')).toBeInTheDocument()
+    expect(screen.getByText('mngCSdescription')).toBeInTheDocument()
 
     // New charging site button
     const newBtn = screen.getByRole('button', {
-      name: 'chargingSites.newSiteBtn'
+      name: 'newSiteBtn'
     })
     expect(newBtn).toBeInTheDocument()
 

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
-from lcfs.web.api.charging_site.repo import ChargingSiteRepo
+from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 
@@ -14,14 +14,14 @@ def mock_db_session():
 
 @pytest.fixture
 def charging_site_repo(mock_db_session):
-    """ChargingSiteRepo instance with mocked database session"""
-    repo = ChargingSiteRepo()
+    """ChargingSiteRepository instance with mocked database session"""
+    repo = ChargingSiteRepository()
     repo.db = mock_db_session
     return repo
 
 
 class TestChargingSiteRepo:
-    """Test class for ChargingSiteRepo bulk update functionality"""
+    """Test class for ChargingSiteRepository bulk update functionality"""
 
     @pytest.mark.anyio
     async def test_bulk_update_equipment_status_success(
