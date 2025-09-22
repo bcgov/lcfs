@@ -428,7 +428,16 @@ export const BCGridViewer = forwardRef(
           ref={gridRef}
           className="ag-theme-material"
           loading={isLoading || loading}
-          defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
+          defaultColDef={{
+            tooltipValueGetter: (params) => {
+              // Show the cell value on hover
+              return params.value !== null && params.value !== undefined
+                ? String(params.value)
+                : 'No data'
+            },
+            ...defaultColDefParams,
+            ...defaultColDef
+          }}
           columnDefs={columnDefs}
           gridOptions={gridOptions}
           rowData={!isLoading && ((data && data[dataKey]) || [])}
