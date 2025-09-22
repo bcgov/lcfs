@@ -69,8 +69,7 @@ function ImportDialog({
   complianceReportId,
   isOverwrite,
   importHook,
-  getJobStatusHook,
-  organizationId
+  getJobStatusHook
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -122,35 +121,40 @@ function ImportDialog({
   const { data, refetch } = getJobStatusHook(jobID)
 
   useEffect(() => {
-    if (data) {
-      setUploadProgress(data.progress || 0)
-      setUploadStatus(data.status || 'Processing')
-      setCreatedCount(data.created || 0)
-      setRejectedCount(data.rejected || 0)
-      
-      if (data.progress >= 100 || data.status === 'Completed' || data.status === 'Failed') {
-        setDialogState(DIALOG_STATES.COMPLETED)
-        setErrorMsgs(data.errors || [])
-      }
-    }
-  }, [data])
-
-  useEffect(() => {
     let intervalId
-    if (jobID && open && dialogState === DIALOG_STATES.UPLOADING) {
-      intervalId = setInterval(() => {
-        refetch()
-      }, 2000)
+    if (jobID && open) {
+      intervalId = setInterval(async () => {
+        try {
+          await refetch()
+          if (data) {
+            setUploadProgress(data.progress)
+            setUploadStatus(data.status)
+            setCreatedCount(data.created)
+            setRejectedCount(data.rejected)
+            if (data.progress >= 100) {
+              setDialogState(DIALOG_STATES.COMPLETED)
+              setErrorMsgs(data.errors)
+              clearInterval(intervalId)
+              setIntervalID(null)
+              setJobID(null)
+            }
+          }
+        } catch (error) {
+          clearInterval(intervalId)
+          setIntervalID(null)
+        }
+      }, 300)
       setIntervalID(intervalId)
     }
 
+    // Clean up the interval on unmount or if jobID/open changes
     return () => {
       if (intervalId) {
         clearInterval(intervalId)
         setIntervalID(null)
       }
     }
-  }, [jobID, open, dialogState, refetch])
+  }, [jobID, data, refetch, open])
 
   const preventBrowserDefaults = (e) => {
     e.preventDefault()
@@ -200,7 +204,7 @@ function ImportDialog({
   const startImport = (file) => {
     setDialogState(DIALOG_STATES.UPLOADING)
     setUploadProgress(0)
-    importFile({ file, isOverwrite, organizationId })
+    importFile({ file, isOverwrite })
   }
 
   const handleFileUpload = (file) => {
