@@ -1062,12 +1062,13 @@ class ComplianceReportRepository:
         """
         Assign or unassign an analyst to/from a compliance report.
         """
-        return await self.db.execute(
+        await self.db.execute(
             text(
                 "UPDATE compliance_report SET assigned_analyst_id = :analyst_id WHERE compliance_report_id = :report_id"
             ),
             {"analyst_id": assigned_analyst_id, "report_id": report_id},
         )
+        await self.db.flush()
 
     @repo_handler
     async def get_user_by_id(self, user_id: int) -> Optional[UserProfile]:
