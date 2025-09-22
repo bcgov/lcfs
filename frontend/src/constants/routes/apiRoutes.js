@@ -208,8 +208,4 @@ export const apiRoutes = {
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
   geocoderClearCache: '/geocoder/cache',
-<<<<<<< HEAD
-
-=======
->>>>>>> develop
 }
