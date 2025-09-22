@@ -67,14 +67,14 @@ class TestChargingSiteExporter:
             mock_builder.return_value = mock_builder_instance
             mock_builder_instance.build_spreadsheet.return_value = b'test_content'
             
-            result = await exporter.export(1, mock_user, mock_organization, include_data=True)
+            result = await exporter.export(1, mock_user, mock_organization, include_data=True, charging_site_ids=[1])
             
             assert isinstance(result, StreamingResponse)
             assert result.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             
             # Verify repo methods were called
             exporter.repo.get_charging_site_options.assert_called_once_with(mock_organization)
-            exporter.repo.get_charging_sites_by_ids.assert_called_once_with(1)
+            exporter.repo.get_charging_sites_by_ids.assert_called_once_with([1])
 
     @pytest.mark.anyio
     async def test_export_template_without_data(self, exporter, mock_user, mock_organization):
@@ -112,13 +112,13 @@ class TestChargingSiteExporter:
     @pytest.mark.anyio
     async def test_load_charging_site_data(self, exporter, mock_charging_sites):
         """Test loading charging site data"""
-        exporter.repo.get_all_charging_sites_by_organization_id.return_value = mock_charging_sites
+        exporter.repo.get_charging_sites_by_ids.return_value = mock_charging_sites
         
-        data = await exporter.load_charging_site_data(1)
+        data = await exporter.load_charging_site_data([1])
         
         assert len(data) == 1
-        assert len(data[0]) == 10  # Should have 10 columns based on CS_EXPORT_COLUMNS
-        exporter.repo.get_all_charging_sites_by_organization_id.assert_called_once_with(1)
+        assert len(data[0]) == 11  # Should have 11 columns based on CS_EXPORT_COLUMNS
+        exporter.repo.get_charging_sites_by_ids.assert_called_once_with([1])
 
     @pytest.mark.anyio
     async def test_export_filename_format(self, exporter, mock_user, mock_organization):
