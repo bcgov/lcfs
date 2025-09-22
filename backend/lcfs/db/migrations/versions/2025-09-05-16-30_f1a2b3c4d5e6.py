@@ -10,7 +10,7 @@ associated transactions are confirmed, causing the credit ledger to not
 display transaction information in the line-by-line breakdown.
 
 Revision ID: f1a2b3c4d5e6
-Revises: 4dd09be7a359
+Revises: c19276038926g
 Create Date: 2025-09-05 16:30:00.000000
 
 """
@@ -19,7 +19,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f1a2b3c4d5e6"
-down_revision = "4dd09be7a359"
+down_revision = "c19276038926"
 branch_labels = None
 depends_on = None
 
