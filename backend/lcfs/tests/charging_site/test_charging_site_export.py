@@ -74,7 +74,7 @@ class TestChargingSiteExporter:
             
             # Verify repo methods were called
             exporter.repo.get_charging_site_options.assert_called_once_with(mock_organization)
-            exporter.repo.get_all_charging_sites_by_organization_id.assert_called_once_with(1)
+            exporter.repo.get_charging_sites_by_ids.assert_called_once_with(1)
 
     @pytest.mark.anyio
     async def test_export_template_without_data(self, exporter, mock_user, mock_organization):
@@ -89,8 +89,8 @@ class TestChargingSiteExporter:
             result = await exporter.export(1, mock_user, mock_organization, include_data=False)
             
             assert isinstance(result, StreamingResponse)
-            # Should not call get_all_charging_sites_by_organization_id when include_data=False
-            exporter.repo.get_all_charging_sites_by_organization_id.assert_not_called()
+            # Should not call get_charging_sites_by_ids when include_data=False
+            exporter.repo.get_charging_sites_by_ids.assert_not_called()
 
     @pytest.mark.anyio
     async def test_create_validators(self, exporter, mock_organization):
