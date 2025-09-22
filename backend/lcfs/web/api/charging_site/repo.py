@@ -237,8 +237,6 @@ class ChargingSiteRepository:
         return equipment, total_count
 
     @repo_handler
-<<<<<<< HEAD
-=======
     async def bulk_update_equipment_status(
         self,
         equipment_ids: List[int],
@@ -284,7 +282,6 @@ class ChargingSiteRepository:
         return result.unique().scalars().all()
 
     @repo_handler
->>>>>>> develop
     async def get_all_charging_sites_by_organization_id(
         self, organization_id: int
     ) -> Sequence[ChargingSite]:

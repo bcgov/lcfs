@@ -190,11 +190,7 @@ export const AddEditChargingSite = ({
         updatedData
       })
       alertRef.current?.clearAlert()
-<<<<<<< HEAD
-      params.node.updateData(responseData)
-=======
       params.node.updateData({ ...responseData, validationStatus: 'valid' })
->>>>>>> develop
       params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
@@ -226,13 +222,13 @@ export const AddEditChargingSite = ({
             ':orgID',
             organizationId
           )
-      
+
       if (includeData) {
         const siteIds = rowData
-          .filter(row => row.chargingSiteId)
-          .map(row => row.chargingSiteId)
-        await apiService.download({ 
-          url: endpoint, 
+          .filter((row) => row.chargingSiteId)
+          .map((row) => row.chargingSiteId)
+        await apiService.download({
+          url: endpoint,
           method: 'post',
           data: siteIds
         })

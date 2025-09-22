@@ -52,42 +52,7 @@ export const useGetChargingSiteById = (siteId, options = {}) => {
     staleTime,
     cacheTime,
     enabled: enabled && !!siteId,
-<<<<<<< HEAD
-    retry: 0,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    ...restOptions
-  })
-}
-
-export const useGetAllChargingSitesByOrg = (
-  organizationId,
-  pagination,
-  options = {}
-) => {
-  const client = useApiService()
-  const {
-    staleTime = DEFAULT_STALE_TIME,
-    cacheTime = DEFAULT_CACHE_TIME,
-    enabled = true,
-    ...restOptions
-  } = options
-
-  return useQuery({
-    queryKey: ['chargingSitesByOrg', organizationId, pagination],
-    queryFn: async () => {
-      const response = await client.post(
-        apiRoutes.getAllChargingSitesByOrg.replace(':orgID', organizationId),
-        { pagination }
-      )
-      return response.data
-    },
-    staleTime,
-    cacheTime,
-    enabled: enabled && !!organizationId,
-    retry: 3,
-=======
     retry: 2,
->>>>>>> develop
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })

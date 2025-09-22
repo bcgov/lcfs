@@ -74,10 +74,6 @@ let chargingSitesData = {
 
 vi.mock('@/hooks/useChargingSite', () => ({
   useGetAllChargingSites: () => ({ data: chargingSitesData, isLoading: false }),
-<<<<<<< HEAD
-  useChargingSiteStatuses: () => ({ data: [], isLoading: false }),
-  useChargingEquipmentStatuses: () => ({ data: [], isLoading: false })
-=======
   useChargingSiteStatuses: () => ({
     data: [
       { id: 'draft', status: 'Draft' },
@@ -85,7 +81,6 @@ vi.mock('@/hooks/useChargingSite', () => ({
     ],
     isLoading: false
   })
->>>>>>> develop
 }))
 
 vi.mock('@/hooks/useCurrentUser')
@@ -145,11 +140,6 @@ describe('ChargingSitesList', () => {
     it('renders IDIR view with all components', () => {
       render(<ChargingSitesList />, { wrapper })
 
-<<<<<<< HEAD
-    // Title and description
-    expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
-    expect(screen.getByText('csDescription')).toBeInTheDocument()
-=======
       expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
       expect(screen.getByText('csDescription')).toBeInTheDocument()
       expect(screen.getByText('common:ClearFilters')).toBeInTheDocument()
@@ -163,7 +153,6 @@ describe('ChargingSitesList', () => {
       expect(screen.getByText(/Legend: No/)).toBeInTheDocument()
       expect(screen.getByText(/Height: 500/)).toBeInTheDocument()
     })
->>>>>>> develop
 
     it('handles organization dropdown selection', async () => {
       const user = userEvent.setup()
@@ -214,27 +203,12 @@ describe('ChargingSitesList', () => {
     })
   })
 
-<<<<<<< HEAD
-  it('renders BCeID view with new charging site button and no org dropdown', () => {
-    useCurrentUser.mockReturnValue({ hasAnyRole: () => false })
-
-    render(<ChargingSitesList />, { wrapper })
-
-    // Title and description for BCeID
-    expect(screen.getByText('mngTitle')).toBeInTheDocument()
-    expect(screen.getByText('mngCSdescription')).toBeInTheDocument()
-
-    // New charging site button
-    const newBtn = screen.getByRole('button', {
-      name: 'newSiteBtn'
-=======
   describe('BCeID User View', () => {
     beforeEach(() => {
       useCurrentUser.mockReturnValue({
         hasAnyRole: () => false,
         data: { organization: { organizationId: 1 } }
       })
->>>>>>> develop
     })
 
     it('renders BCeID view with new site button', () => {
