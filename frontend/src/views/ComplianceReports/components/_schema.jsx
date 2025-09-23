@@ -8,14 +8,17 @@ import {
   LastCommentRenderer
 } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
-import { useGetComplianceReportStatuses, useGetAvailableAnalysts } from '@/hooks/useComplianceReports'
+import {
+  useGetComplianceReportStatuses,
+  useGetAvailableAnalysts
+} from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
 
 export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
-    width: 220,
+    minWidth: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
@@ -49,7 +52,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'assignedAnalyst',
     headerName: t('report:reportColLabels.assignedAnalyst'),
-    width: 180,
+    minWidth: 180,
     hide: isSupplier,
     valueGetter: ({ data }) => data.assignedAnalyst?.initials || '',
     cellRenderer: AssignedAnalystCell,
@@ -79,7 +82,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'lastComment',
     headerName: t('report:reportColLabels.lastComment'),
-    width: 160,
+    minWidth: 160,
     hide: isSupplier, // Only show for IDIR users
     cellRenderer: LastCommentRenderer,
     sortable: false,
@@ -91,7 +94,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
-    width: 210,
+    minWidth: 190,
     valueGetter: ({ data }) => data.compliancePeriod || '',
     filterParams: {
       buttons: ['clear']
@@ -100,14 +103,14 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'organization',
     headerName: t('report:reportColLabels.organization'),
-    flex: 2,
+    minWidth: 250,
     hide: isSupplier,
     valueGetter: ({ data }) => data.organizationName || ''
   },
   {
     field: 'type',
     headerName: t('report:reportColLabels.type'),
-    flex: 2,
+    minWidth: 300,
     valueGetter: ({ data }) => data.reportType,
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -136,7 +139,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
     field: 'updateDate',
     cellDataType: 'dateString',
     headerName: t('report:reportColLabels.lastUpdated'),
-    minWidth: '80',
+    minWidth: 225,
     valueGetter: ({ data }) => data.updateDate || '',
     valueFormatter: timezoneFormatter,
     filter: 'agDateColumnFilter',
@@ -265,14 +268,30 @@ export const renewableFuelColumns = (
   if (parseInt(compliancePeriodYear) === 2024) {
     // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
     if (!lines7And9Locked) {
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      gasolineEditableCells = [
+        ...gasolineEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
+      dieselEditableCells = [
+        ...dieselEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
     }
   } else if (parseInt(compliancePeriodYear) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      gasolineEditableCells = [
+        ...gasolineEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
+      dieselEditableCells = [
+        ...dieselEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
     }
   }
   if (parseInt(compliancePeriodYear) < 2029) {
@@ -392,6 +411,4 @@ export const earlyIssuanceColumns = (t) => [
   }
 ]
 
-export const defaultSortModel = [
-  { field: 'updateDate', direction: 'desc' }
-]
+export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
