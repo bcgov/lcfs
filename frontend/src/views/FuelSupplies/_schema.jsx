@@ -814,26 +814,31 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       field: 'complianceUnits',
+      minWidth: 180,
       valueFormatter: formatNumberWithCommas
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
       field: 'fuelType',
+      minWidth: 200,
       valueGetter: (params) => params.data.fuelType
     },
     {
       field: 'fuelTypeOther',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
+      minWidth: 170,
       hide: !showFuelTypeOther
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
       field: 'fuelCategory',
+      minWidth: 150,
       valueGetter: (params) => params.data.fuelCategory
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
       field: 'endUseType',
+      minWidth: 200,
       valueGetter: (params) => params.data.endUseType
     },
     {
@@ -841,47 +846,57 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
         'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
       ),
       field: 'determiningCarbonIntensity',
+      minWidth: 370,
       valueGetter: (params) => params.data.provisionOfTheAct
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
       field: 'fuelCode',
+      minWidth: 150,
       valueGetter: (params) => params.data.fuelCode
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
+      minWidth: 240,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
+      minWidth: 170,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
+      minWidth: 185,
       valueFormatter: formatNumberWithCommas
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
+      minWidth: 80,
       field: 'units'
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
+      minWidth: 135,
       field: 'targetCi'
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+      minWidth: 90,
       field: 'ciOfFuel'
     },
     {
       field: 'uci',
+      minWidth: 90,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
       field: 'energyDensity',
+      minWidth: 160,
       valueGetter: (params) => {
         if (isFuelTypeOther(params)) {
           return params.data?.energyDensity
@@ -894,10 +909,15 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
         }
       }
     },
-    { headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
+      field: 'eer',
+      minWidth: 80
+    },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
+      minWidth: 170,
       valueFormatter: formatNumberWithCommas
     }
   ]
@@ -908,26 +928,31 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
         return [
           {
             field: 'q1Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q2Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q3Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q4Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'totalQuantity',
+            minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
             valueFormatter: formatNumberWithCommas,
             valueGetter: (params) => {
@@ -966,6 +991,7 @@ export const changelogCommonColDefs = (
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
       field: 'complianceUnits',
+      minWidth: 180,
       valueFormatter: formatNumberWithCommas,
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'complianceUnits')
@@ -973,17 +999,20 @@ export const changelogCommonColDefs = (
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
       field: 'fuelType.fuelType',
+      minWidth: 200,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
       field: 'fuelCategory.category',
+      minWidth: 150,
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'fuelCategory')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
       field: 'endUseType.type',
+      minWidth: 200,
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'endUseType')
     },
@@ -992,64 +1021,76 @@ export const changelogCommonColDefs = (
         'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
       ),
       field: 'provisionOfTheAct.name',
+      minWidth: 370,
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'provisionOfTheAct')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
       field: 'fuelCode.fuelCode',
+      minWidth: 150,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
+      minWidth: 240,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
+      minWidth: 170,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
+      minWidth: 185,
       valueFormatter: formatNumberWithCommas,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
       field: 'units',
+      minWidth: 80,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
       field: 'targetCi',
+      minWidth: 135,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
       field: 'ciOfFuel',
+      minWidth: 90,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
       field: 'uci',
+      minWidth: 90,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
       field: 'energyDensity',
+      minWidth: 160,
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'energyDensity')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
       field: 'eer',
+      minWidth: 80,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
+      minWidth: 170,
       valueFormatter: formatNumberWithCommas,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
     }
@@ -1060,26 +1101,31 @@ export const changelogCommonColDefs = (
         return [
           {
             field: 'q1Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q2Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q3Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q4Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'totalQuantity',
+            minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
             valueFormatter: formatNumberWithCommas,
             valueGetter: (params) => {
@@ -1113,6 +1159,7 @@ export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
     { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
     {
       field: 'actionType',
+      minWidth: 140,
       valueGetter: (params) => {
         if (params.data.actionType === 'UPDATE') {
           if (params.data.updated) {
@@ -1142,26 +1189,31 @@ export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
         return [
           {
             field: 'q1Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q2Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q3Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'q4Quantity',
+            minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
             valueFormatter: formatNumberWithCommas
           },
           {
             field: 'totalQuantity',
+            minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
             valueFormatter: formatNumberWithCommas,
             valueGetter: (params) => {
@@ -1185,6 +1237,7 @@ export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
 
 export const changelogDefaultColDefs = {
   floatingFilter: false,
+  minWidth: 100,
   filter: false
 }
 export const changelogCommonGridOptions = {

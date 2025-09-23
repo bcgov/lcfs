@@ -107,7 +107,8 @@ vi.mock('@/hooks/useCreditLedger', () => ({
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganizationBalance: vi.fn()
+  useOrganizationBalance: vi.fn(),
+  useCurrentOrgBalance: vi.fn()
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -116,7 +117,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 // Import mocked functions after mocking
 import { useCreditLedger, useDownloadCreditLedger, useCreditLedgerYears } from '@/hooks/useCreditLedger'
-import { useOrganizationBalance } from '@/hooks/useOrganization'
+import { useOrganizationBalance, useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 
@@ -124,6 +125,7 @@ const mockUseCreditLedger = vi.mocked(useCreditLedger)
 const mockUseDownloadCreditLedger = vi.mocked(useDownloadCreditLedger)
 const mockUseCreditLedgerYears = vi.mocked(useCreditLedgerYears)
 const mockUseOrganizationBalance = vi.mocked(useOrganizationBalance)
+const mockUseCurrentOrgBalance = vi.mocked(useCurrentOrgBalance)
 const mockUseCurrentUser = vi.mocked(useCurrentUser)
 const mockUseTranslation = vi.mocked(useTranslation)
 
@@ -147,17 +149,17 @@ const renderComponent = (props = {}) => {
 describe('CreditLedger Component Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Default mock implementations
     mockUseCurrentUser.mockReturnValue({
       data: { organization: { organizationId: 999 } }
     })
-    
+
     mockUseCreditLedgerYears.mockReturnValue({
       data: ['2024', '2023', '2022'],
       isLoading: false
     })
-    
+
     mockUseCreditLedger.mockReturnValue({
       data: {
         ledger: [],
@@ -165,11 +167,15 @@ describe('CreditLedger Component Tests', () => {
       },
       isLoading: false
     })
-    
+
     mockUseOrganizationBalance.mockReturnValue({
       data: { totalBalance: 5000 }
     })
-    
+
+    mockUseCurrentOrgBalance.mockReturnValue({
+      data: { totalBalance: 5000 }
+    })
+
     mockUseDownloadCreditLedger.mockReturnValue(vi.fn())
   })
 
@@ -234,9 +240,12 @@ describe('CreditLedger Component Tests', () => {
       mockUseOrganizationBalance.mockReturnValue({
         data: { totalBalance: -1000 }
       })
-      
+      mockUseCurrentOrgBalance.mockReturnValue({
+        data: { totalBalance: -1000 }
+      })
+
       renderComponent()
-      
+
       expect(screen.getByText('0')).toBeInTheDocument()
     })
 
@@ -244,9 +253,12 @@ describe('CreditLedger Component Tests', () => {
       mockUseOrganizationBalance.mockReturnValue({
         data: null
       })
-      
+      mockUseCurrentOrgBalance.mockReturnValue({
+        data: null
+      })
+
       renderComponent()
-      
+
       expect(screen.getByText('0')).toBeInTheDocument()
     })
 
