@@ -124,7 +124,8 @@ export const transactionsColDefs = (t) => [
       })
     },
     suppressFloatingFilterButton: true,
-    width: 250
+    minWidth: 470,
+    flex: 2
   },
   {
     colId: 'fromOrganization',
