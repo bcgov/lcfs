@@ -14,7 +14,6 @@ import { miscRoutes } from './routeConfig/miscRoutes'
 import { transferRoutes } from './routeConfig/transferRoutes'
 import PublicLayout from '@/layouts/PublicLayout'
 import { fuelCodeRoutes } from './routeConfig/fuelCodeRoutes'
-import { chargingSiteRoutes } from './routeConfig/chargingSiteRoutes'
 import { publicPageRoutes } from './routeConfig/publicPageRoutes'
 import { PublicPageLayout } from '@/layouts/PublicPageLayout'
 
@@ -23,7 +22,6 @@ const allRoutes = [
   ...miscRoutes,
   ...adminRoutes,
   ...fuelCodeRoutes,
-  ...chargingSiteRoutes,
   ...organizationRoutes,
   ...transactionRoutes,
   ...transferRoutes,

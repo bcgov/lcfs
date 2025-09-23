@@ -13,10 +13,11 @@ from sqlalchemy import (
     or_,
     delete,
     exists,
+    text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from typing import List, Optional, TypedDict, Type, Any, Coroutine, Sequence
+from typing import List, Optional, TypedDict, Type, Sequence
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
@@ -76,7 +77,7 @@ class ComplianceReportRepository:
     def _get_base_report_options(self, include_transaction: bool = True):
         """
         Get common joinedload options for compliance reports.
-        
+
         Args:
             include_transaction: Whether to include transaction relationship (default: True)
         """
@@ -93,10 +94,10 @@ class ComplianceReportRepository:
             .joinedload(UserProfile.organization),
             joinedload(ComplianceReport.assigned_analyst),
         ]
-        
+
         if include_transaction:
             options.append(joinedload(ComplianceReport.transaction))
-            
+
         return options
 
     def _get_minimal_report_options(self):
@@ -213,13 +214,13 @@ class ComplianceReportRepository:
             CompliancePeriod.description == str(period),
             ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed,
         ]
-        
+
         # Exclude the current report to avoid circular reference
         if exclude_report_id:
             where_conditions.append(
                 ComplianceReport.compliance_report_id != exclude_report_id
             )
-        
+
         result = (
             (
                 await self.db.execute(
@@ -479,7 +480,7 @@ class ComplianceReportRepository:
         for filter in pagination.filters:
             filter_value = filter.filter
             logger.info(f"Processing filter: field={filter.field}, value={filter_value}")
-            
+
             # check if the date string is selected for filter
             if filter.filter is None:
                 filter_value = [
@@ -542,7 +543,7 @@ class ComplianceReportRepository:
                     analyst_id_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_id")
                     first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
                     last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
-                    
+
                     # Start with the simplest condition - just check if analyst_id is null
                     unassigned_condition = analyst_id_field.is_(None)
                     conditions.append(unassigned_condition)
@@ -553,13 +554,13 @@ class ComplianceReportRepository:
                     # Filter by analyst initials - need to construct initials from first/last name
                     first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
                     last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
-                    
+
                     # Create initials field by concatenating first letter of first and last name
                     initials_field = func.concat(
                         func.substring(first_name_field, 1, 1),
                         func.substring(last_name_field, 1, 1)
                     )
-                    
+
                     # Apply the filter condition directly
                     if filter_option == "contains":
                         conditions.append(initials_field.ilike(f"%{filter_value}%"))
@@ -1061,10 +1062,13 @@ class ComplianceReportRepository:
         """
         Assign or unassign an analyst to/from a compliance report.
         """
-        compliance_report = await self.get_compliance_report_by_id(report_id)
-        if compliance_report:
-            compliance_report.assigned_analyst_id = assigned_analyst_id
-            await self.db.flush()
+        await self.db.execute(
+            text(
+                "UPDATE compliance_report SET assigned_analyst_id = :analyst_id WHERE compliance_report_id = :report_id"
+            ),
+            {"analyst_id": assigned_analyst_id, "report_id": report_id},
+        )
+        await self.db.flush()
 
     @repo_handler
     async def get_user_by_id(self, user_id: int) -> Optional[UserProfile]:
@@ -1072,7 +1076,7 @@ class ComplianceReportRepository:
         Get a user by their ID with roles loaded.
         """
         from lcfs.db.models.user.UserRole import UserRole
-        
+
         result = await self.db.execute(
             select(UserProfile)
             .options(joinedload(UserProfile.user_roles).joinedload(UserRole.role))
@@ -1087,7 +1091,7 @@ class ComplianceReportRepository:
         """
         from lcfs.db.models.user.UserRole import UserRole
         from lcfs.db.models.user.Role import Role
-        
+
         result = await self.db.execute(
             select(UserProfile)
             .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)

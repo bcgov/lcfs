@@ -27,7 +27,7 @@ from lcfs.db.models.document import Document
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
-from lcfs.web.api.charging_site.repo import ChargingSiteRepo
+from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import ServiceException
@@ -47,7 +47,7 @@ class DocumentService:
         fuel_supply_repo: FuelSupplyRepository = Depends(),
         admin_adjustment_service: AdminAdjustmentServices = Depends(),
         initiative_agreement_service: InitiativeAgreementServices = Depends(),
-        charging_site_repo: ChargingSiteRepo = Depends(),
+        charging_site_repo: ChargingSiteRepository = Depends(),
     ):
         self.initiative_agreement_service = initiative_agreement_service
         self.admin_adjustment_service = admin_adjustment_service
@@ -244,9 +244,11 @@ class DocumentService:
             or RoleEnum.GOVERNMENT in user.role_names
         ):
             return
+        if user.organization.organization_id == charging_site.organization_id:
+            return
         raise HTTPException(
             status_code=400,
-            detail="Only Analysts and Government Staff can upload files to Charging Sites.",
+            detail="Only Analysts and Government Staff and related Organization users can upload files to Charging Sites.",
         )
 
     @repo_handler
