@@ -528,6 +528,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       isOriginalReport: reportData?.report?.version === 0,
       isAnalystAdjustment:
         currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+      isNonAssessment: reportData?.report?.isNonAssessment || false,
 
       // Conflict detection
       hasDraftSupplemental,
@@ -559,6 +560,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     isSigningAuthorityDeclared,
     hasDraftSupplemental,
     reportData?.report?.version,
+    reportData?.report?.isNonAssessment,
     isSupplemental,
     isDeleted,
     isDeleting,

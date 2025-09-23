@@ -151,7 +151,11 @@ export const BCGridBase = forwardRef(
         }}
         animateRows
         overlayNoRowsTemplate="No rows found"
-        autoSizeStrategy={{ type: 'fitCellContents', ...autoSizeStrategy }}
+        autoSizeStrategy={{
+          type: 'fitGridWidth',
+          defaultMinWidth: 100,
+          ...autoSizeStrategy
+        }}
         suppressDragLeaveHidesColumns
         suppressMovableColumns
         suppressColumnMoveAnimation={false}

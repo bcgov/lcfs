@@ -51,7 +51,7 @@ vi.mock('@/components/BCAlert', () => ({
   FloatingAlert: forwardRef((props, ref) => {
     // Create a mock triggerAlert function
     const triggerAlert = vi.fn()
-    
+
     // Assign triggerAlert to ref if provided
     if (ref) {
       if (typeof ref === 'function') {
@@ -60,7 +60,7 @@ vi.mock('@/components/BCAlert', () => ({
         ref.current = { triggerAlert }
       }
     }
-    
+
     return <div data-test="floating-alert" />
   })
 }))
@@ -72,17 +72,24 @@ vi.mock('@/components/BCBox', () => ({
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, disabled }) => <button data-test="bc-button" onClick={onClick} disabled={disabled}>{children}</button>
+  default: ({ children, onClick, disabled }) => (
+    <button data-test="bc-button" onClick={onClick} disabled={disabled}>
+      {children}
+    </button>
+  )
 }))
 
 vi.mock('@/components/BCModal', () => ({
   __esModule: true,
-  default: ({ children, open }) => open ? <div data-test="bc-modal">{children}</div> : null
+  default: ({ children, open }) =>
+    open ? <div data-test="bc-modal">{children}</div> : null
 }))
 
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({ children, 'data-test': dataTest }) => <div data-test={dataTest || "bc-typography"}>{children}</div>
+  default: ({ children, 'data-test': dataTest }) => (
+    <div data-test={dataTest || 'bc-typography'}>{children}</div>
+  )
 }))
 
 vi.mock('@/components/InternalComments', () => ({
@@ -118,9 +125,14 @@ vi.mock('../components/AssessmentCard', () => ({
   AssessmentCard: () => <div data-test="assessment-card" />
 }))
 
-vi.mock('@/views/ComplianceReports/components/AssessmentRecommendation.jsx', () => ({
-  AssessmentRecommendation: () => <div data-test="assessment-recommendation" />
-}))
+vi.mock(
+  '@/views/ComplianceReports/components/AssessmentRecommendation.jsx',
+  () => ({
+    AssessmentRecommendation: () => (
+      <div data-test="assessment-recommendation" />
+    )
+  })
+)
 
 vi.mock('@/views/ComplianceReports/components/AssessmentStatement.jsx', () => ({
   AssessmentStatement: () => <div data-test="assessment-statement" />
@@ -130,10 +142,13 @@ vi.mock('@/views/ComplianceReports/components/Introduction.jsx', () => ({
   Introduction: () => <div data-test="introduction" />
 }))
 
-vi.mock('@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx', () => ({
-  __esModule: true,
-  default: () => <div data-test="early-issuance-summary" />
-}))
+vi.mock(
+  '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx',
+  () => ({
+    __esModule: true,
+    default: () => <div data-test="early-issuance-summary" />
+  })
+)
 
 vi.mock('../buttonConfigs', () => ({
   buttonClusterConfigFn: vi.fn(() => ({}))
@@ -141,10 +156,22 @@ vi.mock('../buttonConfigs', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material', () => ({
-  Fab: ({ children, onClick }) => <button data-test="fab" onClick={onClick}>{children}</button>,
+  Fab: ({ children, onClick }) => (
+    <button data-test="fab" onClick={onClick}>
+      {children}
+    </button>
+  ),
   Stack: ({ children }) => <div data-test="stack">{children}</div>,
-  Tooltip: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>,
-  Alert: ({ children, severity }) => <div data-test="alert" data-severity={severity}>{children}</div>,
+  Tooltip: ({ children, title }) => (
+    <div data-test="tooltip" title={title}>
+      {children}
+    </div>
+  ),
+  Alert: ({ children, severity }) => (
+    <div data-test="alert" data-severity={severity}>
+      {children}
+    </div>
+  ),
   AlertTitle: ({ children }) => <div data-test="alert-title">{children}</div>
 }))
 
@@ -234,8 +261,14 @@ describe('EditViewComplianceReport', () => {
     window.scrollTo = vi.fn()
     Object.defineProperty(window, 'scrollY', { value: 0, writable: true })
     Object.defineProperty(window, 'innerHeight', { value: 800, writable: true })
-    Object.defineProperty(document.documentElement, 'scrollHeight', { value: 2000, writable: true })
-    Object.defineProperty(document.documentElement, 'scrollTop', { value: 0, writable: true })
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: 2000,
+      writable: true
+    })
+    Object.defineProperty(document.documentElement, 'scrollTop', {
+      value: 0,
+      writable: true
+    })
 
     // Setup default mocks
     useParams.mockReturnValue({
@@ -328,14 +361,19 @@ describe('EditViewComplianceReport', () => {
     })
 
     it('shows error state when isError prop is true', () => {
-      render(<EditViewComplianceReport isError={true} error={{ message: 'Test error' }} />)
-      
+      render(
+        <EditViewComplianceReport
+          isError={true}
+          error={{ message: 'Test error' }}
+        />
+      )
+
       expect(screen.getByText('report:errorRetrieving')).toBeInTheDocument()
     })
 
     it('renders main compliance report header with status', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
       expect(screen.getByTestId('compliance-report-status')).toBeInTheDocument()
     })
@@ -351,7 +389,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => quarterlyReport)
 
       render(<EditViewComplianceReport />)
-      
+
       const header = screen.getByTestId('compliance-report-header')
       expect(header).toBeInTheDocument()
     })
@@ -365,7 +403,7 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.queryByTestId('activity-list-card')).not.toBeInTheDocument()
     })
 
@@ -378,7 +416,7 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       // Complex canEdit logic - just verify component renders
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -390,8 +428,10 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
-      expect(screen.queryByTestId('compliance-report-summary')).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByTestId('compliance-report-summary')
+      ).not.toBeInTheDocument()
     })
 
     it('does not render compliance report summary for non-assessment reports', () => {
@@ -405,7 +445,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => nonAssessmentReport)
 
       render(<EditViewComplianceReport />)
-      
+
       // Complex logic - just verify component renders with non-assessment report
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -426,13 +466,17 @@ describe('EditViewComplianceReport', () => {
         return {
           ...mod,
           EditViewComplianceReport: (props) => {
-            return <div data-test="early-issuance-summary">Early Issuance Summary</div>
+            return (
+              <div data-test="early-issuance-summary">
+                Early Issuance Summary
+              </div>
+            )
           }
         }
       })
 
       render(<EditViewComplianceReport />)
-      
+
       // This test verifies the component renders, actual early issuance logic is complex
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -450,9 +494,11 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => supplementalReport)
 
       render(<EditViewComplianceReport />)
-      
+
       // Should not show alert for this case due to complex logic
-      expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('supplier-supplemental-alert')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -462,20 +508,26 @@ describe('EditViewComplianceReport', () => {
       const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
 
       const { unmount } = render(<EditViewComplianceReport />)
-      
-      expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function))
-      
+
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'scroll',
+        expect.any(Function)
+      )
+
       unmount()
-      
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function))
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'scroll',
+        expect.any(Function)
+      )
     })
 
     it('scrolls when FAB is clicked', async () => {
       render(<EditViewComplianceReport />)
-      
+
       const fab = screen.getByTestId('fab')
       await userEvent.click(fab)
-      
+
       await waitFor(() => {
         expect(window.scrollTo).toHaveBeenCalled()
       })
@@ -492,8 +544,10 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
-      expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByTestId('supplier-supplemental-alert')
+      ).not.toBeInTheDocument()
     })
 
     it('handles missing update date', () => {
@@ -509,8 +563,10 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => reportWithoutDate)
 
       render(<EditViewComplianceReport />)
-      
-      expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByTestId('supplier-supplemental-alert')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -528,13 +584,13 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => quarterlyReport)
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
     it('handles annual reports', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
@@ -556,7 +612,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => quarterlyWithHistory)
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
   })
@@ -580,11 +636,12 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
-      expect(screen.queryByTestId('assessment-statement')).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByTestId('assessment-statement')
+      ).not.toBeInTheDocument()
     })
   })
-
 
   describe('Conditional Rendering', () => {
     it('renders assessment card', () => {
@@ -599,7 +656,9 @@ describe('EditViewComplianceReport', () => {
 
     it('renders compliance report summary', () => {
       render(<EditViewComplianceReport />)
-      expect(screen.getByTestId('compliance-report-summary')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('compliance-report-summary')
+      ).toBeInTheDocument()
     })
 
     it('renders introduction for non-government users', () => {
@@ -616,7 +675,7 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.queryByTestId('introduction')).not.toBeInTheDocument()
     })
 
@@ -629,13 +688,13 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
     })
 
     it('renders scroll FAB', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('fab')).toBeInTheDocument()
       expect(screen.getByTestId('tooltip')).toBeInTheDocument()
     })
@@ -644,7 +703,7 @@ describe('EditViewComplianceReport', () => {
   describe('Button Configuration', () => {
     it('calls buttonClusterConfigFn', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(buttonClusterConfigFn).toHaveBeenCalled()
     })
   })
@@ -652,7 +711,7 @@ describe('EditViewComplianceReport', () => {
   describe('Mutation Callbacks', () => {
     it('has all mutation hooks configured', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useUpdateComplianceReport).toHaveBeenCalled()
       expect(useDeleteComplianceReport).toHaveBeenCalled()
       expect(useCreateSupplementalReport).toHaveBeenCalled()
@@ -664,13 +723,13 @@ describe('EditViewComplianceReport', () => {
   describe('State Management', () => {
     it('manages modal data state', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.queryByTestId('bc-modal')).not.toBeInTheDocument()
     })
 
     it('manages scroll state', () => {
       render(<EditViewComplianceReport />)
-      
+
       const fab = screen.getByTestId('fab')
       expect(fab).toBeInTheDocument()
     })
@@ -683,11 +742,11 @@ describe('EditViewComplianceReport', () => {
           if (onMutate) onMutate()
         })
       }
-      
+
       useDeleteComplianceReport.mockReturnValue(mockDeleteMutation)
-      
+
       render(<EditViewComplianceReport />)
-      
+
       // Component should render normally before deletion
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -700,14 +759,16 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => reportWithNewerVersion)
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
     it('manages signing authority declared state', () => {
       render(<EditViewComplianceReport />)
-      
-      expect(screen.getByTestId('compliance-report-summary')).toBeInTheDocument()
+
+      expect(
+        screen.getByTestId('compliance-report-summary')
+      ).toBeInTheDocument()
     })
 
     it('manages alert processing state', () => {
@@ -717,24 +778,27 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       // Just verify component renders properly
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
     it('resets state on unmount', () => {
       const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
-      
+
       const { unmount } = render(<EditViewComplianceReport />)
-      
+
       unmount()
-      
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function))
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'scroll',
+        expect.any(Function)
+      )
     })
 
     it('handles isDeleting state', () => {
       render(<EditViewComplianceReport />)
-      
+
       // Component should render normally when not deleting
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -743,20 +807,20 @@ describe('EditViewComplianceReport', () => {
   describe('Function Behavior', () => {
     it('scrollToTopOrBottom scrolls to top when isScrollingUp is true', async () => {
       render(<EditViewComplianceReport />)
-      
+
       const fab = screen.getByTestId('fab')
-      
+
       // Simulate scroll state that would trigger top scroll
       await act(async () => {
         window.scrollY = 1000
         document.documentElement.scrollTop = 1000
         window.dispatchEvent(new Event('scroll'))
-        
-        await new Promise(resolve => setTimeout(resolve, 0))
+
+        await new Promise((resolve) => setTimeout(resolve, 0))
       })
-      
+
       await userEvent.click(fab)
-      
+
       await waitFor(() => {
         expect(window.scrollTo).toHaveBeenCalled()
       })
@@ -764,10 +828,10 @@ describe('EditViewComplianceReport', () => {
 
     it('scrollToTopOrBottom scrolls to bottom when isScrollingUp is false', async () => {
       render(<EditViewComplianceReport />)
-      
+
       const fab = screen.getByTestId('fab')
       await userEvent.click(fab)
-      
+
       await waitFor(() => {
         expect(window.scrollTo).toHaveBeenCalled()
       })
@@ -775,47 +839,47 @@ describe('EditViewComplianceReport', () => {
 
     it('handleScroll updates scroll state correctly', async () => {
       const { rerender } = render(<EditViewComplianceReport />)
-      
+
       await act(async () => {
         window.scrollY = 500
         document.documentElement.scrollTop = 500
         window.dispatchEvent(new Event('scroll'))
-        
-        await new Promise(resolve => setTimeout(resolve, 0))
+
+        await new Promise((resolve) => setTimeout(resolve, 0))
       })
-      
+
       // Re-render to see if state updated
       rerender(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('fab')).toBeInTheDocument()
     })
 
     it('handleScroll sets isScrollingUp to false at top', async () => {
       render(<EditViewComplianceReport />)
-      
+
       await act(async () => {
         window.scrollY = 0
         document.documentElement.scrollTop = 0
         window.dispatchEvent(new Event('scroll'))
-        
-        await new Promise(resolve => setTimeout(resolve, 0))
+
+        await new Promise((resolve) => setTimeout(resolve, 0))
       })
-      
+
       expect(screen.getByTestId('arrow-down')).toBeInTheDocument()
     })
 
     it('handleScroll sets isScrollingUp to true at bottom', async () => {
       render(<EditViewComplianceReport />)
-      
+
       await act(async () => {
         window.scrollY = 1200
         window.innerHeight = 800
         document.documentElement.scrollHeight = 2000
         window.dispatchEvent(new Event('scroll'))
-        
-        await new Promise(resolve => setTimeout(resolve, 0))
+
+        await new Promise((resolve) => setTimeout(resolve, 0))
       })
-      
+
       // Should still render fab
       expect(screen.getByTestId('fab')).toBeInTheDocument()
     })
@@ -832,7 +896,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => reportWithAssessment)
 
       render(<EditViewComplianceReport />)
-      
+
       // Just verify component renders with assessment data
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -841,50 +905,50 @@ describe('EditViewComplianceReport', () => {
   describe('Hook Integration', () => {
     it('integrates with useForm hook', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useForm).toHaveBeenCalled()
       expect(mockHandleSubmit).toBeDefined()
     })
 
     it('integrates with useCurrentUser hook', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useCurrentUser).toHaveBeenCalled()
     })
 
     it('integrates with useOrganization hook with correct parameters', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useOrganization).toHaveBeenCalled()
     })
 
     it('integrates with useComplianceReportStore hook', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useComplianceReportStore).toHaveBeenCalled()
     })
 
     it('integrates with useLocation hook for navigation state', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useLocation).toHaveBeenCalled()
     })
 
     it('integrates with useParams hook', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useParams).toHaveBeenCalled()
     })
 
     it('integrates with useTranslation hook', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useTranslation).toHaveBeenCalled()
     })
 
     it('integrates with useQueryClient hook', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(useQueryClient).toHaveBeenCalled()
     })
   })
@@ -907,7 +971,7 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       // The canEdit logic is complex and depends on multiple factors
       // Let's just verify the component renders properly
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
@@ -933,7 +997,7 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       // Since canEdit logic requires hasRoles(analyst) for ANALYST_ADJUSTMENT, not hasAnyRole
       // and our hasRoles returns true for analyst, but the actual canEdit logic is complex
       // Let's just verify the component renders
@@ -957,7 +1021,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => quarterlyReport)
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
@@ -974,9 +1038,11 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => supplierSupplementalReport)
 
       render(<EditViewComplianceReport />)
-      
+
       // Complex logic should not show alert in this case
-      expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('supplier-supplemental-alert')
+      ).not.toBeInTheDocument()
     })
 
     it('handles reportConditions for supplemental reports', () => {
@@ -991,7 +1057,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => supplementalReport)
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
@@ -1004,7 +1070,7 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
     })
 
@@ -1019,7 +1085,7 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => annualReport)
 
       render(<EditViewComplianceReport />)
-      
+
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
@@ -1035,14 +1101,14 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportStore.mockReturnValue(() => draftSupplementalReport)
 
       render(<EditViewComplianceReport />)
-      
+
       // For non-government users, should show 30-day notice
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
     it('calls buttonClusterConfigFn with correct context', () => {
       render(<EditViewComplianceReport />)
-      
+
       expect(buttonClusterConfigFn).toHaveBeenCalledWith(
         expect.objectContaining({
           hasRoles: expect.any(Function),
@@ -1053,11 +1119,75 @@ describe('EditViewComplianceReport', () => {
       )
     })
 
+    it('passes isNonAssessment flag to buttonClusterConfigFn context when false', () => {
+      const reportWithAssessment = {
+        ...defaultReportData,
+        report: {
+          ...defaultReportData.report,
+          isNonAssessment: false
+        }
+      }
+      useComplianceReportStore.mockReturnValue(() => reportWithAssessment)
+
+      render(<EditViewComplianceReport />)
+
+      expect(buttonClusterConfigFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isNonAssessment: false
+        })
+      )
+    })
+
+    it('passes isNonAssessment flag to buttonClusterConfigFn context', () => {
+      // This test verifies that the isNonAssessment property is included in the context
+      // The specific value testing is covered by the buttonConfigs.test.jsx file
+      render(<EditViewComplianceReport />)
+
+      expect(buttonClusterConfigFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isNonAssessment: expect.any(Boolean)
+        })
+      )
+    })
+
+    it('passes default false isNonAssessment when flag is undefined', () => {
+      const reportWithoutFlag = {
+        ...defaultReportData,
+        report: {
+          ...defaultReportData.report
+          // isNonAssessment property is undefined
+        }
+      }
+      delete reportWithoutFlag.report.isNonAssessment
+      useComplianceReportStore.mockReturnValue(() => reportWithoutFlag)
+
+      render(<EditViewComplianceReport />)
+
+      expect(buttonClusterConfigFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isNonAssessment: false
+        })
+      )
+    })
+
+    it('includes isNonAssessment in dependency array for buttonClusterConfig', () => {
+      // This test ensures that the buttonClusterConfig will re-render when isNonAssessment changes
+      // by verifying it's included in the dependency array (tested indirectly through component behavior)
+      render(<EditViewComplianceReport />)
+
+      // The fact that buttonClusterConfigFn is called with isNonAssessment means it's part of the context
+      expect(buttonClusterConfigFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isNonAssessment: expect.any(Boolean)
+        })
+      )
+    })
+
     it('handles deletion state properly', () => {
       useComplianceReportStore.mockReturnValue(() => null)
 
       render(<EditViewComplianceReport />)
-      
+
       // When no report data, component should still render but without certain elements
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
@@ -1067,22 +1197,22 @@ describe('EditViewComplianceReport', () => {
     it('handles scroll events', async () => {
       const scrollSpy = vi.fn()
       window.addEventListener('scroll', scrollSpy)
-      
+
       render(<EditViewComplianceReport />)
-      
+
       await act(async () => {
         window.dispatchEvent(new Event('scroll'))
       })
-      
+
       expect(scrollSpy).toHaveBeenCalled()
     })
 
     it('handles FAB click events', async () => {
       render(<EditViewComplianceReport />)
-      
+
       const fab = screen.getByTestId('fab')
       await userEvent.click(fab)
-      
+
       await waitFor(() => {
         expect(window.scrollTo).toHaveBeenCalled()
       })
@@ -1095,16 +1225,21 @@ describe('EditViewComplianceReport', () => {
       })
 
       render(<EditViewComplianceReport />)
-      
+
       // Just verify component renders without error
       expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
     })
 
     it('handles error prop changes', () => {
       const { rerender } = render(<EditViewComplianceReport />)
-      
-      rerender(<EditViewComplianceReport isError={true} error={{ message: 'New error' }} />)
-      
+
+      rerender(
+        <EditViewComplianceReport
+          isError={true}
+          error={{ message: 'New error' }}
+        />
+      )
+
       // When error is true, component shows error state instead of main content
       expect(screen.getByText('report:errorRetrieving')).toBeInTheDocument()
     })
@@ -1122,7 +1257,9 @@ describe('EditViewComplianceReport', () => {
             updateDate: '2024-01-15T10:00:00Z'
           }
         }
-        useComplianceReportStore.mockReturnValue(() => supplierSupplementalReport)
+        useComplianceReportStore.mockReturnValue(
+          () => supplierSupplementalReport
+        )
         useCurrentUser.mockReturnValue({
           data: { ...defaultUser, isGovernmentUser: false },
           isLoading: false,
@@ -1131,9 +1268,11 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // Verify component renders
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('handles non-draft status supplemental reports', () => {
@@ -1146,19 +1285,25 @@ describe('EditViewComplianceReport', () => {
             updateDate: '2024-01-15T10:00:00Z'
           }
         }
-        useComplianceReportStore.mockReturnValue(() => submittedSupplementalReport)
+        useComplianceReportStore.mockReturnValue(
+          () => submittedSupplementalReport
+        )
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+
+        expect(
+          screen.queryByTestId('supplier-supplemental-alert')
+        ).not.toBeInTheDocument()
       })
 
       it('handles missing report data', () => {
         useComplianceReportStore.mockReturnValue(() => null)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+
+        expect(
+          screen.queryByTestId('supplier-supplemental-alert')
+        ).not.toBeInTheDocument()
       })
 
       it('handles government user with supplemental report', () => {
@@ -1180,8 +1325,10 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.queryByTestId('supplier-supplemental-alert')).not.toBeInTheDocument()
+
+        expect(
+          screen.queryByTestId('supplier-supplemental-alert')
+        ).not.toBeInTheDocument()
       })
     })
 
@@ -1203,8 +1350,10 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => q1Report)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('calculates quarter 2 for July-September months', () => {
@@ -1224,8 +1373,10 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => q2Report)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('calculates quarter 3 for October-December months', () => {
@@ -1245,8 +1396,10 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => q3Report)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('calculates quarter 4 for January-February months', () => {
@@ -1266,8 +1419,10 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => q4Report)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('handles quarterly report with no history', () => {
@@ -1283,8 +1438,10 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => noHistoryReport)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('handles draft quarterly report in current year', () => {
@@ -1306,8 +1463,10 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => draftQuarterlyReport)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('handles draft quarterly report in future year January/February', () => {
@@ -1334,9 +1493,11 @@ describe('EditViewComplianceReport', () => {
         useComplianceReportStore.mockReturnValue(() => futureDraftReport)
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
-        
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
+
         vi.restoreAllMocks()
       })
     })
@@ -1359,7 +1520,7 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // Assessment section should be visible for government users
         expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
       })
@@ -1381,7 +1542,7 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
       })
 
@@ -1390,7 +1551,9 @@ describe('EditViewComplianceReport', () => {
           ...defaultReportData,
           isNewest: false // This will set hasDraftSupplemental to true
         }
-        useComplianceReportStore.mockReturnValue(() => reportWithDraftSupplemental)
+        useComplianceReportStore.mockReturnValue(
+          () => reportWithDraftSupplemental
+        )
         useCurrentUser.mockReturnValue({
           data: { ...defaultUser, isGovernmentUser: true },
           isLoading: false,
@@ -1399,20 +1562,38 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
     })
 
     describe('Mutation Integration', () => {
       it('configures all mutation hooks correctly', () => {
         render(<EditViewComplianceReport />)
-        
-        expect(useUpdateComplianceReport).toHaveBeenCalledWith('123', expect.any(Object))
-        expect(useDeleteComplianceReport).toHaveBeenCalledWith(456, '123', expect.any(Object))
-        expect(useCreateSupplementalReport).toHaveBeenCalledWith('123', expect.any(Object))
-        expect(useCreateAnalystAdjustment).toHaveBeenCalledWith('123', expect.any(Object))
-        expect(useCreateIdirSupplementalReport).toHaveBeenCalledWith('123', expect.any(Object))
+
+        expect(useUpdateComplianceReport).toHaveBeenCalledWith(
+          '123',
+          expect.any(Object)
+        )
+        expect(useDeleteComplianceReport).toHaveBeenCalledWith(
+          456,
+          '123',
+          expect.any(Object)
+        )
+        expect(useCreateSupplementalReport).toHaveBeenCalledWith(
+          '123',
+          expect.any(Object)
+        )
+        expect(useCreateAnalystAdjustment).toHaveBeenCalledWith(
+          '123',
+          expect.any(Object)
+        )
+        expect(useCreateIdirSupplementalReport).toHaveBeenCalledWith(
+          '123',
+          expect.any(Object)
+        )
       })
     })
 
@@ -1426,7 +1607,7 @@ describe('EditViewComplianceReport', () => {
           }
         }
         useComplianceReportStore.mockReturnValue(() => submittedReport)
-        
+
         buttonClusterConfigFn.mockReturnValue({
           SUBMITTED: [
             {
@@ -1441,9 +1622,11 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // Button configuration logic is complex, just verify component renders
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('does not render action buttons for draft status', () => {
@@ -1452,7 +1635,7 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // No action buttons should render for draft status
         expect(screen.queryByText('Test Button')).not.toBeInTheDocument()
       })
@@ -1467,7 +1650,7 @@ describe('EditViewComplianceReport', () => {
           }
         }
         useComplianceReportStore.mockReturnValue(() => submittedReport)
-        
+
         buttonClusterConfigFn.mockReturnValue({
           SUBMITTED: [
             {
@@ -1482,7 +1665,7 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // Verify button cluster config was called with proper context
         expect(buttonClusterConfigFn).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -1514,9 +1697,11 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // Component should render with draft supplemental logic
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('hides 30-day notice for government users', () => {
@@ -1538,9 +1723,11 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // Should not show the alert for government users
-        expect(screen.queryByText('Supplemental Report Submission')).not.toBeInTheDocument()
+        expect(
+          screen.queryByText('Supplemental Report Submission')
+        ).not.toBeInTheDocument()
       })
 
       it('handles supplemental submission deadline calculation', () => {
@@ -1562,16 +1749,18 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
+
         // The calculation logic is complex but the component should render
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
     })
 
     describe('Form Integration', () => {
       it('initializes form with default values', () => {
         render(<EditViewComplianceReport />)
-        
+
         // Verify useForm was called with default values
         expect(useForm).toHaveBeenCalledWith({
           defaultValues: {
@@ -1592,16 +1781,18 @@ describe('EditViewComplianceReport', () => {
             isNonAssessment: true
           }
         }
-        
+
         // Render with initial data
         const { rerender } = render(<EditViewComplianceReport />)
-        
+
         // Change the report data to trigger useEffect
         useComplianceReportStore.mockReturnValue(() => reportWithFormData)
         rerender(<EditViewComplianceReport />)
-        
+
         // Component should render properly with form data
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
     })
 
@@ -1615,11 +1806,13 @@ describe('EditViewComplianceReport', () => {
         })
 
         const { rerender } = render(<EditViewComplianceReport />)
-        
+
         // Trigger deletion
         const deleteButton = screen.queryByText('Delete')
         // Since deletion state is internal, just verify the component can handle it
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
 
       it('handles deletion error and resets state', () => {
@@ -1630,8 +1823,10 @@ describe('EditViewComplianceReport', () => {
         })
 
         render(<EditViewComplianceReport />)
-        
-        expect(screen.getByTestId('compliance-report-header')).toBeInTheDocument()
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toBeInTheDocument()
       })
     })
   })
