@@ -19,7 +19,7 @@ vi.mock('react-router-dom', async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useSearchParams: () => [new URLSearchParams(), mockSetSearchParams],
-    useLocation: () => ({ pathname: '/charging-equipment', state: null })
+    useLocation: () => ({ pathname: '/compliance-reporting/fse', state: null })
   }
 })
 
@@ -30,6 +30,8 @@ vi.mock('react-i18next', () => ({
         'chargingEquipment:manageFSE': 'Manage FSE',
         'chargingEquipment:manageFSEDescription': 'Add new FSE, submit draft or updated FSE to government for validation, or decommission FSE to remove from future compliance reports.',
         'chargingEquipment:newFSE': 'New FSE',
+        'chargingEquipment:selectAllDraftUpdated': 'Select All Draft/Updated',
+        'chargingEquipment:selectAllValidated': 'Select All Validated',
         'chargingEquipment:submitSelected': 'Submit selected',
         'chargingEquipment:setToDecommissioned': 'Set to Decommissioned',
         'chargingEquipment:errorLoadingEquipment': 'Error loading equipment',
@@ -52,68 +54,97 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   BCGridViewer: ({
     rowData,
+    queryData,
     onRowClicked,
     onSelectionChanged,
     gridRef,
     highlightedRowId,
-    onPaginationChanged,
+    onPaginationChange,
     onSortChanged,
     onFilterChanged
   }) => {
-    // Set up grid ref mock
+    const items = rowData ?? queryData?.data?.items ?? []
+
     if (gridRef) {
+      const deselectAllMock = vi.fn()
       gridRef.current = {
         api: {
           setFilterModel: vi.fn(),
           getFilterModel: vi.fn(() => ({})),
-          deselectAll: vi.fn(),
-          getSelectedNodes: vi.fn(() => [])
+          forEachNode: (callback) =>
+            items.forEach((row, index) =>
+              callback({
+                data: row,
+                setSelected: vi.fn(),
+                updateData: vi.fn()
+              })
+            ),
+          getSelectedNodes: vi.fn(() => []),
+          deselectAll: deselectAllMock
         }
       }
     }
 
+    const triggerSelectionChanged = (selectedItems) => {
+      if (gridRef?.current?.api) {
+        gridRef.current.api.getSelectedNodes = vi.fn(() =>
+          selectedItems.map((row) => ({ data: row }))
+        )
+      }
+      onSelectionChanged?.({
+        api: {
+          getSelectedNodes: () => selectedItems.map((row) => ({ data: row }))
+        }
+      })
+    }
+
     return (
       <div data-test="bc-grid-viewer">
-        {rowData?.map((row, index) => (
-          <div 
+        {items.map((row) => (
+          <div
             key={row.charging_equipment_id}
             data-test={`equipment-row-${row.charging_equipment_id}`}
             onClick={() => onRowClicked?.({ data: row })}
-            className={highlightedRowId === row.charging_equipment_id.toString() ? 'highlighted' : ''}
+            className={
+              highlightedRowId === row.charging_equipment_id.toString()
+                ? 'highlighted'
+                : ''
+            }
           >
             <span data-test="status">{row.status}</span>
             <span data-test="serial-number">{row.serial_number}</span>
             <span data-test="manufacturer">{row.manufacturer}</span>
           </div>
         ))}
-        
-        {/* Mock selection controls */}
+
         <div data-test="selection-controls">
-          <button 
-            onClick={() => onSelectionChanged?.({ 
-              api: { 
-                getSelectedNodes: () => rowData?.map(row => ({ data: row })) || [] 
-              } 
-            })}
+          <button
+            onClick={() => triggerSelectionChanged(items)}
             data-test="select-all"
           >
             Select All
           </button>
-          <button 
-            onClick={() => onSelectionChanged?.({ 
-              api: { 
-                getSelectedNodes: () => [] 
-              } 
-            })}
+          <button
+            onClick={() => triggerSelectionChanged([])}
             data-test="deselect-all"
           >
             Deselect All
           </button>
         </div>
 
-        {/* Mock pagination controls */}
         <div data-test="pagination-controls">
-          <button onClick={() => onPaginationChanged?.(2, 25)}>Page 2</button>
+          <button
+            onClick={() =>
+              onPaginationChange?.({
+                page: 2,
+                size: 25,
+                sortOrders: [],
+                filters: []
+              })
+            }
+          >
+            Page 2
+          </button>
         </div>
       </div>
     )
@@ -223,7 +254,9 @@ const TestWrapper = ({ children }) => {
 describe('ChargingEquipment', () => {
   let mockCurrentUser, mockChargingEquipment
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+
     mockCurrentUser = {
       data: { 
         user_type: 'Supplier',
@@ -252,9 +285,6 @@ describe('ChargingEquipment', () => {
     
     useCurrentUser.mockReturnValue(mockCurrentUser)
     useChargingEquipment.mockReturnValue(mockChargingEquipment)
-    
-    // Clear all mock calls
-    vi.clearAllMocks()
   })
 
   afterEach(() => {
@@ -303,7 +333,7 @@ describe('ChargingEquipment', () => {
     const newFseButton = screen.getByText('New FSE')
     fireEvent.click(newFseButton)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/charging-equipment/new')
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/add')
   })
 
   it('handles row click for draft equipment', async () => {
@@ -318,7 +348,7 @@ describe('ChargingEquipment', () => {
       fireEvent.click(draftRow)
     })
 
-    expect(mockNavigate).toHaveBeenCalledWith('/charging-equipment/edit/1')
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/1/edit')
   })
 
   it('handles row click for validated equipment', async () => {
@@ -333,7 +363,7 @@ describe('ChargingEquipment', () => {
       fireEvent.click(validatedRow)
     })
 
-    expect(mockNavigate).toHaveBeenCalledWith('/charging-equipment/edit/2')
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/2/edit')
   })
 
   it('shows bulk action buttons when equipment is selected', async () => {
@@ -350,8 +380,12 @@ describe('ChargingEquipment', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByTestId('submit-selected-btn')).toBeInTheDocument()
-      expect(screen.getByTestId('decommission-selected-btn')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /Submit selected/i })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /Set to Decommissioned/i })
+      ).toBeInTheDocument()
     })
   })
 
@@ -375,7 +409,9 @@ describe('ChargingEquipment', () => {
 
     // Click submit button
     await waitFor(() => {
-      const submitButton = screen.getByTestId('submit-selected-btn')
+      const submitButton = screen.getByRole('button', {
+        name: /Submit selected/i
+      })
       fireEvent.click(submitButton)
     })
 
@@ -408,7 +444,9 @@ describe('ChargingEquipment', () => {
 
     // Click decommission button
     await waitFor(() => {
-      const decommissionButton = screen.getByTestId('decommission-selected-btn')
+      const decommissionButton = screen.getByRole('button', {
+        name: /Set to Decommissioned/i
+      })
       fireEvent.click(decommissionButton)
     })
 
@@ -493,7 +531,9 @@ describe('ChargingEquipment', () => {
     })
 
     await waitFor(() => {
-      const submitButton = screen.getByTestId('submit-selected-btn')
+      const submitButton = screen.getByRole('button', {
+        name: /Submit selected/i
+      })
       fireEvent.click(submitButton)
     })
 

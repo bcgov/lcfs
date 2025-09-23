@@ -125,7 +125,9 @@ describe('useChargingEquipment', () => {
       expect(mockApiService.post).toHaveBeenCalledWith(
         '/charging-equipment/list',
         {
-          ...paginationOptions,
+          page: 1,
+          size: 25,
+          sort_orders: [],
           filters: {}
         }
       )
