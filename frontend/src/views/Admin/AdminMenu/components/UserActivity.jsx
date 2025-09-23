@@ -88,11 +88,6 @@ export const UserActivity = () => {
           dataKey="activities"
           getRowId={getRowId}
           overlayNoRowsTemplate={t('admin:activitiesNotFound')}
-          autoSizeStrategy={{
-            type: 'fitGridWidth',
-            defaultMinWidth: 50,
-            defaultMaxWidth: 600
-          }}
           defaultColDef={defaultColDef}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>

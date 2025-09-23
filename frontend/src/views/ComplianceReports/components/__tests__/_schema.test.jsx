@@ -67,7 +67,7 @@ describe('ComplianceReports Schema', () => {
       expect(assignedAnalystCol).toBeDefined()
       expect(assignedAnalystCol.hide).toBe(false)
       expect(assignedAnalystCol.headerName).toBe('report:reportColLabels.assignedAnalyst')
-      expect(assignedAnalystCol.width).toBe(180)
+      expect(assignedAnalystCol.minWidth).toBe(180)
     })
 
     it('should hide assigned analyst column for suppliers', () => {
@@ -136,19 +136,18 @@ describe('ComplianceReports Schema', () => {
       const statusCol = colDefs.find(col => col.field === 'status')
       expect(statusCol).toBeDefined()
       expect(statusCol.headerName).toBe('report:reportColLabels.status')
-      expect(statusCol.width).toBe(220)
+      expect(statusCol.minWidth).toBe(220)
 
       // Check compliance period column
       const periodCol = colDefs.find(col => col.field === 'compliancePeriod')
       expect(periodCol).toBeDefined()
       expect(periodCol.headerName).toBe('report:reportColLabels.compliancePeriod')
-      expect(periodCol.width).toBe(210)
+      expect(periodCol.minWidth).toBe(190)
 
       // Check type column
       const typeCol = colDefs.find(col => col.field === 'type')
       expect(typeCol).toBeDefined()
       expect(typeCol.headerName).toBe('report:reportColLabels.type')
-      expect(typeCol.flex).toBe(2)
 
       // Check update date column
       const updateDateCol = colDefs.find(col => col.field === 'updateDate')

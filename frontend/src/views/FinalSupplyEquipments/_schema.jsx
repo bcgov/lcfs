@@ -487,24 +487,28 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
     ),
+    minWidth: 300,
     field: 'organizationName'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
     ),
+    minWidth: 210,
     field: 'supplyFromDate'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
     ),
+    minWidth: 190,
     field: 'supplyToDate'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
+    minWidth: 135,
     field: 'kwhUsage',
     valueFormatter: numberFormatter
   },
@@ -519,33 +523,39 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
     ),
+    minWidth: 200,
     field: 'serialNbr'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
     ),
+    minWidth: 250,
     field: 'manufacturer'
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.model'),
+    minWidth: 200,
     field: 'model'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
+    minWidth: 340,
     field: 'levelOfEquipment',
     valueGetter: (params) => params.data.levelOfEquipment
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
+    minWidth: 120,
     field: 'ports'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
     ),
+    minWidth: 200,
     field: 'intendedUseTypes',
     valueGetter: (params) => params.data.intendedUseTypes,
     cellRenderer: CommonArrayRenderer,
@@ -559,6 +569,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUserTypes'
     ),
     field: 'intendedUserTypes',
+    minWidth: 200,
     valueGetter: (params) => params.data.intendedUserTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
@@ -570,32 +581,38 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
     ),
+    minWidth: 300,
     field: 'streetAddress'
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'),
+    minWidth: 150,
     field: 'city'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
+    minWidth: 140,
     field: 'postalCode'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
     ),
+    minWidth: 150,
     field: 'latitude'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
     ),
+    minWidth: 150,
     field: 'longitude'
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'),
+    minWidth: 300,
     field: 'notes'
   }
 ]
