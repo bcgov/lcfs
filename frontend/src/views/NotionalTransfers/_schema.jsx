@@ -370,6 +370,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.legalName'
       ),
+      flex: 1,
       field: 'legalName',
       minWidth: 320
     },
@@ -378,6 +379,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.addressForService'
       ),
       field: 'addressForService',
+      flex: 1,
       minWidth: 280
     },
     {
@@ -385,6 +387,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.fuelCategory'
       ),
       field: 'fuelCategory',
+      flex: 1,
       minWidth: 160
     },
     {
@@ -408,6 +411,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
       ),
       field: 'receivedOrTransferred',
+      flex: 1,
       minWidth: 250
     },
     {

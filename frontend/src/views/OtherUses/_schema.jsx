@@ -430,6 +430,7 @@ export const otherUsesSummaryColDefs = [
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType',
     floatingFilter: false,
+    flex: 1,
     width: '260px'
   },
   {
@@ -440,6 +441,7 @@ export const otherUsesSummaryColDefs = [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
     field: 'provisionOfTheAct',
+    flex: 1,
     floatingFilter: false
   },
   {

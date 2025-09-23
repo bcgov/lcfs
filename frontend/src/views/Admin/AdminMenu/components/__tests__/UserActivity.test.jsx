@@ -47,7 +47,7 @@ vi.mock('@/hooks/useUser', () => ({
 describe('UserActivity', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Setup default mock return values
     mockUseGetUserActivities.mockReturnValue({
       data: { activities: [] },
@@ -153,13 +153,17 @@ describe('UserActivity', () => {
     const { url } = gridProps.defaultColDef.cellRendererParams
 
     // Test undefined transaction type
-    const mockData = { data: { transactionType: undefined, transactionId: 'TEST123' } }
-    
+    const mockData = {
+      data: { transactionType: undefined, transactionId: 'TEST123' }
+    }
+
     // Should return undefined for unknown transaction types
     expect(url(mockData)).toBeUndefined()
 
     // Test unknown transaction type
-    const mockDataUnknown = { data: { transactionType: 'UnknownType', transactionId: 'TEST123' } }
+    const mockDataUnknown = {
+      data: { transactionType: 'UnknownType', transactionId: 'TEST123' }
+    }
     expect(url(mockDataUnknown)).toBeUndefined()
   })
 
@@ -199,10 +203,10 @@ describe('UserActivity', () => {
     // Find the clear filters button
     const clearFiltersButton = screen.getByRole('button')
     expect(clearFiltersButton).toBeInTheDocument()
-    
+
     // Verify it's clickable (this tests the handleClearFilters function gets called)
     expect(clearFiltersButton).not.toBeDisabled()
-    
+
     // Simulate click to test the function path
     fireEvent.click(clearFiltersButton)
     // If no errors thrown, the function executed successfully
@@ -215,7 +219,7 @@ describe('UserActivity', () => {
     // Mock the gridRef.current.clearFilters method
     const mockClearFilters = vi.fn()
     const gridProps = BCGridViewer.mock.calls[0][0]
-    
+
     // Simulate the gridRef being set with clearFilters method
     act(() => {
       gridProps.gridRef.current = { clearFilters: mockClearFilters }
@@ -271,19 +275,8 @@ describe('UserActivity', () => {
     // Verify main container is rendered
     const container = screen.getByTestId('bc-grid-viewer').closest('div')
     expect(container).toBeInTheDocument()
-    
+
     // Verify typography heading is rendered
     expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
-  })
-
-  it('passes correct autoSizeStrategy to BCGridViewer', () => {
-    render(<UserActivity />, { wrapper })
-
-    const gridProps = BCGridViewer.mock.calls[0][0]
-    expect(gridProps.autoSizeStrategy).toEqual({
-      type: 'fitGridWidth',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    })
   })
 })

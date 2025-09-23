@@ -11,7 +11,7 @@ import {
   useDownloadCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
-import { useOrganizationBalance } from '@/hooks/useOrganization'
+import { useOrganizationBalance, useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import { timezoneFormatter } from '@/utils/formatters'
@@ -48,7 +48,15 @@ export const CreditLedger = ({ organizationId }) => {
     period: '' // No period filter
   })
 
-  const { data: orgBalance } = useOrganizationBalance(orgID)
+  // Determine if user is viewing their own organization
+  const isViewingOwnOrg = !organizationId || organizationId === currentUser?.organization?.organizationId
+
+  // Use appropriate balance hook based on context
+  const { data: currentOrgBalance } = useCurrentOrgBalance()
+  const { data: specificOrgBalance } = useOrganizationBalance(orgID)
+
+  // Use current org balance if viewing own org, otherwise use specific org balance
+  const orgBalance = isViewingOwnOrg ? currentOrgBalance : specificOrgBalance
 
   // Function to get available balance for a specific year or current balance for "All years"
   const getAvailableBalanceForPeriod = () => {
