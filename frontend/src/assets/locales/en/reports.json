@@ -70,6 +70,7 @@
     "recommendReportAnalystBtn": "Recommend to compliance manager",
     "recommendReportManagerBtn": "Recommend to director",
     "assessReportBtn": "Issue assessment",
+    "issueNonAssessmentBtn": "Issue non-assessment",
     "reAssessReportBtn": "Re-assess report",
     "deleteSupplementalReportBtn": "Delete supplemental report",
     "deleteAnalystAdjustmentBtn": "Delete analyst adjustment",
