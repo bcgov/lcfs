@@ -23,18 +23,45 @@ export const useGetIntendedUsers = (options = {}) => {
       const response = await client.get(apiRoutes.intendedUsers)
       return response.data
     },
-    staleTime,
+    staleTime: OPTIONS_STALE_TIME,
     cacheTime,
     enabled,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
 }
 
-export const useGetAllChargingSitesByOrg = (
-  organizationId,
+export const useGetChargingSiteById = (siteId, options = {}) => {
+  const client = useApiService()
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingSite', siteId],
+    queryFn: async () => {
+      const response = await client.get(
+        apiRoutes.getChargingSite.replace(':siteId', siteId)
+      )
+      return response.data
+    },
+    staleTime,
+    cacheTime,
+    enabled: enabled && !!siteId,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useGetAllChargingSites = (
   pagination,
+  isIDIR,
+  organizationId,
   options = {}
 ) => {
   const client = useApiService()
@@ -46,50 +73,33 @@ export const useGetAllChargingSitesByOrg = (
   } = options
 
   return useQuery({
-    queryKey: ['chargingSitesByOrg', organizationId, pagination],
+    queryKey: isIDIR
+      ? ['chargingSitesAll', pagination]
+      : ['chargingSitesByOrg', organizationId, pagination],
     queryFn: async () => {
       const response = await client.post(
-        apiRoutes.getAllChargingSitesByOrg.replace(':orgID', organizationId),
-        { pagination }
+        isIDIR
+          ? apiRoutes.getAllChargingSites
+          : apiRoutes.getAllChargingSitesByOrg.replace(
+              ':orgID',
+              organizationId
+            ),
+        {
+          ...pagination
+        }
       )
       return response.data
     },
     staleTime,
     cacheTime,
-    enabled: enabled && !!organizationId,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    ...restOptions
-  })
-}
-
-export const useGetAllChargingSites = (pagination, options = {}) => {
-  const client = useApiService()
-  const {
-    staleTime = DEFAULT_STALE_TIME,
-    cacheTime = DEFAULT_CACHE_TIME,
-    enabled = true,
-    ...restOptions
-  } = options
-
-  return useQuery({
-    queryKey: ['chargingSitesAll', pagination],
-    queryFn: async () => {
-      const response = await client.post(apiRoutes.getAllChargingSites, {
-        ...pagination
-      })
-      return response.data
-    },
-    staleTime,
-    cacheTime,
     enabled,
-    retry: 3,
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
 }
 
-export const useChargingSiteMutation = (organizationId, options = {}) => {
+export const useSaveChargingSite = (organizationId, options = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -97,7 +107,7 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
     onSuccess,
     onError,
     invalidateRelatedQueries = true,
-    clearCache = false,
+    clearCache = true,
     ...restOptions
   } = options
 
@@ -132,31 +142,47 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
       }
     },
     onSuccess: (data, variables, context) => {
-      // Handle cache invalidation
+      // Comprehensive cache invalidation for charging site mutations
       if (clearCache) {
-        queryClient.removeQueries(['chargingSitesByOrg', organizationId])
-      } else {
-        queryClient.invalidateQueries({
-          predicate: (query) => {
-            return (
-              query.queryKey[0] === 'chargingSitesByOrg' &&
-              query.queryKey[1] === organizationId
-            )
-          }
+        // Remove all charging site related queries
+        queryClient.removeQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.removeQueries({ queryKey: ['chargingSitesAll'] })
+        queryClient.removeQueries({ queryKey: ['chargingSite'] })
+        queryClient.removeQueries({
+          queryKey: ['charging-site-equipment-paginated']
         })
+      } else {
+        // Invalidate all related queries
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+        queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated']
+        })
+
+        // Also invalidate any specific charging site queries
+        if (variables.chargingSiteId) {
+          queryClient.invalidateQueries({
+            queryKey: ['chargingSite', variables.chargingSiteId]
+          })
+          queryClient.invalidateQueries({
+            queryKey: [
+              'charging-site-equipment-paginated',
+              variables.chargingSiteId
+            ]
+          })
+        }
       }
 
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
       // Always invalidate on error to ensure fresh data on retry
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
       queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'chargingSitesByOrg' &&
-            query.queryKey[1] === organizationId
-          )
-        }
+        queryKey: ['charging-site-equipment-paginated']
       })
 
       onError?.(error, variables, context)
@@ -165,65 +191,133 @@ export const useChargingSiteMutation = (organizationId, options = {}) => {
   })
 }
 
-export const useChargingSite = (siteId) => {
-  const apiService = useApiService()
-
-  return useQuery({
-    queryKey: ['charging-site', siteId],
-    queryFn: () => apiService.get(`/charging-sites/${siteId}`),
-    select: (response) => response.data,
-    enabled: !!siteId
-  })
-}
-
 export const useChargingSiteStatuses = () => {
   const apiService = useApiService()
 
   return useQuery({
     queryKey: ['charging-site-statuses'],
-    queryFn: () => apiService.get('/charging-sites/statuses/'),
+    queryFn: () => apiService.get(apiRoutes.getSiteStatuses),
     select: (response) => response.data,
-    staleTime: DEFAULT_STALE_TIME
+    staleTime: OPTIONS_STALE_TIME
   })
 }
 
-export const useBulkUpdateEquipmentStatus = () => {
+export const useChargingEquipmentStatuses = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-equipment-statuses'],
+    queryFn: () => apiService.get(apiRoutes.getEquipmentStatuses),
+    select: (response) => response.data,
+    staleTime: OPTIONS_STALE_TIME
+  })
+}
+
+export const useBulkUpdateEquipmentStatus = (options = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
+  const { onSuccess, onError, invalidateAll = true, ...restOptions } = options
+
   return useMutation({
-    mutationFn: ({ siteId, equipment_ids, new_status }) =>
-      apiService.post(
-        `/charging-sites/${siteId}/equipment/bulk-status-update`,
+    mutationFn: ({ siteId, equipmentIds, newStatus }) => {
+      // Validate siteId before making the API call
+      if (!siteId || siteId === 'undefined') {
+        throw new Error('Invalid charging site ID provided')
+      }
+
+      return apiService.post(
+        apiRoutes.bulkUpdateEquipmentStatus.replace(':siteId', siteId),
         {
-          equipment_ids,
-          new_status
+          equipmentIds,
+          newStatus
         }
-      ),
-    onSuccess: (_, { siteId }) => {
-      // Invalidate and refetch charging site data
-      queryClient.invalidateQueries({ queryKey: ['charging-site', siteId] })
-      queryClient.invalidateQueries({ queryKey: ['charging-sites'] })
-      queryClient.invalidateQueries({
-        queryKey: ['charging-site-equipment-paginated', siteId]
-      })
+      )
     },
-    onError: (error) => {
+    onSuccess: (data, variables, context) => {
+      const { siteId } = variables
+
+      if (invalidateAll) {
+        // Comprehensive cache invalidation - invalidate all related queries
+
+        // 1. Invalidate specific and general charging site queries
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSite', siteId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSite']
+        })
+        // 2. Invalidate equipment pagination queries for this site
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated', siteId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated']
+        })
+        // 3. Invalidate all charging sites by organization queries
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSitesByOrg']
+        })
+      } else {
+        // Minimal invalidation - just the specific queries
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSite', siteId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated', siteId]
+        })
+      }
+
+      // Call custom success handler
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
       console.error('Failed to bulk update equipment status:', error)
-    }
+
+      // On error, invalidate queries to ensure we have fresh data
+      const { siteId } = variables || {}
+
+      if (siteId && siteId !== 'undefined') {
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSite', siteId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated', siteId]
+        })
+      }
+
+      // Call custom error handler
+      onError?.(error, variables, context)
+    },
+    // Add retry logic for network failures
+    retry: (failureCount, error) => {
+      // Don't retry validation errors (400-level)
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false
+      }
+      // Retry up to 3 times for server errors
+      return failureCount < 3
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+    ...restOptions
   })
 }
 
 export const useChargingSiteEquipmentPaginated = (
   siteId,
   paginationOptions,
-  options
+  options = {}
 ) => {
   const apiService = useApiService()
 
   return useQuery({
     queryKey: ['charging-site-equipment-paginated', siteId, paginationOptions],
     queryFn: async () => {
+      // Validate siteId before making the API call
+      if (!siteId || siteId === 'undefined') {
+        throw new Error('Invalid site ID provided')
+      }
+
       const url = apiRoutes.getChargingSiteEquipmentPaginated.replace(
         ':siteId',
         siteId
@@ -231,7 +325,120 @@ export const useChargingSiteEquipmentPaginated = (
       const response = await apiService.post(url, paginationOptions)
       return response.data
     },
-    enabled: !!siteId,
+    enabled: !!siteId && siteId !== 'undefined',
+    staleTime: 30000, // 30 seconds
+    retry: (failureCount, error) => {
+      // Don't retry if it's a validation error about invalid site ID
+      if (
+        error?.message?.includes('Invalid site ID') ||
+        error?.response?.status === 400
+      ) {
+        return false
+      }
+      return failureCount < 3
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     ...options
   })
+}
+
+// Charging site import/export hooks
+export const useImportChargingSites = (options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ organizationId, file, isOverwrite }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('overwrite', isOverwrite)
+
+      const response = await client.post(
+        apiRoutes.importChargingSites.replace(':orgID', organizationId),
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      )
+      return response.data
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate charging site queries after import
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
+  const client = useApiService()
+  const {
+    staleTime = JOB_STATUS_STALE_TIME,
+    cacheTime = 0,
+    enabled = true,
+    refetchInterval = 2000,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingSitesImportJobStatus', jobId],
+    queryFn: async () => {
+      const response = await client.get(
+        apiRoutes.getImportChargingSitesJobStatus.replace(':jobID', jobId)
+      )
+      return response.data
+    },
+    staleTime,
+    cacheTime,
+    enabled: enabled && !!jobId,
+    refetchInterval: (data) => {
+      // Stop polling when job is complete or failed
+      if (data?.status === 'Completed' || data?.status === 'Failed' || data?.progress === 100) {
+        return false
+      }
+      return refetchInterval
+    },
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useInvalidateChargingSiteQueries = () => {
+  const queryClient = useQueryClient()
+
+  return {
+    invalidateAll: () => {
+      queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+      queryClient.invalidateQueries({
+        queryKey: ['charging-site-equipment-paginated']
+      })
+      queryClient.invalidateQueries({ queryKey: ['charging-site-statuses'] })
+    },
+    invalidateForSite: (siteId) => {
+      queryClient.invalidateQueries({ queryKey: ['chargingSite', siteId] })
+      queryClient.invalidateQueries({
+        queryKey: ['charging-site-equipment-paginated', siteId]
+      })
+    },
+    invalidateForOrganization: (orgId) => {
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg', orgId] })
+    },
+    // Add method to invalidate all lists
+    invalidateAllLists: () => {
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+    }
+  }
 }
