@@ -9,6 +9,7 @@ from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentBaseSchema,
     BulkActionResponseSchema,
 )
+from lcfs.web.api.charging_equipment.services import ChargingEquipmentServices
 
 
 @pytest.mark.anyio
@@ -46,13 +47,14 @@ async def test_get_charging_equipment_list_success(
         "page_size": 10,
     }
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.get_charging_equipment_list.return_value = mock_list_schema
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.get_charging_equipment_list.return_value = mock_list_schema
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.post(
             "/api/charging-equipment/list",
@@ -65,6 +67,9 @@ async def test_get_charging_equipment_list_success(
         assert data["total_count"] == 1
         assert len(data["items"]) == 1
         assert data["items"][0]["charging_equipment_id"] == 1
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
