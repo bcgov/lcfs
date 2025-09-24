@@ -51,6 +51,15 @@ const Crumb = () => {
   const customBreadcrumbs = {
     admin: { label: 'Administration', route: '/admin' },
     transfers: { label: 'Transactions', route: '/transactions' },
+    'compliance-reporting': {
+      label: 'Compliance reporting',
+      route: '/compliance-reporting'
+    },
+    fse: { label: 'Manage FSE', route: '/compliance-reporting/fse' },
+    'charging-sites': {
+      label: 'Manage charging sites',
+      route: '/compliance-reporting/charging-sites'
+    },
     'add-org': { label: 'Add organization', route: '/add-org' },
     'edit-org': { label: 'Edit organization', route: '/edit-org' },
     'initiative-agreement': { label: 'Transactions', route: '/transactions' },
@@ -70,6 +79,8 @@ const Crumb = () => {
           <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
         }
         sx={{
+          mt: 1,
+          mb: 1,
           '& li': { marginX: 0 },
           '&>ol': { gap: 2 }
         }}
@@ -108,6 +119,11 @@ const Crumb = () => {
           const displayName =
             customCrumb.label ||
             name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
+
+          // Skip numeric ID crumb for FSE routes (e.g., /fse/:id/edit)
+          if (isNumeric(name) && pathnames[index - 1] === 'fse') {
+            return null
+          }
 
           return isLast ? (
             <StyledBreadcrumb

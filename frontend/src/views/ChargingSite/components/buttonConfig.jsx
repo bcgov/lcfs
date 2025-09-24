@@ -98,7 +98,8 @@ class ButtonActionFactory {
         : this.context.t('chargingSite:buttons.selectAllSubmitted'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: submittedEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.SUBMITTED)
+      handler: () =>
+        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.SUBMITTED)
     })
   }
 
@@ -121,7 +122,8 @@ class ButtonActionFactory {
         : this.context.t('chargingSite:buttons.selectAllDraft'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: draftEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.DRAFT)
+      handler: () =>
+        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.DRAFT)
     })
   }
 
@@ -144,7 +146,8 @@ class ButtonActionFactory {
         : this.context.t('chargingSite:buttons.selectAllValidated'),
       icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
       disabled: validatedEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.VALIDATED)
+      handler: () =>
+        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.VALIDATED)
     })
   }
 
@@ -264,7 +267,9 @@ class ButtonActionFactory {
   clearFilters() {
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
-      icon: <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />,
+      icon: (
+        <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />
+      ),
       id: 'clear-filters-btn',
       label: this.context.t('chargingSite:buttons.clearFilters'),
       handler: this.context.handleClearFilters
