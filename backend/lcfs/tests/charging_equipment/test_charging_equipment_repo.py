@@ -148,7 +148,9 @@ async def test_update_charging_equipment_success(
         assert result.manufacturer == "ChargePoint"
         assert result.model == "Express Plus"
         mock_db.flush.assert_called_once()
-        mock_db.refresh.assert_called_once()
+        assert mock_db.refresh.call_count == 2
+        mock_db.refresh.assert_any_call(valid_charging_equipment)
+        mock_db.refresh.assert_any_call(valid_charging_equipment, attribute_names=['charging_site'])
 
 
 @pytest.mark.anyio
