@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useLocation, useNavigate, useParams, Outlet } from 'react-router-dom'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import { OrganizationDetailsCard } from './OrganizationDetailsCard'
 import { OrganizationUsers } from './OrganizationUsers'
 import { CreditLedger } from './CreditLedger'
+import CompanyOverview from './components/CompanyOverview'
+import PenaltyLog from './components/PenaltyLog'
+import SupplyHistory from './components/SupplyHistory'
+import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { useTranslation } from 'react-i18next'
+import { ROUTES } from '@/routes/routes'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -25,7 +30,6 @@ function TabPanel({ children, value, index }) {
 
 export const OrganizationView = ({ addMode = false }) => {
   const { t } = useTranslation(['org'])
-  const [tabIndex, setTabIndex] = useState(0)
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
 
   const location = useLocation()
@@ -34,7 +38,6 @@ export const OrganizationView = ({ addMode = false }) => {
   const [alert, setAlert] = useState(null)
 
   const { data: currentUser, hasRoles } = useCurrentUser()
-  const isIdir = hasRoles(roles.government)
 
   // Get the organization ID - either from URL params (IDIR users) or from current user (BCeID users)
   const organizationId = orgID ?? currentUser?.organization?.organizationId
@@ -49,20 +52,36 @@ export const OrganizationView = ({ addMode = false }) => {
     }
   }, [location, navigate])
 
-  const tabs = [
-    { 
-      label: t('org:dashboardTab', 'Dashboard'), 
-      content: <OrganizationDetailsCard addMode={addMode}/> 
-    },
-    { 
-      label: t('org:usersTab'), 
-      content: <OrganizationUsers /> 
-    },
-    {
-      label: t('org:creditLedgerTab'),
-      content: <CreditLedger organizationId={organizationId} />
-    }
+  // Define tab paths following the wireframe order
+  const tabPaths = useMemo(() => {
+    const basePath = ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID || '')
+    return [
+      basePath,
+      ROUTES.ORGANIZATIONS.USERS.replace(':orgID', orgID || ''),
+      ROUTES.ORGANIZATIONS.CREDIT_LEDGER.replace(':orgID', orgID || ''),
+      ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW.replace(':orgID', orgID || ''),
+      ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
+      ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', orgID || ''),
+      ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING.replace(':orgID', orgID || '')
+    ]
+  }, [orgID])
+
+  const tabLabels = [
+    t('org:tabs.dashboard'),
+    t('org:tabs.users'),
+    t('org:tabs.creditLedger'),
+    t('org:tabs.companyOverview'),
+    t('org:tabs.penaltyLog'),
+    t('org:tabs.supplyHistory'),
+    t('org:tabs.complianceTracking')
   ]
+
+  // Determine current tab index based on location
+  const tabIndex = useMemo(() => {
+    const currentPath = location.pathname
+    const index = tabPaths.findIndex((path) => currentPath === path)
+    return index >= 0 ? index : 0
+  }, [location.pathname, tabPaths])
 
   useEffect(() => {
     function handleResize() {
@@ -77,8 +96,35 @@ export const OrganizationView = ({ addMode = false }) => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const handleChangeTab = (event, newValue) => {
-    setTabIndex(newValue)
+  const handleTabChange = (event, newValue) => {
+    navigate(tabPaths[newValue])
+  }
+
+  // Render content based on current route
+  const renderContent = () => {
+    const currentPath = location.pathname || ''
+
+    if (currentPath.includes('/users')) {
+      return <OrganizationUsers />
+    }
+    if (currentPath.includes('/credit-ledger')) {
+      return <CreditLedger organizationId={organizationId} />
+    }
+    if (currentPath.includes('/company-overview')) {
+      return <CompanyOverview />
+    }
+    if (currentPath.includes('/penalty-log')) {
+      return <PenaltyLog />
+    }
+    if (currentPath.includes('/supply-history')) {
+      return <SupplyHistory />
+    }
+    if (currentPath.includes('/compliance-tracking')) {
+      return <ComplianceTracking />
+    }
+
+    // Default to dashboard
+    return <OrganizationDetailsCard addMode={addMode} />
   }
 
   return (
@@ -94,36 +140,33 @@ export const OrganizationView = ({ addMode = false }) => {
           <Tabs
             orientation={tabsOrientation}
             value={tabIndex}
-            onChange={handleChangeTab}
+            onChange={handleTabChange}
             aria-label="Organization tabs"
             variant="scrollable"
             scrollButtons="auto"
             sx={{
               backgroundColor: 'rgba(0, 0, 0, 0.08)',
               width: 'fit-content',
-              maxWidth: { xs: '100%', md: '50%', lg: '40%' },
+              maxWidth: { xs: '100%', md: '100%', lg: '80%' },
               '& .MuiTab-root': {
                 minWidth: 'auto',
-                paddingX: 3,
+                paddingX: 2,
                 marginX: 1,
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                fontSize: '0.75rem'
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
               }
             }}
           >
-            {tabs.map((tab, idx) => (
-              <Tab key={idx} label={tab.label} />
+            {tabLabels.map((label, idx) => (
+              <Tab key={idx} label={label} />
             ))}
           </Tabs>
         </AppBar>
 
-        {tabs.map((tab, idx) => (
-          <TabPanel key={idx} value={tabIndex} index={idx}>
-            {tab.content}
-          </TabPanel>
-        ))}
+        <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
       </BCBox>
     </BCBox>
   )
