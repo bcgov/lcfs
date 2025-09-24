@@ -76,6 +76,16 @@ export const ChargingEquipment = () => {
   // Check if we're on a nested route (like /new or /:id/edit)
   const isOnNestedRoute = location.pathname !== `${ROUTES.REPORTS.LIST}/fse`
 
+  useEffect(() => {
+    if (location.state?.message) {
+      alertRef.current?.triggerAlert({
+        message: location.state.message,
+        severity: location.state.severity || 'info'
+      })
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location, navigate])
+
   const getRowId = useCallback((params) => {
     return params.data.charging_equipment_id
   }, [])
@@ -269,7 +279,7 @@ export const ChargingEquipment = () => {
           <BCTypography variant="h5" gutterBottom>
             {t('chargingEquipment:manageFSE')}
           </BCTypography>
-          <BCTypography variant="body1" color="text.secondary" paragraph>
+          <BCTypography variant="body2" color="text.secondary" paragraph>
             {t('chargingEquipment:manageFSEDescription')}
           </BCTypography>
         </Grid>
@@ -283,7 +293,7 @@ export const ChargingEquipment = () => {
 
       {!isOnNestedRoute && (
         <Grid item xs={12}>
-          <BCBox>
+          <BCBox sx={{ width: '100%', minHeight: 600 }}>
             <Box display="flex" justifyContent="space-between" mb={2}>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
@@ -346,25 +356,27 @@ export const ChargingEquipment = () => {
               <ClearFiltersButton onClick={handleClearFilters} />
             </Box>
 
-            <BCGridViewer
-              gridRef={gridRef}
-              alertRef={alertRef}
-              columnDefs={chargingEquipmentColDefs}
-              defaultColDef={defaultColDef}
-              getRowId={getRowId}
-              overlayLoadingTemplate="Loading FSE data..."
-              overlayNoRowsTemplate="No FSE found"
-              gridKey="charging-equipment"
-              paginationOptions={paginationOptions}
-              onPaginationChange={(opts) => setPaginationOptions(opts)}
-              queryData={{ data: equipmentData, isLoading, isError, error }}
-              onRowClicked={handleRowClick}
-              rowSelection="multiple"
-              onSelectionChanged={handleSelectionChanged}
-              suppressRowClickSelection={true}
-              rowMultiSelectWithClick={false}
-              highlightedRowId={highlightedId}
-            />
+            <Box sx={{ height: 500, width: '100%' }}>
+              <BCGridViewer
+                gridRef={gridRef}
+                alertRef={alertRef}
+                columnDefs={chargingEquipmentColDefs}
+                defaultColDef={defaultColDef}
+                getRowId={getRowId}
+                overlayLoadingTemplate="Loading FSE data..."
+                overlayNoRowsTemplate="No FSE found"
+                gridKey="charging-equipment"
+                paginationOptions={paginationOptions}
+                onPaginationChange={(opts) => setPaginationOptions(opts)}
+                queryData={{ data: equipmentData, isLoading, isError, error }}
+                onRowClicked={handleRowClick}
+                rowSelection="multiple"
+                onSelectionChanged={handleSelectionChanged}
+                suppressRowClickSelection={true}
+                rowMultiSelectWithClick={false}
+                highlightedRowId={highlightedId}
+              />
+            </Box>
           </BCBox>
         </Grid>
       )}

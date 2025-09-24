@@ -13,6 +13,8 @@
   "selectAllValidated": "Select all Validated",
   "clearFilters": "Clear filters",
   "errorLoadingEquipment": "Error loading charging equipment",
+  "equipmentSaved": "Equipment saved successfully",
+  "saveAndReturn": "Save & Return",
   
   "chargingSite": "Charging Site",
   "allocatingOrganization": "Allocating Organization",
@@ -41,5 +43,7 @@
   "saveError": "Error saving charging equipment",
   "loadError": "Error loading charging equipment",
   "deleteError": "Error deleting charging equipment",
-  "deleteConfirmation": "Are you sure you want to delete this equipment? This action cannot be undone."
+  "deleteConfirmation": "Are you sure you want to delete this equipment? This action cannot be undone.",
+  "bulkInputTitle": "Bulk FSE Input",
+  "bulkInputDescription": "Add multiple FSE entries using the grid below or upload from Excel."
 }

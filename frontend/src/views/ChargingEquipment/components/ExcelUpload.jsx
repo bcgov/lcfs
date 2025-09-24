@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react'
-import { Box, Button, Typography, Alert } from '@mui/material'
+import { Box, Alert } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
+import BCButton from '@/components/BCButton'
 
 export const ExcelUpload = ({ 
   onDataParsed, 
@@ -12,7 +13,7 @@ export const ExcelUpload = ({
   levels = [], 
   endUseTypes = [] 
 }) => {
-  const { t } = useTranslation(['chargingEquipment'])
+  const { t } = useTranslation(['chargingEquipment', 'common'])
   const fileInputRef = useRef(null)
   const [uploadError, setUploadError] = useState('')
 
@@ -126,16 +127,20 @@ export const ExcelUpload = ({
 
   return (
     <Box display="flex" gap={2} alignItems="center" mb={2}>
-      <Button
+      <BCButton
         variant="outlined"
+        color="primary"
+        size="small"
         startIcon={<FontAwesomeIcon icon={faDownload} />}
         onClick={downloadTemplate}
       >
         {t('common:downloadTemplate')}
-      </Button>
+      </BCButton>
       
-      <Button
-        variant="outlined"
+      <BCButton
+        variant="contained"
+        color="primary"
+        size="small"
         component="label"
         startIcon={<FontAwesomeIcon icon={faUpload} />}
       >
@@ -147,7 +152,7 @@ export const ExcelUpload = ({
           accept=".xlsx,.xls"
           onChange={handleFileUpload}
         />
-      </Button>
+      </BCButton>
 
       {uploadError && (
         <Alert severity="error" sx={{ mt: 1 }}>

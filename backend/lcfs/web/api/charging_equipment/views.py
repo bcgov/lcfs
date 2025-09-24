@@ -16,7 +16,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Optional
 
-from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.schema import (
@@ -37,11 +36,6 @@ from lcfs.web.api.charging_equipment.importer import ChargingEquipmentImporter
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
-get_async_db = dependencies.get_async_db_session
-
-
-def _get_service() -> ChargingEquipmentServices:
-    return ChargingEquipmentServices()
 
 
 @router.post(
@@ -52,7 +46,7 @@ def _get_service() -> ChargingEquipmentServices:
 async def get_charging_equipment_list(
     request: Request,
     body: PaginationRequestSchema = Body(...),
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> ChargingEquipmentListSchema:
     """
     Get paginated list of charging equipment (FSE) for the organization.
@@ -72,7 +66,7 @@ async def get_charging_equipment_list(
 async def get_charging_equipment(
     request: Request,
     charging_equipment_id: int,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> ChargingEquipmentBaseSchema:
     """
     Get detailed information about a specific charging equipment.
@@ -91,7 +85,7 @@ async def get_charging_equipment(
 async def create_charging_equipment(
     request: Request,
     equipment_data: ChargingEquipmentCreateSchema,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> ChargingEquipmentBaseSchema:
     """
     Create new charging equipment in Draft status.
@@ -113,7 +107,7 @@ async def update_charging_equipment(
     request: Request,
     charging_equipment_id: int,
     equipment_data: ChargingEquipmentUpdateSchema,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> ChargingEquipmentBaseSchema:
     """
     Update existing charging equipment.
@@ -134,7 +128,7 @@ async def update_charging_equipment(
 async def delete_charging_equipment(
     request: Request,
     charging_equipment_id: int,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ):
     """
     Delete charging equipment.
@@ -154,7 +148,7 @@ async def delete_charging_equipment(
 async def bulk_submit_equipment(
     request: Request,
     bulk_request: BulkSubmitRequestSchema,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> BulkActionResponseSchema:
     """
     Bulk submit charging equipment for validation.
@@ -177,7 +171,7 @@ async def bulk_submit_equipment(
 async def bulk_decommission_equipment(
     request: Request,
     bulk_request: BulkDecommissionRequestSchema,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> BulkActionResponseSchema:
     """
     Bulk decommission charging equipment.
@@ -198,7 +192,7 @@ async def bulk_decommission_equipment(
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
 async def get_equipment_statuses(
     request: Request,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> List[dict]:
     """
     Get all available charging equipment statuses.
@@ -214,7 +208,7 @@ async def get_equipment_statuses(
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
 async def get_levels_of_equipment(
     request: Request,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> List[dict]:
     """
     Get all available levels of equipment.
@@ -230,7 +224,7 @@ async def get_levels_of_equipment(
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
 async def get_end_use_types(
     request: Request,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> List[dict]:
     """
     Get all available end use types for intended use selection.
@@ -246,7 +240,7 @@ async def get_end_use_types(
 @view_handler([RoleEnum.SUPPLIER])
 async def get_charging_sites(
     request: Request,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> List[dict]:
     """
     Get all charging sites for the supplier's organization.
@@ -262,7 +256,7 @@ async def get_charging_sites(
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
 async def get_organizations(
     request: Request,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> List[dict]:
     """
     Get all organizations for allocating organization selection.
@@ -278,7 +272,7 @@ async def get_organizations(
 @view_handler([RoleEnum.SUPPLIER])
 async def has_allocation_agreements(
     request: Request,
-    service: ChargingEquipmentServices = Depends(_get_service),
+    service: ChargingEquipmentServices = Depends(),
 ) -> bool:
     """Boolean flag indicating if the supplier has any allocation agreements."""
     return await service.has_allocation_agreements(request.user)

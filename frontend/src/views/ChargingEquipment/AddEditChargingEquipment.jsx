@@ -33,7 +33,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { chargingEquipmentSchema } from './_formSchema'
 import { bulkChargingEquipmentColDefs, defaultBulkColDef } from './_bulkSchema'
 
-import BCAlert from '@/components/BCAlert'
+import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
@@ -94,6 +94,79 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const [gridErrors, setGridErrors] = useState({})
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
+
+  // Navigation handler
+  const handleCancel = useCallback(() => {
+    navigate(`${ROUTES.REPORTS.LIST}/fse`)
+  }, [navigate])
+
+  // Grid event handlers
+  const handleCellEditingStopped = useCallback(async (params) => {
+    if (params.oldValue === params.newValue) return
+
+    const updatedData = {
+      ...Object.entries(params.node.data)
+        .filter(
+          ([, value]) =>
+            value !== null && value !== '' && value !== undefined
+        )
+        .reduce((acc, [key, value]) => {
+          acc[key] = value
+          return acc
+        }, {}),
+      charging_equipment_id: equipment?.charging_equipment_id,
+      status: equipment?.status || 'Draft'
+    }
+
+    const canEdit = !isEdit || (equipment?.status && ['Draft', 'Updated', 'Validated'].includes(equipment.status))
+    if (!canEdit) return
+
+    try {
+      const responseData = await handleScheduleSave({
+        alertRef,
+        idField: 'charging_equipment_id',
+        labelPrefix: 'chargingEquipment',
+        params,
+        setErrors: setGridErrors,
+        setWarnings: setGridWarnings,
+        saveRow: updateMutation.mutateAsync,
+        t,
+        updatedData
+      })
+
+      params.node.updateData(responseData)
+      alertRef.current?.triggerAlert({
+        message: t('chargingEquipment:updateSuccess'),
+        severity: 'success'
+      })
+    } catch (error) {
+      alertRef.current?.triggerAlert({
+        message: error.message || 'Failed to update equipment',
+        severity: 'error'
+      })
+    }
+  }, [equipment, isEdit, alertRef, updateMutation.mutateAsync, t])
+
+  const handleGridAction = useCallback(async (action, params) => {
+    if (action === 'delete' && isEdit && equipment?.status === 'Draft') {
+      try {
+        await handleScheduleDelete(
+          params,
+          'charging_equipment_id',
+          deleteMutation.mutateAsync,
+          alertRef,
+          () => {},
+          {}
+        )
+        handleCancel()
+      } catch (error) {
+        alertRef.current?.triggerAlert({
+          message: error.message || 'Failed to delete equipment',
+          severity: 'error'
+        })
+      }
+    }
+  }, [isEdit, equipment, deleteMutation.mutateAsync, handleCancel])
 
   // Form setup with react-hook-form and yup validation
   const {
@@ -190,9 +263,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }
 
-  const handleCancel = () => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse`)
-  }
 
   // Bulk mode handlers
   const handleAddRow = () => {
@@ -295,21 +365,25 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   const canDelete = isEdit && equipment?.status === 'Draft'
 
+  const containerSx = { width: '100%', px: { xs: 2, md: 3 } }
+
   // Render bulk mode
   if (isBulkMode) {
     return (
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
-            <BCTypography variant="h4">
-              {t('chargingEquipment:newFSE')}
-            </BCTypography>
-            <Box display="flex" gap={1}>
+      <BCBox sx={containerSx}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              flexWrap="wrap"
+              gap={2}
+              mb={2}
+            >
+              <BCTypography variant="h4">
+                {t('chargingEquipment:newFSE')}
+              </BCTypography>
               <BCButton
                 variant="outlined"
                 startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
@@ -318,101 +392,118 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 {t('common:back')}
               </BCButton>
             </Box>
-          </Box>
-        </Grid>
+          </Grid>
 
-        <Grid item xs={12}>
-          <BCAlert ref={alertRef} />
-        </Grid>
+          <Grid item xs={12}>
+            <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 1 }} />
+          </Grid>
 
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <BCTypography variant="h6" gutterBottom>
-              Bulk FSE Input
-            </BCTypography>
-            <BCTypography variant="body2" color="text.secondary" paragraph>
-              Add multiple FSE entries using the grid below or upload from
-              Excel.
-            </BCTypography>
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <BCTypography variant="h6" gutterBottom>
+                {t('chargingEquipment:bulkInputTitle')}
+              </BCTypography>
+              <BCTypography variant="body2" color="text.secondary" paragraph>
+                {t('chargingEquipment:bulkInputDescription')}
+              </BCTypography>
 
-            {/* Excel Upload */}
-            <ExcelUpload
-              onDataParsed={setBulkData}
-              chargingSites={chargingSites}
-              organizations={organizations}
-              levels={levels}
-              endUseTypes={endUseTypes}
-            />
+              <ExcelUpload
+                onDataParsed={(data) => {
+                  setBulkData(data)
+                  alertRef.current?.clearAlert()
+                }}
+                chargingSites={chargingSites}
+                organizations={organizations}
+                levels={levels}
+                endUseTypes={endUseTypes}
+              />
 
-            {/* AG Grid aligned with Charging Site UI */}
-            <BCGridEditor
-              gridRef={gridRef}
-              rowData={bulkData}
-              columnDefs={bulkChargingEquipmentColDefs(
-                chargingSites,
-                organizations,
-                levels,
-                endUseTypes,
-                gridErrors,
-                gridWarnings
-              )}
-              defaultColDef={defaultBulkColDef}
-              stopEditingWhenCellsLoseFocus
-              onCellEditingStopped={async (params) => {
-                if (params.oldValue === params.newValue) return
+              <BCGridEditor
+                gridRef={gridRef}
+                rowData={bulkData}
+                columnDefs={bulkChargingEquipmentColDefs(
+                  chargingSites,
+                  organizations,
+                  levels,
+                  endUseTypes,
+                  gridErrors,
+                  gridWarnings
+                )}
+                defaultColDef={defaultBulkColDef}
+                stopEditingWhenCellsLoseFocus
+                onCellEditingStopped={async (params) => {
+                  if (params.oldValue === params.newValue) return
 
-                params.node.updateData({
-                  ...params.node.data,
-                  validationStatus: 'pending'
-                })
+                  params.node.updateData({
+                    ...params.node.data,
+                    validationStatus: 'pending'
+                  })
 
-                const updatedData = {
-                  ...Object.entries(params.node.data)
-                    .filter(
-                      ([, value]) =>
-                        value !== null && value !== '' && value !== undefined
-                    )
-                    .reduce((acc, [key, value]) => {
-                      acc[key] = value
-                      return acc
-                    }, {}),
-                  status: 'Draft'
-                }
+                  const updatedData = {
+                    ...Object.entries(params.node.data)
+                      .filter(
+                        ([, value]) =>
+                          value !== null && value !== '' && value !== undefined
+                      )
+                      .reduce((acc, [key, value]) => {
+                        acc[key] = value
+                        return acc
+                      }, {}),
+                    status: 'Draft'
+                  }
 
-                const responseData = await handleScheduleSave({
-                  alertRef,
-                  idField: 'charging_equipment_id',
-                  labelPrefix: 'chargingEquipment',
-                  params,
-                  setErrors: setGridErrors,
-                  setWarnings: setGridWarnings,
-                  saveRow,
-                  t,
-                  updatedData
-                })
-
-                alertRef.current?.clearAlert()
-                params.node.updateData(responseData)
-              }}
-              onCellValueChanged={(params) => {
-                const updatedData = [...bulkData]
-                const rowIndex = updatedData.findIndex(
-                  (row) => row.id === params.data.id
-                )
-                if (rowIndex >= 0) {
-                  updatedData[rowIndex] = params.data
-                  setBulkData(updatedData)
-                }
-              }}
-              onAction={async (action, params) => {
-                if (action === 'delete') {
-                  await handleScheduleDelete(
-                    params,
-                    'charging_equipment_id',
-                    saveRow,
+                  const responseData = await handleScheduleSave({
                     alertRef,
-                    setBulkData,
-                    {
+                    idField: 'charging_equipment_id',
+                    labelPrefix: 'chargingEquipment',
+                    params,
+                    setErrors: setGridErrors,
+                    setWarnings: setGridWarnings,
+                    saveRow,
+                    t,
+                    updatedData
+                  })
+
+                  alertRef.current?.clearAlert()
+                  params.node.updateData(responseData)
+                }}
+                onCellValueChanged={(params) => {
+                  const updatedData = [...bulkData]
+                  const rowIndex = updatedData.findIndex(
+                    (row) => row.id === params.data.id
+                  )
+                  if (rowIndex >= 0) {
+                    updatedData[rowIndex] = params.data
+                    setBulkData(updatedData)
+                  }
+                }}
+                onAction={async (action, params) => {
+                  if (action === 'delete') {
+                    await handleScheduleDelete(
+                      params,
+                      'charging_equipment_id',
+                      saveRow,
+                      alertRef,
+                      setBulkData,
+                      {
+                        charging_site_id: '',
+                        allocating_organization_id: '',
+                        serial_number: '',
+                        manufacturer: '',
+                        model: '',
+                        level_of_equipment_id: '',
+                        ports: 'Single port',
+                        notes: '',
+                        intended_use_ids: []
+                      }
+                    )
+                  }
+                }}
+                onAddRows={(numRows) =>
+                  Array(numRows)
+                    .fill()
+                    .map(() => ({
+                      id: Date.now() + Math.random(),
                       charging_site_id: '',
                       allocating_organization_id: '',
                       serial_number: '',
@@ -422,171 +513,125 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       ports: 'Single port',
                       notes: '',
                       intended_use_ids: []
-                    }
-                  )
+                    }))
                 }
-              }}
-              onAddRows={(numRows) =>
-                Array(numRows)
-                  .fill()
-                  .map(() => ({
-                    id: Date.now() + Math.random(),
-                    charging_site_id: '',
-                    allocating_organization_id: '',
-                    serial_number: '',
-                    manufacturer: '',
-                    model: '',
-                    level_of_equipment_id: '',
-                    ports: 'Single port',
-                    notes: '',
-                    intended_use_ids: []
-                  }))
-              }
-              saveButtonProps={{
-                enabled: true,
-                text: 'Save All',
-                onSave: handleBulkSave,
-                confirmText: 'You have unsaved or invalid rows.',
-                confirmLabel: 'Save and return'
-              }}
-              suppressRowClickSelection={true}
-            />
-          </Paper>
-        </Grid>
+                saveButtonProps={{
+                  enabled: true,
+                  text: 'Save All',
+                  onSave: handleBulkSave,
+                  confirmText: 'You have unsaved or invalid rows.',
+                  confirmLabel: 'Save and return'
+                }}
+                suppressRowClickSelection={true}
+              />
+
+              <Box display="flex" gap={2} mt={2}>
+                <BCButton variant="outlined" onClick={handleCancel}>
+                  {t('common:back')}
+                </BCButton>
+              </Box>
+            </Paper>
+          </Grid>
       </Grid>
-    )
-  }
+    </BCBox>
+  )
+}
 
   // Render single edit mode (simpler styling and conditional read-only per status)
   // Match Charging Site add/edit container layout
   return (
-    <Grid container spacing={2} className="add-edit-charging-site-container">
-      <Grid item xs={12}>
-        <div className="header">
-          <BCTypography variant="h5" color="primary">
-            {isEdit
-              ? t('chargingEquipment:editFSEShort')
-              : t('chargingEquipment:newFSE')}
-          </BCTypography>
-          {isEdit && equipment && (
-            <BCBox my={2.5} component="div">
-              <BCTypography
-                variant="body4"
-                color="text"
-                mt={0.5}
-                component="div"
-              >
-                {equipment.status} • {t('chargingEquipment:registrationNumber')}
-                : {equipment.registration_number || ''}
+    <BCBox sx={containerSx}>
+      <Grid container spacing={1}>
+        <Grid item xs={12}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            gap={2}
+            mb={1}
+            mt={3}
+          >
+            <Box>
+              <BCTypography variant="h5" color="primary">
+                {isEdit
+                  ? t('chargingEquipment:editFSEShort')
+                  : t('chargingEquipment:newFSE')}
               </BCTypography>
-            </BCBox>
-          )}
-        </div>
-      </Grid>
-
-      <Grid item xs={12}>
-        <BCAlert ref={alertRef} />
-      </Grid>
-
-      <Grid item xs={12}>
-        <Paper sx={{ p: 2 }}>
-          <BCGridEditor
-            gridRef={gridRef}
-            rowData={[
-              {
-                id: equipment?.charging_equipment_id || Date.now(),
-                charging_equipment_id: equipment?.charging_equipment_id,
-                charging_site_id: equipment?.charging_site_id || '',
-                allocating_organization_id:
-                  equipment?.allocating_organization_id || '',
-                serial_number: equipment?.serial_number || '',
-                manufacturer: equipment?.manufacturer || '',
-                model: equipment?.model || '',
-                level_of_equipment_id: equipment?.level_of_equipment_id || '',
-                ports: equipment?.ports || 'Single port',
-                notes: equipment?.notes || '',
-                intended_use_ids:
-                  equipment?.intended_uses?.map((use) => use.end_use_type_id) ||
-                  [],
-                status: equipment?.status || 'Draft'
-              }
-            ]}
-            columnDefs={bulkChargingEquipmentColDefs(
-              chargingSites,
-              organizations,
-              levels,
-              endUseTypes,
-              gridErrors,
-              gridWarnings,
-              { enableDelete: isEdit && equipment?.status === 'Draft' },
-              true,
-              isEdit && equipment?.status === 'Draft'
-            )}
-            defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
-            readOnlyEdit={!canEdit}
-            onCellEditingStopped={async (params) => {
-              if (params.oldValue === params.newValue) return
-
-              const updatedData = {
-                ...Object.entries(params.node.data)
-                  .filter(
-                    ([, value]) =>
-                      value !== null && value !== '' && value !== undefined
-                  )
-                  .reduce((acc, [key, value]) => {
-                    acc[key] = value
-                    return acc
-                  }, {}),
-                charging_equipment_id: equipment?.charging_equipment_id,
-                status: equipment?.status || 'Draft'
-              }
-
-              if (!canEdit) return
-
-              const responseData = await handleScheduleSave({
-                alertRef,
-                idField: 'charging_equipment_id',
-                labelPrefix: 'chargingEquipment',
-                params,
-                setErrors: setGridErrors,
-                setWarnings: setGridWarnings,
-                saveRow,
-                t,
-                updatedData
-              })
-
-              params.node.updateData(responseData)
-              alertRef.current?.triggerAlert({
-                message: t('chargingEquipment:updateSuccess'),
-                severity: 'success'
-              })
-            }}
-            onAction={async (action, params) => {
-              if (
-                action === 'delete' &&
-                isEdit &&
-                equipment?.status === 'Draft'
-              ) {
-                await handleScheduleDelete(
-                  params,
-                  'charging_equipment_id',
-                  saveRow,
-                  alertRef,
-                  () => {},
-                  {}
-                )
-                handleCancel()
-              }
-            }}
-            showAddRowsButton={false}
-          />
-          <Box display="flex" gap={2} mt={2}>
-            <BCButton variant="outlined" onClick={handleCancel}>
+              {isEdit && equipment && (
+                <BCTypography
+                  variant="body2"
+                  color="text.secondary"
+                  component="div"
+                >
+                  {equipment.status} • {t('chargingEquipment:registrationNumber')}: {equipment.registration_number || ''}
+                </BCTypography>
+              )}
+            </Box>
+            <BCButton
+              variant="outlined"
+              startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
+              onClick={handleCancel}
+            >
               {t('common:back')}
             </BCButton>
           </Box>
-        </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
+        </Grid>
+
+        <Grid item xs={12}>
+          <Box sx={{ width: '100%' }}>
+            <BCGridEditor
+              gridRef={gridRef}
+              alertRef={alertRef}
+              columnDefs={bulkChargingEquipmentColDefs(
+                chargingSites,
+                organizations,
+                levels,
+                endUseTypes,
+                gridErrors,
+                gridWarnings,
+                { enableDelete: isEdit && equipment?.status === 'Draft' },
+                true,
+                isEdit && equipment?.status === 'Draft'
+              )}
+              defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
+              rowData={[
+                {
+                  id: equipment?.charging_equipment_id || Date.now(),
+                  charging_equipment_id: equipment?.charging_equipment_id,
+                  charging_site_id: equipment?.charging_site_id || '',
+                  allocating_organization_id:
+                    equipment?.allocating_organization_id || '',
+                  serial_number: equipment?.serial_number || '',
+                  manufacturer: equipment?.manufacturer || '',
+                  model: equipment?.model || '',
+                  level_of_equipment_id: equipment?.level_of_equipment_id || '',
+                  ports: equipment?.ports || 'Single port',
+                  notes: equipment?.notes || '',
+                  intended_use_ids:
+                    equipment?.intended_uses?.map((use) => use.end_use_type_id) ||
+                    [],
+                  status: equipment?.status || 'Draft'
+                }
+              ]}
+              onCellEditingStopped={handleCellEditingStopped}
+              onAction={handleGridAction}
+              showAddRowsButton={false}
+              saveButtonProps={{
+                enabled: true,
+                text: t('chargingEquipment:saveAndReturn'),
+                onSave: () => navigate(ROUTES.REPORTS.LIST + '/fse')
+              }}
+            />
+          </Box>
+        </Grid>
       </Grid>
-    </Grid>
+    </BCBox>
   )
 }
+
+export default AddEditChargingEquipment

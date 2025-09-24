@@ -222,6 +222,8 @@ class ChargingEquipmentRepository:
         self.db.add(charging_equipment)
         await self.db.flush()
         await self.db.refresh(charging_equipment)
+        # ensure related charging site (for registration number) is loaded for downstream use
+        await self.db.refresh(charging_equipment, attribute_names=["charging_site"])
 
         return charging_equipment
 
@@ -267,6 +269,7 @@ class ChargingEquipmentRepository:
 
         await self.db.flush()
         await self.db.refresh(equipment)
+        await self.db.refresh(equipment, attribute_names=["charging_site"])
 
         return equipment
 

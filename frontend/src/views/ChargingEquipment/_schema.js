@@ -18,7 +18,7 @@ export const chargingEquipmentColDefs = [
     checkboxSelection: (params) => {
       const status = params.data?.status
       // allow selecting Draft/Updated/Validated; disallow Submitted/Decommissioned for submit
-      return status !== 'Decommissioned'
+      return status !== 'Decommissioned' && status !== 'Submitted'
     },
     headerCheckboxSelection: true,
     headerCheckboxSelectionFilteredOnly: true,
