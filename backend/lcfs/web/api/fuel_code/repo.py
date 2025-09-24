@@ -230,7 +230,8 @@ class FuelCodeRepository:
         result = await self.db.execute(stmt)
         fuel_type = result.scalars().first()
         if not fuel_type:
-            raise ValueError(f"Fuel type '{fuel_type_name}' not found")
+            # Let decorator wrap into DatabaseException
+            raise Exception(f"Fuel type '{fuel_type_name}' not found")
         return fuel_type
 
     @repo_handler
@@ -245,7 +246,8 @@ class FuelCodeRepository:
             ],
         )
         if not result:
-            raise ValueError(f"Fuel type with ID '{fuel_type_id}' not found")
+            # Let decorator wrap into DatabaseException
+            raise Exception(f"Fuel type with ID '{fuel_type_id}' not found")
         return result
 
     @repo_handler
@@ -1212,7 +1214,9 @@ class FuelCodeRepository:
             )
             .where(
                 and_(
-                    FuelCode.expiration_date.between(date.today(), date.today() + timedelta(days=90)),
+                    FuelCode.expiration_date.between(
+                        date.today(), date.today() + timedelta(days=90)
+                    ),
                     FuelCodeStatus.status == FuelCodeStatusEnum.Approved,
                 )
             )

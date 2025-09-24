@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
+import { roles } from '@/constants/roles'
 import { wrapper } from '@/tests/utils/wrapper'
 import {
   useCompliancePeriod,
@@ -218,6 +219,16 @@ describe('useComplianceReports', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
+      const { useCurrentUser } = await import('../useCurrentUser')
+      const hasRolesMock = vi.fn((...requestedRoles) =>
+        requestedRoles.includes(roles.government)
+      )
+      vi.mocked(useCurrentUser).mockReturnValue({
+        hasRoles: hasRolesMock,
+        data: { organization: { organizationId: 1 } },
+        isLoading: false
+      })
+
       const { result } = renderHook(() => useGetComplianceReportList(), {
         wrapper
       })
@@ -230,7 +241,7 @@ describe('useComplianceReports', () => {
       expect(mockPost).toHaveBeenCalledWith('/reports/list', {
         page: 1,
         size: 10,
-        sortOrders: [],
+        sort_orders: [],
         filters: []
       })
     })
