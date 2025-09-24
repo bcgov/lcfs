@@ -83,15 +83,16 @@ async def test_get_charging_equipment_by_id_success(
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.get_charging_equipment_by_id.return_value = (
-            valid_charging_equipment_base_schema
-        )
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.get_charging_equipment_by_id.return_value = (
+        valid_charging_equipment_base_schema
+    )
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.get("/api/charging-equipment/1")
 
@@ -100,6 +101,9 @@ async def test_get_charging_equipment_by_id_success(
         data = response.json()
         assert data["charging_equipment_id"] == 1
         assert data["serial_number"] == "ABC123456"
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -114,15 +118,16 @@ async def test_create_charging_equipment_success(
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.create_charging_equipment.return_value = (
-            valid_charging_equipment_base_schema
-        )
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.create_charging_equipment.return_value = (
+        valid_charging_equipment_base_schema
+    )
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.post(
             "/api/charging-equipment/",
@@ -134,6 +139,9 @@ async def test_create_charging_equipment_success(
         data = response.json()
         assert data["charging_equipment_id"] == 1
         assert data["serial_number"] == "ABC123456"
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -148,15 +156,16 @@ async def test_update_charging_equipment_success(
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.update_charging_equipment.return_value = (
-            valid_charging_equipment_base_schema
-        )
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.update_charging_equipment.return_value = (
+        valid_charging_equipment_base_schema
+    )
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.put(
             "/api/charging-equipment/1",
@@ -167,6 +176,9 @@ async def test_update_charging_equipment_success(
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["charging_equipment_id"] == 1
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -177,18 +189,22 @@ async def test_delete_charging_equipment_success(
     # Mock user with supplier role
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.delete_charging_equipment.return_value = True
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.delete_charging_equipment.return_value = True
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.delete("/api/charging-equipment/1")
 
         # Verify response
         assert response.status_code == status.HTTP_204_NO_CONTENT
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -206,13 +222,14 @@ async def test_bulk_submit_equipment_success(
         errors=[],
     )
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.bulk_submit_equipment.return_value = mock_response
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.bulk_submit_equipment.return_value = mock_response
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.post(
             "/api/charging-equipment/bulk/submit",
@@ -224,6 +241,9 @@ async def test_bulk_submit_equipment_success(
         data = response.json()
         assert data["success"] is True
         assert data["affected_count"] == 2
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -241,13 +261,14 @@ async def test_bulk_decommission_equipment_success(
         errors=[],
     )
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.bulk_decommission_equipment.return_value = mock_response
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.bulk_decommission_equipment.return_value = mock_response
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.post(
             "/api/charging-equipment/bulk/decommission",
@@ -259,6 +280,9 @@ async def test_bulk_decommission_equipment_success(
         data = response.json()
         assert data["success"] is True
         assert data["affected_count"] == 1
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -274,13 +298,14 @@ async def test_get_equipment_statuses_success(
         {"status_id": 2, "status": "Submitted"},
     ]
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.get_equipment_statuses.return_value = mock_statuses
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.get_equipment_statuses.return_value = mock_statuses
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.get("/api/charging-equipment/statuses/list")
 
@@ -289,6 +314,9 @@ async def test_get_equipment_statuses_success(
         data = response.json()
         assert len(data) == 2
         assert data[0]["status"] == "Draft"
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -308,13 +336,14 @@ async def test_get_levels_of_equipment_success(
         },
     ]
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.get_levels_of_equipment.return_value = mock_levels
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.get_levels_of_equipment.return_value = mock_levels
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.get("/api/charging-equipment/levels/list")
 
@@ -323,6 +352,9 @@ async def test_get_levels_of_equipment_success(
         data = response.json()
         assert len(data) == 2
         assert data[0]["name"] == "Level 1"
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -338,13 +370,14 @@ async def test_get_end_use_types_success(
         {"end_use_type_id": 2, "type": "Residential", "sub_type": "Private"},
     ]
 
-    with patch(
-        "lcfs.web.api.charging_equipment.views.ChargingEquipmentServices"
-    ) as mock_service_class:
-        mock_service = AsyncMock()
-        mock_service.get_end_use_types.return_value = mock_end_use_types
-        mock_service_class.return_value = mock_service
+    # Mock the service dependency
+    mock_service = AsyncMock()
+    mock_service.get_end_use_types.return_value = mock_end_use_types
 
+    # Override the dependency
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
         # Make request
         response = await client.get("/api/charging-equipment/end-use-types/list")
 
@@ -353,6 +386,9 @@ async def test_get_end_use_types_success(
         data = response.json()
         assert len(data) == 2
         assert data[0]["type"] == "Commercial"
+    finally:
+        # Clean up the dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
