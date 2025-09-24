@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Tuple
 
 from fastapi import Depends, HTTPException
@@ -35,6 +36,9 @@ from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+
+
+logger = logging.getLogger(__name__)
 
 
 class ComplianceReportUpdateService:
@@ -239,7 +243,21 @@ class ComplianceReportUpdateService:
         )
 
         credit_change = report.summary.line_20_surplus_deficit_units
-        await self._create_or_update_reserve_transaction(credit_change, report)
+        logger.debug(
+            "Submitting report %s (org %s): line_20_surplus_deficit_units=%s",
+            report.compliance_report_id,
+            report.organization_id,
+            credit_change,
+        )
+        reserve_units = await self._create_or_update_reserve_transaction(
+            credit_change, report
+        )
+        logger.debug(
+            "Post-submit reserve units for report %s (org %s): %s",
+            report.compliance_report_id,
+            report.organization_id,
+            reserve_units,
+        )
         await self.repo.update_compliance_report(report)
 
         return report.summary
@@ -328,19 +346,44 @@ class ComplianceReportUpdateService:
                     status_code=400, 
                     detail="Report summary must be locked before assessment. Please ensure the report was recommended by an analyst first."
                 )
-            
+
             credit_change = report.summary.line_20_surplus_deficit_units
+            logger.debug(
+                "Assessing report %s (org %s): credit_change=%s",
+                report.compliance_report_id,
+                report.organization_id,
+                credit_change,
+            )
 
             if report.transaction:
-                # Update the transaction to assessed
+                existing_units = report.transaction.compliance_units
+                logger.debug(
+                    "Using existing reserved units for report %s (org %s): %s",
+                    report.compliance_report_id,
+                    report.organization_id,
+                    existing_units,
+                )
                 report.transaction.transaction_action = TransactionActionEnum.Adjustment
                 report.transaction.update_user = user.keycloak_username
-                report.transaction.compliance_units = credit_change
+                report.transaction.compliance_units = existing_units
             else:
-                # Create a new transaction if none exists (fixes Government adjustment issue)
-                await self._create_or_update_reserve_transaction(credit_change, report)
-                if report.transaction:
-                    # Update the newly created transaction to Adjustment status
+                capped_units = await self._create_or_update_reserve_transaction(
+                    credit_change, report
+                )
+                logger.debug(
+                    "Assessment reserve units for report %s (org %s): %s",
+                    report.compliance_report_id,
+                    report.organization_id,
+                    capped_units,
+                )
+
+                if capped_units != 0:
+                    # Ensure a transaction exists before converting to Adjustment
+                    report.transaction = await self.org_service.adjust_balance(
+                        transaction_action=TransactionActionEnum.Reserved,
+                        compliance_units=capped_units,
+                        organization_id=report.organization_id,
+                    )
                     report.transaction.transaction_action = (
                         TransactionActionEnum.Adjustment
                     )
@@ -360,20 +403,85 @@ class ComplianceReportUpdateService:
         available_balance = await self.org_service.calculate_available_balance(
             report.organization_id
         )
+        pre_deadline_balance = None
+        if credit_change < 0:
+            pre_deadline_balance = await self._calculate_pre_deadline_balance(report)
+
+        effective_available_balance = available_balance
+        if pre_deadline_balance is not None:
+            effective_available_balance = min(available_balance, pre_deadline_balance)
+
         units_to_reserve = credit_change
-        # If not enough credits, reserve what is left
-        if credit_change < 0 and abs(credit_change) > available_balance:
-            units_to_reserve = available_balance * -1
+        if credit_change < 0:
+            eligible_units = min(
+                abs(credit_change),
+                max(effective_available_balance, 0),
+            )
+            units_to_reserve = -eligible_units
+
+        logger.debug(
+            (
+                "Reserve calc for report %s (org %s): credit_change=%s, available_balance=%s, "
+                "pre_deadline_balance=%s, effective_available=%s, units_to_reserve=%s"
+            ),
+            report.compliance_report_id,
+            report.organization_id,
+            credit_change,
+            available_balance,
+            pre_deadline_balance,
+            effective_available_balance,
+            units_to_reserve,
+        )
+
         if report.transaction is not None:
             # update existing transaction
             report.transaction.compliance_units = units_to_reserve
-        # Only need a Transaction if they have credits or if it's a positive credit_change
-        elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
+        elif credit_change != 0 and (
+            effective_available_balance > 0 or credit_change > 0
+        ):
+            # Only need a Transaction if they have credits or it's a gain
+            logger.debug(
+                "Creating reserve transaction for report %s (org %s) with units %s",
+                report.compliance_report_id,
+                report.organization_id,
+                units_to_reserve,
+            )
             report.transaction = await self.org_service.adjust_balance(
                 transaction_action=TransactionActionEnum.Reserved,
                 compliance_units=units_to_reserve,
                 organization_id=report.organization_id,
             )
+
+        return units_to_reserve
+
+    async def _calculate_pre_deadline_balance(self, report: ComplianceReport) -> int:
+        compliance_period = getattr(report, "compliance_period", None)
+        period_description = getattr(compliance_period, "description", None)
+
+        try:
+            compliance_year = int(period_description)
+        except (TypeError, ValueError):
+            logger.debug(
+                "Pre-deadline balance fallback for report %s (org %s) period=%s",
+                report.compliance_report_id,
+                report.organization_id,
+                period_description,
+            )
+            return await self.org_service.calculate_available_balance(
+                report.organization_id
+            )
+
+        pre_deadline_balance = await self.org_service.calculate_available_balance_for_period(
+            report.organization_id, compliance_year
+        )
+        logger.debug(
+            "Pre-deadline balance for report %s (org %s) year %s: %s",
+            report.compliance_report_id,
+            report.organization_id,
+            compliance_year,
+            pre_deadline_balance,
+        )
+        return pre_deadline_balance
 
     async def _calculate_and_lock_summary(
         self, report, user, skip_can_sign_check=False
