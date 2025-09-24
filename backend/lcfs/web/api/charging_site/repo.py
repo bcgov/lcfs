@@ -413,7 +413,8 @@ class ChargingSiteRepository:
         charging_site = result.scalar_one_or_none()
 
         if not charging_site:
-            raise ValueError(f"Charging site with ID {charging_site_id} not found")
+            # Raise a generic exception so it is wrapped by repo_handler into DatabaseException
+            raise Exception(f"Charging site with ID {charging_site_id} not found")
 
         # Clear many-to-many relationships
         charging_site.intended_users.clear()

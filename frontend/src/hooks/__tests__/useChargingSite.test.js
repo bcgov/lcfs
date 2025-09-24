@@ -133,8 +133,8 @@ describe('useChargingSite', () => {
 
       const updateData = {
         siteId: 1,
-        equipmentIds: [1, 2], // Fixed: Use camelCase to match actual implementation
-        newStatus: 'Validated' // Fixed: Use camelCase to match actual implementation
+        equipmentIds: [1, 2],
+        newStatus: 'Validated'
       }
 
       await act(async () => {
@@ -144,8 +144,8 @@ describe('useChargingSite', () => {
       expect(mockPost).toHaveBeenCalledWith(
         '/charging-sites/1/equipment/bulk-status-update',
         {
-          equipmentIds: [1, 2], // Fixed: Use camelCase
-          newStatus: 'Validated' // Fixed: Use camelCase
+          equipment_ids: [1, 2],
+          new_status: 'Validated'
         }
       )
     })
@@ -166,8 +166,8 @@ describe('useChargingSite', () => {
 
       const updateData = {
         siteId: 1,
-        equipmentIds: [1, 2], // Fixed: Use camelCase
-        newStatus: 'Validated' // Fixed: Use camelCase
+        equipmentIds: [1, 2],
+        newStatus: 'Validated'
       }
 
       await act(async () => {
@@ -181,8 +181,8 @@ describe('useChargingSite', () => {
       expect(mockPost).toHaveBeenCalledWith(
         '/charging-sites/1/equipment/bulk-status-update',
         {
-          equipmentIds: [1, 2], // Fixed: Use camelCase
-          newStatus: 'Validated' // Fixed: Use camelCase
+          equipment_ids: [1, 2],
+          new_status: 'Validated'
         }
       )
     }, 10000) // Increased timeout
@@ -197,8 +197,8 @@ describe('useChargingSite', () => {
 
       const updateData = {
         siteId: 1,
-        equipmentIds: [1, 2], // Fixed: Use camelCase
-        newStatus: 'Validated' // Fixed: Use camelCase
+        equipmentIds: [1, 2],
+        newStatus: 'Validated'
       }
 
       await act(async () => {
@@ -220,8 +220,8 @@ describe('useChargingSite', () => {
 
       const updateData = {
         siteId: 1,
-        equipmentIds: [], // Fixed: Use camelCase
-        newStatus: 'Validated' // Fixed: Use camelCase
+        equipmentIds: [],
+        newStatus: 'Validated'
       }
 
       await act(async () => {
@@ -231,8 +231,8 @@ describe('useChargingSite', () => {
       expect(mockPost).toHaveBeenCalledWith(
         '/charging-sites/1/equipment/bulk-status-update',
         {
-          equipmentIds: [], // Fixed: Use camelCase
-          newStatus: 'Validated' // Fixed: Use camelCase
+          equipment_ids: [],
+          new_status: 'Validated'
         }
       )
     })
@@ -249,16 +249,16 @@ describe('useChargingSite', () => {
       await act(async () => {
         await result.current.mutateAsync({
           siteId: 1,
-          equipmentIds: [1, 2], // Fixed: Use camelCase
-          newStatus: 'Draft' // Fixed: Use camelCase
+          equipmentIds: [1, 2],
+          newStatus: 'Draft'
         })
       })
 
       expect(mockPost).toHaveBeenLastCalledWith(
         '/charging-sites/1/equipment/bulk-status-update',
         {
-          equipmentIds: [1, 2], // Fixed: Use camelCase
-          newStatus: 'Draft' // Fixed: Use camelCase
+          equipment_ids: [1, 2],
+          new_status: 'Draft'
         }
       )
 
@@ -266,16 +266,16 @@ describe('useChargingSite', () => {
       await act(async () => {
         await result.current.mutateAsync({
           siteId: 1,
-          equipmentIds: [3, 4], // Fixed: Use camelCase
-          newStatus: 'Submitted' // Fixed: Use camelCase
+          equipmentIds: [3, 4],
+          newStatus: 'Submitted'
         })
       })
 
       expect(mockPost).toHaveBeenLastCalledWith(
         '/charging-sites/1/equipment/bulk-status-update',
         {
-          equipmentIds: [3, 4], // Fixed: Use camelCase
-          newStatus: 'Submitted' // Fixed: Use camelCase
+          equipment_ids: [3, 4],
+          new_status: 'Submitted'
         }
       )
     })

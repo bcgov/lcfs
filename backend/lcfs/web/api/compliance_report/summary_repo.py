@@ -44,46 +44,50 @@ class ComplianceReportSummaryRepository:
         self.fuel_supply_repo = fuel_supply_repo
 
     async def _validate_lines_7_and_9_locked(
-        self, 
-        summary: ComplianceReportSummaryUpdateSchema, 
-        compliance_report: ComplianceReport
+        self,
+        summary: ComplianceReportSummaryUpdateSchema,
+        compliance_report: ComplianceReport,
     ) -> None:
         """
         Validate that Lines 7 and 9 are not being modified for 2025+ reports with previous assessed report.
-        
+
         Args:
             summary: The summary update data
             compliance_report: The compliance report being updated
-            
+
         Raises:
             ServiceException: If Lines 7 or 9 are being modified when they should be locked
         """
         compliance_year = int(compliance_report.compliance_period.description)
-        
+
         # Only validate for 2025+ reports
         if compliance_year < 2025:
             return
-            
+
         # Check for previous assessed report
         from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+
         cr_repo = ComplianceReportRepository(self.db)
         prev_compliance_report = None
-        
+
         if not compliance_report.supplemental_initiator:
-            prev_compliance_report = await cr_repo.get_assessed_compliance_report_by_period(
-                compliance_report.organization_id,
-                compliance_year - 1
+            prev_compliance_report = (
+                await cr_repo.get_assessed_compliance_report_by_period(
+                    compliance_report.organization_id, compliance_year - 1
+                )
             )
-        
+
         # If no previous assessed report, Lines 7 and 9 are editable
         if not prev_compliance_report:
             return
-            
+
         # Get current summary values to compare against
-        existing_summary = await self.get_summary_by_report_id(summary.compliance_report_id)
+        existing_summary = await self.get_summary_by_report_id(
+            summary.compliance_report_id
+        )
         if not existing_summary:
             return
-            
+
         # Check if Lines 7 or 9 are being modified (they should be locked)
         for row in summary.renewable_fuel_target_summary:
             try:
@@ -93,8 +97,10 @@ class ComplianceReportSummaryRepository:
                     for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                         new_value = getattr(row, fuel_type, 0) or 0
                         existing_column = f"line_7_previously_retained_{fuel_type}"
-                        existing_value = getattr(existing_summary, existing_column, 0) or 0
-                        
+                        existing_value = (
+                            getattr(existing_summary, existing_column, 0) or 0
+                        )
+
                         # Allow small floating point differences
                         if abs(float(new_value) - float(existing_value)) > 0.01:
                             raise ServiceException(
@@ -107,8 +113,10 @@ class ComplianceReportSummaryRepository:
                     for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                         new_value = getattr(row, fuel_type, 0) or 0
                         existing_column = f"line_9_obligation_added_{fuel_type}"
-                        existing_value = getattr(existing_summary, existing_column, 0) or 0
-                        
+                        existing_value = (
+                            getattr(existing_summary, existing_column, 0) or 0
+                        )
+
                         # Allow small floating point differences
                         if abs(float(new_value) - float(existing_value)) > 0.01:
                             raise ServiceException(
@@ -152,18 +160,25 @@ class ComplianceReportSummaryRepository:
         :param summary: The generated summary data
         """
         # Get compliance report to validate locked fields
-        compliance_report_query = select(ComplianceReport).where(
-            ComplianceReport.compliance_report_id == summary.compliance_report_id
-        ).options(joinedload(ComplianceReport.current_status))
+        compliance_report_query = (
+            select(ComplianceReport)
+            .where(
+                ComplianceReport.compliance_report_id == summary.compliance_report_id
+            )
+            .options(joinedload(ComplianceReport.current_status))
+        )
         result = await self.db.execute(compliance_report_query)
         compliance_report = result.scalar_one_or_none()
-        
+
         if not compliance_report:
-            raise ValueError(f"No compliance report found with ID {summary.compliance_report_id}")
-            
+            # Let decorator wrap into DatabaseException
+            raise Exception(
+                f"No compliance report found with ID {summary.compliance_report_id}"
+            )
+
         # Validate Lines 7 and 9 for 2025+ reports
         await self._validate_lines_7_and_9_locked(summary, compliance_report)
-        
+
         existing_summary = await self.get_summary_by_report_id(
             summary.compliance_report_id
         )
@@ -171,7 +186,8 @@ class ComplianceReportSummaryRepository:
         if existing_summary:
             summary_obj = existing_summary
         else:
-            raise ValueError(
+            # Let decorator wrap into DatabaseException
+            raise Exception(
                 f"""No summary found with report ID {
                     summary.compliance_report_id}"""
             )
@@ -197,8 +213,8 @@ class ComplianceReportSummaryRepository:
         # Update non-compliance penalty summary
         # Skip updating calculated penalty columns when penalty override is enabled
         # to preserve original calculated values
-        penalty_override_enabled = getattr(summary, 'penalty_override_enabled', False)
-        
+        penalty_override_enabled = getattr(summary, "penalty_override_enabled", False)
+
         if not penalty_override_enabled:
             non_compliance_summary = summary.non_compliance_penalty_summary
             for row in non_compliance_summary:
@@ -211,15 +227,19 @@ class ComplianceReportSummaryRepository:
 
         # Update penalty override fields - only for 2024 reports and later
         if compliance_year and compliance_year >= 2024:
-            if hasattr(summary, 'penalty_override_enabled'):
+            if hasattr(summary, "penalty_override_enabled"):
                 summary_obj.penalty_override_enabled = summary.penalty_override_enabled
-            if hasattr(summary, 'renewable_penalty_override'):
-                summary_obj.renewable_penalty_override = summary.renewable_penalty_override
-            if hasattr(summary, 'low_carbon_penalty_override'):
-                summary_obj.low_carbon_penalty_override = summary.low_carbon_penalty_override
-            if hasattr(summary, 'penalty_override_date'):
+            if hasattr(summary, "renewable_penalty_override"):
+                summary_obj.renewable_penalty_override = (
+                    summary.renewable_penalty_override
+                )
+            if hasattr(summary, "low_carbon_penalty_override"):
+                summary_obj.low_carbon_penalty_override = (
+                    summary.low_carbon_penalty_override
+                )
+            if hasattr(summary, "penalty_override_date"):
                 summary_obj.penalty_override_date = summary.penalty_override_date
-            if hasattr(summary, 'penalty_override_user'):
+            if hasattr(summary, "penalty_override_user"):
                 summary_obj.penalty_override_user = summary.penalty_override_user
         else:
             # For pre-2024 reports, ensure penalty override fields are cleared
@@ -234,12 +254,16 @@ class ComplianceReportSummaryRepository:
             # When override is enabled, total is sum of override values
             renewable_override = summary_obj.renewable_penalty_override or 0
             low_carbon_override = summary_obj.low_carbon_penalty_override or 0
-            summary_obj.total_non_compliance_penalty_payable = renewable_override + low_carbon_override
+            summary_obj.total_non_compliance_penalty_payable = (
+                renewable_override + low_carbon_override
+            )
         else:
             # When override is disabled, total is sum of calculated penalty values
             line_11_total = summary_obj.line_11_fossil_derived_base_fuel_total or 0
             line_21_total = summary_obj.line_21_non_compliance_penalty_payable or 0
-            summary_obj.total_non_compliance_penalty_payable = line_11_total + line_21_total
+            summary_obj.total_non_compliance_penalty_payable = (
+                line_11_total + line_21_total
+            )
 
         self.db.add(summary_obj)
         await self.db.flush()
@@ -355,7 +379,6 @@ class ComplianceReportSummaryRepository:
                 ) + (record.quantity_supplied or 0)
 
         return dict(fuel_quantities)
-
 
     @staticmethod
     def _format_category(category: str) -> str:

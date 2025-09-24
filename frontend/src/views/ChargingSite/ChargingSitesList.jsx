@@ -53,7 +53,8 @@ export const ChargingSitesList = ({ alertRef }) => {
   }
 
   const organizationId = currentUser?.organization?.organizationId
-  const isOnNestedRoute = location.pathname !== ROUTES.REPORTS.CHARGING_SITE.INDEX
+  const isOnNestedRoute =
+    location.pathname !== ROUTES.REPORTS.CHARGING_SITE.INDEX
 
   const { data: orgNames = [], isLoading: orgLoading } = useOrganizationNames(
     null,
