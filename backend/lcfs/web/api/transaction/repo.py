@@ -583,6 +583,16 @@ class TransactionRepository:
                     admin_date = admin_date.date()
                 if admin_date <= compliance_period_end_local.date():
                     count_as_past = True
+            # 6. Transactions not linked to any parent entity (Historical reports)
+            elif (
+                row.admin_effective_date is None
+                and row.ia_effective_date is None
+                and row.transfer_from_effective_date is None
+                and row.transfer_to_effective_date is None
+                and not row.is_compliance_report
+            ):
+                # If the transaction is not linked to any parent entity, consider it as historical reports that aren't in the system yet
+                count_as_past = True
 
             # Apply the transaction to the appropriate balance
             if count_as_past:
