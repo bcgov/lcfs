@@ -26,8 +26,13 @@ export const createMarkerIcon = (color) => {
 // Prepare marker icons
 export const markerIcons = {
   default: new L.Icon.Default(),
-  green: createMarkerIcon('green'),
+  blue: createMarkerIcon('blue'),
+  gold: createMarkerIcon('gold'),
   red: createMarkerIcon('red'),
+  green: createMarkerIcon('green'),
   orange: createMarkerIcon('orange'),
-  grey: createMarkerIcon('grey')
+  yellow: createMarkerIcon('yellow'),
+  violet: createMarkerIcon('violet'),
+  grey: createMarkerIcon('grey'),
+  black: createMarkerIcon('black')
 }

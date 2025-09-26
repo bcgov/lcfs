@@ -633,7 +633,7 @@ class TestChargingSiteService:
         assert len(result.equipments) == 1
         assert result.pagination.total == 1
         mock_repo.get_equipment_for_charging_site_paginated.assert_called_once_with(
-            1, pagination
+            1, pagination, False
         )
 
     @pytest.mark.anyio

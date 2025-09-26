@@ -79,7 +79,10 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_equipment_for_charging_site_paginated(
-        self, site_id: int, pagination: PaginationRequestSchema
+        self,
+        site_id: int,
+        pagination: PaginationRequestSchema,
+        is_government_user: bool = False,
     ):
         """
         Get charging equipment for a specific site with pagination, filtering, and sorting
@@ -87,12 +90,13 @@ class ChargingSiteRepository:
         # Conditions for the base subquery (before ranking)
         base_conditions = [ChargingEquipment.charging_site_id == site_id]
 
-        # Exclude Decommissioned FSE's in the base query
-        base_conditions.append(
-            ~ChargingEquipment.status.has(
-                ChargingEquipmentStatus.status == "Decommissioned"
+        # Exclude Decommissioned FSE's in the base query for gov users
+        if is_government_user:
+            base_conditions.append(
+                ~ChargingEquipment.status.has(
+                    ChargingEquipmentStatus.status == "Decommissioned"
+                )
             )
-        )
 
         # Apply status filters to base conditions (before ranking)
         status_conditions = []
@@ -192,8 +196,8 @@ class ChargingSiteRepository:
                     else:
                         query = query.order_by(field.asc())
         else:
-            # Default sort by create date
-            query = query.order_by(ranked_equipment.update_date.asc())
+            # Default sort by update date descending
+            query = query.order_by(ranked_equipment.update_date.desc())
 
         # Get total count using the same base conditions
         count_query = (
@@ -329,12 +333,12 @@ class ChargingSiteRepository:
         # Apply sort orders
         for order in sort_orders or []:
             direction = asc if getattr(order, "direction", "asc") == "asc" else desc
-            field = getattr(ChargingSite, getattr(order, "field", "create_date"), None)
+            field = getattr(ChargingSite, getattr(order, "field", "update_date"), None)
             if field is not None:
                 stmt = stmt.order_by(direction(field))
 
         if not sort_orders:
-            stmt = stmt.order_by(ChargingSite.create_date.asc())
+            stmt = stmt.order_by(ChargingSite.update_date.desc())
 
         # Count total
         total = await self.db.scalar(select(func.count()).select_from(stmt.subquery()))

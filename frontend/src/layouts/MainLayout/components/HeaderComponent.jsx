@@ -5,6 +5,7 @@ import BCTypography from '@/components/BCTypography'
 import SupplierBalance from './SupplierBalance' // Adjust the import path as necessary
 import { NavLink } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
+import BCBox from '@/components/BCBox'
 
 export const HeaderComponent = () => {
   const { t } = useTranslation()
@@ -12,7 +13,13 @@ export const HeaderComponent = () => {
 
   return (
     isFetched && (
-      <>
+      <BCBox
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end'
+        }}
+      >
         <BCTypography
           component={NavLink}
           to={!data?.isGovernmentUser && ROUTES.ORGANIZATION.ORG}
@@ -23,7 +30,7 @@ export const HeaderComponent = () => {
           {data?.organization?.name || t('govOrg')}
         </BCTypography>
         {data?.organization?.organizationId && <SupplierBalance />}
-      </>
+      </BCBox>
     )
   )
 }

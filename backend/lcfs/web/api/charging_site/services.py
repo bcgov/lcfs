@@ -140,7 +140,7 @@ class ChargingSiteService:
 
         equipment_records, total_count = (
             await self.repo.get_equipment_for_charging_site_paginated(
-                site_id, pagination
+                site_id, pagination, self.request.user.is_government
             )
         )
 
