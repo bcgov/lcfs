@@ -21,7 +21,7 @@ vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   BCGridViewer: React.forwardRef((props, ref) => (
     <div data-testid="bc-grid-viewer">
-      <button onClick={() => props.onRowClicked({ data: { chargingEquipmentId: 456 } })}>
+      <button onClick={() => props.onCellClicked({ data: { chargingEquipmentId: 456 } })}>
         Row Click
       </button>
     </div>
@@ -91,7 +91,7 @@ describe('ChargingSiteFSEGrid', () => {
     const rowButton = screen.getByText('Row Click')
     fireEvent.click(rowButton)
     
-    expect(mockNavigate).toHaveBeenCalledWith('/charging-sites/123/456/edit-equipment')
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/456/edit')
   })
 
   it('displays loading state', () => {
