@@ -13,6 +13,7 @@ import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
 import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
 import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
 import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
+import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
 
 export const reportRoutes = [
   {
@@ -92,6 +93,14 @@ export const reportRoutes = [
     element: <AddEditOtherUses />,
     handle: {
       title: 'Fuels for other use',
+      mode: 'add'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.ADD.FSE_REPORTING,
+    element: <FinalSupplyEquipmentReporting />,
+    handle: {
+      title: 'FSE compliance reporting',
       mode: 'add'
     }
   },

@@ -75,6 +75,8 @@ export const ROUTES = {
         '/compliance-reporting/:compliancePeriod/:complianceReportId/supply-of-fuel',
       FINAL_SUPPLY_EQUIPMENTS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/final-supply-equipments',
+      FSE_REPORTING:
+        '/compliance-reporting/:compliancePeriod/:complianceReportId/fse-reporting',
       ALLOCATION_AGREEMENTS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/allocation-agreements',
       NOTIONAL_TRANSFERS:

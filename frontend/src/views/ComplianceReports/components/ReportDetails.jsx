@@ -168,7 +168,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         ),
       finalSupplyEquipments: () =>
         navigate(
-          buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
+          buildPath(ROUTES.REPORTS.ADD.FSE_REPORTING, {
             compliancePeriod,
             complianceReportId
           })
