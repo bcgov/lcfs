@@ -18,6 +18,12 @@ from typing import List, Optional
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from pydantic import Field
+from typing import Optional as OptionalType
+
+# Extended pagination schema to support organization filtering for IDIR users
+class ChargingEquipmentPaginationRequestSchema(PaginationRequestSchema):
+    organization_id: OptionalType[int] = Field(None, alias="organization_id")
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentBaseSchema,
     ChargingEquipmentCreateSchema,
@@ -42,19 +48,25 @@ logger = structlog.get_logger(__name__)
     "/list",
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler(["*"])
 async def get_charging_equipment_list(
     request: Request,
-    body: PaginationRequestSchema = Body(...),
+    body: ChargingEquipmentPaginationRequestSchema = Body(...),
     service: ChargingEquipmentServices = Depends(),
 ) -> ChargingEquipmentListSchema:
     """
     Get paginated list of charging equipment (FSE) for the organization.
 
     - **Suppliers** can view their own organization's equipment
-    - **Government/Analysts** can view any organization's equipment
+    - **Government/Analysts** can view any organization's equipment with optional filtering
     """
-    return await service.get_charging_equipment_list(request.user, body, None)
+    # Extract organization_id from body if provided (for IDIR users dropdown filter)
+    # This is separate from table filters
+    filters = None
+    if body.organization_id:
+        filters = ChargingEquipmentFilterSchema(organization_id=body.organization_id)
+
+    return await service.get_charging_equipment_list(request.user, body, filters)
 
 
 @router.get(
@@ -62,7 +74,7 @@ async def get_charging_equipment_list(
     response_model=ChargingEquipmentBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler(["*"])
 async def get_charging_equipment(
     request: Request,
     charging_equipment_id: int,
@@ -184,12 +196,73 @@ async def bulk_decommission_equipment(
     )
 
 
+@router.post(
+    "/bulk/validate",
+    response_model=BulkActionResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def bulk_validate_equipment(
+    request: Request,
+    bulk_request: BulkSubmitRequestSchema,
+    service: ChargingEquipmentServices = Depends(),
+) -> BulkActionResponseSchema:
+    """
+    Bulk validate charging equipment (Government/Analyst only).
+
+    - Changes status from Submitted to Validated
+    - Only government users can validate equipment
+    """
+    return await service.bulk_validate_equipment(
+        request.user, bulk_request.charging_equipment_ids
+    )
+
+
+@router.post(
+    "/bulk/return-to-draft",
+    response_model=BulkActionResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def bulk_return_to_draft(
+    request: Request,
+    bulk_request: BulkSubmitRequestSchema,
+    service: ChargingEquipmentServices = Depends(),
+) -> BulkActionResponseSchema:
+    """
+    Bulk return charging equipment to draft (Government/Analyst only).
+
+    - Changes status from Submitted/Validated to Draft
+    - Only government users can return equipment to draft
+    """
+    return await service.bulk_return_to_draft(
+        request.user, bulk_request.charging_equipment_ids
+    )
+
+
+@router.get(
+    "/charging-sites/{site_id}/equipment-processing",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_site_equipment_processing(
+    request: Request,
+    site_id: int,
+    service: ChargingEquipmentServices = Depends(),
+) -> dict:
+    """
+    Get charging site details and equipment for FSE processing (Government/Analyst view).
+    """
+    return await service.get_site_equipment_processing(request.user, site_id)
+
+
 @router.get(
     "/statuses/list",
     response_model=List[dict],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler(["*"])
 async def get_equipment_statuses(
     request: Request,
     service: ChargingEquipmentServices = Depends(),
@@ -205,7 +278,7 @@ async def get_equipment_statuses(
     response_model=List[dict],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler(["*"])
 async def get_levels_of_equipment(
     request: Request,
     service: ChargingEquipmentServices = Depends(),
@@ -221,7 +294,7 @@ async def get_levels_of_equipment(
     response_model=List[dict],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler(["*"])
 async def get_end_use_types(
     request: Request,
     service: ChargingEquipmentServices = Depends(),
@@ -253,7 +326,7 @@ async def get_charging_sites(
     response_model=List[dict],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler(["*"])
 async def get_organizations(
     request: Request,
     service: ChargingEquipmentServices = Depends(),

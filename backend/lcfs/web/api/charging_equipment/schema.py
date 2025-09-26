@@ -78,6 +78,7 @@ class ChargingEquipmentUpdateSchema(BaseModel):
 
 class ChargingEquipmentListItemSchema(BaseModel):
     charging_equipment_id: int
+    charging_site_id: int
     status: ChargingEquipmentStatusEnum
     site_name: str
     registration_number: str

@@ -464,6 +464,40 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
     cellRenderer: CommonArrayRenderer
   },
   {
+    field: 'actions',
+    headerName: 'Actions',
+    minWidth: 180,
+    sortable: false,
+    filter: false,
+    hide: !isIDIR,
+    cellRenderer: (params) => {
+      if (!isIDIR) return null
+
+      const siteId = params.data?.chargingSiteId
+      if (!siteId) return null
+
+      const navigate = (window.navigateToFSEProcessing || (() => {}))
+
+      return `
+        <button
+          class="fse-processing-btn"
+          onclick="window.navigateToFSEProcessing('${siteId}')"
+          style="
+            background: #003366;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+          "
+        >
+          FSE Processing
+        </button>
+      `
+    }
+  },
+  {
     field: 'notes',
     minWidth: 500,
     headerName: i18n.t('chargingSite:columnLabels.notes')

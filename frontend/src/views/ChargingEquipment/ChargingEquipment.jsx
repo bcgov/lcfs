@@ -12,7 +12,7 @@ import {
   faFilterCircleXmark
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Grid, Stack } from '@mui/material'
+import { Box, Grid, Stack, Autocomplete, TextField } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Outlet,
@@ -23,6 +23,9 @@ import {
 import { useTranslation } from 'react-i18next'
 import { defaultSortModel, chargingEquipmentColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { govRoles } from '@/constants/roles'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
+import { Role } from '@/components/Role'
 import Loading from '@/components/Loading'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { BCAlert2 } from '@/components/BCAlert'
@@ -44,6 +47,7 @@ export const ChargingEquipment = () => {
   const alertRef = useRef(null)
   const isProgrammaticSelection = useRef(false)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
+  const isIDIR = hasAnyRole(...govRoles)
 
   const [searchParams, setSearchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
@@ -58,13 +62,72 @@ export const ChargingEquipment = () => {
     initialPaginationOptions
   )
 
+  // Organization filter state (for IDIR users)
+  const [selectedOrg, setSelectedOrg] = useState(() => {
+    const savedOrgFilter = sessionStorage.getItem('fse-index-orgFilter')
+    if (savedOrgFilter) {
+      try {
+        return JSON.parse(savedOrgFilter)
+      } catch (error) {
+        console.warn('Failed to parse saved organization filter:', error)
+      }
+    }
+    return { id: null, label: null }
+  })
+
+  // Get organization names for IDIR users
+  const { data: orgNames = [], isLoading: orgLoading } = useOrganizationNames(
+    null,
+    { enabled: isIDIR }
+  )
+
+  // Enhanced organization change handler with caching
+  const handleOrganizationChange = useCallback((event, option) => {
+    const id = option?.organizationId || null
+    const label = option?.name || null
+    const newSelectedOrg = { id, label }
+
+    // Update state
+    setSelectedOrg(newSelectedOrg)
+
+    // Persist to session storage
+    try {
+      if (id && label) {
+        sessionStorage.setItem(
+          'fse-index-orgFilter',
+          JSON.stringify(newSelectedOrg)
+        )
+      } else {
+        sessionStorage.removeItem('fse-index-orgFilter')
+      }
+    } catch (error) {
+      console.warn('Failed to update organization filter:', error)
+    }
+  }, [])
+
+  // Find the selected organization object for the Autocomplete value
+  const selectedOrgOption = useMemo(() => {
+    if (!selectedOrg.id || !orgNames.length) return null
+    return orgNames.find((org) => org.organizationId === selectedOrg.id) || null
+  }, [selectedOrg.id, orgNames])
+
+  // Include organization filter in pagination options for IDIR users
+  const enhancedPaginationOptions = useMemo(() => {
+    const options = { ...paginationOptions }
+    if (isIDIR && selectedOrg.id) {
+      // Add organization filter to the API request
+      options.organizationId = selectedOrg.id
+    }
+    return options
+  }, [paginationOptions, isIDIR, selectedOrg.id])
+
   const {
     data: equipmentData,
     isLoading,
     isError,
     error,
     refetch
-  } = useChargingEquipment(paginationOptions)
+  } = useChargingEquipment(enhancedPaginationOptions)
 
   const {
     submitEquipment,
@@ -157,8 +220,22 @@ export const ChargingEquipment = () => {
     // Ignore clicks on the checkbox selection column
     const colId = params?.column?.getColId?.()
     if (colId === '__select__') return
-    const { charging_equipment_id } = params.data
-    navigate(`${ROUTES.REPORTS.LIST}/fse/${charging_equipment_id}/edit`)
+
+    // Check if user is IDIR/government
+    const isIDIR = hasAnyRole(...govRoles)
+
+    const { charging_equipment_id, charging_site_id } = params.data
+
+    if (isIDIR) {
+      // For IDIR users, navigate to the charging site page for this FSE
+      navigate(
+        ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', charging_site_id)
+      )
+      return
+    }
+
+    // For supplier users, navigate to edit route
+    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', charging_equipment_id))
   }
 
   const handleSelectionChanged = (event) => {
@@ -243,6 +320,10 @@ export const ChargingEquipment = () => {
   const handleClearFilters = () => {
     setPaginationOptions(initialPaginationOptions)
     gridRef.current?.api?.setFilterModel(null)
+    // Clear organization filter for IDIR users
+    if (isIDIR) {
+      handleOrganizationChange(null, null)
+    }
   }
 
   const canSubmit = selectedRows.some(
@@ -251,7 +332,6 @@ export const ChargingEquipment = () => {
 
   const canDecommission = selectedRows.some((row) => row.status === 'Validated')
 
-  if (isLoading) return <Loading />
   if (isError) {
     return (
       <Grid container spacing={3}>
@@ -273,14 +353,16 @@ export const ChargingEquipment = () => {
   }
 
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={1}>
       {!isOnNestedRoute && (
         <Grid item xs={12}>
           <BCTypography variant="h5" gutterBottom>
-            {t('chargingEquipment:manageFSE')}
+            {isIDIR ? 'FSE index' : t('chargingEquipment:manageFSE')}
           </BCTypography>
           <BCTypography variant="body2" color="text.secondary" paragraph>
-            {t('chargingEquipment:manageFSEDescription')}
+            {isIDIR
+              ? 'Index of all FSE for all organizations. Processing FSE is done either through the charging site page or the compliance report.'
+              : t('chargingEquipment:manageFSEDescription')}
           </BCTypography>
         </Grid>
       )}
@@ -293,68 +375,126 @@ export const ChargingEquipment = () => {
 
       {!isOnNestedRoute && (
         <Grid item xs={12}>
-          <BCBox sx={{ width: '100%', minHeight: 600 }}>
-            <Box display="flex" justifyContent="space-between" mb={2}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                sx={{ flexWrap: 'wrap' }}
-              >
-                <BCButton
-                  variant="contained"
-                  color="primary"
-                  size="medium"
-                  startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-                  onClick={handleNewFSE}
-                >
-                  {t('chargingEquipment:newFSE')}
-                </BCButton>
-
-                <BCButton
-                  variant="contained"
-                  color="primary"
-                  size="medium"
-                  startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
-                  onClick={handleSelectAllDraftUpdated}
-                >
-                  {t('chargingEquipment:selectAllDraftUpdated')}
-                </BCButton>
-
-                <BCButton
-                  variant="contained"
-                  color="primary"
-                  size="medium"
-                  startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
-                  onClick={handleSelectAllValidated}
-                >
-                  {t('chargingEquipment:selectAllValidated')}
-                </BCButton>
-
-                <BCButton
-                  variant="outlined"
-                  color="primary"
-                  size="medium"
-                  startIcon={<FontAwesomeIcon icon={faCheck} />}
-                  onClick={() => setShowSubmitModal(true)}
-                  disabled={selectedRows.length === 0 || !canSubmit}
-                >
-                  {t('chargingEquipment:submitSelected')}
-                </BCButton>
-
-                <BCButton
-                  variant="outlined"
-                  color="error"
-                  size="medium"
-                  startIcon={<FontAwesomeIcon icon={faBan} />}
-                  onClick={() => setShowDecommissionModal(true)}
-                  disabled={selectedRows.length === 0 || !canDecommission}
-                >
-                  {t('chargingEquipment:setToDecommissioned')}
-                </BCButton>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} lg={7}>
+              <Stack spacing={1} direction="row">
+                {!isIDIR && (
+                  <BCButton
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    onClick={handleNewFSE}
+                  >
+                    <BCTypography variant="subtitle2">
+                      {t('chargingEquipment:newFSE')}
+                    </BCTypography>
+                  </BCButton>
+                )}
+                <ClearFiltersButton onClick={handleClearFilters} />
               </Stack>
+            </Grid>
+            {isIDIR && (
+              <Grid
+                item
+                xs={12}
+                lg={5}
+                sx={{
+                  display: 'flex',
+                  justifyContent: { xs: 'flex-start', lg: 'flex-end' },
+                  alignItems: 'center'
+                }}
+              >
+                <Role roles={govRoles}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <BCTypography variant="body2" color="primary">
+                      Show FSE for:
+                    </BCTypography>
+                    <Autocomplete
+                      disablePortal
+                      id="fse-orgs"
+                      loading={orgLoading}
+                      options={orgNames}
+                      value={selectedOrgOption}
+                      getOptionLabel={(option) => option.name}
+                      isOptionEqualToValue={(option, value) =>
+                        option.organizationId === value.organizationId
+                      }
+                      onChange={handleOrganizationChange}
+                      sx={({ functions: { pxToRem } }) => ({
+                        width: 300,
+                        '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
+                      })}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Select organization"
+                          slotProps={{
+                            htmlInput: {
+                              ...params.inputProps,
+                              style: { fontSize: 16, padding: '8px' }
+                            }
+                          }}
+                        />
+                      )}
+                    />
+                  </Box>
+                </Role>
+              </Grid>
+            )}
+          </Grid>
 
-              <ClearFiltersButton onClick={handleClearFilters} />
-            </Box>
+          <BCBox sx={{ width: '100%', minHeight: 600, mt: 2 }}>
+            {!isIDIR && (
+              <Box display="flex" justifyContent="flex-start" mb={2}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={2}
+                  sx={{ flexWrap: 'wrap' }}
+                >
+                  <BCButton
+                    variant="contained"
+                    color="primary"
+                    size="medium"
+                    startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
+                    onClick={handleSelectAllDraftUpdated}
+                  >
+                    {t('chargingEquipment:selectAllDraftUpdated')}
+                  </BCButton>
+
+                  <BCButton
+                    variant="contained"
+                    color="primary"
+                    size="medium"
+                    startIcon={<FontAwesomeIcon icon={faSquareCheck} />}
+                    onClick={handleSelectAllValidated}
+                  >
+                    {t('chargingEquipment:selectAllValidated')}
+                  </BCButton>
+
+                  <BCButton
+                    variant="outlined"
+                    color="primary"
+                    size="medium"
+                    startIcon={<FontAwesomeIcon icon={faCheck} />}
+                    onClick={() => setShowSubmitModal(true)}
+                    disabled={selectedRows.length === 0 || !canSubmit}
+                  >
+                    {t('chargingEquipment:submitSelected')}
+                  </BCButton>
+
+                  <BCButton
+                    variant="outlined"
+                    color="error"
+                    size="medium"
+                    startIcon={<FontAwesomeIcon icon={faBan} />}
+                    onClick={() => setShowDecommissionModal(true)}
+                    disabled={selectedRows.length === 0 || !canDecommission}
+                  >
+                    {t('chargingEquipment:setToDecommissioned')}
+                  </BCButton>
+                </Stack>
+              </Box>
+            )}
 
             <Box sx={{ height: 500, width: '100%' }}>
               <BCGridViewer
@@ -381,7 +521,7 @@ export const ChargingEquipment = () => {
         </Grid>
       )}
 
-      {!isOnNestedRoute && (
+      {!isOnNestedRoute && !isIDIR && (
         <BulkActionModals
           showSubmitModal={showSubmitModal}
           showDecommissionModal={showDecommissionModal}

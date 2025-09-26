@@ -55,22 +55,20 @@ class ChargingEquipmentServices:
     ) -> ChargingEquipmentListSchema:
         """Get paginated list of charging equipment for the user's organization."""
 
-        # Get organization ID based on user type
-        if not user.is_government:
-            organization_id = user.organization_id
+        # Get organization scope based on user type
+        # Include all statuses for government users
+        exclude_draft = False
+
+        if user.is_government:
+            organization_id = (
+                filters.organization_id if filters and filters.organization_id else None
+            )
         else:
-            # For government users, require an organization filter
-            if filters and filters.organization_id:
-                organization_id = filters.organization_id
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Organization ID is required",
-                )
+            organization_id = user.organization_id
 
         # Get equipment list from repository
         equipment_list, total_count = await self.repo.get_charging_equipment_list(
-            organization_id, pagination, filters
+            organization_id, pagination, filters, exclude_draft
         )
 
         # Transform to schema
@@ -78,6 +76,7 @@ class ChargingEquipmentServices:
         for equipment in equipment_list:
             item = ChargingEquipmentListItemSchema(
                 charging_equipment_id=equipment.charging_equipment_id,
+                charging_site_id=equipment.charging_site_id,
                 status=equipment.status.status,
                 site_name=equipment.charging_site.site_name,
                 registration_number=equipment.registration_number
@@ -494,3 +493,191 @@ class ChargingEquipmentServices:
             await self.repo.update_charging_sites_status(
                 site_ids, ["Draft", "Updated"], "Submitted"
             )
+
+    @service_handler
+    async def bulk_validate_equipment(
+        self, user: UserProfile, equipment_ids: List[int]
+    ) -> BulkActionResponseSchema:
+        """Bulk validate charging equipment (Government users only)."""
+
+        # Check authorization - user must be government
+        if not user.is_government:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only government users can validate equipment",
+            )
+
+        # Validate current statuses: only Submitted are eligible
+        status_map = await self.repo.get_equipment_status_map(equipment_ids, None)
+        eligible_ids = [
+            eid for eid, status in status_map.items() if status == "Submitted"
+        ]
+        ineligible_ids = [
+            eid for eid, status in status_map.items() if status != "Submitted"
+        ]
+
+        # Update status to Validated for eligible ones
+        affected_count = 0
+        if eligible_ids:
+            affected_count = await self.repo.bulk_update_status(
+                eligible_ids, "Validated", None
+            )
+
+        if affected_count == 0:
+            return BulkActionResponseSchema(
+                success=False,
+                message="No equipment could be validated",
+                affected_count=0,
+                errors=[
+                    "No valid equipment found or not in Submitted status",
+                    *[f"Equipment {eid} not in Submitted status" for eid in ineligible_ids],
+                ],
+            )
+
+        await add_notification_msg(
+            action_type=ActionTypeEnum.UPDATE,
+            action="Bulk validated charging equipment",
+            message=f"Validated {affected_count} charging equipment",
+            related_entity_type="ChargingEquipment",
+            user=user,
+        )
+
+        return BulkActionResponseSchema(
+            success=True,
+            message=f"Successfully validated {affected_count} equipment",
+            affected_count=affected_count,
+        )
+
+    @service_handler
+    async def bulk_return_to_draft(
+        self, user: UserProfile, equipment_ids: List[int]
+    ) -> BulkActionResponseSchema:
+        """Bulk return charging equipment to draft (Government users only)."""
+
+        # Check authorization - user must be government
+        if not user.is_government:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only government users can return equipment to draft",
+            )
+
+        # Validate current statuses: Submitted and Validated are eligible
+        status_map = await self.repo.get_equipment_status_map(equipment_ids, None)
+        eligible_ids = [
+            eid for eid, status in status_map.items() if status in ("Submitted", "Validated")
+        ]
+        ineligible_ids = [
+            eid
+            for eid, status in status_map.items()
+            if status not in ("Submitted", "Validated")
+        ]
+
+        # Update status to Draft for eligible ones
+        affected_count = 0
+        if eligible_ids:
+            affected_count = await self.repo.bulk_update_status(
+                eligible_ids, "Draft", None
+            )
+
+        if affected_count == 0:
+            return BulkActionResponseSchema(
+                success=False,
+                message="No equipment could be returned to draft",
+                affected_count=0,
+                errors=[
+                    "No valid equipment found or not in Submitted/Validated status",
+                    *[
+                        f"Equipment {eid} not in Submitted/Validated"
+                        for eid in ineligible_ids
+                    ],
+                ],
+            )
+
+        await add_notification_msg(
+            action_type=ActionTypeEnum.UPDATE,
+            action="Bulk returned charging equipment to draft",
+            message=f"Returned {affected_count} charging equipment to draft",
+            related_entity_type="ChargingEquipment",
+            user=user,
+        )
+
+        return BulkActionResponseSchema(
+            success=True,
+            message=f"Successfully returned {affected_count} equipment to draft",
+            affected_count=affected_count,
+        )
+
+    @service_handler
+    async def get_site_equipment_processing(
+        self, user: UserProfile, site_id: int
+    ) -> dict:
+        """Get charging site details and equipment for government processing view."""
+
+        # Check authorization - user must be government
+        if not user.is_government:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only government users can access equipment processing",
+            )
+
+        # Get charging site details
+        site = await self.repo.get_charging_site_by_id(site_id)
+        if not site:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Charging site not found",
+            )
+
+        # Get equipment for this site
+        equipment_list, total_count = await self.repo.get_charging_equipment_by_site(
+            site_id
+        )
+
+        # Transform equipment to schema format
+        equipment_items = []
+        for equipment in equipment_list:
+            item = {
+                "charging_equipment_id": equipment.charging_equipment_id,
+                "status": equipment.status.status,
+                "registration_number": equipment.registration_number
+                or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
+                "version": equipment.version,
+                "allocating_organization_name": (
+                    equipment.allocating_organization.name
+                    if equipment.allocating_organization
+                    else None
+                ),
+                "serial_number": equipment.serial_number,
+                "manufacturer": equipment.manufacturer,
+                "model": equipment.model,
+                "level_of_equipment_name": equipment.level_of_equipment.name,
+                "created_date": equipment.create_date,
+                "updated_date": equipment.update_date,
+            }
+            equipment_items.append(item)
+
+        return {
+            "site": {
+                "charging_site_id": site.charging_site_id,
+                "site_name": site.site_name,
+                "site_code": site.site_code,
+                "site_address": site.street_address,
+                "city": site.city,
+                "postal_code": site.postal_code,
+                "status": site.status.status,
+                "version": site.version,
+                "organization": site.organization.name,
+                "site_notes": site.site_notes,
+                "intended_uses": [
+                    {
+                        "type": use.type,
+                        "description": use.sub_type,
+                    }
+                    for use in site.intended_uses
+                ],
+            },
+            "equipment": {
+                "items": equipment_items,
+                "total_count": total_count,
+            },
+        }

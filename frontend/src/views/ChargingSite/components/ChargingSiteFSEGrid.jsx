@@ -226,12 +226,17 @@ export const ChargingSiteFSEGrid = ({
 
   const handleRowClicked = useCallback(
     (params) => {
-      // TODO: fix navigation
+      // For IDIR users, prevent navigation - they don't need edit access
+      if (isIDIR) {
+        return
+      }
+
+      // For BCeID users, navigate to edit page
       navigate(
         `/charging-sites/${siteId}/${params.data.chargingEquipmentId}/edit-equipment`
       )
     },
-    [navigate, siteId]
+    [navigate, siteId, isIDIR]
   )
 
   // Build context for button configuration

@@ -687,6 +687,9 @@ class TestChargingSiteService:
         assert isinstance(result, ChargingSitesSchema)
         assert len(result.charging_sites) == 1
         assert result.pagination.total == 1
+        # With no filters supplied, service should not add implicit status conditions
+        args, _ = mock_repo.get_all_charging_sites_paginated.call_args
+        assert args[2] == []
 
     @pytest.mark.anyio
     async def test_delete_all_charging_sites(self, charging_site_service, mock_repo):

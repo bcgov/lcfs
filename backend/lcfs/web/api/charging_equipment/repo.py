@@ -53,11 +53,13 @@ class ChargingEquipmentRepository:
     @repo_handler
     async def get_charging_equipment_list(
         self,
-        organization_id: int,
+        organization_id: Optional[int],
         pagination: PaginationRequestSchema,
         filters: Optional[ChargingEquipmentFilterSchema] = None,
+        exclude_draft: bool = False,
     ) -> tuple[List[ChargingEquipment], int]:
-        """Get paginated list of charging equipment for an organization."""
+        """Get paginated list of charging equipment scoped to an organization when provided.
+        If exclude_draft is True, excludes equipment with DRAFT status."""
 
         # Base query with joins
         query = (
@@ -88,8 +90,17 @@ class ChargingEquipmentRepository:
                 joinedload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
             )
-            .where(ChargingSite.organization_id == organization_id)
         )
+
+        # Apply organization scoping when either the caller or filters set it
+        if organization_id is not None:
+            query = query.where(ChargingSite.organization_id == organization_id)
+        elif filters and filters.organization_id is not None:
+            query = query.where(ChargingSite.organization_id == filters.organization_id)
+
+        # Exclude draft equipment for government users
+        if exclude_draft:
+            query = query.where(ChargingEquipmentStatus.status != "Draft")
 
         # Apply filters
         if filters:
@@ -491,3 +502,48 @@ class ChargingEquipmentRepository:
         await self.db.flush()
 
         return result.rowcount
+
+    @repo_handler
+    async def get_charging_site_by_id(self, site_id: int) -> Optional[ChargingSite]:
+        """Get charging site by ID with related data."""
+        query = (
+            select(ChargingSite)
+            .options(
+                selectinload(ChargingSite.organization),
+                selectinload(ChargingSite.status),
+                selectinload(ChargingSite.intended_uses),
+            )
+            .where(ChargingSite.charging_site_id == site_id)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_charging_equipment_by_site(
+        self, site_id: int
+    ) -> tuple[List[ChargingEquipment], int]:
+        """Get all charging equipment for a specific site."""
+        query = (
+            select(ChargingEquipment)
+            .options(
+                selectinload(ChargingEquipment.charging_site),
+                selectinload(ChargingEquipment.status),
+                selectinload(ChargingEquipment.level_of_equipment),
+                selectinload(ChargingEquipment.allocating_organization),
+                selectinload(ChargingEquipment.intended_uses),
+            )
+            .where(ChargingEquipment.charging_site_id == site_id)
+            .order_by(ChargingEquipment.equipment_number)
+        )
+
+        result = await self.db.execute(query)
+        equipment_list = result.scalars().all()
+
+        # Get total count
+        count_query = select(func.count()).where(
+            ChargingEquipment.charging_site_id == site_id
+        )
+        count_result = await self.db.execute(count_query)
+        total_count = count_result.scalar()
+
+        return equipment_list, total_count

@@ -17,7 +17,12 @@ export const useChargingEquipment = (paginationOptions) => {
         sort_orders: paginationOptions?.sortOrders || [],
         filters: paginationOptions?.filters || []
       }
-      
+
+      // Add organization_id if provided (for IDIR users filtering)
+      if (paginationOptions?.organizationId) {
+        requestData.organization_id = paginationOptions.organizationId
+      }
+
       const response = await apiService.post(
         apiRoutes.chargingEquipment.list,
         requestData
