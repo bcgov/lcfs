@@ -308,6 +308,9 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     bold: Optional[bool] = False
     total_value: Optional[float] = 0
     format: Optional[str] = FORMATS.NUMBER.value
+    max_gasoline: Optional[float] = None
+    max_diesel: Optional[float] = None
+    max_jet_fuel: Optional[float] = None
 
 
 class ComplianceReportSummarySchema(BaseSchema):

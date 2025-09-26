@@ -53,7 +53,13 @@ export const ROUTES = {
     EDIT: '/organizations/:orgID/edit-org',
     ADD_USER: '/organizations/:orgID/add-user',
     VIEW_USER: '/organizations/:orgID/:userID',
-    EDIT_USER: '/organizations/:orgID/:userID/edit-user'
+    EDIT_USER: '/organizations/:orgID/:userID/edit-user',
+    USERS: '/organizations/:orgID/users',
+    CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
+    COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
+    PENALTY_LOG: '/organizations/:orgID/penalty-log',
+    SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+    COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking'
   },
 
   REPORTS: {

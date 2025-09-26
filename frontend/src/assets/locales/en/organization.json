@@ -56,6 +56,33 @@
   "editBtn": "Edit",
   "orgDetails": "Organization details",
   "creditLedger": "Credit ledger",
+  "tabs": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "creditLedger": "Credit ledger",
+    "companyOverview": "Company overview",
+    "penaltyLog": "Penalty log",
+    "supplyHistory": "Supply history",
+    "complianceTracking": "Compliance tracking"
+  },
+  "sections": {
+    "companyOverview": {
+      "title": "Company Overview",
+      "description": "This section will contain company overview information. Implementation pending."
+    },
+    "penaltyLog": {
+      "title": "Penalty Log",
+      "description": "This section will contain penalty log information. Implementation pending."
+    },
+    "supplyHistory": {
+      "title": "Supply History",
+      "description": "This section will contain supply history information. Implementation pending."
+    },
+    "complianceTracking": {
+      "title": "Compliance Tracking",
+      "description": "This section will contain compliance tracking information. Implementation pending."
+    }
+  },
   "creditLedgerTab": "Credit ledger",
   "usersTab": "Users",
   "downloadExcel": "Download Excel",
