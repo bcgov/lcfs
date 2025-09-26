@@ -150,7 +150,8 @@ class CalculatorRepository:
                 compliance_period=compliance_period,
                 error=str(e),
             )
-            raise ValueError(
+            # Raise generic exception so repo_handler wraps into DatabaseException
+            raise Exception(
                 f"""Invalid compliance_period: '{
                     compliance_period}' must be an integer."""
             ) from e
@@ -285,9 +286,7 @@ class CalculatorRepository:
             )
         )
 
-        include_legacy = int(compliance_period) < int(
-            LCFS_Constants.LEGISLATION_TRANSITION_YEAR
-        )
+        include_legacy = current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
         if not include_legacy:
             query = query.where(
                 and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)

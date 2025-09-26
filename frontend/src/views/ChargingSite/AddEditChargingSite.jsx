@@ -6,7 +6,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, chargingSiteColDefs } from './components/_schema'
-
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
@@ -223,13 +222,13 @@ export const AddEditChargingSite = ({
             ':orgID',
             organizationId
           )
-      
+
       if (includeData) {
         const siteIds = rowData
-          .filter(row => row.chargingSiteId)
-          .map(row => row.chargingSiteId)
-        await apiService.download({ 
-          url: endpoint, 
+          .filter((row) => row.chargingSiteId)
+          .map((row) => row.chargingSiteId)
+        await apiService.download({
+          url: endpoint,
           method: 'post',
           data: siteIds
         })

@@ -7,9 +7,10 @@ import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom'
 import { Role } from '@/components/Role'
 import { roles, govRoles } from '@/constants/roles'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ComplianceReports } from './ComplianceReports'
+import { ChargingEquipment } from '@/views/ChargingEquipment'
 import { FloatingAlert } from '@/components/BCAlert'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 function a11yProps(index) {
   return {

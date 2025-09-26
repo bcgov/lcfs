@@ -91,7 +91,8 @@ class FuelSupplyRepository:
                 compliance_period=compliance_period,
                 error=str(e),
             )
-            raise ValueError(
+            # Raise a generic exception so @repo_handler wraps it as DatabaseException
+            raise Exception(
                 f"""Invalid compliance_period: '{
                     compliance_period}' must be an integer."""
             ) from e
@@ -228,7 +229,7 @@ class FuelSupplyRepository:
             )
         )
 
-        include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
+        include_legacy = current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
         if not include_legacy:
             query = query.where(
                 and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
@@ -401,10 +402,14 @@ class FuelSupplyRepository:
 
         # Subquery to get the maximum version for each group_uuid
         max_version_subquery = (
-            select(FuelSupply.group_uuid, func.max(FuelSupply.version).label("max_version"))
+            select(
+                FuelSupply.group_uuid, func.max(FuelSupply.version).label("max_version")
+            )
             .where(
                 FuelSupply.compliance_report_id.in_(related_reports_subquery),
-                FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+                FuelSupply.action_type.in_(
+                    [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
+                ),
             )
             .group_by(FuelSupply.group_uuid)
         ).subquery()
@@ -423,12 +428,15 @@ class FuelSupplyRepository:
                 FuelSupply.compliance_report_id.in_(related_reports_subquery),
                 FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
                 FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
-                FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
+                FuelSupply.provision_of_the_act_id
+                == fuel_supply.provision_of_the_act_id,
                 FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
                 FuelSupply.end_use_id == fuel_supply.end_use_id,
                 FuelSupply.is_canada_produced == fuel_supply.is_canada_produced,
                 FuelSupply.is_q1_supplied == fuel_supply.is_q1_supplied,
-                FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+                FuelSupply.action_type.in_(
+                    [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
+                ),
                 FuelSupply.group_uuid != fuel_supply.group_uuid,
             )
         )
@@ -472,7 +480,7 @@ class FuelSupplyRepository:
             .order_by(
                 FuelSupply.version.desc(),
             )
-            .offset(1) # Skip the first (latest) record
+            .offset(1)  # Skip the first (latest) record
             .limit(1)
         )
 
