@@ -108,53 +108,21 @@ class UserAuthentication(AuthenticationBackend):
         await self.refresh_jwk()
 
         if not self.test_keycloak_user:
-            # Attempt to find the signing key from the cached JWKS payload
-            try:
-                unverified_header = jwt.get_unverified_header(token)
-            except jwt.DecodeError as exc:
-                raise HTTPException(status_code=401, detail=str(exc))
-
-            kid = unverified_header.get("kid")
-            if not kid:
-                raise HTTPException(status_code=401, detail="Token header missing kid")
-
-            if not self.jwks:
-                raise HTTPException(
-                    status_code=500, detail="JWKS payload is unavailable"
-                )
-
-            keys = self.jwks.get("keys", [])
-            signing_jwk = next((key for key in keys if key.get("kid") == kid), None)
-
-            if not signing_jwk:
-                # JWKS may have rotated. Refresh once and retry lookup before failing.
-                await self.refresh_jwk()
-                keys = self.jwks.get("keys", [])
-                signing_jwk = next((key for key in keys if key.get("kid") == kid), None)
-
-            if not signing_jwk:
-                raise HTTPException(
-                    status_code=401, detail="Signing key not found for token"
-                )
-
-            try:
-                signing_key = jwt.algorithms.RSAAlgorithm.from_jwk(
-                    json.dumps(signing_jwk)
-                )
-            except (ValueError, TypeError) as exc:
-                raise HTTPException(status_code=401, detail=str(exc))
+            # Use PyJWKClient with the JWKS URI to get the signing key
+            jwks_client = jwt.PyJWKClient(self.jwks_uri)
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
 
             # Decode and validate the JWT token
             try:
                 user_token = jwt.decode(
                     token,
-                    signing_key,
+                    signing_key.key,
                     algorithms=["RS256"],
                     audience=self.settings.keycloak_audience,
                     options={"verify_exp": True},
                     leeway=5,  # Allows for 5 seconds of clock skew
                 )
-            except jwt.ExpiredSignatureError:
+            except jwt.ExpiredSignatureError as exc:
                 raise HTTPException(status_code=401, detail="Token has expired")
             except (jwt.InvalidTokenError, jwt.DecodeError) as exc:
                 raise HTTPException(status_code=401, detail=str(exc))
