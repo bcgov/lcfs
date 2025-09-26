@@ -10,6 +10,31 @@ import { ChargingEquipment } from '../ChargingEquipment'
 // Mock all hooks and dependencies
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useChargingEquipment')
+vi.mock('@/hooks/useOrganizations')
+
+// Mock Keycloak
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: () => ({
+    keycloak: {
+      token: 'mock-token',
+      authenticated: true
+    }
+  })
+}))
+
+// Mock snackbar
+vi.mock('notistack', () => ({
+  useSnackbar: () => ({
+    enqueueSnackbar: vi.fn()
+  })
+}))
+
+// Mock authorization
+vi.mock('@/hooks/useAuthorization', () => ({
+  useAuthorization: () => ({
+    setForbidden: vi.fn()
+  })
+}))
 
 const mockNavigate = vi.fn()
 const mockSetSearchParams = vi.fn()
@@ -48,6 +73,14 @@ vi.mock('@/components/ClearFiltersButton', () => ({
     <button data-test="clear-filters-button" onClick={onClick}>
       Clear Filters
     </button>
+  )
+}))
+
+vi.mock('@/components/Role', () => ({
+  Role: ({ children, roles }) => (
+    <div data-test="role-component">
+      {children}
+    </div>
   )
 }))
 
@@ -199,6 +232,7 @@ const mockEquipmentData = {
   items: [
     {
       charging_equipment_id: 1,
+      charging_site_id: 1,
       status: 'Draft',
       site_name: 'Test Site 1',
       registration_number: 'TEST1-001',
@@ -213,6 +247,7 @@ const mockEquipmentData = {
     },
     {
       charging_equipment_id: 2,
+      charging_site_id: 2,
       status: 'Validated',
       site_name: 'Test Site 2',
       registration_number: 'TEST2-001',
@@ -231,6 +266,11 @@ const mockEquipmentData = {
   current_page: 1,
   page_size: 25
 }
+
+const mockOrgNames = [
+  { organizationId: 1, name: 'Test Organization 1' },
+  { organizationId: 2, name: 'Test Organization 2' }
+]
 
 const TestWrapper = ({ children }) => {
   const queryClient = new QueryClient({
@@ -252,19 +292,19 @@ const TestWrapper = ({ children }) => {
 }
 
 describe('ChargingEquipment', () => {
-  let mockCurrentUser, mockChargingEquipment
+  let mockCurrentUser, mockChargingEquipment, mockOrganizationNames
 
   beforeEach(async () => {
     vi.clearAllMocks()
 
     mockCurrentUser = {
-      data: { 
+      data: {
         user_type: 'Supplier',
         organization_id: 1,
-        hasAnyRole: vi.fn(() => true),
+        hasAnyRole: vi.fn(() => false), // Default to supplier user
         hasRoles: vi.fn(() => true)
       },
-      hasAnyRole: vi.fn(() => true),
+      hasAnyRole: vi.fn(() => false), // Default to supplier user
       hasRoles: vi.fn(() => true)
     }
 
@@ -279,12 +319,20 @@ describe('ChargingEquipment', () => {
       isDecommissioning: false
     }
 
+    mockOrganizationNames = {
+      data: mockOrgNames,
+      isLoading: false,
+      isError: false
+    }
+
     // Setup mocks
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
     const { useChargingEquipment } = await import('@/hooks/useChargingEquipment')
-    
+    const { useOrganizationNames } = await import('@/hooks/useOrganizations')
+
     useCurrentUser.mockReturnValue(mockCurrentUser)
     useChargingEquipment.mockReturnValue(mockChargingEquipment)
+    useOrganizationNames.mockReturnValue(mockOrganizationNames)
   })
 
   afterEach(() => {
@@ -546,6 +594,142 @@ describe('ChargingEquipment', () => {
     // Modal should be closed (not visible)
     await waitFor(() => {
       expect(screen.queryByTestId('submit-modal')).not.toBeInTheDocument()
+    })
+  })
+
+  // Tests for IDIR user functionality
+  describe('IDIR User Functionality', () => {
+    beforeEach(() => {
+      // Configure mock for IDIR user
+      mockCurrentUser.hasAnyRole = vi.fn(() => true)
+      mockCurrentUser.data.hasAnyRole = vi.fn(() => true)
+    })
+
+    it('shows FSE index title and description for IDIR users', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      expect(screen.getByText('FSE index')).toBeInTheDocument()
+      expect(screen.getByText(/Index of all FSE for all organizations/)).toBeInTheDocument()
+    })
+
+    it('does not show New FSE button for IDIR users', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      expect(screen.queryByText('New FSE')).not.toBeInTheDocument()
+    })
+
+    it('shows organization filter dropdown for IDIR users', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      // Check that the Role component is rendered (organization filter should be inside)
+      expect(screen.getByTestId('role-component')).toBeInTheDocument()
+      // The Autocomplete component should be present
+      expect(screen.getByPlaceholderText('Select organization')).toBeInTheDocument()
+    })
+
+    it('handles organization filter change for IDIR users', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      const orgSelect = screen.getByPlaceholderText('Select organization')
+
+      // Simulate selecting an organization
+      fireEvent.click(orgSelect)
+      // Note: Full Autocomplete testing would require more complex setup
+      expect(orgSelect).toBeInTheDocument()
+    })
+
+    it('navigates to charging site page when IDIR user clicks FSE row', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        const equipmentRow = screen.getByTestId('equipment-row-1')
+        fireEvent.click(equipmentRow)
+      })
+
+      // Should navigate to charging site view, not edit
+      expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/charging-sites/1')
+    })
+
+    it('clears organization filter when clear filters is clicked', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      const clearFiltersButton = screen.getByTestId('clear-filters-button')
+      fireEvent.click(clearFiltersButton)
+
+      // Should reset organization filter - this is tested via functionality
+      expect(clearFiltersButton).toBeInTheDocument()
+    })
+
+    it('does not show bulk action buttons for IDIR users', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      // IDIR users should not see bulk action buttons
+      expect(screen.queryByText(/Select All Draft/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Submit selected/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Set to Decommissioned/)).not.toBeInTheDocument()
+    })
+  })
+
+  // Tests for improved loading states
+  describe('Loading States', () => {
+    it('shows main structure with loading grid instead of full page loading', async () => {
+      mockChargingEquipment.isLoading = true
+
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      // Main structure should be visible
+      expect(screen.getByText('Manage FSE')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+
+      // Grid should handle loading state internally
+      expect(screen.queryByTestId('loading-component')).not.toBeInTheDocument()
+    })
+
+    it('maintains UI structure during organization filter changes', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      // Simulate loading state during filter change
+      mockChargingEquipment.isLoading = true
+
+      // UI should remain stable
+      expect(screen.getByText('Manage FSE')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
   })
 })

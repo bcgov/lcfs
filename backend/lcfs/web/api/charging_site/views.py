@@ -227,6 +227,7 @@ async def get_all_charging_sites(
 ) -> ChargingSitesSchema:
     """
     Endpoint to get paginated list of all charging sites (IDIR use).
+    Excludes DRAFT status charging sites for government users.
     """
     try:
         pagination = PaginationRequestSchema(
@@ -235,7 +236,10 @@ async def get_all_charging_sites(
             sort_orders=request_data.sort_orders,
             filters=request_data.filters,
         )
-        return await service.get_all_charging_sites_paginated(pagination)
+        # Pass a flag to indicate this is a government user request
+        return await service.get_all_charging_sites_paginated(
+            pagination, exclude_draft=True
+        )
     except HTTPException as http_ex:
         raise http_ex
     except Exception as e:

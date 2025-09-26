@@ -228,13 +228,14 @@ class ChargingSiteService:
         pagination = validate_pagination(pagination)
 
         # Apply filters
-        for f in pagination.sort_orders:
-            # normalize fields to snake_case handled by schema
-            pass
-
         if pagination.filters:
             for f in pagination.filters:
-                field = get_field_for_filter(ChargingSite, f.field)
+                # Handle status field specially since it's a relationship
+                if f.field == "status":
+                    field = get_field_for_filter(ChargingSiteStatus, "status")
+                else:
+                    field = get_field_for_filter(ChargingSite, f.field)
+
                 if field is not None:
                     condition = apply_filter_conditions(
                         field,
@@ -264,17 +265,23 @@ class ChargingSiteService:
 
     @service_handler
     async def get_all_charging_sites_paginated(
-        self, pagination: PaginationRequestSchema
+        self, pagination: PaginationRequestSchema, exclude_draft: bool = False
     ) -> ChargingSitesSchema:
         """
         Paginated list of all charging sites.
+        If exclude_draft is True, excludes charging sites with DRAFT status.
         """
         conditions = []
         pagination = validate_pagination(pagination)
 
         if pagination.filters:
             for f in pagination.filters:
-                field = get_field_for_filter(ChargingSite, f.field)
+                # Handle status field specially since it's a relationship
+                if f.field == "status":
+                    field = get_field_for_filter(ChargingSiteStatus, "status")
+                else:
+                    field = get_field_for_filter(ChargingSite, f.field)
+
                 if field is not None:
                     condition = apply_filter_conditions(
                         field,
@@ -284,15 +291,11 @@ class ChargingSiteService:
                     )
                     if condition is not None:
                         conditions.append(condition)
-        conditions.append(
-            ~ChargingSite.status.has(
-                ChargingSiteStatus.status == ChargingSiteStatusEnum.DRAFT
-            )
-        )
+
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_all_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders
+            offset, limit, conditions, pagination.sort_orders, exclude_draft
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
