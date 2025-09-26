@@ -113,6 +113,9 @@ class ComplianceReportSummaryService:
     ) -> bool:
         """
         Check if Lines 7 and 9 should be locked for 2025+ reports with previous assessed report.
+        Lines 7 and 9 should be locked for ALL reports (original and supplemental) when there
+        is a previous assessed report, to prevent modification of retention/deferral data
+        after the first compliance period.
 
         Returns:
             bool: True if Lines 7 and 9 should be locked (non-editable)
@@ -123,16 +126,13 @@ class ComplianceReportSummaryService:
         if compliance_year < 2025:
             return False
 
-        # Check for previous assessed report
-        if not compliance_report.supplemental_initiator:
-            prev_compliance_report = (
-                await self.cr_repo.get_assessed_compliance_report_by_period(
-                    compliance_report.organization_id, compliance_year - 1
-                )
+        # Check for previous assessed report - applies to both original and supplemental reports
+        prev_compliance_report = (
+            await self.cr_repo.get_assessed_compliance_report_by_period(
+                compliance_report.organization_id, compliance_year - 1
             )
-            return prev_compliance_report is not None
-
-        return False
+        )
+        return prev_compliance_report is not None
 
     def convert_summary_to_dict(
         self,
@@ -490,14 +490,25 @@ class ComplianceReportSummaryService:
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        prev_compliance_report = None
-        if not compliance_report.supplemental_initiator:
-            prev_compliance_report = (
-                await self.cr_repo.get_assessed_compliance_report_by_period(
-                    compliance_report.organization_id,
-                    int(compliance_report.compliance_period.description) - 1,
-                )
-            )
+        prev_compliance_report = await self.cr_repo.get_assessed_compliance_report_by_period(
+            compliance_report.organization_id,
+            int(compliance_report.compliance_period.description) - 1,
+        )
+
+        previous_year_required = {
+            "gasoline": 0,
+            "diesel": 0,
+            "jet_fuel": 0,
+        }
+        if prev_compliance_report and prev_compliance_report.summary:
+            previous_year_required = {
+                "gasoline": prev_compliance_report.summary.line_4_eligible_renewable_fuel_required_gasoline
+                or 0,
+                "diesel": prev_compliance_report.summary.line_4_eligible_renewable_fuel_required_diesel
+                or 0,
+                "jet_fuel": prev_compliance_report.summary.line_4_eligible_renewable_fuel_required_jet_fuel
+                or 0,
+            }
 
         summary_model = compliance_report.summary
         compliance_data_service.set_nickname(compliance_report.nickname)
@@ -538,23 +549,57 @@ class ComplianceReportSummaryService:
             }
 
             # Update the current summary model with auto-populated values for Lines 7 and 9
-            summary_model.line_7_previously_retained_gasoline = previous_retained[
-                "gasoline"
-            ]
-            summary_model.line_7_previously_retained_diesel = previous_retained[
-                "diesel"
-            ]
-            summary_model.line_7_previously_retained_jet_fuel = previous_retained[
-                "jet_fuel"
-            ]
+            current_line_7_gasoline = (
+                summary_model.line_7_previously_retained_gasoline or 0
+            )
+            current_line_7_diesel = (
+                summary_model.line_7_previously_retained_diesel or 0
+            )
+            current_line_7_jet = (
+                summary_model.line_7_previously_retained_jet_fuel or 0
+            )
 
-            summary_model.line_9_obligation_added_gasoline = previous_obligation[
-                "gasoline"
-            ]
-            summary_model.line_9_obligation_added_diesel = previous_obligation["diesel"]
-            summary_model.line_9_obligation_added_jet_fuel = previous_obligation[
-                "jet_fuel"
-            ]
+            if current_line_7_gasoline == 0 and previous_retained["gasoline"]:
+                current_line_7_gasoline = previous_retained["gasoline"]
+            if current_line_7_diesel == 0 and previous_retained["diesel"]:
+                current_line_7_diesel = previous_retained["diesel"]
+            if current_line_7_jet == 0 and previous_retained["jet_fuel"]:
+                current_line_7_jet = previous_retained["jet_fuel"]
+
+            summary_model.line_7_previously_retained_gasoline = current_line_7_gasoline
+            summary_model.line_7_previously_retained_diesel = current_line_7_diesel
+            summary_model.line_7_previously_retained_jet_fuel = current_line_7_jet
+
+            previous_retained = {
+                "gasoline": current_line_7_gasoline,
+                "diesel": current_line_7_diesel,
+                "jet_fuel": current_line_7_jet,
+            }
+
+            current_line_9_gasoline = (
+                summary_model.line_9_obligation_added_gasoline or 0
+            )
+            current_line_9_diesel = (
+                summary_model.line_9_obligation_added_diesel or 0
+            )
+            current_line_9_jet = summary_model.line_9_obligation_added_jet_fuel or 0
+
+            if current_line_9_gasoline == 0 and previous_obligation["gasoline"]:
+                current_line_9_gasoline = previous_obligation["gasoline"]
+            if current_line_9_diesel == 0 and previous_obligation["diesel"]:
+                current_line_9_diesel = previous_obligation["diesel"]
+            if current_line_9_jet == 0 and previous_obligation["jet_fuel"]:
+                current_line_9_jet = previous_obligation["jet_fuel"]
+
+            summary_model.line_9_obligation_added_gasoline = current_line_9_gasoline
+            summary_model.line_9_obligation_added_diesel = current_line_9_diesel
+            summary_model.line_9_obligation_added_jet_fuel = current_line_9_jet
+
+            previous_obligation = {
+                "gasoline": current_line_9_gasoline,
+                "diesel": current_line_9_diesel,
+                "jet_fuel": current_line_9_jet,
+            }
 
         elif prev_compliance_report:
             # For pre-2025 reports with previous report: use previous values but don't force update
@@ -684,6 +729,7 @@ class ComplianceReportSummaryService:
             notional_transfers_sums,
             compliance_period=compliance_period_start.year,
             prev_summary=compliance_report.summary,
+            previous_year_required=previous_year_required,
         )
         low_carbon_fuel_target_summary, non_compliance_penalty_payable_units = (
             await self.calculate_low_carbon_fuel_target_summary(
@@ -835,6 +881,7 @@ class ComplianceReportSummaryService:
         notional_transfers_sums: dict,
         compliance_period: int,
         prev_summary: ComplianceReportSummary,
+        previous_year_required: Optional[dict] = None,
     ) -> List[ComplianceReportSummaryRowSchema]:
         # Define constants as Decimal
         DECIMAL_ZERO = Decimal("0")
@@ -852,7 +899,23 @@ class ComplianceReportSummaryService:
         decimal_renewable_quantities = to_decimal_dict(renewable_quantities)
         decimal_previous_retained = to_decimal_dict(previous_retained)
         decimal_previous_obligation = to_decimal_dict(previous_obligation)
+        decimal_previous_year_required = to_decimal_dict(previous_year_required or {})
         decimal_notional_transfers_sums = to_decimal_dict(notional_transfers_sums)
+
+        line7_max_caps = {}
+        for category in ["gasoline", "diesel", "jet_fuel"]:
+            prev_required_value = decimal_previous_year_required.get(
+                category, DECIMAL_ZERO
+            )
+            max_cap = DECIMAL_ZERO
+            if prev_required_value:
+                max_cap = (
+                    prev_required_value * Decimal("0.05")
+                ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            max_cap = max(
+                max_cap, decimal_previous_retained.get(category, DECIMAL_ZERO)
+            )
+            line7_max_caps[category] = max_cap
 
         # line 3: Use Decimal
         decimal_tracked_totals = {
@@ -906,7 +969,9 @@ class ComplianceReportSummaryService:
             )
             decimal_retained_renewables[category] = min(line_6_value, max_retained)
 
-            # Similarly for line 8 - preserve but cap at 5% of current line 4
+            # Line 8 (obligation deferred) logic:
+            # - If renewable supplied >= required, set deferment to 0 (supplier is compliant)
+            # - If renewable supplied < required, allow up to max deferment (5% of line 4)
             line_8_value = Decimal(
                 str(
                     getattr(
@@ -917,7 +982,16 @@ class ComplianceReportSummaryService:
                     or 0
                 )
             )
-            decimal_deferred_renewables[category] = min(line_8_value, max_retained)
+
+            renewable_supplied = decimal_renewable_quantities.get(category, DECIMAL_ZERO)
+            required = decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
+
+            if renewable_supplied >= required:
+                # Supplier is compliant - no deferment allowed
+                decimal_deferred_renewables[category] = DECIMAL_ZERO
+            else:
+                # Supplier is non-compliant - allow deferment up to maximum
+                decimal_deferred_renewables[category] = min(line_8_value, max_retained)
 
         # line 10: Calculate net supplied using Decimal
         decimal_net_renewable_supplied = {
@@ -1067,53 +1141,75 @@ class ComplianceReportSummaryService:
             },
         }
 
-        summary = [
-            ComplianceReportSummaryRowSchema(
-                line=self._get_line_value(
-                    line, compliance_data_service.is_legacy_year()
-                ),
-                description=(
-                    RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
-                        "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
-                        "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
-                    )
-                    if (line in [6, 8])
-                    else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
-                ),
-                field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
-                gasoline=(
-                    int(values.get("gasoline", 0))
-                    if line != 11
-                    else float(values.get("gasoline", 0))
-                ),
-                diesel=(
-                    int(values.get("diesel", 0))
-                    if line != 11
-                    else float(values.get("diesel", 0))
-                ),
-                jet_fuel=(
-                    int(values.get("jet_fuel", 0))
-                    if line != 11
-                    else float(values.get("jet_fuel", 0))
-                ),
-                total_value=(
-                    int(
-                        values.get("gasoline", 0)
-                        + values.get("diesel", 0)
-                        + values.get("jet_fuel", 0)
-                    )
-                    if line != 11
-                    else float(
-                        values.get("gasoline", 0)
-                        + values.get("diesel", 0)
-                        + values.get("jet_fuel", 0)
-                    )
-                ),
-                format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
+        summary: List[ComplianceReportSummaryRowSchema] = []
+        for line, values in summary_lines.items():
+            additional_kwargs = {}
+            if line == 7:
+                additional_kwargs = {
+                    "max_gasoline": int(
+                        line7_max_caps.get("gasoline", DECIMAL_ZERO)
+                    ),
+                    "max_diesel": int(
+                        line7_max_caps.get("diesel", DECIMAL_ZERO)
+                    ),
+                    "max_jet_fuel": int(
+                        line7_max_caps.get("jet_fuel", DECIMAL_ZERO)
+                    ),
+                }
+
+            summary.append(
+                ComplianceReportSummaryRowSchema(
+                    line=self._get_line_value(
+                        line, compliance_data_service.is_legacy_year()
+                    ),
+                    description=(
+                        RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
+                            "{:,}".format(
+                                round(summary_lines[4]["gasoline"] * 0.05)
+                            ),
+                            "{:,}".format(
+                                round(summary_lines[4]["diesel"] * 0.05)
+                            ),
+                            "{:,}".format(
+                                round(summary_lines[4]["jet_fuel"] * 0.05)
+                            ),
+                        )
+                        if (line in [6, 8])
+                        else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+                    ),
+                    field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
+                    gasoline=(
+                        int(values.get("gasoline", 0))
+                        if line != 11
+                        else float(values.get("gasoline", 0))
+                    ),
+                    diesel=(
+                        int(values.get("diesel", 0))
+                        if line != 11
+                        else float(values.get("diesel", 0))
+                    ),
+                    jet_fuel=(
+                        int(values.get("jet_fuel", 0))
+                        if line != 11
+                        else float(values.get("jet_fuel", 0))
+                    ),
+                    total_value=(
+                        int(
+                            values.get("gasoline", 0)
+                            + values.get("diesel", 0)
+                            + values.get("jet_fuel", 0)
+                        )
+                        if line != 11
+                        else float(
+                            values.get("gasoline", 0)
+                            + values.get("diesel", 0)
+                            + values.get("jet_fuel", 0)
+                        )
+                    ),
+                    format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
+                    **additional_kwargs,
+                )
             )
-            for line, values in summary_lines.items()
-        ]
 
         return summary
 

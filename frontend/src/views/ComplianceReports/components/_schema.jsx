@@ -183,6 +183,52 @@ export const renewableFuelColumns = (
   let dieselEditableCells = []
   let jetFuelEditableCells = []
 
+  const safeRound = (value = 0) => Math.round(value || 0)
+
+  const toRoundedOrUndefined = (value) => {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+      return undefined
+    }
+    return Math.round(numericValue)
+  }
+
+  const buildLineSevenConstraint = (maxValue, currentValue) => {
+    const constraint = { min: 0 }
+    const roundedMax = toRoundedOrUndefined(maxValue)
+    const roundedCurrent = toRoundedOrUndefined(currentValue) ?? 0
+
+    if (roundedMax !== undefined && roundedMax > 0) {
+      constraint.max = Math.max(roundedMax, roundedCurrent)
+    }
+
+    return constraint
+  }
+
+  const line7Constraints = {
+    gasoline: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxGasoline,
+      data[SUMMARY.LINE_7]?.gasoline
+    ),
+    diesel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxDiesel,
+      data[SUMMARY.LINE_7]?.diesel
+    ),
+    jetFuel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxJetFuel,
+      data[SUMMARY.LINE_7]?.jetFuel
+    )
+  }
+
+  const unlockedLineSevenConstraint = (constraint) =>
+    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+
+  const fivePercentCaps = {
+    gasoline: safeRound(0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0)),
+    diesel: safeRound(0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)),
+    jetFuel: safeRound(0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0))
+  }
+
   // ========= Gasoline Logic ============
   if (
     data[SUMMARY.LINE_2].gasoline > 0 &&
@@ -320,9 +366,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: gasolineEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) }
+        [SUMMARY.LINE_6]: { min: 0, max: fivePercentCaps.gasoline },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.gasoline),
+        [SUMMARY.LINE_8]: { min: 0, max: fivePercentCaps.gasoline }
       }
     },
     {
@@ -333,9 +379,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: dieselEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) }
+        [SUMMARY.LINE_6]: { min: 0, max: fivePercentCaps.diesel },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.diesel),
+        [SUMMARY.LINE_8]: { min: 0, max: fivePercentCaps.diesel }
       }
     },
     {
@@ -346,9 +392,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: jetFuelEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) }
+        [SUMMARY.LINE_6]: { min: 0, max: fivePercentCaps.jetFuel },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.jetFuel),
+        [SUMMARY.LINE_8]: { min: 0, max: fivePercentCaps.jetFuel }
       }
     }
   ]

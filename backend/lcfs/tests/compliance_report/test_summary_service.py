@@ -527,10 +527,8 @@ async def test_calculate_renewable_fuel_target_summary_2024(
     assert result[6].gasoline == 100.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 100.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=100, diesel=100, jet_fuel=100
-    # Capped values: min(100, 1) = 1, min(100, 0) = 0, min(100, 0) = 0
-    assert result[7].gasoline == 1
+    # Line 8 - supplier is compliant (Line 2 >= Line 4), so deferment is zeroed
+    assert result[7].gasoline == 0
     assert result[7].diesel == 0
     assert result[7].jet_fuel == 0
     # Line 9
@@ -538,7 +536,8 @@ async def test_calculate_renewable_fuel_target_summary_2024(
     assert result[8].diesel == 100.0
     assert result[8].jet_fuel == 100.0
     # Line 10
-    assert result[9].gasoline == 200.0
+    # Net renewable supplied now reflects zero deferment (was 200 when Line 8 carried 1)
+    assert result[9].gasoline == 199.0
     assert result[9].diesel == 200.0
     assert result[9].jet_fuel == 200.0
     # Line 11
@@ -608,20 +607,18 @@ async def test_calculate_renewable_fuel_target_summary_2028(
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 500.0
     assert result[6].jet_fuel == 100.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Capped values: min(300, 1) = 1, min(200, 3) = 3, min(100, 1) = 1
-    assert result[7].gasoline == 1
-    assert result[7].diesel == 3
-    assert result[7].jet_fuel == 1
+    # Line 8 - supplier is compliant, deferment should be zeroed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 400.0
     assert result[8].diesel == 600.0
     assert result[8].jet_fuel == 200.0
     # Line 10
-    assert result[9].gasoline == 600.0
-    assert result[9].diesel == 400.0
-    assert result[9].jet_fuel == 800.0
+    assert result[9].gasoline == 599.0
+    assert result[9].diesel == 397.0
+    assert result[9].jet_fuel == 799.0
     # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
@@ -689,20 +686,17 @@ async def test_calculate_renewable_fuel_target_summary_2029(
     assert result[6].gasoline == 200.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 300.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Line 4: gasoline=20 (5% = 1), diesel=40 (5% = 2), jet_fuel=6 (5% = 0)
-    # Capped values: min(300, 1) = 1, min(200, 2) = 2, min(100, 0) = 0
-    assert result[7].gasoline == 1
-    assert result[7].diesel == 2
+    # Line 8 - supplier is compliant, deferment should be zeroed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
     assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 300.0
     assert result[8].diesel == 200.0
     assert result[8].jet_fuel == 100.0
     # Line 10
-    assert result[9].gasoline == 100.0
-    assert result[9].diesel == 500.0
+    assert result[9].gasoline == 99.0
+    assert result[9].diesel == 498.0
     assert result[9].jet_fuel == 600.0
     # Line 11
     assert result[10].gasoline == 0.0
@@ -771,24 +765,62 @@ async def test_calculate_renewable_fuel_target_summary_2030(
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 200.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=100, diesel=100, jet_fuel=100
-    # Capped values: min(100, 1) = 1, min(100, 2) = 2, min(100, 1) = 1
-    assert result[7].gasoline == 1
-    assert result[7].diesel == 2
-    assert result[7].jet_fuel == 1
+    # Line 8 - supplier is compliant, deferment should be zeroed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 100.0
     assert result[8].diesel == 200.0
     assert result[8].jet_fuel == 300.0
     # Line 10
-    assert result[9].gasoline == 600.0
-    assert result[9].diesel == 500.0
-    assert result[9].jet_fuel == 100.0
+    assert result[9].gasoline == 599.0
+    assert result[9].diesel == 498.0
+    assert result[9].jet_fuel == 99.0
     # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
     assert result[10].jet_fuel == 0.0
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_deferment_when_short(
+    compliance_report_summary_service,
+):
+    """When a supplier is short on renewables, deferment should cap at 5% of line 4."""
+
+    fossil_quantities = {"gasoline": 1000, "diesel": 0, "jet_fuel": 0}
+    renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2025
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=0,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=10,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    _assert_renewable_common(result)
+
+    # Compliance shortfall -> deferment is capped at 5% of line 4 (50 * 5% = 2.5 -> rounds to 3)
+    assert result[7].gasoline == 3
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
 
 
 @pytest.mark.anyio
@@ -2374,6 +2406,7 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 5}  # This should populate Line 7
     previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 2}  # This should populate Line 9
     notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_year_required = {"gasoline": 400, "diesel": 750, "jet_fuel": 0}
     
     # Create a proper ComplianceReportSummary mock with the actual fields
     from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
@@ -2398,6 +2431,7 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         notional_transfers_sums,
         2025,
         mock_prev_summary,
+        previous_year_required,
     )
     
     # Check that all lines are present in the result - should be 11 lines total
@@ -2412,6 +2446,9 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     assert line_7_row.gasoline == previous_retained["gasoline"]  # 10
     assert line_7_row.diesel == previous_retained["diesel"]      # 20
     assert line_7_row.jet_fuel == previous_retained["jet_fuel"]  # 5
+    assert line_7_row.max_gasoline == 20
+    assert line_7_row.max_diesel == 38
+    assert line_7_row.max_jet_fuel == 5
     
     assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
     assert line_9_row.diesel == previous_obligation["diesel"]      # 10
