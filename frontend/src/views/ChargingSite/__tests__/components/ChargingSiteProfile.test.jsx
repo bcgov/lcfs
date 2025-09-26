@@ -11,7 +11,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
-  CommonArrayRenderer: ({ value }) => <div>{value?.join(', ')}</div>
+  CommonArrayRenderer: ({ value }) => <div>{value?.join(', ')}</div>,
+  createStatusRenderer: () => ({ data }) => <span>{data?.status?.status}</span>
 }))
 
 vi.mock('@/components/Role', () => ({

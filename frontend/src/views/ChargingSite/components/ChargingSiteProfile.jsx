@@ -5,7 +5,10 @@ import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useGetChargingSiteById } from '@/hooks/useChargingSite'
 import { constructAddress } from '@/utils/constructAddress'
-import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import {
+  CommonArrayRenderer,
+  createStatusRenderer
+} from '@/utils/grid/cellRenderers'
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -28,12 +31,22 @@ export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
       >
         {/* Left Column */}
         <BCBox display="flex" flexDirection="column" gap={1}>
-          <BCTypography variant="body4">
+          <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <BCTypography variant="label">
               {t('cardLabels.status')}:
             </BCTypography>{' '}
-            {data?.status?.status || ''}
-          </BCTypography>
+            {createStatusRenderer(
+              {
+                Draft: 'info',
+                Updated: 'info',
+                Submitted: 'warning',
+                Validated: 'success',
+                Decommissioned: 'smoky'
+              },
+              {},
+              data?.status?.status || ''
+            )({ data })}
+          </BCBox>
 
           <BCTypography variant="body4">
             <BCTypography variant="label">

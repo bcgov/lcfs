@@ -12,6 +12,7 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   ChargingSiteStatusRenderer,
   CommonArrayRenderer,
+  createStatusRenderer,
   MultiSelectRenderer
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
@@ -264,18 +265,6 @@ export const chargingSiteColDefs = (
 export const chargingEquipmentColDefs = (t, isIDIR = false) => {
   return [
     {
-      headerName: '',
-      field: 'select',
-      checkboxSelection: (params) =>
-        params.data?.status?.status !== 'Submitted' || isIDIR,
-      headerCheckboxSelection: true,
-      width: 50,
-      pinned: 'left',
-      lockPinned: true,
-      filter: false,
-      sortable: false
-    },
-    {
       field: 'status',
       minWidth: 175,
       filter: true,
@@ -283,6 +272,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false) => {
       valueGetter: (params) => {
         return params.data?.status?.status || ''
       },
+      cellRenderer: createStatusRenderer(
+        {
+          Draft: 'info',
+          Updated: 'info',
+          Submitted: 'warning',
+          Validated: 'success',
+          Decommissioned: 'error'
+        },
+        { statusField: 'status', replaceUnderscores: false }
+      ),
       cellClass: 'vertical-middle',
       floatingFilterComponent: BCSelectFloatingFilter,
       floatingFilterComponentParams: {
@@ -301,12 +300,13 @@ export const chargingEquipmentColDefs = (t, isIDIR = false) => {
       field: 'siteName',
       headerName: t('fseColumnLabels.siteName'),
       sortable: false,
+      minWidth: 310,
       valueGetter: (params) => params.data?.chargingSite?.siteName || ''
     },
     {
       field: 'registrationNumber',
       sortable: false,
-      minWidth: 160,
+      minWidth: 180,
       headerName: t('fseColumnLabels.registrationNumber')
     },
     {
@@ -315,7 +315,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false) => {
     },
     {
       field: 'allocatingOrganization',
-      minWidth: 250,
+      minWidth: 400,
       headerName: t('fseColumnLabels.allocatingOrg'),
       valueGetter: (params) => {
         return (
@@ -402,7 +402,6 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
     field: 'status',
     minWidth: 130,
     filter: true,
-    sortable: true,
     headerName: i18n.t('chargingSite:columnLabels.status'),
     valueGetter: (params) => params.data?.status?.status || '',
     floatingFilterComponent: BCSelectFloatingFilter,
@@ -435,11 +434,15 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
   },
   {
     field: 'siteCode',
+    filter: true,
+    sortable: true,
     minWidth: 140,
     headerName: i18n.t('chargingSite:columnLabels.siteNumber')
   },
   {
     field: 'streetAddress',
+    filter: true,
+    sortable: true,
     minWidth: 260,
     headerName: i18n.t('chargingSite:columnLabels.streetAddress')
   },
@@ -452,6 +455,8 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
   },
   {
     field: 'postalCode',
+    filter: true,
+    sortable: true,
     minWidth: 135,
     headerName: i18n.t('chargingSite:columnLabels.postalCode')
   },
@@ -465,6 +470,7 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
   },
   {
     field: 'notes',
+    filter: true,
     minWidth: 500,
     headerName: i18n.t('chargingSite:columnLabels.notes')
   }
