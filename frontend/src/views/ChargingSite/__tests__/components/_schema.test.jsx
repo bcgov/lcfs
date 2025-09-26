@@ -99,13 +99,7 @@ describe('_schema', () => {
       expect(colDefs.length).toBeGreaterThan(0)
     })
 
-    it('includes checkbox selection for non-IDIR users', () => {
-      const colDefs = chargingEquipmentColDefs(mockT, false)
 
-      const selectCol = colDefs.find((col) => col.field === 'select')
-      expect(selectCol).toBeDefined()
-      expect(selectCol.checkboxSelection).toBeDefined()
-    })
 
     it('includes equipment fields', () => {
       const colDefs = chargingEquipmentColDefs(mockT, true)

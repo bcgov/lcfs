@@ -19,6 +19,7 @@ import BCModal from '@/components/BCModal'
 import { Role } from '@/components/Role'
 import { govRoles, roles } from '@/constants/roles'
 import { BCAlert2 } from '@/components/BCAlert'
+import ROUTES from '@/routes/routes'
 
 const initialPaginationOptions = {
   page: 1,
@@ -211,7 +212,17 @@ export const ChargingSiteFSEGrid = ({
 
   const gridOptions = useMemo(
     () => ({
-      rowSelection: 'multiple',
+      rowSelection: {
+        checkboxes: true,
+        mode: 'multiRow',
+        headerCheckbox: true,
+        isRowSelectable: (params) =>
+          params.data?.status?.status !== 'Submitted' || isIDIR
+      },
+      selectionColumnDef: {
+        suppressHeaderMenuButton: true,
+        pinned: 'left'
+      },
       suppressRowClickSelection: true,
       onSelectionChanged: (event) => handleSelectionChanged(event.api),
       getRowId: (params) => params.data.chargingEquipmentId
@@ -220,16 +231,15 @@ export const ChargingSiteFSEGrid = ({
   )
 
   const handleAddEquipment = useCallback(() => {
-    // TODO: fix navigation
-    navigate(`/charging-sites/${siteId}/add-equipment`)
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`)
   }, [navigate, siteId])
 
-  const handleRowClicked = useCallback(
+  const handleCellClicked = useCallback(
     (params) => {
-      // TODO: fix navigation
-      navigate(
-        `/charging-sites/${siteId}/${params.data.chargingEquipmentId}/edit-equipment`
-      )
+      const colId = params?.column?.getColId?.()
+      if (colId === 'ag-Grid-ControlsColumn') return
+      const { chargingEquipmentId } = params.data
+      navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`)
     },
     [navigate, siteId]
   )
@@ -338,10 +348,10 @@ export const ChargingSiteFSEGrid = ({
             columnDefs={chargingEquipmentColDefs(t, isIDIR)}
             queryData={equipmentQuery}
             dataKey="equipments"
-            getRowId={(params) => params.data.chargingEquipmentId}
+            getRowId={(params) => String(params.data.chargingEquipmentId)}
             paginationOptions={paginationOptions}
             onPaginationChange={handlePaginationChange}
-            onRowClicked={handleRowClicked}
+            onCellClicked={handleCellClicked}
             overlayNoRowsTemplate={t('chargingSite:noChargingEquipmentsFnd')}
             gridOptions={gridOptions}
             enableCopyButton={false}

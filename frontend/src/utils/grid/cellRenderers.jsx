@@ -768,7 +768,11 @@ export const LastCommentRenderer = (props) => {
   )
 }
 
-export const createStatusRenderer = (colorMap, options = {}) => {
+export const createStatusRenderer = (
+  colorMap,
+  options = {},
+  value = undefined
+) => {
   const {
     statusField = 'status',
     defaultColor = 'info',
@@ -790,10 +794,20 @@ export const createStatusRenderer = (colorMap, options = {}) => {
     const location = useLocation()
 
     // Get the status value from the specified field path
-    const statusValue = statusField.includes('.')
+    let statusValue = statusField.includes('.')
       ? statusField.split('.').reduce((obj, key) => obj?.[key], data)
       : data[statusField]
-
+    if (
+      statusValue &&
+      typeof statusValue === 'object' &&
+      statusValue !== null &&
+      !Array.isArray(statusValue)
+    ) {
+      statusValue = statusValue.status || statusValue
+    }
+    if (value !== undefined) {
+      statusValue = value
+    }
     // Get the display text
     let displayText = statusValue
     if (replaceUnderscores && typeof displayText === 'string') {
@@ -809,6 +823,7 @@ export const createStatusRenderer = (colorMap, options = {}) => {
           display: 'flex',
           justifyContent: 'center'
         }}
+        component="span"
       >
         <BCBadge
           badgeContent={displayText}
@@ -850,7 +865,8 @@ export const ChargingSiteStatusRenderer = createStatusRenderer(
     Draft: 'info',
     Submitted: 'warning',
     Validated: 'success',
-    Updated: 'info'
+    Updated: 'info',
+    Decommissioned: 'error'
   },
   {
     statusField: 'status.status'

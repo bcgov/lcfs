@@ -289,10 +289,11 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
       case 'validated':
         return markerIcons.green
       case 'draft':
+      case 'updated':
         return markerIcons.default
       case 'submitted':
         return markerIcons.orange
-      case 'rejected':
+      case 'decommissioned':
         return markerIcons.red
       default:
         return markerIcons.grey
@@ -303,11 +304,12 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
     switch (status?.toLowerCase()) {
       case 'validated':
         return colors.badgeColors.success.background
+      case 'updated':
       case 'draft':
         return colors.badgeColors.info.background
       case 'submitted':
         return colors.badgeColors.warning.background
-      case 'rejected':
+      case 'decommissioned':
         return '#f44336'
       default:
         return '#9e9e9e'
