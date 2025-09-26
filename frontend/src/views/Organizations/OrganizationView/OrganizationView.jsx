@@ -153,7 +153,6 @@ export const OrganizationView = ({ addMode = false }) => {
                 paddingX: 2,
                 marginX: 1,
                 whiteSpace: 'nowrap',
-                fontSize: '0.75rem'
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
