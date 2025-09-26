@@ -397,7 +397,7 @@ export const FSEProcessing = () => {
           rows. Use the site name filter and/or paging to assist.
         </BCTypography>
 
-        <BCBox sx={{ width: '100%', minHeight: 600 }}>
+        <BCBox sx={{ width: '100%', height: '100%' }}>
           <Box display="flex" justifyContent="space-between" mb={2}>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
@@ -440,7 +440,7 @@ export const FSEProcessing = () => {
             <ClearFiltersButton onClick={handleClearFilters} />
           </Box>
 
-          <Box sx={{ height: 500, width: '100%' }}>
+          <BCBox sx={{ width: '100%' }}>
             <BCGridViewer
               gridRef={gridRef}
               alertRef={alertRef}
@@ -464,7 +464,7 @@ export const FSEProcessing = () => {
               suppressRowClickSelection={true}
               rowMultiSelectWithClick={false}
             />
-          </Box>
+          </BCBox>
         </BCBox>
       </Grid>
 

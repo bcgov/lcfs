@@ -496,7 +496,7 @@ export const ChargingEquipment = () => {
               </Box>
             )}
 
-            <Box sx={{ height: 500, width: '100%' }}>
+            <BCBox sx={{ width: '100%' }}>
               <BCGridViewer
                 gridRef={gridRef}
                 alertRef={alertRef}
@@ -516,7 +516,7 @@ export const ChargingEquipment = () => {
                 rowMultiSelectWithClick={false}
                 highlightedRowId={highlightedId}
               />
-            </Box>
+            </BCBox>
           </BCBox>
         </Grid>
       )}
