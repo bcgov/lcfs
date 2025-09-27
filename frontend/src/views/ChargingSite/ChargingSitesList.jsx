@@ -25,6 +25,21 @@ export const ChargingSitesList = ({ alertRef }) => {
   const { t } = useTranslation(['chargingSite'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
+
+  // Setup global navigation function for FSE processing
+  useEffect(() => {
+    if (isIDIR) {
+      window.navigateToFSEProcessing = (siteId) => {
+        navigate(ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING.replace(':siteId', siteId))
+      }
+    }
+
+    return () => {
+      if (window.navigateToFSEProcessing) {
+        delete window.navigateToFSEProcessing
+      }
+    }
+  }, [navigate, isIDIR])
   const gridRef = useRef(null)
 
   // Enhanced state management with caching

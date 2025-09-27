@@ -14,6 +14,7 @@ import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEqui
 import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
 import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
+import { FSEProcessing } from '@/views/FSEProcessing'
 
 export const reportRoutes = [
   {
@@ -127,5 +128,10 @@ export const reportRoutes = [
       title: 'Export fuels',
       mode: 'add'
     }
+  },
+  {
+    path: ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING,
+    element: <FSEProcessing />,
+    handle: { title: 'FSE Processing' }
   }
 ]

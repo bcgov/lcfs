@@ -236,12 +236,17 @@ export const ChargingSiteFSEGrid = ({
 
   const handleCellClicked = useCallback(
     (params) => {
+      // For IDIR users, prevent navigation - they don't need edit access
+      if (isIDIR) {
+        return
+      }
+
       const colId = params?.column?.getColId?.()
       if (colId === 'ag-Grid-ControlsColumn') return
       const { chargingEquipmentId } = params.data
       navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`)
     },
-    [navigate, siteId]
+    [navigate, siteId, isIDIR]
   )
 
   // Build context for button configuration

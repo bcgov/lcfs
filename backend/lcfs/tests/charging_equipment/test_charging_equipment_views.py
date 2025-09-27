@@ -28,6 +28,7 @@ async def test_get_charging_equipment_list_success(
         "items": [
             {
                 "charging_equipment_id": 1,
+                "charging_site_id": 1,
                 "status": "Draft",
                 "site_name": "Test Charging Site",
                 "registration_number": "TEST1-001",

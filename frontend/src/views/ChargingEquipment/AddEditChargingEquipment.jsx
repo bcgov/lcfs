@@ -49,6 +49,7 @@ import {
   useHasAllocationAgreements
 } from '@/hooks/useChargingEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { govRoles } from '@/constants/roles'
 import { ExcelUpload } from './components/ExcelUpload'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 
@@ -65,7 +66,22 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const isEdit = operationMode === 'single' && Boolean(fseId)
   const isBulkMode = operationMode === 'bulk'
 
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasAnyRole } = useCurrentUser()
+
+  // Check if user is IDIR/government - they should not access this component
+  useEffect(() => {
+    const isIDIR = hasAnyRole(...govRoles)
+    if (isIDIR) {
+      // Redirect IDIR users back to the main FSE list
+      navigate(ROUTES.REPORTS.LIST + '/fse', {
+        replace: true,
+        state: {
+          message: 'IDIR users cannot edit FSE equipment directly. Use the FSE processing workflow through charging sites.',
+          severity: 'info'
+        }
+      })
+    }
+  }, [hasAnyRole, navigate])
 
   // Hooks for data and mutations
   const {

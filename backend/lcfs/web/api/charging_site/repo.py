@@ -303,10 +303,12 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_all_charging_sites_paginated(
-        self, offset: int, limit: int, conditions: list, sort_orders: list
+        self, offset: int, limit: int, conditions: list, sort_orders: list,
+        exclude_draft: bool = False
     ) -> tuple[list[ChargingSite], int]:
         """
         Retrieve all charging sites with pagination, filtering, and sorting.
+        If exclude_draft is True, excludes sites with DRAFT status.
         """
         stmt = (
             select(ChargingSite)
@@ -316,8 +318,17 @@ class ChargingSiteRepository:
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.intended_users),
             )
-            .where(and_(*conditions) if conditions else True)
         )
+
+        # Add condition to exclude draft sites if requested
+        if exclude_draft:
+            stmt = stmt.join(ChargingSite.status).where(
+                ChargingSiteStatus.status != "Draft"
+            )
+
+        # Apply other conditions
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
 
         # Apply sort orders
         for order in sort_orders or []:
@@ -352,8 +363,9 @@ class ChargingSiteRepository:
         """
         org_condition = ChargingSite.organization_id == organization_id
         all_conditions = [org_condition] + (conditions or [])
+        # Pass False for exclude_draft since supplier users should see their own drafts
         return await self.get_all_charging_sites_paginated(
-            offset, limit, all_conditions, sort_orders
+            offset, limit, all_conditions, sort_orders, False
         )
 
     @repo_handler

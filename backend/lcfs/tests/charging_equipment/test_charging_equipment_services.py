@@ -90,7 +90,7 @@ async def test_get_charging_equipment_list_supplier_success(
 
     # Verify repo was called with correct organization_id
     mock_repo.get_charging_equipment_list.assert_called_once_with(
-        mock_user.organization_id, pagination, None
+        mock_user.organization_id, pagination, None, False
     )
 
 
@@ -115,24 +115,32 @@ async def test_get_charging_equipment_list_government_with_org_filter(
 
     # Verify repo was called with filtered organization_id
     mock_repo.get_charging_equipment_list.assert_called_once_with(
-        2, pagination, filters
+        2, pagination, filters, False
     )
 
 
 @pytest.mark.anyio
-async def test_get_charging_equipment_list_government_no_org_filter_fails(
-    service, mock_repo, mock_government_user
+async def test_get_charging_equipment_list_government_no_org_filter_success(
+    service, mock_repo, mock_government_user, valid_charging_equipment
 ):
-    """Test getting equipment list as government user without organization filter fails."""
+    """Test getting equipment list as government user without organization filter succeeds."""
     # Setup pagination without organization filter
     pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[])
+    mock_repo.get_charging_equipment_list.return_value = ([valid_charging_equipment], 1)
 
-    # Call the service method and expect HTTPException
-    with pytest.raises(HTTPException) as exc_info:
-        await service.get_charging_equipment_list(mock_government_user, pagination)
+    # Call the service method
+    result = await service.get_charging_equipment_list(
+        mock_government_user, pagination
+    )
 
-    assert exc_info.value.status_code == 400
-    assert "Organization ID is required" in str(exc_info.value.detail)
+    # Verify the result
+    assert result.total_count == 1
+    assert len(result.items) == 1
+
+    # Government users without an org filter should query all organizations (organization_id None)
+    mock_repo.get_charging_equipment_list.assert_called_once_with(
+        None, pagination, None, False
+    )
 
 
 @pytest.mark.anyio
