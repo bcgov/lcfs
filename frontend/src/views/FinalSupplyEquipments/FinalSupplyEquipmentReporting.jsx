@@ -2,16 +2,19 @@ import BCBox from '@/components/BCBox'
 import { BCGridEditorPaginated } from '@/components/BCDataGrid/BCGridEditorPaginated'
 import BCTypography from '@/components/BCTypography'
 import { Stack, TextField, Autocomplete } from '@mui/material'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
 import { useParams } from 'react-router-dom'
 import BCButton from '@/components/BCButton'
 import { useSiteNames } from '@/hooks/useChargingSite'
-import { useQuery } from '@tanstack/react-query'
 import { getFSEReportingColDefs } from './_schema'
-import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
+import {
+  useGetFSEReportingList,
+  useSaveFSEReporting
+} from '@/hooks/useFinalSupplyEquipment'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { handleScheduleSave } from '@/utils/schedules'
 
 export const FinalSupplyEquipmentReporting = () => {
   const { t } = useTranslation()
@@ -20,6 +23,7 @@ export const FinalSupplyEquipmentReporting = () => {
   const [isGridReady, setGridReady] = useState(false)
   const dateGridRef = useRef(null)
   const dateGridAlertRef = useRef(null)
+  const previousSelectionRef = useRef(new Set())
 
   const { complianceReportId, compliancePeriod } = useParams()
 
@@ -27,6 +31,7 @@ export const FinalSupplyEquipmentReporting = () => {
   const maxDate = `${compliancePeriod}-12-31`
 
   const { data: siteNames = [], isLoading: siteLoading } = useSiteNames()
+
   // Get report data from store
   const reportData = useComplianceReportStore((state) =>
     state.getCachedReport(complianceReportId)
@@ -59,14 +64,149 @@ export const FinalSupplyEquipmentReporting = () => {
     reportData?.report?.organizationId
   )
   const { data, isLoading, isError } = queryData
-  // Handle row selection for bulk operations
-  const handleSelectionChanged = useCallback((api) => {
-    const selectedNodes = api.getSelectedNodes()
-    const selectedIds = selectedNodes.map(
-      (node) => node.data.fseComplianceReportingId
-    )
-    setSelectedRows(selectedIds)
-  }, [])
+
+  // Mutation hook for saving changes
+  const { mutateAsync: saveRow } = useSaveFSEReporting(
+    reportData?.report?.organizationId,
+    complianceReportId
+  )
+
+  // Initialize previous selection when data loads
+  useEffect(() => {
+    if (isGridReady && dateGridRef.current?.api) {
+      const initialSelection = new Set()
+      dateGridRef.current.api.forEachNode((node) => {
+        if (node.data.fseComplianceReportingId) {
+          initialSelection.add(node.data.chargingEquipmentId)
+        }
+      })
+      previousSelectionRef.current = initialSelection
+    }
+  }, [data, isGridReady])
+
+  // Handle row selection changes
+  const handleSelectionChanged = useCallback(
+    async (api) => {
+      const currentSelection = new Set()
+      const selectedNodes = api.getSelectedNodes()
+
+      // Build current selection set
+      selectedNodes.forEach((node) => {
+        currentSelection.add(node.data.chargingEquipmentId)
+      })
+
+      const previousSelection = previousSelectionRef.current
+
+      // Find newly selected rows (unselected -> selected = CREATE)
+      const newlySelected = [...currentSelection].filter(
+        (id) => !previousSelection.has(id)
+      )
+
+      // Find newly unselected rows (selected -> unselected = DELETE)
+      const newlyUnselected = [...previousSelection].filter(
+        (id) => !currentSelection.has(id)
+      )
+
+      // Process deletions
+      for (const equipmentId of newlyUnselected) {
+        const node = api.getRowNode(equipmentId)
+        if (node && node.data.fseComplianceReportingId) {
+          try {
+            dateGridAlertRef.current?.showAlert(
+              'pending',
+              t('finalSupplyEquipment:removingEquipment')
+            )
+
+            await saveRow({
+              fseComplianceReportingId: node.data.fseComplianceReportingId,
+              chargingEquipmentId: node.data.chargingEquipmentId,
+              complianceReportId,
+              organizationId: reportData?.report?.organizationId,
+              deleted: true
+            })
+
+            // Update node to reflect deletion
+            node.updateData({
+              ...node.data,
+              fseComplianceReportingId: null,
+              complianceReportId: null,
+              supplyFromDate: null,
+              supplyToDate: null,
+              kwhUsage: null,
+              notes: null
+            })
+
+            dateGridAlertRef.current?.showAlert(
+              'success',
+              t('finalSupplyEquipment:equipmentRemoved')
+            )
+          } catch (error) {
+            console.error('Error removing equipment:', error)
+            dateGridAlertRef.current?.showAlert(
+              'error',
+              t('finalSupplyEquipment:errorRemovingEquipment')
+            )
+            // Revert selection on error
+            api.setNodesSelected({ nodes: [node], newValue: true })
+          }
+        }
+      }
+
+      // Process additions (create new FSE compliance records)
+      for (const equipmentId of newlySelected) {
+        const node = api.getRowNode(equipmentId)
+        if (node && !node.data.fseComplianceReportingId) {
+          try {
+            dateGridAlertRef.current?.showAlert(
+              'pending',
+              t('finalSupplyEquipment:addingEquipment')
+            )
+
+            const response = await saveRow({
+              chargingEquipmentId: node.data.chargingEquipmentId,
+              complianceReportId,
+              organizationId: reportData?.report?.organizationId,
+              supplyFromDate: defaultFromDate,
+              supplyToDate: defaultToDate,
+              kwhUsage: null,
+              notes: null
+            })
+
+            // Update node with new FSE compliance reporting ID
+            node.updateData({
+              ...node.data,
+              fseComplianceReportingId: response.data.fseComplianceReportingId,
+              complianceReportId,
+              supplyFromDate: defaultFromDate,
+              supplyToDate: defaultToDate
+            })
+
+            dateGridAlertRef.current?.showAlert(
+              'success',
+              t('finalSupplyEquipment:equipmentAdded')
+            )
+          } catch (error) {
+            console.error('Error adding equipment:', error)
+            dateGridAlertRef.current?.showAlert(
+              'error',
+              t('finalSupplyEquipment:errorAddingEquipment')
+            )
+            // Revert selection on error
+            api.setNodesSelected({ nodes: [node], newValue: false })
+          }
+        }
+      }
+
+      // Update previous selection reference
+      previousSelectionRef.current = currentSelection
+
+      // Clear alert after processing
+      if (newlySelected.length === 0 && newlyUnselected.length === 0) {
+        dateGridAlertRef.current?.clearAlert()
+      }
+    },
+    [saveRow, complianceReportId, reportData, defaultFromDate, defaultToDate, t]
+  )
 
   const gridOptions = useMemo(
     () => ({
@@ -82,31 +222,99 @@ export const FinalSupplyEquipmentReporting = () => {
         pinned: 'left'
       },
       onSelectionChanged: (event) => handleSelectionChanged(event.api),
-      getRowId: (params) => params.data.chargingEquipmentId
+      getRowId: (params) => params.data.chargingEquipmentId,
+      stopEditingWhenCellsLoseFocus: false
     }),
     [handleSelectionChanged]
   )
 
   const columnDefs = useMemo(
     () => getFSEReportingColDefs(minDate, maxDate, errors, warnings),
-    [t, minDate, maxDate]
+    [minDate, maxDate, errors, warnings]
   )
 
   const handleGridReady = useCallback(() => {
     setGridReady(true)
   }, [])
 
-  const handleCellEditingStopped = useCallback((params) => {
-    // Handle saving edited cell data
-    console.log('Cell edited:', params.data)
-    // TODO: Make API call to save changes
-    // Example: updateFSERecord(params.data.id, params.data)
-  }, [])
+  // Handle individual cell edits with validation and saving
+  const handleCellEditingStopped = useCallback(
+    async (params) => {
+      if (params.oldValue === params.newValue) return
+
+      // Only allow edits on selected rows (rows with fseComplianceReportingId)
+      if (!params.node.data.fseComplianceReportingId) {
+        dateGridAlertRef.current?.showAlert(
+          'warning',
+          t('finalSupplyEquipment:selectRowToEdit')
+        )
+        return
+      }
+
+      // Update validation status to pending
+      params.node.updateData({
+        ...params.node.data,
+        validationStatus: 'pending'
+      })
+
+      dateGridAlertRef.current?.showAlert(
+        'pending',
+        t('finalSupplyEquipment:updatingRow')
+      )
+
+      // Prepare data for save
+      const updatedData = {
+        ...Object.entries(params.node.data)
+          .filter(
+            ([, value]) => value !== null && value !== '' && value !== undefined
+          )
+          .reduce((acc, [key, value]) => {
+            acc[key] = value
+            return acc
+          }, {}),
+        complianceReportId,
+        organizationId: reportData?.report?.organizationId
+      }
+
+      try {
+        const responseData = await handleScheduleSave({
+          alertRef: dateGridAlertRef,
+          idField: 'fseComplianceReportingId',
+          labelPrefix: 'finalSupplyEquipment',
+          params,
+          setErrors,
+          setWarnings,
+          saveRow,
+          t,
+          updatedData
+        })
+
+        dateGridAlertRef.current?.clearAlert()
+        params.node.updateData({
+          ...responseData,
+          validationStatus: 'valid',
+          modified: false
+        })
+        params.api?.autoSizeAllColumns?.()
+      } catch (error) {
+        console.error('Error saving FSE reporting data:', error)
+        params.node.updateData({
+          ...params.node.data,
+          validationStatus: 'error'
+        })
+        dateGridAlertRef.current?.showAlert(
+          'error',
+          t('finalSupplyEquipment:errorSavingRow')
+        )
+      }
+    },
+    [saveRow, t, complianceReportId, reportData]
+  )
 
   const onFirstDataRendered = useCallback((params) => {
     const nodesToSelect = []
     params.api.forEachNode((node) => {
-      if (node.data.complianceReportId) {
+      if (node.data.fseComplianceReportingId) {
         nodesToSelect.push(node)
       }
     })
@@ -115,8 +323,14 @@ export const FinalSupplyEquipmentReporting = () => {
 
   const handleSiteChange = useCallback((event, newValue) => {
     setSelectedSiteOption(newValue)
-    // Reset to first page when filter changes
-    setPaginationOptions((prev) => ({ ...prev, page: 1 }))
+    // Update filters in pagination options
+    setPaginationOptions((prev) => ({
+      ...prev,
+      page: 1,
+      filters: newValue
+        ? [{ field: 'chargingSiteId', value: newValue.chargingSiteId }]
+        : []
+    }))
   }, [])
 
   const handleApplyToSelected = useCallback(() => {
@@ -131,38 +345,46 @@ export const FinalSupplyEquipmentReporting = () => {
 
     const updates = []
     selectedNodes.forEach((node) => {
-      const updatedData = {
-        ...node.data,
-        supplyFromDate: defaultFromDate,
-        supplyToDate: defaultToDate,
-        modified: true
+      if (node.data.fseComplianceReportingId) {
+        const updatedData = {
+          ...node.data,
+          supplyFromDate: defaultFromDate,
+          supplyToDate: defaultToDate,
+          modified: true
+        }
+        updates.push(updatedData)
       }
-      updates.push(updatedData)
     })
 
-    dateGridRef.current?.api.applyTransaction({ update: updates })
-    dateGridAlertRef.current?.showAlert(
-      'success',
-      t('finalSupplyEquipment:datesAppliedToSelected')
-    )
+    if (updates.length > 0) {
+      dateGridRef.current?.api.applyTransaction({ update: updates })
+      dateGridAlertRef.current?.showAlert(
+        'success',
+        t('finalSupplyEquipment:datesAppliedToSelected')
+      )
+    }
   }, [defaultFromDate, defaultToDate, t])
 
   const handleApplyToAll = useCallback(() => {
     const allRowData = []
     dateGridRef.current?.api.forEachNode((node) => {
-      allRowData.push({
-        ...node.data,
-        supplyFromDate: defaultFromDate,
-        supplyToDate: defaultToDate,
-        modified: true
-      })
+      if (node.data.fseComplianceReportingId) {
+        allRowData.push({
+          ...node.data,
+          supplyFromDate: defaultFromDate,
+          supplyToDate: defaultToDate,
+          modified: true
+        })
+      }
     })
 
-    dateGridRef.current?.api.applyTransaction({ update: allRowData })
-    dateGridAlertRef.current?.showAlert(
-      'success',
-      t('finalSupplyEquipment:datesAppliedToAll')
-    )
+    if (allRowData.length > 0) {
+      dateGridRef.current?.api.applyTransaction({ update: allRowData })
+      dateGridAlertRef.current?.showAlert(
+        'success',
+        t('finalSupplyEquipment:datesAppliedToAll')
+      )
+    }
   }, [defaultFromDate, defaultToDate, t])
 
   // Validate date range
@@ -171,10 +393,10 @@ export const FinalSupplyEquipmentReporting = () => {
     return new Date(defaultFromDate) <= new Date(defaultToDate)
   }, [defaultFromDate, defaultToDate])
 
-  const handleSaveAll = useCallback(() => {
+  const handleSaveAll = useCallback(async () => {
     const modifiedRows = []
     dateGridRef.current?.api.forEachNode((node) => {
-      if (node.data.modified) {
+      if (node.data.modified && node.data.fseComplianceReportingId) {
         modifiedRows.push(node.data)
       }
     })
@@ -187,18 +409,45 @@ export const FinalSupplyEquipmentReporting = () => {
       return
     }
 
-    // TODO: Make API call to save all modified rows
-    console.log('Saving modified rows:', modifiedRows)
-    // Example: batchUpdateFSERecords(modifiedRows)
-
-    dateGridAlertRef.current?.showAlert(
-      'success',
-      t(
-        'finalSupplyEquipment:changesSaved',
-        `Successfully saved ${modifiedRows.length} changes`
+    try {
+      dateGridAlertRef.current?.showAlert(
+        'pending',
+        t('finalSupplyEquipment:savingChanges')
       )
-    )
-  }, [t])
+
+      // Save all modified rows
+      await Promise.all(
+        modifiedRows.map((row) =>
+          saveRow({
+            ...row,
+            complianceReportId,
+            organizationId: reportData?.report?.organizationId
+          })
+        )
+      )
+
+      // Clear modified flags
+      const updates = modifiedRows.map((row) => ({
+        ...row,
+        modified: false,
+        validationStatus: 'valid'
+      }))
+      dateGridRef.current?.api.applyTransaction({ update: updates })
+
+      dateGridAlertRef.current?.showAlert(
+        'success',
+        t('finalSupplyEquipment:changesSaved', {
+          count: modifiedRows.length
+        })
+      )
+    } catch (error) {
+      console.error('Error saving modified rows:', error)
+      dateGridAlertRef.current?.showAlert(
+        'error',
+        t('finalSupplyEquipment:errorSavingChanges')
+      )
+    }
+  }, [t, saveRow, complianceReportId, reportData])
 
   return (
     <Stack className="fse-reporting-container" spacing={6}>
@@ -374,7 +623,7 @@ export const FinalSupplyEquipmentReporting = () => {
         columnDefs={columnDefs}
         defaultColDef={{
           resizable: false,
-          editable: false,
+          editable: true,
           singleClickEdit: true
         }}
         gridOptions={gridOptions}

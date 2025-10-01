@@ -439,3 +439,112 @@ export const useGetFSEReportingList = (
     ...restOptions
   })
 }
+
+export const useSaveFSEReporting = (
+  organizationId,
+  complianceReportId,
+  options = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = false,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      if (!organizationId) {
+        throw new Error('Organization ID is required')
+      }
+      if (!complianceReportId) {
+        throw new Error('Compliance report ID is required')
+      }
+
+      const fseComplianceReportingId = data.fseComplianceReportingId || null
+
+      // DELETE operation
+      if (data.deleted) {
+        if (!fseComplianceReportingId) {
+          throw new Error(
+            'FSE compliance reporting ID is required for deletion'
+          )
+        }
+        return await client.delete(
+          `/final-supply-equipments/reporting/${fseComplianceReportingId}`
+        )
+      }
+
+      // UPDATE operation (has ID and not deleted)
+      if (fseComplianceReportingId) {
+        return await client.put(
+          `/final-supply-equipments/reporting/${fseComplianceReportingId}`,
+          {
+            ...data,
+            complianceReportId,
+            organizationId
+          }
+        )
+      }
+
+      // CREATE operation (no ID)
+      return await client.post('/final-supply-equipments/reporting', {
+        ...data,
+        complianceReportId,
+        organizationId
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      if (clearCache) {
+        // Remove all FSE reporting queries from cache
+        queryClient.removeQueries({
+          queryKey: ['fse-reporting-list']
+        })
+      } else {
+        // Invalidate FSE reporting list queries for this organization
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            return (
+              query.queryKey[0] === 'fse-reporting-list' &&
+              query.queryKey[1] === organizationId
+            )
+          }
+        })
+      }
+
+      if (invalidateRelatedQueries) {
+        // Invalidate compliance report related queries
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report-summary', complianceReportId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report', complianceReportId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['final-supply-equipments', complianceReportId]
+        })
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      // Invalidate on error to ensure fresh data on retry
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'fse-reporting-list' &&
+            query.queryKey[1] === organizationId
+          )
+        }
+      })
+
+      onError?.(error, variables, context)
+    },
+    retry: 0,
+    ...restOptions
+  })
+}
