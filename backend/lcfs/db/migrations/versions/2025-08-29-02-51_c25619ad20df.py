@@ -1,8 +1,8 @@
 """Revert transfer update_date and update_user
 
-Revision ID: bbd3a73fa80f
-Revises: f1a2b3c4d5e6
-Create Date: 2025-09-23 22:51:00.286711
+Revision ID: c25619ad20df
+Revises: b7c0cbcad7d8
+Create Date: 2025-08-29 02:51:00.286711
 
 """
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "bbd3a73fa80f"
-down_revision = "f1a2b3c4d5e6"
+revision = "c25619ad20df"
+down_revision = "b7c0cbcad7d8"
 branch_labels = None
 depends_on = None
 
