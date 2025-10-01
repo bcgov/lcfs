@@ -1,6 +1,6 @@
 {
   "fseReportingTitle": "FSE compliance reporting",
-  "fseReportingDesc": "Enter dates of supply and kWh usage for compliance reporting. The 'Set default values' button will only apply to the visible rows. Use the site name filter and/or paging to assist in setting date variances.",
+  "fseReportingDesc": "Enter dates of supply and kWh usage for compliance reporting. Use the site name filter and/or paging to assist in setting date variances.",
   "fseTitle": "Final supply equipment (FSE)",
   "reportingResponsibilityInfo": [
     "Report dates of supply for your final supply equipment (FSE).",
@@ -9,8 +9,21 @@
   ],
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
+  "defaultFromDate": "Default from",
+  "defaultToDate": "Default to",
+  "applyToSelected": "Apply to selected",
+  "applyToAll": "Apply to all",
+  "selectSiteName": "Select site name",
+  "showFSEFor": "Show FSE for:",
   "addRow": "Add row",
   "rows": "rows",
+  "noRowsSelected": "Please select rows first.",
+  "datesAppliedToSelected": "Dates applied to selected rows.",
+  "datesAppliedToAll": "Dates applied to all rows.",
+  "noChangesToSave": "No changes to save.",
+  "saveChanges": "Save changes",
+  "saveConfirmation": "You have validation errors. Do you want to save anyway?",
+  "saveAnyway": "Save anyway",
   "finalSupplyEquipmentColLabels": {
     "complianceReportId": "Compliance Report ID",
     "organizationName": "Organization",
@@ -31,7 +44,10 @@
     "postalCode": "Postal code",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "notes": "Notes"
+    "notes": "Notes",
+    "complianceNotes": "Compliance notes",
+    "siteName": "Site name",
+    "equipmentNotes": "Equipment notes"
   },
   "postalCodeError": "Please enter a valid postal code.",
   "validateMsg": {

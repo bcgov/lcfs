@@ -13,6 +13,7 @@ from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.final_supply_equipment.schema import (
+    FSEReportingSchema,
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
     LevelOfEquipmentSchema,
@@ -368,9 +369,56 @@ class FinalSupplyEquipmentServices:
             new_fse = FinalSupplyEquipmentCreateSchema(
                 **payload,
                 level_of_equipment=old_fse.level_of_equipment,
-                intended_use_types=[use_type for use_type in old_fse.intended_use_types],
-                intended_user_types=[user_type for user_type in old_fse.intended_user_types],
+                intended_use_types=[
+                    use_type for use_type in old_fse.intended_use_types
+                ],
+                intended_user_types=[
+                    user_type for user_type in old_fse.intended_user_types
+                ],
                 compliance_report_id=target_report_id,
             )
 
             await self.create_final_supply_equipment(new_fse, organization_id)
+
+    @service_handler
+    async def get_fse_reporting_list_paginated(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ) -> dict:
+        """
+        Get paginated charging equipment with related charging site and FSE compliance reporting data
+        """
+        data, total = await self.repo.get_fse_reporting_list_paginated(
+            organization_id, pagination
+        )
+        return {
+            "finalSupplyEquipments": [
+                FSEReportingSchema.model_validate(item) for item in data
+            ],
+            "pagination": PaginationResponseSchema(
+                page=pagination.page,
+                size=pagination.size,
+                total=total,
+                total_pages=math.ceil(total / pagination.size),
+            ),
+        }
+
+    @service_handler
+    async def create_fse_reporting(self, data: dict) -> dict:
+        """
+        Create FSE compliance reporting data
+        """
+        return await self.repo.create_fse_reporting(data)
+
+    @service_handler
+    async def update_fse_reporting(self, reporting_id: int, data: dict) -> dict:
+        """
+        Update FSE compliance reporting data
+        """
+        return await self.repo.update_fse_reporting(reporting_id, data)
+
+    @service_handler
+    async def delete_fse_reporting(self, reporting_id: int) -> None:
+        """
+        Delete FSE compliance reporting data
+        """
+        await self.repo.delete_fse_reporting(reporting_id)

@@ -134,7 +134,7 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   }, [t, status])
 
   const getRowId = (params) => {
-    return params.data.finalSupplyEquipmentId.toString()
+    return String(params.data.chargingEquipmentId)
   }
 
   return (

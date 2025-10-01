@@ -5,6 +5,7 @@ from fastapi import (
     APIRouter,
     Body,
     HTTPException,
+    Path,
     Query,
     status,
     Request,
@@ -340,3 +341,77 @@ async def get_job_status(
 
     status = await importer.get_status(job_id)
     return JSONResponse(content=status)
+
+
+@router.post(
+    "/reporting/list",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_fse_reporting_list(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(...),
+    organization_id: int = Query(None, description="Organization ID"),
+    service: FinalSupplyEquipmentServices = Depends(),
+) -> dict:
+    """
+    Get paginated charging equipment with related charging site and FSE compliance reporting data
+    """
+    org_id = (
+        organization_id
+        if request.user.is_government and organization_id
+        else request.user.organization_id
+    )
+    return await service.get_fse_reporting_list_paginated(org_id, pagination)
+
+
+@router.post(
+    "/reporting/save",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def create_fse_reporting(
+    request: Request,
+    request_data: dict = Body(...),
+    service: FinalSupplyEquipmentServices = Depends(),
+) -> dict:
+    """
+    Create FSE compliance reporting data
+    """
+    return await service.create_fse_reporting(request_data)
+
+
+@router.put(
+    "/reporting/{reporting_id}",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def update_fse_reporting(
+    request: Request,
+    reporting_id: int,
+    request_data: dict = Body(...),
+    service: FinalSupplyEquipmentServices = Depends(),
+) -> dict:
+    """
+    Update FSE compliance reporting data
+    """
+    return await service.update_fse_reporting(reporting_id, request_data)
+
+
+@router.delete(
+    "/reporting/{reporting_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def delete_fse_reporting(
+    request: Request,
+    reporting_id: int,
+    service: FinalSupplyEquipmentServices = Depends(),
+):
+    """
+    Delete FSE compliance reporting data
+    """
+    await service.delete_fse_reporting(reporting_id)

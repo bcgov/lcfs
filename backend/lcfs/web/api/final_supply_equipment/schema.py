@@ -82,3 +82,31 @@ class DeleteFinalSupplyEquipmentResponseSchema(BaseSchema):
 class FinalSupplyEquipmentsSchema(BaseSchema):
     final_supply_equipments: Optional[List[FinalSupplyEquipmentSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}
+
+
+class FSEReportingSchema(BaseSchema):
+    fse_compliance_reporting_id: Optional[int] = None
+    charging_equipment_id: int
+    charging_site_id: int
+    serial_number: str
+    manufacturer: str
+    model: Optional[str] = None
+    site_name: str
+    street_address: Optional[str] = None
+    city: str
+    postal_code: str
+    latitude: float
+    longitude: float
+    level_of_equipment: str
+    ports: Optional[PortsEnum] = None
+    supply_from_date: Optional[date] = None
+    supply_to_date: Optional[date] = None
+    kwh_usage: Optional[float] = None
+    compliance_notes: Optional[str] = None
+    equipment_notes: Optional[str] = None
+    compliance_report_id: Optional[int] = None
+    organization_name: Optional[str] = None
+    registration_number: Optional[str] = None
+    intended_uses: List[str] = []
+    intended_users: List[str] = []
+    deleted: Optional[bool] = None

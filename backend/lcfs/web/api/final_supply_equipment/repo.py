@@ -2,7 +2,7 @@ from typing import Any, List, Sequence
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, delete, distinct, exists, func, select, update
+from sqlalchemy import and_, delete, distinct, exists, func, select, update, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -488,3 +488,207 @@ class FinalSupplyEquipmentRepository:
         )
 
         return result.rowcount
+
+    @repo_handler
+    async def get_fse_reporting_list_paginated(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ) -> tuple[list[dict], int]:
+        """
+        Get paginated charging equipment with related charging site and FSE compliance reporting data
+        """
+        from lcfs.db.models.compliance.ChargingEquipment import (
+            ChargingEquipment,
+            charging_equipment_intended_use_association,
+        )
+        from lcfs.db.models.compliance.ChargingSite import (
+            ChargingSite,
+            charging_site_intended_user_association,
+        )
+        from lcfs.db.models.compliance import FSEComplianceReporting
+        from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
+
+        # Subquery for intended_uses (from charging equipment)
+        intended_uses_subquery = (
+            select(func.array_agg(EndUseType.type).label("intended_uses"))
+            .select_from(charging_equipment_intended_use_association)
+            .join(
+                EndUseType,
+                charging_equipment_intended_use_association.c.end_use_type_id
+                == EndUseType.end_use_type_id,
+            )
+            .where(
+                charging_equipment_intended_use_association.c.charging_equipment_id
+                == ChargingEquipment.charging_equipment_id
+            )
+            .correlate(ChargingEquipment)
+            .scalar_subquery()
+        )
+
+        # Subquery for intended_users (from charging site)
+        intended_users_subquery = (
+            select(func.array_agg(EndUserType.type_name).label("intended_users"))
+            .select_from(charging_site_intended_user_association)
+            .join(
+                EndUserType,
+                charging_site_intended_user_association.c.end_user_type_id
+                == EndUserType.end_user_type_id,
+            )
+            .where(
+                charging_site_intended_user_association.c.charging_site_id
+                == ChargingSite.charging_site_id
+            )
+            .correlate(ChargingSite)
+            .scalar_subquery()
+        )
+
+        base_query = (
+            select(
+                ChargingEquipment.charging_equipment_id,
+                ChargingEquipment.serial_number,
+                ChargingEquipment.manufacturer,
+                ChargingEquipment.model,
+                ChargingEquipment.organization_name,
+                (
+                    ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
+                ).label("registration_number"),
+                ChargingSite.site_name,
+                ChargingSite.charging_site_id,
+                ChargingEquipment.notes.label("equipment_notes"),
+                FSEComplianceReporting.supply_from_date,
+                FSEComplianceReporting.supply_to_date,
+                FSEComplianceReporting.kwh_usage,
+                FSEComplianceReporting.notes.label("compliance_notes"),
+                FSEComplianceReporting.fse_compliance_reporting_id,
+                FSEComplianceReporting.compliance_report_id,
+                ChargingSite.street_address,
+                ChargingSite.city,
+                ChargingSite.postal_code,
+                ChargingSite.latitude,
+                ChargingSite.longitude,
+                LevelOfEquipment.name.label("level_of_equipment"),
+                ChargingEquipment.ports,
+                intended_uses_subquery.label(
+                    "intended_uses"
+                ),  # Equipment intended uses
+                intended_users_subquery.label("intended_users"),  # Site intended users
+            )
+            .select_from(ChargingEquipment)
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .join(
+                LevelOfEquipment,
+                ChargingEquipment.level_of_equipment_id
+                == LevelOfEquipment.level_of_equipment_id,
+            )
+            .outerjoin(
+                FSEComplianceReporting,
+                ChargingEquipment.charging_equipment_id
+                == FSEComplianceReporting.charging_equipment_id,
+            )
+            .where(ChargingSite.organization_id == organization_id)
+        )
+
+        # Apply filters
+        if pagination.filters:
+            for f in pagination.filters:
+                if f.field == "site_name":
+                    field = get_field_for_filter(ChargingSite, "site_name")
+                elif f.field in ["serial_number", "manufacturer", "model"]:
+                    field = get_field_for_filter(ChargingEquipment, f.field)
+                elif f.field in ["supply_from_date", "supply_to_date", "kwh_usage"]:
+                    field = get_field_for_filter(FSEComplianceReporting, f.field)
+                else:
+                    continue
+
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field, f.filter, f.type, f.filter_type
+                    )
+                    if condition is not None:
+                        base_query = base_query.where(condition)
+
+        # Apply sorting
+        if pagination.sort_orders:
+            for sort_order in pagination.sort_orders:
+                if sort_order.field == "site_name":
+                    field = ChargingSite.site_name
+                elif sort_order.field in ["serial_number", "manufacturer", "model"]:
+                    field = getattr(ChargingEquipment, sort_order.field)
+                elif sort_order.field in [
+                    "supply_from_date",
+                    "supply_to_date",
+                    "kwh_usage",
+                ]:
+                    field = getattr(FSEComplianceReporting, sort_order.field)
+                else:
+                    continue
+
+                if sort_order.direction.lower() == "desc":
+                    base_query = base_query.order_by(desc(field))
+                else:
+                    base_query = base_query.order_by(asc(field))
+        else:
+            base_query = base_query.order_by(ChargingEquipment.charging_equipment_id)
+
+        # Count total
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total = await self.db.scalar(count_query)
+
+        # Apply pagination
+        offset = (pagination.page - 1) * pagination.size
+        paginated_query = base_query.offset(offset).limit(pagination.size)
+
+        result = await self.db.execute(paginated_query)
+        data = result.fetchall()
+
+        return data, total or 0
+
+    @repo_handler
+    async def create_fse_reporting(self, data: dict) -> dict:
+        """
+        Create FSE compliance reporting data
+        """
+        from lcfs.db.models.compliance import FSEComplianceReporting
+
+        record = FSEComplianceReporting(**data)
+        self.db.add(record)
+        await self.db.flush()
+        data["id"] = record.id
+        return data
+
+    @repo_handler
+    async def update_fse_reporting(
+        self, fse_compliance_reporting_id: int, data: dict
+    ) -> dict:
+        """
+        Update FSE compliance reporting data
+        """
+        from lcfs.db.models.compliance import FSEComplianceReporting
+
+        stmt = (
+            update(FSEComplianceReporting)
+            .where(
+                FSEComplianceReporting.fse_compliance_reporting_id
+                == fse_compliance_reporting_id
+            )
+            .values(**data)
+        )
+        await self.db.execute(stmt)
+        await self.db.flush()
+        return {"id": fse_compliance_reporting_id, **data}
+
+    @repo_handler
+    async def delete_fse_reporting(self, fse_compliance_reporting_id: int) -> None:
+        """
+        Delete FSE compliance reporting data
+        """
+        from lcfs.db.models.compliance import FSEComplianceReporting
+
+        stmt = delete(FSEComplianceReporting).where(
+            FSEComplianceReporting.fse_compliance_reporting_id
+            == fse_compliance_reporting_id
+        )
+        await self.db.execute(stmt)
+        await self.db.flush()

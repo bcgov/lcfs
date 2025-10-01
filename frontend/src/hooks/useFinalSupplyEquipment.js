@@ -400,3 +400,42 @@ export const useGetFinalSupplyEquipmentImportJobStatus = (
     ...restOptions
   })
 }
+
+export const useGetFSEReportingList = (
+  complianceReportId,
+  pagination = { page: 1, size: 10, filters: [], sort_orders: [] },
+  options = {},
+  organizationId = null
+) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['fse-reporting-list', organizationId, pagination],
+    queryFn: async () => {
+      if (!organizationId) {
+        throw new Error('Organization ID is required')
+      }
+
+      const response = await client.post(
+        organizationId
+          ? `/final-supply-equipments/reporting/list?organizationId=${organizationId}`
+          : '/final-supply-equipments/reporting/list',
+        pagination
+      )
+      return response.data
+    },
+    enabled: enabled && !!organizationId,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
