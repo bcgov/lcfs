@@ -640,7 +640,8 @@ export const getFSEReportingColDefs = (
   minDate,
   maxDate,
   errors = {},
-  warnings = {}
+  warnings = {},
+  complianceReportId
 ) => [
   validation,
   {
@@ -671,7 +672,7 @@ export const getFSEReportingColDefs = (
       maxDate,
       autoOpenLastRow: false
     },
-    editable: true,
+    editable: (params) => params.data.complianceReportId === complianceReportId,
     valueGetter: (params) => {
       return params.data.supplyFromDate || minDate
     },
@@ -703,7 +704,7 @@ export const getFSEReportingColDefs = (
       maxDate,
       autoOpenLastRow: false
     },
-    editable: true,
+    editable: (params) => params.data.complianceReportId === complianceReportId,
     valueGetter: (params) => {
       return params.data.supplyToDate || maxDate
     },
@@ -727,7 +728,7 @@ export const getFSEReportingColDefs = (
       min: 0,
       showStepperButtons: false
     },
-    editable: true,
+    editable: (params) => params.data.complianceReportId === complianceReportId,
     filter: false,
     sortable: false,
     cellStyle: (params) =>
@@ -740,7 +741,9 @@ export const getFSEReportingColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
-    editable: true,
+    editable: (params) => params.data.complianceReportId === complianceReportId,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',
     minWidth: 200
   },
@@ -800,6 +803,8 @@ export const getFSEReportingColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
     editable: false,
+    filter: false,
+    sortable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150

@@ -10,7 +10,11 @@ from sqlalchemy import Row, RowMapping
 from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.utils.constants import POSTAL_REGEX
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.base import (
+    FilterModel,
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+)
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.final_supply_equipment.schema import (
     FSEReportingSchema,
@@ -382,11 +386,23 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def get_fse_reporting_list_paginated(
-        self, organization_id: int, pagination: PaginationRequestSchema
+        self,
+        organization_id: int,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int = None,
     ) -> dict:
         """
         Get paginated charging equipment with related charging site and FSE compliance reporting data
         """
+        if compliance_report_id:
+            pagination.filters.append(
+                FilterModel(
+                    filter_type="number",
+                    field="compliance_report_id",
+                    type="equals",
+                    filter=compliance_report_id,
+                )
+            )
         data, total = await self.repo.get_fse_reporting_list_paginated(
             organization_id, pagination
         )

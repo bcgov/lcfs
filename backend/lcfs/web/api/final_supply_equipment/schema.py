@@ -107,6 +107,6 @@ class FSEReportingSchema(BaseSchema):
     compliance_report_id: Optional[int] = None
     organization_name: Optional[str] = None
     registration_number: Optional[str] = None
-    intended_uses: List[str] = []
-    intended_users: List[str] = []
+    intended_uses: Optional[List[str]] = []
+    intended_users: Optional[List[str]] = []
     deleted: Optional[bool] = None

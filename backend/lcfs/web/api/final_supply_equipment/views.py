@@ -352,7 +352,12 @@ async def get_job_status(
 async def get_fse_reporting_list(
     request: Request,
     pagination: PaginationRequestSchema = Body(...),
-    organization_id: int = Query(None, description="Organization ID"),
+    organization_id: int = Query(
+        None, alias="organizationId", description="Organization ID"
+    ),
+    compliance_report_id: int = Query(
+        None, alias="complianceReportId", description="Mode of operation (same or other)"
+    ),
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> dict:
     """
@@ -363,7 +368,7 @@ async def get_fse_reporting_list(
         if request.user.is_government and organization_id
         else request.user.organization_id
     )
-    return await service.get_fse_reporting_list_paginated(org_id, pagination)
+    return await service.get_fse_reporting_list_paginated(org_id, pagination, compliance_report_id)
 
 
 @router.post(

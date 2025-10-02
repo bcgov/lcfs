@@ -593,11 +593,23 @@ class FinalSupplyEquipmentRepository:
         # Apply filters
         if pagination.filters:
             for f in pagination.filters:
-                if f.field == "site_name":
+                if f.field in ["site_name", "registration_number", "street_address"]:
+                    if f.field == "registration_number":
+                        f.field = "site_code"
                     field = get_field_for_filter(ChargingSite, "site_name")
-                elif f.field in ["serial_number", "manufacturer", "model"]:
+                elif f.field in ["serial_number", "manufacturer", "model", "equipment_notes"]:
+                    if f.field == "equipment_notes":
+                        f.field = "notes"
                     field = get_field_for_filter(ChargingEquipment, f.field)
-                elif f.field in ["supply_from_date", "supply_to_date", "kwh_usage"]:
+                elif f.field in [
+                    "supply_from_date",
+                    "supply_to_date",
+                    "kwh_usage",
+                    "compliance_report_id",
+                    "compliance_notes"
+                ]:
+                    if f.field == "compliance_notes":
+                        f.field = "notes"
                     field = get_field_for_filter(FSEComplianceReporting, f.field)
                 else:
                     continue
@@ -620,6 +632,7 @@ class FinalSupplyEquipmentRepository:
                     "supply_from_date",
                     "supply_to_date",
                     "kwh_usage",
+                    "compliance_report_id",
                 ]:
                     field = getattr(FSEComplianceReporting, sort_order.field)
                 else:

@@ -417,18 +417,32 @@ export const useGetFSEReportingList = (
   } = options
 
   return useQuery({
-    queryKey: ['fse-reporting-list', organizationId, pagination],
+    queryKey: [
+      'fse-reporting-list',
+      complianceReportId,
+      organizationId,
+      pagination
+    ],
     queryFn: async () => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
 
-      const response = await client.post(
-        organizationId
-          ? `/final-supply-equipments/reporting/list?organizationId=${organizationId}`
-          : '/final-supply-equipments/reporting/list',
-        pagination
-      )
+      // Build query params conditionally
+      const queryParams = new URLSearchParams()
+
+      if (organizationId) {
+        queryParams.append('organizationId', organizationId)
+      }
+
+      if (complianceReportId) {
+        queryParams.append('complianceReportId', complianceReportId)
+      }
+
+      const queryString = queryParams.toString()
+      const url = `/final-supply-equipments/reporting/list${queryString ? `?${queryString}` : ''}`
+
+      const response = await client.post(url, pagination)
       return response.data
     },
     enabled: enabled && !!organizationId,
