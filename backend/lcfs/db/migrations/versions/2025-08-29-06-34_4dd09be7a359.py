@@ -1,7 +1,7 @@
 """regulation changes for 2025 and beyond
 
 Revision ID: 4dd09be7a359
-Revises: b7c0cbcad7d8
+Revises: c25619ad20df
 Create Date: 2025-08-29 06:34:33.415526
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "4dd09be7a359"
-down_revision = "b7c0cbcad7d8"
+down_revision = "c25619ad20df"
 branch_labels = None
 depends_on = None
 
