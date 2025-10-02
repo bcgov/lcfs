@@ -1,7 +1,7 @@
 """FSE Compliance reporting
 
 Revision ID: 13529e573c05
-Revises: bbd3a73fa80f
+Revises: f1a2b3c4d5e6
 Create Date: 2025-09-29 17:52:15.519620
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "13529e573c05"
-down_revision = "bbd3a73fa80f"
+down_revision = "f1a2b3c4d5e6"
 branch_labels = None
 depends_on = None
 

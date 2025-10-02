@@ -80,19 +80,19 @@ vi.mock('@/constants/schedules.js', () => ({
 // -------- test data -------- //
 const mockEquipmentData = [
   {
-    finalSupplyEquipmentId: 1,
+    chargingEquipmentId: 1,
     organizationName: 'Test Org 1',
     serialNbr: 'SN001',
     location: 'Vancouver'
   },
   {
-    finalSupplyEquipmentId: 2,
+    chargingEquipmentId: 2,
     organizationName: 'Test Org 2',
     serialNbr: 'SN002',
     location: 'Victoria'
   },
   {
-    finalSupplyEquipmentId: 3,
+    chargingEquipmentId: 3,
     organizationName: 'Another Company',
     serialNbr: 'SN003',
     location: 'Surrey'
@@ -221,7 +221,7 @@ describe('FinalSupplyEquipmentSummary', () => {
 
     it('handles pagination calculations', async () => {
       const largeData = Array.from({ length: 25 }, (_, i) => ({
-        finalSupplyEquipmentId: i + 1,
+        chargingEquipmentId: i + 1,
         organizationName: `Org ${i + 1}`,
         serialNbr: `SN${i + 1}`,
         location: 'Test Location'
@@ -280,7 +280,7 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('getRowId function works correctly', () => {
       renderComponent()
       const getRowId = gridViewerProps.getRowId
-      const result = getRowId({ data: { finalSupplyEquipmentId: 42 } })
+      const result = getRowId({ data: { chargingEquipmentId: 42 } })
       expect(result).toBe('42')
     })
 
@@ -329,7 +329,7 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(gridViewerProps.suppressPagination).toBe(true)
 
       const largeData = Array.from({ length: 15 }, (_, i) => ({
-        finalSupplyEquipmentId: i + 1,
+        chargingEquipmentId: i + 1,
         organizationName: `Org ${i + 1}`,
         serialNbr: `SN${i + 1}`
       }))
