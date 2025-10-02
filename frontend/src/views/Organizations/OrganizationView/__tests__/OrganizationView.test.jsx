@@ -282,24 +282,22 @@ describe('OrganizationView', () => {
       )
     })
 
-    it('uses currentUser organizationId when orgID not in params (BCeID users)', () => {
+    it('redirects BCeID users to dashboard when accessing restricted tabs', () => {
       mockUseParams.mockReturnValue({}) // No orgID
       mockCurrentUser.mockReturnValue({
         data: { organization: { organizationId: '456' } },
-        hasRoles: vi.fn().mockReturnValue(false)
+        hasRoles: vi.fn().mockReturnValue(false) // BCeID user (not government)
       })
       mockUseLocation.mockReturnValue({
-        pathname: '/organizations/456/credit-ledger',
+        pathname: '/organizations/456/credit-ledger', // Trying to access restricted tab
         state: {}
       })
 
       renderComponent()
 
-      expect(screen.getByTestId('credit-ledger')).toBeInTheDocument()
-      expect(screen.getByTestId('credit-ledger')).toHaveAttribute(
-        'data-organization-id',
-        '456'
-      )
+      // BCeID users should see dashboard, not credit-ledger
+      expect(screen.queryByTestId('credit-ledger')).not.toBeInTheDocument()
+      expect(screen.getByTestId('organization-details-card')).toBeInTheDocument()
     })
   })
 

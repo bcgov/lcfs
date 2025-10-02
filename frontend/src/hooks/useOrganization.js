@@ -318,6 +318,47 @@ export const useUpdateCurrentOrgCreditMarket = (options = {}) => {
   })
 }
 
+// Mutation hook for updating company overview details
+export const useUpdateCompanyOverview = (orgID, options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/company-overview`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (clearCache) {
+        queryClient.removeQueries(['organization', orgID])
+      } else {
+        queryClient.setQueryData(['organization', orgID], data.data)
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['organization'])
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries(['organization', orgID])
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
 export const useCreditMarketListings = (options = {}) => {
   const client = useApiService()
 
