@@ -1,7 +1,7 @@
 """Add company overview fields to organization
 
 Revision ID: 3ac464e21203
-Revises: bbd3a73fa80f
+Revises: f1a2b3c4d5e6
 Create Date: 2025-09-29 17:05:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "3ac464e21203"
-down_revision = "bbd3a73fa80f"
+down_revision = "f1a2b3c4d5e6"
 branch_labels = None
 depends_on = None
 
