@@ -1005,7 +1005,8 @@ async def test_update_organization_company_overview_ignores_invalid_fields(
     }
     user = MagicMock()
 
-    mock_organization = MagicMock()
+    # Create a spec'd mock that only allows company overview fields
+    mock_organization = MagicMock(spec=['organization_id', 'company_details', 'company_representation_agreements', 'company_acting_as_aggregator', 'company_additional_notes', 'update_user'])
     mock_organization.organization_id = organization_id
     mock_organization.company_details = "Old details"
 
