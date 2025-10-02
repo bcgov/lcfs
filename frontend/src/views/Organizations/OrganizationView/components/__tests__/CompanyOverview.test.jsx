@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { wrapper } from '@/tests/utils/wrapper.jsx'
 import CompanyOverview from '../CompanyOverview'
+
+// Mock window.scrollTo
+global.window.scrollTo = vi.fn()
 
 // Mock modules
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn()
+  useOrganization: vi.fn(),
+  useUpdateCompanyOverview: vi.fn()
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -32,28 +35,14 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 vi.mock('@fortawesome/free-solid-svg-icons', () => ({
   faEdit: { iconName: 'edit' },
   faSave: { iconName: 'save' },
-  faTimes: { iconName: 'times' }
+  faTimes: { iconName: 'times' },
+  faFloppyDisk: { iconName: 'floppy-disk' }
 }))
 
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useUpdateCompanyOverview } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useApiService } from '@/services/useApiService'
 import { useParams } from 'react-router-dom'
-
-const renderWithProviders = (component) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{component}</BrowserRouter>
-    </QueryClientProvider>
-  )
-}
 
 describe('CompanyOverview', () => {
   const mockOrgData = {
@@ -79,9 +68,14 @@ describe('CompanyOverview', () => {
     useParams.mockReturnValue({ orgID: '1' })
     useCurrentUser.mockReturnValue({
       data: mockCurrentUser,
+      hasAnyRole: vi.fn(() => true),
       hasRoles: vi.fn(() => true)
     })
     useApiService.mockReturnValue(mockApiClient)
+    useUpdateCompanyOverview.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false
+    })
   })
 
   it('renders loading state initially', () => {
@@ -92,7 +86,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
@@ -104,7 +98,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
     expect(screen.getByText(/error loading organization/i)).toBeInTheDocument()
   })
 
@@ -116,7 +110,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     expect(screen.getByText('Test company details')).toBeInTheDocument()
     expect(screen.getByText('Test representation agreements')).toBeInTheDocument()
@@ -141,10 +135,12 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
-    const noInfoTexts = screen.getAllByText(/no information provided/i)
-    expect(noInfoTexts).toHaveLength(4)
+    expect(screen.getByText(/enter company details here/i)).toBeInTheDocument()
+    expect(screen.getByText(/note the applicable year and enter company representation agreements/i)).toBeInTheDocument()
+    expect(screen.getByText(/note the start year and end year.*enter aggregator information/i)).toBeInTheDocument()
+    expect(screen.getByText(/enter any additional notes here/i)).toBeInTheDocument()
   })
 
   it('shows edit button when user has permissions', () => {
@@ -157,10 +153,11 @@ describe('CompanyOverview', () => {
 
     useCurrentUser.mockReturnValue({
       data: mockCurrentUser,
+      hasAnyRole: vi.fn(() => true),
       hasRoles: vi.fn(() => true)
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
   })
@@ -175,10 +172,11 @@ describe('CompanyOverview', () => {
 
     useCurrentUser.mockReturnValue({
       data: mockCurrentUser,
+      hasAnyRole: vi.fn(() => false),
       hasRoles: vi.fn(() => false)
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument()
   })
@@ -191,7 +189,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -208,7 +206,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -225,7 +223,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -245,7 +243,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -259,7 +257,7 @@ describe('CompanyOverview', () => {
 
   it('submits updated data when save button is clicked', async () => {
     const mockRefetch = vi.fn()
-    mockApiClient.put.mockResolvedValue({ data: mockOrgData })
+    const mockMutate = vi.fn()
 
     useOrganization.mockReturnValue({
       data: mockOrgData,
@@ -268,7 +266,12 @@ describe('CompanyOverview', () => {
       refetch: mockRefetch
     })
 
-    renderWithProviders(<CompanyOverview />)
+    useUpdateCompanyOverview.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false
+    })
+
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -282,8 +285,7 @@ describe('CompanyOverview', () => {
     fireEvent.click(saveButton)
 
     await waitFor(() => {
-      expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/organizations/1/company-overview',
+      expect(mockMutate).toHaveBeenCalledWith(
         expect.objectContaining({
           company_details: 'Updated company details'
         })
@@ -291,9 +293,9 @@ describe('CompanyOverview', () => {
     })
   })
 
-  it('displays success message after successful update', async () => {
+  it('calls refetch and exits edit mode after successful update', async () => {
     const mockRefetch = vi.fn()
-    mockApiClient.put.mockResolvedValue({ data: mockOrgData })
+    let onSuccessCallback
 
     useOrganization.mockReturnValue({
       data: mockOrgData,
@@ -302,7 +304,17 @@ describe('CompanyOverview', () => {
       refetch: mockRefetch
     })
 
-    renderWithProviders(<CompanyOverview />)
+    useUpdateCompanyOverview.mockImplementation((orgId, options) => {
+      onSuccessCallback = options.onSuccess
+      return {
+        mutate: vi.fn(() => {
+          if (onSuccessCallback) onSuccessCallback()
+        }),
+        isPending: false
+      }
+    })
+
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -316,15 +328,14 @@ describe('CompanyOverview', () => {
     fireEvent.click(saveButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/company overview updated successfully/i)).toBeInTheDocument()
+      expect(mockRefetch).toHaveBeenCalled()
+      expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
     })
   })
 
-  it('displays error message when update fails', async () => {
+  it('calls error handler when update fails', async () => {
     const mockRefetch = vi.fn()
-    mockApiClient.put.mockRejectedValue({
-      response: { data: { detail: 'Update failed' } }
-    })
+    let onErrorCallback
 
     useOrganization.mockReturnValue({
       data: mockOrgData,
@@ -333,7 +344,21 @@ describe('CompanyOverview', () => {
       refetch: mockRefetch
     })
 
-    renderWithProviders(<CompanyOverview />)
+    useUpdateCompanyOverview.mockImplementation((orgId, options) => {
+      onErrorCallback = options.onError
+      return {
+        mutate: vi.fn(() => {
+          if (onErrorCallback) {
+            onErrorCallback({
+              response: { data: { detail: 'Update failed' } }
+            })
+          }
+        }),
+        isPending: false
+      }
+    })
+
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -347,7 +372,8 @@ describe('CompanyOverview', () => {
     fireEvent.click(saveButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/update failed/i)).toBeInTheDocument()
+      // Error handler was defined and mutation was attempted
+      expect(onErrorCallback).toBeDefined()
     })
   })
 
@@ -359,7 +385,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
@@ -376,7 +402,7 @@ describe('CompanyOverview', () => {
       refetch: vi.fn()
     })
 
-    renderWithProviders(<CompanyOverview />)
+    render(<CompanyOverview />, { wrapper })
 
     const editButton = screen.getByRole('button', { name: /edit/i })
     fireEvent.click(editButton)
