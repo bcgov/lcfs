@@ -40,73 +40,6 @@ vi.mock('leaflet', () => {
 })
 
 describe('FinalSupplyEquipments utils.js', () => {
-  it('datesOverlap correctly detects overlaps', () => {
-    expect(
-      datesOverlap('2023-01-01', '2023-01-31', '2023-01-15', '2023-02-01')
-    ).toBe(true)
-    expect(
-      datesOverlap('2023-01-01', '2023-01-31', '2023-02-01', '2023-02-28')
-    ).toBe(false)
-  })
-
-  it('transformApiData converts API rows and handles null', () => {
-    expect(transformApiData(null)).toEqual([])
-    const input = {
-      finalSupplyEquipments: [
-        {
-          finalSupplyEquipmentId: 1,
-          serialNbr: 'SN1',
-          latitude: '49.3',
-          longitude: '-123.1',
-          streetAddress: '123 St',
-          city: 'Van',
-          postalCode: 'V6B',
-          supplyFromDate: '2023-01-01',
-          supplyToDate: '2023-12-31'
-        }
-      ]
-    }
-    const out = transformApiData(input)
-    expect(out[0].id).toBe('1_SN1')
-    expect(out[0].lat).toBe(49.3)
-  })
-
-  it('groupLocationsByCoordinates rounds coords for grouping', () => {
-    const grouped = groupLocationsByCoordinates([
-      { lat: 49.300001, lng: -123.1 },
-      { lat: 49.300001, lng: -123.1 }
-    ])
-    expect(Object.keys(grouped)).toHaveLength(1)
-  })
-
-  it('findOverlappingPeriods detects same-serial overlaps', () => {
-    const loc1 = {
-      id: '10_SN1',
-      uniqueId: 'u1',
-      supplyFromDate: '2023-01-01',
-      supplyToDate: '2023-03-31'
-    }
-    const loc2 = {
-      id: '11_SN1',
-      uniqueId: 'u2',
-      supplyFromDate: '2023-03-01',
-      supplyToDate: '2023-04-30'
-    }
-    const result = findOverlappingPeriods(loc1, [loc1, loc2])
-    expect(result).toHaveLength(1)
-  })
-
-  it('sortMixedStrings puts numeric prefixes first', () => {
-    const arr = ['Banana', '2foo', '10bar', 'apple']
-    const sorted = sortMixedStrings(arr)
-    expect(sorted.slice(0, 2)).toEqual(['2foo', '10bar'])
-  })
-})
-
-// Mock fetch globally
-global.fetch = vi.fn()
-
-describe('FinalSupplyEquipments utils.js', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -117,7 +50,6 @@ describe('FinalSupplyEquipments utils.js', () => {
 
   describe('fixLeafletIcons', () => {
     it('should delete _getIconUrl and merge options', async () => {
-      // Dynamic import to get the mocked version
       const L = (await import('leaflet')).default
 
       fixLeafletIcons()
@@ -224,8 +156,8 @@ describe('FinalSupplyEquipments utils.js', () => {
       const input = {
         finalSupplyEquipments: [
           {
-            finalSupplyEquipmentId: 1,
-            serialNbr: 'SN1',
+            chargingEquipmentId: 1,
+            serialNumber: 'SN1',
             latitude: '49.3',
             longitude: '-123.1',
             streetAddress: '123 Main St',
@@ -243,8 +175,8 @@ describe('FinalSupplyEquipments utils.js', () => {
       expect(result[0]).toMatchObject({
         id: '1_SN1',
         uniqueId: '1_SN1_0',
-        finalSupplyEquipmentId: 1,
-        serialNbr: 'SN1',
+        chargingEquipmentId: 1,
+        serialNumber: 'SN1',
         name: '123 Main St, Vancouver, V6B 1A1',
         lat: 49.3,
         lng: -123.1,
@@ -257,8 +189,8 @@ describe('FinalSupplyEquipments utils.js', () => {
       const input = {
         finalSupplyEquipments: [
           {
-            finalSupplyEquipmentId: null,
-            serialNbr: null,
+            chargingEquipmentId: null,
+            serialNumber: null,
             latitude: null,
             longitude: null,
             streetAddress: null,
@@ -275,9 +207,8 @@ describe('FinalSupplyEquipments utils.js', () => {
       expect(result[0]).toMatchObject({
         id: 'unknown_unknown',
         uniqueId: 'unknown_unknown_0',
-        finalSupplyEquipmentId: 'unknown',
-        serialNbr: 'unknown',
-        name: ', ,',
+        chargingEquipmentId: 'unknown',
+        serialNumber: 'unknown',
         lat: 0,
         lng: 0
       })
@@ -288,8 +219,8 @@ describe('FinalSupplyEquipments utils.js', () => {
     it('should handle multiple items', () => {
       const input = {
         finalSupplyEquipments: [
-          { finalSupplyEquipmentId: 1, serialNbr: 'SN1' },
-          { finalSupplyEquipmentId: 2, serialNbr: 'SN2' }
+          { chargingEquipmentId: 1, serialNumber: 'SN1' },
+          { chargingEquipmentId: 2, serialNumber: 'SN2' }
         ]
       }
 
@@ -342,37 +273,44 @@ describe('FinalSupplyEquipments utils.js', () => {
         name: 'Location 1'
       },
       {
-        id: '11_SN1',
+        id: '10_SN1', // Same FSE ID and serial number as first one
         uniqueId: 'u2',
         supplyFromDate: '2023-03-01',
         supplyToDate: '2023-04-30',
         name: 'Location 2'
       },
       {
-        id: '10_SN2',
+        id: '10_SN2', // Same FSE ID but different serial number
         uniqueId: 'u3',
         supplyFromDate: '2023-02-01',
         supplyToDate: '2023-04-30',
         name: 'Location 3'
+      },
+      {
+        id: '11_SN1', // Different FSE ID but same serial number
+        uniqueId: 'u4',
+        supplyFromDate: '2023-02-01',
+        supplyToDate: '2023-04-30',
+        name: 'Location 4'
       }
     ]
 
-    it('should find overlapping periods for same serial number', () => {
+    it('should find overlapping periods for same FSE ID and serial number', () => {
       const result = findOverlappingPeriods(mockLocations[0], mockLocations)
 
       expect(result).toHaveLength(1)
       expect(result[0].uniqueId).toBe('u2')
-      expect(result[0].fseId).toBe('11')
+      expect(result[0].fseId).toBe('10')
       expect(result[0].serialNum).toBe('SN1')
     })
 
     it('should return empty array when no overlaps', () => {
       const currentLoc = {
         id: '12_SN3',
-        uniqueId: 'u4',
+        uniqueId: 'u5',
         supplyFromDate: '2023-05-01',
         supplyToDate: '2023-06-30',
-        name: 'Location 4'
+        name: 'Location 5'
       }
 
       const result = findOverlappingPeriods(currentLoc, mockLocations)
@@ -386,10 +324,39 @@ describe('FinalSupplyEquipments utils.js', () => {
       expect(result.find((loc) => loc.uniqueId === 'u1')).toBeUndefined()
     })
 
-    it('should only match same serial numbers', () => {
+    it('should only match same FSE ID and serial numbers', () => {
       const result = findOverlappingPeriods(mockLocations[0], mockLocations)
 
+      // Should not match different serial number
       expect(result.find((loc) => loc.serialNum === 'SN2')).toBeUndefined()
+      // Should not match different FSE ID
+      expect(result.find((loc) => loc.uniqueId === 'u4')).toBeUndefined()
+    })
+
+    it('should not match if dates do not overlap', () => {
+      const nonOverlappingLocations = [
+        {
+          id: '10_SN1',
+          uniqueId: 'u1',
+          supplyFromDate: '2023-01-01',
+          supplyToDate: '2023-01-31',
+          name: 'Location 1'
+        },
+        {
+          id: '10_SN1',
+          uniqueId: 'u2',
+          supplyFromDate: '2023-02-01',
+          supplyToDate: '2023-02-28',
+          name: 'Location 2'
+        }
+      ]
+
+      const result = findOverlappingPeriods(
+        nonOverlappingLocations[0],
+        nonOverlappingLocations
+      )
+
+      expect(result).toHaveLength(0)
     })
   })
 

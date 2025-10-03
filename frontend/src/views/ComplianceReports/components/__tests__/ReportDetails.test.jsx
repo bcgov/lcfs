@@ -11,7 +11,7 @@ const mockUseCurrentUser = vi.fn()
 const mockUseComplianceReportWithCache = vi.fn()
 const mockUseComplianceReportDocuments = vi.fn()
 const mockUseGetFuelSupplies = vi.fn()
-const mockUseGetFinalSupplyEquipments = vi.fn()
+const mockUseGetFSEReportingList = vi.fn()
 const mockUseGetAllAllocationAgreements = vi.fn()
 const mockUseGetAllNotionalTransfers = vi.fn()
 const mockUseGetAllOtherUses = vi.fn()
@@ -67,7 +67,7 @@ vi.mock('@/hooks/useFuelSupply', () => ({
 }))
 
 vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
-  useGetFinalSupplyEquipments: () => mockUseGetFinalSupplyEquipments()
+  useGetFSEReportingList: () => mockUseGetFSEReportingList()
 }))
 
 vi.mock('@/hooks/useAllocationAgreement', () => ({
@@ -223,7 +223,7 @@ describe('ReportDetails', () => {
       isLoading: false,
       error: null
     })
-    mockUseGetFinalSupplyEquipments.mockReturnValue({
+    mockUseGetFSEReportingList.mockReturnValue({
       data: { finalSupplyEquipments: [] },
       isLoading: false,
       error: null

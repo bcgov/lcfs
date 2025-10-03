@@ -92,6 +92,24 @@ async def get_charging_site_statuses(
 
 
 @router.get(
+    "/names",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
+async def get_site_names(
+    request: Request, 
+    organization_id: int = None,
+    service: ChargingSiteService = Depends()
+) -> List[dict]:
+    """
+    Get site names and IDs for organization
+    """
+    org_id = organization_id if request.user.is_government and organization_id else request.user.organization_id
+    return await service.get_site_names_by_organization(org_id)
+
+
+@router.get(
     "/{site_id}",
     response_model=ChargingSiteSchema,
     status_code=status.HTTP_200_OK,

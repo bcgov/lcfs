@@ -522,3 +522,15 @@ class ChargingSiteRepository:
             await self.db.delete(charging_site)
 
         await self.db.flush()
+
+    @repo_handler
+    async def get_site_names_by_organization(self, organization_id: int):
+        """
+        Get site names and charging site IDs for the given organization
+        """
+        result = await self.db.execute(
+            select(ChargingSite.site_name, ChargingSite.charging_site_id)
+            .where(ChargingSite.organization_id == organization_id)
+            .order_by(ChargingSite.site_name)
+        )
+        return result.all()

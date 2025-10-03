@@ -242,3 +242,34 @@ class TestChargingSiteRepository:
         assert len(result) == 2
         assert result[0] == mock_statuses
         assert result[1] == mock_users
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization(self, charging_site_repo, mock_db_session):
+        """Test getting site names by organization"""
+        # Mock the result with site_name and charging_site_id
+        mock_result = MagicMock()
+        mock_result.all.return_value = [
+            ("Site 1", 1),
+            ("Site 2", 2),
+        ]
+        mock_db_session.execute.return_value = mock_result
+        
+        result = await charging_site_repo.get_site_names_by_organization(1)
+        
+        assert len(result) == 2
+        assert result[0] == ("Site 1", 1)
+        assert result[1] == ("Site 2", 2)
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization_empty(self, charging_site_repo, mock_db_session):
+        """Test getting site names when no sites exist for organization"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db_session.execute.return_value = mock_result
+        
+        result = await charging_site_repo.get_site_names_by_organization(999)
+        
+        assert len(result) == 0
+        assert result == []
+        mock_db_session.execute.assert_called_once()

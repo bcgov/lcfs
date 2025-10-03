@@ -93,7 +93,7 @@ export const ActivityLinksList = ({
       createActivity(
         'report:activityLists.finalSupplyEquipment',
         'report:activityLabels.finalSupplyEquipment',
-        ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
+        ROUTES.REPORTS.ADD.FSE_REPORTING,
         true
       ),
       createActivity(

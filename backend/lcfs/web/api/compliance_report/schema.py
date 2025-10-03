@@ -355,10 +355,10 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
-    filters: Optional[List[FilterModel]] = None
-    page: Optional[int] = None
-    size: Optional[int] = None
-    sort_orders: Optional[List[SortOrder]] = None
+    filters: Optional[List[FilterModel]] = []
+    page: Optional[int] = 1
+    size: Optional[int] = 10
+    sort_orders: Optional[List[SortOrder]] = []
 
 
 class ComplianceReportUpdateSchema(BaseSchema):

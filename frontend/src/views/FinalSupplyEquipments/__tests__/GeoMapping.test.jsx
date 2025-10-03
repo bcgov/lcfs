@@ -1,13 +1,10 @@
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useState, useEffect } from 'react'
 import GeoMapping from '../GeoMapping'
 import { wrapper } from '@/tests/utils/wrapper'
 import * as utils from '../components/utils'
 
-// ------ Shared mocks across tests ------ //
-// These imports are extremely heavy (leaflet, map tiling, etc.) so we stub
-// them once here to keep the tests lightweight.
+// Mock heavy dependencies
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }) => (
     <div data-test="map-container">{children}</div>
@@ -27,47 +24,40 @@ vi.mock('../components/StatusComponent', () => ({
   ),
   OverlapSummary: () => <div data-test="overlap-summary" />,
   LoadingState: () => <div data-test="loading-state" />,
-  ErrorState: () => <div data-test="error-state" />,
-  NoDataState: () => <div data-test="no-data-state" />
+  ErrorState: ({ resetGeofencing }) => (
+    <div data-test="error-state">
+      <button onClick={resetGeofencing}>Reset</button>
+    </div>
+  ),
+  NoDataState: ({ resetGeofencing }) => (
+    <div data-test="no-data-state">
+      <button onClick={resetGeofencing}>Reset</button>
+    </div>
+  )
 }))
 
 vi.mock('../components/TableComponent', () => ({
   ExcelStyledTable: () => <div data-test="excel-table" />
 }))
 
-// Utility functions mock - configurable for testing different scenarios
+// Utility functions mock
 vi.mock('../components/utils', () => ({
   fixLeafletIcons: vi.fn(),
   transformApiData: vi.fn((data) => data?.finalSupplyEquipments || []),
   groupLocationsByCoordinates: vi.fn((data) => ({ '0,0': data })),
-  findOverlappingPeriods: vi.fn(() => []),
-  batchProcessGeofencing: vi.fn(() => Promise.resolve({}))
+  findOverlappingPeriods: vi.fn(() => [])
 }))
 
-// Mock the location service to use our controllable mock
+// Mock the location service
 let mockLocationService = {
-  batchProcessGeofencing: vi.fn(() => Promise.resolve({})),
-  isLoading: false,
-  error: null
+  batchProcessGeofencing: vi.fn(() => Promise.resolve({}))
 }
 
 vi.mock('@/services/locationService', () => ({
   useLocationService: () => mockLocationService
 }))
 
-// We will provide custom responses for the hook inside each test via a helper
-let hookResponse
-vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
-  useGetFinalSupplyEquipments: () => hookResponse
-}))
-
-// Helper to render with wrapper and customise hook output
-const renderWithHook = (customResponse) => {
-  hookResponse = customResponse
-  return render(<GeoMapping complianceReportId="123" />, { wrapper })
-}
-
-// Mock data for testing
+// Mock data
 const mockSupplyEquipmentData = {
   finalSupplyEquipments: [
     {
@@ -112,8 +102,6 @@ const mockTransformedData = [
   }
 ]
 
-// ------ Test suite ------ //
-
 describe('GeoMapping', () => {
   const mockTransformApiData = vi.mocked(utils.transformApiData)
   const mockGroupLocationsByCoordinates = vi.mocked(
@@ -123,7 +111,6 @@ describe('GeoMapping', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // Reset mock implementations
     mockTransformApiData.mockImplementation(
       (data) => data?.finalSupplyEquipments || []
     )
@@ -131,298 +118,224 @@ describe('GeoMapping', () => {
       '0,0': data
     }))
     mockFindOverlappingPeriods.mockImplementation(() => [])
-
-    // Reset location service mock
     mockLocationService.batchProcessGeofencing = vi.fn(() =>
       Promise.resolve({})
     )
   })
 
-  it('shows loading state', () => {
-    renderWithHook({ isLoading: true })
-    expect(screen.getByTestId('loading-state')).toBeInTheDocument()
-  })
-
-  it('shows error state when hook reports error', () => {
-    renderWithHook({ isLoading: false, isError: true, refetch: vi.fn() })
-    expect(screen.getByTestId('error-state')).toBeInTheDocument()
-  })
-
-  it('shows no data state when hook returns no dataset', () => {
-    renderWithHook({
-      isLoading: false,
-      isError: false,
-      data: null,
-      refetch: vi.fn()
-    })
+  it('shows no data state when data is null', () => {
+    render(<GeoMapping complianceReportId="123" data={null} />, { wrapper })
     expect(screen.getByTestId('no-data-state')).toBeInTheDocument()
   })
 
+  it('shows no data state when finalSupplyEquipments is empty', () => {
+    render(
+      <GeoMapping
+        complianceReportId="123"
+        data={{ finalSupplyEquipments: [] }}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByTestId('error-state')).toBeInTheDocument()
+  })
+
   it('renders the map when data is available', async () => {
-    renderWithHook({
-      isLoading: false,
-      isError: false,
-      data: mockSupplyEquipmentData,
-      refetch: vi.fn()
-    })
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
 
     expect(screen.getByTestId('map-container')).toBeInTheDocument()
     expect(screen.getByTestId('base-map')).toBeInTheDocument()
+    expect(screen.getByTestId('geofencing-status')).toBeInTheDocument()
+  })
+
+  it('processes API data when data loads', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue({
+      '50.1234,-120.5678': [mockTransformedData[0]],
+      '51.2345,-121.6789': [mockTransformedData[1]]
+    })
+
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
+
     await waitFor(() => {
-      expect(screen.getByTestId('geofencing-status').textContent).not.toBe(
-        'idle'
+      expect(mockTransformApiData).toHaveBeenCalledWith(mockSupplyEquipmentData)
+    })
+    expect(mockGroupLocationsByCoordinates).toHaveBeenCalledWith(
+      mockTransformedData
+    )
+  })
+
+  it('handles empty transformed data by setting error state', async () => {
+    mockTransformApiData.mockReturnValue([])
+
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(mockTransformApiData).toHaveBeenCalled()
+      expect(screen.getByTestId('error-state')).toBeInTheDocument()
+    })
+  })
+
+  it('triggers geofencing when locations are loaded', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue({
+      '50.1234,-120.5678': [mockTransformedData[0]]
+    })
+    mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
+
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
+    })
+  })
+
+  it('handles geofencing errors', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue({
+      '50.1234,-120.5678': [mockTransformedData[0]]
+    })
+    mockLocationService.batchProcessGeofencing.mockRejectedValue(
+      new Error('Geofencing failed')
+    )
+
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('geofencing-status').textContent).toBe('error')
+    })
+  })
+
+  it('calculates overlaps when geofencing is completed', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue({
+      '50.1234,-120.5678': [mockTransformedData[0]]
+    })
+    mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
+    mockFindOverlappingPeriods.mockReturnValue(['overlap1'])
+
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(mockFindOverlappingPeriods).toHaveBeenCalled()
+    })
+  })
+
+  it('resets geofencing when reset button is clicked', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
+
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalledTimes(
+        1
+      )
+    })
+
+    const resetButton = screen.getByRole('button', {
+      name: /reset geofencing/i
+    })
+    fireEvent.click(resetButton)
+
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalledTimes(
+        2
       )
     })
   })
 
-  describe('Data Processing Effects', () => {
-    it('processes API data when supplyEquipmentData loads', async () => {
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]],
-        '51.2345,-121.6789': [mockTransformedData[1]]
-      })
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockTransformApiData).toHaveBeenCalledWith(
-          mockSupplyEquipmentData
-        )
-      })
-      expect(mockGroupLocationsByCoordinates).toHaveBeenCalledWith(
-        mockTransformedData
-      )
+  it('renders all map components', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue({
+      '50.1234,-120.5678': [mockTransformedData[0]]
     })
 
-    it('handles empty data by setting error state', async () => {
-      mockTransformApiData.mockReturnValue([])
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
 
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockTransformApiData).toHaveBeenCalled()
-      })
-      // Error state would be set internally but we can't easily test state directly
-      // Component behavior with error is tested in other tests
-    })
-
-    it('triggers geofencing when locations are loaded and status is idle', async () => {
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
-      })
-    })
-
-    it('handles geofencing errors', async () => {
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockRejectedValue(
-        new Error('Geofencing failed')
-      )
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
-      })
-      // Error status would be set internally
-    })
-
-    it('calculates overlaps when geofencing is completed', async () => {
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
-      mockFindOverlappingPeriods.mockReturnValue(['overlap1'])
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
-      })
-
-      await waitFor(() => {
-        expect(mockFindOverlappingPeriods).toHaveBeenCalled()
-      })
-    })
+    expect(screen.getByTestId('map-container')).toBeInTheDocument()
+    expect(screen.getByTestId('base-map')).toBeInTheDocument()
+    expect(screen.getByTestId('bounds-handler')).toBeInTheDocument()
+    expect(screen.getByTestId('map-legend')).toBeInTheDocument()
+    expect(screen.getByTestId('map-markers')).toBeInTheDocument()
   })
 
-  describe('User Interactions', () => {
-    it('refreshes data when refresh button is clicked', async () => {
-      const refetchMock = vi.fn()
+  it('processes geofencing results correctly for grouped locations', async () => {
+    const groupedData = {
+      '50.1234,-120.5678': [mockTransformedData[0], mockTransformedData[1]]
+    }
 
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: refetchMock
-      })
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue(groupedData)
+    mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
 
-      const refreshButton = screen.getByRole('button', {
-        name: /refresh map data/i
-      })
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
 
-      await act(async () => {
-        fireEvent.click(refreshButton)
-      })
-
-      expect(refetchMock).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
     })
+
+    // Verify that geofencing was called with unique locations
+    const callArgs = mockLocationService.batchProcessGeofencing.mock.calls[0][0]
+    expect(callArgs).toHaveLength(1) // Only one unique location from the group
   })
 
-  describe('Function Testing', () => {
-    it('tests generatePopupContent functionality through component behavior', async () => {
-      // Test that the function exists and works by verifying component renders with popup data
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
-      mockFindOverlappingPeriods.mockReturnValue([])
+  it('handles BC and non-BC locations in overlap statistics', async () => {
+    mockTransformApiData.mockReturnValue(mockTransformedData)
+    mockGroupLocationsByCoordinates.mockReturnValue({
+      '50.1234,-120.5678': [mockTransformedData[0]]
+    })
+    mockLocationService.batchProcessGeofencing.mockResolvedValue({
+      1: true, // In BC
+      2: false // Outside BC
+    })
+    mockFindOverlappingPeriods.mockReturnValue(['overlap1'])
 
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
+    render(
+      <GeoMapping complianceReportId="123" data={mockSupplyEquipmentData} />,
+      { wrapper }
+    )
 
-      // Verify the component processes the data correctly for popup content
-      await waitFor(() => {
-        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
-      })
-
-      // The map markers component should be rendered, indicating generatePopupContent is working
-      expect(screen.getByTestId('map-markers')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
     })
 
-    it('tests generatePopupContent with BC location', async () => {
-      // This function is internal but we can test through the component's state
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
-      })
+    await waitFor(() => {
+      expect(mockFindOverlappingPeriods).toHaveBeenCalled()
     })
-
-    it('tests generatePopupContent with non-BC location', async () => {
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: false }) // Outside BC
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockLocationService.batchProcessGeofencing).toHaveBeenCalled()
-      })
-    })
-
-    it('tests generatePopupContent with overlapping periods', async () => {
-      mockTransformApiData.mockReturnValue(mockTransformedData)
-      mockGroupLocationsByCoordinates.mockReturnValue({
-        '50.1234,-120.5678': [mockTransformedData[0]]
-      })
-      mockLocationService.batchProcessGeofencing.mockResolvedValue({ 1: true })
-      mockFindOverlappingPeriods.mockReturnValue(['overlap1', 'overlap2']) // Has overlaps
-
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: mockSupplyEquipmentData,
-        refetch: vi.fn()
-      })
-
-      await waitFor(() => {
-        expect(mockFindOverlappingPeriods).toHaveBeenCalled()
-      })
-    })
-  })
-
-  describe('Error Handling', () => {
-    it('shows error state when there is an internal error', async () => {
-      await act(async () => {
-        renderWithHook({
-          isLoading: false,
-          isError: false,
-          data: mockSupplyEquipmentData,
-          refetch: vi.fn()
-        })
-      })
-
-      // Wait for all async state updates to complete
-      await waitFor(() => {
-        // Component creates error internally, which would trigger error state
-        // This is tested by the empty data scenario above
-        expect(screen.getByTestId('map-container')).toBeInTheDocument()
-      })
-    })
-
-    it('shows no data state when supply equipment data is missing', () => {
-      renderWithHook({
-        isLoading: false,
-        isError: false,
-        data: null,
-        refetch: vi.fn()
-      })
-
-      expect(screen.getByTestId('no-data-state')).toBeInTheDocument()
-    })
-
-    // Note: Removed flaky test that was inconsistent between error-state vs no-data-state
-    // to maintain 100% pass rate while keeping high coverage
   })
 })

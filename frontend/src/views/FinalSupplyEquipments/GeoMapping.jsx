@@ -28,12 +28,11 @@ import {
   findOverlappingPeriods
 } from './components/utils'
 import { useLocationService } from '@/services/locationService'
-import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
 
 // Fix Leaflet icon issue
 fixLeafletIcons()
 
-const GeoMapping = ({ complianceReportId }) => {
+const GeoMapping = ({ complianceReportId, data }) => {
   const [locations, setLocations] = useState([])
   const [groupedLocations, setGroupedLocations] = useState({})
   const [error, setError] = useState(null)
@@ -51,21 +50,13 @@ const GeoMapping = ({ complianceReportId }) => {
   // Use the location service for geofencing
   const { batchProcessGeofencing } = useLocationService()
 
-  // Use react-query for fetching data
-  const {
-    data: supplyEquipmentData,
-    isLoading,
-    isError,
-    refetch
-  } = useGetFinalSupplyEquipments(complianceReportId)
-
   // Reset geofencing status
   const resetGeofencing = () => setGeofencingStatus('idle')
 
   // Process API data when it loads
   useEffect(() => {
-    if (supplyEquipmentData) {
-      const transformedData = transformApiData(supplyEquipmentData)
+    if (data) {
+      const transformedData = transformApiData(data)
 
       if (transformedData.length === 0) {
         console.warn('No location data found in API response')
@@ -78,7 +69,7 @@ const GeoMapping = ({ complianceReportId }) => {
         setError(null)
       }
     }
-  }, [supplyEquipmentData])
+  }, [data])
 
   // Run geofencing when locations are loaded
   useEffect(() => {
@@ -159,8 +150,8 @@ const GeoMapping = ({ complianceReportId }) => {
     locGroup.forEach((loc) => {
       if (!uniqueSupplyUnits[loc.id]) {
         uniqueSupplyUnits[loc.id] = {
-          fseId: loc.finalSupplyEquipmentId,
-          serialNum: loc.serialNbr,
+          fseId: loc.chargingEquipmentId,
+          serialNum: loc.serialNumber,
           hasOverlap: false,
           records: []
         }
@@ -222,26 +213,16 @@ const GeoMapping = ({ complianceReportId }) => {
     )
   }
 
-  if (isLoading) {
-    return <LoadingState />
-  }
-
-  if (isError || error) {
-    return (
-      <ErrorState
-        error={error}
-        refetch={refetch}
-        resetGeofencing={resetGeofencing}
-      />
-    )
+  if (error) {
+    return <ErrorState error={error} resetGeofencing={resetGeofencing} />
   }
 
   if (
-    !supplyEquipmentData ||
-    !supplyEquipmentData.finalSupplyEquipments ||
-    supplyEquipmentData.finalSupplyEquipments.length === 0
+    !data ||
+    !data.finalSupplyEquipments ||
+    data.finalSupplyEquipments.length === 0
   )
-    return <NoDataState refetch={refetch} resetGeofencing={resetGeofencing} />
+    return <NoDataState resetGeofencing={resetGeofencing} />
 
   return (
     <div>
@@ -250,12 +231,11 @@ const GeoMapping = ({ complianceReportId }) => {
         color="dark"
         size="small"
         onClick={() => {
-          refetch()
           setGeofencingStatus('idle')
         }}
         sx={{ mb: 2 }}
       >
-        Refresh Map Data
+        Reset Geofencing
       </BCButton>
 
       <GeofencingStatus status={geofencingStatus} />

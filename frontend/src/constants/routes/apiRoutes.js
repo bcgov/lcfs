@@ -110,6 +110,7 @@ export const apiRoutes = {
   downloadFinalSupplyEquipmentsTemplate:
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
+  saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
   // charging sites
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',

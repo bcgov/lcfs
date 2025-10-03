@@ -12,8 +12,6 @@ This script populates all tables in the correct order:
 5. compliance_report_charging_equipment - Create compliance associations
 """
 
-import hashlib
-from typing import Optional
 import uuid
 from datetime import datetime, timezone
 from lcfs.utils.unique_key_generators import next_base36
@@ -160,13 +158,12 @@ def upgrade() -> None:
                 serial_number, manufacturer, model, level_of_equipment_id, ports, notes, organization_name,
                 group_uuid, version, action_type, create_date, update_date, create_user, update_user
             )
-            SELECT 
+            SELECT
                 fse.final_supply_equipment_id, cs.charging_site_id, :default_status_id,
                 LPAD(ROW_NUMBER() OVER (PARTITION BY cs.charging_site_id ORDER BY fse.final_supply_equipment_id)::text, 5, '0'),
                 fse.serial_nbr, fse.manufacturer, fse.model, fse.level_of_equipment_id, fse.ports,
-                CONCAT('Migrated from FSE ID: ', fse.final_supply_equipment_id,
+                CONCAT('FSE ID: ', fse.final_supply_equipment_id,
                     CASE WHEN fse.registration_nbr IS NOT NULL THEN ' | Registration: ' || fse.registration_nbr ELSE '' END,
-                    CASE WHEN fse.organization_name IS NOT NULL THEN ' | Org name: ' || fse.organization_name ELSE '' END,
                     CASE WHEN fse.notes IS NOT NULL THEN ' | Original notes: ' || fse.notes ELSE '' END),
                 fse.organization_name,
                 gen_random_uuid(), 0, 'CREATE',
@@ -174,11 +171,27 @@ def upgrade() -> None:
                 COALESCE(fse.create_user, 'system_migration'),
                 COALESCE(fse.update_user, 'system_migration')
             FROM final_supply_equipment fse
+            JOIN (
+                SELECT 
+                    compliance_report_id,
+                    organization_id,
+                    compliance_period_id
+                FROM compliance_report cr1
+                WHERE version = (
+                    SELECT MAX(version)
+                    FROM compliance_report cr2
+                    WHERE cr2.organization_id = cr1.organization_id 
+                    AND cr2.compliance_period_id = cr1.compliance_period_id
+                )
+            ) latest_cr ON fse.compliance_report_id = latest_cr.compliance_report_id
             JOIN compliance_report cr ON fse.compliance_report_id = cr.compliance_report_id
-            JOIN charging_site cs ON (cs.organization_id = cr.organization_id AND cs.street_address = fse.street_address 
-                AND cs.city = fse.city AND cs.postal_code = fse.postal_code AND cs.create_user = 'system_migration')
-            WHERE fse.serial_nbr IS NOT NULL AND fse.manufacturer IS NOT NULL
-        """
+            JOIN charging_site cs ON (cs.organization_id = cr.organization_id 
+                AND cs.street_address = fse.street_address
+                AND cs.city = fse.city 
+                AND cs.postal_code = fse.postal_code 
+                AND cs.create_user = 'system_migration')
+            WHERE fse.serial_nbr IS NOT NULL AND fse.manufacturer IS NOT null;
+            """
             ),
             {"default_status_id": default_equipment_status_id},
         )
