@@ -150,8 +150,8 @@ const GeoMapping = ({ complianceReportId, data }) => {
     locGroup.forEach((loc) => {
       if (!uniqueSupplyUnits[loc.id]) {
         uniqueSupplyUnits[loc.id] = {
-          fseId: loc.finalSupplyEquipmentId,
-          serialNum: loc.serialNbr,
+          fseId: loc.chargingEquipmentId,
+          serialNum: loc.serialNumber,
           hasOverlap: false,
           records: []
         }
