@@ -16,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
-import { BCAlert2, FloatingAlert } from '@/components/BCAlert'
+import { FloatingAlert } from '@/components/BCAlert'
 import {
   RequiredHeader,
   AccessibleHeader,
@@ -658,6 +658,7 @@ export const BCGridEditorPaginated = ({
         flexDirection: 'column'
       }}
     >
+      <FloatingAlert dismissible={true} ref={alertRef} data-test="alert-box" />
       {showRequiredIndicator && (
         <BCTypography
           variant="body4"
@@ -725,7 +726,8 @@ export const BCGridEditorPaginated = ({
           {/* Floating pagination */}
           {isPaginationFloating &&
             enableFloatingPagination &&
-            (data?.pagination?.size || paginationOptions.size || 10) > 10 && (
+            (data?.pagination?.size || paginationOptions.size || 10) > 10 &&
+            (data?.pagination?.total || paginationOptions.total || 10) > 10 && (
               <BCBox
                 className="ag-grid-pagination-container-floating"
                 display="flex"
@@ -785,12 +787,8 @@ export const BCGridEditorPaginated = ({
         </>
       )}
 
-      <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
-        <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
-      </BCBox>
-
       {/* Action Buttons */}
-      <BCBox flex={1}>
+      <BCBox flex={1} mt={2} mx={0} ml={-2}>
         {showAddRowsButton && (
           <>
             <BCButton

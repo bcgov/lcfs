@@ -1,6 +1,6 @@
 from datetime import date
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from pydantic import Field
 
@@ -105,6 +105,7 @@ class FSEReportingSchema(BaseSchema):
     compliance_notes: Optional[str] = None
     equipment_notes: Optional[str] = None
     compliance_report_id: Optional[int] = None
+    compliance_period_id: Optional[int] = None
     organization_name: Optional[str] = None
     registration_number: Optional[str] = None
     intended_uses: Optional[List[str]] = []
@@ -114,8 +115,8 @@ class FSEReportingSchema(BaseSchema):
 
 class FSEReportingBaseSchema(BaseSchema):
     fse_compliance_reporting_id: Optional[int] = None
-    supply_from_date: Optional[date] = None
-    supply_to_date: Optional[date] = None
+    supply_from_date: date
+    supply_to_date: date
     kwh_usage: Optional[float] = 0
     notes: Optional[str] = None
     charging_equipment_id: int
@@ -124,9 +125,21 @@ class FSEReportingBaseSchema(BaseSchema):
     compliance_period_id: int
 
 
+class FSEReportingBatchSchema(BaseSchema):
+    fse_reports: Union[List[FSEReportingBaseSchema], FSEReportingBaseSchema] = []
+    compliance_report_id: int
+    organization_id: int
+
+
 class FSEReportingDefaultDates(BaseSchema):
     supply_from_date: Optional[date] = None
     supply_to_date: Optional[date] = None
     equipment_ids: List[int] = []
     compliance_report_id: int
-    compliance_period_id: int
+    organization_id: int
+
+
+class FSEReportingBatchDeleteSchema(BaseSchema):
+    reporting_ids: List[int]
+    compliance_report_id: int
+    organization_id: int

@@ -483,38 +483,24 @@ export const useSaveFSEReporting = (
         throw new Error('Compliance report ID is required')
       }
 
-      const fseComplianceReportingId = data.fseComplianceReportingId || null
-
-      // DELETE operation
-      if (data.deleted) {
-        if (!fseComplianceReportingId) {
-          throw new Error(
-            'FSE compliance reporting ID is required for deletion'
-          )
-        }
-        return await client.delete(
-          `/final-supply-equipments/reporting/${fseComplianceReportingId}`
-        )
+      // Handle batch operations for multiple selected rows
+      if (Array.isArray(data)) {
+        return await client.post(apiRoutes.saveFSEReportingBatch, {
+          fseReports: [...data],
+          complianceReportId,
+          organizationId
+        })
       }
+
+      const fseComplianceReportingId = data.fseComplianceReportingId || null
 
       // UPDATE operation (has ID and not deleted)
       if (fseComplianceReportingId) {
         return await client.put(
           `/final-supply-equipments/reporting/${fseComplianceReportingId}`,
-          {
-            ...data,
-            complianceReportId,
-            organizationId
-          }
+          { ...data }
         )
       }
-
-      // CREATE operation (no ID)
-      return await client.post('/final-supply-equipments/reporting', {
-        ...data,
-        complianceReportId,
-        organizationId
-      })
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {
@@ -523,12 +509,12 @@ export const useSaveFSEReporting = (
           queryKey: ['fse-reporting-list']
         })
       } else {
-        // Invalidate FSE reporting list queries for this organization
+        // Invalidate FSE reporting list queries for this compliance report
         queryClient.invalidateQueries({
           predicate: (query) => {
             return (
               query.queryKey[0] === 'fse-reporting-list' &&
-              query.queryKey[1] === organizationId
+              query.queryKey[1] === complianceReportId
             )
           }
         })
@@ -555,7 +541,7 @@ export const useSaveFSEReporting = (
         predicate: (query) => {
           return (
             query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === organizationId
+            query.queryKey[1] === complianceReportId
           )
         }
       })
@@ -563,6 +549,124 @@ export const useSaveFSEReporting = (
       onError?.(error, variables, context)
     },
     retry: 0,
+    ...restOptions
+  })
+}
+
+export const useDeleteFSEReportingBatch = (
+  complianceReportId,
+  organizationId = null,
+  options = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (reportingIds) => {
+      if (!Array.isArray(reportingIds) || reportingIds.length === 0) {
+        throw new Error('Reporting IDs array is required')
+      }
+
+      return await client.delete(apiRoutes.saveFSEReportingBatch, {
+        data: { reportingIds, complianceReportId, organizationId }
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate FSE reporting list queries for this compliance report
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'fse-reporting-list' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
+
+      if (invalidateRelatedQueries) {
+        // Invalidate compliance report related queries
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report-summary', complianceReportId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report', complianceReportId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['final-supply-equipments', complianceReportId]
+        })
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      // Invalidate on error to ensure fresh data on retry
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'fse-reporting-list' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
+
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useSetFSEReportingDefaultDates = (
+  complianceReportId,
+  options = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      return await client.post(
+        '/final-supply-equipments/reporting/set-default',
+        data
+      )
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate FSE reporting list queries for this compliance report
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'fse-reporting-list' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report-summary', complianceReportId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report', complianceReportId]
+        })
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
     ...restOptions
   })
 }

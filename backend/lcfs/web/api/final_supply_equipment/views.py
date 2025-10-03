@@ -30,9 +30,12 @@ from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
     FSEReportingDefaultDates,
+    FSEReportingBatchDeleteSchema,
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
     FinalSupplyEquipmentSchema,
+    FSEReportingBatchSchema,
+    FSEReportingBaseSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.final_supply_equipment.validation import (
@@ -375,20 +378,37 @@ async def get_fse_reporting_list(
 
 
 @router.post(
-    "/reporting/save",
+    "/reporting/batch",
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
 async def create_fse_reporting(
     request: Request,
-    request_data: dict = Body(...),
+    request_data: FSEReportingBatchSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> dict:
     """
     Create FSE compliance reporting data
     """
-    return await service.create_fse_reporting(request_data)
+    return await service.create_fse_reporting_batch(request_data.fse_reports)
+
+
+@router.delete(
+    "/reporting/batch",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
+async def delete_fse_reporting_batch(
+    request: Request,
+    request_data: FSEReportingBatchDeleteSchema = Body(...),
+    service: FinalSupplyEquipmentServices = Depends(),
+) -> dict:
+    """
+    Delete multiple FSE compliance reporting records
+    """
+    return await service.delete_fse_reporting_batch(request_data.reporting_ids)
 
 
 @router.put(
@@ -396,11 +416,11 @@ async def create_fse_reporting(
     response_model=dict,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
 async def update_fse_reporting(
     request: Request,
     reporting_id: int,
-    request_data: dict = Body(...),
+    request_data: FSEReportingBaseSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> dict:
     """
@@ -413,7 +433,7 @@ async def update_fse_reporting(
     "/reporting/{reporting_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
 async def delete_fse_reporting(
     request: Request,
     reporting_id: int,
@@ -426,7 +446,7 @@ async def delete_fse_reporting(
 
 
 @router.post("/reporting/set-default", status_code=status.HTTP_200_OK)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
 async def set_default_dates_fse_reporting(
     request: Request,
     request_data: FSEReportingDefaultDates = Body(...),
@@ -435,5 +455,24 @@ async def set_default_dates_fse_reporting(
     """
     Set default supply dates to the selected charging equipments
     """
-    # TODO: Implement this
-    print(request_data)
+    organization_id = getattr(request.user, "organization_id", None)
+
+    if request.user.is_government or not organization_id:
+        compliance_report = await service.get_compliance_report_by_id(
+            request_data.compliance_report_id
+        )
+        organization = getattr(compliance_report, "organization", None)
+        organization_id = getattr(organization, "organization_id", None)
+
+    if not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization could not be determined",
+        )
+    if request_data.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization ID does not match the user's organization",
+        )
+
+    return await service.set_default_dates_fse_reporting(request_data, organization_id)

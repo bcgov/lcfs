@@ -745,7 +745,7 @@ export const getFSEReportingColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',
-    minWidth: 200
+    minWidth: 400
   },
   {
     field: 'siteName',

@@ -1,14 +1,12 @@
-from sqlalchemy.orm import make_transient
-from typing import Any, Coroutine, Sequence
+from typing import List, Sequence
 
 import structlog
 import math
 import re
-from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import Row, RowMapping
+from fastapi import Depends, HTTPException, status
 
-from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance import FSEComplianceReporting
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
@@ -22,6 +20,8 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentsSchema,
     LevelOfEquipmentSchema,
     FinalSupplyEquipmentSchema,
+    FSEReportingBaseSchema,
+    FSEReportingDefaultDates,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
@@ -405,12 +405,27 @@ class FinalSupplyEquipmentServices:
                 )
             )
         data, total = await self.repo.get_fse_reporting_list_paginated(
-            organization_id, pagination, compliance_report_id
+            organization_id, pagination, compliance_report_id, mode
         )
+
+        # Process data to set fields to None if compliance_report_id doesn't match
+        processed_data = []
+        for item in data:
+            schemaData = FSEReportingSchema.model_validate(item)
+            if (
+                compliance_report_id
+                and schemaData.compliance_report_id != compliance_report_id
+            ):
+                schemaData.supply_from_date = None
+                schemaData.supply_to_date = None
+                schemaData.fse_compliance_reporting_id = None
+                schemaData.compliance_report_id = None
+                schemaData.compliance_notes = None
+                schemaData.compliance_period_id = None
+            processed_data.append(schemaData)
+
         return {
-            "finalSupplyEquipments": [
-                FSEReportingSchema.model_validate(item) for item in data
-            ],
+            "finalSupplyEquipments": processed_data,
             "pagination": PaginationResponseSchema(
                 page=pagination.page,
                 size=pagination.size,
@@ -420,18 +435,24 @@ class FinalSupplyEquipmentServices:
         }
 
     @service_handler
-    async def create_fse_reporting(self, data: dict) -> dict:
+    async def create_fse_reporting_batch(
+        self, data: List[FSEReportingBaseSchema]
+    ) -> dict:
         """
         Create FSE compliance reporting data
         """
-        return await self.repo.create_fse_reporting(data)
+        # Convert Pydantic schemas to dict format for SQLAlchemy
+        model_data = [item.model_dump() for item in data]
+        return await self.repo.create_fse_reporting_batch(model_data)
 
     @service_handler
-    async def update_fse_reporting(self, reporting_id: int, data: dict) -> dict:
+    async def update_fse_reporting(
+        self, reporting_id: int, data: FSEReportingBaseSchema
+    ) -> dict:
         """
         Update FSE compliance reporting data
         """
-        return await self.repo.update_fse_reporting(reporting_id, data)
+        return await self.repo.update_fse_reporting(reporting_id, data.model_dump())
 
     @service_handler
     async def delete_fse_reporting(self, reporting_id: int) -> None:
@@ -439,3 +460,29 @@ class FinalSupplyEquipmentServices:
         Delete FSE compliance reporting data
         """
         await self.repo.delete_fse_reporting(reporting_id)
+
+    @service_handler
+    async def delete_fse_reporting_batch(self, reporting_ids: List[int]) -> dict:
+        """
+        Delete multiple FSE compliance reporting records
+        """
+        deleted_count = await self.repo.delete_fse_reporting_batch(reporting_ids)
+        return {
+            "message": f"{deleted_count} FSE reporting records deleted successfully"
+        }
+
+    @service_handler
+    async def set_default_dates_fse_reporting(
+        self, data: FSEReportingDefaultDates, organization_id: int
+    ) -> dict:
+        if not data.equipment_ids:
+            return {"created": 0, "updated": 0}
+
+        if not data.supply_from_date or not data.supply_to_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Supply from and to dates are required",
+            )
+        updated_count = await self.repo.bulk_update_reporting_dates(data)
+
+        return {"updated": updated_count}

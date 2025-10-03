@@ -2,7 +2,7 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import Grid2 from '@mui/material/Grid2'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
@@ -11,94 +11,30 @@ import { defaultInitialPagination } from '@/constants/schedules.js'
 import GeoMapping from './GeoMapping'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
+import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
 
-export const FinalSupplyEquipmentSummary = ({ data, status }) => {
+export const FinalSupplyEquipmentSummary = ({
+  data,
+  status,
+  organizationId
+}) => {
   const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
+  const queryData = useGetFSEReportingList(
+    complianceReportId,
+    paginationOptions,
+    {},
+    organizationId,
+    undefined
+  )
+  const { data: fseData, isLoading, isError, refetch } = queryData
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])
-
-  // Client-side pagination logic
-  const paginatedData = useMemo(() => {
-    if (!data?.finalSupplyEquipments) {
-      return {
-        data: {
-          finalSupplyEquipments: [],
-          pagination: {
-            page: 1,
-            size: paginationOptions.size,
-            total: 0
-          }
-        },
-        error: null,
-        isError: false,
-        isLoading: false
-      }
-    }
-
-    let filteredData = [...data.finalSupplyEquipments]
-
-    // Apply filters if any
-    if (paginationOptions.filters && paginationOptions.filters.length > 0) {
-      paginationOptions.filters.forEach((filter) => {
-        if (filter.type === 'contains' && filter.filter) {
-          filteredData = filteredData.filter((item) => {
-            const fieldValue = item[filter.field]
-            return (
-              fieldValue &&
-              fieldValue
-                .toString()
-                .toLowerCase()
-                .includes(filter.filter.toLowerCase())
-            )
-          })
-        }
-      })
-    }
-
-    // Apply sorting if any
-    if (
-      paginationOptions.sortOrders &&
-      paginationOptions.sortOrders.length > 0
-    ) {
-      paginationOptions.sortOrders.forEach((sort) => {
-        filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
-
-          let comparison = 0
-          if (aVal > bVal) comparison = 1
-          if (aVal < bVal) comparison = -1
-
-          return sort.direction === 'desc' ? -comparison : comparison
-        })
-      })
-    }
-
-    const total = filteredData.length
-    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
-    const endIndex = startIndex + paginationOptions.size
-    const paginatedItems = filteredData.slice(startIndex, endIndex)
-
-    return {
-      data: {
-        finalSupplyEquipments: paginatedItems,
-        pagination: {
-          page: paginationOptions.page,
-          size: paginationOptions.size,
-          total
-        }
-      },
-      error: null,
-      isError: false,
-      isLoading: false
-    }
-  }, [data?.finalSupplyEquipments, paginationOptions])
 
   const gridOptions = useMemo(
     () => ({
@@ -136,6 +72,9 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const getRowId = (params) => {
     return String(params.data.chargingEquipmentId)
   }
+  const handlePaginationChange = useCallback((newPaginationOptions) => {
+    setPaginationOptions(newPaginationOptions)
+  }, [])
 
   return (
     <Grid2 className="final-supply-equipment-container" mx={-1}>
@@ -144,20 +83,15 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
           gridKey="final-supply-equipments"
           gridRef={gridRef}
           columnDefs={columns}
-          queryData={paginatedData}
+          queryData={queryData}
           dataKey="finalSupplyEquipments"
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={(data?.finalSupplyEquipments?.length || 0) <= 10}
+          suppressPagination={(fseData?.pagination?.total || 0) <= 10}
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }))
-          }
+          onPaginationChange={handlePaginationChange}
           enablePageCaching={false}
         />
       </BCBox>

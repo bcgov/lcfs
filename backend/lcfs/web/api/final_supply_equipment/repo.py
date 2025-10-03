@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any, List, Sequence
 
 import structlog
@@ -12,8 +13,8 @@ from sqlalchemy import (
     update,
     asc,
     desc,
-    case,
     literal,
+    union_all,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -46,6 +47,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
     PortsEnum,
+    FSEReportingDefaultDates,
 )
 from lcfs.web.core.decorators import repo_handler
 
@@ -512,16 +514,12 @@ class FinalSupplyEquipmentRepository:
 
         return result.rowcount
 
-    @repo_handler
-    async def get_fse_reporting_list_paginated(
+    def _build_base_select(
         self,
+        source_priority: int,
         organization_id: int,
-        pagination: PaginationRequestSchema,
-        compliance_report_id: int | None = None,
-    ) -> tuple[list[dict], int]:
-        """
-        Get paginated charging equipment with related charging site and FSE compliance reporting data
-        """
+        filter_conditions: list[Any] = [],
+    ):
         # Subquery for intended_uses (from charging equipment)
         intended_uses_subquery = (
             select(func.array_agg(EndUseType.type).label("intended_uses"))
@@ -556,7 +554,12 @@ class FinalSupplyEquipmentRepository:
             .scalar_subquery()
         )
 
-        base_query = (
+        common_conditions = [
+            ChargingSite.organization_id == organization_id,
+            ChargingEquipmentStatus.status != "Decommissioned",
+        ]
+
+        return (
             select(
                 ChargingEquipment.charging_equipment_id,
                 ChargingEquipment.serial_number,
@@ -575,6 +578,7 @@ class FinalSupplyEquipmentRepository:
                 FSEComplianceReporting.notes.label("compliance_notes"),
                 FSEComplianceReporting.fse_compliance_reporting_id,
                 FSEComplianceReporting.compliance_report_id,
+                FSEComplianceReporting.compliance_period_id,
                 ChargingSite.street_address,
                 ChargingSite.city,
                 ChargingSite.postal_code,
@@ -582,10 +586,9 @@ class FinalSupplyEquipmentRepository:
                 ChargingSite.longitude,
                 LevelOfEquipment.name.label("level_of_equipment"),
                 ChargingEquipment.ports,
-                intended_uses_subquery.label(
-                    "intended_uses"
-                ),  # Equipment intended uses
-                intended_users_subquery.label("intended_users"),  # Site intended users
+                intended_uses_subquery.label("intended_uses"),
+                intended_users_subquery.label("intended_users"),
+                literal(source_priority).label("source_priority"),
             )
             .select_from(ChargingEquipment)
             .join(
@@ -607,76 +610,103 @@ class FinalSupplyEquipmentRepository:
                 ChargingEquipment.charging_equipment_id
                 == FSEComplianceReporting.charging_equipment_id,
             )
-            .where(
-                ChargingSite.organization_id == organization_id,
-                ChargingEquipmentStatus.status != "Decommissioned",
-            )
+            .where(*common_conditions, *filter_conditions)
         )
 
+    def _apply_filters(self, filter_conditions, filters):
+        for f in filters:
+            if f.field in [
+                "site_name",
+                "registration_number",
+                "street_address",
+                "charging_site_id",
+            ]:
+                if f.field == "registration_number":
+                    f.field = "site_code"
+                field = get_field_for_filter(ChargingSite, f.field)
+            elif f.field in [
+                "serial_number",
+                "manufacturer",
+                "model",
+                "equipment_notes",
+            ]:
+                if f.field == "equipment_notes":
+                    f.field = "notes"
+                field = get_field_for_filter(ChargingEquipment, f.field)
+            elif f.field in [
+                "supply_from_date",
+                "supply_to_date",
+                "kwh_usage",
+                "compliance_report_id",
+                "compliance_notes",
+            ]:
+                if f.field == "compliance_notes":
+                    f.field = "notes"
+                field = get_field_for_filter(FSEComplianceReporting, f.field)
+            else:
+                continue
+
+            if field is not None:
+                condition = apply_filter_conditions(
+                    field, f.filter, f.type, f.filter_type
+                )
+                if condition is not None:
+                    filter_conditions.append(condition)
+
+    @repo_handler
+    async def get_fse_reporting_list_paginated(
+        self,
+        organization_id: int,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int | None = None,
+        mode: str = "all",
+    ) -> tuple[list[dict], int]:
+        """
+        Get paginated charging equipment with related charging site and FSE compliance reporting data
+        """
+
+        filter_conditions: list[Any] = []
         # Apply filters
         if pagination.filters:
-            for f in pagination.filters:
-                if f.field in ["site_name", "registration_number", "street_address"]:
-                    if f.field == "registration_number":
-                        f.field = "site_code"
-                    field = get_field_for_filter(ChargingSite, "site_name")
-                elif f.field in [
-                    "serial_number",
-                    "manufacturer",
-                    "model",
-                    "equipment_notes",
-                ]:
-                    if f.field == "equipment_notes":
-                        f.field = "notes"
-                    field = get_field_for_filter(ChargingEquipment, f.field)
-                elif f.field in [
-                    "supply_from_date",
-                    "supply_to_date",
-                    "kwh_usage",
-                    "compliance_report_id",
-                    "compliance_notes",
-                ]:
-                    if f.field == "compliance_notes":
-                        f.field = "notes"
-                    field = get_field_for_filter(FSEComplianceReporting, f.field)
-                else:
-                    continue
+            self._apply_filters(filter_conditions, pagination.filters)
+        union_queries: list[Any] = []
 
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field, f.filter, f.type, f.filter_type
-                    )
-                    if condition is not None:
-                        base_query = base_query.where(condition)
-
-        if compliance_report_id is not None:
-            preferred_match = case(
-                (
-                    FSEComplianceReporting.compliance_report_id == compliance_report_id,
-                    0,
-                ),
-                else_=1,
+        if compliance_report_id is not None and mode != "all":
+            union_queries.append(
+                self._build_base_select(0, organization_id, filter_conditions).where(
+                    FSEComplianceReporting.compliance_report_id == compliance_report_id
+                )
             )
+
+        union_queries.append(
+            self._build_base_select(1, organization_id, filter_conditions)
+        )
+
+        if len(union_queries) == 1:
+            combined_query = union_queries[0]
         else:
-            preferred_match = literal(1)
+            combined_query = union_all(*union_queries)
+
+        combined_subquery = combined_query.subquery()
+
         row_number_column = (
             func.row_number()
             .over(
-                partition_by=ChargingEquipment.charging_equipment_id,
+                partition_by=combined_subquery.c.charging_equipment_id,
                 order_by=[
-                    preferred_match,
-                    desc(
-                        FSEComplianceReporting.fse_compliance_reporting_id
-                    ).nullslast(),
+                    combined_subquery.c.source_priority,
+                    desc(combined_subquery.c.fse_compliance_reporting_id).nullslast(),
                 ],
             )
             .label("row_number")
         )
 
-        dedup_subquery = base_query.add_columns(row_number_column).subquery()
+        dedup_subquery = select(*combined_subquery.c, row_number_column).subquery()
 
         selectable_columns = [
-            column for column in dedup_subquery.c if column.key != "row_number"
+            column
+            for column in dedup_subquery.c
+            if column.key not in {"row_number", "source_priority"}
         ]
 
         final_query = (
@@ -726,27 +756,46 @@ class FinalSupplyEquipmentRepository:
         return data, total or 0
 
     @repo_handler
-    async def create_fse_reporting(self, data: dict) -> dict:
+    async def create_fse_reporting_batch(self, data) -> dict:
         """
         Create FSE compliance reporting data
         """
-        from lcfs.db.models.compliance import FSEComplianceReporting
 
-        record = FSEComplianceReporting(**data)
-        self.db.add(record)
+        records = [FSEComplianceReporting(**item) for item in data]
+        self.db.add_all(records)
         await self.db.flush()
-        data["id"] = record.id
-        return data
+        return {"message": "FSE compliance reporting data created successfully"}
+
+    @repo_handler
+    async def bulk_update_reporting_dates(self, data: FSEReportingDefaultDates) -> int:
+        stmt = (
+            update(FSEComplianceReporting)
+            .where(
+                and_(
+                    FSEComplianceReporting.charging_equipment_id.in_(
+                        data.equipment_ids
+                    ),
+                    FSEComplianceReporting.compliance_report_id
+                    == data.compliance_report_id,
+                    FSEComplianceReporting.organization_id == data.organization_id,
+                )
+            )
+            .values(
+                supply_from_date=data.supply_from_date,
+                supply_to_date=data.supply_to_date,
+            )
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount or 0
 
     @repo_handler
     async def update_fse_reporting(
-        self, fse_compliance_reporting_id: int, data: dict
+        self, fse_compliance_reporting_id: int, data
     ) -> dict:
         """
         Update FSE compliance reporting data
         """
-        from lcfs.db.models.compliance import FSEComplianceReporting
-
         stmt = (
             update(FSEComplianceReporting)
             .where(
@@ -764,11 +813,21 @@ class FinalSupplyEquipmentRepository:
         """
         Delete FSE compliance reporting data
         """
-        from lcfs.db.models.compliance import FSEComplianceReporting
-
         stmt = delete(FSEComplianceReporting).where(
             FSEComplianceReporting.fse_compliance_reporting_id
             == fse_compliance_reporting_id
         )
         await self.db.execute(stmt)
         await self.db.flush()
+
+    @repo_handler
+    async def delete_fse_reporting_batch(self, reporting_ids: List[int]) -> int:
+        """
+        Delete multiple FSE compliance reporting records
+        """
+        stmt = delete(FSEComplianceReporting).where(
+            FSEComplianceReporting.fse_compliance_reporting_id.in_(reporting_ids)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount

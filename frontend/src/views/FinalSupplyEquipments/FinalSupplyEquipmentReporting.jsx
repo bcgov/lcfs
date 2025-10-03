@@ -11,10 +11,13 @@ import { useSiteNames } from '@/hooks/useChargingSite'
 import { getFSEReportingColDefs } from './_schema'
 import {
   useGetFSEReportingList,
-  useSaveFSEReporting
+  useSaveFSEReporting,
+  useDeleteFSEReportingBatch,
+  useSetFSEReportingDefaultDates
 } from '@/hooks/useFinalSupplyEquipment'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { handleScheduleSave } from '@/utils/schedules'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 export const FinalSupplyEquipmentReporting = () => {
   const { t } = useTranslation()
@@ -22,17 +25,16 @@ export const FinalSupplyEquipmentReporting = () => {
   const [warnings, setWarnings] = useState({})
   const [isGridReady, setGridReady] = useState(false)
   const [selectedSiteOption, setSelectedSiteOption] = useState(null)
+  const [hasSelectedRows, setHasSelectedRows] = useState(false)
   // Pagination state
   const [paginationOptions, setPaginationOptions] = useState({
-    page: 1,
-    size: 10,
-    sortOrders: [],
-    filters: []
+    defaultInitialPagination
   })
   const fseGridRef = useRef(null)
   const fseGridAlertRef = useRef(null)
   const previousSelectionRef = useRef(new Set())
   const globalSelectionRef = useRef(new Set())
+  const validationStatusCacheRef = useRef(new Map())
 
   const { complianceReportId, compliancePeriod } = useParams()
 
@@ -72,18 +74,45 @@ export const FinalSupplyEquipmentReporting = () => {
     complianceReportId
   )
 
+  // Mutation hook for batch delete
+  const { mutateAsync: deleteBatch } = useDeleteFSEReportingBatch(
+    complianceReportId,
+    reportData?.report?.organizationId
+  )
+
+  // Mutation hook for set defaults
+  const { mutateAsync: setDefaults } =
+    useSetFSEReportingDefaultDates(complianceReportId)
+
   // Initialize global selection from all data when component loads
   useEffect(() => {
     if (data?.finalSupplyEquipments) {
       const globalSelection = new Set()
       data.finalSupplyEquipments.forEach((item) => {
-        if (item.fseComplianceReportingId === complianceReportId) {
+        if (item.complianceReportId === parseInt(complianceReportId)) {
           globalSelection.add(item.chargingEquipmentId)
         }
       })
       globalSelectionRef.current = globalSelection
     }
   }, [data])
+
+  // Set selected site option from cached pagination filters
+  useEffect(() => {
+    if (siteNames.length > 0 && paginationOptions.filters?.length > 0) {
+      const chargingSiteFilter = paginationOptions.filters.find(
+        (filter) => filter.field === 'chargingSiteId'
+      )
+      if (chargingSiteFilter && !selectedSiteOption) {
+        const cachedSite = siteNames.find(
+          (site) => site.chargingSiteId === chargingSiteFilter.filter
+        )
+        if (cachedSite) {
+          setSelectedSiteOption(cachedSite)
+        }
+      }
+    }
+  }, [siteNames, paginationOptions.filters, selectedSiteOption])
 
   // Update grid selection when page data changes
   useEffect(() => {
@@ -92,9 +121,27 @@ export const FinalSupplyEquipmentReporting = () => {
       const nodesToSelect = []
 
       fseGridRef.current.api.forEachNode((node) => {
-        if (globalSelectionRef.current.has(node.data.chargingEquipmentId)) {
+        const equipmentId = node.data?.chargingEquipmentId
+        if (!equipmentId) return
+
+        if (node.data.validationStatus !== undefined) {
+          validationStatusCacheRef.current.set(
+            equipmentId,
+            node.data.validationStatus
+          )
+        } else if (validationStatusCacheRef.current.has(equipmentId)) {
+          const cachedStatus = validationStatusCacheRef.current.get(equipmentId)
+          if (node.data.validationStatus !== cachedStatus) {
+            node.updateData({
+              ...node.data,
+              validationStatus: cachedStatus
+            })
+          }
+        }
+
+        if (globalSelectionRef.current.has(equipmentId)) {
           nodesToSelect.push(node)
-          currentPageSelection.add(node.data.chargingEquipmentId)
+          currentPageSelection.add(equipmentId)
         }
       })
 
@@ -110,8 +157,119 @@ export const FinalSupplyEquipmentReporting = () => {
   const handleSelectionChanged = useCallback(
     async (api) => {
       const selectedNodes = fseGridRef.current?.api.getSelectedNodes()
+      const currentSelection = new Set(
+        selectedNodes.map((node) => node.data.chargingEquipmentId)
+      )
+
+      // Find newly selected rows (not previously selected)
+      const newlySelected = selectedNodes.filter(
+        (node) =>
+          !previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
+          !node.data.fseComplianceReportingId
+      )
+
+      // Find newly unselected rows (previously selected but now unselected)
+      const newlyUnselected = []
+      const newlyUnselectedEquipmentIds = []
+      fseGridRef.current?.api.forEachNode((node) => {
+        if (
+          previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
+          !currentSelection.has(node.data.chargingEquipmentId) &&
+          node.data.fseComplianceReportingId
+        ) {
+          newlyUnselected.push(parseInt(node.data.fseComplianceReportingId))
+          newlyUnselectedEquipmentIds.push(node.data.chargingEquipmentId)
+        }
+      })
+
+      try {
+        // Handle newly selected rows
+        if (newlySelected.length > 0) {
+          const newRows = newlySelected.map((node) => ({
+            supplyFromDate: defaultFromDate,
+            supplyToDate: defaultToDate,
+            kwhUsage: node.data.kwhUsage,
+            notes: null,
+            chargingEquipmentId: node.data.chargingEquipmentId,
+            organizationId: reportData?.report?.organizationId,
+            complianceReportId,
+            compliancePeriodId: reportData?.report?.compliancePeriodId
+          }))
+
+          const response = await saveRow(newRows)
+
+          // Update grid rows with created FSE reporting data
+          newlySelected.forEach((node, index) => {
+            const createdData = Array.isArray(response.data)
+              ? response.data[index]
+              : response.data
+            node.updateData({
+              ...node.data,
+              fseComplianceReportingId:
+                createdData?.fseComplianceReportingId || createdData?.id,
+              supplyFromDate: defaultFromDate,
+              supplyToDate: defaultToDate,
+              complianceReportId: parseInt(complianceReportId),
+              complianceNotes: null
+            })
+          })
+        }
+
+        // Handle newly unselected rows
+        if (newlyUnselected.length > 0) {
+          await deleteBatch(newlyUnselected)
+          newlyUnselectedEquipmentIds.forEach((id) => {
+            validationStatusCacheRef.current.delete(id)
+          })
+          // Update grid rows with deleted FSE reporting data
+          newlySelected.forEach((node, index) => {
+            node.updateData({
+              ...node.data,
+              supplyFromDate: defaultFromDate,
+              supplyToDate: defaultToDate,
+              kwhUsage: node.data.kwhUsage,
+              notes: null,
+              chargingEquipmentId: node.data.chargingEquipmentId,
+              organizationId: reportData?.report?.organizationId,
+              complianceReportId: null,
+              compliancePeriodId: null
+            })
+          })
+        }
+
+        if (newlySelected.length > 0) {
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:rowsCreatedSuccessfully'),
+            severity: 'success'
+          })
+        } else if (newlyUnselected.length > 0) {
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:rowsDeletedSuccessfully'),
+            severity: 'success'
+          })
+        }
+      } catch (error) {
+        console.error('Error updating FSE reporting records:', error)
+        fseGridAlertRef.current?.triggerAlert({
+          message: t('finalSupplyEquipment:errorAddDeleteRows'),
+          severity: 'error'
+        })
+      }
+
+      // Update global and previous selection tracking
+      globalSelectionRef.current = currentSelection
+      previousSelectionRef.current = currentSelection
+      setHasSelectedRows(currentSelection.size > 0)
     },
-    [saveRow, complianceReportId, reportData, defaultFromDate, defaultToDate, t]
+    [
+      saveRow,
+      deleteBatch,
+      complianceReportId,
+      reportData,
+      defaultFromDate,
+      defaultToDate,
+      refetch
+    ]
   )
 
   const gridOptions = useMemo(
@@ -141,9 +299,9 @@ export const FinalSupplyEquipmentReporting = () => {
         maxDate,
         errors,
         warnings,
-        complianceReportId
+        parseInt(complianceReportId)
       ),
-    [minDate, maxDate, errors, warnings]
+    [minDate, maxDate, errors, warnings, handleSelectionChanged]
   )
 
   const handleGridReady = useCallback(() => {
@@ -155,71 +313,52 @@ export const FinalSupplyEquipmentReporting = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
-      // Only allow edits on selected rows (rows with fseComplianceReportingId)
-      if (!params.node.data.fseComplianceReportingId) {
-        fseGridAlertRef.current?.showAlert(
-          'warning',
-          t('finalSupplyEquipment:selectRowToEdit')
-        )
-        return
-      }
-
       // Update validation status to pending
       params.node.updateData({
         ...params.node.data,
         validationStatus: 'pending'
       })
-
-      fseGridAlertRef.current?.showAlert(
-        'pending',
-        t('finalSupplyEquipment:updatingRow')
-      )
-
+      const equipmentId = params.node?.data?.chargingEquipmentId
+      if (equipmentId) {
+        validationStatusCacheRef.current.set(equipmentId, 'pending')
+      }
       // Prepare data for save
       const updatedData = {
-        ...Object.entries(params.node.data)
-          .filter(
-            ([, value]) => value !== null && value !== '' && value !== undefined
-          )
-          .reduce((acc, [key, value]) => {
-            acc[key] = value
-            return acc
-          }, {}),
-        complianceReportId,
+        supplyFromDate: params.data.supplyFromDate,
+        supplyToDate: params.data.supplyToDate,
+        kwhUsage: params.data.kwhUsage,
+        notes: params.data.complianceNotes,
+        fseComplianceReportingId: params.data.fseComplianceReportingId,
+        chargingEquipmentId: params.data.chargingEquipmentId,
+        complianceReportId: parseInt(complianceReportId),
+        compliancePeriodId: reportData?.report?.compliancePeriodId,
         organizationId: reportData?.report?.organizationId
       }
 
-      try {
-        const responseData = await handleScheduleSave({
-          alertRef: fseGridAlertRef,
-          idField: 'fseComplianceReportingId',
-          labelPrefix: 'finalSupplyEquipment',
-          params,
-          setErrors,
-          setWarnings,
-          saveRow,
-          t,
-          updatedData
-        })
-
-        fseGridAlertRef.current?.clearAlert()
-        params.node.updateData({
-          ...responseData,
-          validationStatus: 'valid',
-          modified: false
-        })
-        params.api?.autoSizeAllColumns?.()
-      } catch (error) {
-        console.error('Error saving FSE reporting data:', error)
-        params.node.updateData({
-          ...params.node.data,
-          validationStatus: 'error'
-        })
-        fseGridAlertRef.current?.showAlert(
-          'error',
-          t('finalSupplyEquipment:errorSavingRow')
+      const responseData = await handleScheduleSave({
+        alertRef: fseGridAlertRef,
+        idField: 'fseComplianceReportingId',
+        labelPrefix: 'finalSupplyEquipment',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
+      console.log(responseData)
+      params.node.updateData({
+        ...params.node.data,
+        validationStatus: responseData.validationStatus,
+        modified: responseData.modified
+      })
+      if (equipmentId) {
+        validationStatusCacheRef.current.set(
+          equipmentId,
+          responseData.validationStatus
         )
       }
+      params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t, complianceReportId, reportData]
   )
@@ -231,12 +370,19 @@ export const FinalSupplyEquipmentReporting = () => {
       ...prev,
       page: 1,
       filters: newValue
-        ? [{ field: 'chargingSiteId', value: newValue.chargingSiteId }]
+        ? [
+            {
+              field: 'chargingSiteId',
+              type: 'equals',
+              filterType: 'number',
+              filter: newValue.chargingSiteId
+            }
+          ]
         : []
     }))
   }, [])
 
-  const handleSetDefaultValues = useCallback(() => {
+  const handleSetDefaultValues = useCallback(async () => {
     const selectedNodes = fseGridRef.current?.api.getSelectedNodes()
     if (!selectedNodes || selectedNodes.length === 0) {
       fseGridAlertRef.current?.showAlert(
@@ -246,51 +392,45 @@ export const FinalSupplyEquipmentReporting = () => {
       return
     }
 
-    const updates = []
-    selectedNodes.forEach((node) => {
-      if (node.data.fseComplianceReportingId) {
-        const updatedData = {
-          fseComplianceReportingId: node.data.fseComplianceReportingId,
-          supplyFromDate: defaultFromDate,
-          supplyToDate: defaultToDate,
-          kwhUsage: node.data.kwhUsage,
-          notes: node.data.complianceNotes,
-          chargingEquipmentId: node.data.chargingEquipmentId,
-          organizationId: reportData?.report?.organizationId,
-          complianceReportId,
-          compliancePeriodId: reportData?.report?.compliancePeriodId,
-          modified: true
-        }
-        updates.push(updatedData)
-      }
-    })
+    const equipmentIds = selectedNodes
+      .filter((node) => node.data.fseComplianceReportingId)
+      .map((node) => node.data.chargingEquipmentId)
 
-    if (updates.length > 0) {
-      const responseData = refetch()
-    }
-  }, [defaultFromDate, defaultToDate, t])
-
-  const handleApplyToAll = useCallback(() => {
-    const allRowData = []
-    fseGridRef.current?.api.forEachNode((node) => {
-      if (node.data.fseComplianceReportingId) {
-        allRowData.push({
-          ...node.data,
-          supplyFromDate: defaultFromDate,
-          supplyToDate: defaultToDate,
-          modified: true
-        })
-      }
-    })
-
-    if (allRowData.length > 0) {
-      fseGridRef.current?.api.applyTransaction({ update: allRowData })
+    if (equipmentIds.length === 0) {
       fseGridAlertRef.current?.showAlert(
-        'success',
-        t('finalSupplyEquipment:datesAppliedToAll')
+        'warning',
+        t('finalSupplyEquipment:noRowsSelected')
       )
+      return
     }
-  }, [defaultFromDate, defaultToDate, t])
+
+    try {
+      await setDefaults({
+        supplyFromDate: defaultFromDate,
+        supplyToDate: defaultToDate,
+        equipmentIds,
+        complianceReportId: parseInt(complianceReportId),
+        organizationId: reportData?.report?.organizationId
+      })
+      fseGridAlertRef.current?.triggerAlert({
+        message: t('finalSupplyEquipment:defaultValuesSet'),
+        severity: 'success'
+      })
+    } catch (error) {
+      console.error('Error setting default values:', error)
+      fseGridAlertRef.current?.triggerAlert({
+        message: t('finalSupplyEquipment:errorSettingDefaults'),
+        severity: 'error'
+      })
+    }
+  }, [
+    defaultFromDate,
+    defaultToDate,
+    setDefaults,
+    complianceReportId,
+    reportData,
+    t
+  ])
 
   // Validate date range
   const isDateRangeValid = useMemo(() => {
@@ -337,6 +477,14 @@ export const FinalSupplyEquipmentReporting = () => {
         modified: false,
         validationStatus: 'valid'
       }))
+      updates.forEach((row) => {
+        if (row.chargingEquipmentId) {
+          validationStatusCacheRef.current.set(
+            row.chargingEquipmentId,
+            row.validationStatus
+          )
+        }
+      })
       fseGridRef.current?.api.applyTransaction({ update: updates })
 
       fseGridAlertRef.current?.showAlert(
@@ -455,7 +603,7 @@ export const FinalSupplyEquipmentReporting = () => {
             size="medium"
             color="primary"
             onClick={handleSetDefaultValues}
-            disabled={!isDateRangeValid}
+            disabled={!isDateRangeValid || !hasSelectedRows}
             sx={{ minWidth: 160, height: 40 }}
           >
             <BCTypography variant="body2">

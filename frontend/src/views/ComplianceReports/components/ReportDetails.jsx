@@ -274,7 +274,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         useFetch: useGetFSEReportingList,
         component: (data) =>
           data.finalSupplyEquipments.length > 0 && (
-            <FinalSupplyEquipmentSummary status={currentStatus} data={data} />
+            <FinalSupplyEquipmentSummary
+              status={currentStatus}
+              data={data}
+              organizationId={complianceReportData?.report?.organizationId}
+            />
           )
       },
       {
