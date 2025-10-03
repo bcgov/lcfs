@@ -5,7 +5,7 @@ import { Stack, TextField, Autocomplete } from '@mui/material'
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import BCButton from '@/components/BCButton'
 import { useSiteNames } from '@/hooks/useChargingSite'
 import { getFSEReportingColDefs } from './_schema'
@@ -18,6 +18,7 @@ import {
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { handleScheduleSave } from '@/utils/schedules'
 import { defaultInitialPagination } from '@/constants/schedules'
+import ROUTES from '@/routes/routes'
 
 export const FinalSupplyEquipmentReporting = () => {
   const { t } = useTranslation()
@@ -36,6 +37,7 @@ export const FinalSupplyEquipmentReporting = () => {
   const globalSelectionRef = useRef(new Set())
   const validationStatusCacheRef = useRef(new Map())
 
+  const navigate = useNavigate()
   const { complianceReportId, compliancePeriod } = useParams()
 
   const minDate = `${compliancePeriod}-01-01`
@@ -438,70 +440,6 @@ export const FinalSupplyEquipmentReporting = () => {
     return new Date(defaultFromDate) <= new Date(defaultToDate)
   }, [defaultFromDate, defaultToDate])
 
-  const handleSaveAll = useCallback(async () => {
-    const modifiedRows = []
-    fseGridRef.current?.api.forEachNode((node) => {
-      if (node.data.modified && node.data.fseComplianceReportingId) {
-        modifiedRows.push(node.data)
-      }
-    })
-
-    if (modifiedRows.length === 0) {
-      fseGridAlertRef.current?.showAlert(
-        'info',
-        t('finalSupplyEquipment:noChangesToSave')
-      )
-      return
-    }
-
-    try {
-      fseGridAlertRef.current?.showAlert(
-        'pending',
-        t('finalSupplyEquipment:savingChanges')
-      )
-
-      // Save all modified rows
-      await Promise.all(
-        modifiedRows.map((row) =>
-          saveRow({
-            ...row,
-            complianceReportId,
-            organizationId: reportData?.report?.organizationId
-          })
-        )
-      )
-
-      // Clear modified flags
-      const updates = modifiedRows.map((row) => ({
-        ...row,
-        modified: false,
-        validationStatus: 'valid'
-      }))
-      updates.forEach((row) => {
-        if (row.chargingEquipmentId) {
-          validationStatusCacheRef.current.set(
-            row.chargingEquipmentId,
-            row.validationStatus
-          )
-        }
-      })
-      fseGridRef.current?.api.applyTransaction({ update: updates })
-
-      fseGridAlertRef.current?.showAlert(
-        'success',
-        t('finalSupplyEquipment:changesSaved', {
-          count: modifiedRows.length
-        })
-      )
-    } catch (error) {
-      console.error('Error saving modified rows:', error)
-      fseGridAlertRef.current?.showAlert(
-        'error',
-        t('finalSupplyEquipment:errorSavingChanges')
-      )
-    }
-  }, [t, saveRow, complianceReportId, reportData])
-
   return (
     <Stack className="fse-reporting-container" spacing={6}>
       <BCBox component="header" className="fse-header-container">
@@ -610,18 +548,6 @@ export const FinalSupplyEquipmentReporting = () => {
               {t('finalSupplyEquipment:setDefaultValues')}
             </BCTypography>
           </BCButton>
-          {/* <BCButton
-            variant="outlined"
-            size="medium"
-            color="primary"
-            onClick={handleApplyToAll}
-            disabled={!isDateRangeValid}
-            sx={{ minWidth: 160, height: 40 }}
-          >
-            <BCTypography variant="body2">
-              {t('finalSupplyEquipment:applyToAll')}
-            </BCTypography>
-          </BCButton> */}
         </BCBox>
 
         {/* Right side: Filter dropdown */}
@@ -694,7 +620,11 @@ export const FinalSupplyEquipmentReporting = () => {
           text: t('finalSupplyEquipment:saveChanges'),
           confirmText: t('finalSupplyEquipment:saveConfirmation'),
           confirmLabel: t('finalSupplyEquipment:saveAnyway'),
-          onSave: handleSaveAll
+          onSave: (e) => {
+            navigate(
+              `/compliance-reporting/${compliancePeriod}/${complianceReportId}`
+            )
+          }
         }}
         autoSizeStrategy={{
           type: 'fitCellContents',

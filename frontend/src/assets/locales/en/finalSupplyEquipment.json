@@ -1,6 +1,6 @@
 {
   "fseReportingTitle": "FSE compliance reporting",
-  "fseReportingDesc": "Enter dates of supply and kWh usage for compliance reporting. Ensure you've selected the row before being able to edit. The 'Set default values' button will only apply to the selected rows in the current page. Use the site name filter and/or paging to assist in setting date variances.",
+  "fseReportingDesc": "Select the equipment to report for the current compliance year, or deselect it to exclude it from reporting. Enter the supply dates and kWh usage for compliance reporting. Make sure you select a row before attempting to edit. The \"Set default values\" button applies only to the rows selected on the current page. Use the site name filter and/or pagination to help manage date variations.",
   "fseTitle": "Final supply equipment (FSE)",
   "reportingResponsibilityInfo": [
     "Report dates of supply for your final supply equipment (FSE).",

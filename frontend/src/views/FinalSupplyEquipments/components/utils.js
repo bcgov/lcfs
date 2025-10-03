@@ -99,7 +99,7 @@ export const findOverlappingPeriods = (currentLoc, allLocations) => {
       // Only check for overlap if this is the same ID but different record
       return (
         currentLoc.uniqueId !== loc.uniqueId && // Different record
-        currentFseId !== locFseId && // Same FSE-ID number
+        currentFseId === locFseId && // Same FSE-ID number
         currentSerialNum === locSerialNum && // Same serial number
         datesOverlap(
           currentLoc.supplyFromDate,
