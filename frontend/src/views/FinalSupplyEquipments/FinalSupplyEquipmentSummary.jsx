@@ -110,7 +110,9 @@ export const FinalSupplyEquipmentSummary = ({
         />
 
         {/* Conditional Rendering of MapComponent */}
-        {showMap && <GeoMapping complianceReportId={complianceReportId} />}
+        {showMap && (
+          <GeoMapping complianceReportId={complianceReportId} data={fseData} />
+        )}
       </>
     </Grid2>
   )

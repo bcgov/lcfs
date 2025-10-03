@@ -46,16 +46,16 @@ export const transformApiData = (data) => {
   if (!data || !data.finalSupplyEquipments) return []
 
   return data.finalSupplyEquipments.map((row, index) => {
-    // Create a combined ID from finalSupplyEquipmentId and serialNbr
-    const finalSupplyEquipmentId = row.finalSupplyEquipmentId || 'unknown'
-    const serialNbr = row.serialNbr || 'unknown'
-    const combinedId = `${finalSupplyEquipmentId}_${serialNbr}`
+    // Create a combined ID from chargingEquipmentId and serialNumber
+    const chargingEquipmentId = row.chargingEquipmentId || 'unknown'
+    const serialNumber = row.serialNumber || 'unknown'
+    const combinedId = `${chargingEquipmentId}_${serialNumber}`
 
     return {
       id: combinedId,
       uniqueId: `${combinedId}_${index}`,
-      finalSupplyEquipmentId,
-      serialNbr,
+      chargingEquipmentId,
+      serialNumber,
       name:
         `${row.streetAddress || ''}, ${row.city || ''}, ${
           row.postalCode || ''
