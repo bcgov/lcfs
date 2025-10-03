@@ -390,11 +390,12 @@ class FinalSupplyEquipmentServices:
         organization_id: int,
         pagination: PaginationRequestSchema,
         compliance_report_id: int = None,
+        mode: str = "all",
     ) -> dict:
         """
         Get paginated charging equipment with related charging site and FSE compliance reporting data
         """
-        if compliance_report_id:
+        if compliance_report_id and mode != "all":
             pagination.filters.append(
                 FilterModel(
                     filter_type="number",
@@ -404,7 +405,7 @@ class FinalSupplyEquipmentServices:
                 )
             )
         data, total = await self.repo.get_fse_reporting_list_paginated(
-            organization_id, pagination
+            organization_id, pagination, compliance_report_id
         )
         return {
             "finalSupplyEquipments": [

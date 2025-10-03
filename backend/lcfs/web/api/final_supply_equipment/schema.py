@@ -110,3 +110,23 @@ class FSEReportingSchema(BaseSchema):
     intended_uses: Optional[List[str]] = []
     intended_users: Optional[List[str]] = []
     deleted: Optional[bool] = None
+
+
+class FSEReportingBaseSchema(BaseSchema):
+    fse_compliance_reporting_id: Optional[int] = None
+    supply_from_date: Optional[date] = None
+    supply_to_date: Optional[date] = None
+    kwh_usage: Optional[float] = 0
+    notes: Optional[str] = None
+    charging_equipment_id: int
+    organization_id: int
+    compliance_report_id: int
+    compliance_period_id: int
+
+
+class FSEReportingDefaultDates(BaseSchema):
+    supply_from_date: Optional[date] = None
+    supply_to_date: Optional[date] = None
+    equipment_ids: List[int] = []
+    compliance_report_id: int
+    compliance_period_id: int

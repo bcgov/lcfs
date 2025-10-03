@@ -2,7 +2,19 @@ from typing import Any, List, Sequence
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, delete, distinct, exists, func, select, update, asc, desc
+from sqlalchemy import (
+    and_,
+    delete,
+    distinct,
+    exists,
+    func,
+    select,
+    update,
+    asc,
+    desc,
+    case,
+    literal,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -13,7 +25,18 @@ from lcfs.db.models.compliance import (
     ComplianceReport,
     EndUserType,
     FinalSupplyEquipment,
+    ChargingEquipmentStatus,
+    FSEComplianceReporting,
 )
+from lcfs.db.models.compliance.ChargingEquipment import (
+    ChargingEquipment,
+    charging_equipment_intended_use_association,
+)
+from lcfs.db.models.compliance.ChargingSite import (
+    ChargingSite,
+    charging_site_intended_user_association,
+)
+from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
 )
@@ -491,22 +514,14 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def get_fse_reporting_list_paginated(
-        self, organization_id: int, pagination: PaginationRequestSchema
+        self,
+        organization_id: int,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int | None = None,
     ) -> tuple[list[dict], int]:
         """
         Get paginated charging equipment with related charging site and FSE compliance reporting data
         """
-        from lcfs.db.models.compliance.ChargingEquipment import (
-            ChargingEquipment,
-            charging_equipment_intended_use_association,
-        )
-        from lcfs.db.models.compliance.ChargingSite import (
-            ChargingSite,
-            charging_site_intended_user_association,
-        )
-        from lcfs.db.models.compliance import FSEComplianceReporting
-        from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
-
         # Subquery for intended_uses (from charging equipment)
         intended_uses_subquery = (
             select(func.array_agg(EndUseType.type).label("intended_uses"))
@@ -582,12 +597,20 @@ class FinalSupplyEquipmentRepository:
                 ChargingEquipment.level_of_equipment_id
                 == LevelOfEquipment.level_of_equipment_id,
             )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
             .outerjoin(
                 FSEComplianceReporting,
                 ChargingEquipment.charging_equipment_id
                 == FSEComplianceReporting.charging_equipment_id,
             )
-            .where(ChargingSite.organization_id == organization_id)
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipmentStatus.status != "Decommissioned",
+            )
         )
 
         # Apply filters
@@ -597,7 +620,12 @@ class FinalSupplyEquipmentRepository:
                     if f.field == "registration_number":
                         f.field = "site_code"
                     field = get_field_for_filter(ChargingSite, "site_name")
-                elif f.field in ["serial_number", "manufacturer", "model", "equipment_notes"]:
+                elif f.field in [
+                    "serial_number",
+                    "manufacturer",
+                    "model",
+                    "equipment_notes",
+                ]:
                     if f.field == "equipment_notes":
                         f.field = "notes"
                     field = get_field_for_filter(ChargingEquipment, f.field)
@@ -606,7 +634,7 @@ class FinalSupplyEquipmentRepository:
                     "supply_to_date",
                     "kwh_usage",
                     "compliance_report_id",
-                    "compliance_notes"
+                    "compliance_notes",
                 ]:
                     if f.field == "compliance_notes":
                         f.field = "notes"
@@ -621,37 +649,76 @@ class FinalSupplyEquipmentRepository:
                     if condition is not None:
                         base_query = base_query.where(condition)
 
+        if compliance_report_id is not None:
+            preferred_match = case(
+                (
+                    FSEComplianceReporting.compliance_report_id == compliance_report_id,
+                    0,
+                ),
+                else_=1,
+            )
+        else:
+            preferred_match = literal(1)
+        row_number_column = (
+            func.row_number()
+            .over(
+                partition_by=ChargingEquipment.charging_equipment_id,
+                order_by=[
+                    preferred_match,
+                    desc(
+                        FSEComplianceReporting.fse_compliance_reporting_id
+                    ).nullslast(),
+                ],
+            )
+            .label("row_number")
+        )
+
+        dedup_subquery = base_query.add_columns(row_number_column).subquery()
+
+        selectable_columns = [
+            column for column in dedup_subquery.c if column.key != "row_number"
+        ]
+
+        final_query = (
+            select(*selectable_columns)
+            .select_from(dedup_subquery)
+            .where(dedup_subquery.c.row_number == 1)
+        )
         # Apply sorting
         if pagination.sort_orders:
             for sort_order in pagination.sort_orders:
                 if sort_order.field == "site_name":
-                    field = ChargingSite.site_name
+                    field = dedup_subquery.c.site_name
                 elif sort_order.field in ["serial_number", "manufacturer", "model"]:
-                    field = getattr(ChargingEquipment, sort_order.field)
+                    field = getattr(dedup_subquery.c, sort_order.field)
                 elif sort_order.field in [
                     "supply_from_date",
                     "supply_to_date",
                     "kwh_usage",
                     "compliance_report_id",
                 ]:
-                    field = getattr(FSEComplianceReporting, sort_order.field)
+                    field = getattr(dedup_subquery.c, sort_order.field)
                 else:
                     continue
 
                 if sort_order.direction.lower() == "desc":
-                    base_query = base_query.order_by(desc(field))
+                    final_query = final_query.order_by(desc(field))
                 else:
-                    base_query = base_query.order_by(asc(field))
+                    final_query = final_query.order_by(asc(field))
         else:
-            base_query = base_query.order_by(ChargingEquipment.charging_equipment_id)
+            final_query = final_query.order_by(dedup_subquery.c.charging_equipment_id)
 
         # Count total
-        count_query = select(func.count()).select_from(base_query.subquery())
+        count_query = (
+            select(func.count())
+            .select_from(dedup_subquery)
+            .where(dedup_subquery.c.row_number == 1)
+        )
         total = await self.db.scalar(count_query)
 
         # Apply pagination
         offset = (pagination.page - 1) * pagination.size
-        paginated_query = base_query.offset(offset).limit(pagination.size)
+        paginated_query = final_query.offset(offset).limit(pagination.size)
 
         result = await self.db.execute(paginated_query)
         data = result.fetchall()

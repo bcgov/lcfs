@@ -58,10 +58,11 @@ export const FinalSupplyEquipmentReporting = () => {
 
   // Query hook for data fetching
   const queryData = useGetFSEReportingList(
-    undefined, // retrieve all equipments related to the organization
+    complianceReportId,
     paginationOptions,
     {},
-    reportData?.report?.organizationId
+    reportData?.report?.organizationId,
+    'all' // 'all' to fetch all equipments data.
   )
   const { data, isLoading, isError, refetch } = queryData
 
@@ -108,8 +109,7 @@ export const FinalSupplyEquipmentReporting = () => {
   // Handle row selection changes
   const handleSelectionChanged = useCallback(
     async (api) => {
-      // TODO: yet to implement
-      console.log('handleSelectionChanged', api)
+      const selectedNodes = fseGridRef.current?.api.getSelectedNodes()
     },
     [saveRow, complianceReportId, reportData, defaultFromDate, defaultToDate, t]
   )
@@ -250,9 +250,15 @@ export const FinalSupplyEquipmentReporting = () => {
     selectedNodes.forEach((node) => {
       if (node.data.fseComplianceReportingId) {
         const updatedData = {
-          ...node.data,
+          fseComplianceReportingId: node.data.fseComplianceReportingId,
           supplyFromDate: defaultFromDate,
           supplyToDate: defaultToDate,
+          kwhUsage: node.data.kwhUsage,
+          notes: node.data.complianceNotes,
+          chargingEquipmentId: node.data.chargingEquipmentId,
+          organizationId: reportData?.report?.organizationId,
+          complianceReportId,
+          compliancePeriodId: reportData?.report?.compliancePeriodId,
           modified: true
         }
         updates.push(updatedData)

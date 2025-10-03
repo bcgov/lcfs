@@ -5,7 +5,6 @@ from fastapi import (
     APIRouter,
     Body,
     HTTPException,
-    Path,
     Query,
     status,
     Request,
@@ -30,6 +29,7 @@ from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImp
 from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
+    FSEReportingDefaultDates,
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
     FinalSupplyEquipmentSchema,
@@ -356,8 +356,9 @@ async def get_fse_reporting_list(
         None, alias="organizationId", description="Organization ID"
     ),
     compliance_report_id: int = Query(
-        None, alias="complianceReportId", description="Mode of operation (same or other)"
+        None, alias="complianceReportId", description="Compliance Report ID"
     ),
+    mode: str = Query(None, alias="mode", description="Mode"),
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> dict:
     """
@@ -368,7 +369,9 @@ async def get_fse_reporting_list(
         if request.user.is_government and organization_id
         else request.user.organization_id
     )
-    return await service.get_fse_reporting_list_paginated(org_id, pagination, compliance_report_id)
+    return await service.get_fse_reporting_list_paginated(
+        org_id, pagination, compliance_report_id, mode
+    )
 
 
 @router.post(
@@ -420,3 +423,17 @@ async def delete_fse_reporting(
     Delete FSE compliance reporting data
     """
     await service.delete_fse_reporting(reporting_id)
+
+
+@router.post("/reporting/set-default", status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def set_default_dates_fse_reporting(
+    request: Request,
+    request_data: FSEReportingDefaultDates = Body(...),
+    service: FinalSupplyEquipmentServices = Depends(),
+):
+    """
+    Set default supply dates to the selected charging equipments
+    """
+    # TODO: Implement this
+    print(request_data)
