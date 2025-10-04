@@ -42,12 +42,12 @@ export const FinalSupplyEquipmentReporting = () => {
 
   const minDate = `${compliancePeriod}-01-01`
   const maxDate = `${compliancePeriod}-12-31`
-
-  const { data: siteNames = [], isLoading: siteLoading } = useSiteNames()
-
   // Get report data from store
   const reportData = useComplianceReportStore((state) =>
     state.getCachedReport(complianceReportId)
+  )
+  const { data: siteNames = [], isLoading: siteLoading } = useSiteNames(
+    reportData?.report?.organizationId
   )
 
   const { control, watch } = useForm({
