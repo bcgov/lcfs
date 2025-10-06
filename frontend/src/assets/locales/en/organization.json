@@ -76,7 +76,7 @@
     },
     "supplyHistory": {
       "title": "Supply History",
-      "description": "This section will contain supply history information. Implementation pending."
+      "description": "Year-by-year fuel supply summary aggregated from compliance reports."
     },
     "complianceTracking": {
       "title": "Compliance Tracking",
@@ -127,5 +127,35 @@
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
   },
-  "snapshotTitle": "Organization Information from Compliance Report"
+  "snapshotTitle": "Organization Information from Compliance Report",
+  "supplyHistory": {
+    "title": "Supply History",
+    "filterByYear": "Filter by year",
+    "allYears": "All years",
+    "noDataFound": "No fuel supply data found",
+    "columns": {
+      "year": "Year",
+      "submissionDate": "Submission Date",
+      "fuelType": "Fuel Type",
+      "fuelCategory": "Fuel Category",
+      "provision": "Provision of the Act",
+      "fuelCode": "Fuel Code",
+      "quantity": "Quantity",
+      "units": "Units"
+    },
+    "analytics": {
+      "totalVolume": "Total Volume",
+      "totalFuelTypes": "Fuel Types",
+      "totalReports": "Total Reports",
+      "mostRecentSubmission": "Most Recent Submission",
+      "noData": "No data",
+      "chartsTitle": "Analytics & Visualizations",
+      "fuelTypeDistribution": "Fuel Type Distribution",
+      "volumeOverTime": "Volume Over Time",
+      "categoryBreakdown": "Fuel Category Breakdown",
+      "provisionDistribution": "Provision Distribution",
+      "topFuelCodes": "Top 10 Fuel Codes by Volume",
+      "quantity": "Quantity"
+    }
+  }
 }
