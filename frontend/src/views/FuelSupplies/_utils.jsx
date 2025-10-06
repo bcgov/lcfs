@@ -1,8 +1,13 @@
 import { v4 as uuid } from 'uuid'
 import { isArrayEmpty } from '@/utils/array.js'
-import { DEFAULT_CI_FUEL, DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import { DEFAULT_CI_FUEL } from '@/constants/common'
 import { handleScheduleSave } from '@/utils/schedules'
 import { cleanEmptyStringValues } from '@/utils/formatters'
+import {
+  calculateRenewableClaimColumnVisibility,
+  applyRenewableClaimColumnVisibility
+} from '@/utils/renewableClaimEligibility'
+import { PROVISION_APPROVED_FUEL_CODE } from './_schema'
 
 /**
  * Processes raw fuel supply data for grid consumption
@@ -36,87 +41,19 @@ export const processFuelSupplyRowData = ({
 /**
  * Determines which columns should be visible based on row data and fuel types
  */
-export const calculateColumnVisibility = (rowData, optionsData, compliancePeriod) => {
-  const complianceYear = parseInt(compliancePeriod, 10)
-  if (!optionsData?.fuelTypes || isArrayEmpty(rowData) || complianceYear < NEW_REGULATION_YEAR) {
-    return {
-      shouldShowIsCanadaProduced: false,
-      shouldShowIsQ1Supplied: false
-    }
-  }
-
-  let shouldShowIsCanadaProduced = false
-  let shouldShowIsQ1Supplied = false
-
-  for (const row of rowData) {
-    if (!row.fuelType) continue
-
-    const fuelType = optionsData.fuelTypes.find(
-      (obj) => row.fuelType === obj.fuelType
-    )
-
-    if (!fuelType) continue
-
-    const isRenewable = fuelType.renewable
-    let isCanadian = false
-
-    if (row.fuelCode) {
-      const fuelCodeDetails = fuelType.fuelCodes?.find(
-        (fc) =>
-          fc.fuelCode === row.fuelCode ||
-          fc.fuelCode === row.fuelCode.replace('C-', '')
-      )
-      isCanadian = fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
-    }
-
-    // Check conditions for showing columns
-    if (
-      (row.fuelCategory === 'Diesel' &&
-        complianceYear >= NEW_REGULATION_YEAR &&
-        isRenewable &&
-        row.provisionOfTheAct === DEFAULT_CI_FUEL_CODE) ||
-      isCanadian
-    ) {
-      shouldShowIsCanadaProduced = true
-    }
-
-    if (
-      row.fuelCategory === 'Diesel' &&
-      complianceYear === NEW_REGULATION_YEAR &&
-      isRenewable &&
-      !isCanadian &&
-      row.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
-    ) {
-      shouldShowIsQ1Supplied = true
-    }
-
-    // Early exit if both conditions are met
-    if (shouldShowIsCanadaProduced && shouldShowIsQ1Supplied) break
-  }
-
-  return { shouldShowIsCanadaProduced, shouldShowIsQ1Supplied }
-}
+export const calculateColumnVisibility = (rowData, optionsData, compliancePeriod) =>
+  calculateRenewableClaimColumnVisibility(
+    Array.isArray(rowData) ? rowData : [],
+    optionsData,
+    compliancePeriod,
+    PROVISION_APPROVED_FUEL_CODE
+  )
 
 /**
  * Updates grid column visibility
  */
 export const updateGridColumnsVisibility = (gridRef, columnVisibility) => {
-  const api = gridRef.current?.api
-  if (!api) return
-
-  const { shouldShowIsCanadaProduced, shouldShowIsQ1Supplied } = columnVisibility
-
-  // Only update if visibility actually changed
-  const currentIsCanadaProduced = api.getColumn('isCanadaProduced')?.isVisible()
-  const currentIsQ1Supplied = api.getColumn('isQ1Supplied')?.isVisible()
-
-  if (currentIsCanadaProduced !== shouldShowIsCanadaProduced) {
-    api.setColumnsVisible(['isCanadaProduced'], shouldShowIsCanadaProduced)
-  }
-
-  if (currentIsQ1Supplied !== shouldShowIsQ1Supplied) {
-    api.setColumnsVisible(['isQ1Supplied'], shouldShowIsQ1Supplied)
-  }
+  applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
 }
 
 /**

@@ -28,6 +28,10 @@ import {
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import {
+  isEligibleRenewableFuel,
+  isFuelCodeCanadian
+} from '@/utils/renewableClaimEligibility'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -418,6 +422,8 @@ export const fuelSupplyColDefs = (
               singleFuelCode.fuelCode || singleFuelCode.fuel_code
             params.data.fuelCodeId =
               singleFuelCode.fuelCodeId || singleFuelCode.fuel_code_id
+            params.data.isCanadaProduced =
+              singleFuelCode?.fuelProductionFacilityCountry === 'Canada'
           }
         }
 
@@ -480,17 +486,20 @@ export const fuelSupplyColDefs = (
         freeSolo: false,
         openOnFocus: true
       },
+      hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )?.renewable
+        const isEligible = isEligibleRenewableFuel(
+          params.data.fuelType,
+          params.data.fuelCategory,
+          optionsData
+        )
+
         return (
-          params.data.fuelCategory === 'Diesel' &&
           complianceYear >= NEW_REGULATION_YEAR &&
-          isRenewable &&
+          isEligible &&
           params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
         )
       },
@@ -513,6 +522,7 @@ export const fuelSupplyColDefs = (
       field: 'isQ1Supplied',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
       cellEditorParams: {
@@ -525,29 +535,22 @@ export const fuelSupplyColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
-        const fuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = fuelType?.renewable
-        const fuelCode = params.data.fuelCode
-        let isCanadian = false
-        if (fuelCode) {
-          const fuelCodeDetails = fuelType.fuelCodes?.find(
-            (fc) =>
-              fc.fuelCode === params.data.fuelCode ||
-              fc.fuelCode === params.data.fuelCode.replace('C-', '')
-          )
-          isCanadian =
-            fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
+        if (complianceYear >= NEW_REGULATION_YEAR) {
+          return false
         }
-        return (
-          params.data.fuelCategory === 'Diesel' &&
-          complianceYear >= NEW_REGULATION_YEAR &&
-          isRenewable &&
-          !isCanadian &&
-          params.data.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
+
+        const isEligible = isEligibleRenewableFuel(
+          params.data.fuelType,
+          params.data.fuelCategory,
+          optionsData
         )
+
+        if (!isEligible) {
+          return false
+        }
+
+        return params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
       },
       valueGetter: (params) =>
         params.data.isQ1Supplied
@@ -809,7 +812,11 @@ export const fuelSupplyColDefs = (
   return baseColumns
 }
 
-export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
+export const fuelSupplySummaryColDef = (
+  isEarlyIssuance,
+  showFuelTypeOther,
+  complianceYear
+) => {
   const baseColumns = [
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
@@ -859,12 +866,14 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
       minWidth: 240,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
       minWidth: 170,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
     {
@@ -985,7 +994,8 @@ export const defaultColDef = {
 
 export const changelogCommonColDefs = (
   highlight = true,
-  isEarlyIssuance = false
+  isEarlyIssuance = false,
+  complianceYear
 ) => {
   const baseColumns = [
     {
@@ -1035,12 +1045,14 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
       minWidth: 240,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
       minWidth: 170,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
     {
@@ -1147,7 +1159,11 @@ export const changelogCommonColDefs = (
   return baseColumns
 }
 
-export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
+export const changelogColDefs = (
+  highlight = true,
+  isEarlyIssuance = false,
+  complianceYear
+) => {
   const baseColumns = [
     {
       field: 'groupUuid',
@@ -1181,7 +1197,7 @@ export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
         }
       }
     },
-    ...changelogCommonColDefs(highlight)
+    ...changelogCommonColDefs(highlight, isEarlyIssuance, complianceYear)
   ]
   if (isEarlyIssuance) {
     return baseColumns.flatMap((item) => {

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
@@ -11,6 +11,23 @@ const mockNavigate = vi.fn()
 const mockSaveRow = vi.fn().mockResolvedValue({ id: 'test-id', isValid: true })
 const mockTriggerAlert = vi.fn()
 
+const columnVisibilityState = {
+  isCanadaProduced: false,
+  isQ1Supplied: false
+}
+
+const setColumnsVisibleMock = vi.fn((columns, visible) => {
+  columns.forEach((column) => {
+    columnVisibilityState[column] = visible
+  })
+})
+
+const getColumnMock = vi.fn((column) => ({
+  isVisible: () => columnVisibilityState[column]
+}))
+
+let mockCompliancePeriod = '2024'
+
 // Mock React Router
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -18,7 +35,10 @@ vi.mock('react-router-dom', async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useLocation: () => ({ state: null }),
-    useParams: () => ({ complianceReportId: '123', compliancePeriod: '2024' })
+    useParams: () => ({
+      complianceReportId: '123',
+      compliancePeriod: mockCompliancePeriod
+    })
   }
 })
 
@@ -30,16 +50,33 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock hooks with controllable data
-const mockOtherUsesData = []
+let mockOtherUsesData = []
 const mockOptionsData = {
   fuelTypes: [
     {
-      fuelType: 'Gasoline',
+      fuelType: 'Biodiesel',
       units: 'L',
       defaultCarbonIntensity: 10.5,
-      fuelCategories: [{ category: 'Petroleum' }],
-      provisionOfTheAct: [{ name: 'Default method' }],
-      fuelCodes: [{ fuelCode: 'BCLCF001', carbonIntensity: 8.5, fuelCodeId: 1 }]
+      renewable: true,
+      fuelCategories: [{ category: 'Diesel' }],
+      provisionOfTheAct: [
+        { name: 'Default carbon intensity - section 19 (b) (ii)' },
+        { name: 'Fuel code - section 19 (b) (i)' }
+      ],
+      fuelCodes: [
+        {
+          fuelCode: '123',
+          carbonIntensity: 8.5,
+          fuelCodeId: 1,
+          fuelProductionFacilityCountry: 'Canada'
+        },
+        {
+          fuelCode: '999',
+          carbonIntensity: 9.5,
+          fuelCodeId: 2,
+          fuelProductionFacilityCountry: 'United States'
+        }
+      ]
     }
   ],
   expectedUses: [{ name: 'Transportation' }]
@@ -119,6 +156,7 @@ vi.mock('@mui/material/Grid2', () => ({
 // Simple BCGridEditor mock that triggers our callback functions
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
+    gridRef,
     alertRef,
     onGridReady,
     onAction,
@@ -132,18 +170,24 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       alertRef.current = { triggerAlert: mockTriggerAlert }
     }
 
+    const api = {
+      sizeColumnsToFit: vi.fn(),
+      getLastDisplayedRowIndex: () => 0,
+      startEditingCell: vi.fn(),
+      autoSizeAllColumns: vi.fn(),
+      setColumnsVisible: setColumnsVisibleMock,
+      getColumn: getColumnMock
+    }
+
+    if (gridRef && typeof gridRef === 'object') {
+      gridRef.current = { api }
+    }
+
     // Trigger callbacks immediately for testing
     if (onGridReady) {
       setTimeout(() => {
         try {
-          onGridReady({
-            api: {
-              sizeColumnsToFit: vi.fn(),
-              getLastDisplayedRowIndex: () => 0,
-              startEditingCell: vi.fn(),
-              autoSizeAllColumns: vi.fn()
-            }
-          })
+          onGridReady({ api })
         } catch (e) {
           // Ignore callback errors
         }
@@ -155,7 +199,7 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
         try {
           onCellValueChanged({
             colDef: { field: 'fuelType' },
-            data: { fuelType: 'Gasoline' },
+            data: { fuelType: 'Biodiesel' },
             node: { setDataValue: vi.fn() }
           })
         } catch (e) {
@@ -237,6 +281,12 @@ const renderComponent = (props = {}) => {
 describe('AddEditOtherUses', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockOtherUsesData = []
+    mockCompliancePeriod = '2024'
+    columnVisibilityState.isCanadaProduced = false
+    columnVisibilityState.isQ1Supplied = false
+    setColumnsVisibleMock.mockReset()
+    getColumnMock.mockReset()
   })
 
   // Basic Component Tests
@@ -548,6 +598,50 @@ describe('AddEditOtherUses', () => {
         const shouldContinue = params.oldValue !== params.newValue
 
         expect(shouldContinue).toBe(true)
+      })
+    })
+
+    describe('Renewable claim column visibility', () => {
+      it('shows claim toggles for eligible diesel entries in 2025', async () => {
+        mockCompliancePeriod = '2025'
+        mockOtherUsesData = [
+          {
+            otherUsesId: '1',
+            fuelType: 'Biodiesel',
+            fuelCategory: 'Diesel',
+            provisionOfTheAct:
+              'Default carbon intensity - section 19 (b) (ii)',
+            fuelCode: 'C-123',
+            complianceReportId: 123
+          },
+          {
+            otherUsesId: '2',
+            fuelType: 'Biodiesel',
+            fuelCategory: 'Diesel',
+            provisionOfTheAct: 'Fuel code - section 19 (b) (i)',
+            fuelCode: 'C-999',
+            complianceReportId: 123
+          }
+        ]
+
+        renderComponent()
+
+        await waitFor(() =>
+          expect(columnVisibilityState.isCanadaProduced).toBe(true)
+        )
+
+        await waitFor(() =>
+          expect(columnVisibilityState.isQ1Supplied).toBe(true)
+        )
+
+        expect(setColumnsVisibleMock).toHaveBeenCalledWith(
+          ['isCanadaProduced'],
+          true
+        )
+        expect(setColumnsVisibleMock).toHaveBeenCalledWith(
+          ['isQ1Supplied'],
+          true
+        )
       })
     })
 

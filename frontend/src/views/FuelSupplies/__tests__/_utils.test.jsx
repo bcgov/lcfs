@@ -142,7 +142,7 @@ describe('fuelSupplyUtils', () => {
     const mockOptionsData = {
       fuelTypes: [
         {
-          fuelType: 'Diesel',
+          fuelType: 'Biodiesel',
           renewable: true,
           fuelCodes: [
             {
@@ -177,7 +177,7 @@ describe('fuelSupplyUtils', () => {
     it('shows IsCanadaProduced for Canadian fuel', () => {
       const rowData = [
         {
-          fuelType: 'Diesel',
+          fuelType: 'Biodiesel',
           fuelCategory: 'Diesel',
           fuelCode: 'C-123',
           provisionOfTheAct: 'DEFAULT_CODE'
@@ -195,17 +195,17 @@ describe('fuelSupplyUtils', () => {
     it('shows IsQ1Supplied for renewable diesel in regulation year', () => {
       const rowData = [
         {
-          fuelType: 'Diesel',
+          fuelType: 'Biodiesel',
           fuelCategory: 'Diesel',
           fuelCode: 'NON-C-123',
-          provisionOfTheAct: 'OTHER_CODE'
+          provisionOfTheAct: 'Fuel code - section 19 (b) (i)'
         }
       ]
 
       const optionsWithNonCanadian = {
         fuelTypes: [
           {
-            fuelType: 'Diesel',
+            fuelType: 'Biodiesel',
             renewable: true,
             fuelCodes: [
               {

@@ -15,7 +15,7 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "total_tracked_fuel_supplied",
     },
     4: {
-        "description": "Volume of eligible renewable fuel required",
+        "description": "Volume of eligible renewable fuel required (Gasoline = 5%, Diesel = {diesel_percent})",
         "field": "eligible_renewable_fuel_required",
     },
     5: {

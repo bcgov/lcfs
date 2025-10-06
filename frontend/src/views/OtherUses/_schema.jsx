@@ -21,6 +21,10 @@ import {
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import {
+  isEligibleRenewableFuel,
+  isFuelCodeCanadian
+} from '@/utils/renewableClaimEligibility'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -69,9 +73,10 @@ export const otherUsesColDefs = (
 
     valueSetter: (params) => {
       if (params.newValue) {
-        // TODO: Evaluate if additional fields need to be reset when fuel type changes
         params.data.fuelType = params.newValue
         params.data.fuelCode = undefined
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
       }
       return true
     }
@@ -100,7 +105,15 @@ export const otherUsesColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
-    minWidth: 200
+    minWidth: 200,
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.fuelCategory = params.newValue
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
+      }
+      return true
+    }
   },
   {
     field: 'provisionOfTheAct',
@@ -133,6 +146,8 @@ export const otherUsesColDefs = (
       if (params.newValue !== params.oldValue) {
         params.data.provisionOfTheAct = params.newValue
         params.data.fuelCode = undefined // Reset fuelCode when provisionOfTheAct changes
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
         return true
       }
       return false
@@ -237,13 +252,15 @@ export const otherUsesColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
       const complianceYear = parseInt(compliancePeriod, 10)
-      const isRenewable = !optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )?.fossilDerived
+      const isEligible = isEligibleRenewableFuel(
+        params.data.fuelType,
+        params.data.fuelCategory,
+        optionsData
+      )
+
       return (
-        params.data.fuelCategory === 'Diesel' &&
         complianceYear >= NEW_REGULATION_YEAR &&
-        isRenewable &&
+        isEligible &&
         params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
       )
     },
@@ -278,27 +295,30 @@ export const otherUsesColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
       const complianceYear = parseInt(compliancePeriod, 10)
-      const isRenewable = fuelType?.renewable
-      const fuelCode = params.data.fuelCode
-      let isCanadian = false
-      if (fuelCode) {
-        const fuelCodeDetails = fuelType.fuelCodes?.find(
-          (fc) =>
-            fc.fuelCode === params.data.fuelCode ||
-            fc.fuelCode === params.data.fuelCode.replace('C-', '')
-        )
-        isCanadian = fuelCodeDetails?.fuelProductionFacilityCountry === 'Canada'
+      if (complianceYear !== NEW_REGULATION_YEAR) {
+        return false
       }
+
+      const isEligible = isEligibleRenewableFuel(
+        params.data.fuelType,
+        params.data.fuelCategory,
+        optionsData
+      )
+
+      if (!isEligible) {
+        return false
+      }
+
+      const isCanadian = isFuelCodeCanadian(
+        params.data.fuelType,
+        params.data.fuelCode,
+        optionsData
+      )
+
       return (
-        params.data.fuelCategory === 'Diesel' &&
-        complianceYear >= NEW_REGULATION_YEAR &&
-        isRenewable &&
-        !isCanadian &&
-        params.data.provisionOfTheAct != DEFAULT_CI_FUEL_CODE
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+        !isCanadian
       )
     },
     valueGetter: (params) =>
