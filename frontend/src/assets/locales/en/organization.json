@@ -127,5 +127,9 @@
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
   },
-  "snapshotTitle": "Organization Information from Compliance Report"
+  "snapshotTitle": "Organization Information from Compliance Report",
+  "penaltyLog": {
+    "history": "Penalty history",
+    "addPenaltyBtn": "Add discretionary penalty"
+  }
 }

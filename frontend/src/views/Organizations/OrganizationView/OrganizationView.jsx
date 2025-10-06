@@ -14,6 +14,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/routes/routes'
+import breakpoints from '@/themes/base/breakpoints'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -84,17 +85,16 @@ export const OrganizationView = ({ addMode = false }) => {
   }, [location.pathname, tabPaths])
 
   useEffect(() => {
-    function handleResize() {
-      if (window.innerWidth < 500) {
-        setTabsOrientation('vertical')
-      } else {
-        setTabsOrientation('horizontal')
-      }
+    // A function that sets the orientation state of the tabs.
+    function handleTabsOrientation() {
+      return window.innerWidth < breakpoints.values.lg
+        ? setTabsOrientation('vertical')
+        : setTabsOrientation('horizontal')
     }
-    window.addEventListener('resize', handleResize)
-    handleResize()
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    window.addEventListener('resize', handleTabsOrientation)
+    handleTabsOrientation()
+    return () => window.removeEventListener('resize', handleTabsOrientation)
+  }, [tabsOrientation])
 
   const handleTabChange = (event, newValue) => {
     navigate(tabPaths[newValue])
@@ -152,7 +152,7 @@ export const OrganizationView = ({ addMode = false }) => {
                 minWidth: 'auto',
                 paddingX: 2,
                 marginX: 1,
-                whiteSpace: 'nowrap',
+                whiteSpace: 'nowrap'
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
