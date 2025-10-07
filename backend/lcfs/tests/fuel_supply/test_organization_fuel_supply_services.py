@@ -3,10 +3,8 @@ from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime
 
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.fuel_supply.schema import (
-    OrganizationFuelSuppliesSchema,
-    PaginationRequestSchema,
-)
+from lcfs.web.api.fuel_supply.schema import OrganizationFuelSuppliesSchema
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 
 
@@ -26,30 +24,50 @@ async def test_get_organization_fuel_supply_success(organization_fuel_supply_ser
     organization_id = 1
     pagination = PaginationRequestSchema(page=1, size=10, filters=[])
 
-    # Mock fuel supply data
+    # Mock fuel supply data with ORM relationships
     mock_fuel_supply_1 = MagicMock()
     mock_fuel_supply_1.fuel_supply_id = 1
-    mock_fuel_supply_1.compliance_period = "2023"
-    mock_fuel_supply_1.report_submission_date = datetime(2023, 3, 31)
-    mock_fuel_supply_1.fuel_type = "Diesel"
-    mock_fuel_supply_1.fuel_category = "Petroleum-based"
-    mock_fuel_supply_1.provision_of_the_act = "Default carbon intensity - section 19 (b) (ii)"
-    mock_fuel_supply_1.fuel_code = None
-    mock_fuel_supply_1.fuel_quantity = 50000
-    mock_fuel_supply_1.units = "L"
+    mock_fuel_supply_1.quantity = 50000
+    mock_fuel_supply_1.q1_quantity = None
+    mock_fuel_supply_1.q2_quantity = None
+    mock_fuel_supply_1.q3_quantity = None
+    mock_fuel_supply_1.q4_quantity = None
+    mock_fuel_supply_1.units = MagicMock(value="L")
     mock_fuel_supply_1.compliance_report_id = 101
+
+    # Mock relationships
+    mock_fuel_supply_1.compliance_report = MagicMock()
+    mock_fuel_supply_1.compliance_report.compliance_period = MagicMock(description="2023")
+    mock_fuel_supply_1.compliance_report.update_date = datetime(2023, 3, 31)
+
+    mock_fuel_supply_1.fuel_type = MagicMock(fuel_type="Diesel")
+    mock_fuel_supply_1.fuel_category = MagicMock(category="Petroleum-based")
+    provision_mock_1 = MagicMock()
+    provision_mock_1.name = "Default carbon intensity - section 19 (b) (ii)"
+    mock_fuel_supply_1.provision_of_the_act = provision_mock_1
+    mock_fuel_supply_1.fuel_code = None
 
     mock_fuel_supply_2 = MagicMock()
     mock_fuel_supply_2.fuel_supply_id = 2
-    mock_fuel_supply_2.compliance_period = "2023"
-    mock_fuel_supply_2.report_submission_date = datetime(2023, 3, 31)
-    mock_fuel_supply_2.fuel_type = "Gasoline"
-    mock_fuel_supply_2.fuel_category = "Petroleum-based"
-    mock_fuel_supply_2.provision_of_the_act = "Fuel code - section 19 (b) (i)"
-    mock_fuel_supply_2.fuel_code = "BCLCF123.1"
-    mock_fuel_supply_2.fuel_quantity = 75000
-    mock_fuel_supply_2.units = "L"
+    mock_fuel_supply_2.quantity = 75000
+    mock_fuel_supply_2.q1_quantity = None
+    mock_fuel_supply_2.q2_quantity = None
+    mock_fuel_supply_2.q3_quantity = None
+    mock_fuel_supply_2.q4_quantity = None
+    mock_fuel_supply_2.units = MagicMock(value="L")
     mock_fuel_supply_2.compliance_report_id = 101
+
+    # Mock relationships
+    mock_fuel_supply_2.compliance_report = MagicMock()
+    mock_fuel_supply_2.compliance_report.compliance_period = MagicMock(description="2023")
+    mock_fuel_supply_2.compliance_report.update_date = datetime(2023, 3, 31)
+
+    mock_fuel_supply_2.fuel_type = MagicMock(fuel_type="Gasoline")
+    mock_fuel_supply_2.fuel_category = MagicMock(category="Petroleum-based")
+    provision_mock_2 = MagicMock()
+    provision_mock_2.name = "Fuel code - section 19 (b) (i)"
+    mock_fuel_supply_2.provision_of_the_act = provision_mock_2
+    mock_fuel_supply_2.fuel_code = MagicMock(fuel_code="BCLCF123.1")
 
     mock_fuel_supplies = [mock_fuel_supply_1, mock_fuel_supply_2]
     total_count = 2
@@ -108,8 +126,9 @@ async def test_get_organization_fuel_supply_success(organization_fuel_supply_ser
     mock_repo.get_organization_fuel_supply_paginated.assert_awaited_once_with(
         organization_id, pagination
     )
+    # Verify analytics was called (filters passed as empty list when no filters)
     mock_repo.get_organization_fuel_supply_analytics.assert_awaited_once_with(
-        organization_id, None
+        organization_id, []
     )
 
 
@@ -149,10 +168,12 @@ async def test_get_organization_fuel_supply_with_filters(organization_fuel_suppl
     assert response.pagination.total == 0
     assert response.pagination.total_pages == 0
 
-    # Verify filters were passed to analytics
-    mock_repo.get_organization_fuel_supply_analytics.assert_awaited_once_with(
-        organization_id, filters
-    )
+    # Verify filters were passed to analytics (filters are converted to FilterModel objects)
+    call_args = mock_repo.get_organization_fuel_supply_analytics.call_args
+    assert call_args[0][0] == organization_id
+    assert len(call_args[0][1]) == 1
+    assert call_args[0][1][0].field == "compliance_period"  # CamelCase converted to snake_case
+    assert call_args[0][1][0].filter == "2023"
 
 
 @pytest.mark.anyio
@@ -168,15 +189,25 @@ async def test_get_organization_fuel_supply_pagination(organization_fuel_supply_
     for i in range(5):
         mock_supply = MagicMock()
         mock_supply.fuel_supply_id = i + 6  # Second page: items 6-10
-        mock_supply.compliance_period = "2023"
-        mock_supply.report_submission_date = datetime(2023, 3, 31)
-        mock_supply.fuel_type = f"Fuel Type {i+6}"
-        mock_supply.fuel_category = "Renewable"
-        mock_supply.provision_of_the_act = "Test Provision"
-        mock_supply.fuel_code = None
-        mock_supply.fuel_quantity = 1000 * (i + 6)
-        mock_supply.units = "L"
+        mock_supply.quantity = 1000 * (i + 6)
+        mock_supply.q1_quantity = None
+        mock_supply.q2_quantity = None
+        mock_supply.q3_quantity = None
+        mock_supply.q4_quantity = None
+        mock_supply.units = MagicMock(value="L")
         mock_supply.compliance_report_id = 101
+
+        # Mock relationships
+        mock_supply.compliance_report = MagicMock()
+        mock_supply.compliance_report.compliance_period = MagicMock(description="2023")
+        mock_supply.compliance_report.update_date = datetime(2023, 3, 31)
+
+        mock_supply.fuel_type = MagicMock(fuel_type=f"Fuel Type {i+6}")
+        mock_supply.fuel_category = MagicMock(category="Renewable")
+        provision_mock = MagicMock()
+        provision_mock.name = "Test Provision"
+        mock_supply.provision_of_the_act = provision_mock
+        mock_supply.fuel_code = None
         mock_fuel_supplies.append(mock_supply)
 
     total_count = 13
@@ -219,15 +250,25 @@ async def test_get_organization_fuel_supply_null_submission_date(organization_fu
 
     mock_fuel_supply = MagicMock()
     mock_fuel_supply.fuel_supply_id = 1
-    mock_fuel_supply.compliance_period = "2023"
-    mock_fuel_supply.report_submission_date = None  # Null submission date
-    mock_fuel_supply.fuel_type = "Diesel"
-    mock_fuel_supply.fuel_category = "Petroleum-based"
-    mock_fuel_supply.provision_of_the_act = "Test Provision"
-    mock_fuel_supply.fuel_code = None
-    mock_fuel_supply.fuel_quantity = 50000
-    mock_fuel_supply.units = "L"
+    mock_fuel_supply.quantity = 50000
+    mock_fuel_supply.q1_quantity = None
+    mock_fuel_supply.q2_quantity = None
+    mock_fuel_supply.q3_quantity = None
+    mock_fuel_supply.q4_quantity = None
+    mock_fuel_supply.units = MagicMock(value="L")
     mock_fuel_supply.compliance_report_id = 101
+
+    # Mock relationships
+    mock_fuel_supply.compliance_report = MagicMock()
+    mock_fuel_supply.compliance_report.compliance_period = MagicMock(description="2023")
+    mock_fuel_supply.compliance_report.update_date = None  # Null submission date
+
+    mock_fuel_supply.fuel_type = MagicMock(fuel_type="Diesel")
+    mock_fuel_supply.fuel_category = MagicMock(category="Petroleum-based")
+    provision_mock = MagicMock()
+    provision_mock.name = "Test Provision"
+    mock_fuel_supply.provision_of_the_act = provision_mock
+    mock_fuel_supply.fuel_code = None
 
     mock_analytics = {
         "total_volume": 50000,
