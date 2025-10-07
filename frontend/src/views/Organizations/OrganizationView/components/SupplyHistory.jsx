@@ -1,8 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react'
 import { Grid, FormControl, Select, MenuItem, Card, CardContent, Box } from '@mui/material'
-import { BarChart } from '@mui/x-charts/BarChart'
-import { LineChart } from '@mui/x-charts/LineChart'
-import { PieChart } from '@mui/x-charts/PieChart'
+import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -141,6 +139,159 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     }
   }, [fuelSupplies])
 
+  // ECharts Options
+  const fuelTypeChartOption = useMemo(() => ({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: fuelTypeChartData.labels,
+      axisLabel: {
+        rotate: 45,
+        interval: 0
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: t('org:supplyHistory.analytics.quantity')
+    },
+    series: [{
+      name: t('org:supplyHistory.analytics.quantity'),
+      type: 'bar',
+      data: fuelTypeChartData.values,
+      itemStyle: {
+        color: '#1976d2'
+      }
+    }]
+  }), [fuelTypeChartData, t])
+
+  const volumeOverTimeChartOption = useMemo(() => ({
+    tooltip: {
+      trigger: 'axis'
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: volumeOverTimeChartData.labels,
+      boundaryGap: false
+    },
+    yAxis: {
+      type: 'value',
+      name: t('org:supplyHistory.analytics.totalVolume')
+    },
+    series: [{
+      name: t('org:supplyHistory.analytics.totalVolume'),
+      type: 'line',
+      data: volumeOverTimeChartData.values,
+      areaStyle: {
+        color: 'rgba(25, 118, 210, 0.2)'
+      },
+      itemStyle: {
+        color: '#1976d2'
+      },
+      lineStyle: {
+        color: '#1976d2'
+      }
+    }]
+  }), [volumeOverTimeChartData, t])
+
+  const categoryChartOption = useMemo(() => ({
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)'
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left'
+    },
+    series: [{
+      type: 'pie',
+      radius: '65%',
+      data: categoryChartData.map(item => ({
+        name: item.label,
+        value: item.value
+      })),
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }]
+  }), [categoryChartData])
+
+  const provisionChartOption = useMemo(() => ({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    grid: {
+      left: '20%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      name: t('org:supplyHistory.analytics.quantity')
+    },
+    yAxis: {
+      type: 'category',
+      data: provisionChartData.labels
+    },
+    series: [{
+      name: t('org:supplyHistory.analytics.quantity'),
+      type: 'bar',
+      data: provisionChartData.values,
+      itemStyle: {
+        color: '#1976d2'
+      }
+    }]
+  }), [provisionChartData, t])
+
+  const topFuelCodesChartOption = useMemo(() => ({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    grid: {
+      left: '15%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      name: t('org:supplyHistory.analytics.quantity')
+    },
+    yAxis: {
+      type: 'category',
+      data: topFuelCodesChartData.labels
+    },
+    series: [{
+      name: t('org:supplyHistory.analytics.quantity'),
+      type: 'bar',
+      data: topFuelCodesChartData.values,
+      itemStyle: {
+        color: '#1976d2'
+      }
+    }]
+  }), [topFuelCodesChartData, t])
+
   return (
     <BCBox p={2}>
       <BCTypography variant="h5" color="primary" sx={{ mb: 3 }}>
@@ -258,23 +409,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                 {t('org:supplyHistory.analytics.fuelTypeDistribution')}
               </BCTypography>
               {fuelTypeChartData.labels.length > 0 ? (
-                <BarChart
-                  xAxis={[
-                    {
-                      scaleType: 'band',
-                      data: fuelTypeChartData.labels,
-                      label: t('org:supplyHistory.columns.fuelType')
-                    }
-                  ]}
-                  series={[
-                    {
-                      data: fuelTypeChartData.values,
-                      label: t('org:supplyHistory.analytics.quantity')
-                    }
-                  ]}
-                  height={300}
-                  margin={{ top: 10, right: 10, bottom: 70, left: 60 }}
-                />
+                <ReactECharts option={fuelTypeChartOption} style={{ height: 300 }} />
               ) : (
                 <BCTypography variant="body2" color="text.secondary">
                   {t('org:supplyHistory.analytics.noData')}
@@ -292,22 +427,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                 {t('org:supplyHistory.analytics.volumeOverTime')}
               </BCTypography>
               {volumeOverTimeChartData.labels.length > 0 ? (
-                <LineChart
-                  xAxis={[
-                    {
-                      scaleType: 'band',
-                      data: volumeOverTimeChartData.labels
-                    }
-                  ]}
-                  series={[
-                    {
-                      data: volumeOverTimeChartData.values,
-                      label: t('org:supplyHistory.analytics.totalVolume'),
-                      area: true
-                    }
-                  ]}
-                  height={300}
-                />
+                <ReactECharts option={volumeOverTimeChartOption} style={{ height: 300 }} />
               ) : (
                 <BCTypography variant="body2" color="text.secondary">
                   {t('org:supplyHistory.analytics.noData')}
@@ -325,23 +445,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                 {t('org:supplyHistory.analytics.categoryBreakdown')}
               </BCTypography>
               {categoryChartData.length > 0 ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <PieChart
-                    series={[
-                      {
-                        data: categoryChartData,
-                        highlightScope: { faded: 'global', highlighted: 'item' },
-                        faded: {
-                          innerRadius: 30,
-                          additionalRadius: -30,
-                          color: 'gray'
-                        }
-                      }
-                    ]}
-                    height={300}
-                    width={400}
-                  />
-                </Box>
+                <ReactECharts option={categoryChartOption} style={{ height: 300 }} />
               ) : (
                 <BCTypography variant="body2" color="text.secondary">
                   {t('org:supplyHistory.analytics.noData')}
@@ -359,22 +463,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                 {t('org:supplyHistory.analytics.provisionDistribution')}
               </BCTypography>
               {provisionChartData.labels.length > 0 ? (
-                <BarChart
-                  yAxis={[
-                    {
-                      scaleType: 'band',
-                      data: provisionChartData.labels
-                    }
-                  ]}
-                  series={[
-                    {
-                      data: provisionChartData.values,
-                      label: t('org:supplyHistory.analytics.quantity')
-                    }
-                  ]}
-                  height={300}
-                  layout="horizontal"
-                />
+                <ReactECharts option={provisionChartOption} style={{ height: 300 }} />
               ) : (
                 <BCTypography variant="body2" color="text.secondary">
                   {t('org:supplyHistory.analytics.noData')}
@@ -392,22 +481,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
                 {t('org:supplyHistory.analytics.topFuelCodes')}
               </BCTypography>
               {topFuelCodesChartData.labels.length > 0 ? (
-                <BarChart
-                  yAxis={[
-                    {
-                      scaleType: 'band',
-                      data: topFuelCodesChartData.labels
-                    }
-                  ]}
-                  series={[
-                    {
-                      data: topFuelCodesChartData.values,
-                      label: t('org:supplyHistory.analytics.quantity')
-                    }
-                  ]}
-                  height={400}
-                  layout="horizontal"
-                />
+                <ReactECharts option={topFuelCodesChartOption} style={{ height: 400 }} />
               ) : (
                 <BCTypography variant="body2" color="text.secondary">
                   {t('org:supplyHistory.analytics.noData')}
