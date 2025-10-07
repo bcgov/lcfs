@@ -263,7 +263,7 @@ describe('useOrganizationFuelSupply', () => {
     const pagination = { page: 1, size: 10, filters: [] }
 
     const { result } = renderHook(
-      () => useOrganizationFuelSupply(organizationId, pagination),
+      () => useOrganizationFuelSupply(organizationId, pagination, { retry: false }),
       { wrapper }
     )
 
