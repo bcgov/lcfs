@@ -241,23 +241,23 @@ describe('fuelSupplyUtils', () => {
     it('early exits when both conditions are met', () => {
       const rowData = [
         {
-          fuelType: 'Diesel',
+          fuelType: 'Biodiesel',
           fuelCategory: 'Diesel',
           fuelCode: 'C-123',
           provisionOfTheAct: 'DEFAULT_CODE'
         },
         {
-          fuelType: 'Diesel',
+          fuelType: 'Biodiesel',
           fuelCategory: 'Diesel',
           fuelCode: 'NON-C-456',
-          provisionOfTheAct: 'OTHER_CODE'
+          provisionOfTheAct: 'Fuel code - section 19 (b) (i)'
         }
       ]
 
       const complexOptionsData = {
         fuelTypes: [
           {
-            fuelType: 'Diesel',
+            fuelType: 'Biodiesel',
             renewable: true,
             fuelCodes: [
               { fuelCode: 'C-123', fuelProductionFacilityCountry: 'Canada' },

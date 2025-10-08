@@ -53,7 +53,6 @@ const SigningAuthorityDeclaration = ({
       {!hasRecords && renderAlert('report:noRecords')}
       {!hasAuthority && renderAlert('report:noSigningAuthorityTooltip')}
       {!hasValidAddress && renderAlert('report:invalidAddress')}
-      {/* {!hasEligibleRenewableFuel && renderAlert('report:invalidAddress')} */}
       {hasEligibleRenewableFuel && (
         <FormControlLabel
           control={
