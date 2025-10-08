@@ -309,7 +309,7 @@ describe('ActivityLinksList', () => {
         screen.getByText('report:activityLists.finalSupplyEquipment')
       )
       expect(mockNavigate).toHaveBeenCalledWith(
-        '/compliance-reporting/2025/123/final-supply-equipments'
+        '/compliance-reporting/2025/123/fse-reporting'
       )
     })
 
