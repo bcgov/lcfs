@@ -154,9 +154,9 @@ describe('SigningAuthorityDeclaration Component', () => {
     const checkbox = screen.getByRole('checkbox')
     fireEvent.click(checkbox)
 
-    expect(onChangeMock).toHaveBeenCalledWith(true)
+    expect(onChangeMock).toHaveBeenCalledWith({ certifyClaim: false, certifyInfo: true })
     fireEvent.click(checkbox)
-    expect(onChangeMock).toHaveBeenCalledWith(false)
+    expect(onChangeMock).toHaveBeenCalledWith({ certifyClaim: false, certifyInfo: false })
   })
 
   it('checkbox starts unchecked by default', () => {
@@ -196,7 +196,7 @@ describe('SigningAuthorityDeclaration Component', () => {
       hasValidAddress: true
     })
 
-    expect(onChangeMock).toHaveBeenCalledWith(false)
+    expect(onChangeMock).toHaveBeenCalledWith({ certifyClaim: false, certifyInfo: false })
   })
 
 
