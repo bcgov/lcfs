@@ -2,6 +2,7 @@ import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { DateTime } from 'luxon'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
+import { NEW_REGULATION_YEAR } from '@/constants/common'
 
 /**
  *
@@ -80,7 +81,12 @@ class ButtonActionFactory {
       id: 'submit-report-btn',
       label: this.context.t('report:actionBtns.submitReportBtn'),
       icon: faPencil,
-      disabled: !this.context.isSigningAuthorityDeclared,
+      disabled: !(
+        this.context.isSigningAuthorityDeclared.certifyInfo &&
+        (this.context.isSigningAuthorityDeclared.certifyClaim ||
+          parseInt(this.context.compliancePeriod) < NEW_REGULATION_YEAR ||
+          !this.context.hasEligibleRenewableFuel)
+      ),
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
