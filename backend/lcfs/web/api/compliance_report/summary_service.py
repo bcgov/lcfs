@@ -494,6 +494,36 @@ class ComplianceReportSummaryService:
 
         return summary_data
 
+    def _is_eligible_renewable(self, record, compliance_year) -> bool:
+        if not record.fuel_type.renewable:
+            return False
+
+        if compliance_year < 2025:
+            return True
+
+        category = (record.fuel_category.category or "").lower()
+        fuel_type_name = (record.fuel_type.fuel_type or "").lower()
+
+        if category == "gasoline":
+            if fuel_type_name not in ELIGIBLE_GASOLINE_RENEWABLE_TYPES:
+                return False
+        elif category == "diesel":
+            if fuel_type_name not in ELIGIBLE_DIESEL_RENEWABLE_TYPES:
+                return False
+        else:
+            return True
+
+        if record.is_canada_produced or record.is_q1_supplied:
+            return True
+
+        fuel_code_country = (
+            (record.fuel_code.fuel_production_facility_country or "")
+            if getattr(record, "fuel_code", None)
+            else ""
+        ).lower()
+
+        return fuel_code_country == "canada"
+
     @service_handler
     async def calculate_compliance_report_summary(
         self, report_id: int
@@ -703,42 +733,12 @@ class ComplianceReportSummaryService:
         # line 2
         # Ensure renewable volumes counted towards line 2 meet 2025+ eligibility criteria.
 
-        def _is_eligible_renewable(record) -> bool:
-            if not record.fuel_type.renewable:
-                return False
-
-            if compliance_year < 2025:
-                return True
-
-            category = (record.fuel_category.category or "").lower()
-            fuel_type_name = (record.fuel_type.fuel_type or "").lower()
-
-            if category == "gasoline":
-                if fuel_type_name not in ELIGIBLE_GASOLINE_RENEWABLE_TYPES:
-                    return False
-            elif category == "diesel":
-                if fuel_type_name not in ELIGIBLE_DIESEL_RENEWABLE_TYPES:
-                    return False
-            else:
-                return True
-
-            if record.is_canada_produced or record.is_q1_supplied:
-                return True
-
-            fuel_code_country = (
-                (record.fuel_code.fuel_production_facility_country or "")
-                if getattr(record, "fuel_code", None)
-                else ""
-            ).lower()
-
-            return fuel_code_country == "canada"
-
         filtered_renewable_fuel_supplies = [
-            fs for fs in effective_fuel_supplies if _is_eligible_renewable(fs)
+            fs for fs in effective_fuel_supplies if self._is_eligible_renewable(fs, compliance_year)
         ]
 
         filtered_renewable_other_uses = [
-            ou for ou in effective_other_uses if _is_eligible_renewable(ou)
+            ou for ou in effective_other_uses if self._is_eligible_renewable(ou, compliance_year)
         ]
 
         all_renewable_records = [
@@ -1186,9 +1186,7 @@ class ComplianceReportSummaryService:
                     ),
                 }
 
-            description_template = RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line][
-                "description"
-            ]
+            description_template = RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
 
             if line in [6, 8]:
                 description_value = description_template.format(

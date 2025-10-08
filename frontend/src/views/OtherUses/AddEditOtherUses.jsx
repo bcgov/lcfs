@@ -20,11 +20,11 @@ import {
   otherUsesColDefs,
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
-import { DEFAULT_CI_FUEL_CODE } from '@/constants/common'
+import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
-} from '@/utils/renewableClaimEligibility'
+} from '@/utils/renewableClaimUtils'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -441,6 +441,11 @@ export const AddEditOtherUses = () => {
         <BCTypography variant="body4" color="text" my={2} component="div">
           {t('otherUses:newOtherUsesGuide')}
         </BCTypography>
+        {parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && (
+          <BCTypography variant="body4" color="text" my={2} component="div">
+            {t('otherUses:newOtherUsesGuide2025')}
+          </BCTypography>
+        )}
       </div>
 
       <BCGridEditor

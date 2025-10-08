@@ -6,7 +6,7 @@ import { cleanEmptyStringValues } from '@/utils/formatters'
 import {
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
-} from '@/utils/renewableClaimEligibility'
+} from '@/utils/renewableClaimUtils'
 import { PROVISION_APPROVED_FUEL_CODE } from './_schema'
 
 /**

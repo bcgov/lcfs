@@ -23,8 +23,9 @@ import {
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,
-  isFuelCodeCanadian
-} from '@/utils/renewableClaimEligibility'
+  isFuelCodeCanadian,
+  canEditQ1Supplied
+} from '@/utils/renewableClaimUtils'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -203,6 +204,7 @@ export const otherUsesColDefs = (
           (fc) => fc.fuelCode === params.data.fuelCode
         )
         const country = fuelCodeDetails?.fuelProductionFacilityCountry
+        params.data.isCanadaProduced = country === 'Canada'
         return formatFuelCodeWithCountryPrefix(
           params.data.fuelCode,
           country,
@@ -226,8 +228,17 @@ export const otherUsesColDefs = (
           if (matchingFuelCode) {
             params.data.fuelCodeId = matchingFuelCode.fuelCodeId
           }
-          params.data.isCanadaProduced =
-            matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+          if (
+            isEligibleRenewableFuel(
+              params.data.fuelType,
+              params.data.fuelCategory,
+              optionsData
+            )
+          ) {
+            params.data.isCanadaProduced =
+              matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+          }
+          params.data.isCanadaProduced = false
           params.data.isQ1Supplied = false
         }
         return true
@@ -248,6 +259,7 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
+    hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
@@ -258,11 +270,7 @@ export const otherUsesColDefs = (
         optionsData
       )
 
-      return (
-        complianceYear >= NEW_REGULATION_YEAR &&
-        isEligible &&
-        params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
-      )
+      return parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && isEligible
     },
     valueGetter: (params) =>
       params.data.isCanadaProduced
@@ -292,35 +300,16 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
+    hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-    editable: (params) => {
-      const complianceYear = parseInt(compliancePeriod, 10)
-      if (complianceYear !== NEW_REGULATION_YEAR) {
-        return false
-      }
-
-      const isEligible = isEligibleRenewableFuel(
-        params.data.fuelType,
-        params.data.fuelCategory,
-        optionsData
-      )
-
-      if (!isEligible) {
-        return false
-      }
-
-      const isCanadian = isFuelCodeCanadian(
-        params.data.fuelType,
-        params.data.fuelCode,
-        optionsData
-      )
-
-      return (
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
-        !isCanadian
-      )
-    },
+    editable: (params) =>
+      canEditQ1Supplied(
+        params.data,
+        optionsData,
+        compliancePeriod,
+        PROVISION_APPROVED_FUEL_CODE
+      ),
     valueGetter: (params) =>
       params.data.isQ1Supplied
         ? 'Yes'
@@ -445,7 +434,7 @@ export const otherUsesColDefs = (
   }
 ]
 
-export const otherUsesSummaryColDefs = [
+export const otherUsesSummaryColDefs = (complianceYear) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType',
@@ -475,6 +464,7 @@ export const otherUsesSummaryColDefs = [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
     field: 'isCanadaProduced',
+    hide: complianceYear < NEW_REGULATION_YEAR,
     floatingFilter: false,
     valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : ''),
     minWidth: 240
@@ -482,6 +472,7 @@ export const otherUsesSummaryColDefs = [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
     field: 'isQ1Supplied',
+    hide: complianceYear < NEW_REGULATION_YEAR,
     floatingFilter: false,
     valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : ''),
     minWidth: 180
@@ -528,7 +519,7 @@ export const defaultColDef = {
   singleClickEdit: true
 }
 
-export const changelogCommonColDefs = (highlight = true) => [
+export const changelogCommonColDefs = (highlight = true, complianceYear) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType.fuelType',
@@ -564,6 +555,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
     field: 'isCanadaProduced',
     minWidth: 240,
+    hide: complianceYear < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'isCanadaProduced')
   },
@@ -571,6 +563,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
     field: 'isQ1Supplied',
     minWidth: 180,
+    hide: complianceYear < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'isQ1Supplied')
   },
@@ -606,7 +599,7 @@ export const changelogCommonColDefs = (highlight = true) => [
   }
 ]
 
-export const changelogColDefs = (highlight = true) => [
+export const changelogColDefs = (highlight = true, complianceYear) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -638,7 +631,7 @@ export const changelogColDefs = (highlight = true) => [
       }
     }
   },
-  ...changelogCommonColDefs(highlight)
+  ...changelogCommonColDefs(highlight, complianceYear)
 ]
 
 export const changelogDefaultColDefs = {

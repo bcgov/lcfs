@@ -170,8 +170,8 @@ export const NotionalTransferChangelog = () => {
                 gridKey={`notional-transfers-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false)
-                    : changelogColDefs()
+                    ? changelogCommonColDefs(false, parseInt(compliancePeriod))
+                    : changelogColDefs(true, parseInt(compliancePeriod))
                 }
                 queryData={queryData}
                 getRowId={getRowId}

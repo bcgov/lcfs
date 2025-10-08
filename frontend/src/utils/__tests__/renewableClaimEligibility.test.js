@@ -4,7 +4,7 @@ import {
   isFuelCodeCanadian,
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
-} from '../renewableClaimEligibility'
+} from '../renewableClaimUtils'
 
 const APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 

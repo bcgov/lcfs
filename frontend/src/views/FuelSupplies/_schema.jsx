@@ -30,8 +30,9 @@ import {
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,
-  isFuelCodeCanadian
-} from '@/utils/renewableClaimEligibility'
+  isFuelCodeCanadian,
+  canEditQ1Supplied
+} from '@/utils/renewableClaimUtils'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -422,8 +423,16 @@ export const fuelSupplyColDefs = (
               singleFuelCode.fuelCode || singleFuelCode.fuel_code
             params.data.fuelCodeId =
               singleFuelCode.fuelCodeId || singleFuelCode.fuel_code_id
-            params.data.isCanadaProduced =
-              singleFuelCode?.fuelProductionFacilityCountry === 'Canada'
+            if (
+              isEligibleRenewableFuel(
+                params.data.fuelType,
+                params.data.fuelCategory,
+                optionsData
+              )
+            ) {
+              params.data.isCanadaProduced =
+                singleFuelCode?.fuelProductionFacilityCountry === 'Canada'
+            }
           }
         }
 
@@ -459,14 +468,22 @@ export const fuelSupplyColDefs = (
             if (matchingFuelCode) {
               params.data.fuelCodeId = matchingFuelCode.fuelCodeId
             }
-            params.data.isCanadaProduced =
-              matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+            if (
+              isEligibleRenewableFuel(
+                params.data.fuelType,
+                params.data.fuelCategory,
+                optionsData
+              )
+            ) {
+              params.data.isCanadaProduced =
+                matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
+            }
             params.data.isQ1Supplied = false
           }
         } else {
           // If user clears the value
-          param.data.isCanadaProduced = false
-          param.data.isQ1Supplied = false
+          params.data.isCanadaProduced = false
+          params.data.isQ1Supplied = false
           params.data.fuelCode = undefined
           params.data.fuelCodeId = undefined
         }
@@ -490,18 +507,12 @@ export const fuelSupplyColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
-        const complianceYear = parseInt(compliancePeriod, 10)
         const isEligible = isEligibleRenewableFuel(
           params.data.fuelType,
           params.data.fuelCategory,
           optionsData
         )
-
-        return (
-          complianceYear >= NEW_REGULATION_YEAR &&
-          isEligible &&
-          params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
-        )
+        return parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && isEligible
       },
       valueGetter: (params) =>
         params.data.isCanadaProduced
@@ -534,24 +545,14 @@ export const fuelSupplyColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-      editable: (params) => {
-        const complianceYear = parseInt(compliancePeriod, 10)
-        if (complianceYear >= NEW_REGULATION_YEAR) {
-          return false
-        }
-
-        const isEligible = isEligibleRenewableFuel(
-          params.data.fuelType,
-          params.data.fuelCategory,
-          optionsData
-        )
-
-        if (!isEligible) {
-          return false
-        }
-
-        return params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      },
+      editable: (params) =>
+        canEditQ1Supplied(
+          params.data,
+          optionsData,
+          compliancePeriod,
+          PROVISION_APPROVED_FUEL_CODE
+        ),
+      minWidth: 160,
       valueGetter: (params) =>
         params.data.isQ1Supplied
           ? 'Yes'
