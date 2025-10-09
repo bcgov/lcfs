@@ -7,7 +7,10 @@ from lcfs.db.models import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportSummarySchema
+)
 from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
@@ -951,7 +954,7 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     # Set required renewable fuel values to match the summary model.
     expected_eligible_renewable_fuel_required = {
         "gasoline": 500.0,  # 5% of 10000
-        "diesel": 800.0,  # 4% of 20000
+        "diesel": 1600.0,  # 8% of 20000
         "jet_fuel": 900.0,  # 3% of 30000
     }
     summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
@@ -991,6 +994,142 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     assert result[7].diesel == 80
     assert result[7].jet_fuel == 45
 
+
+@pytest.mark.anyio
+async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_trxn_repo,
+):
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.compliance_report_id = 1
+    compliance_report.organization_id = 1
+    compliance_report.compliance_report_group_uuid = "test-group"
+    compliance_report.version = 0
+    compliance_report.nickname = "Test Report"
+    compliance_report.reporting_frequency = None
+
+    compliance_period = MagicMock()
+    compliance_period.description = "2025"
+    compliance_period.effective_date = datetime(2025, 1, 1)
+    compliance_period.expiration_date = datetime(2025, 12, 31)
+    compliance_report.compliance_period = compliance_period
+
+    summary_model = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=1,
+    )
+    compliance_report.summary = summary_model
+
+    compliance_report_summary_service.cr_repo.get_compliance_report_by_id = AsyncMock(
+        return_value=compliance_report
+    )
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+
+    def _make_record(category, fuel_type_name, *, canada=False, q1=False, country=None):
+        fuel_type = MagicMock()
+        fuel_type.renewable = True
+        fuel_type.fuel_type = fuel_type_name
+        fuel_type.fossil_derived = False
+        fuel_category = MagicMock()
+        fuel_category.category = category
+        record = MagicMock()
+        record.fuel_type = fuel_type
+        record.fuel_category = fuel_category
+        record.is_canada_produced = canada
+        record.is_q1_supplied = q1
+        if country:
+            fuel_code = MagicMock()
+            fuel_code.fuel_production_facility_country = country
+            record.fuel_code = fuel_code
+        else:
+            record.fuel_code = None
+        return record
+
+    canadian_supply = _make_record("Diesel", "Biodiesel", canada=True)
+    q1_supply = _make_record(
+        "Diesel", "HDRD", q1=True, country="United States"
+    )
+    ineligible_supply = _make_record(
+        "Diesel", "Biodiesel", country="United States"
+    )
+    gasoline_other_use = _make_record("Gasoline", "Ethanol", canada=True)
+
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[canadian_supply, q1_supply, ineligible_supply])
+    )
+    compliance_report_summary_service.other_uses_repo.get_effective_other_uses = (
+        AsyncMock(return_value=[gasoline_other_use])
+    )
+    compliance_report_summary_service.notional_transfer_service.get_notional_transfers = (
+        AsyncMock(return_value=MagicMock(notional_transfers=[]))
+    )
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[])
+    )
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = (
+        AsyncMock(return_value=[])
+    )
+
+    captured_records = []
+
+    def _aggregate(records, fossil_derived):
+        if fossil_derived:
+            return {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+        captured_records.append(records)
+        return {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+
+    compliance_report_summary_service.repo.aggregate_quantities = MagicMock(
+        side_effect=_aggregate
+    )
+    compliance_report_summary_service.calculate_renewable_fuel_target_summary = MagicMock(
+        return_value=[
+            ComplianceReportSummaryRowSchema(
+                line=index,
+                description="",
+                field="",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+                value=0,
+                total_value=0,
+            )
+            for index in range(1, 12)
+        ]
+    )
+    compliance_report_summary_service.calculate_low_carbon_fuel_target_summary = AsyncMock(
+        return_value=([], 0)
+    )
+    compliance_report_summary_service.calculate_non_compliance_penalty_summary = MagicMock(
+        return_value=[]
+    )
+    compliance_report_summary_service.convert_summary_to_dict = MagicMock(
+        return_value=ComplianceReportSummarySchema(
+            summary_id=1,
+            compliance_report_id=1,
+            is_locked=False,
+            quarter=None,
+            renewable_fuel_target_summary=[],
+            low_carbon_fuel_target_summary=[],
+            non_compliance_penalty_summary=[],
+            can_sign=False,
+        )
+    )
+    compliance_report_summary_service._should_lock_lines_7_and_9 = AsyncMock(
+        return_value=False
+    )
+    compliance_report_summary_service.repo.save_compliance_report_summary = AsyncMock()
+
+    await compliance_report_summary_service.calculate_compliance_report_summary(1)
+
+    # Ensure renewable aggregation excluded ineligible supply but kept eligible ones.
+    assert captured_records, "Expected renewable aggregation records to be captured"
+    renewable_records = captured_records[-1]
+    assert canadian_supply in renewable_records
+    assert q1_supply in renewable_records
+    assert gasoline_other_use in renewable_records
+    assert ineligible_supply not in renewable_records
 
 @pytest.mark.anyio
 async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(

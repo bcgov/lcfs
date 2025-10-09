@@ -9,14 +9,14 @@ const SigningAuthorityDeclaration = ({
   onChange,
   hasAuthority,
   hasRecords,
-  hasValidAddress
+  hasValidAddress,
+  hasEligibleRenewableFuel
 }) => {
   const { t } = useTranslation(['report'])
-  const [checked, setChecked] = useState(false)
-
-  const handleChange = (event) => {
-    setChecked(event.target.checked)
-  }
+  const [checked, setChecked] = useState({
+    certifyInfo: false,
+    certifyClaim: false
+  })
 
   useEffect(() => {
     onChange(checked)
@@ -53,12 +53,47 @@ const SigningAuthorityDeclaration = ({
       {!hasRecords && renderAlert('report:noRecords')}
       {!hasAuthority && renderAlert('report:noSigningAuthorityTooltip')}
       {!hasValidAddress && renderAlert('report:invalidAddress')}
+      {hasEligibleRenewableFuel && (
+        <FormControlLabel
+          control={
+            <Checkbox
+              disabled={!hasRecords || !hasAuthority || !hasValidAddress}
+              checked={checked.certifyClaim}
+              onChange={(event) =>
+                setChecked({
+                  ...checked,
+                  certifyClaim: event.target.checked
+                })
+              }
+              id="claim-declaration"
+              data-test="claim-checkbox"
+              color="primary"
+            />
+          }
+          label={
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t('report:claimDeclarationText')
+              }}
+            />
+          }
+          style={{
+            marginTop: 20,
+            alignItems: 'flex-start'
+          }}
+        />
+      )}
       <FormControlLabel
         control={
           <Checkbox
             disabled={!hasRecords || !hasAuthority || !hasValidAddress}
-            checked={checked}
-            onChange={handleChange}
+            checked={checked.certifyInfo}
+            onChange={(event) =>
+              setChecked({
+                ...checked,
+                certifyInfo: event.target.checked
+              })
+            }
             id="signing-authority-declaration"
             data-test="signing-authority-checkbox"
             color="primary"

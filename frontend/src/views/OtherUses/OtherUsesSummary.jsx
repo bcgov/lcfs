@@ -6,13 +6,14 @@ import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useParams } from 'react-router-dom'
 
 export const OtherUsesSummary = ({ data, status }) => {
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
   const gridRef = useRef()
-
+  const { compliancePeriod } = useParams()
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
     if (!data?.otherUses) {
@@ -114,7 +115,7 @@ export const OtherUsesSummary = ({ data, status }) => {
           gridKey="other-uses"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={otherUsesSummaryColDefs}
+          columnDefs={otherUsesSummaryColDefs(parseInt(compliancePeriod))}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="otherUses"

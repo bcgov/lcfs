@@ -267,12 +267,18 @@ export const AddEditFuelSupplies = () => {
         <BCTypography variant="h5" color="primary">
           {t('fuelSupply:fuelSupplyTitle')}
         </BCTypography>
-        <BCTypography variant="body4" color="text" my={2} component="div">
-          {t('fuelSupply:fuelSupplyGuide')}
-        </BCTypography>
-        {compliancePeriod >= NEW_REGULATION_YEAR && (
+        {compliancePeriod >= NEW_REGULATION_YEAR ? (
+          <>
+            <BCTypography variant="body4" color="text" my={2} component="div">
+              {t('fuelSupply:fuelSupplyGuide2025Later')}
+            </BCTypography>
+            <BCTypography variant="body4" color="text" my={2} component="div">
+              {t('fuelSupply:fuelSupplyNote')}
+            </BCTypography>
+          </>
+        ) : (
           <BCTypography variant="body4" color="text" my={2} component="div">
-            {t('fuelSupply:fuelSupplyNote')}
+            {t('fuelSupply:fuelSupplyGuide')}
           </BCTypography>
         )}
       </div>

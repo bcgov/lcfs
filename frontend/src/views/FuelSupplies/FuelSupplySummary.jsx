@@ -7,6 +7,7 @@ import { defaultInitialPagination } from '@/constants/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router-dom'
 
 export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
   const [paginationOptions, setPaginationOptions] = useState(
@@ -14,6 +15,7 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
   )
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'fuelSupply'])
+  const { compliancePeriod } = useParams()
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -141,7 +143,8 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
           gridRef={gridRef}
           columnDefs={fuelSupplySummaryColDef(
             isEarlyIssuance,
-            showFuelTypeOther
+            showFuelTypeOther,
+            parseInt(compliancePeriod)
           )}
           queryData={paginatedData}
           dataKey="fuelSupplies"
