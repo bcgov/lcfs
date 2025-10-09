@@ -45,6 +45,20 @@ from lcfs.web.utils.calculations import calculate_compliance_units
 
 logger = structlog.get_logger(__name__)
 
+ELIGIBLE_GASOLINE_RENEWABLE_TYPES = {
+    "renewable gasoline",
+    "ethanol",
+    "renewable naphtha",
+    "other",
+}
+
+ELIGIBLE_DIESEL_RENEWABLE_TYPES = {
+    "biodiesel",
+    "hdrd",
+    "other diesel fuel",
+    "other",
+}
+
 
 class ComplianceDataService:
     def __init__(self):
@@ -480,6 +494,36 @@ class ComplianceReportSummaryService:
 
         return summary_data
 
+    def _is_eligible_renewable(self, record, compliance_year) -> bool:
+        if not record.fuel_type.renewable:
+            return False
+
+        if compliance_year < 2025:
+            return True
+
+        category = (record.fuel_category.category or "").lower()
+        fuel_type_name = (record.fuel_type.fuel_type or "").lower()
+
+        if category == "gasoline":
+            if fuel_type_name not in ELIGIBLE_GASOLINE_RENEWABLE_TYPES:
+                return False
+        elif category == "diesel":
+            if fuel_type_name not in ELIGIBLE_DIESEL_RENEWABLE_TYPES:
+                return False
+        else:
+            return True
+
+        if record.is_canada_produced or record.is_q1_supplied:
+            return True
+
+        fuel_code_country = (
+            (record.fuel_code.fuel_production_facility_country or "")
+            if getattr(record, "fuel_code", None)
+            else ""
+        ).lower()
+
+        return fuel_code_country == "canada"
+
     @service_handler
     async def calculate_compliance_report_summary(
         self, report_id: int
@@ -687,29 +731,14 @@ class ComplianceReportSummaryService:
 
         fossil_quantities = self.repo.aggregate_quantities(all_fossil_records, True)
         # line 2
-        # Ensure non-Canadian renewable diesel volumes are not added into lines 1 or 2.
+        # Ensure renewable volumes counted towards line 2 meet 2025+ eligibility criteria.
+
         filtered_renewable_fuel_supplies = [
-            fs
-            for fs in effective_fuel_supplies
-            if fs.fuel_type.renewable
-            and (
-                compliance_year < 2025
-                or fs.fuel_category.category != "Diesel"
-                or (fs.fuel_category.category == "Diesel" and fs.is_canada_produced)
-                or (fs.fuel_category.category == "Diesel" and fs.is_q1_supplied)
-            )
+            fs for fs in effective_fuel_supplies if self._is_eligible_renewable(fs, compliance_year)
         ]
 
         filtered_renewable_other_uses = [
-            ou
-            for ou in effective_other_uses
-            if ou.fuel_type.renewable
-            and (
-                compliance_year < 2025
-                or ou.fuel_category.category != "Diesel"
-                or (ou.fuel_category.category == "Diesel" and ou.is_canada_produced)
-                or (ou.fuel_category.category == "Diesel" and ou.is_q1_supplied)
-            )
+            ou for ou in effective_other_uses if self._is_eligible_renewable(ou, compliance_year)
         ]
 
         all_renewable_records = [
@@ -1157,26 +1186,28 @@ class ComplianceReportSummaryService:
                     ),
                 }
 
+            description_template = RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+
+            if line in [6, 8]:
+                description_value = description_template.format(
+                    "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
+                    "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
+                    "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
+                )
+            elif line == 4:
+                diesel_percent_display = "8%" if compliance_period >= 2025 else "4%"
+                description_value = description_template.format(
+                    diesel_percent=diesel_percent_display
+                )
+            else:
+                description_value = description_template
+
             summary.append(
                 ComplianceReportSummaryRowSchema(
                     line=self._get_line_value(
                         line, compliance_data_service.is_legacy_year()
                     ),
-                    description=(
-                        RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                            "{:,}".format(
-                                round(summary_lines[4]["gasoline"] * 0.05)
-                            ),
-                            "{:,}".format(
-                                round(summary_lines[4]["diesel"] * 0.05)
-                            ),
-                            "{:,}".format(
-                                round(summary_lines[4]["jet_fuel"] * 0.05)
-                            ),
-                        )
-                        if (line in [6, 8])
-                        else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
-                    ),
+                    description=description_value,
                     field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                     gasoline=(
                         int(values.get("gasoline", 0))

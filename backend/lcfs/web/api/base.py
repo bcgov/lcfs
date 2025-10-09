@@ -70,7 +70,7 @@ class FilterModel(BaseSchema):
 
 class PaginationRequestSchema(BaseSchema):
     page: int = Field(default=1, alias="page")
-    size: int = Field(default=20, alias="size")
+    size: int = Field(default=10, alias="size")
     sort_orders: List[SortOrder] = Field(default=[], alias="sortOrders")
     filters: List[FilterModel] = Field(default=[], alias="filters")
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

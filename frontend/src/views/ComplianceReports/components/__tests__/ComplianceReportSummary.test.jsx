@@ -1,6 +1,8 @@
 import React, { act } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+
+
 import ComplianceReportSummary from '../ComplianceReportSummary'
 import {
   useGetComplianceReportSummary,
@@ -251,7 +253,9 @@ describe('ComplianceReportSummary', () => {
     buttonClusterConfig: mockButtonClusterConfig,
     methods: { handleSubmit: mockHandleSubmit },
     enableCompareMode: false,
-    alertRef: { current: { triggerAlert: mockTriggerAlert } }
+    alertRef: { current: { triggerAlert: mockTriggerAlert } },
+    hasEligibleRenewableFuel: false,
+    setHasEligibleRenewableFuel: vi.fn()
   }
 
   const mockSummaryData = {
@@ -262,7 +266,8 @@ describe('ComplianceReportSummary', () => {
     lowCarbonPenaltyOverride: null,
     renewableFuelTargetSummary: [
       { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
-      { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 }
+      { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
+      { line: 3, gasoline: 25, diesel: 25, jetFuel: 25 }
     ],
     lowCarbonFuelTargetSummary: [{ line: 11, diesel: 75, gasoline: 25 }],
     nonCompliancePenaltySummary: [
@@ -443,6 +448,11 @@ describe('ComplianceReportSummary', () => {
           { line: 11, totalValue: 1000 },
           { line: 21, totalValue: 500 },
           { totalValue: 1500 }
+        ],
+        renewableFuelTargetSummary: [
+          { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
+          { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
+          { line: 3, gasoline: 25, diesel: 25, jetFuel: 25 }
         ]
       },
       isLoading: false,
@@ -473,6 +483,11 @@ describe('ComplianceReportSummary', () => {
           { line: 11, totalValue: 1500 }, // Original
           { line: 21, totalValue: 750 }, // Original
           { totalValue: 2250 } // Original total
+        ],
+        renewableFuelTargetSummary: [
+          { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
+          { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
+          { line: 3, gasoline: 25, diesel: 25, jetFuel: 25 }
         ]
       },
       isLoading: false,
@@ -747,14 +762,11 @@ describe('ComplianceReportSummary', () => {
 
     render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
 
-    await waitFor(() => {
-      const cellEditTrigger = screen.getAllByTestId('cell-edit-trigger')[0]
-      fireEvent.click(cellEditTrigger)
+    const cellEditTrigger = screen.getAllByTestId('cell-edit-trigger')[0]
+    fireEvent.click(cellEditTrigger)
 
-      // Simulate mutation success callback
-      const mutateCall = mockMutateWithError.mock.calls[0]
-      expect(mutateCall[0]).toBeDefined() // Data was passed
-    })
+    expect(mockMutateWithError).toHaveBeenCalled()
+    expect(mockMutateWithError.mock.calls[0][0]).toBeDefined()
   })
 
   // Test 22: Test signing authority checkbox interaction
@@ -802,6 +814,11 @@ describe('ComplianceReportSummary', () => {
           { line: 11, totalValue: 1500 },
           { line: 21, totalValue: 750 },
           { totalValue: 2250 }
+        ],
+        renewableFuelTargetSummary: [
+          { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
+          { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
+          { line: 3, gasoline: 25, diesel: 25, jetFuel: 25 }
         ]
       },
       isLoading: false,
@@ -896,6 +913,11 @@ describe('ComplianceReportSummary', () => {
           { line: 11, totalValue: 1000 }, // Will be overridden
           { line: 21, totalValue: 2000 }, // Will be overridden
           { totalValue: 3000 } // Will be calculated as sum
+        ],
+        renewableFuelTargetSummary: [
+          { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
+          { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
+          { line: 3, gasoline: 25, diesel: 25, jetFuel: 25 }
         ]
       },
       isLoading: false,

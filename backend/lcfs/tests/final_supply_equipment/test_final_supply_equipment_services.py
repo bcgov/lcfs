@@ -376,3 +376,150 @@ async def test_copy_fse_between_reports(
     mock_repo.create_final_supply_equipment.assert_awaited_once()
     mock_repo.increment_seq_by_org_and_postal_code.assert_awaited_once()
     mock_org_repo.get_organization.assert_awaited_once_with(1)
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_list_paginated_success(
+    service, mock_repo
+):
+    """Test successful retrieval of paginated FSE reporting list"""
+    mock_data = [
+        {
+            "charging_equipment_id": 1,
+            "serial_number": "SER123",
+            "manufacturer": "TestMfg",
+            "supply_from_date": "2024-01-01",
+            "supply_to_date": "2024-12-31",
+            "compliance_report_id": 10,
+            "charging_site_id": 1,
+            "site_name": "Test Site",
+            "city": "Test City",
+            "postal_code": "V1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+            "level_of_equipment": "Level 2",
+        }
+    ]
+    mock_repo.get_fse_reporting_list_paginated.return_value = (mock_data, 1)
+    
+    pagination = MagicMock(page=1, size=10, filters=[])
+    result = await service.get_fse_reporting_list_paginated(1, pagination, 10, "current")
+    
+    assert "finalSupplyEquipments" in result
+    assert "pagination" in result
+    assert result["pagination"].total == 1
+    mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(1, pagination, 10, "current")
+
+
+@pytest.mark.anyio
+async def test_create_fse_reporting_batch_success(
+    service, mock_repo
+):
+    """Test successful creation of FSE reporting batch"""
+    mock_repo.create_fse_reporting_batch.return_value = {"message": "Success"}
+    
+    data = [
+        MagicMock(model_dump=lambda: {
+            "charging_equipment_id": 1,
+            "compliance_report_id": 10,
+            "supply_from_date": "2024-01-01",
+            "supply_to_date": "2024-12-31",
+        })
+    ]
+    
+    result = await service.create_fse_reporting_batch(data)
+    
+    assert result["message"] == "Success"
+    mock_repo.create_fse_reporting_batch.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_success(
+    service, mock_repo
+):
+    """Test successful update of FSE reporting"""
+    mock_repo.update_fse_reporting.return_value = {"id": 1, "kwh_usage": 1500.0}
+    
+    data = MagicMock(model_dump=lambda: {"kwh_usage": 1500.0})
+    result = await service.update_fse_reporting(1, data)
+    
+    assert result["id"] == 1
+    assert result["kwh_usage"] == 1500.0
+    mock_repo.update_fse_reporting.assert_awaited_once_with(1, {"kwh_usage": 1500.0})
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_success(
+    service, mock_repo
+):
+    """Test successful deletion of FSE reporting"""
+    mock_repo.delete_fse_reporting.return_value = None
+    
+    await service.delete_fse_reporting(1)
+    
+    mock_repo.delete_fse_reporting.assert_awaited_once_with(1)
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_batch_success(
+    service, mock_repo
+):
+    """Test successful batch deletion of FSE reporting"""
+    mock_repo.delete_fse_reporting_batch.return_value = 2
+    
+    result = await service.delete_fse_reporting_batch([1, 2])
+    
+    assert "message" in result
+    assert "2 FSE reporting records deleted successfully" in result["message"]
+    mock_repo.delete_fse_reporting_batch.assert_awaited_once_with([1, 2])
+
+
+@pytest.mark.anyio
+async def test_set_default_dates_fse_reporting_success(
+    service, mock_repo
+):
+    """Test successful setting of default dates for FSE reporting"""
+    mock_repo.bulk_update_reporting_dates.return_value = 3
+    
+    data = MagicMock(
+        equipment_ids=[1, 2, 3],
+        supply_from_date="2024-01-01",
+        supply_to_date="2024-12-31"
+    )
+    
+    result = await service.set_default_dates_fse_reporting(data, 5)
+    
+    assert result["updated"] == 3
+    mock_repo.bulk_update_reporting_dates.assert_awaited_once_with(data)
+
+
+@pytest.mark.anyio
+async def test_set_default_dates_fse_reporting_empty_equipment_ids(
+    service, mock_repo
+):
+    """Test setting default dates with empty equipment IDs"""
+    data = MagicMock(equipment_ids=[])
+    
+    result = await service.set_default_dates_fse_reporting(data, 5)
+    
+    assert result["created"] == 0
+    assert result["updated"] == 0
+    mock_repo.bulk_update_reporting_dates.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_set_default_dates_fse_reporting_missing_dates(
+    service, mock_repo
+):
+    """Test setting default dates with missing supply dates"""
+    data = MagicMock(
+        equipment_ids=[1, 2],
+        supply_from_date=None,
+        supply_to_date="2024-12-31"
+    )
+    
+    with pytest.raises(HTTPException) as exc_info:
+        await service.set_default_dates_fse_reporting(data, 5)
+    
+    assert exc_info.value.status_code == 400
+    assert "Supply from and to dates are required" in exc_info.value.detail

@@ -212,6 +212,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     charging_equipment_compliance_associations = relationship(
         "ComplianceReportChargingEquipment", back_populates="organization"
     )
+    fse_compliance_reports = relationship(
+        "FSEComplianceReporting", back_populates="organization"
+    )
 
 
 @event.listens_for(Organization, "before_insert")

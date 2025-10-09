@@ -1,3 +1,4 @@
+import { useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
@@ -14,6 +15,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
     defaultInitialPagination
   )
   const gridRef = useRef()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -122,7 +124,10 @@ export const NotionalTransferSummary = ({ data, status }) => {
           gridKey="notional-transfers"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={notionalTransferSummaryColDefs(isEarlyIssuance)}
+          columnDefs={notionalTransferSummaryColDefs(
+            isEarlyIssuance,
+            parseInt(compliancePeriod)
+          )}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="notionalTransfers"

@@ -725,3 +725,40 @@ class TestChargingSiteService:
 
         assert result["Draft"] == 1
         assert result["Submitted"] == 2
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization_success(
+        self, charging_site_service, mock_repo
+    ):
+        """Test successful retrieval of site names by organization"""
+        # Mock site data with site_name and charging_site_id attributes
+        mock_site1 = MagicMock()
+        mock_site1.site_name = "Site 1"
+        mock_site1.charging_site_id = 1
+
+        mock_site2 = MagicMock()
+        mock_site2.site_name = "Site 2"
+        mock_site2.charging_site_id = 2
+
+        mock_sites = [mock_site1, mock_site2]
+        mock_repo.get_site_names_by_organization.return_value = mock_sites
+
+        result = await charging_site_service.get_site_names_by_organization(1)
+
+        assert len(result) == 2
+        assert result[0] == {"siteName": "Site 1", "chargingSiteId": 1}
+        assert result[1] == {"siteName": "Site 2", "chargingSiteId": 2}
+        mock_repo.get_site_names_by_organization.assert_called_once_with(1)
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization_empty(
+        self, charging_site_service, mock_repo
+    ):
+        """Test retrieval of site names when no sites exist"""
+        mock_repo.get_site_names_by_organization.return_value = []
+
+        result = await charging_site_service.get_site_names_by_organization(1)
+
+        assert len(result) == 0
+        assert result == []
+        mock_repo.get_site_names_by_organization.assert_called_once_with(1)
