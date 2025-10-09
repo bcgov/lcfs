@@ -223,10 +223,48 @@ export const renewableFuelColumns = (
   const unlockedLineSevenConstraint = (constraint) =>
     lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
 
-  const fivePercentCaps = {
-    gasoline: safeRound(0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0)),
-    diesel: safeRound(0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)),
-    jetFuel: safeRound(0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0))
+  // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
+  const line6Caps = {
+    gasoline: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.gasoline || 0) - (data[SUMMARY.LINE_4]?.gasoline || 0)), // excess
+        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
+      )
+    ),
+    diesel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.diesel || 0) - (data[SUMMARY.LINE_4]?.diesel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
+      )
+    ),
+    jetFuel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.jetFuel || 0) - (data[SUMMARY.LINE_4]?.jetFuel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
+      )
+    )
+  }
+
+  // Line 8 (Deferral) caps - LCFA s.10(3): Lesser of deficiency and 5% of Line 4
+  const line8Caps = {
+    gasoline: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.gasoline || 0) - (data[SUMMARY.LINE_2]?.gasoline || 0)), // deficiency
+        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
+      )
+    ),
+    diesel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.diesel || 0) - (data[SUMMARY.LINE_2]?.diesel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
+      )
+    ),
+    jetFuel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.jetFuel || 0) - (data[SUMMARY.LINE_2]?.jetFuel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
+      )
+    )
   }
 
   // ========= Gasoline Logic ============
@@ -366,9 +404,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: gasolineEditableCells,
       cellConstraints: {
-        [SUMMARY.LINE_6]: { min: 0, max: fivePercentCaps.gasoline },
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.gasoline },
         [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.gasoline),
-        [SUMMARY.LINE_8]: { min: 0, max: fivePercentCaps.gasoline }
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.gasoline }
       }
     },
     {
@@ -379,9 +417,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: dieselEditableCells,
       cellConstraints: {
-        [SUMMARY.LINE_6]: { min: 0, max: fivePercentCaps.diesel },
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.diesel },
         [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.diesel),
-        [SUMMARY.LINE_8]: { min: 0, max: fivePercentCaps.diesel }
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.diesel }
       }
     },
     {
@@ -392,9 +430,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: jetFuelEditableCells,
       cellConstraints: {
-        [SUMMARY.LINE_6]: { min: 0, max: fivePercentCaps.jetFuel },
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.jetFuel },
         [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.jetFuel),
-        [SUMMARY.LINE_8]: { min: 0, max: fivePercentCaps.jetFuel }
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.jetFuel }
       }
     }
   ]
