@@ -139,7 +139,7 @@ export const CompanyOverview = () => {
               fontStyle: orgData?.companyDetails ? 'normal' : 'italic'
             }}
           >
-            {orgData?.companyDetails || t('org:companyDetailsPlaceholder')}
+            {orgData?.companyDetails || t('org:noInformationProvided')}
           </BCTypography>
         </Box>
 
@@ -161,7 +161,7 @@ export const CompanyOverview = () => {
             }}
           >
             {orgData?.companyRepresentationAgreements ||
-              t('org:companyRepresentationAgreementsPlaceholder')}
+              t('org:noInformationProvided')}
           </BCTypography>
         </Box>
 
@@ -183,7 +183,7 @@ export const CompanyOverview = () => {
             }}
           >
             {orgData?.companyActingAsAggregator ||
-              t('org:companyActingAsAggregatorPlaceholder')}
+              t('org:noInformationProvided')}
           </BCTypography>
         </Box>
 
@@ -203,7 +203,7 @@ export const CompanyOverview = () => {
             }}
           >
             {orgData?.companyAdditionalNotes ||
-              t('org:companyAdditionalNotesPlaceholder')}
+              t('org:noInformationProvided')}
           </BCTypography>
         </Box>
       </Stack>
