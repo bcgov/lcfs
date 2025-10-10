@@ -145,7 +145,7 @@ export const OrganizationView = ({ addMode = false }) => {
       return <PenaltyLog />
     }
     if (currentPath.includes('/supply-history')) {
-      return <SupplyHistory />
+      return <SupplyHistory organizationId={organizationId} />
     }
     if (currentPath.includes('/compliance-tracking')) {
       return <ComplianceTracking />

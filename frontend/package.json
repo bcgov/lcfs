@@ -65,6 +65,8 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2",
     "esbuild": "^0.25.1",
     "i18next": "^24.2.3",
     "keycloak-js": "^26.1.4",
