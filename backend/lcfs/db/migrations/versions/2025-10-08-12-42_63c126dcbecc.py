@@ -1,7 +1,7 @@
 """Penalty log
 
 Revision ID: 63c126dcbecc
-Revises: f1a2b3c4d5e6
+Revises: 3ac464e21203
 Create Date: 2025-10-08 12:42:54.801204
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "63c126dcbecc"
-down_revision = "f1a2b3c4d5e6"
+down_revision = "3ac464e21203"
 branch_labels = None
 depends_on = None
 
