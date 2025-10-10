@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
-  Button,
   Card,
   CardContent,
   Divider,
@@ -13,15 +12,17 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableRow,
-  TextField
+  TableRow
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import Loading from '@/components/Loading'
+import BCAlert from '@/components/BCAlert'
 
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
@@ -35,6 +36,12 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import BCButton from '@/components/BCButton'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import {
+  useOrganizationPenaltyAnalytics,
+  useOrganizationPenaltyLogs
+} from '@/hooks/useOrganization'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faGaugeHigh,
@@ -52,60 +59,6 @@ echarts.use([
   CanvasRenderer
 ])
 
-const yearlyPenalties = [
-  { year: 2021, autoRenewable: 40000, autoLowCarbon: 10000 },
-  { year: 2022, autoRenewable: 10000, autoLowCarbon: 40000 },
-  { year: 2023, autoRenewable: 0, autoLowCarbon: 50000 },
-  { year: 2024, autoRenewable: 100000, autoLowCarbon: 0 }
-]
-
-const penaltyTotals = {
-  autoRenewable: 150000,
-  autoLowCarbon: 100000,
-  discretionary: 50000,
-  totalAutomatic: 250000,
-  total: 300000
-}
-
-const penaltyLogRows = [
-  {
-    id: '2024-single',
-    complianceYear: 2024,
-    contraventionType: 'Single contravention',
-    offenceHistory: 'Yes',
-    deliberate: 'No',
-    effortsToCorrect: 'No',
-    economicBenefitDerived: 'Yes',
-    effortsToPreventRecurrence: 'No',
-    notes: 'Penalty issued following routine audit.',
-    penaltyAmount: 25000
-  },
-  {
-    id: '2023-continuous',
-    complianceYear: 2023,
-    contraventionType: 'Continuous contravention',
-    offenceHistory: 'Yes',
-    deliberate: 'Yes',
-    effortsToCorrect: 'No',
-    economicBenefitDerived: 'Yes',
-    effortsToPreventRecurrence: 'No',
-    notes: 'Director determined escalation due to repeated issues.',
-    penaltyAmount: 42000
-  },
-  {
-    id: '2022-single',
-    complianceYear: 2022,
-    contraventionType: 'Single contravention',
-    offenceHistory: 'Yes',
-    deliberate: 'No',
-    effortsToCorrect: 'No',
-    economicBenefitDerived: 'Yes',
-    effortsToPreventRecurrence: 'No',
-    notes: 'Self-disclosed by organization.',
-    penaltyAmount: 15000
-  }
-]
-
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-CA', {
     style: 'currency',
@@ -116,6 +69,30 @@ const formatCurrency = (value) =>
 const cardBorderSx = {
   border: '1px solid',
   borderColor: 'divider'
+}
+
+const normalizeYear = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return 'N/A'
+  }
+  return String(value)
+}
+
+const compareYears = (a, b) => {
+  const numA = Number(a)
+  const numB = Number(b)
+  const isNumA = !Number.isNaN(numA)
+  const isNumB = !Number.isNaN(numB)
+
+  if (isNumA && isNumB) {
+    return numA - numB
+  }
+  if (isNumA) return -1
+  if (isNumB) return 1
+
+  return String(a ?? '').localeCompare(String(b ?? ''), undefined, {
+    sensitivity: 'base'
+  })
 }
 
 const useStackedBarOption = (data, theme) =>
@@ -183,7 +160,7 @@ const usePenaltyMixOption = (totals, theme) =>
     }
   }, [theme, totals])
 
-const useSparklineOption = (data, theme, seriesName = 'Series') =>
+const useSparklineOption = (labels, data, theme, seriesName = 'Series') =>
   useMemo(() => {
     const primary = theme.palette.primary.main
 
@@ -202,7 +179,7 @@ const useSparklineOption = (data, theme, seriesName = 'Series') =>
       xAxis: {
         type: 'category',
         show: false,
-        data: yearlyPenalties.map((item) => item.year)
+        data: labels
       },
       yAxis: { type: 'value', show: false },
       series: [
@@ -215,7 +192,7 @@ const useSparklineOption = (data, theme, seriesName = 'Series') =>
         }
       ]
     }
-  }, [data, seriesName, theme])
+  }, [data, labels, seriesName, theme])
 
 function ResponsiveEChart({ option, height, ariaLabel }) {
   const chartRef = useRef(null)
@@ -368,24 +345,129 @@ MetricCard.defaultProps = {
 export default function PenaltyLog() {
   const { t } = useTranslation(['org'])
   const theme = useTheme()
+  const { orgID } = useParams()
+  const navigate = useNavigate()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+
+  const organizationId = orgID ?? currentUser?.organization?.organizationId
+
+  const {
+    data: penaltyAnalytics,
+    isLoading: analyticsLoading,
+    isError: analyticsIsError,
+    error: analyticsError
+  } = useOrganizationPenaltyAnalytics(organizationId)
+
+  const rawYearlyPenalties = penaltyAnalytics?.yearlyPenalties ?? []
+  const rawPenaltyLogs = penaltyAnalytics?.penaltyLogs ?? []
+  const rawTotals = penaltyAnalytics?.totals
+
+  const allYears = useMemo(() => {
+    const yearSet = new Set()
+
+    const addYear = (value) => {
+      yearSet.add(normalizeYear(value))
+    }
+
+    rawYearlyPenalties.forEach((item) => addYear(item?.complianceYear))
+    rawPenaltyLogs.forEach((item) => addYear(item?.complianceYear))
+
+    const years = Array.from(yearSet)
+    years.sort(compareYears)
+    return years
+  }, [rawPenaltyLogs, rawYearlyPenalties])
+
+  const yearlyPenalties = useMemo(() => {
+    const dataByYear = new Map()
+    rawYearlyPenalties.forEach((item) => {
+      dataByYear.set(normalizeYear(item?.complianceYear), item)
+    })
+
+    return allYears.map((yearLabel) => {
+      const source = dataByYear.get(yearLabel)
+      const autoRenewable = Number(source?.autoRenewable ?? 0)
+      const autoLowCarbon = Number(source?.autoLowCarbon ?? 0)
+      const totalAutomatic =
+        source?.totalAutomatic !== undefined
+          ? Number(source.totalAutomatic)
+          : autoRenewable + autoLowCarbon
+
+      const numericYear = Number(yearLabel)
+      const complianceYear = Number.isNaN(numericYear) ? yearLabel : numericYear
+
+      return {
+        year: yearLabel,
+        complianceYear,
+        autoRenewable,
+        autoLowCarbon,
+        totalAutomatic
+      }
+    })
+  }, [allYears, rawYearlyPenalties])
+
+  const penaltyTotals = useMemo(() => {
+    const autoRenewable = Number(rawTotals?.autoRenewable ?? 0)
+    const autoLowCarbon = Number(rawTotals?.autoLowCarbon ?? 0)
+    const discretionary = Number(rawTotals?.discretionary ?? 0)
+    const totalAutomatic =
+      rawTotals?.totalAutomatic !== undefined
+        ? Number(rawTotals.totalAutomatic)
+        : autoRenewable + autoLowCarbon
+    const total =
+      rawTotals?.total !== undefined
+        ? Number(rawTotals.total)
+        : totalAutomatic + discretionary
+
+    return {
+      autoRenewable,
+      autoLowCarbon,
+      discretionary,
+      totalAutomatic,
+      total
+    }
+  }, [rawTotals])
+
+  const yearLabels = allYears
+
+  const totalSparklineData = useMemo(
+    () => yearlyPenalties.map((item) => item.totalAutomatic),
+    [yearlyPenalties]
+  )
+
+  const automaticSparklineData = useMemo(
+    () => yearlyPenalties.map((item) => item.autoRenewable),
+    [yearlyPenalties]
+  )
+
+  const discretionarySparklineData = useMemo(() => {
+    const sums = new Map()
+    rawPenaltyLogs.forEach((entry) => {
+      const key = normalizeYear(entry?.complianceYear)
+      const amount = Number(entry?.penaltyAmount ?? 0)
+      sums.set(key, (sums.get(key) ?? 0) + amount)
+    })
+
+    return yearLabels.map((year) => sums.get(year) ?? 0)
+  }, [rawPenaltyLogs, yearLabels])
 
   const stackedBarOption = useStackedBarOption(yearlyPenalties, theme)
   const penaltyMixOption = usePenaltyMixOption(penaltyTotals, theme)
 
   const totalSparkline = useSparklineOption(
-    yearlyPenalties.map((item) => item.autoRenewable + item.autoLowCarbon),
+    yearLabels,
+    totalSparklineData,
     theme,
     'Total penalties'
   )
   const automaticSparkline = useSparklineOption(
-    yearlyPenalties.map((item) => item.autoRenewable),
+    yearLabels,
+    automaticSparklineData,
     theme,
     'Automatic penalties'
   )
   const discretionarySparkline = useSparklineOption(
-    yearlyPenalties.map(
-      () => penaltyTotals.discretionary / yearlyPenalties.length
-    ),
+    yearLabels,
+    discretionarySparklineData,
     theme,
     'Discretionary penalties'
   )
@@ -395,12 +477,35 @@ export default function PenaltyLog() {
     defaultInitialPagination
   )
 
+  const penaltyLogsQuery = useOrganizationPenaltyLogs(
+    organizationId,
+    paginationOptions,
+    {
+      enabled: !!organizationId
+    }
+  )
+
+  const booleanValueFormatter = useCallback(({ value }) => {
+    if (value === null || value === undefined) return ''
+    return value ? 'Yes' : 'No'
+  }, [])
+
+  const getPenaltyRowId = useCallback((params) => {
+    const identifier =
+      params.data?.penaltyLogId ??
+      params.data?.penalty_log_id ??
+      params.data?.id
+    return identifier !== undefined && identifier !== null
+      ? String(identifier)
+      : ''
+  }, [])
+
   const penaltyLogColumnDefs = useMemo(
     () => [
       {
         headerName: 'Compliance year',
         field: 'complianceYear',
-        filter: 'agNumberColumnFilter',
+        filter: 'agTextColumnFilter',
         minWidth: 180
       },
       {
@@ -411,27 +516,37 @@ export default function PenaltyLog() {
       {
         headerName: 'History of offences',
         field: 'offenceHistory',
-        minWidth: 190
+        minWidth: 190,
+        filter: 'agSetColumnFilter',
+        valueFormatter: booleanValueFormatter
       },
       {
         headerName: 'Whether contravention was deliberate',
         field: 'deliberate',
-        minWidth: 340
+        minWidth: 340,
+        filter: 'agSetColumnFilter',
+        valueFormatter: booleanValueFormatter
       },
       {
         headerName: 'Efforts taken to correct',
         field: 'effortsToCorrect',
-        minWidth: 230
+        minWidth: 230,
+        filter: 'agSetColumnFilter',
+        valueFormatter: booleanValueFormatter
       },
       {
         headerName: 'Economic benefit derived from contravention',
         field: 'economicBenefitDerived',
-        minWidth: 390
+        minWidth: 390,
+        filter: 'agSetColumnFilter',
+        valueFormatter: booleanValueFormatter
       },
       {
         headerName: 'Efforts to prevent recurrence',
         field: 'effortsToPreventRecurrence',
-        minWidth: 270
+        minWidth: 270,
+        filter: 'agSetColumnFilter',
+        valueFormatter: booleanValueFormatter
       },
       {
         headerName: 'Any additional factors (notes)',
@@ -447,7 +562,7 @@ export default function PenaltyLog() {
         minWidth: 260
       }
     ],
-    []
+    [booleanValueFormatter]
   )
 
   const penaltyLogDefaultColDef = useMemo(
@@ -458,154 +573,50 @@ export default function PenaltyLog() {
     []
   )
 
-  const processedPenaltyRows = useMemo(() => {
-    const applyTextFilter = (value, filter) => {
-      if (!filter.filter) return true
-      const cell = value?.toString().toLowerCase() || ''
-      const target = filter.filter.toString().toLowerCase()
-
-      switch (filter.type) {
-        case 'equals':
-          return cell === target
-        case 'notEqual':
-          return cell !== target
-        case 'startsWith':
-          return cell.startsWith(target)
-        case 'endsWith':
-          return cell.endsWith(target)
-        default:
-          return cell.includes(target)
-      }
-    }
-
-    const applyNumberFilter = (value, filter) => {
-      if (filter.filter === null || filter.filter === undefined) return true
-      const numericValue = Number(value)
-      const numericFilter = Number(filter.filter)
-      if (Number.isNaN(numericValue) || Number.isNaN(numericFilter))
-        return false
-
-      switch (filter.type) {
-        case 'equals':
-          return numericValue === numericFilter
-        case 'notEqual':
-          return numericValue !== numericFilter
-        case 'greaterThan':
-          return numericValue > numericFilter
-        case 'greaterThanOrEqual':
-          return numericValue >= numericFilter
-        case 'lessThan':
-          return numericValue < numericFilter
-        case 'lessThanOrEqual':
-          return numericValue <= numericFilter
-        default:
-          return true
-      }
-    }
-
-    const applySetFilter = (value, filter) => {
-      if (!filter?.values || filter.values.length === 0) return true
-      const formattedValue = value?.toString() ?? ''
-      return filter.values.includes(formattedValue)
-    }
-
-    const compareValues = (a, b) => {
-      if (a === b) return 0
-      if (a === null || a === undefined) return -1
-      if (b === null || b === undefined) return 1
-      if (typeof a === 'number' && typeof b === 'number') {
-        return a > b ? 1 : -1
-      }
-      return a.toString().localeCompare(b.toString(), undefined, {
-        sensitivity: 'base'
-      })
-    }
-
-    let rows = penaltyLogRows.slice()
-
-    if (paginationOptions.filters?.length) {
-      rows = rows.filter((row) =>
-        paginationOptions.filters.every((filter) => {
-          const cellValue = row[filter.field]
-
-          if (filter.filterType === 'number') {
-            return applyNumberFilter(cellValue, filter)
-          }
-
-          if (filter.filterType === 'set') {
-            return applySetFilter(cellValue, filter)
-          }
-
-          return applyTextFilter(cellValue, filter)
-        })
-      )
-    }
-
-    if (paginationOptions.sortOrders?.length) {
-      rows = rows.sort((aRow, bRow) => {
-        for (const sort of paginationOptions.sortOrders) {
-          const comparison = compareValues(aRow[sort.field], bRow[sort.field])
-          if (comparison !== 0) {
-            return sort.direction === 'asc' ? comparison : -comparison
-          }
-        }
-        return 0
-      })
-    }
-
-    return rows
-  }, [paginationOptions.filters, paginationOptions.sortOrders])
-
-  const totalRecords = processedPenaltyRows.length
-
-  useEffect(() => {
-    const totalPages =
-      paginationOptions.size > 0
-        ? Math.max(1, Math.ceil(totalRecords / paginationOptions.size))
-        : 1
-
-    if (paginationOptions.page > totalPages) {
-      setPaginationOptions((prev) => ({ ...prev, page: totalPages }))
-    }
-  }, [totalRecords, paginationOptions.page, paginationOptions.size])
-
-  const penaltyLogQueryData = useMemo(() => {
-    const { page, size } = paginationOptions
-    const startIndex = (page - 1) * size
-    const endIndex = startIndex + size
-    const paginatedRows = processedPenaltyRows.slice(startIndex, endIndex)
-
-    return {
-      data: {
-        penaltyLogs: paginatedRows,
-        pagination: {
-          page,
-          size,
-          total: totalRecords
-        }
-      },
-      error: null,
-      isError: false,
-      isLoading: false
-    }
-  }, [
-    processedPenaltyRows,
-    paginationOptions.page,
-    paginationOptions.size,
-    totalRecords
-  ])
-
   const handleClearFilters = useCallback(() => {
     try {
       penaltyLogGridRef.current?.clearFilters?.()
     } catch (e) {
       // no-op
     }
-    setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
+    setPaginationOptions({ ...defaultInitialPagination })
   }, [])
+
+  const handlePaginationChange = useCallback((newPagination) => {
+    setPaginationOptions((prev) => ({ ...prev, ...newPagination }))
+  }, [])
+
+  if (analyticsLoading || currentUserLoading) {
+    return <Loading />
+  }
+
+  if (!organizationId) {
+    return (
+      <BCAlert severity="info">
+        {t(
+          'org:penaltyLog.noOrganizationSelected',
+          'Select an organization to view penalty analytics.'
+        )}
+      </BCAlert>
+    )
+  }
+
+  const analyticsErrorMessage =
+    analyticsError?.response?.data?.detail ?? analyticsError?.message ?? ''
+
+  const analyticsErrorAlert = analyticsIsError ? (
+    <BCAlert severity="error" sx={{ mb: 2 }}>
+      {t(
+        'org:penaltyLog.analyticsError',
+        'Unable to load penalty analytics data.'
+      )}
+      {analyticsErrorMessage ? ` (${analyticsErrorMessage})` : ''}
+    </BCAlert>
+  ) : null
 
   return (
     <BCBox p={0} sx={{ maxWidth: '100%' }}>
+      {analyticsErrorAlert}
       <BCTypography variant="h5" color="primary" fontWeight="medium" my={1}>
         {t('org:sections.penaltyLog.title')}
       </BCTypography>
@@ -692,9 +703,7 @@ export default function PenaltyLog() {
                             {formatCurrency(row.autoLowCarbon)}
                           </TableCell>
                           <TableCell>
-                            {formatCurrency(
-                              row.autoRenewable + row.autoLowCarbon
-                            )}
+                            {formatCurrency(row.totalAutomatic)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -778,7 +787,14 @@ export default function PenaltyLog() {
               variant="contained"
               size="small"
               color="primary"
-              onClick={() => {}}
+              onClick={() => {
+                if (!organizationId) return
+                navigate(
+                  buildPath(ROUTES.ORGANIZATIONS.PENALTY_LOG_MANAGE, {
+                    orgID: organizationId
+                  })
+                )
+              }}
             >
               <BCTypography variant="subtitle2">
                 {t('org:penaltyLog.addPenaltyBtn')}
@@ -799,11 +815,12 @@ export default function PenaltyLog() {
             gridRef={penaltyLogGridRef}
             columnDefs={penaltyLogColumnDefs}
             defaultColDef={penaltyLogDefaultColDef}
-            queryData={penaltyLogQueryData}
+            queryData={penaltyLogsQuery}
             dataKey="penaltyLogs"
             paginationOptions={paginationOptions}
-            onPaginationChange={setPaginationOptions}
-            getRowId={(params) => params.data.id}
+            onPaginationChange={handlePaginationChange}
+            getRowId={getPenaltyRowId}
+            loading={penaltyLogsQuery.isLoading}
             enablePageCaching={false}
             autoSizeStrategy={{
               type: 'fitCellContents',

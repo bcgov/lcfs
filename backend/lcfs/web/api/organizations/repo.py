@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
@@ -7,7 +9,7 @@ from typing import List, Optional, TYPE_CHECKING
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_
+from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_, delete
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -28,6 +30,21 @@ from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
 )
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.compliance.ComplianceReportListView import (
+    ComplianceReportListView,
+)
+from lcfs.db.models.organization.PenaltyLog import PenaltyLog
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    apply_filter_conditions,
+    apply_number_filter_conditions,
+    validate_pagination,
+)
 
 if TYPE_CHECKING:
     from lcfs.db.models.user.UserProfile import UserProfile
@@ -697,6 +714,335 @@ class OrganizationsRepository:
             )
         )
         return await self.db.scalar(query)
+
+    @repo_handler
+    async def get_penalty_analytics_data(self, organization_id: int):
+        """
+        Retrieve compliance report penalty summary data and discretionary penalties
+        for a given organization.
+        """
+        assessed_reports_cte = (
+            select(
+                ComplianceReportListView.compliance_report_id.label("report_id"),
+                ComplianceReportListView.compliance_period_id.label(
+                    "compliance_period_id"
+                ),
+                ComplianceReportListView.compliance_period.label(
+                    "compliance_year"
+                ),
+                func.row_number()
+                .over(
+                    partition_by=ComplianceReportListView.compliance_period_id,
+                    order_by=[
+                        ComplianceReportListView.update_date.desc(),
+                        ComplianceReportListView.compliance_report_id.desc(),
+                    ],
+                )
+                .label("row_number"),
+            )
+            .where(
+                ComplianceReportListView.organization_id == organization_id,
+                ComplianceReportListView.is_latest.is_(True),
+                ComplianceReportListView.report_status
+                == ComplianceReportStatusEnum.Submitted,
+            )
+        ).cte("assessed_reports")
+
+        summary_query = (
+            select(
+                assessed_reports_cte.c.compliance_period_id,
+                assessed_reports_cte.c.compliance_year,
+                ComplianceReportSummary.line_11_non_compliance_penalty_gasoline.label(
+                    "line_11_penalty_gasoline"
+                ),
+                ComplianceReportSummary.line_11_non_compliance_penalty_diesel.label(
+                    "line_11_penalty_diesel"
+                ),
+                ComplianceReportSummary.line_11_non_compliance_penalty_jet_fuel.label(
+                    "line_11_penalty_jet_fuel"
+                ),
+                ComplianceReportSummary.line_21_non_compliance_penalty_payable.label(
+                    "line_21_penalty_payable"
+                ),
+                ComplianceReportSummary.penalty_override_enabled.label(
+                    "penalty_override_enabled"
+                ),
+                ComplianceReportSummary.renewable_penalty_override.label(
+                    "renewable_penalty_override"
+                ),
+                ComplianceReportSummary.low_carbon_penalty_override.label(
+                    "low_carbon_penalty_override"
+                ),
+            )
+            .join(
+                ComplianceReportSummary,
+                ComplianceReportSummary.compliance_report_id
+                == assessed_reports_cte.c.report_id,
+            )
+            .where(assessed_reports_cte.c.row_number == 1)
+            .order_by(assessed_reports_cte.c.compliance_year.asc())
+        )
+
+        summaries = (await self.db.execute(summary_query)).mappings().all()
+
+        penalty_logs_query = (
+            select(
+                PenaltyLog.penalty_log_id,
+                PenaltyLog.compliance_period_id,
+                CompliancePeriod.description.label("compliance_year"),
+                PenaltyLog.penalty_type,
+                PenaltyLog.offence_history,
+                PenaltyLog.deliberate,
+                PenaltyLog.efforts_to_correct,
+                PenaltyLog.economic_benefit_derived,
+                PenaltyLog.efforts_to_prevent_recurrence,
+                PenaltyLog.notes,
+                PenaltyLog.penalty_amount,
+            )
+            .join(
+                CompliancePeriod,
+                CompliancePeriod.compliance_period_id
+                == PenaltyLog.compliance_period_id,
+            )
+            .where(PenaltyLog.organization_id == organization_id)
+            .order_by(
+                CompliancePeriod.description.asc(),
+                PenaltyLog.penalty_log_id.asc(),
+            )
+        )
+        penalty_logs_result = await self.db.execute(penalty_logs_query)
+        penalty_logs = penalty_logs_result.mappings().all()
+
+        return summaries, penalty_logs
+
+    @repo_handler
+    async def get_penalty_logs_paginated(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ):
+        pagination = validate_pagination(pagination)
+
+        conditions = [PenaltyLog.organization_id == organization_id]
+
+        filter_field_map = {
+            "compliance_year": CompliancePeriod.description,
+            "contravention_type": PenaltyLog.penalty_type,
+            "offence_history": PenaltyLog.offence_history,
+            "deliberate": PenaltyLog.deliberate,
+            "efforts_to_correct": PenaltyLog.efforts_to_correct,
+            "economic_benefit_derived": PenaltyLog.economic_benefit_derived,
+            "efforts_to_prevent_recurrence": PenaltyLog.efforts_to_prevent_recurrence,
+            "notes": PenaltyLog.notes,
+            "penalty_amount": PenaltyLog.penalty_amount,
+        }
+
+        boolean_fields = {
+            "offence_history",
+            "deliberate",
+            "efforts_to_correct",
+            "economic_benefit_derived",
+            "efforts_to_prevent_recurrence",
+        }
+
+        def parse_boolean(value):
+            if isinstance(value, bool):
+                return value
+            if value is None:
+                return None
+            value_str = str(value).strip().lower()
+            if value_str in {"yes", "true", "1"}:
+                return True
+            if value_str in {"no", "false", "0"}:
+                return False
+            return None
+
+        for filter_model in pagination.filters:
+            column = filter_field_map.get(filter_model.field)
+            if not column:
+                continue
+
+            if filter_model.field in boolean_fields:
+                if filter_model.filter_type == "set":
+                    raw_values = filter_model.filter or []
+                    parsed_values = [
+                        value
+                        for value in (parse_boolean(v) for v in raw_values)
+                        if value is not None
+                    ]
+                    if parsed_values:
+                        conditions.append(column.in_(parsed_values))
+                else:
+                    bool_value = parse_boolean(filter_model.filter)
+                    if bool_value is not None:
+                        if filter_model.type == "notEqual":
+                            conditions.append(column.is_not(bool_value))
+                        else:
+                            conditions.append(column.is_(bool_value))
+                continue
+
+            filter_value = filter_model.filter
+            filter_type = filter_model.filter_type
+            filter_option = filter_model.type
+
+            if filter_model.field == "penalty_amount" and isinstance(filter_value, list):
+                numeric_range = [float(v) for v in filter_value if v is not None]
+                if len(numeric_range) == 2:
+                    conditions.append(
+                        apply_number_filter_conditions(
+                            column,
+                            numeric_range,
+                            "inRange",
+                        )
+                    )
+                continue
+
+            if filter_model.field == "penalty_amount" and filter_value is not None:
+                try:
+                    filter_value = float(filter_value)
+                except (TypeError, ValueError):
+                    continue
+
+            if filter_value is not None:
+                try:
+                    conditions.append(
+                        apply_filter_conditions(
+                            column, filter_value, filter_option, filter_type
+                        )
+                    )
+                except HTTPException:
+                    continue
+
+        total_query = (
+            select(func.count())
+            .select_from(PenaltyLog)
+            .join(
+                CompliancePeriod,
+                CompliancePeriod.compliance_period_id
+                == PenaltyLog.compliance_period_id,
+            )
+            .where(and_(*conditions))
+        )
+        total = await self.db.scalar(total_query)
+
+        sort_map = {
+            "compliance_year": CompliancePeriod.description,
+            "contravention_type": PenaltyLog.penalty_type,
+            "offence_history": PenaltyLog.offence_history,
+            "deliberate": PenaltyLog.deliberate,
+            "efforts_to_correct": PenaltyLog.efforts_to_correct,
+            "economic_benefit_derived": PenaltyLog.economic_benefit_derived,
+            "efforts_to_prevent_recurrence": PenaltyLog.efforts_to_prevent_recurrence,
+            "notes": PenaltyLog.notes,
+            "penalty_amount": PenaltyLog.penalty_amount,
+        }
+
+        order_by_clauses = []
+        for sort in pagination.sort_orders:
+            column = sort_map.get(sort.field)
+            if not column:
+                continue
+            order_by_clauses.append(
+                asc(column) if sort.direction == "asc" else desc(column)
+            )
+
+        if not order_by_clauses:
+            order_by_clauses = [
+                CompliancePeriod.description.desc(),
+                PenaltyLog.penalty_log_id.desc(),
+            ]
+
+        offset = (pagination.page - 1) * pagination.size
+
+        records_query = (
+            select(
+                PenaltyLog.penalty_log_id,
+                PenaltyLog.compliance_period_id,
+                CompliancePeriod.description.label("compliance_year"),
+                PenaltyLog.penalty_type,
+                PenaltyLog.offence_history,
+                PenaltyLog.deliberate,
+                PenaltyLog.efforts_to_correct,
+                PenaltyLog.economic_benefit_derived,
+                PenaltyLog.efforts_to_prevent_recurrence,
+                PenaltyLog.notes,
+                PenaltyLog.penalty_amount,
+            )
+            .join(
+                CompliancePeriod,
+                CompliancePeriod.compliance_period_id
+                == PenaltyLog.compliance_period_id,
+            )
+            .where(and_(*conditions))
+            .order_by(*order_by_clauses)
+            .offset(offset)
+            .limit(pagination.size)
+        )
+
+        records = (await self.db.execute(records_query)).mappings().all()
+
+        return records, total
+
+    @repo_handler
+    async def create_penalty_log(self, organization_id: int, data):
+        penalty_log = PenaltyLog(
+            organization_id=organization_id,
+            compliance_period_id=data.compliance_period_id,
+            penalty_type=data.penalty_type.value,
+            offence_history=data.offence_history,
+            deliberate=data.deliberate,
+            efforts_to_correct=data.efforts_to_correct,
+            economic_benefit_derived=data.economic_benefit_derived,
+            efforts_to_prevent_recurrence=data.efforts_to_prevent_recurrence,
+            notes=data.notes,
+            penalty_amount=Decimal(str(data.penalty_amount or 0)),
+        )
+        self.db.add(penalty_log)
+        await self.db.flush()
+        await self.db.refresh(penalty_log, attribute_names=["compliance_period"])
+        return penalty_log
+
+    @repo_handler
+    async def get_penalty_log_by_id(
+        self, organization_id: int, penalty_log_id: int
+    ) -> Optional[PenaltyLog]:
+        result = await self.db.execute(
+            select(PenaltyLog)
+            .options(joinedload(PenaltyLog.compliance_period))
+            .where(
+                PenaltyLog.penalty_log_id == penalty_log_id,
+                PenaltyLog.organization_id == organization_id,
+            )
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def update_penalty_log(self, penalty_log: PenaltyLog, data):
+        penalty_log.compliance_period_id = data.compliance_period_id
+        penalty_log.penalty_type = data.penalty_type.value
+        penalty_log.offence_history = data.offence_history
+        penalty_log.deliberate = data.deliberate
+        penalty_log.efforts_to_correct = data.efforts_to_correct
+        penalty_log.economic_benefit_derived = data.economic_benefit_derived
+        penalty_log.efforts_to_prevent_recurrence = (
+            data.efforts_to_prevent_recurrence
+        )
+        penalty_log.notes = data.notes
+        penalty_log.penalty_amount = Decimal(str(data.penalty_amount or 0))
+        await self.db.flush()
+        await self.db.refresh(penalty_log, attribute_names=["compliance_period"])
+        return penalty_log
+
+    @repo_handler
+    async def delete_penalty_log(self, organization_id: int, penalty_log_id: int) -> bool:
+        result = await self.db.execute(
+            delete(PenaltyLog)
+            .where(
+                PenaltyLog.penalty_log_id == penalty_log_id,
+                PenaltyLog.organization_id == organization_id,
+            )
+            .returning(PenaltyLog.penalty_log_id)
+        )
+        deleted_id = result.scalar()
+        return deleted_id is not None
 
     @repo_handler
     async def get_link_key_by_key(self, link_key: str) -> OrganizationLinkKey:

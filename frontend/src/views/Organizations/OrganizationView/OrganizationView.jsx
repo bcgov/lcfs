@@ -8,6 +8,7 @@ import { OrganizationUsers } from './OrganizationUsers'
 import { CreditLedger } from './CreditLedger'
 import CompanyOverview from './components/CompanyOverview'
 import PenaltyLog from './components/PenaltyLog'
+import PenaltyLogManage from './components/PenaltyLogManage'
 import SupplyHistory from './components/SupplyHistory'
 import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -112,6 +113,9 @@ export const OrganizationView = ({ addMode = false }) => {
     }
     if (currentPath.includes('/company-overview')) {
       return <CompanyOverview />
+    }
+    if (currentPath.includes('/penalty-log/manage')) {
+      return <PenaltyLogManage />
     }
     if (currentPath.includes('/penalty-log')) {
       return <PenaltyLog />

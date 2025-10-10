@@ -45,6 +45,11 @@ export const organizationRoutes = [
     handle: { title: 'Penalty log' }
   },
   {
+    path: ROUTES.ORGANIZATIONS.PENALTY_LOG_MANAGE,
+    element: <OrganizationView />,
+    handle: { title: 'Manage penalty log' }
+  },
+  {
     path: ROUTES.ORGANIZATIONS.SUPPLY_HISTORY,
     element: <OrganizationView />,
     handle: { title: 'Supply history' }
