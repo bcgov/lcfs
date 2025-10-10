@@ -8,6 +8,7 @@
   "asterisk": "<span><span style='color: red;'>*</span> indicates a required field</span>",
   "unknown": "Unknown",
   "backBtn": "Back",
+  "editBtn": "Edit",
   "cancelBtn": "Cancel",
   "saveBtn": "Save",
   "deleteBtn": "Delete",
@@ -98,6 +99,5 @@
         }
       }
     }
-  },
-  "editBtn": "Edit"
+  }
 }
