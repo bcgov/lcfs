@@ -147,6 +147,10 @@ class OrganizationBase(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
 
 
 class OrganizationSchema(OrganizationBase):
@@ -272,6 +276,10 @@ class OrganizationResponseSchema(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
     organization_type_id: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = []
     org_type: Optional[OrganizationTypeSchema] = []
@@ -330,6 +338,15 @@ class OrganizationCreditMarketListingSchema(BaseSchema):
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
+
+
+class OrganizationCompanyOverviewUpdateSchema(BaseSchema):
+    """Schema for updating company overview information"""
+
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
 
 
 # --------------------------------------

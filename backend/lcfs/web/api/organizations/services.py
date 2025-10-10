@@ -498,6 +498,40 @@ class OrganizationsService:
         return updated_organization
 
     @service_handler
+    async def update_organization_company_overview(
+        self,
+        organization_id: int,
+        company_overview_data: dict,
+        user=None,
+    ):
+        """
+        Update only the company overview fields for an organization.
+        This method only updates the specific company overview fields without affecting other organization data.
+        """
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Update only the company overview fields
+        allowed_fields = {
+            "company_details",
+            "company_representation_agreements",
+            "company_acting_as_aggregator",
+            "company_additional_notes",
+        }
+
+        for key, value in company_overview_data.items():
+            if key in allowed_fields and hasattr(organization, key):
+                setattr(organization, key, value)
+
+        # Set the update user
+        if user:
+            organization.update_user = user.keycloak_username
+
+        updated_organization = await self.repo.update_organization(organization)
+        return updated_organization
+
+    @service_handler
     async def get_organization(self, organization_id: int):
         """handles fetching an organization"""
         organization = await self.repo.get_organization(organization_id)

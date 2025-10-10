@@ -44,6 +44,9 @@ export const OrganizationView = ({ addMode = false }) => {
   // Get the organization ID - either from URL params (IDIR users) or from current user (BCeID users)
   const organizationId = orgID ?? currentUser?.organization?.organizationId
 
+  // Check if user is government (IDIR) - only they should see all tabs
+  const isGovernment = hasRoles(roles.government)
+
   useEffect(() => {
     if (location.state?.message) {
       setAlert({
@@ -54,29 +57,40 @@ export const OrganizationView = ({ addMode = false }) => {
     }
   }, [location, navigate])
 
-  // Define tab paths following the wireframe order
-  const tabPaths = useMemo(() => {
+  // Define tab paths and labels based on user role
+  const { tabPaths, tabLabels } = useMemo(() => {
     const basePath = ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID || '')
-    return [
-      basePath,
-      ROUTES.ORGANIZATIONS.USERS.replace(':orgID', orgID || ''),
-      ROUTES.ORGANIZATIONS.CREDIT_LEDGER.replace(':orgID', orgID || ''),
-      ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW.replace(':orgID', orgID || ''),
-      ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
-      ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', orgID || ''),
-      ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING.replace(':orgID', orgID || '')
-    ]
-  }, [orgID])
 
-  const tabLabels = [
-    t('org:tabs.dashboard'),
-    t('org:tabs.users'),
-    t('org:tabs.creditLedger'),
-    t('org:tabs.companyOverview'),
-    t('org:tabs.penaltyLog'),
-    t('org:tabs.supplyHistory'),
-    t('org:tabs.complianceTracking')
-  ]
+    if (isGovernment) {
+      // Government users see all tabs
+      return {
+        tabPaths: [
+          basePath,
+          ROUTES.ORGANIZATIONS.USERS.replace(':orgID', orgID || ''),
+          ROUTES.ORGANIZATIONS.CREDIT_LEDGER.replace(':orgID', orgID || ''),
+          ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW.replace(':orgID', orgID || ''),
+          ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
+          ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', orgID || ''),
+          ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING.replace(':orgID', orgID || '')
+        ],
+        tabLabels: [
+          t('org:tabs.dashboard'),
+          t('org:tabs.users'),
+          t('org:tabs.creditLedger'),
+          t('org:tabs.companyOverview'),
+          t('org:tabs.penaltyLog'),
+          t('org:tabs.supplyHistory'),
+          t('org:tabs.complianceTracking')
+        ]
+      }
+    } else {
+      // BCeID suppliers only see dashboard
+      return {
+        tabPaths: [basePath],
+        tabLabels: [t('org:tabs.dashboard')]
+      }
+    }
+  }, [orgID, isGovernment, t])
 
   // Determine current tab index based on location
   const tabIndex = useMemo(() => {
@@ -104,6 +118,20 @@ export const OrganizationView = ({ addMode = false }) => {
   // Render content based on current route
   const renderContent = () => {
     const currentPath = location.pathname || ''
+
+    // If non-government user tries to access government-only tabs, redirect to dashboard
+    if (!isGovernment && (
+      currentPath.includes('/users') ||
+      currentPath.includes('/credit-ledger') ||
+      currentPath.includes('/company-overview') ||
+      currentPath.includes('/penalty-log') ||
+      currentPath.includes('/supply-history') ||
+      currentPath.includes('/compliance-tracking')
+    )) {
+      const basePath = ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID || '')
+      navigate(basePath, { replace: true })
+      return <OrganizationDetailsCard addMode={addMode} />
+    }
 
     if (currentPath.includes('/users')) {
       return <OrganizationUsers />

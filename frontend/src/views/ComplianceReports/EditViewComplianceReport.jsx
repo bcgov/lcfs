@@ -54,9 +54,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const [modalData, setModalData] = useState(null)
   const [isDeleted, setIsDeleted] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-
-  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
+  const [hasEligibleRenewableFuel, setHasEligibleRenewableFuel] =
     useState(false)
+
+  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] = useState({
+    certifyCompliance: false,
+    certifyClaim: false
+  })
   const alertRef = useRef()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -542,7 +546,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       createSupplementalReport,
       createIdirSupplementalReport,
       createAnalystAdjustment,
-      amendPenalties: () => {}
+      amendPenalties: () => {},
+      hasEligibleRenewableFuel,
     }
     return buttonClusterConfigFn(context)
   }, [
@@ -565,7 +570,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     isDeleted,
     isDeleting,
     currentStatus,
-    isEarlyIssuance
+    isEarlyIssuance,
+    hasEligibleRenewableFuel
   ])
 
   useEffect(() => {
@@ -708,6 +714,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     setIsSigningAuthorityDeclared={
                       setIsSigningAuthorityDeclared
                     }
+                    hasEligibleRenewableFuel={hasEligibleRenewableFuel}
+                    setHasEligibleRenewableFuel={setHasEligibleRenewableFuel}
                     buttonClusterConfig={buttonClusterConfig}
                     methods={methods}
                     alertRef={alertRef}

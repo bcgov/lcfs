@@ -17,9 +17,16 @@ services:
   redis:
     container_name: redis
     restart: "no"
-    image: bitnami/redis:7.4.2
+    image: redis:8.2.1
     environment:
       REDIS_PASSWORD: development_only
+    command: >
+      sh -c 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 5
     ports:
       - '6379:6379'
     volumes:

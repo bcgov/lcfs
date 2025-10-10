@@ -20,6 +20,7 @@ from .ComplianceReportChargingEquipment import ComplianceReportChargingEquipment
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
+from .FSEComplianceReporting import FSEComplianceReporting
 
 __all__ = [
     "AllocationAgreement",
@@ -44,4 +45,5 @@ __all__ = [
     "NotionalTransfer",
     "OtherUses",
     "EndUserType",
+    "FSEComplianceReporting",
 ]

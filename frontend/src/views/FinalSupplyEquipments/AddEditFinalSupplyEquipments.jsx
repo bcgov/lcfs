@@ -32,6 +32,10 @@ import {
   getQuarterDateRange
 } from '@/utils/dateQuarterUtils'
 
+/*
+ * @deprecated - Final Supply Equipment schedule is deprecated and will be removed in a future release.
+ * Please do not add any new features or make changes to this file without approval from the BC Gov team.
+ */
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)

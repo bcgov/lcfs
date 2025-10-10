@@ -1,6 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -214,6 +215,31 @@ export const useChargingEquipmentStatuses = () => {
   })
 }
 
+export const useSiteNames = (organizationId = null, options = {}) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const {
+    staleTime = OPTIONS_STALE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['site-names', organizationId],
+    queryFn: async () => {
+      const isIDIR = currentUser?.roles?.some(role => role.name === 'Government')
+      const url = isIDIR && organizationId 
+        ? `/charging-sites/names?organization_id=${organizationId}`
+        : '/charging-sites/names'
+      const response = await client.get(url)
+      return response.data
+    },
+    staleTime,
+    enabled: enabled && !!currentUser,
+    ...restOptions
+  })
+}
+
 export const useBulkUpdateEquipmentStatus = (options = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
@@ -406,7 +432,11 @@ export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
       // Stop polling when job is complete or failed
-      if (data?.status === 'Completed' || data?.status === 'Failed' || data?.progress === 100) {
+      if (
+        data?.status === 'Completed' ||
+        data?.status === 'Failed' ||
+        data?.progress === 100
+      ) {
         return false
       }
       return refetchInterval

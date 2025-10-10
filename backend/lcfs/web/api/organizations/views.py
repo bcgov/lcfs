@@ -25,6 +25,7 @@ from .schema import (
     OrganizationDetailsSchema,
     OrganizationCreditMarketUpdateSchema,
     OrganizationCreditMarketListingSchema,
+    OrganizationCompanyOverviewUpdateSchema,
     OrganizationLinkKeyCreateSchema,
     OrganizationLinkKeysListSchema,
     LinkKeyOperationResponseSchema,
@@ -398,6 +399,27 @@ async def update_current_org_credit_market_details(
     # Use the dedicated method to update only credit market fields
     return await service.update_organization_credit_market_details(
         organization_id, credit_market_data.model_dump(exclude_unset=True), request.user
+    )
+
+
+@router.put(
+    "/{organization_id}/company-overview",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+async def update_company_overview(
+    request: Request,
+    organization_id: int,
+    company_overview_data: OrganizationCompanyOverviewUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Update company overview details for an organization.
+    This endpoint allows analysts, managers, and directors to update company overview information.
+    """
+    return await service.update_organization_company_overview(
+        organization_id, company_overview_data.model_dump(exclude_unset=True), request.user
     )
 
 

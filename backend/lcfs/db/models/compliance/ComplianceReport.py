@@ -162,6 +162,9 @@ class ComplianceReport(BaseModel, Auditable):
     assigned_analyst = relationship(
         "UserProfile", foreign_keys=[assigned_analyst_id], lazy="selectin"
     )
+    fse_compliance_reports = relationship(
+        "FSEComplianceReporting", back_populates="compliance_report"
+    )
 
     # Tracking relationships
     summary = relationship(

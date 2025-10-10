@@ -1063,3 +1063,199 @@ async def test_validate_link_key_invalid(organizations_service):
     organizations_service.repo.get_link_key_by_key.assert_called_once_with(
         link_key_value
     )
+
+
+# Company Overview Service Tests
+@pytest.mark.anyio
+async def test_update_organization_company_overview_success(organizations_service):
+    """Test successful company overview update"""
+    organization_id = 1
+    company_overview_data = {
+        "company_details": "Updated company details",
+        "company_representation_agreements": "Updated agreements",
+        "company_acting_as_aggregator": "Updated aggregator info",
+        "company_additional_notes": "Updated notes",
+    }
+    user = MagicMock()
+    user.keycloak_username = "test_user"
+
+    mock_organization = MagicMock()
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+    mock_organization.company_representation_agreements = "Old agreements"
+    mock_organization.company_acting_as_aggregator = "Old aggregator"
+    mock_organization.company_additional_notes = "Old notes"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify organization was fetched
+    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
+
+    # Verify fields were updated
+    assert mock_organization.company_details == "Updated company details"
+    assert (
+        mock_organization.company_representation_agreements == "Updated agreements"
+    )
+    assert mock_organization.company_acting_as_aggregator == "Updated aggregator info"
+    assert mock_organization.company_additional_notes == "Updated notes"
+    assert mock_organization.update_user == "test_user"
+
+    # Verify organization was saved
+    organizations_service.repo.update_organization.assert_called_once_with(
+        mock_organization
+    )
+
+    # Verify result is returned
+    assert result == mock_organization
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_organization_not_found(
+    organizations_service,
+):
+    """Test company overview update when organization doesn't exist"""
+    from lcfs.web.exception.exceptions import DataNotFoundException
+
+    organization_id = 999
+    company_overview_data = {"company_details": "Test"}
+
+    organizations_service.repo.get_organization = AsyncMock(return_value=None)
+
+    # Test the method - should raise DataNotFoundException
+    with pytest.raises(DataNotFoundException, match="Organization not found"):
+        await organizations_service.update_organization_company_overview(
+            organization_id, company_overview_data
+        )
+
+    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
+    organizations_service.repo.update_organization.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_partial_update(
+    organizations_service,
+):
+    """Test updating only some company overview fields"""
+    organization_id = 1
+    # Only update company_details and company_additional_notes
+    company_overview_data = {
+        "company_details": "New details",
+        "company_additional_notes": "New notes",
+    }
+    user = MagicMock()
+    user.keycloak_username = "test_user"
+
+    mock_organization = MagicMock()
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+    mock_organization.company_representation_agreements = "Old agreements"
+    mock_organization.company_acting_as_aggregator = "Old aggregator"
+    mock_organization.company_additional_notes = "Old notes"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify only specified fields were updated
+    assert mock_organization.company_details == "New details"
+    assert mock_organization.company_additional_notes == "New notes"
+    # These should remain unchanged
+    assert mock_organization.company_representation_agreements == "Old agreements"
+    assert mock_organization.company_acting_as_aggregator == "Old aggregator"
+
+    organizations_service.repo.update_organization.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_with_none_values(
+    organizations_service,
+):
+    """Test updating company overview with None values (clearing fields)"""
+    organization_id = 1
+    company_overview_data = {
+        "company_details": None,
+        "company_representation_agreements": None,
+    }
+    user = MagicMock()
+    user.keycloak_username = "test_user"
+
+    mock_organization = MagicMock()
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+    mock_organization.company_representation_agreements = "Old agreements"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify fields were set to None
+    assert mock_organization.company_details is None
+    assert mock_organization.company_representation_agreements is None
+
+    organizations_service.repo.update_organization.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_ignores_invalid_fields(
+    organizations_service,
+):
+    """Test that invalid fields are ignored during company overview update"""
+    organization_id = 1
+    company_overview_data = {
+        "company_details": "New details",
+        "invalid_field": "Should be ignored",
+        "another_invalid": "Also ignored",
+    }
+    user = MagicMock()
+
+    # Create a spec'd mock that only allows company overview fields
+    mock_organization = MagicMock(spec=['organization_id', 'company_details', 'company_representation_agreements', 'company_acting_as_aggregator', 'company_additional_notes', 'update_user'])
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify valid field was updated
+    assert mock_organization.company_details == "New details"
+
+    # Verify invalid fields were not set (would raise AttributeError if attempted)
+    assert not hasattr(mock_organization, "invalid_field")
+    assert not hasattr(mock_organization, "another_invalid")
+
+    organizations_service.repo.update_organization.assert_called_once()

@@ -485,7 +485,11 @@ export const BCGridViewer = forwardRef(
             {/* Floating pagination container */}
             {isPaginationFloating &&
               enableFloatingPagination &&
-              (data?.pagination?.size || paginationOptions.size || 10) > 10 && (
+              (data?.pagination?.size || paginationOptions.size || 10) > 10 &&
+              (data?.pagination?.total ||
+                data?.total_count ||
+                paginationOptions.total ||
+                10) > 10 && (
                 <BCBox
                   className="ag-grid-pagination-container-floating"
                   display="flex"
