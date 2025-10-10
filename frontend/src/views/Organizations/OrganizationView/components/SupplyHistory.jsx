@@ -24,7 +24,12 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   // Use passed organizationId prop, fallback to current user's org for backward compatibility
   const organizationId = propOrganizationId ?? currentUser?.organization?.organizationId
 
-  const [pagination, setPagination] = useState({ page: 1, size: 10 })
+  const [paginationOptions, setPaginationOptions] = useState({
+    page: 1,
+    size: 10,
+    sortOrders: [],
+    filters: []
+  })
   const [selectedYear, setSelectedYear] = useState('all')
 
   // Build filters based on selected year
@@ -43,11 +48,11 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }, [selectedYear])
 
   // Fetch fuel supply data
-  const { data, isLoading } = useOrganizationFuelSupply(
+  const queryData = useOrganizationFuelSupply(
     organizationId,
     {
-      page: pagination.page,
-      size: pagination.size,
+      page: paginationOptions.page,
+      size: paginationOptions.size,
       filters
     },
     {
@@ -55,9 +60,9 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
     }
   )
 
-  const fuelSupplies = data?.fuelSupplies || []
-  const analytics = data?.analytics || {}
-  const paginationData = data?.pagination || {}
+  const fuelSupplies = queryData?.data?.fuelSupplies || []
+  const analytics = queryData?.data?.analytics || {}
+  const paginationData = queryData?.data?.pagination || {}
 
   // Extract unique years for filter dropdown
   const availableYears = useMemo(() => {
@@ -67,11 +72,14 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
 
   const handleYearChange = (event) => {
     setSelectedYear(event.target.value)
-    setPagination({ ...pagination, page: 1 }) // Reset to first page
+    setPaginationOptions({ ...paginationOptions, page: 1 }) // Reset to first page
   }
 
   const handleGridPaginationChange = useCallback((newPagination) => {
-    setPagination(newPagination)
+    setPaginationOptions((prev) => ({
+      ...prev,
+      ...newPagination
+    }))
   }, [])
 
   // Prepare chart data
@@ -380,18 +388,17 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
       {/* Data Grid */}
       <BCBox sx={{ mb: 4 }}>
         <BCGridViewer
-          ref={gridRef}
+          gridRef={gridRef}
+          gridKey="supply-history"
           columnDefs={supplyHistoryColDefs()}
           defaultColDef={defaultColDef}
           gridOptions={gridOptions}
-          rowData={fuelSupplies}
-          pagination={true}
-          paginationPageSize={pagination.size}
-          onPaginationChanged={handleGridPaginationChange}
-          serverSidePagination={true}
-          serverSidePaginationData={paginationData}
-          loading={isLoading}
+          queryData={queryData}
+          dataKey="fuelSupplies"
+          paginationOptions={paginationOptions}
+          onPaginationChange={handleGridPaginationChange}
           enableAdvancedFilters={false}
+          enablePageCaching={false}
         />
       </BCBox>
 
