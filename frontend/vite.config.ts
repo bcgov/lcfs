@@ -53,7 +53,8 @@ export default defineConfig({
       '@mui/material/Tooltip',
       '@mui/material/Grid2',
       'luxon',
-      'chroma-js'
+      'chroma-js',
+      'buffer'
     ]
   }
 })

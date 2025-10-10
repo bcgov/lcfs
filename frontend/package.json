@@ -60,6 +60,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autosuggest-highlight": "^3.3.4",
     "axios": "^1.12.1",
+    "buffer": "^6.0.3",
     "chroma-js": "^3.1.2",
     "country-list": "^2.3.0",
     "date-fns": "^4.1.0",
