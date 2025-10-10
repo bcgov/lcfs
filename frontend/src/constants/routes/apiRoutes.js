@@ -152,6 +152,7 @@ export const apiRoutes = {
   fuelSupplyOptions: '/fuel-supply/table-options?',
   getAllFuelSupplies: '/fuel-supply/list-all',
   saveFuelSupplies: '/fuel-supply/save',
+  getOrganizationFuelSupply: '/fuel-supply/organization/:orgID',
 
   // fuel-exports
   fuelExportOptions: '/fuel-exports/table-options?',
