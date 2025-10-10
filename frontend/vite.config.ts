@@ -49,6 +49,11 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['@mui/material/Grid2', '@mui/material/Tooltip']
+    include: [
+      '@mui/material/Tooltip',
+      '@mui/material/Grid2',
+      'luxon',
+      'chroma-js'
+    ]
   }
 })
