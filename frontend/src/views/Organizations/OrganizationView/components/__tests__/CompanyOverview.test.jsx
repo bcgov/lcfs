@@ -137,10 +137,8 @@ describe('CompanyOverview', () => {
 
     render(<CompanyOverview />, { wrapper })
 
-    expect(screen.getByText(/enter company details here/i)).toBeInTheDocument()
-    expect(screen.getByText(/note the applicable year and enter company representation agreements/i)).toBeInTheDocument()
-    expect(screen.getByText(/note the start year and end year.*enter aggregator information/i)).toBeInTheDocument()
-    expect(screen.getByText(/enter any additional notes here/i)).toBeInTheDocument()
+    const noInfoElements = screen.getAllByText(/no information provided/i)
+    expect(noInfoElements).toHaveLength(4)
   })
 
   it('shows edit button when user has permissions', () => {
