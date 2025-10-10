@@ -500,3 +500,11 @@ class ChargingSiteService:
         Get site status IDs mapped by status name
         """
         return {status.status: status.charging_site_status_id for status in statuses}
+
+    @service_handler
+    async def get_site_names_by_organization(self, organization_id: int) -> List[dict]:
+        """
+        Get site names and charging site IDs for the given organization
+        """
+        sites = await self.repo.get_site_names_by_organization(organization_id)
+        return [{"siteName": site.site_name, "chargingSiteId": site.charging_site_id} for site in sites]

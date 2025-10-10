@@ -27,7 +27,7 @@ The Renewable Fuel Target is a key policy mechanism designed to increase the use
 
 The target is expressed as a percentage of total fuel volume and is applied separately to different fuel classes:
 - **Gasoline Class**: Requires 5% renewable content (e.g., ethanol in gasoline)
-- **Diesel Class**: Requires 4% renewable content (e.g., biodiesel in diesel)
+- **Diesel Class**: Requires 4% renewable content (e.g., biodiesel in diesel) prior to 2025, increasing to 8% for the 2025 compliance period and subsequent years
 
 Suppliers must demonstrate compliance annually by showing they have either:
 1. Physically blended sufficient renewable content into their fuels
@@ -43,7 +43,7 @@ Suppliers must demonstrate compliance annually by showing they have either:
 
 3. **Line 3: Total Tracked Fuel Supplied** - This is simply the sum of Lines 1 and 2, representing the total volume of all transportation fuels (both fossil and renewable) supplied during the compliance period. This line provides context for understanding the overall market share of renewable fuels.
 
-4. **Line 4: Eligible Renewable Fuel Required** - This is the calculated minimum volume of renewable fuel that the supplier must incorporate into their fuel supply to meet the regulated target. It's determined by multiplying Line 1 (fossil fuel volume) by the required renewable percentage for each fuel class (5% for gasoline, 4% for diesel). This is the compliance benchmark against which a supplier's actual renewable content is measured.
+4. **Line 4: Eligible Renewable Fuel Required** - This is the calculated minimum volume of renewable fuel that the supplier must incorporate into their fuel supply to meet the regulated target. It's determined by multiplying Line 1 (fossil fuel volume) by the required renewable percentage for each fuel class (5% for gasoline, 4% for diesel prior to 2025 and 8% for diesel in 2025 and beyond). This is the compliance benchmark against which a supplier's actual renewable content is measured.
 
 5. **Line 5: Net Notionally Transferred** - This represents the volume of renewable fuel attributes that have been transferred between suppliers. A positive number indicates renewable attributes received from other suppliers, while a negative number represents attributes transferred to others. These "notional transfers" allow for flexibility in meeting targets without requiring physical transfers of fuel.
 

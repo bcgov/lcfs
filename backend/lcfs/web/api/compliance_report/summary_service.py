@@ -45,6 +45,20 @@ from lcfs.web.utils.calculations import calculate_compliance_units
 
 logger = structlog.get_logger(__name__)
 
+ELIGIBLE_GASOLINE_RENEWABLE_TYPES = {
+    "renewable gasoline",
+    "ethanol",
+    "renewable naphtha",
+    "other",
+}
+
+ELIGIBLE_DIESEL_RENEWABLE_TYPES = {
+    "biodiesel",
+    "hdrd",
+    "other diesel fuel",
+    "other",
+}
+
 
 class ComplianceDataService:
     def __init__(self):
@@ -480,6 +494,36 @@ class ComplianceReportSummaryService:
 
         return summary_data
 
+    def _is_eligible_renewable(self, record, compliance_year) -> bool:
+        if not record.fuel_type.renewable:
+            return False
+
+        if compliance_year < 2025:
+            return True
+
+        category = (record.fuel_category.category or "").lower()
+        fuel_type_name = (record.fuel_type.fuel_type or "").lower()
+
+        if category == "gasoline":
+            if fuel_type_name not in ELIGIBLE_GASOLINE_RENEWABLE_TYPES:
+                return False
+        elif category == "diesel":
+            if fuel_type_name not in ELIGIBLE_DIESEL_RENEWABLE_TYPES:
+                return False
+        else:
+            return True
+
+        if record.is_canada_produced or record.is_q1_supplied:
+            return True
+
+        fuel_code_country = (
+            (record.fuel_code.fuel_production_facility_country or "")
+            if getattr(record, "fuel_code", None)
+            else ""
+        ).lower()
+
+        return fuel_code_country == "canada"
+
     @service_handler
     async def calculate_compliance_report_summary(
         self, report_id: int
@@ -687,29 +731,14 @@ class ComplianceReportSummaryService:
 
         fossil_quantities = self.repo.aggregate_quantities(all_fossil_records, True)
         # line 2
-        # Ensure non-Canadian renewable diesel volumes are not added into lines 1 or 2.
+        # Ensure renewable volumes counted towards line 2 meet 2025+ eligibility criteria.
+
         filtered_renewable_fuel_supplies = [
-            fs
-            for fs in effective_fuel_supplies
-            if fs.fuel_type.renewable
-            and (
-                compliance_year < 2025
-                or fs.fuel_category.category != "Diesel"
-                or (fs.fuel_category.category == "Diesel" and fs.is_canada_produced)
-                or (fs.fuel_category.category == "Diesel" and fs.is_q1_supplied)
-            )
+            fs for fs in effective_fuel_supplies if self._is_eligible_renewable(fs, compliance_year)
         ]
 
         filtered_renewable_other_uses = [
-            ou
-            for ou in effective_other_uses
-            if ou.fuel_type.renewable
-            and (
-                compliance_year < 2025
-                or ou.fuel_category.category != "Diesel"
-                or (ou.fuel_category.category == "Diesel" and ou.is_canada_produced)
-                or (ou.fuel_category.category == "Diesel" and ou.is_q1_supplied)
-            )
+            ou for ou in effective_other_uses if self._is_eligible_renewable(ou, compliance_year)
         ]
 
         all_renewable_records = [
@@ -942,21 +971,31 @@ class ComplianceReportSummaryService:
             * jet_fuel_perc,
         }
 
-        # line 6 & 8: Always preserve user-entered values, but cap at 5% of current line 4
+        # Line 6 & 8: Apply "lesser of" logic per LCFA s.10
+        # Line 6: Lesser of excess and prescribed portion (5% of Line 4)
+        # Line 8: Lesser of deficiency and prescribed portion (5% of Line 4)
         decimal_retained_renewables = {}
         decimal_deferred_renewables = {}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            # Calculate the 5% cap based on current line 4 value, rounded to nearest integer
             current_required_quantity_dec = (
                 decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
-            max_retained = (current_required_quantity_dec * Decimal("0.05")).quantize(
+            renewable_supplied = decimal_renewable_quantities.get(category, DECIMAL_ZERO)
+
+            # Calculate prescribed portion (5% of Line 4)
+            prescribed_portion = (current_required_quantity_dec * Decimal("0.05")).quantize(
                 Decimal("1"), rounding=ROUND_HALF_UP
             )
 
-            # Always preserve line 6 value from current summary (user's input)
-            # but cap it at 5% of current line 4
+            # Line 6 (Retention) - LCFA s.10(2)
+            # Maximum retention is the LESSER of:
+            # (a) the excess (Line 2 - Line 4), and
+            # (b) the prescribed portion of the target (5% of Line 4)
+            excess = max(DECIMAL_ZERO, renewable_supplied - current_required_quantity_dec)
+            max_retention = min(excess, prescribed_portion)
+
+            # Preserve user input but cap at calculated maximum
             line_6_value = Decimal(
                 str(
                     getattr(
@@ -967,11 +1006,16 @@ class ComplianceReportSummaryService:
                     or 0
                 )
             )
-            decimal_retained_renewables[category] = min(line_6_value, max_retained)
+            decimal_retained_renewables[category] = min(line_6_value, max_retention)
 
-            # Line 8 (obligation deferred) logic:
-            # - If renewable supplied >= required, set deferment to 0 (supplier is compliant)
-            # - If renewable supplied < required, allow up to max deferment (5% of line 4)
+            # Line 8 (Deferral) - LCFA s.10(3)
+            # Maximum deferral is the LESSER of:
+            # (a) the deficiency (Line 4 - Line 2), and
+            # (b) the prescribed portion of the target (5% of Line 4)
+            deficiency = max(DECIMAL_ZERO, current_required_quantity_dec - renewable_supplied)
+            max_deferral = min(deficiency, prescribed_portion)
+
+            # Preserve user input but cap at calculated maximum
             line_8_value = Decimal(
                 str(
                     getattr(
@@ -982,16 +1026,7 @@ class ComplianceReportSummaryService:
                     or 0
                 )
             )
-
-            renewable_supplied = decimal_renewable_quantities.get(category, DECIMAL_ZERO)
-            required = decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
-
-            if renewable_supplied >= required:
-                # Supplier is compliant - no deferment allowed
-                decimal_deferred_renewables[category] = DECIMAL_ZERO
-            else:
-                # Supplier is non-compliant - allow deferment up to maximum
-                decimal_deferred_renewables[category] = min(line_8_value, max_retained)
+            decimal_deferred_renewables[category] = min(line_8_value, max_deferral)
 
         # line 10: Calculate net supplied using Decimal
         decimal_net_renewable_supplied = {
@@ -1157,26 +1192,28 @@ class ComplianceReportSummaryService:
                     ),
                 }
 
+            description_template = RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+
+            if line in [6, 8]:
+                description_value = description_template.format(
+                    "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
+                    "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
+                    "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
+                )
+            elif line == 4:
+                diesel_percent_display = "8%" if compliance_period >= 2025 else "4%"
+                description_value = description_template.format(
+                    diesel_percent=diesel_percent_display
+                )
+            else:
+                description_value = description_template
+
             summary.append(
                 ComplianceReportSummaryRowSchema(
                     line=self._get_line_value(
                         line, compliance_data_service.is_legacy_year()
                     ),
-                    description=(
-                        RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                            "{:,}".format(
-                                round(summary_lines[4]["gasoline"] * 0.05)
-                            ),
-                            "{:,}".format(
-                                round(summary_lines[4]["diesel"] * 0.05)
-                            ),
-                            "{:,}".format(
-                                round(summary_lines[4]["jet_fuel"] * 0.05)
-                            ),
-                        )
-                        if (line in [6, 8])
-                        else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
-                    ),
+                    description=description_value,
                     field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                     gasoline=(
                         int(values.get("gasoline", 0))
@@ -1213,6 +1250,47 @@ class ComplianceReportSummaryService:
 
         return summary
 
+    async def _calculate_transaction_period_dates(
+        self,
+        compliance_year: int,
+        organization_id: int,
+        exclude_report_id: int = None,
+    ) -> Tuple[datetime, datetime]:
+        """
+        Calculate the transaction period date range for Line 12 and Line 13.
+
+        Per LCFA requirements:
+        - First compliance report (no previous assessed report): January 1 to March 31 (following year)
+        - Subsequent reports (has previous assessed report): April 1 to March 31 (following year)
+
+        This prevents overlap in transfer aggregation across compliance periods.
+
+        Args:
+            compliance_year: The compliance period year (e.g., 2024)
+            organization_id: The organization ID
+            exclude_report_id: Report ID to exclude when checking for previous reports
+
+        Returns:
+            Tuple of (transaction_start_date, transaction_end_date)
+        """
+        # Check if there's a previous assessed report for the prior year
+        prev_assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
+            organization_id, compliance_year - 1, exclude_report_id
+        )
+
+        # Transaction period always ends on March 31 of the following year
+        transaction_end_date = datetime(compliance_year + 1, 3, 31, 23, 59, 59)
+
+        if prev_assessed_report:
+            # Subsequent report: April 1 of compliance year to March 31 of following year
+            # This avoids overlap with previous period (which covered Jan 1 - Mar 31)
+            transaction_start_date = datetime(compliance_year, 4, 1, 0, 0, 0)
+        else:
+            # First report: January 1 of compliance year to March 31 of following year
+            transaction_start_date = datetime(compliance_year, 1, 1, 0, 0, 0)
+
+        return transaction_start_date, transaction_end_date
+
     async def calculate_low_carbon_fuel_target_summary(
         self,
         compliance_period_start: datetime,
@@ -1227,14 +1305,22 @@ class ComplianceReportSummaryService:
             organization_id, compliance_period_start.year, compliance_report.compliance_report_id
         )
 
+        # Calculate correct transaction period dates for Line 12 and Line 13
+        # First report: Jan 1 - Mar 31 (next year)
+        # Subsequent reports: Apr 1 - Mar 31 (next year) to avoid overlap
+        compliance_year = compliance_period_start.year
+        transaction_start_date, transaction_end_date = await self._calculate_transaction_period_dates(
+            compliance_year, organization_id, compliance_report.compliance_report_id
+        )
+
         compliance_units_transferred_out = int(
             await self.repo.get_transferred_out_compliance_units(
-                compliance_period_start, compliance_period_end, organization_id
+                transaction_start_date, transaction_end_date, organization_id
             )
         )  # line 12
         compliance_units_received = int(
             await self.repo.get_received_compliance_units(
-                compliance_period_start, compliance_period_end, organization_id
+                transaction_start_date, transaction_end_date, organization_id
             )
         )  # line 13
         compliance_units_issued = int(

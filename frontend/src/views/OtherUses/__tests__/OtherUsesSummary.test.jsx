@@ -68,7 +68,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 
 // Mock the schema
 vi.mock('@/views/OtherUses/_schema.jsx', () => ({
-  otherUsesSummaryColDefs: [
+  otherUsesSummaryColDefs: () => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantitySupplied', headerName: 'Quantity Supplied' },
     { field: 'units', headerName: 'Units' }
@@ -329,14 +329,28 @@ describe('OtherUsesSummary', () => {
       { wrapper }
     )
 
-    const paginationButton = screen.getByTestId('pagination-trigger')
+    const paginationTrigger = screen.getByTestId('pagination-trigger')
     
     await act(async () => {
-      fireEvent.click(paginationButton)
+      fireEvent.click(paginationTrigger)
     })
 
-    // Component should handle pagination change without errors
-    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    expect(screen.getByTestId('has-pagination-change')).toHaveTextContent('has-pagination-change')
+  })
+
+  // Grid configuration tests
+  it('configures grid with correct properties', () => {
+    render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent('has-auto-size')
+    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent('text-selection-enabled')
+    expect(screen.getByTestId('page-caching')).toHaveTextContent('page-caching-disabled')
   })
 
   // Grid configuration tests
@@ -483,32 +497,160 @@ describe('OtherUsesSummary', () => {
     expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent('no-cell-renderer')
   })
 
-  // Tests for all remaining branches
   it('handles different status values correctly', () => {
-    const statuses = [
-      COMPLIANCE_REPORT_STATUSES.DRAFT,
-      COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-      COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
-      'UNKNOWN_STATUS'
-    ]
+    const mockData = {
+      otherUses: [{ otherUsesId: 1, fuelType: 'Test', actionType: 'CREATE' }]
+    }
 
-    statuses.forEach((status) => {
-      const { rerender } = render(
-        <OtherUsesSummary
-          data={{ otherUses: [] }}
-          status={status}
-        />,
-        { wrapper }
-      )
+    render(
+      <OtherUsesSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+      />,
+      { wrapper }
+    )
 
-      const hasCellRenderer = status === COMPLIANCE_REPORT_STATUSES.DRAFT
-      expect(screen.getByTestId('default-col-def-cell-renderer')).toHaveTextContent(
-        hasCellRenderer ? 'has-cell-renderer' : 'no-cell-renderer'
-      )
-
-      rerender(<div />)
-    })
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('no-cell-renderer')
   })
+
+  it('verifies all grid configuration properties', () => {
+    render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
+    expect(screen.getByTestId('cell-text-selection')).toHaveTextContent(
+      'text-selection-enabled'
+    )
+  })
+
+  it('handles component re-render with useMemo dependencies', () => {
+    const { rerender } = render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    rerender(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+      />
+    )
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('no-cell-renderer')
+  })
+
+  it('tests defaultColDef useMemo dependency on status change', () => {
+    render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByTestId('default-col-def-cell-renderer')
+    ).toHaveTextContent('has-cell-renderer')
+  })
+
+  it('handles data edge case with numeric values', () => {
+    const mockData = {
+      otherUses: [
+        {
+          otherUsesId: 999,
+          fuelType: 'Test',
+          quantitySupplied: 0,
+          actionType: 'CREATE'
+        }
+      ]
+    }
+
+    render(
+      <OtherUsesSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
+  })
+
+  it('handles boolean and string field values', () => {
+    const mockData = {
+      otherUses: [
+        {
+          otherUsesId: 1,
+          fuelType: 'String Value',
+          isActive: true,
+          actionType: 'CREATE'
+        }
+      ]
+    }
+
+    render(
+      <OtherUsesSummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
+  })
+
+  it('covers all auto sizing strategy configuration', () => {
+    render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('has-auto-size')).toHaveTextContent(
+      'has-auto-size'
+    )
+  })
+
+  it('handles component with minimal required props only', () => {
+    render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+  })
+
+  it('verifies pagination options state is properly initialized', () => {
+    render(
+      <OtherUsesSummary
+        data={{ otherUses: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('current-page')).toHaveTextContent('1')
+    expect(screen.getByTestId('page-size')).toHaveTextContent('10')
+  })
+
 
   it('verifies all grid configuration properties', () => {
     render(

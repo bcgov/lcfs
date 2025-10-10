@@ -170,8 +170,16 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
                 gridKey={`fuel-supply-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false, isEarlyIssuance)
-                    : changelogColDefs(true, isEarlyIssuance)
+                    ? changelogCommonColDefs(
+                        false,
+                        isEarlyIssuance,
+                        parseInt(compliancePeriod)
+                      )
+                    : changelogColDefs(
+                        true,
+                        isEarlyIssuance,
+                        parseInt(compliancePeriod)
+                      )
                 }
                 queryData={queryData}
                 getRowId={getRowId}

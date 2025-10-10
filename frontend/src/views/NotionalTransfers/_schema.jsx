@@ -16,6 +16,7 @@ import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import { NEW_REGULATION_YEAR } from '@/constants/common'
 
 export const notionalTransferColDefs = (
   optionsData,
@@ -364,7 +365,7 @@ export const notionalTransferColDefs = (
   return baseColumns
 }
 
-export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
+export const notionalTransferSummaryColDefs = (isEarlyIssuance = false, complianceYear) => {
   const baseColumns = [
     {
       headerName: i18n.t(
@@ -396,6 +397,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
       ),
       field: 'isCanadaProduced',
       minWidth: 250,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
@@ -403,6 +405,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
         'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
       ),
       field: 'isQ1Supplied',
+      hide: complianceYear < NEW_REGULATION_YEAR,
       minWidth: 170,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
@@ -495,7 +498,7 @@ export const defaultColDef = {
   autoHeaderHeight: true
 }
 
-export const changelogCommonColDefs = (highlight = true) => [
+export const changelogCommonColDefs = (highlight = true, complianceYear) => [
   {
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     field: 'legalName',
@@ -527,6 +530,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     ),
     field: 'isCanadaProduced',
     minWidth: 240,
+    hide: complianceYear < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'isCanadaProduced')
   },
@@ -535,6 +539,7 @@ export const changelogCommonColDefs = (highlight = true) => [
       'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
     ),
     field: 'isQ1Supplied',
+    hide: complianceYear < NEW_REGULATION_YEAR,
     minWidth: 240,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'isQ1Supplied')
@@ -555,7 +560,7 @@ export const changelogCommonColDefs = (highlight = true) => [
   }
 ]
 
-export const changelogColDefs = (highlight = true) => [
+export const changelogColDefs = (highlight = true, complianceYear) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -587,7 +592,7 @@ export const changelogColDefs = (highlight = true) => [
       }
     }
   },
-  ...changelogCommonColDefs(highlight)
+  ...changelogCommonColDefs(highlight, complianceYear)
 ]
 
 export const changelogDefaultColDefs = {
