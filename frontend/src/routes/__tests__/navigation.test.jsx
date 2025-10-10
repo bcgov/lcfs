@@ -650,18 +650,18 @@ describe('Dynamic Routes and Navigation', () => {
     })
 
     it('should build paths with multiple parameters', () => {
-      const path = buildPath('/organizations/:orgID/:userID', {
+      const path = buildPath('/organizations/:orgID/users/:userID', {
         orgID: '123',
         userID: '456'
       })
-      expect(path).toBe('/organizations/123/456')
+      expect(path).toBe('/organizations/123/users/456')
     })
 
     it('should build paths with missing parameters', () => {
-      const path = buildPath('/organizations/:orgID/:userID', {
+      const path = buildPath('/organizations/:orgID/users/:userID', {
         orgID: '123'
       })
-      expect(path).toBe('/organizations/123/:userID')
+      expect(path).toBe('/organizations/123/users/:userID')
     })
 
     it('should build paths with extra parameters', () => {

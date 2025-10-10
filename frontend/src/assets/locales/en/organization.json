@@ -143,6 +143,36 @@
   "snapshotTitle": "Organization Information from Compliance Report",
   "penaltyLog": {
     "history": "Penalty history",
-    "addPenaltyBtn": "Add discretionary penalty"
+    "addPenaltyBtn": "Add discretionary penalty",
+    "columns": {
+      "complianceYear": "Compliance year",
+      "contraventionType": "Continous or single contravention",
+      "offenceHistory": "History of offences",
+      "deliberate": "Whether contravention was deliberate",
+      "effortsToCorrect": "Efforts taken to correct",
+      "economicBenefitDerived": "Economic benefit derived from contravention",
+      "effortsToPreventRecurrence": "Efforts to prevent reccurrence",
+      "notes": "Any additonal factors (notes)",
+      "penaltyAmount": "Amount of penalty ($CAD)"
+    },
+    "metrics": {
+      "totalPenalties": "Total penalties",
+      "totalAuto": "Total automatic",
+      "totalSubtitle": "Auto Renewable + Auto Low Carbon",
+      "autoPenalties": "Automatic penalties",
+      "discretionaryPenalty": "Discretionary penalty",
+      "totalPenaltiesTrend": "Total penalties trend",
+      "automaticPenaltiesTrend": "Automatic penalties trend",
+      "yearToDate": "Year to date",
+      "discretionary": "Discretionary",
+      "discretionarySubtitle": "Assessed by director",
+      "discretionaryPenaltiesTrend": "Discretionary penalties trend",
+      "autoRenewable": "Auto Renewable",
+      "autoLowCarbon": "Auto Low Carbon"
+    },
+    "manageTitle": "Manage penalty log entries",
+    "saveReturn": "Save & return",
+    "noOrganizationSelected": "Select an organization to view penalty analytics.",
+    "analyticsError": "Unable to load penalty analytics data."
   }
 }

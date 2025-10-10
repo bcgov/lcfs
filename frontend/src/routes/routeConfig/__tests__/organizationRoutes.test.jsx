@@ -42,12 +42,12 @@ vi.mock('../routes', () => ({
       ADD: '/organizations/add-org',
       VIEW: '/organizations/:orgID',
       ADD_USER: '/organizations/:orgID/add-user',
-      VIEW_USER: '/organizations/:orgID/:userID'
+      VIEW_USER: '/organizations/:orgID/users/:userID'
     },
     ORGANIZATION: {
       ORG: '/organization',
       ADD_USER: '/organization/add-user',
-      VIEW_USER: '/organization/:userID'
+      VIEW_USER: '/organization/users/:userID'
     }
   }
 }))
@@ -70,10 +70,10 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID/supply-history',
       '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/add-user',
-      '/organizations/:orgID/:userID',
+      '/organizations/:orgID/users/:userID',
       '/organization',
       '/organization/add-user',
-      '/organization/:userID'
+      '/organization/users/:userID'
     ]
 
     const actualPaths = organizationRoutes.map((route) => route.path)
@@ -101,7 +101,7 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID/supply-history',
         '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/add-user',
-        '/organizations/:orgID/:userID'
+        '/organizations/:orgID/users/:userID'
       ]
 
       idirRoutes.forEach((route) => {
@@ -120,7 +120,7 @@ describe('organizationRoutes', () => {
       const expectedBceidPaths = [
         '/organization',
         '/organization/add-user',
-        '/organization/:userID'
+        '/organization/users/:userID'
       ]
 
       bceidRoutes.forEach((route) => {
@@ -165,7 +165,7 @@ it('should have correct route structure for add user to organization', () => {
 
 it('should have correct route structure for view user in organization', () => {
   const viewUserRoute = organizationRoutes.find(
-    (route) => route.path === '/organizations/:orgID/:userID'
+    (route) => route.path === '/organizations/:orgID/users/:userID'
   )
   expect(viewUserRoute).toBeDefined()
   expect(viewUserRoute.handle.title).toBe('User profile')
@@ -192,7 +192,7 @@ it('should have correct route structure for BCeID add user', () => {
 
 it('should have correct route structure for BCeID view user', () => {
   const viewUserRoute = organizationRoutes.find(
-    (route) => route.path === '/organization/:userID'
+    (route) => route.path === '/organization/users/:userID'
   )
   expect(viewUserRoute).toBeDefined()
   expect(viewUserRoute.handle.title).toBe('User profile')
@@ -241,14 +241,14 @@ describe('Route Elements', () => {
 
   it('should use UserDetailsCard with correct props for view user routes', () => {
     const viewUserOrgRoute = organizationRoutes.find(
-      (route) => route.path === '/organizations/:orgID/:userID'
+      (route) => route.path === '/organizations/:orgID/users/:userID'
     )
     expect(viewUserOrgRoute.element.type).toBe(UserDetailsCard)
     expect(viewUserOrgRoute.element.props.userType).toBe('bceid')
     expect(viewUserOrgRoute.element.props.addMode).toBeUndefined()
 
     const viewUserBceidRoute = organizationRoutes.find(
-      (route) => route.path === '/organization/:userID'
+      (route) => route.path === '/organization/users/:userID'
     )
     expect(viewUserBceidRoute.element.type).toBe(UserDetailsCard)
     expect(viewUserBceidRoute.element.props.userType).toBe('bceid') // Updated: now has bceid
@@ -280,7 +280,7 @@ describe('Route Handle Properties', () => {
 
     const expectedCrumbRoutes = [
       '/organizations',
-      '/organizations/:orgID/:userID'
+      '/organizations/:orgID/users/:userID'
     ]
     routesWithCrumbs.forEach((route) => {
       expect(expectedCrumbRoutes.includes(route.path)).toBe(true)
@@ -293,7 +293,7 @@ describe('Route Handle Properties', () => {
     expect(listRoute.handle.crumb()).toBe('Organizations')
 
     const viewUserRoute = organizationRoutes.find(
-      (route) => route.path === '/organizations/:orgID/:userID'
+      (route) => route.path === '/organizations/:orgID/users/:userID'
     )
     expect(viewUserRoute.handle.crumb()).toBe('Users')
   })

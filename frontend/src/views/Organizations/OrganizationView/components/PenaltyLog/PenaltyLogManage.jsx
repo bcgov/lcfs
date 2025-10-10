@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Grid2 from '@mui/material/Grid2'
@@ -26,26 +20,7 @@ import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete } from '@/utils/schedules'
-
-const PENALTY_TYPES = [
-  'Single contravention',
-  'Continuous contravention'
-]
-
-const booleanValueSetter = (field) => (params) => {
-  const { newValue } = params
-  if (newValue === undefined || newValue === null || newValue === '') {
-    params.data[field] = false
-    return true
-  }
-  if (typeof newValue === 'boolean') {
-    params.data[field] = newValue
-    return true
-  }
-  params.data[field] =
-    newValue === 'Yes' || newValue === 'true' || newValue === 'True'
-  return true
-}
+import { penaltyLogEditorColDefs } from './_schema'
 
 const mapApiPenaltyToRow = (penalty, existingId) => ({
   id: existingId ?? penalty.penaltyLogId ?? uuid(),
@@ -97,10 +72,8 @@ export const PenaltyLogManage = () => {
     []
   )
 
-  const {
-    data: compliancePeriods,
-    isLoading: compliancePeriodsLoading
-  } = useCompliancePeriod()
+  const { data: compliancePeriods, isLoading: compliancePeriodsLoading } =
+    useCompliancePeriod()
 
   const {
     data: penaltyLogsData,
@@ -155,152 +128,11 @@ export const PenaltyLogManage = () => {
       option.value.toString()
     )
 
-    return [
-      validation,
-      actions((params) => ({
-        enableDuplicate: false,
-        enableUndo: false,
-        enableStatus: false,
-        enableDelete: !!params.data.penaltyLogId
-      })),
-      {
-        field: 'id',
-        hide: true
-      },
-      {
-        field: 'penaltyLogId',
-        hide: true
-      },
-      {
-        field: 'compliancePeriodId',
-        headerComponent: RequiredHeader,
-        headerName: t('org:penaltyLog.columns.compliancePeriod', {
-          defaultValue: 'Compliance period'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: complianceValues
-        },
-        valueFormatter: ({ value }) =>
-          value !== undefined && value !== null
-            ? compliancePeriodLabelMap.get(Number(value)) ?? ''
-            : '',
-        valueSetter: (params) => {
-          if (params.newValue === undefined || params.newValue === null) {
-            return false
-          }
-          const numericValue = Number(params.newValue)
-          params.data.compliancePeriodId = numericValue
-          params.data.complianceYear = compliancePeriodLabelMap.get(
-            numericValue
-          )
-          return true
-        },
-        minWidth: 200
-      },
-      {
-        field: 'penaltyType',
-        headerComponent: RequiredHeader,
-        headerName: t('org:penaltyLog.columns.penaltyType', {
-          defaultValue: 'Contravention type'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: PENALTY_TYPES
-        },
-        minWidth: 220
-      },
-      {
-        field: 'penaltyAmount',
-        headerComponent: RequiredHeader,
-        headerName: t('org:penaltyLog.columns.penaltyAmount', {
-          defaultValue: 'Penalty amount (CAD)'
-        }),
-        cellEditor: 'agNumberCellEditor',
-        valueFormatter: ({ value }) =>
-          value === null || value === undefined
-            ? ''
-            : Number(value).toLocaleString('en-CA', {
-                style: 'currency',
-                currency: 'CAD',
-                maximumFractionDigits: 0
-              }),
-        minWidth: 200
-      },
-      {
-        field: 'offenceHistory',
-        headerName: t('org:penaltyLog.columns.offenceHistory', {
-          defaultValue: 'History of offences'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: ['Yes', 'No']
-        },
-        valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
-        valueSetter: booleanValueSetter('offenceHistory'),
-        minWidth: 190
-      },
-      {
-        field: 'deliberate',
-        headerName: t('org:penaltyLog.columns.deliberate', {
-          defaultValue: 'Deliberate contravention'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: ['Yes', 'No']
-        },
-        valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
-        valueSetter: booleanValueSetter('deliberate'),
-        minWidth: 210
-      },
-      {
-        field: 'effortsToCorrect',
-        headerName: t('org:penaltyLog.columns.effortsToCorrect', {
-          defaultValue: 'Efforts to correct'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: ['Yes', 'No']
-        },
-        valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
-        valueSetter: booleanValueSetter('effortsToCorrect'),
-        minWidth: 180
-      },
-      {
-        field: 'economicBenefitDerived',
-        headerName: t('org:penaltyLog.columns.economicBenefitDerived', {
-          defaultValue: 'Economic benefit derived'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: ['Yes', 'No']
-        },
-        valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
-        valueSetter: booleanValueSetter('economicBenefitDerived'),
-        minWidth: 220
-      },
-      {
-        field: 'effortsToPreventRecurrence',
-        headerName: t('org:penaltyLog.columns.effortsToPreventRecurrence', {
-          defaultValue: 'Efforts to prevent recurrence'
-        }),
-        cellEditor: 'agSelectCellEditor',
-        cellEditorParams: {
-          values: ['Yes', 'No']
-        },
-        valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
-        valueSetter: booleanValueSetter('effortsToPreventRecurrence'),
-        minWidth: 240
-      },
-      {
-        field: 'notes',
-        headerName: t('org:penaltyLog.columns.notes', {
-          defaultValue: 'Notes'
-        }),
-        cellEditor: 'agLargeTextCellEditor',
-        minWidth: 260
-      }
-    ]
+    return penaltyLogEditorColDefs(
+      compliancePeriodLabelMap,
+      complianceValues,
+      t
+    )
   }, [compliancePeriodLabelMap, compliancePeriodOptions, t])
 
   useEffect(() => {
@@ -375,10 +207,7 @@ export const PenaltyLogManage = () => {
 
         const response = await savePenaltyLog(payload)
         const savedPenalty = response.data ?? response
-        const updatedRow = mapApiPenaltyToRow(
-          savedPenalty,
-          params.node.data.id
-        )
+        const updatedRow = mapApiPenaltyToRow(savedPenalty, params.node.data.id)
         params.node.updateData(updatedRow)
         setRowData((prevRows) =>
           prevRows.map((row) =>
@@ -422,17 +251,18 @@ export const PenaltyLogManage = () => {
   }
 
   return (
-    <Grid2 className="penalty-log-manage" px={1} py={2} container direction="column">
-      <Grid2 display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <BCTypography variant="h5" color="primary">
-          {t('org:penaltyLog.manageTitle', {
-            defaultValue: 'Manage penalty log entries'
-          })}
-        </BCTypography>
-        <BCButton variant="outlined" color="primary" onClick={handleBack}>
-          {t('common:backBtn', { defaultValue: 'Back' })}
-        </BCButton>
-      </Grid2>
+    <Grid2
+      className="penalty-log-manage"
+      px={1}
+      py={2}
+      container
+      direction="column"
+    >
+      <BCTypography variant="h5" color="primary">
+        {t('org:penaltyLog.manageTitle', {
+          defaultValue: 'Manage penalty log entries'
+        })}
+      </BCTypography>
 
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
         <BCGridEditor
@@ -446,6 +276,14 @@ export const PenaltyLogManage = () => {
           onAddRows={onAddRows}
           gridOptions={gridOptions}
           loading={penaltyLogsLoading}
+          saveButtonProps={{
+            enabled: true,
+            text: t('org:penaltyLog.saveReturn'),
+            onSave: () =>
+              navigate(
+                ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID)
+              )
+          }}
         />
       </BCBox>
     </Grid2>
