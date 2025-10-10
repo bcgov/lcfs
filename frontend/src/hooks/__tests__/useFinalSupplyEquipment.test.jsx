@@ -8,7 +8,11 @@ import {
   useUpdateFinalSupplyEquipment,
   useDeleteFinalSupplyEquipment,
   useImportFinalSupplyEquipment,
-  useGetFinalSupplyEquipmentImportJobStatus
+  useGetFinalSupplyEquipmentImportJobStatus,
+  useGetFSEReportingList,
+  useSaveFSEReporting,
+  useDeleteFSEReportingBatch,
+  useSetFSEReportingDefaultDates
 } from '../useFinalSupplyEquipment'
 
 // Mock the API service
@@ -30,7 +34,8 @@ vi.mock('@/constants/routes', () => ({
     saveFinalSupplyEquipments: '/final-supply-equipment',
     importFinalSupplyEquipments: '/final-supply-equipment/import/:reportID',
     getImportFinalSupplyEquipmentsJobStatus:
-      '/final-supply-equipment/import-job-status/:jobID'
+      '/final-supply-equipment/import-job-status/:jobID',
+    saveFSEReportingBatch: '/final-supply-equipments/reporting/batch'
   }
 }))
 
@@ -428,6 +433,249 @@ describe('useFinalSupplyEquipment', () => {
           useGetFinalSupplyEquipmentImportJobStatus('job-123', { retry: 0 }),
         { wrapper: createWrapper() }
       )
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useGetFSEReportingList', () => {
+    it('should fetch FSE reporting list successfully', async () => {
+      const mockData = {
+        fseReports: [
+          { id: 1, fseComplianceReportingId: 1 },
+          { id: 2, fseComplianceReportingId: 2 }
+        ],
+        pagination: { total: 2, page: 1 }
+      }
+      mockApiService.post.mockResolvedValue({ data: mockData })
+
+      const pagination = { page: 1, size: 10, filters: [], sort_orders: [] }
+      const { result } = renderHook(
+        () => useGetFSEReportingList(123, pagination, {}, 456),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual(mockData)
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/list?organizationId=456&complianceReportId=123',
+        pagination
+      )
+    })
+
+    it('should include mode in query params when provided', async () => {
+      const mockData = { fseReports: [], pagination: {} }
+      mockApiService.post.mockResolvedValue({ data: mockData })
+
+      const pagination = { page: 1, size: 10, filters: [], sort_orders: [] }
+      const { result } = renderHook(
+        () => useGetFSEReportingList(123, pagination, {}, 456, 'edit'),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/list?organizationId=456&complianceReportId=123&mode=edit',
+        pagination
+      )
+    })
+
+    it('should not fetch when organizationId is missing', () => {
+      const pagination = { page: 1, size: 10, filters: [], sort_orders: [] }
+      const { result } = renderHook(
+        () => useGetFSEReportingList(123, pagination, {}, null),
+        { wrapper: createWrapper() }
+      )
+
+      expect(result.current.status).toBe('pending')
+      expect(mockApiService.post).not.toHaveBeenCalled()
+    })
+
+    it('should handle API errors', async () => {
+      const mockError = new Error('Fetch failed')
+      mockApiService.post.mockRejectedValue(mockError)
+
+      const pagination = { page: 1, size: 10, filters: [], sort_orders: [] }
+      const { result } = renderHook(
+        () => useGetFSEReportingList(123, pagination, { retry: 0 }, 456),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useSaveFSEReporting', () => {
+    it('should save single FSE reporting record successfully', async () => {
+      const mockResponse = { data: { id: 1 } }
+      mockApiService.put.mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(() => useSaveFSEReporting(456, 123), {
+        wrapper: createWrapper()
+      })
+
+      const reportData = {
+        fseComplianceReportingId: 1,
+        quantity: 100
+      }
+
+      result.current.mutate(reportData)
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.put).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/1',
+        reportData
+      )
+    })
+
+    it('should handle batch save operations', async () => {
+      const mockResponse = { data: [] }
+      mockApiService.post.mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(() => useSaveFSEReporting(456, 123), {
+        wrapper: createWrapper()
+      })
+
+      const batchData = [
+        { fseComplianceReportingId: 1, quantity: 100 },
+        { fseComplianceReportingId: 2, quantity: 200 }
+      ]
+
+      result.current.mutate(batchData)
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/batch',
+        {
+          fseReports: batchData,
+          complianceReportId: 123,
+          organizationId: 456
+        }
+      )
+    })
+
+    it('should handle save errors', async () => {
+      const mockError = new Error('Save failed')
+      mockApiService.put.mockRejectedValue(mockError)
+
+      const { result } = renderHook(() => useSaveFSEReporting(456, 123), {
+        wrapper: createWrapper()
+      })
+
+      result.current.mutate({ fseComplianceReportingId: 1 })
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useDeleteFSEReportingBatch', () => {
+    it('should delete FSE reporting records in batch', async () => {
+      const mockResponse = { data: {} }
+      mockApiService.delete.mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(
+        () => useDeleteFSEReportingBatch(123, 456),
+        {
+          wrapper: createWrapper()
+        }
+      )
+
+      const reportingIds = [1, 2, 3]
+      result.current.mutate(reportingIds)
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.delete).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/batch',
+        {
+          data: {
+            reportingIds,
+            complianceReportId: 123,
+            organizationId: 456
+          }
+        }
+      )
+    })
+
+    it('should handle delete errors', async () => {
+      const mockError = new Error('Delete failed')
+      mockApiService.delete.mockRejectedValue(mockError)
+
+      const { result } = renderHook(() => useDeleteFSEReportingBatch(123), {
+        wrapper: createWrapper()
+      })
+
+      result.current.mutate([1, 2])
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useSetFSEReportingDefaultDates', () => {
+    it('should set default dates successfully', async () => {
+      const mockResponse = { data: { success: true } }
+      mockApiService.post.mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(() => useSetFSEReportingDefaultDates(123), {
+        wrapper: createWrapper()
+      })
+
+      const dateData = {
+        startDate: '2024-01-01',
+        endDate: '2024-12-31'
+      }
+
+      result.current.mutate(dateData)
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/set-default',
+        dateData
+      )
+    })
+
+    it('should handle errors', async () => {
+      const mockError = new Error('Set default dates failed')
+      mockApiService.post.mockRejectedValue(mockError)
+
+      const { result } = renderHook(() => useSetFSEReportingDefaultDates(123), {
+        wrapper: createWrapper()
+      })
+
+      result.current.mutate({ startDate: '2024-01-01' })
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)

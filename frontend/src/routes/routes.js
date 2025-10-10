@@ -53,7 +53,13 @@ export const ROUTES = {
     EDIT: '/organizations/:orgID/edit-org',
     ADD_USER: '/organizations/:orgID/add-user',
     VIEW_USER: '/organizations/:orgID/:userID',
-    EDIT_USER: '/organizations/:orgID/:userID/edit-user'
+    EDIT_USER: '/organizations/:orgID/:userID/edit-user',
+    USERS: '/organizations/:orgID/users',
+    CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
+    COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
+    PENALTY_LOG: '/organizations/:orgID/penalty-log',
+    SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+    COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking'
   },
 
   REPORTS: {
@@ -61,11 +67,22 @@ export const ROUTES = {
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
     CALCULATOR: '/compliance-reporting/credit-calculator',
+    CHARGING_SITE: {
+      INDEX: '/compliance-reporting/charging-sites',
+      VIEW: '/compliance-reporting/charging-sites/:siteId',
+      EDIT: '/compliance-reporting/charging-sites/:siteId/edit',
+      ADD: '/compliance-reporting/charging-sites/add'
+    },
+    MANAGE_FSE: '/compliance-reporting/fse',
+    ADD_FSE: '/compliance-reporting/fse/add',
+    EDIT_FSE: '/compliance-reporting/fse/:fseId/edit',
     ADD: {
       SUPPLY_OF_FUEL:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/supply-of-fuel',
       FINAL_SUPPLY_EQUIPMENTS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/final-supply-equipments',
+      FSE_REPORTING:
+        '/compliance-reporting/:compliancePeriod/:complianceReportId/fse-reporting',
       ALLOCATION_AGREEMENTS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/allocation-agreements',
       NOTIONAL_TRANSFERS:
@@ -103,6 +120,10 @@ export const ROUTES = {
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID',
     EXPORT: '/fuel-codes/export'
+  },
+
+  CHARGING_SITES: {
+    EQUIPMENT_PROCESSING: '/charging-sites/:siteId/equipment-processing'
   },
 
   FORMS: {

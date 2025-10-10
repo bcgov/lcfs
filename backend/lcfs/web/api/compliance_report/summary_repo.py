@@ -171,7 +171,8 @@ class ComplianceReportSummaryRepository:
         compliance_report = result.scalar_one_or_none()
 
         if not compliance_report:
-            raise ValueError(
+            # Let decorator wrap into DatabaseException
+            raise Exception(
                 f"No compliance report found with ID {summary.compliance_report_id}"
             )
 
@@ -185,7 +186,8 @@ class ComplianceReportSummaryRepository:
         if existing_summary:
             summary_obj = existing_summary
         else:
-            raise ValueError(
+            # Let decorator wrap into DatabaseException
+            raise Exception(
                 f"""No summary found with report ID {
                     summary.compliance_report_id}"""
             )

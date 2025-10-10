@@ -15,7 +15,7 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "total_tracked_fuel_supplied",
     },
     4: {
-        "description": "Volume of eligible renewable fuel required",
+        "description": "Volume of eligible renewable fuel required (Gasoline = 5%, Diesel = {diesel_percent})",
         "field": "eligible_renewable_fuel_required",
     },
     5: {
@@ -23,8 +23,8 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "net_notionally_transferred",
     },
     6: {
-        "legacy": "Volume of eligible renewable fuel retained (up to 5% of Line 4|15 - gasoline={}; diesel={})",
-        "description": "Volume of eligible renewable fuel retained (up to 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
+        "legacy": "Volume of eligible renewable fuel retained (up to lesser of excess and 5% of Line 4|15 - gasoline={}; diesel={})",
+        "description": "Volume of eligible renewable fuel retained (up to lesser of excess and 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
         "field": "renewable_fuel_retained",
     },
     7: {
@@ -33,8 +33,8 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "previously_retained",
     },
     8: {
-        "legacy": "Volume of eligible renewable obligation deferred (up to 5% of Line 4|15 - gasoline={}; diesel={})",
-        "description": "Volume of eligible renewable obligation deferred (up to 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
+        "legacy": "Volume of eligible renewable obligation deferred (up to lesser of deficiency and 5% of Line 4|15 - gasoline={}; diesel={})",
+        "description": "Volume of eligible renewable obligation deferred (up to lesser of deficiency and 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
         "field": "obligation_deferred",
     },
     9: {

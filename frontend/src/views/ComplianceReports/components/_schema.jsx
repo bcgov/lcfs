@@ -8,14 +8,17 @@ import {
   LastCommentRenderer
 } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
-import { useGetComplianceReportStatuses, useGetAvailableAnalysts } from '@/hooks/useComplianceReports'
+import {
+  useGetComplianceReportStatuses,
+  useGetAvailableAnalysts
+} from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
 
 export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
-    width: 220,
+    minWidth: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
@@ -49,7 +52,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'assignedAnalyst',
     headerName: t('report:reportColLabels.assignedAnalyst'),
-    width: 150,
+    minWidth: 180,
     hide: isSupplier,
     valueGetter: ({ data }) => data.assignedAnalyst?.initials || '',
     cellRenderer: AssignedAnalystCell,
@@ -79,7 +82,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'lastComment',
     headerName: t('report:reportColLabels.lastComment'),
-    width: 160,
+    minWidth: 160,
     hide: isSupplier, // Only show for IDIR users
     cellRenderer: LastCommentRenderer,
     sortable: false,
@@ -91,7 +94,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
-    width: 210,
+    minWidth: 190,
     valueGetter: ({ data }) => data.compliancePeriod || '',
     filterParams: {
       buttons: ['clear']
@@ -100,14 +103,14 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'organization',
     headerName: t('report:reportColLabels.organization'),
-    flex: 2,
+    minWidth: 250,
     hide: isSupplier,
     valueGetter: ({ data }) => data.organizationName || ''
   },
   {
     field: 'type',
     headerName: t('report:reportColLabels.type'),
-    flex: 2,
+    minWidth: 300,
     valueGetter: ({ data }) => data.reportType,
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -136,7 +139,7 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
     field: 'updateDate',
     cellDataType: 'dateString',
     headerName: t('report:reportColLabels.lastUpdated'),
-    minWidth: '80',
+    minWidth: 225,
     valueGetter: ({ data }) => data.updateDate || '',
     valueFormatter: timezoneFormatter,
     filter: 'agDateColumnFilter',
@@ -179,6 +182,90 @@ export const renewableFuelColumns = (
   let gasolineEditableCells = []
   let dieselEditableCells = []
   let jetFuelEditableCells = []
+
+  const safeRound = (value = 0) => Math.round(value || 0)
+
+  const toRoundedOrUndefined = (value) => {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+      return undefined
+    }
+    return Math.round(numericValue)
+  }
+
+  const buildLineSevenConstraint = (maxValue, currentValue) => {
+    const constraint = { min: 0 }
+    const roundedMax = toRoundedOrUndefined(maxValue)
+    const roundedCurrent = toRoundedOrUndefined(currentValue) ?? 0
+
+    if (roundedMax !== undefined && roundedMax > 0) {
+      constraint.max = Math.max(roundedMax, roundedCurrent)
+    }
+
+    return constraint
+  }
+
+  const line7Constraints = {
+    gasoline: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxGasoline,
+      data[SUMMARY.LINE_7]?.gasoline
+    ),
+    diesel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxDiesel,
+      data[SUMMARY.LINE_7]?.diesel
+    ),
+    jetFuel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxJetFuel,
+      data[SUMMARY.LINE_7]?.jetFuel
+    )
+  }
+
+  const unlockedLineSevenConstraint = (constraint) =>
+    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+
+  // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
+  const line6Caps = {
+    gasoline: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.gasoline || 0) - (data[SUMMARY.LINE_4]?.gasoline || 0)), // excess
+        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
+      )
+    ),
+    diesel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.diesel || 0) - (data[SUMMARY.LINE_4]?.diesel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
+      )
+    ),
+    jetFuel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.jetFuel || 0) - (data[SUMMARY.LINE_4]?.jetFuel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
+      )
+    )
+  }
+
+  // Line 8 (Deferral) caps - LCFA s.10(3): Lesser of deficiency and 5% of Line 4
+  const line8Caps = {
+    gasoline: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.gasoline || 0) - (data[SUMMARY.LINE_2]?.gasoline || 0)), // deficiency
+        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
+      )
+    ),
+    diesel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.diesel || 0) - (data[SUMMARY.LINE_2]?.diesel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
+      )
+    ),
+    jetFuel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.jetFuel || 0) - (data[SUMMARY.LINE_2]?.jetFuel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
+      )
+    )
+  }
 
   // ========= Gasoline Logic ============
   if (
@@ -265,14 +352,30 @@ export const renewableFuelColumns = (
   if (parseInt(compliancePeriodYear) === 2024) {
     // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
     if (!lines7And9Locked) {
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      gasolineEditableCells = [
+        ...gasolineEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
+      dieselEditableCells = [
+        ...dieselEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
     }
   } else if (parseInt(compliancePeriodYear) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      gasolineEditableCells = [
+        ...gasolineEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
+      dieselEditableCells = [
+        ...dieselEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
     }
   }
   if (parseInt(compliancePeriodYear) < 2029) {
@@ -301,9 +404,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: gasolineEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) }
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.gasoline },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.gasoline),
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.gasoline }
       }
     },
     {
@@ -314,9 +417,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: dieselEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) }
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.diesel },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.diesel),
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.diesel }
       }
     },
     {
@@ -327,9 +430,9 @@ export const renewableFuelColumns = (
       editable,
       editableCells: jetFuelEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) }
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.jetFuel },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.jetFuel),
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.jetFuel }
       }
     }
   ]
@@ -392,6 +495,4 @@ export const earlyIssuanceColumns = (t) => [
   }
 ]
 
-export const defaultSortModel = [
-  { field: 'updateDate', direction: 'desc' }
-]
+export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { suppressKeyboardEvent, isEqual } from '../eventHandlers'
 
 // Helper to build a basic ag-cell DOM structure
@@ -54,6 +54,86 @@ describe('suppressKeyboardEvent', () => {
     // Case: Tab pressed on first element -> true (stay within cell)
     event = { code: 'Tab', srcElement: input1, shiftKey: false, key: 'Tab' }
     expect(suppressKeyboardEvent({ event })).toBe(true)
+  })
+
+  it('triggers row navigation when Enter is pressed and keyboard navigation is enabled', () => {
+    const cell = createCell()
+    const event = { code: 'Enter', srcElement: cell }
+    const mockOnRowClicked = vi.fn()
+    const mockParams = {
+      event,
+      node: { id: 'test-row' },
+      data: { id: 1 }
+    }
+
+    const result = suppressKeyboardEvent(mockParams, {
+      enableKeyboardRowNavigation: true,
+      onRowClicked: mockOnRowClicked
+    })
+
+    expect(result).toBe(true) // Should suppress default behavior
+    expect(mockOnRowClicked).toHaveBeenCalledWith({
+      ...mockParams,
+      event: expect.objectContaining({
+        target: cell,
+        currentTarget: cell
+      })
+    })
+  })
+
+  it('does not trigger row navigation when Enter is pressed but keyboard navigation is disabled', () => {
+    const cell = createCell()
+    const event = { code: 'Enter', srcElement: cell }
+    const mockOnRowClicked = vi.fn()
+    const mockParams = {
+      event,
+      node: { id: 'test-row' },
+      data: { id: 1 }
+    }
+
+    const result = suppressKeyboardEvent(mockParams, {
+      enableKeyboardRowNavigation: false,
+      onRowClicked: mockOnRowClicked
+    })
+
+    expect(result).toBe(false) // Should allow default behavior
+    expect(mockOnRowClicked).not.toHaveBeenCalled()
+  })
+
+  it('does not trigger row navigation when Enter is pressed but no onRowClicked handler is provided', () => {
+    const cell = createCell()
+    const event = { code: 'Enter', srcElement: cell }
+    const mockParams = {
+      event,
+      node: { id: 'test-row' },
+      data: { id: 1 }
+    }
+
+    const result = suppressKeyboardEvent(mockParams, {
+      enableKeyboardRowNavigation: true,
+      onRowClicked: null
+    })
+
+    expect(result).toBe(false) // Should allow default behavior
+  })
+
+  it('does not trigger row navigation when Enter is pressed but no node is provided', () => {
+    const cell = createCell()
+    const event = { code: 'Enter', srcElement: cell }
+    const mockOnRowClicked = vi.fn()
+    const mockParams = {
+      event,
+      node: null,
+      data: { id: 1 }
+    }
+
+    const result = suppressKeyboardEvent(mockParams, {
+      enableKeyboardRowNavigation: true,
+      onRowClicked: mockOnRowClicked
+    })
+
+    expect(result).toBe(false) // Should allow default behavior
+    expect(mockOnRowClicked).not.toHaveBeenCalled()
   })
 })
 

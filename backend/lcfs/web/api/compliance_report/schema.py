@@ -45,8 +45,8 @@ class ReportingFrequency(str, Enum):
 
 
 class PortsEnum(str, Enum):
-    SINGLE = "Single port"
-    DUAL = "Dual port"
+    SINGLE_PORT = "Single port"
+    DUAL_PORT = "Dual port"
 
 
 class SummarySchema(BaseSchema):
@@ -308,6 +308,9 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     bold: Optional[bool] = False
     total_value: Optional[float] = 0
     format: Optional[str] = FORMATS.NUMBER.value
+    max_gasoline: Optional[float] = None
+    max_diesel: Optional[float] = None
+    max_jet_fuel: Optional[float] = None
 
 
 class ComplianceReportSummarySchema(BaseSchema):
@@ -328,7 +331,7 @@ class ComplianceReportSummarySchema(BaseSchema):
     low_carbon_penalty_override: Optional[float] = None
     penalty_override_date: Optional[datetime] = None
     penalty_override_user: Optional[int] = None
-    
+
     # Lines 7 & 9 locking for 2025+ reports
     lines_7_and_9_locked: Optional[bool] = False
 
@@ -352,10 +355,10 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
-    filters: Optional[List[FilterModel]] = None
-    page: Optional[int] = None
-    size: Optional[int] = None
-    sort_orders: Optional[List[SortOrder]] = None
+    filters: Optional[List[FilterModel]] = []
+    page: Optional[int] = 1
+    size: Optional[int] = 10
+    sort_orders: Optional[List[SortOrder]] = []
 
 
 class ComplianceReportUpdateSchema(BaseSchema):

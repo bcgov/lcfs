@@ -583,6 +583,16 @@ class TransactionRepository:
                     admin_date = admin_date.date()
                 if admin_date <= compliance_period_end_local.date():
                     count_as_past = True
+            # 6. Transactions not linked to any parent entity (Historical reports)
+            elif (
+                row.admin_effective_date is None
+                and row.ia_effective_date is None
+                and row.transfer_from_effective_date is None
+                and row.transfer_to_effective_date is None
+                and not row.is_compliance_report
+            ):
+                # If the transaction is not linked to any parent entity, consider it as historical reports that aren't in the system yet
+                count_as_past = True
 
             # Apply the transaction to the appropriate balance
             if count_as_past:
@@ -591,7 +601,7 @@ class TransactionRepository:
                 # This is a future negative transaction - but only count it if it's not
                 # associated with any parent entity that has a future effective date
                 is_future_debit = True
-                
+
                 # Check if this transaction belongs to a transfer with future effective date
                 if row.transfer_from_effective_date is not None:
                     transfer_date = row.transfer_from_effective_date
@@ -599,14 +609,14 @@ class TransactionRepository:
                         transfer_date = transfer_date.date()
                     if transfer_date > compliance_period_end_local.date():
                         is_future_debit = False
-                        
+
                 if row.transfer_to_effective_date is not None:
                     transfer_date = row.transfer_to_effective_date
                     if hasattr(transfer_date, "date"):
                         transfer_date = transfer_date.date()
                     if transfer_date > compliance_period_end_local.date():
                         is_future_debit = False
-                        
+
                 # Check if this transaction belongs to an IA with future effective date
                 if row.ia_effective_date is not None:
                     ia_date = row.ia_effective_date
@@ -614,7 +624,7 @@ class TransactionRepository:
                         ia_date = ia_date.date()
                     if ia_date > compliance_period_end_local.date():
                         is_future_debit = False
-                        
+
                 # Check if this transaction belongs to an admin adjustment with future effective date
                 if row.admin_effective_date is not None:
                     admin_date = row.admin_effective_date
@@ -622,7 +632,7 @@ class TransactionRepository:
                         admin_date = admin_date.date()
                     if admin_date > compliance_period_end_local.date():
                         is_future_debit = False
-                
+
                 if is_future_debit:
                     future_negative += compliance_units
 
@@ -776,7 +786,7 @@ class TransactionRepository:
 
         # Ensure a valid entity type was provided
         if condition is None:
-            raise ValueError(f"Invalid entity type: {entity_type}")
+            raise Exception(f"Invalid entity type: {entity_type}")
 
         query = select(TransferStatus.status).where(condition)
         result = await self.db.execute(query)

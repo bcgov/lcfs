@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, BigInteger
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, Enum, BigInteger, text
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 import enum
@@ -70,7 +70,9 @@ class NotionalTransfer(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Indicates whether the transfer is Received or Transferred",
     )
-
+    is_canada_produced = Column(Boolean, server_default=text('false'), comment="Flag for Canada production fuels")
+    is_q1_supplied = Column(Boolean, server_default=text('false'), comment="Flag for Q1 supply of fuel")
+    
     compliance_report = relationship(
         "ComplianceReport", back_populates="notional_transfers"
     )

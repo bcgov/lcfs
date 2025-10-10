@@ -422,18 +422,26 @@ const GenericChipRenderer = ({
   const [visibleChips, setVisibleChips] = useState([])
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
-  const options = useMemo(
-    () =>
-      Array.isArray(value)
-        ? value.filter((item) => item !== '')
-        : value && value !== ''
-          ? value
-              .split(',')
-              .map((item) => item.trim())
-              .filter((item) => item !== '')
-          : [],
-    [value]
-  )
+  const options = useMemo(() => {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => item?.label || item)
+        .filter((item) => item && item !== '')
+    }
+
+    if (value?.label) {
+      return [value.label]
+    }
+
+    if (typeof value === 'string' && value) {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+
+    return []
+  }, [value])
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
@@ -555,15 +563,23 @@ const defaultRenderChip = (chip) => (
       backgroundColor: `${colors.input.main}`,
       color: '#fff',
       margin: '0 2px',
-      width: `${chip.width}px`,
+      minWidth: `${Math.max(chip.width || 60, 40)}px`,
+      maxWidth: `${chip.maxWidth || 200}px`,
       fontSize: '0.8125rem',
       boxSizing: 'border-box',
       height: '32px',
       borderRadius: '16px',
       whiteSpace: 'nowrap',
       textOverflow: 'ellipsis',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      flexShrink: 0,
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        transform: 'scale(1.05)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }
     }}
+    title={chip.text}
   >
     {chip.text}
   </span>
@@ -579,18 +595,26 @@ const defaultRenderOverflowChip = (hiddenChipsCount) =>
         borderRadius: '16px',
         padding: '0.5rem',
         color: `${colors.text.main}`,
-        cursor: 'text',
+        cursor: 'pointer',
         margin: '0 2px',
         fontSize: '0.8125rem',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         boxSizing: 'border-box',
-        width: '40px',
+        minWidth: '40px',
+        maxWidth: '60px',
         height: '32px',
         whiteSpace: 'nowrap',
         textOverflow: 'ellipsis',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        flexShrink: 0,
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          backgroundColor: 'rgba(0, 0, 0, 0.12)',
+          transform: 'scale(1.05)'
+        }
       }}
       title={`+${hiddenChipsCount} more`}
     >
@@ -743,3 +767,108 @@ export const LastCommentRenderer = (props) => {
     </Link>
   )
 }
+
+export const createStatusRenderer = (
+  colorMap,
+  options = {},
+  value = undefined
+) => {
+  const {
+    statusField = 'status',
+    defaultColor = 'info',
+    variant = 'contained',
+    size = 'lg',
+    minWidth = '120px',
+    fontSize = '0.875rem',
+    padding = '0.4em 0.6em',
+    fontWeight = 'regular',
+    textTransform = null,
+    replaceUnderscores = false,
+    margin = 1,
+    enableLink = false,
+    urlGenerator = null
+  } = options
+
+  return (props) => {
+    const { data, node } = props
+    const location = useLocation()
+
+    // Get the status value from the specified field path
+    let statusValue = statusField.includes('.')
+      ? statusField.split('.').reduce((obj, key) => obj?.[key], data)
+      : data[statusField]
+    if (
+      statusValue &&
+      typeof statusValue === 'object' &&
+      statusValue !== null &&
+      !Array.isArray(statusValue)
+    ) {
+      statusValue = statusValue.status || statusValue
+    }
+    if (value !== undefined) {
+      statusValue = value
+    }
+    // Get the display text
+    let displayText = statusValue
+    if (replaceUnderscores && typeof displayText === 'string') {
+      displayText = displayText.replaceAll('_', ' ')
+    }
+
+    const badgeColor = colorMap[statusValue] || defaultColor
+
+    const component = (
+      <BCBox
+        m={margin}
+        sx={{
+          display: 'flex',
+          justifyContent: 'center'
+        }}
+        component="span"
+      >
+        <BCBadge
+          badgeContent={displayText}
+          color={badgeColor}
+          variant={variant}
+          size={size}
+          sx={{
+            '& .MuiBadge-badge': {
+              minWidth,
+              fontWeight,
+              fontSize,
+              padding,
+              ...(textTransform && { textTransform })
+            }
+          }}
+        />
+      </BCBox>
+    )
+
+    // If link is enabled, wrap in Link
+    if (enableLink) {
+      const targetUrl = urlGenerator
+        ? urlGenerator({ data, node })
+        : `${location.pathname}/${node?.id}`
+
+      return (
+        <Link to={targetUrl} style={{ color: '#000' }}>
+          {component}
+        </Link>
+      )
+    }
+
+    return component
+  }
+}
+
+export const ChargingSiteStatusRenderer = createStatusRenderer(
+  {
+    Draft: 'info',
+    Submitted: 'warning',
+    Validated: 'success',
+    Updated: 'info',
+    Decommissioned: 'error'
+  },
+  {
+    statusField: 'status.status'
+  }
+)

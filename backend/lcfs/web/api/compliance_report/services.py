@@ -460,7 +460,38 @@ class ComplianceReportServices:
             )
         new_version = latest_report.version + 1
 
-        # 5. Create the new supplemental report object
+        # 5. Copy summary data from the current submitted report, focusing on user-input lines 6-9
+        if current_report.summary:
+            # Handle both SQLAlchemy model and schema objects
+            if hasattr(current_report.summary, '__table__'):
+                # SQLAlchemy model - use table columns
+                summary_data = {
+                    column: getattr(current_report.summary, column)
+                    for column in current_report.summary.__table__.columns.keys()
+                    if any(column.startswith(f"line_{i}") for i in range(6, 10))
+                }
+            else:
+                # Pydantic schema or other object - copy specific line fields manually
+                summary_data = {}
+                for line_num in range(6, 10):
+                    for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
+                        if line_num == 6:
+                            field_name = f"line_{line_num}_renewable_fuel_retained_{fuel_type}"
+                        elif line_num == 7:
+                            field_name = f"line_{line_num}_previously_retained_{fuel_type}"
+                        elif line_num == 8:
+                            field_name = f"line_{line_num}_obligation_deferred_{fuel_type}"
+                        elif line_num == 9:
+                            field_name = f"line_{line_num}_obligation_added_{fuel_type}"
+
+                        if hasattr(current_report.summary, field_name):
+                            summary_data[field_name] = getattr(current_report.summary, field_name)
+
+            new_summary = ComplianceReportSummary(**summary_data)
+        else:
+            new_summary = ComplianceReportSummary()  # Fallback to empty if no summary exists
+
+        # Create the new supplemental report object
         new_report = ComplianceReport(
             compliance_period_id=current_report.compliance_period_id,
             organization_id=current_report.organization_id,
@@ -474,7 +505,7 @@ class ComplianceReportServices:
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
                 else f"Early issuance - Supplemental report {new_version}"
             ),  # Automatic nickname
-            summary=ComplianceReportSummary(),  # Start with an empty summary
+            summary=new_summary,  # Copy summary data from current report
             create_user=user.keycloak_username,  # Log who created it
             update_user=user.keycloak_username,
         )

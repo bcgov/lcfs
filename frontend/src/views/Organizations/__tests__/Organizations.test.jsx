@@ -23,11 +23,55 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-// Mock useApiService
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({
+    gridRef,
+    onPaginationChange,
+    queryData,
+    getRowId,
+    gridOptions,
+    defaultColDef,
+    handleGridKey,
+    ...otherProps
+  }) => {
+    // Set up gridRef with clearFilters method
+    if (gridRef) {
+      gridRef.current = {
+        clearFilters: vi.fn()
+      }
+    }
+
+    return (
+      <div data-test="bc-grid-viewer" data-testid="grid" {...otherProps}>
+        BCGridViewer
+      </div>
+    )
+  }
+}))
+
 vi.mock('@/services/useApiService', () => ({
   useApiService: () => ({
-    download: mockDownload
+    download: mockDownload,
+    post: vi.fn().mockResolvedValue({
+      data: {
+        organizations: [],
+        pagination: { total: 0, page: 1, size: 10 }
+      }
+    })
   })
+}))
+
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationsList: () => ({
+    data: {
+      organizations: [],
+      pagination: { total: 0, page: 1, size: 10 }
+    },
+    isLoading: false,
+    isError: false,
+    error: null
+  }),
+  useOrganizationStatuses: () => ({ data: [] })
 }))
 
 // Mock react-i18next
@@ -39,7 +83,8 @@ vi.mock('react-i18next', () => ({
         'org:newOrgBtn': 'Add Organization',
         'org:orgDownloadBtn': 'Download Organizations',
         'org:userDownloadBtn': 'Download Users',
-        'org:orgDownloadFailMsg': 'Failed to download organization information.',
+        'org:orgDownloadFailMsg':
+          'Failed to download organization information.',
         'org:userDownloadFailMsg': 'Failed to download user information.',
         'org:noOrgsFound': 'No organizations found'
       }
@@ -48,27 +93,14 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock cell renderers FIRST - before schema
+// Mock cell renderers
 vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
   OrgStatusRenderer: () => <span>Status Renderer</span>,
   LinkRenderer: () => <div data-test="link-renderer">Link</div>,
   YesNoTextRenderer: () => <span>Yes/No Renderer</span>
 }))
 
-// Mock other dependencies
-vi.mock('@/hooks/useOrganizations', () => ({
-  useOrganizationStatuses: () => ({ data: [] })
-}))
-
-vi.mock('@/components/BCDataGrid/components', () => ({
-  BCSelectFloatingFilter: () => <div>Filter</div>
-}))
-
-vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
-  usersColumnDefs: () => []
-}))
-
-// Mock schema after dependencies
+// Mock schema
 vi.mock('./OrganizationView/_schema', () => ({
   organizationsColDefs: () => [
     { field: 'name', headerName: 'Name' },
@@ -110,11 +142,7 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children }) => (
-    <div data-test="bc-box">
-      {children}
-    </div>
-  )
+  default: ({ children }) => <div data-test="bc-box">{children}</div>
 }))
 
 vi.mock('@/components/BCButton', () => ({
@@ -127,60 +155,25 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children }) => (
-    <span data-test="bc-typography">
-      {children}
-    </span>
-  )
-}))
-
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ 
-    onSetResetGrid, 
-    gridRef, 
-    apiEndpoint, 
-    apiData, 
-    columnDefs, 
-    gridKey, 
-    getRowId, 
-    defaultSortModel, 
-    gridOptions, 
-    enableCopyButton, 
-    defaultColDef 
-  }) => {
-    // Simulate calling onSetResetGrid callback when component mounts
-    if (onSetResetGrid && typeof onSetResetGrid === 'function') {
-      setTimeout(() => {
-        onSetResetGrid(() => console.log('Grid reset'))
-      }, 0)
-    }
-    // Handle grid ref if provided
-    if (gridRef && typeof gridRef === 'object') {
-      gridRef.current = {
-        api: {
-          refreshServerSide: vi.fn(),
-          setFilterModel: vi.fn(),
-          getFilterModel: vi.fn(() => ({})),
-        }
-      }
-    }
-    return <div data-test="data-grid-server">Data Grid</div>
-  }
+  default: ({ children }) => <span data-test="bc-typography">{children}</span>
 }))
 
 vi.mock('@mui/material', () => ({
   Stack: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
-    <div data-test="mui-stack" style={{
-      display: 'flex',
-      flexDirection: direction || 'column',
-      gap: spacing,
-      flexWrap: flexWrap || 'nowrap'
-    }}>
+    <div
+      data-test="mui-stack"
+      style={{
+        display: 'flex',
+        flexDirection: direction || 'column',
+        gap: spacing,
+        flexWrap: flexWrap || 'nowrap'
+      }}
+    >
       {children}
     </div>
   ),
   TextField: ({ value, onChange, label, disabled }) => (
-    <input 
+    <input
       data-test="mui-textfield"
       value={value}
       onChange={(e) => onChange && onChange(e)}
@@ -201,16 +194,18 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 vi.mock('@/components/DownloadButton', () => {
   const { forwardRef } = require('react')
   return {
-    DownloadButton: forwardRef(({ onDownload, isDownloading, label, downloadLabel, dataTest }, ref) => (
-      <button
-        ref={ref}
-        data-test={dataTest || "download-button"}
-        onClick={onDownload}
-        disabled={isDownloading}
-      >
-        {isDownloading ? downloadLabel : label}
-      </button>
-    ))
+    DownloadButton: forwardRef(
+      ({ onDownload, isDownloading, label, downloadLabel, dataTest }, ref) => (
+        <button
+          ref={ref}
+          data-test={dataTest || 'download-button'}
+          onClick={onDownload}
+          disabled={isDownloading}
+        >
+          {isDownloading ? downloadLabel : label}
+        </button>
+      )
+    )
   }
 })
 
@@ -230,8 +225,6 @@ vi.mock('@/components/Role', () => ({
   )
 }))
 
-// Duplicate mock removed - merged with the one above
-
 describe('Organizations Component', () => {
   beforeEach(() => {
     mockLocationValue.state = null
@@ -241,7 +234,7 @@ describe('Organizations Component', () => {
 
   afterEach(async () => {
     // Wait for any pending promises to resolve
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
     vi.clearAllMocks()
     mockLocationValue.state = null
   })
@@ -249,21 +242,21 @@ describe('Organizations Component', () => {
   describe('Component Rendering', () => {
     it('renders the component with correct title', () => {
       render(<Organizations />, { wrapper })
-      
+
       expect(screen.getByText('Organizations')).toBeInTheDocument()
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
     it('renders all main UI elements', () => {
       render(<Organizations />, { wrapper })
-      
+
       expect(screen.getByText('Organizations')).toBeInTheDocument()
       expect(screen.getByText('Add Organization')).toBeInTheDocument()
       expect(screen.getByText('Download Organizations')).toBeInTheDocument()
       expect(screen.getByText('Download Users')).toBeInTheDocument()
       expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
       expect(screen.getByTestId('role-component')).toBeInTheDocument()
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
   })
 
@@ -288,7 +281,9 @@ describe('Organizations Component', () => {
       fireEvent.click(downloadOrgButton)
 
       await waitFor(() => {
-        expect(mockDownload).toHaveBeenCalledWith({ url: '/api/organizations/export' })
+        expect(mockDownload).toHaveBeenCalledWith({
+          url: '/api/organizations/export'
+        })
       })
     })
 
@@ -303,8 +298,18 @@ describe('Organizations Component', () => {
       })
     })
 
-    it('shows error alert when organization download fails', async () => {
-      mockDownload.mockRejectedValueOnce(new Error('Download failed'))
+    it('displays alert message when location state contains message', () => {
+      mockLocationValue.state = {
+        message: 'Test message',
+        severity: 'success'
+      }
+
+      render(<Organizations />, { wrapper })
+      expect(screen.getByText('Test message')).toBeInTheDocument()
+    })
+
+    it('displays error alert when download fails', async () => {
+      mockDownload.mockRejectedValue(new Error('Download failed'))
 
       render(<Organizations />, { wrapper })
 
@@ -314,7 +319,9 @@ describe('Organizations Component', () => {
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
         expect(alertBox).toBeInTheDocument()
-        expect(alertBox.textContent).toContain('Failed to download organization information.')
+        expect(alertBox.textContent).toContain(
+          'Failed to download organization information.'
+        )
       })
     })
 
@@ -329,7 +336,9 @@ describe('Organizations Component', () => {
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
         expect(alertBox).toBeInTheDocument()
-        expect(alertBox.textContent).toContain('Failed to download user information.')
+        expect(alertBox.textContent).toContain(
+          'Failed to download user information.'
+        )
       })
     })
   })
@@ -345,10 +354,10 @@ describe('Organizations Component', () => {
 
     it('handles clear filters button click', () => {
       render(<Organizations />, { wrapper })
-      
+
       const clearFiltersButton = screen.getByTestId('clear-filters-button')
       fireEvent.click(clearFiltersButton)
-      
+
       expect(clearFiltersButton).toBeInTheDocument()
     })
   })
@@ -406,9 +415,9 @@ describe('Organizations Component', () => {
   describe('Conditional Rendering', () => {
     it('hides alert when alertMessage is empty', () => {
       mockLocationValue.state = null
-      
+
       render(<Organizations />, { wrapper })
-      
+
       expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
     })
 
@@ -416,9 +425,9 @@ describe('Organizations Component', () => {
       mockLocationValue.state = {
         message: 'Test alert message'
       }
-      
+
       render(<Organizations />, { wrapper })
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('alert-box')).toBeInTheDocument()
       })
@@ -439,49 +448,43 @@ describe('Organizations Component', () => {
   describe('Grid Configuration', () => {
     it('renders data grid with correct configuration', () => {
       render(<Organizations />, { wrapper })
-      
-      const grid = screen.getByTestId('data-grid-server')
+      const grid = screen.getByTestId('bc-grid-viewer')
       expect(grid).toBeInTheDocument()
-      expect(grid.textContent).toBe('Data Grid')
+      expect(grid.textContent).toBe('BCGridViewer')
     })
 
     it('provides getRowId function that works correctly', () => {
       render(<Organizations />, { wrapper })
-      
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
   })
 
   describe('Memoized Values', () => {
     it('renders with correct API endpoint configuration', () => {
       render(<Organizations />, { wrapper })
-      
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
     it('renders with correct grid options', () => {
       render(<Organizations />, { wrapper })
-      
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
     it('renders with correct default column definition', () => {
       render(<Organizations />, { wrapper })
-      
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
 
     it('renders with correct default sort model', () => {
       render(<Organizations />, { wrapper })
-      
-      expect(screen.getByTestId('data-grid-server')).toBeInTheDocument()
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
   })
 
   describe('Button State Management', () => {
     it('shows loading state during organization download', async () => {
       let resolveDownload
-      const downloadPromise = new Promise(resolve => {
+      const downloadPromise = new Promise((resolve) => {
         resolveDownload = resolve
       })
       mockDownload.mockReturnValue(downloadPromise)
@@ -492,7 +495,9 @@ describe('Organizations Component', () => {
       fireEvent.click(downloadButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Download Organizations...')).toBeInTheDocument()
+        expect(
+          screen.getByText('Download Organizations...')
+        ).toBeInTheDocument()
       })
 
       // Resolve the promise to clean up
@@ -502,7 +507,7 @@ describe('Organizations Component', () => {
 
     it('shows loading state during user download', async () => {
       let resolveDownload
-      const downloadPromise = new Promise(resolve => {
+      const downloadPromise = new Promise((resolve) => {
         resolveDownload = resolve
       })
       mockDownload.mockReturnValue(downloadPromise)

@@ -55,7 +55,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(8)
+    expect(organizationRoutes.length).toBe(14)
   })
 
   it('should have all expected route paths', () => {
@@ -63,6 +63,12 @@ describe('organizationRoutes', () => {
       '/organizations',
       '/organizations/add-org',
       '/organizations/:orgID',
+      '/organizations/:orgID/users',
+      '/organizations/:orgID/credit-ledger',
+      '/organizations/:orgID/company-overview',
+      '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/supply-history',
+      '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/add-user',
       '/organizations/:orgID/:userID',
       '/organization',
@@ -82,12 +88,18 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(5)
+      expect(idirRoutes.length).toBe(11)
 
       const expectedIdirPaths = [
         '/organizations',
         '/organizations/add-org',
         '/organizations/:orgID',
+        '/organizations/:orgID/users',
+        '/organizations/:orgID/credit-ledger',
+        '/organizations/:orgID/company-overview',
+        '/organizations/:orgID/penalty-log',
+        '/organizations/:orgID/supply-history',
+        '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/add-user',
         '/organizations/:orgID/:userID'
       ]
@@ -305,10 +317,10 @@ describe('Route Handle Properties', () => {
   describe('User Type Configurations', () => {
     it('should set userType="bceid" for all user-related routes', () => {
       const allUserRoutes = organizationRoutes.filter((route) =>
-        route.path.includes('user')
+        route.path.includes('user') && route.element.props?.userType
       )
 
-      expect(allUserRoutes.length).toBe(4) // Should have 4 user routes
+      expect(allUserRoutes.length).toBe(4) // Should have 4 UserDetailsCard routes with userType
 
       allUserRoutes.forEach((route) => {
         expect(route.element.props.userType).toBe('bceid')

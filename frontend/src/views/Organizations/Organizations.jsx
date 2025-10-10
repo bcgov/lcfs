@@ -2,7 +2,7 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { Stack } from '@mui/material'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { DownloadButton } from '@/components/DownloadButton'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useApiService } from '@/services/useApiService'
+import { useOrganizationsList } from '@/hooks/useOrganizations'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
@@ -24,7 +25,15 @@ export const Organizations = () => {
   const gridRef = useRef()
   const downloadButtonRef = useRef(null)
   const [gridKey] = useState('organizations-grid')
-  const apiEndpoint = useMemo(() => 'organizations/', [])
+
+  // Pagination state
+  const [paginationOptions, setPaginationOptions] = useState({
+    page: 1,
+    size: 10,
+    sortOrders: [{ field: 'name', direction: 'asc' }],
+    filters: []
+  })
+
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('org:noOrgsFound')
@@ -41,12 +50,6 @@ export const Organizations = () => {
     []
   )
 
-  // Sorting
-  const defaultSortModel = useMemo(
-    () => [{ field: 'name', direction: 'asc' }],
-    []
-  )
-
   // For alert messages
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -56,22 +59,18 @@ export const Organizations = () => {
   const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
   const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
 
-  // For clearing filters
-  const [resetGridFn, setResetGridFn] = useState(null)
-  const handleSetResetGrid = useCallback(
-    (fn) => {
-      if (resetGridFn !== fn) {
-        setResetGridFn(() => fn)
-      }
-    },
-    [resetGridFn]
-  )
+  // Use the organizations list hook
+  const queryData = useOrganizationsList(paginationOptions)
 
+  // Clear filters using gridRef exposed API and reset pagination filters
   const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+    try {
+      gridRef.current?.clearFilters?.()
+    } catch (e) {
+      // no-op
     }
-  }, [resetGridFn])
+    setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
+  }, [])
 
   // Router navigation
   const navigate = useNavigate()
@@ -173,18 +172,22 @@ export const Organizations = () => {
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
+        <BCGridViewer
           gridRef={gridRef}
-          apiEndpoint={apiEndpoint}
-          apiData="organizations"
-          columnDefs={organizationsColDefs(t)}
           gridKey={gridKey}
+          columnDefs={organizationsColDefs(t)}
+          queryData={queryData}
+          dataKey="organizations"
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50
+          }}
+          paginationOptions={paginationOptions}
+          onPaginationChange={setPaginationOptions}
           getRowId={getRowId}
-          defaultSortModel={defaultSortModel}
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </BCBox>

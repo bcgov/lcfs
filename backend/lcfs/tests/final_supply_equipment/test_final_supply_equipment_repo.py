@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
@@ -80,12 +80,14 @@ async def test_get_intended_user_types(repo, fake_db):
 @pytest.mark.anyio
 async def test_get_organization_names_valid(repo, fake_db):
     # Create a dummy organization object with an organization_id and name.
-    organization = type("Org", (), {"organization_id": 1, "name": "Test Organization"})()
+    organization = type(
+        "Org", (), {"organization_id": 1, "name": "Test Organization"}
+    )()
     # Simulate the queries returning tuples with organization names.
     # First call for allocation partners, second call for existing FSE orgs
     fake_db.execute.side_effect = [
         FakeResult([("Partner Org",)]),  # allocation partners
-        FakeResult([("Org1",), ("Org2",)])  # existing FSE organizations
+        FakeResult([("Org1",), ("Org2",)]),  # existing FSE organizations
     ]
     result = await repo.get_organization_names(organization)
     # Should return user's organization first, then others alphabetically
@@ -110,7 +112,7 @@ async def test_get_organization_names_no_name(repo, fake_db):
     organization = type("Org", (), {"organization_id": 1, "name": None})()
     fake_db.execute.side_effect = [
         FakeResult([("Partner Org",)]),  # allocation partners
-        FakeResult([("Org1",), ("Org2",)])  # existing FSE organizations
+        FakeResult([("Org1",), ("Org2",)]),  # existing FSE organizations
     ]
     result = await repo.get_organization_names(organization)
     # Should return organizations alphabetically (no user org to put first)
@@ -341,15 +343,15 @@ async def test_search_manufacturers(repo, fake_db):
 
 
 @pytest.mark.anyio
-async def test_check_uniques_within_current_report_only(
-    repo, fake_db
-):
+async def test_check_uniques_within_current_report_only(repo, fake_db):
     """
     Test that records are only checked for duplicates within the current compliance report
     """
-    from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
+    from lcfs.web.api.final_supply_equipment.schema import (
+        FinalSupplyEquipmentCreateSchema,
+    )
     from datetime import date
-    
+
     # Create FSE record for current report
     fse_record = FinalSupplyEquipmentCreateSchema(
         compliance_report_id=100,
@@ -365,26 +367,26 @@ async def test_check_uniques_within_current_report_only(
         intended_user_types=[],
         street_address="123 Test St",
         city="Test City",
-        organization_name="Test Org"
+        organization_name="Test Org",
     )
-    
+
     # Mock that no duplicates are found within the current report
     fake_db.execute.return_value = FakeResult([False])
-    
+
     result = await repo.check_uniques_of_fse_row(fse_record)
     assert result is False  # Should not find duplicates
 
 
 @pytest.mark.anyio
-async def test_check_overlap_within_current_report_only(
-    repo, fake_db
-):
+async def test_check_overlap_within_current_report_only(repo, fake_db):
     """
     Test that overlapping date ranges are only checked within the current compliance report
     """
-    from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
+    from lcfs.web.api.final_supply_equipment.schema import (
+        FinalSupplyEquipmentCreateSchema,
+    )
     from datetime import date
-    
+
     fse_overlap = FinalSupplyEquipmentCreateSchema(
         compliance_report_id=300,
         supply_from_date=date(2024, 6, 1),
@@ -399,11 +401,126 @@ async def test_check_overlap_within_current_report_only(
         intended_user_types=[],
         street_address="456 Test Ave",
         city="Test City",
-        organization_name="Test Org"
+        organization_name="Test Org",
     )
-    
+
     # Mock that overlaps are found within the current report
     fake_db.execute.return_value = FakeResult([True])
-    
+
     result = await repo.check_overlap_of_fse_row(fse_overlap)
     assert result is True  # Should detect overlap within current report
+
+
+async def test_get_fse_reporting_list_paginated(repo, fake_db):
+    """Test getting paginated FSE reporting list"""
+    # Mock the count query result
+    count_result = FakeResult([5])
+    # Mock the data query result
+    data_result = MagicMock()
+    data_result.fetchall.return_value = [
+        {
+            "charging_equipment_id": 1,
+            "serial_number": "SER123",
+            "manufacturer": "TestMfg",
+            "supply_from_date": "2024-01-01",
+            "supply_to_date": "2024-12-31",
+        },
+        {
+            "charging_equipment_id": 2,
+            "serial_number": "SER456",
+            "manufacturer": "TestMfg2",
+            "supply_from_date": "2024-01-01",
+            "supply_to_date": "2024-12-31",
+        },
+    ]
+
+    fake_db.scalar.return_value = 5
+    fake_db.execute.return_value = data_result
+
+    pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
+    data, total = await repo.get_fse_reporting_list_paginated(
+        1, pagination, 10, "current"
+    )
+
+    assert total == 5
+    assert len(data) == 2
+    assert data[0]["charging_equipment_id"] == 1
+
+
+@pytest.mark.anyio
+async def test_create_fse_reporting_batch(repo, fake_db):
+    """Test creating FSE reporting batch"""
+    data = [
+        {
+            "charging_equipment_id": 1,
+            "compliance_report_id": 10,
+            "supply_from_date": "2024-01-01",
+            "supply_to_date": "2024-12-31",
+            "kwh_usage": 1000.0,
+        }
+    ]
+
+    result = await repo.create_fse_reporting_batch(data)
+
+    assert result["message"] == "FSE compliance reporting data created successfully"
+    fake_db.add_all.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting(repo, fake_db):
+    """Test updating FSE reporting"""
+    data = {"kwh_usage": 1500.0, "notes": "Updated notes"}
+
+    result = await repo.update_fse_reporting(1, data)
+
+    assert result["id"] == 1
+    assert result["kwh_usage"] == 1500.0
+    assert result["notes"] == "Updated notes"
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting(repo, fake_db):
+    """Test deleting FSE reporting"""
+    await repo.delete_fse_reporting(1)
+
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_batch(repo, fake_db):
+    """Test batch deletion of FSE reporting"""
+    mock_result = MagicMock()
+    mock_result.rowcount = 3
+    fake_db.execute.return_value = mock_result
+
+    result = await repo.delete_fse_reporting_batch([1, 2, 3])
+
+    assert result == 3
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_reporting_dates(repo, fake_db):
+    """Test bulk updating reporting dates"""
+    mock_result = MagicMock()
+    mock_result.rowcount = 2
+    fake_db.execute.return_value = mock_result
+
+    data = MagicMock(
+        equipment_ids=[1, 2],
+        compliance_report_id=10,
+        organization_id=5,
+        supply_from_date="2024-01-01",
+        supply_to_date="2024-12-31",
+    )
+
+    result = await repo.bulk_update_reporting_dates(data)
+
+    assert result == 2
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()

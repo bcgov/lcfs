@@ -75,6 +75,11 @@ class OrganizationsService:
         self.redis_balance_service = redis_balance_service
         self.notification_service = notification_service
 
+    async def _requires_bceid(self, organization_type_id: int) -> bool:
+        """Check if organization type requires BCeID."""
+        org_type = await self.repo.get_organization_type(organization_type_id)
+        return org_type.is_bceid_user if org_type else True
+
     def apply_organization_filters(self, pagination, conditions):
         """
         Apply filters to the organizations query.
@@ -184,10 +189,49 @@ class OrganizationsService:
         self, organization_data: OrganizationCreateSchema, user=None
     ):
         """handles creating an organization"""
-        org_address = OrganizationAddress(**organization_data.address.dict())
-        org_attorney_address = OrganizationAttorneyAddress(
-            **organization_data.attorney_address.dict()
+        # Check if the organization type requires BCeID
+        requires_bceid = await self._requires_bceid(
+            organization_data.organization_type_id
         )
+
+        # Handle address creation based on organization type
+        org_address = None
+        org_attorney_address = None
+
+        if requires_bceid:
+            # For BCeID organizations, address is required
+            if not organization_data.address:
+                raise ValueError("Address is required for BCeID organization types")
+            org_address = OrganizationAddress(**organization_data.address.dict())
+
+            if not organization_data.attorney_address:
+                raise ValueError(
+                    "Attorney address is required for BCeID organization types"
+                )
+            org_attorney_address = OrganizationAttorneyAddress(
+                **organization_data.attorney_address.dict()
+            )
+        else:
+            # For non-BCeID organizations, address is optional
+            if (
+                organization_data.address
+                and hasattr(organization_data.address, "street_address")
+                and organization_data.address.street_address
+            ):
+                org_address = OrganizationAddress(**organization_data.address.dict())
+
+            if (
+                organization_data.attorney_address
+                and hasattr(organization_data.attorney_address, "street_address")
+                and organization_data.attorney_address.street_address
+            ):
+                org_attorney_address = OrganizationAttorneyAddress(
+                    **organization_data.attorney_address.dict()
+                )
+
+            # For non-BCeID types, email is required
+            if not organization_data.email:
+                raise ValueError("Email is required for all organization types")
 
         # Create and add organization model to the database
         org_model = Organization(
@@ -238,6 +282,11 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
+        # Check if the organization type requires BCeID
+        requires_bceid = await self._requires_bceid(
+            organization_data.organization_type_id
+        )
+
         # If early issuance setting is being updated, validate against existing reports for current year
         if (
             hasattr(organization_data, "has_early_issuance")
@@ -268,42 +317,81 @@ class OrganizationsService:
             if hasattr(organization, key):
                 setattr(organization, key, value)
 
-        if organization_data.address:
-            if organization.organization_address_id:
-                org_address = await self.repo.get_organization_address(
-                    organization.organization_address_id
-                )
-            else:
-                org_address = OrganizationAddress(
-                    organization=organization,
-                )
-                organization.organization_address = org_address
-                self.repo.add(org_address)
+        # For non-BCeID types, validate email is present if being updated
+        if (
+            not requires_bceid
+            and organization_data.email is not None
+            and not organization_data.email
+        ):
+            raise ValueError("Email is required for all organization types")
 
-            for key, value in organization_data.address.dict().items():
-                if hasattr(org_address, key):
-                    setattr(org_address, key, value)
+        # Handle address updates based on organization type requirements
+        if organization_data.address:
+            # Check if switching to BCeID type requires addresses
+            if requires_bceid and not hasattr(
+                organization_data.address, "street_address"
+            ):
+                raise ValueError("Address is required for BCeID organization types")
+
+            # Only update if there's meaningful address data
+            has_address_data = (
+                hasattr(organization_data.address, "street_address")
+                and organization_data.address.street_address
+            )
+
+            if has_address_data or requires_bceid:
+                if organization.organization_address_id:
+                    org_address = await self.repo.get_organization_address(
+                        organization.organization_address_id
+                    )
+                else:
+                    org_address = OrganizationAddress(
+                        organization=organization,
+                    )
+                    organization.organization_address = org_address
+                    self.repo.add(org_address)
+
+                for key, value in organization_data.address.dict().items():
+                    if hasattr(org_address, key):
+                        setattr(org_address, key, value)
 
         if organization_data.attorney_address:
-            if organization.organization_attorney_address_id:
-                org_attorney_address = (
-                    await self.repo.get_organization_attorney_address(
-                        organization.organization_attorney_address_id
+            # Check if switching to BCeID type requires attorney addresses
+            if requires_bceid and not hasattr(
+                organization_data.attorney_address, "street_address"
+            ):
+                raise ValueError(
+                    "Attorney address is required for BCeID organization types"
+                )
+
+            # Only update if there's meaningful attorney address data
+            has_attorney_address_data = (
+                hasattr(organization_data.attorney_address, "street_address")
+                and organization_data.attorney_address.street_address
+            )
+
+            if has_attorney_address_data or requires_bceid:
+                if organization.organization_attorney_address_id:
+                    org_attorney_address = (
+                        await self.repo.get_organization_attorney_address(
+                            organization.organization_attorney_address_id
+                        )
                     )
-                )
-            else:
-                org_attorney_address = OrganizationAttorneyAddress(
-                    organization=organization,
-                )
-                organization.organization_attorney_address = org_attorney_address
-                self.repo.add(org_attorney_address)
+                else:
+                    org_attorney_address = OrganizationAttorneyAddress(
+                        organization=organization,
+                    )
+                    organization.organization_attorney_address = org_attorney_address
+                    self.repo.add(org_attorney_address)
 
-            if not org_attorney_address:
-                raise DataNotFoundException("Organization attorney address not found")
+                if not org_attorney_address:
+                    raise DataNotFoundException(
+                        "Organization attorney address not found"
+                    )
 
-            for key, value in organization_data.attorney_address.dict().items():
-                if hasattr(org_attorney_address, key):
-                    setattr(org_attorney_address, key, value)
+                for key, value in organization_data.attorney_address.dict().items():
+                    if hasattr(org_attorney_address, key):
+                        setattr(org_attorney_address, key, value)
 
         updated_organization = await self.repo.update_organization(organization)
         return updated_organization
@@ -361,23 +449,57 @@ class OrganizationsService:
             organization.update_user = user.keycloak_username
 
         updated_organization = await self.repo.update_organization(organization)
-        
+
         # Check if this is a new credit listing that should trigger notifications
         # A new listing is when:
         # 1. The organization is now displayed in the credit market AND has credits to sell
         # 2. AND either wasn't displayed before OR didn't have credits to sell before
         is_now_displayed = updated_organization.display_in_credit_market or False
         new_credits_to_sell = updated_organization.credits_to_sell or 0
-        
+
         is_new_listing = (
-            is_now_displayed and 
-            new_credits_to_sell > 0 and
-            (not was_displayed_in_market or old_credits_to_sell == 0)
+            is_now_displayed
+            and new_credits_to_sell > 0
+            and (not was_displayed_in_market or old_credits_to_sell == 0)
         )
         
         if is_new_listing and settings.feature_credit_market_notifications:
             await self._send_credit_market_notification(updated_organization, user)
-        
+
+        return updated_organization
+
+    @service_handler
+    async def update_organization_company_overview(
+        self,
+        organization_id: int,
+        company_overview_data: dict,
+        user=None,
+    ):
+        """
+        Update only the company overview fields for an organization.
+        This method only updates the specific company overview fields without affecting other organization data.
+        """
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Update only the company overview fields
+        allowed_fields = {
+            "company_details",
+            "company_representation_agreements",
+            "company_acting_as_aggregator",
+            "company_additional_notes",
+        }
+
+        for key, value in company_overview_data.items():
+            if key in allowed_fields and hasattr(organization, key):
+                setattr(organization, key, value)
+
+        # Set the update user
+        if user:
+            organization.update_user = user.keycloak_username
+
+        updated_organization = await self.repo.update_organization(organization)
         return updated_organization
 
     @service_handler
@@ -877,7 +999,9 @@ class OrganizationsService:
             is_valid=True,
         )
 
-    async def _send_credit_market_notification(self, organization: Organization, user=None):
+    async def _send_credit_market_notification(
+        self, organization: Organization, user=None
+    ):
         """
         Send notification to subscribed BCeID users when new credits are listed for sale.
         """
@@ -887,9 +1011,9 @@ class OrganizationsService:
                 "organizationName": organization.name,
                 "creditsToSell": organization.credits_to_sell,
                 "service": "CreditMarket",
-                "action": "CreditsListedForSale"
+                "action": "CreditsListedForSale",
             }
-            
+
             # Create notification data
             notification_data = NotificationMessageSchema(
                 type="Credit market - credits listed for sale",
@@ -898,20 +1022,24 @@ class OrganizationsService:
                 related_organization_id=organization.organization_id,
                 origin_user_profile_id=user.user_profile_id if user else None,
             )
-            
+
             # Send notification to all subscribed BCeID users
             await self.notification_service.send_notification(
                 NotificationRequestSchema(
-                    notification_types=[NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE],
+                    notification_types=[
+                        NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE
+                    ],
                     notification_context={
                         "subject": f"LCFS Credit Market - New Credits Available from {organization.name}"
                     },
                     notification_data=notification_data,
                 )
             )
-            
-            logger.info(f"Credit market notification sent for organization {organization.organization_id}")
-            
+
+            logger.info(
+                f"Credit market notification sent for organization {organization.organization_id}"
+            )
+
         except Exception as e:
             logger.error(f"Failed to send credit market notification: {str(e)}")
             # Don't raise the exception - notification failure shouldn't break the main operation

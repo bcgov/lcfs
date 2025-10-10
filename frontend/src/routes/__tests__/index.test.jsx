@@ -110,6 +110,7 @@ vi.mock('@/views/Transfers', () => ({
   )
 }))
 
+// Fix the ComplianceReports mock to prevent the hasRoles error
 vi.mock('@/views/ComplianceReports', () => ({
   ComplianceReports: () => (
     <div data-test="compliance-reports">Compliance Reports</div>
@@ -117,6 +118,11 @@ vi.mock('@/views/ComplianceReports', () => ({
   CreditCalculator: () => (
     <div data-test="credit-calculator">Credit Calculator</div>
   )
+}))
+
+// Mock the ReportsMenu component that wraps ComplianceReports
+vi.mock('@/views/ComplianceReports/ReportsMenu', () => ({
+  ReportsMenu: () => <div data-test="reports-menu">Reports Menu</div>
 }))
 
 vi.mock('@/views/ComplianceReports/ComplianceReportViewSelector', () => ({
@@ -200,13 +206,31 @@ vi.mock('@/utils/keycloak', () => ({
   logout: vi.fn()
 }))
 
-// Mock authorization context
+// Mock authorization context and any role-related hooks
 vi.mock('@/contexts/AuthorizationContext', () => ({
   useAuthorization: () => ({
     setForbidden: vi.fn(),
-    forbidden: false
+    forbidden: false,
+    hasRoles: vi.fn(() => true), // Mock hasRoles function
+    hasRole: vi.fn(() => true),
+    roles: [],
+    isAuthorized: vi.fn(() => true)
   })
 }))
+
+// Mock any role-related hooks that might be used
+vi.mock(
+  '@/hooks/useRoles',
+  () => ({
+    useRoles: () => ({
+      hasRoles: vi.fn(() => true),
+      hasRole: vi.fn(() => true),
+      roles: [],
+      isGovernmentUser: false
+    })
+  }),
+  { virtual: true }
+)
 
 // Mock RequireAuth component
 vi.mock('@/components/RequireAuth', () => ({
@@ -268,7 +292,8 @@ describe('Router Configuration', () => {
     error: null,
     data: {
       id: 1,
-      username: 'testuser'
+      username: 'testuser',
+      roles: [{ name: 'test-role' }]
     }
   }
 
@@ -409,7 +434,7 @@ describe('Router Configuration', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
-        expect(screen.getByTestId('compliance-reports')).toBeInTheDocument()
+        expect(screen.getByTestId('reports-menu')).toBeInTheDocument()
       })
     })
 

@@ -25,6 +25,36 @@ export const organizationRoutes = [
     handle: { title: 'Organization profile' }
   },
   {
+    path: ROUTES.ORGANIZATIONS.USERS,
+    element: <OrganizationView />,
+    handle: { title: 'Organization users' }
+  },
+  {
+    path: ROUTES.ORGANIZATIONS.CREDIT_LEDGER,
+    element: <OrganizationView />,
+    handle: { title: 'Credit ledger' }
+  },
+  {
+    path: ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW,
+    element: <OrganizationView />,
+    handle: { title: 'Company overview' }
+  },
+  {
+    path: ROUTES.ORGANIZATIONS.PENALTY_LOG,
+    element: <OrganizationView />,
+    handle: { title: 'Penalty log' }
+  },
+  {
+    path: ROUTES.ORGANIZATIONS.SUPPLY_HISTORY,
+    element: <OrganizationView />,
+    handle: { title: 'Supply history' }
+  },
+  {
+    path: ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING,
+    element: <OrganizationView />,
+    handle: { title: 'Compliance tracking' }
+  },
+  {
     path: ROUTES.ORGANIZATIONS.ADD_USER,
     element: <UserDetailsCard addMode={true} userType="bceid" />,
     handle: { title: 'New user' }

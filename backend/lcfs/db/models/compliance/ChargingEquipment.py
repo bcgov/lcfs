@@ -69,12 +69,17 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     equipment_number = Column(
-        String(3),
+        String(5),
         nullable=False,
         comment="Auto-generated 3-digit equipment number (suffix for registration)",
         index=True,
     )
 
+    organization_name = Column(
+        Text,
+        nullable=True,
+        comment="Name of the organization associated with the equipment",
+    )
     allocating_organization_id = Column(
         Integer,
         ForeignKey("organization.organization_id"),
@@ -83,19 +88,19 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     serial_number = Column(
-        String(100),
+        String(500),
         nullable=False,
         comment="Serial number of the equipment",
     )
 
     manufacturer = Column(
-        String(100),
+        String(500),
         nullable=False,
         comment="Manufacturer of the equipment",
     )
 
     model = Column(
-        String(100),
+        String(500),
         nullable=True,
         comment="Model of the equipment",
     )
@@ -109,7 +114,9 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     ports = Column(
-        Enum(PortsEnum, name="ports_enum"),
+        Enum(
+            PortsEnum, name="ports_enum", values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=True,
         comment="Port configuration of the equipment",
     )
@@ -139,6 +146,10 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         "ComplianceReportChargingEquipment",
         back_populates="charging_equipment",
         cascade="all, delete-orphan",
+    )
+    fse_compliance_reports = relationship(
+        "FSEComplianceReporting",
+        back_populates="charging_equipment",
     )
 
     @property
@@ -187,9 +198,9 @@ def generate_equipment_number(mapper, connection, target):
             # First equipment for this site
             next_seq = 1
 
-        if next_seq > 999:
+        if next_seq > 99999:
             raise ValueError(
-                "Exceeded maximum equipment numbers (999) for this charging site"
+                "Exceeded maximum equipment numbers (99,999) for this charging site"
             )
 
         target.equipment_number = f"{next_seq:03d}"

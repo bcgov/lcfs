@@ -37,20 +37,22 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
     })
 
     const data = response.data
-    
+
     // Return in the format expected by AsyncSuggestionEditor
     // Now suggestions come as complete AddressSchema objects
-    return data.suggestions?.map((addr) => ({
-      label: addr.full_address,
-      fullAddress: addr.full_address,
-      streetAddress: addr.street_address,
-      city: addr.city,
-      province: addr.province,
-      postalCode: addr.postal_code,
-      latitude: addr.latitude,
-      longitude: addr.longitude,
-      score: addr.score
-    })) || []
+    return (
+      data.suggestions?.map((addr) => ({
+        label: addr.full_address,
+        fullAddress: addr.full_address,
+        streetAddress: addr.street_address,
+        city: addr.city,
+        province: addr.province,
+        postalCode: addr.postal_code,
+        latitude: addr.latitude,
+        longitude: addr.longitude,
+        score: addr.score
+      })) || []
+    )
   } catch (error) {
     console.error('Address autocomplete failed:', error)
     return []
@@ -370,7 +372,8 @@ export const finalSupplyEquipmentColDefs = (
           params.data.streetAddress = params.newValue
         } else if (params.newValue?.fullAddress) {
           // Address selected from autocomplete - we already have all the data
-          params.data.streetAddress = params.newValue.streetAddress || params.newValue.fullAddress
+          params.data.streetAddress =
+            params.newValue.streetAddress || params.newValue.fullAddress
           params.data.city = params.newValue.city || ''
           params.data.postalCode = params.newValue.postalCode || ''
           params.data.latitude = params.newValue.latitude || ''
@@ -487,24 +490,28 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
     ),
+    minWidth: 300,
     field: 'organizationName'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
     ),
+    minWidth: 210,
     field: 'supplyFromDate'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
     ),
+    minWidth: 190,
     field: 'supplyToDate'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
+    minWidth: 135,
     field: 'kwhUsage',
     valueFormatter: numberFormatter
   },
@@ -512,42 +519,47 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
-    field: 'registrationNbr',
+    field: 'registrationNumber',
     hide: true
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
     ),
-    field: 'serialNbr'
+    minWidth: 200,
+    field: 'serialNumber'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
     ),
+    minWidth: 250,
     field: 'manufacturer'
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.model'),
+    minWidth: 200,
     field: 'model'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
+    minWidth: 340,
     field: 'levelOfEquipment',
     valueGetter: (params) => params.data.levelOfEquipment
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
+    minWidth: 130,
     field: 'ports'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
     ),
-    field: 'intendedUseTypes',
-    valueGetter: (params) => params.data.intendedUseTypes,
+    minWidth: 250,
+    field: 'intendedUses',
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
       status === COMPLIANCE_REPORT_STATUSES.DRAFT
@@ -558,8 +570,8 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUserTypes'
     ),
-    field: 'intendedUserTypes',
-    valueGetter: (params) => params.data.intendedUserTypes,
+    field: 'intendedUsers',
+    minWidth: 200,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
       status === COMPLIANCE_REPORT_STATUSES.DRAFT
@@ -570,33 +582,48 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
     ),
+    minWidth: 300,
     field: 'streetAddress'
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'),
+    minWidth: 180,
     field: 'city'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
+    minWidth: 140,
     field: 'postalCode'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
     ),
+    minWidth: 150,
     field: 'latitude'
   },
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
     ),
+    minWidth: 150,
     field: 'longitude'
   },
   {
-    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'),
-    field: 'notes'
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
+    ),
+    minWidth: 300,
+    field: 'complianceNotes'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.equipmentNotes'
+    ),
+    minWidth: 300,
+    field: 'equipmentNotes'
   }
 ]
 
@@ -608,3 +635,178 @@ export const defaultColDef = {
   sortable: false,
   singleClickEdit: true
 }
+
+export const getFSEReportingColDefs = (
+  minDate,
+  maxDate,
+  errors = {},
+  warnings = {},
+  complianceReportId
+) => [
+  validation,
+  {
+    field: 'fseComplianceReportingId',
+    headerName: i18n.t('finalSupplyEquipment:fseComplianceReportingId'),
+    editable: false,
+    hide: true
+  },
+  {
+    field: 'supplyFromDate',
+    filter: false,
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
+    ),
+    headerComponent: RequiredHeader,
+    minWidth: 200,
+    cellRenderer: (params) => (
+      <BCTypography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </BCTypography>
+    ),
+    suppressKeyboardEvent,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    cellEditor: DateEditor,
+    cellEditorParams: {
+      minDate,
+      maxDate,
+      autoOpenLastRow: false
+    },
+    editable: (params) => params.data.complianceReportId === complianceReportId,
+    valueGetter: (params) => {
+      return params.data.supplyFromDate || minDate
+    },
+    valueSetter: (params) => {
+      params.data.supplyFromDate = params.newValue
+      return true
+    }
+  },
+  {
+    field: 'supplyToDate',
+    filter: false,
+    sortable: false,
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
+    ),
+    headerComponent: RequiredHeader,
+    minWidth: 200,
+    cellRenderer: (params) => (
+      <BCTypography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </BCTypography>
+    ),
+    suppressKeyboardEvent,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    cellEditor: DateEditor,
+    cellEditorParams: {
+      minDate,
+      maxDate,
+      autoOpenLastRow: false
+    },
+    editable: (params) => params.data.complianceReportId === complianceReportId,
+    valueGetter: (params) => {
+      return params.data.supplyToDate || maxDate
+    },
+    valueSetter: (params) => {
+      params.data.supplyToDate = params.newValue
+      return true
+    }
+  },
+  {
+    field: 'kwhUsage',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
+    ),
+    minWidth: 220,
+    valueFormatter: numberFormatter,
+    valueGetter: (params) => params.data.kwhUsage || 0,
+    cellEditor: NumberEditor,
+    type: 'numericColumn',
+    cellEditorParams: {
+      precision: 0,
+      min: 0,
+      showStepperButtons: false
+    },
+    editable: (params) => params.data.complianceReportId === complianceReportId,
+    filter: false,
+    sortable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
+  },
+  {
+    field: 'complianceNotes',
+    filter: true,
+    sortable: false,
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
+    ),
+    editable: (params) => params.data.complianceReportId === complianceReportId,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    cellEditor: 'agTextCellEditor',
+    minWidth: 400
+  },
+  {
+    field: 'siteName',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.siteName'
+    ),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 220
+  },
+  {
+    field: 'streetAddress',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
+    ),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 220
+  },
+  {
+    field: 'serialNumber',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
+    ),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 280
+  },
+  {
+    field: 'model',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
+    ),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 150
+  },
+  {
+    field: 'equipmentNotes',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.equipmentNotes'
+    ),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 300
+  },
+  {
+    field: 'registrationNumber',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
+    ),
+    editable: false,
+    filter: false,
+    sortable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 150
+  }
+]
