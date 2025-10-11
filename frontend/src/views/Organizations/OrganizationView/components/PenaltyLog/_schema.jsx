@@ -1,11 +1,33 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import { RequiredHeader } from '@/components/BCDataGrid/components'
+import {
+  BCSelectFloatingFilter,
+  RequiredHeader
+} from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { currencyFormatter } from '@/utils/formatters'
 
 const booleanValueFormatter = ({ value }) => {
   if (value === null || value === undefined) return ''
   return value ? 'Yes' : 'No'
+}
+
+export const PENALTY_TYPES = [
+  'Single contravention',
+  'Continuous contravention'
+]
+const booleanValueSetter = (field) => (params) => {
+  const { newValue } = params
+  if (newValue === undefined || newValue === null || newValue === '') {
+    params.data[field] = false
+    return true
+  }
+  if (typeof newValue === 'boolean') {
+    params.data[field] = newValue
+    return true
+  }
+  params.data[field] =
+    newValue === 'Yes' || newValue === 'true' || newValue === 'True'
+  return true
 }
 
 export const penaltyLogColumnDefs = [
@@ -18,6 +40,16 @@ export const penaltyLogColumnDefs = [
   {
     headerName: i18n.t('org:penaltyLog.columns.contraventionType'),
     field: 'contraventionType',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: () => ({
+        data: [
+          { label: 'Single contravention' },
+          { label: 'Continuous contravention' }
+        ],
+        isLoading: false
+      })
+    },
     minWidth: 320
   },
   {
@@ -63,7 +95,6 @@ export const penaltyLogColumnDefs = [
   {
     headerName: i18n.t('org:penaltyLog.columns.penaltyAmount'),
     field: 'penaltyAmount',
-    filter: 'agNumberColumnFilter',
     valueFormatter: ({ value }) =>
       value === null || value === undefined
         ? ''
@@ -71,21 +102,7 @@ export const penaltyLogColumnDefs = [
     minWidth: 260
   }
 ]
-const PENALTY_TYPES = ['Single contravention', 'Continuous contravention']
-const booleanValueSetter = (field) => (params) => {
-  const { newValue } = params
-  if (newValue === undefined || newValue === null || newValue === '') {
-    params.data[field] = false
-    return true
-  }
-  if (typeof newValue === 'boolean') {
-    params.data[field] = newValue
-    return true
-  }
-  params.data[field] =
-    newValue === 'Yes' || newValue === 'true' || newValue === 'True'
-  return true
-}
+
 export const penaltyLogEditorColDefs = (
   compliancePeriodLabelMap,
   complianceValues,
@@ -132,16 +149,16 @@ export const penaltyLogEditorColDefs = (
     minWidth: 200
   },
   {
-    field: 'penaltyType',
+    field: 'contraventionType',
     headerComponent: RequiredHeader,
-    headerName: t('org:penaltyLog.columns.penaltyType', {
+    headerName: t('org:penaltyLog.columns.contraventionType', {
       defaultValue: 'Contravention type'
     }),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
       values: PENALTY_TYPES
     },
-    minWidth: 220
+    minWidth: 230
   },
   {
     field: 'penaltyAmount',
@@ -158,7 +175,7 @@ export const penaltyLogEditorColDefs = (
             currency: 'CAD',
             maximumFractionDigits: 0
           }),
-    minWidth: 200
+    minWidth: 240
   },
   {
     field: 'offenceHistory',
@@ -184,7 +201,7 @@ export const penaltyLogEditorColDefs = (
     },
     valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
     valueSetter: booleanValueSetter('deliberate'),
-    minWidth: 210
+    minWidth: 350
   },
   {
     field: 'effortsToCorrect',
@@ -197,7 +214,7 @@ export const penaltyLogEditorColDefs = (
     },
     valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
     valueSetter: booleanValueSetter('effortsToCorrect'),
-    minWidth: 180
+    minWidth: 220
   },
   {
     field: 'economicBenefitDerived',
@@ -210,7 +227,7 @@ export const penaltyLogEditorColDefs = (
     },
     valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
     valueSetter: booleanValueSetter('economicBenefitDerived'),
-    minWidth: 220
+    minWidth: 400
   },
   {
     field: 'effortsToPreventRecurrence',
@@ -223,14 +240,13 @@ export const penaltyLogEditorColDefs = (
     },
     valueFormatter: ({ value }) => (value ? 'Yes' : 'No'),
     valueSetter: booleanValueSetter('effortsToPreventRecurrence'),
-    minWidth: 240
+    minWidth: 280
   },
   {
     field: 'notes',
     headerName: t('org:penaltyLog.columns.notes', {
       defaultValue: 'Notes'
     }),
-    cellEditor: 'agLargeTextCellEditor',
-    minWidth: 260
+    minWidth: 360
   }
 ]

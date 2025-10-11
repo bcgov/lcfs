@@ -55,7 +55,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(14)
+    expect(organizationRoutes.length).toBe(16)
   })
 
   it('should have all expected route paths', () => {
@@ -67,11 +67,13 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID/credit-ledger',
       '/organizations/:orgID/company-overview',
       '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/penalty-log/manage',
       '/organizations/:orgID/supply-history',
       '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/add-user',
       '/organizations/:orgID/users/:userID',
       '/organization',
+      '/organization/users',
       '/organization/add-user',
       '/organization/users/:userID'
     ]
@@ -88,7 +90,7 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(11)
+      expect(idirRoutes.length).toBe(12)
 
       const expectedIdirPaths = [
         '/organizations',
@@ -98,6 +100,7 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID/credit-ledger',
         '/organizations/:orgID/company-overview',
         '/organizations/:orgID/penalty-log',
+        '/organizations/:orgID/penalty-log/manage',
         '/organizations/:orgID/supply-history',
         '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/add-user',
@@ -115,10 +118,11 @@ describe('organizationRoutes', () => {
           route.path.startsWith('/organization') &&
           !route.path.startsWith('/organizations')
       )
-      expect(bceidRoutes.length).toBe(3)
+      expect(bceidRoutes.length).toBe(4)
 
       const expectedBceidPaths = [
         '/organization',
+        '/organization/users',
         '/organization/add-user',
         '/organization/users/:userID'
       ]
@@ -276,11 +280,13 @@ describe('Route Handle Properties', () => {
     const routesWithCrumbs = organizationRoutes.filter(
       (route) => route.handle.crumb
     )
-    expect(routesWithCrumbs.length).toBe(2) // Organizations list and organization user view routes
+    expect(routesWithCrumbs.length).toBe(4) // Organizations list and organization user view routes
 
     const expectedCrumbRoutes = [
       '/organizations',
-      '/organizations/:orgID/users/:userID'
+      '/organizations/:orgID/users/:userID',
+      '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/penalty-log/manage'
     ]
     routesWithCrumbs.forEach((route) => {
       expect(expectedCrumbRoutes.includes(route.path)).toBe(true)

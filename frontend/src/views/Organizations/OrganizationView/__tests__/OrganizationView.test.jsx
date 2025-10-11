@@ -216,7 +216,7 @@ describe('OrganizationView', () => {
 
       // Test basic tab rendering which exercises TabPanel internally
       expect(screen.getByRole('tablist')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
     })
 
@@ -228,7 +228,7 @@ describe('OrganizationView', () => {
       expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
 
       // Clicking tabs should call navigate (routing-based approach)
-      fireEvent.click(screen.getByText('org:tabs.users'))
+      fireEvent.click(screen.getByText('Users'))
       expect(mockNavigate).toHaveBeenCalled()
     })
   })
@@ -237,27 +237,15 @@ describe('OrganizationView', () => {
     it('renders basic component structure', () => {
       renderComponent()
 
-      expect(screen.getByText('org:tabs.dashboard')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.users')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.creditLedger')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.companyOverview')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.penaltyLog')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.supplyHistory')).toBeInTheDocument()
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Users')).toBeInTheDocument()
+      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
+      expect(screen.getByText('Company overview')).toBeInTheDocument()
+      expect(screen.getByText('Penalty log')).toBeInTheDocument()
+      expect(screen.getByText('Supply history')).toBeInTheDocument()
       expect(
-        screen.getByText('org:tabs.complianceTracking')
+        screen.getByText('Compliance tracking')
       ).toBeInTheDocument()
-    })
-
-    it('calls translation hook with correct namespace', () => {
-      renderComponent()
-
-      expect(mockT).toHaveBeenCalledWith('org:tabs.dashboard')
-      expect(mockT).toHaveBeenCalledWith('org:tabs.users')
-      expect(mockT).toHaveBeenCalledWith('org:tabs.creditLedger')
-      expect(mockT).toHaveBeenCalledWith('org:tabs.companyOverview')
-      expect(mockT).toHaveBeenCalledWith('org:tabs.penaltyLog')
-      expect(mockT).toHaveBeenCalledWith('org:tabs.supplyHistory')
-      expect(mockT).toHaveBeenCalledWith('org:tabs.complianceTracking')
     })
   })
 
@@ -304,6 +292,7 @@ describe('OrganizationView', () => {
   describe('Alert State Management', () => {
     it('displays alert when location state has message', () => {
       mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
         state: {
           message: 'Test alert message',
           severity: 'success'
@@ -321,6 +310,7 @@ describe('OrganizationView', () => {
 
     it('displays alert with default severity when not specified', () => {
       mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
         state: { message: 'Test message' }
       })
 
@@ -332,7 +322,10 @@ describe('OrganizationView', () => {
     })
 
     it('does not display alert when no message in state', () => {
-      mockUseLocation.mockReturnValue({ state: {} })
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
+        state: {}
+      })
 
       renderComponent()
 
@@ -403,11 +396,11 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
 
       // Click on Users tab should call navigate
-      fireEvent.click(screen.getByText('org:tabs.users'))
+      fireEvent.click(screen.getByText('Users'))
       expect(mockNavigate).toHaveBeenCalled()
 
       // Click on Credit Ledger tab should call navigate
-      fireEvent.click(screen.getByText('org:tabs.creditLedger'))
+      fireEvent.click(screen.getByText('Credit ledger'))
       expect(mockNavigate).toHaveBeenCalled()
     })
 
@@ -454,9 +447,9 @@ describe('OrganizationView', () => {
       const tabs = screen.getAllByRole('tab')
       expect(tabs).toHaveLength(7)
 
-      expect(screen.getByText('org:tabs.dashboard')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.users')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.creditLedger')).toBeInTheDocument()
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Users')).toBeInTheDocument()
+      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
     })
   })
 
@@ -470,15 +463,13 @@ describe('OrganizationView', () => {
     it('renders all tab labels correctly', () => {
       renderComponent()
 
-      expect(screen.getByText('org:tabs.dashboard')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.users')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.creditLedger')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.companyOverview')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.penaltyLog')).toBeInTheDocument()
-      expect(screen.getByText('org:tabs.supplyHistory')).toBeInTheDocument()
-      expect(
-        screen.getByText('org:tabs.complianceTracking')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Users')).toBeInTheDocument()
+      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
+      expect(screen.getByText('Company overview')).toBeInTheDocument()
+      expect(screen.getByText('Penalty log')).toBeInTheDocument()
+      expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
     })
   })
 
@@ -490,7 +481,7 @@ describe('OrganizationView', () => {
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
 
       // Click Users tab should call navigate
-      fireEvent.click(screen.getByText('org:tabs.users'))
+      fireEvent.click(screen.getByText('Users'))
       expect(mockNavigate).toHaveBeenCalled()
     })
 

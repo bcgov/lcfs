@@ -71,8 +71,17 @@
       "description": "This section will contain company overview information. Implementation pending."
     },
     "penaltyLog": {
-      "title": "Penalty Log",
-      "description": "This section will contain penalty log information. Implementation pending."
+      "title": "Penalty log",
+      "description": "Overview of automatic and discretionary penalties issued to this organization.",
+      "history": "Penalty history",
+      "analyticsError": "Unable to load penalty analytics data.",
+      "addPenaltyBtn": "Add penalty",
+      "noOrganizationSelected": "Select an organization to view penalty analytics.",
+      "messages": {
+        "saving": "Saving penalty log entry...",
+        "saveSuccess": "Penalty log entry saved.",
+        "penaltyAmountRequired": "Penalty amount must be greater than zero."
+      }
     },
     "supplyHistory": {
       "title": "Supply History",
@@ -146,7 +155,7 @@
     "addPenaltyBtn": "Add discretionary penalty",
     "columns": {
       "complianceYear": "Compliance year",
-      "contraventionType": "Continous or single contravention",
+      "contraventionType": "Continuous or single contravention",
       "offenceHistory": "History of offences",
       "deliberate": "Whether contravention was deliberate",
       "effortsToCorrect": "Efforts taken to correct",
@@ -170,7 +179,7 @@
       "autoRenewable": "Auto Renewable",
       "autoLowCarbon": "Auto Low Carbon"
     },
-    "manageTitle": "Manage penalty log entries",
+    "manageTitle": "Confer discretionary penalty",
     "saveReturn": "Save & return",
     "noOrganizationSelected": "Select an organization to view penalty analytics.",
     "analyticsError": "Unable to load penalty analytics data."

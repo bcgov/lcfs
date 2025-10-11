@@ -374,7 +374,7 @@ class PenaltyLogEntrySchema(BaseSchema):
     penalty_log_id: int
     compliance_period_id: int
     compliance_year: Optional[Union[int, str]] = None
-    penalty_type: str
+    contravention_type: str
     offence_history: bool
     deliberate: bool
     efforts_to_correct: bool
@@ -395,14 +395,14 @@ class PenaltyLogListResponseSchema(BaseSchema):
     penalty_logs: List[PenaltyLogEntrySchema]
 
 
-class PenaltyTypeEnum(str, Enum):
+class ContraventionTypeEnum(str, Enum):
     SINGLE = "Single contravention"
     CONTINUOUS = "Continuous contravention"
 
 
 class PenaltyLogBaseSchema(BaseSchema):
     compliance_period_id: int
-    penalty_type: PenaltyTypeEnum
+    contravention_type: ContraventionTypeEnum
     offence_history: bool = False
     deliberate: bool = False
     efforts_to_correct: bool = False

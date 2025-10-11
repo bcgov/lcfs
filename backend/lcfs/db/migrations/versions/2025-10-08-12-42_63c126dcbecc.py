@@ -20,7 +20,7 @@ depends_on = None
 
 def upgrade() -> None:
     sa.Enum(
-        "Single contravention", "Continuous contravention", name="penalty_type_enum"
+        "Single contravention", "Continuous contravention", name="contravention_enum"
     ).create(op.get_bind())
     op.create_table(
         "penalty_log",
@@ -44,11 +44,11 @@ def upgrade() -> None:
             comment="Compliance period that the penalty relates to.",
         ),
         sa.Column(
-            "penalty_type",
+            "contravention_type",
             postgresql.ENUM(
                 "Single contravention",
                 "Continuous contravention",
-                name="penalty_type_enum",
+                name="contravention_enum",
                 create_type=False,
             ),
             nullable=False,
@@ -146,6 +146,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("penalty_log")
     sa.Enum(
-        "Single contravention", "Continuous contravention", name="penalty_type_enum"
+        "Single contravention", "Continuous contravention", name="contravention_enum"
     ).drop(op.get_bind())
 

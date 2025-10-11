@@ -30,9 +30,9 @@ class PenaltyLog(BaseModel, Auditable):
         nullable=False,
         comment="Compliance period that the penalty relates to.",
     )
-    penalty_type = Column(
+    contravention_type = Column(
         Enum(
-            "Single contravention", "Continuous contravention", name="penalty_type_enum"
+            "Single contravention", "Continuous contravention", name="contravention_enum"
         ),
         nullable=False,
         comment="Type of penalty assessed (e.g., 'Single contravention', 'Continuous contravention').",

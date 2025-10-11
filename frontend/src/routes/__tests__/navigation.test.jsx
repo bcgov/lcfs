@@ -510,12 +510,16 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle nested user parameters in organizations', async () => {      
-      const testRouter = createTestRouter(['/organizations/org123/user456'])
+    it('should handle nested user parameters in organizations', async () => {
+      const testRouter = createTestRouter([
+        '/organizations/org123/users/user456'
+      ])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('user-details-card-view-bceid')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('user-details-card-view-bceid')
+        ).toBeInTheDocument()
         expect(screen.getByText(/userID: user456/)).toBeInTheDocument()
         expect(screen.getByText(/orgID: org123/)).toBeInTheDocument()
       })

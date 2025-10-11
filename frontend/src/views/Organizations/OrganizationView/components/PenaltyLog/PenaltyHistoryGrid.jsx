@@ -46,7 +46,8 @@ export const PenaltyHistoryGrid = ({ organizationId }) => {
   const penaltyLogDefaultColDef = useMemo(
     () => ({
       flex: 1,
-      minWidth: 180
+      minWidth: 180,
+      suppressFloatingFilterButton: true
     }),
     []
   )

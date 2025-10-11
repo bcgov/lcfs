@@ -727,9 +727,7 @@ class OrganizationsRepository:
                 ComplianceReportListView.compliance_period_id.label(
                     "compliance_period_id"
                 ),
-                ComplianceReportListView.compliance_period.label(
-                    "compliance_year"
-                ),
+                ComplianceReportListView.compliance_period.label("compliance_year"),
                 func.row_number()
                 .over(
                     partition_by=ComplianceReportListView.compliance_period_id,
@@ -739,12 +737,15 @@ class OrganizationsRepository:
                     ],
                 )
                 .label("row_number"),
-            )
-            .where(
+            ).where(
                 ComplianceReportListView.organization_id == organization_id,
                 ComplianceReportListView.is_latest.is_(True),
-                ComplianceReportListView.report_status
-                == ComplianceReportStatusEnum.Submitted,
+                ComplianceReportListView.report_status.in_(
+                    [
+                        ComplianceReportStatusEnum.Submitted,
+                        ComplianceReportStatusEnum.Assessed,
+                    ]
+                ),
             )
         ).cte("assessed_reports")
 
@@ -790,7 +791,7 @@ class OrganizationsRepository:
                 PenaltyLog.penalty_log_id,
                 PenaltyLog.compliance_period_id,
                 CompliancePeriod.description.label("compliance_year"),
-                PenaltyLog.penalty_type,
+                PenaltyLog.contravention_type,
                 PenaltyLog.offence_history,
                 PenaltyLog.deliberate,
                 PenaltyLog.efforts_to_correct,
@@ -825,7 +826,7 @@ class OrganizationsRepository:
 
         filter_field_map = {
             "compliance_year": CompliancePeriod.description,
-            "contravention_type": PenaltyLog.penalty_type,
+            "contravention_type": PenaltyLog.contravention_type,
             "offence_history": PenaltyLog.offence_history,
             "deliberate": PenaltyLog.deliberate,
             "efforts_to_correct": PenaltyLog.efforts_to_correct,
@@ -883,7 +884,9 @@ class OrganizationsRepository:
             filter_type = filter_model.filter_type
             filter_option = filter_model.type
 
-            if filter_model.field == "penalty_amount" and isinstance(filter_value, list):
+            if filter_model.field == "penalty_amount" and isinstance(
+                filter_value, list
+            ):
                 numeric_range = [float(v) for v in filter_value if v is not None]
                 if len(numeric_range) == 2:
                     conditions.append(
@@ -925,7 +928,7 @@ class OrganizationsRepository:
 
         sort_map = {
             "compliance_year": CompliancePeriod.description,
-            "contravention_type": PenaltyLog.penalty_type,
+            "contravention_type": PenaltyLog.contravention_type,
             "offence_history": PenaltyLog.offence_history,
             "deliberate": PenaltyLog.deliberate,
             "efforts_to_correct": PenaltyLog.efforts_to_correct,
@@ -957,7 +960,7 @@ class OrganizationsRepository:
                 PenaltyLog.penalty_log_id,
                 PenaltyLog.compliance_period_id,
                 CompliancePeriod.description.label("compliance_year"),
-                PenaltyLog.penalty_type,
+                PenaltyLog.contravention_type,
                 PenaltyLog.offence_history,
                 PenaltyLog.deliberate,
                 PenaltyLog.efforts_to_correct,
@@ -986,7 +989,7 @@ class OrganizationsRepository:
         penalty_log = PenaltyLog(
             organization_id=organization_id,
             compliance_period_id=data.compliance_period_id,
-            penalty_type=data.penalty_type.value,
+            contravention_type=data.contravention_type.value,
             offence_history=data.offence_history,
             deliberate=data.deliberate,
             efforts_to_correct=data.efforts_to_correct,
@@ -1017,14 +1020,12 @@ class OrganizationsRepository:
     @repo_handler
     async def update_penalty_log(self, penalty_log: PenaltyLog, data):
         penalty_log.compliance_period_id = data.compliance_period_id
-        penalty_log.penalty_type = data.penalty_type.value
+        penalty_log.contravention_type = data.contravention_type.value
         penalty_log.offence_history = data.offence_history
         penalty_log.deliberate = data.deliberate
         penalty_log.efforts_to_correct = data.efforts_to_correct
         penalty_log.economic_benefit_derived = data.economic_benefit_derived
-        penalty_log.efforts_to_prevent_recurrence = (
-            data.efforts_to_prevent_recurrence
-        )
+        penalty_log.efforts_to_prevent_recurrence = data.efforts_to_prevent_recurrence
         penalty_log.notes = data.notes
         penalty_log.penalty_amount = Decimal(str(data.penalty_amount or 0))
         await self.db.flush()
@@ -1032,7 +1033,9 @@ class OrganizationsRepository:
         return penalty_log
 
     @repo_handler
-    async def delete_penalty_log(self, organization_id: int, penalty_log_id: int) -> bool:
+    async def delete_penalty_log(
+        self, organization_id: int, penalty_log_id: int
+    ) -> bool:
         result = await self.db.execute(
             delete(PenaltyLog)
             .where(

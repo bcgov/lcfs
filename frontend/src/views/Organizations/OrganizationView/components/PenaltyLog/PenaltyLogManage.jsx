@@ -20,14 +20,14 @@ import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete } from '@/utils/schedules'
-import { penaltyLogEditorColDefs } from './_schema'
+import { penaltyLogEditorColDefs, PENALTY_TYPES } from './_schema'
 
 const mapApiPenaltyToRow = (penalty, existingId) => ({
   id: existingId ?? penalty.penaltyLogId ?? uuid(),
   penaltyLogId: penalty.penaltyLogId,
   compliancePeriodId: penalty.compliancePeriodId,
   complianceYear: penalty.complianceYear,
-  penaltyType: penalty.penaltyType,
+  contraventionType: penalty.contraventionType,
   offenceHistory: !!penalty.offenceHistory,
   deliberate: !!penalty.deliberate,
   effortsToCorrect: !!penalty.effortsToCorrect,
@@ -45,7 +45,7 @@ const mapApiPenaltyToRow = (penalty, existingId) => ({
 const buildPayloadFromRow = (data) => ({
   penaltyLogId: data.penaltyLogId,
   compliancePeriodId: data.compliancePeriodId,
-  penaltyType: data.penaltyType,
+  contraventionType: data.contraventionType,
   offenceHistory: !!data.offenceHistory,
   deliberate: !!data.deliberate,
   effortsToCorrect: !!data.effortsToCorrect,
@@ -54,7 +54,7 @@ const buildPayloadFromRow = (data) => ({
   notes: data.notes,
   penaltyAmount:
     data.penaltyAmount === null || data.penaltyAmount === undefined
-      ? 0
+      ? null
       : Number(data.penaltyAmount)
 })
 
@@ -103,17 +103,16 @@ export const PenaltyLogManage = () => {
     () => ({
       editable: true,
       resizable: true,
-      sortable: true,
-      filter: true,
-      floatingFilter: true,
-      suppressHeaderMenuButton: true
+      filter: false,
+      floatingFilter: false,
+      sortable: false,
+      singleClickEdit: true
     }),
     []
   )
 
   const gridOptions = useMemo(
     () => ({
-      stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 80,
@@ -135,16 +134,6 @@ export const PenaltyLogManage = () => {
     )
   }, [compliancePeriodLabelMap, compliancePeriodOptions, t])
 
-  useEffect(() => {
-    if (penaltyLogsData?.penaltyLogs) {
-      setRowData(
-        penaltyLogsData.penaltyLogs.map((penalty) =>
-          mapApiPenaltyToRow(penalty)
-        )
-      )
-    }
-  }, [penaltyLogsData])
-
   const onAddRows = useCallback((numRows = 1) => {
     return Array(numRows)
       .fill(null)
@@ -152,7 +141,7 @@ export const PenaltyLogManage = () => {
         id: uuid(),
         penaltyLogId: null,
         compliancePeriodId: null,
-        penaltyType: PENALTY_TYPES[0],
+        contraventionType: PENALTY_TYPES[0],
         offenceHistory: false,
         deliberate: false,
         effortsToCorrect: false,
@@ -165,6 +154,18 @@ export const PenaltyLogManage = () => {
       }))
   }, [])
 
+  useEffect(() => {
+    if (!penaltyLogsData) return
+
+    const entries = penaltyLogsData.penaltyLogs?.length
+      ? penaltyLogsData.penaltyLogs.map((penalty) =>
+          mapApiPenaltyToRow(penalty)
+        )
+      : onAddRows()
+
+    setRowData(entries)
+  }, [penaltyLogsData, onAddRows])
+
   const onAction = useCallback(
     async (action, params) => {
       if (action !== 'delete') return
@@ -172,7 +173,7 @@ export const PenaltyLogManage = () => {
       const defaultRow = {
         penaltyLogId: null,
         compliancePeriodId: null,
-        penaltyType: PENALTY_TYPES[0]
+        contraventionType: PENALTY_TYPES[0]
       }
 
       const success = await handleScheduleDelete(
@@ -196,6 +197,21 @@ export const PenaltyLogManage = () => {
       if (!params.data.modified || params.data.deleted) return
 
       const payload = buildPayloadFromRow(params.node.data)
+
+      if (payload.penaltyAmount === null || payload.penaltyAmount <= 0) {
+        alertRef.current?.triggerAlert({
+          severity: 'error',
+          message: t('org:penaltyLog.messages.penaltyAmountRequired', {
+            defaultValue: 'Penalty amount must be greater than zero.'
+          })
+        })
+        params.node.updateData({
+          ...params.node.data,
+          validationStatus: 'error',
+          modified: true
+        })
+        return
+      }
 
       try {
         alertRef.current?.triggerAlert({
@@ -276,6 +292,7 @@ export const PenaltyLogManage = () => {
           onAddRows={onAddRows}
           gridOptions={gridOptions}
           loading={penaltyLogsLoading}
+          stopEditingWhenCellsLoseFocus
           saveButtonProps={{
             enabled: true,
             text: t('org:penaltyLog.saveReturn'),
