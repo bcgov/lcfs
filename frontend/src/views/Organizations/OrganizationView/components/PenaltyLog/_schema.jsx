@@ -1,10 +1,12 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
+  AutocompleteCellEditor,
   BCSelectFloatingFilter,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { currencyFormatter } from '@/utils/formatters'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 const booleanValueFormatter = ({ value }) => {
   if (value === null || value === undefined) return ''
@@ -124,14 +126,24 @@ export const penaltyLogEditorColDefs = (
     hide: true
   },
   {
-    field: 'compliancePeriodId',
+    field: 'compliancePeriod',
     headerComponent: RequiredHeader,
     headerName: t('org:penaltyLog.columns.compliancePeriod', {
       defaultValue: 'Compliance period'
     }),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
-      values: complianceValues
+      options: complianceValues.map((value) => ({
+        value,
+        label: compliancePeriodLabelMap.get(Number(value))
+      })),
+      freeSolo: false,
+      disableCloseOnSelect: false,
+      openOnFocus: true
+    },
+    suppressKeyboardEvent,
+    valueGetter: ({ data }) => {
+      return data.compliancePeriodId
     },
     valueFormatter: ({ value }) =>
       value !== undefined && value !== null
@@ -158,7 +170,7 @@ export const penaltyLogEditorColDefs = (
     cellEditorParams: {
       values: PENALTY_TYPES
     },
-    minWidth: 230
+    minWidth: 320
   },
   {
     field: 'penaltyAmount',
