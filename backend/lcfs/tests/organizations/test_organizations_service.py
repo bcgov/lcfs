@@ -12,7 +12,7 @@ from lcfs.web.api.organizations.schema import (
     PenaltyAnalyticsResponseSchema,
     PenaltyLogCreateSchema,
     PenaltyLogUpdateSchema,
-    PenaltyTypeEnum,
+    ContraventionTypeEnum,
 )
 from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
@@ -238,7 +238,7 @@ async def test_get_penalty_analytics_aggregates_values(
             "penalty_log_id": 11,
             "compliance_period_id": 1,
             "compliance_year": "2023",
-            "penalty_type": "Single contravention",
+            "contravention_type": "Single contravention",
             "offence_history": True,
             "deliberate": False,
             "efforts_to_correct": False,
@@ -251,7 +251,7 @@ async def test_get_penalty_analytics_aggregates_values(
             "penalty_log_id": 12,
             "compliance_period_id": 2,
             "compliance_year": "2024",
-            "penalty_type": "Continuous contravention",
+            "contravention_type": "Continuous contravention",
             "offence_history": False,
             "deliberate": True,
             "efforts_to_correct": True,
@@ -282,7 +282,7 @@ async def test_get_penalty_analytics_aggregates_values(
 
     assert len(result.penalty_logs) == 2
     assert result.penalty_logs[0].penalty_amount == pytest.approx(1000.5)
-    assert result.penalty_logs[1].penalty_type == "Continuous contravention"
+    assert result.penalty_logs[1].contravention_type == "Continuous contravention"
 
 
 @pytest.mark.anyio
@@ -297,7 +297,7 @@ async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
                     "penalty_log_id": 12,
                     "compliance_period_id": 7,
                     "compliance_year": "2024",
-                    "penalty_type": "Single contravention",
+                    "contravention_type": "Single contravention",
                     "offence_history": True,
                     "deliberate": False,
                     "efforts_to_correct": True,
@@ -326,7 +326,7 @@ async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
 async def test_create_penalty_log(organizations_service, mock_repo):
     payload = PenaltyLogCreateSchema(
         compliance_period_id=10,
-        penalty_type=PenaltyTypeEnum.SINGLE,
+        contravention_type=ContraventionTypeEnum.SINGLE,
         offence_history=True,
         deliberate=False,
         efforts_to_correct=True,
@@ -340,7 +340,7 @@ async def test_create_penalty_log(organizations_service, mock_repo):
         penalty_log_id=1,
         compliance_period_id=10,
         compliance_period=SimpleNamespace(description="2024"),
-        penalty_type=PenaltyTypeEnum.SINGLE.value,
+        contravention_type=ContraventionTypeEnum.SINGLE.value,
         offence_history=True,
         deliberate=False,
         efforts_to_correct=True,
@@ -363,7 +363,7 @@ async def test_create_penalty_log(organizations_service, mock_repo):
 async def test_update_penalty_log(organizations_service, mock_repo):
     payload = PenaltyLogUpdateSchema(
         compliance_period_id=11,
-        penalty_type=PenaltyTypeEnum.CONTINUOUS,
+        contravention_type=ContraventionTypeEnum.CONTINUOUS,
         offence_history=False,
         deliberate=True,
         efforts_to_correct=False,
@@ -377,7 +377,7 @@ async def test_update_penalty_log(organizations_service, mock_repo):
         penalty_log_id=2,
         compliance_period_id=10,
         compliance_period=SimpleNamespace(description="2023"),
-        penalty_type=PenaltyTypeEnum.SINGLE.value,
+        contravention_type=ContraventionTypeEnum.SINGLE.value,
         offence_history=True,
         deliberate=False,
         efforts_to_correct=True,
@@ -391,7 +391,7 @@ async def test_update_penalty_log(organizations_service, mock_repo):
         penalty_log_id=2,
         compliance_period_id=11,
         compliance_period=SimpleNamespace(description="2024"),
-        penalty_type=PenaltyTypeEnum.CONTINUOUS.value,
+        contravention_type=ContraventionTypeEnum.CONTINUOUS.value,
         offence_history=False,
         deliberate=True,
         efforts_to_correct=False,
@@ -407,7 +407,7 @@ async def test_update_penalty_log(organizations_service, mock_repo):
     result = await organizations_service.update_penalty_log(1, 2, payload)
 
     assert result.penalty_log_id == 2
-    assert result.penalty_type == PenaltyTypeEnum.CONTINUOUS.value
+    assert result.contravention_type == ContraventionTypeEnum.CONTINUOUS.value
     assert result.penalty_amount == pytest.approx(500.0)
     mock_repo.get_penalty_log_by_id.assert_awaited_once()
     mock_repo.update_penalty_log.assert_awaited_once()
