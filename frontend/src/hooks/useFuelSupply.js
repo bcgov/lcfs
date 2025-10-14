@@ -338,3 +338,36 @@ export const useDeleteFuelSupply = (params, options = {}) => {
     ...restOptions
   })
 }
+
+export const useOrganizationFuelSupply = (organizationId, pagination, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-fuel-supply', organizationId, pagination],
+    queryFn: async () => {
+      if (!organizationId) {
+        throw new Error('Organization ID is required')
+      }
+
+      const path = apiRoutes.getOrganizationFuelSupply.replace(
+        ':orgID',
+        organizationId
+      )
+      const response = await client.post(path, pagination)
+      return response.data
+    },
+    enabled: enabled && !!organizationId,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}

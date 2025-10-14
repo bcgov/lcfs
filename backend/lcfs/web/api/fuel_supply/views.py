@@ -15,6 +15,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyResponseSchema,
     FuelTypeOptionsResponse,
     CommonPaginatedReportRequestSchema,
+    OrganizationFuelSuppliesSchema,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
@@ -117,6 +118,12 @@ async def save_fuel_supply_row(
     await report_validate.validate_compliance_report_editable(compliance_report)
 
     if request_data.deleted:
+        if request_data.version > 0:
+            duplicate_id = await fs_validate.check_duplicate_of_prev_data(request_data)
+            if duplicate_id is not None:
+                duplicate_response = format_duplicate_error(request_data.fuel_supply_id)
+                return duplicate_response
+        # Delete fuel supply row using actions service
         return await action_service.delete_fuel_supply(request_data)
     else:
         duplicate_id = await fs_validate.check_duplicate(request_data)
@@ -150,6 +157,8 @@ def format_duplicate_error(duplicate_id: int):
                         "fuelType",
                         "fuelCategory",
                         "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
                     ],
                     "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
                 }
@@ -162,9 +171,32 @@ def format_duplicate_error(duplicate_id: int):
                         "fuelType",
                         "fuelCategory",
                         "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
                     ],
                     "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
                 }
             ],
         },
     )
+
+
+@router.post(
+    "/organization/{organization_id}",
+    response_model=OrganizationFuelSuppliesSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_organization_fuel_supply(
+    request: Request,
+    organization_id: int,
+    pagination: PaginationRequestSchema = Body(...),
+    service: FuelSupplyServices = Depends(),
+) -> OrganizationFuelSuppliesSchema:
+    """
+    Get paginated fuel supply history for a specific organization.
+    Aggregates data from all compliance reports for the organization.
+    Supports filtering by year, fuel type, category, and provision.
+    Only accessible by government users.
+    """
+    return await service.get_organization_fuel_supply(organization_id, pagination)

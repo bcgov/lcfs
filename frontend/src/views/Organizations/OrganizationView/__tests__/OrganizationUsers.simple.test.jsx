@@ -17,7 +17,7 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-// Mock react-router-dom  
+// Mock react-router-dom
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal()
@@ -45,10 +45,26 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn(() => makeUserHook(adminUser))
 }))
 
-// Simple mocks for components
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  __esModule: true,
-  default: (props) => <div data-test="grid" data-testid="grid">BCDataGridServer</div>
+// Mock useOrganizationUsers hook
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationUsers: vi.fn(() => ({
+    data: {
+      users: [],
+      pagination: { page: 1, size: 10, total: 0 }
+    },
+    isLoading: false,
+    error: null,
+    isError: false
+  }))
+}))
+
+// Mock BCGridViewer instead of BCDataGridServer
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: (props) => (
+    <div data-test="grid" data-testid="grid">
+      BCGridViewer
+    </div>
+  )
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
@@ -79,8 +95,8 @@ vi.mock('../_schema', () => ({
 vi.mock('@/routes/routes', () => ({
   buildPath: vi.fn((route) => `/mock-path/${route}`),
   ROUTES: {
-    ORGANIZATIONS: { ADD_USER: 'org-add-user' },
-    ORGANIZATION: { ADD_USER: 'add-user' }
+    ORGANIZATIONS: { ADD_USER: 'org-add-user', VIEW_USER: 'org-view-user' },
+    ORGANIZATION: { ADD_USER: 'add-user', VIEW_USER: 'view-user' }
   }
 }))
 
@@ -90,15 +106,36 @@ vi.mock('@/constants/routes', () => ({
   }
 }))
 
-const queryClient = new QueryClient()
+// Mock translation hook to return keys as values
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key) => {
+        // Return expected values for specific keys
+        if (key === 'org:usersLabel') return 'Users'
+        if (key === 'org:newUsrBtn') return 'New user'
+        if (key === 'org:noUsersFound') return 'No users found'
+        return key
+      }
+    })
+  }
+})
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false
+    }
+  }
+})
 
 const Wrapper = ({ children }) => (
   <QueryClientProvider client={queryClient}>
     <I18nextProvider i18n={i18n}>
       <MemoryRouter>
-        <ThemeProvider theme={theme}>
-          {children}
-        </ThemeProvider>
+        <ThemeProvider theme={theme}>{children}</ThemeProvider>
       </MemoryRouter>
     </I18nextProvider>
   </QueryClientProvider>
@@ -107,7 +144,7 @@ const Wrapper = ({ children }) => (
 describe('OrganizationUsers', () => {
   afterEach(() => {
     cleanup()
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('renders component', () => {

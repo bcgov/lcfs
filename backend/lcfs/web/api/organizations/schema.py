@@ -67,6 +67,17 @@ class AddressBase(BaseSchema):
     postalCode_zipCode: Optional[str] = None
 
 
+# Optional address schema for non-BCeID organization types
+class OptionalAddressBase(BaseSchema):
+    name: Optional[str] = None
+    street_address: Optional[str] = None
+    address_other: Optional[str] = None
+    city: Optional[str] = None
+    province_state: Optional[str] = None
+    country: Optional[str] = None
+    postalCode_zipCode: Optional[str] = None
+
+
 # --------------------------------------
 # Organization Address
 # --------------------------------------
@@ -84,6 +95,11 @@ class OrganizationAddressCreateSchema(OrganizationAddressBase):
     pass
 
 
+# Optional address schema for non-BCeID organization types
+class OptionalOrganizationAddressCreateSchema(OptionalAddressBase):
+    pass
+
+
 # --------------------------------------
 # Organization Attorney Address
 # --------------------------------------
@@ -98,6 +114,11 @@ class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBase):
 
 
 class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
+    pass
+
+
+# Optional attorney address schema for non-BCeID organization types
+class OptionalOrganizationAttorneyAddressCreateSchema(OptionalAddressBase):
     pass
 
 
@@ -125,6 +146,10 @@ class OrganizationBase(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
 
 
 class OrganizationSchema(OrganizationBase):
@@ -160,6 +185,32 @@ class OrganizationCreateSchema(BaseSchema):
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
 
+# Schema for non-BCeID organization types
+class NonBCeIDOrganizationCreateSchema(BaseSchema):
+    name: str
+    operating_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    edrms_record: Optional[str] = None
+    has_early_issuance: bool
+    organization_status_id: int
+    organization_type_id: int
+    records_address: Optional[str] = None
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
+    address: Optional[OptionalOrganizationAddressCreateSchema] = (
+        None  # Address is optional for non-BCeID types
+    )
+    attorney_address: Optional[OptionalOrganizationAttorneyAddressCreateSchema] = (
+        None  # Attorney address is optional for non-BCeID types
+    )
+
+
 class OrganizationUpdateSchema(BaseSchema):
     name: Optional[str] = None
     operating_name: Optional[str] = None
@@ -181,6 +232,32 @@ class OrganizationUpdateSchema(BaseSchema):
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
 
 
+# Update schema for non-BCeID organization types with relaxed validation
+class NonBCeIDOrganizationUpdateSchema(BaseSchema):
+    name: Optional[str] = None
+    operating_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    edrms_record: Optional[str] = None
+    has_early_issuance: bool
+    organization_status_id: Optional[int] = None
+    organization_type_id: int
+    records_address: Optional[str] = None
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
+    address: Optional[OptionalOrganizationAddressCreateSchema] = (
+        None  # Address is optional for non-BCeID types
+    )
+    attorney_address: Optional[OptionalOrganizationAttorneyAddressCreateSchema] = (
+        None  # Attorney address is optional for non-BCeID types
+    )
+
+
 class OrganizationResponseSchema(BaseSchema):
     organization_id: int
     name: str
@@ -198,6 +275,10 @@ class OrganizationResponseSchema(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
     organization_type_id: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = []
     org_type: Optional[OrganizationTypeSchema] = []
@@ -256,6 +337,15 @@ class OrganizationCreditMarketListingSchema(BaseSchema):
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
+
+
+class OrganizationCompanyOverviewUpdateSchema(BaseSchema):
+    """Schema for updating company overview information"""
+
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
 
 
 # --------------------------------------

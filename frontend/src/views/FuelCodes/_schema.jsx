@@ -20,7 +20,7 @@ export const fuelCodeColDefs = (t, status = null) => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
-    minWidth: 200,
+    minWidth: 130,
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'status',
@@ -32,12 +32,14 @@ export const fuelCodeColDefs = (t, status = null) => [
   },
   {
     field: 'prefix',
+    minWidth: 100,
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     suppressFloatingFilterButton: true
     // cellRenderer: FuelCodePrefixRenderer,
   },
   {
     field: 'fuelSuffix',
+    minWidth: 120,
     headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
     type: 'numericColumn',
     filter: 'agNumberColumnFilter',
@@ -49,6 +51,7 @@ export const fuelCodeColDefs = (t, status = null) => [
   },
   {
     field: 'carbonIntensity',
+    minWidth: 260,
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     type: 'numericColumn',
     filter: 'agNumberColumnFilter',
@@ -59,6 +62,7 @@ export const fuelCodeColDefs = (t, status = null) => [
   },
   {
     field: 'edrms',
+    minWidth: 140,
     headerName: t('fuelCode:fuelCodeColLabels.edrms')
   },
   {
@@ -81,7 +85,7 @@ export const fuelCodeColDefs = (t, status = null) => [
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
     valueFormatter: dateFormatter,
     filter: 'agDateColumnFilter',
-    width: 250,
+    minWidth: 250,
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
   },
@@ -90,7 +94,7 @@ export const fuelCodeColDefs = (t, status = null) => [
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
     valueFormatter: dateFormatter,
     filter: 'agDateColumnFilter',
-    width: 250,
+    minWidth: 250,
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
   },
@@ -99,7 +103,7 @@ export const fuelCodeColDefs = (t, status = null) => [
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
     valueFormatter: dateFormatter,
     filter: 'agDateColumnFilter',
-    width: 250,
+    minWidth: 250,
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
   },
@@ -108,16 +112,18 @@ export const fuelCodeColDefs = (t, status = null) => [
     headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
     valueFormatter: dateFormatter,
     filter: 'agDateColumnFilter',
-    width: 250,
+    minWidth: 250,
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
   },
   {
     field: 'fuelType',
+    minWidth: 200,
     headerName: t('fuelCode:fuelCodeColLabels.fuelType')
   },
   {
     field: 'feedstock',
+    minWidth: 150,
     headerName: t('fuelCode:fuelCodeColLabels.feedstock')
   },
   {

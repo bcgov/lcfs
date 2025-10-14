@@ -20,6 +20,11 @@ import {
   otherUsesColDefs,
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
+import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import {
+  calculateRenewableClaimColumnVisibility,
+  applyRenewableClaimColumnVisibility
+} from '@/utils/renewableClaimUtils'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -244,6 +249,19 @@ export const AddEditOtherUses = () => {
     }
   }, [])
 
+  const updateGridColumnsVisibility = useCallback(() => {
+    if (!gridRef.current?.api) return
+
+    const columnVisibility = calculateRenewableClaimColumnVisibility(
+      rowData,
+      optionsData,
+      compliancePeriod,
+      PROVISION_APPROVED_FUEL_CODE
+    )
+
+    applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
+  }, [rowData, optionsData, compliancePeriod])
+
   const onCellValueChanged = useCallback(
     async (params) => {
       if (
@@ -295,8 +313,13 @@ export const AddEditOtherUses = () => {
           )
         }
       }
+      updateNodeData(params.node, 'isCanadaProduced', false)
+      updateNodeData(params.node, 'isQ1Supplied', false)
+      setTimeout(() => {
+        updateGridColumnsVisibility()
+      }, 0)
     },
-    [optionsData, findCiOfFuel, updateNodeData]
+    [optionsData, findCiOfFuel, updateNodeData, updateGridColumnsVisibility]
   )
 
   const onCellEditingStopped = useCallback(
@@ -343,7 +366,7 @@ export const AddEditOtherUses = () => {
           severity: 'error'
         })
       }
-      params.api.autoSizeAllColumns()
+      params.api?.autoSizeAllColumns?.()
     },
     [numericComplianceReportId, saveRow, t, validate]
   )
@@ -395,9 +418,13 @@ export const AddEditOtherUses = () => {
     }),
     []
   )
+  // Call this function whenever relevant data changes
+  useEffect(() => {
+    updateGridColumnsVisibility()
+  }, [rowData, optionsData, updateGridColumnsVisibility])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   // Show loading state
@@ -414,6 +441,11 @@ export const AddEditOtherUses = () => {
         <BCTypography variant="body4" color="text" my={2} component="div">
           {t('otherUses:newOtherUsesGuide')}
         </BCTypography>
+        {parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && (
+          <BCTypography variant="body4" color="text" my={2} component="div">
+            {t('otherUses:newOtherUsesGuide2025')}
+          </BCTypography>
+        )}
       </div>
 
       <BCGridEditor

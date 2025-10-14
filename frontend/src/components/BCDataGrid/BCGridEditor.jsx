@@ -34,7 +34,7 @@ import { RequiredHeader } from '@/components/BCDataGrid/components'
  * @returns {JSX.Element}
  */
 export const BCGridEditor = ({
-  gridRef,
+  gridRef = useRef(null),
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -211,7 +211,6 @@ export const BCGridEditor = ({
       params.event.target.dataset.action &&
       onAction
     ) {
-      alertRef.current.clearAlert()
       const action = params.event.target.dataset.action
       const transaction = await onAction(action, params)
 
@@ -251,7 +250,6 @@ export const BCGridEditor = ({
 
   const handleAddRowsInternal = useCallback(
     async (numRows) => {
-      alertRef.current.clearAlert()
       let newRows = []
 
       if (onAction) {
@@ -425,7 +423,7 @@ export const BCGridEditor = ({
 }
 
 BCGridEditor.propTypes = {
-  gridRef: PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
+  gridRef: PropTypes.shape({ current: PropTypes.any }),
   alertRef: PropTypes.shape({ current: PropTypes.any }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,
