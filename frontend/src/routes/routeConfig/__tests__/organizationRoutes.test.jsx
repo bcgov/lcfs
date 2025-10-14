@@ -42,12 +42,12 @@ vi.mock('../routes', () => ({
       ADD: '/organizations/add-org',
       VIEW: '/organizations/:orgID',
       ADD_USER: '/organizations/:orgID/add-user',
-      VIEW_USER: '/organizations/:orgID/:userID'
+      VIEW_USER: '/organizations/:orgID/users/:userID'
     },
     ORGANIZATION: {
       ORG: '/organization',
       ADD_USER: '/organization/add-user',
-      VIEW_USER: '/organization/:userID'
+      VIEW_USER: '/organization/users/:userID'
     }
   }
 }))
@@ -55,7 +55,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(14)
+    expect(organizationRoutes.length).toBe(16)
   })
 
   it('should have all expected route paths', () => {
@@ -67,13 +67,15 @@ describe('organizationRoutes', () => {
       '/organizations/:orgID/credit-ledger',
       '/organizations/:orgID/company-overview',
       '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/penalty-log/manage',
       '/organizations/:orgID/supply-history',
       '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/add-user',
-      '/organizations/:orgID/:userID',
+      '/organizations/:orgID/users/:userID',
       '/organization',
+      '/organization/users',
       '/organization/add-user',
-      '/organization/:userID'
+      '/organization/users/:userID'
     ]
 
     const actualPaths = organizationRoutes.map((route) => route.path)
@@ -88,7 +90,7 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(11)
+      expect(idirRoutes.length).toBe(12)
 
       const expectedIdirPaths = [
         '/organizations',
@@ -98,10 +100,11 @@ describe('organizationRoutes', () => {
         '/organizations/:orgID/credit-ledger',
         '/organizations/:orgID/company-overview',
         '/organizations/:orgID/penalty-log',
+        '/organizations/:orgID/penalty-log/manage',
         '/organizations/:orgID/supply-history',
         '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/add-user',
-        '/organizations/:orgID/:userID'
+        '/organizations/:orgID/users/:userID'
       ]
 
       idirRoutes.forEach((route) => {
@@ -115,12 +118,13 @@ describe('organizationRoutes', () => {
           route.path.startsWith('/organization') &&
           !route.path.startsWith('/organizations')
       )
-      expect(bceidRoutes.length).toBe(3)
+      expect(bceidRoutes.length).toBe(4)
 
       const expectedBceidPaths = [
         '/organization',
+        '/organization/users',
         '/organization/add-user',
-        '/organization/:userID'
+        '/organization/users/:userID'
       ]
 
       bceidRoutes.forEach((route) => {
@@ -165,7 +169,7 @@ it('should have correct route structure for add user to organization', () => {
 
 it('should have correct route structure for view user in organization', () => {
   const viewUserRoute = organizationRoutes.find(
-    (route) => route.path === '/organizations/:orgID/:userID'
+    (route) => route.path === '/organizations/:orgID/users/:userID'
   )
   expect(viewUserRoute).toBeDefined()
   expect(viewUserRoute.handle.title).toBe('User profile')
@@ -192,7 +196,7 @@ it('should have correct route structure for BCeID add user', () => {
 
 it('should have correct route structure for BCeID view user', () => {
   const viewUserRoute = organizationRoutes.find(
-    (route) => route.path === '/organization/:userID'
+    (route) => route.path === '/organization/users/:userID'
   )
   expect(viewUserRoute).toBeDefined()
   expect(viewUserRoute.handle.title).toBe('User profile')
@@ -241,14 +245,14 @@ describe('Route Elements', () => {
 
   it('should use UserDetailsCard with correct props for view user routes', () => {
     const viewUserOrgRoute = organizationRoutes.find(
-      (route) => route.path === '/organizations/:orgID/:userID'
+      (route) => route.path === '/organizations/:orgID/users/:userID'
     )
     expect(viewUserOrgRoute.element.type).toBe(UserDetailsCard)
     expect(viewUserOrgRoute.element.props.userType).toBe('bceid')
     expect(viewUserOrgRoute.element.props.addMode).toBeUndefined()
 
     const viewUserBceidRoute = organizationRoutes.find(
-      (route) => route.path === '/organization/:userID'
+      (route) => route.path === '/organization/users/:userID'
     )
     expect(viewUserBceidRoute.element.type).toBe(UserDetailsCard)
     expect(viewUserBceidRoute.element.props.userType).toBe('bceid') // Updated: now has bceid
@@ -276,11 +280,13 @@ describe('Route Handle Properties', () => {
     const routesWithCrumbs = organizationRoutes.filter(
       (route) => route.handle.crumb
     )
-    expect(routesWithCrumbs.length).toBe(2) // Organizations list and organization user view routes
+    expect(routesWithCrumbs.length).toBe(4) // Organizations list and organization user view routes
 
     const expectedCrumbRoutes = [
       '/organizations',
-      '/organizations/:orgID/:userID'
+      '/organizations/:orgID/users/:userID',
+      '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/penalty-log/manage'
     ]
     routesWithCrumbs.forEach((route) => {
       expect(expectedCrumbRoutes.includes(route.path)).toBe(true)
@@ -293,7 +299,7 @@ describe('Route Handle Properties', () => {
     expect(listRoute.handle.crumb()).toBe('Organizations')
 
     const viewUserRoute = organizationRoutes.find(
-      (route) => route.path === '/organizations/:orgID/:userID'
+      (route) => route.path === '/organizations/:orgID/users/:userID'
     )
     expect(viewUserRoute.handle.crumb()).toBe('Users')
   })

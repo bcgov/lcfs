@@ -39,6 +39,9 @@ export const apiRoutes = {
   // organizations
   organizationSearch: '/organizations/search?',
   organizationExport: '/organizations/export',
+  organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
+  organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
+  organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
 
   // transactions
   transactions: '/transactions/',

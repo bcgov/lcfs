@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { useLocation, useNavigate, useParams, Outlet } from 'react-router-dom'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
@@ -7,13 +7,18 @@ import { OrganizationDetailsCard } from './OrganizationDetailsCard'
 import { OrganizationUsers } from './OrganizationUsers'
 import { CreditLedger } from './CreditLedger'
 import CompanyOverview from './components/CompanyOverview'
-import PenaltyLog from './components/PenaltyLog'
+import { PenaltyLog } from './components/PenaltyLog/PenaltyLog'
+import PenaltyLogManage from './components/PenaltyLog/PenaltyLogManage'
 import SupplyHistory from './components/SupplyHistory'
 import ComplianceTracking from './components/ComplianceTracking'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
-import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/routes/routes'
+import breakpoints from '@/themes/base/breakpoints'
+import {
+  orgDashboardRenderers,
+  orgDashboardRoutes
+} from '@/routes/routeConfig/organizationRoutes'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -29,7 +34,6 @@ function TabPanel({ children, value, index }) {
 }
 
 export const OrganizationView = ({ addMode = false }) => {
-  const { t } = useTranslation(['org'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
 
   const location = useLocation()
@@ -55,105 +59,61 @@ export const OrganizationView = ({ addMode = false }) => {
     }
   }, [location, navigate])
 
-  // Define tab paths and labels based on user role
-  const { tabPaths, tabLabels } = useMemo(() => {
-    const basePath = ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID || '')
-
-    if (isGovernment) {
-      // Government users see all tabs
-      return {
-        tabPaths: [
-          basePath,
-          ROUTES.ORGANIZATIONS.USERS.replace(':orgID', orgID || ''),
-          ROUTES.ORGANIZATIONS.CREDIT_LEDGER.replace(':orgID', orgID || ''),
-          ROUTES.ORGANIZATIONS.COMPANY_OVERVIEW.replace(':orgID', orgID || ''),
-          ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
-          ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', orgID || ''),
-          ROUTES.ORGANIZATIONS.COMPLIANCE_TRACKING.replace(':orgID', orgID || '')
-        ],
-        tabLabels: [
-          t('org:tabs.dashboard'),
-          t('org:tabs.users'),
-          t('org:tabs.creditLedger'),
-          t('org:tabs.companyOverview'),
-          t('org:tabs.penaltyLog'),
-          t('org:tabs.supplyHistory'),
-          t('org:tabs.complianceTracking')
-        ]
-      }
-    } else {
-      // BCeID suppliers only see dashboard
-      return {
-        tabPaths: [basePath],
-        tabLabels: [t('org:tabs.dashboard')]
-      }
-    }
-  }, [orgID, isGovernment, t])
+  const tabConfig = useMemo(() => {
+    return orgDashboardRoutes(organizationId, isGovernment)
+  }, [isGovernment, organizationId])
 
   // Determine current tab index based on location
   const tabIndex = useMemo(() => {
     const currentPath = location.pathname
-    const index = tabPaths.findIndex((path) => currentPath === path)
-    return index >= 0 ? index : 0
-  }, [location.pathname, tabPaths])
+
+    // Direct access to manage route should highlight penalty log tab
+    if (currentPath.includes('/penalty-log/manage')) {
+      const penaltyIndex = tabConfig.findIndex((config) =>
+        config.path.includes('/penalty-log')
+      )
+      return penaltyIndex >= 0 ? penaltyIndex : 0
+    }
+
+    const matchIndex = tabConfig.findIndex((config) => {
+      if (config.match) {
+        return config.match(currentPath)
+      }
+      return currentPath === config.path
+    })
+    return matchIndex >= 0 ? matchIndex : 0
+  }, [location.pathname, tabConfig])
 
   useEffect(() => {
-    function handleResize() {
-      if (window.innerWidth < 500) {
-        setTabsOrientation('vertical')
-      } else {
-        setTabsOrientation('horizontal')
-      }
+    // A function that sets the orientation state of the tabs.
+    function handleTabsOrientation() {
+      return window.innerWidth < breakpoints.values.lg
+        ? setTabsOrientation('vertical')
+        : setTabsOrientation('horizontal')
     }
-    window.addEventListener('resize', handleResize)
-    handleResize()
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    window.addEventListener('resize', handleTabsOrientation)
+    handleTabsOrientation()
+    return () => window.removeEventListener('resize', handleTabsOrientation)
+  }, [tabsOrientation])
 
   const handleTabChange = (event, newValue) => {
-    navigate(tabPaths[newValue])
+    const targetPath = tabConfig[newValue]?.path
+    if (targetPath) {
+      navigate(targetPath)
+    }
   }
 
   // Render content based on current route
-  const renderContent = () => {
+  const renderContent = useCallback(() => {
     const currentPath = location.pathname || ''
-
-    // If non-government user tries to access government-only tabs, redirect to dashboard
-    if (!isGovernment && (
-      currentPath.includes('/users') ||
-      currentPath.includes('/credit-ledger') ||
-      currentPath.includes('/company-overview') ||
-      currentPath.includes('/penalty-log') ||
-      currentPath.includes('/supply-history') ||
-      currentPath.includes('/compliance-tracking')
-    )) {
-      const basePath = ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID || '')
-      navigate(basePath, { replace: true })
-      return <OrganizationDetailsCard addMode={addMode} />
-    }
-
-    if (currentPath.includes('/users')) {
-      return <OrganizationUsers />
-    }
-    if (currentPath.includes('/credit-ledger')) {
-      return <CreditLedger organizationId={organizationId} />
-    }
-    if (currentPath.includes('/company-overview')) {
-      return <CompanyOverview />
-    }
-    if (currentPath.includes('/penalty-log')) {
-      return <PenaltyLog />
-    }
-    if (currentPath.includes('/supply-history')) {
-      return <SupplyHistory organizationId={organizationId} />
-    }
-    if (currentPath.includes('/compliance-tracking')) {
-      return <ComplianceTracking />
-    }
-
-    // Default to dashboard
-    return <OrganizationDetailsCard addMode={addMode} />
-  }
+    return orgDashboardRenderers(
+      isGovernment,
+      currentPath,
+      organizationId,
+      addMode,
+      navigate
+    )
+  }, [isGovernment, organizationId, location, addMode, navigate])
 
   return (
     <BCBox>
@@ -164,31 +124,33 @@ export const OrganizationView = ({ addMode = false }) => {
       )}
 
       <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
-        <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
+        <AppBar
+          position="static"
+          sx={{ boxShadow: 'none', border: 'none', width: 'fit-content' }}
+        >
           <Tabs
             orientation={tabsOrientation}
             value={tabIndex}
             onChange={handleTabChange}
             aria-label="Organization tabs"
-            variant="scrollable"
-            scrollButtons="auto"
             sx={{
-              backgroundColor: 'rgba(0, 0, 0, 0.08)',
-              width: 'fit-content',
-              maxWidth: { xs: '100%', md: '100%', lg: '80%' },
+              background: 'rgba(0, 0, 0, 0.08)',
+              maxWidth: '100%',
               '& .MuiTab-root': {
                 minWidth: 'auto',
                 paddingX: 2,
                 marginX: 1,
-                whiteSpace: 'nowrap',
+                whiteSpace: 'nowrap'
               },
               '& .MuiTabs-flexContainer': {
                 flexWrap: 'nowrap'
               }
             }}
+            variant="scrollable"
+            scrollButtons="auto"
           >
-            {tabLabels.map((label, idx) => (
-              <Tab key={idx} label={label} />
+            {tabConfig.map((config, idx) => (
+              <Tab key={config.path} label={config.label} />
             ))}
           </Tabs>
         </AppBar>

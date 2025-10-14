@@ -1,6 +1,7 @@
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
+from decimal import Decimal
 
 from lcfs.web.api.base import BaseSchema
 from lcfs.web.api.base import PaginationResponseSchema
@@ -346,6 +347,77 @@ class OrganizationCompanyOverviewUpdateSchema(BaseSchema):
     company_representation_agreements: Optional[str] = None
     company_acting_as_aggregator: Optional[str] = None
     company_additional_notes: Optional[str] = None
+
+
+# --------------------------------------
+# Penalty Analytics
+# --------------------------------------
+
+
+class PenaltyYearlySummarySchema(BaseSchema):
+    compliance_period_id: int
+    compliance_year: Optional[Union[int, str]] = None
+    auto_renewable: float
+    auto_low_carbon: float
+    total_automatic: float
+
+
+class PenaltyTotalsSchema(BaseSchema):
+    auto_renewable: float
+    auto_low_carbon: float
+    discretionary: float
+    total_automatic: float
+    total: float
+
+
+class PenaltyLogEntrySchema(BaseSchema):
+    penalty_log_id: int
+    compliance_period_id: int
+    compliance_year: Optional[Union[int, str]] = None
+    contravention_type: str
+    offence_history: bool
+    deliberate: bool
+    efforts_to_correct: bool
+    economic_benefit_derived: bool
+    efforts_to_prevent_recurrence: bool
+    notes: Optional[str] = None
+    penalty_amount: float
+
+
+class PenaltyAnalyticsResponseSchema(BaseSchema):
+    yearly_penalties: List[PenaltyYearlySummarySchema]
+    totals: PenaltyTotalsSchema
+    penalty_logs: List[PenaltyLogEntrySchema]
+
+
+class PenaltyLogListResponseSchema(BaseSchema):
+    pagination: PaginationResponseSchema
+    penalty_logs: List[PenaltyLogEntrySchema]
+
+
+class ContraventionTypeEnum(str, Enum):
+    SINGLE = "Single contravention"
+    CONTINUOUS = "Continuous contravention"
+
+
+class PenaltyLogBaseSchema(BaseSchema):
+    compliance_period_id: int
+    contravention_type: ContraventionTypeEnum
+    offence_history: bool = False
+    deliberate: bool = False
+    efforts_to_correct: bool = False
+    economic_benefit_derived: bool = False
+    efforts_to_prevent_recurrence: bool = False
+    notes: Optional[str] = None
+    penalty_amount: Decimal
+
+
+class PenaltyLogCreateSchema(PenaltyLogBaseSchema):
+    pass
+
+
+class PenaltyLogUpdateSchema(PenaltyLogBaseSchema):
+    pass
 
 
 # --------------------------------------
