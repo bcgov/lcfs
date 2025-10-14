@@ -311,10 +311,10 @@ class UserServices:
         """
         Retrieves activities for a specific user with proper permission checks.
         """
-        # Permission Checks
+        # Permission Checks, pass no data found instead of 403
         if not await self._has_access_to_user_activities(current_user, user_id):
             raise HTTPException(
-                status_code=403,
+                status_code=404,
                 detail="You do not have permission to view this user's activities.",
             )
 
