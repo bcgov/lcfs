@@ -411,6 +411,7 @@ async def test_check_overlap_within_current_report_only(repo, fake_db):
     assert result is True  # Should detect overlap within current report
 
 
+@pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated(repo, fake_db):
     """Test getting paginated FSE reporting list"""
     # Mock the count query result
