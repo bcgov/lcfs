@@ -1,12 +1,18 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import unittest
+from decimal import Decimal
+from types import SimpleNamespace
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.organizations.schema import (
     OrganizationSummaryResponseSchema,
     OrganizationCreateSchema,
     OrganizationUpdateSchema,
     OrganizationAddressSchema,
+    PenaltyAnalyticsResponseSchema,
+    PenaltyLogCreateSchema,
+    PenaltyLogUpdateSchema,
+    ContraventionTypeEnum,
 )
 from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
@@ -194,6 +200,229 @@ async def test_get_organization_names_invalid_statuses(
 
     # Result should be valid even with invalid statuses passed
     assert isinstance(result, list)
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_aggregates_values(
+    organizations_service, mock_repo
+):
+    """Ensure penalty analytics aggregates automatic and discretionary penalties correctly."""
+
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2023",
+            "line_11_penalty_gasoline": 100.0,
+            "line_11_penalty_diesel": 50.0,
+            "line_11_penalty_jet_fuel": None,
+            "line_21_penalty_payable": 200.0,
+            "penalty_override_enabled": False,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        },
+        {
+            "compliance_period_id": 2,
+            "compliance_year": "2024",
+            "line_11_penalty_gasoline": 10.0,
+            "line_11_penalty_diesel": 20.0,
+            "line_11_penalty_jet_fuel": 30.0,
+            "line_21_penalty_payable": 40.0,
+            "penalty_override_enabled": True,
+            "renewable_penalty_override": 500.0,
+            "low_carbon_penalty_override": 700.0,
+        },
+    ]
+
+    penalty_logs = [
+        {
+            "penalty_log_id": 11,
+            "compliance_period_id": 1,
+            "compliance_year": "2023",
+            "contravention_type": "Single contravention",
+            "offence_history": True,
+            "deliberate": False,
+            "efforts_to_correct": False,
+            "economic_benefit_derived": True,
+            "efforts_to_prevent_recurrence": False,
+            "notes": "Test note",
+            "penalty_amount": Decimal("1000.50"),
+        },
+        {
+            "penalty_log_id": 12,
+            "compliance_period_id": 2,
+            "compliance_year": "2024",
+            "contravention_type": "Continuous contravention",
+            "offence_history": False,
+            "deliberate": True,
+            "efforts_to_correct": True,
+            "economic_benefit_derived": False,
+            "efforts_to_prevent_recurrence": True,
+            "notes": None,
+            "penalty_amount": Decimal("200.00"),
+        },
+    ]
+
+    mock_repo.get_penalty_analytics_data = AsyncMock(
+        return_value=(summaries, penalty_logs)
+    )
+
+    result = await organizations_service.get_penalty_analytics(organization_id=123)
+
+    assert isinstance(result, PenaltyAnalyticsResponseSchema)
+    assert len(result.yearly_penalties) == 2
+    assert result.yearly_penalties[0].compliance_year == 2023
+    assert result.yearly_penalties[0].auto_renewable == pytest.approx(150.0)
+    assert result.yearly_penalties[1].auto_low_carbon == pytest.approx(700.0)
+
+    assert result.totals.auto_renewable == pytest.approx(650.0)
+    assert result.totals.auto_low_carbon == pytest.approx(900.0)
+    assert result.totals.total_automatic == pytest.approx(1550.0)
+    assert result.totals.discretionary == pytest.approx(1200.5)
+    assert result.totals.total == pytest.approx(2750.5)
+
+    assert len(result.penalty_logs) == 2
+    assert result.penalty_logs[0].penalty_amount == pytest.approx(1000.5)
+    assert result.penalty_logs[1].contravention_type == "Continuous contravention"
+
+
+@pytest.mark.anyio
+async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
+    pagination = PaginationRequestSchema(page=2, size=5, filters=[], sort_orders=[])
+
+    mock_repo.get_penalty_logs_paginated = AsyncMock(
+        return_value=
+        (
+            [
+                {
+                    "penalty_log_id": 12,
+                    "compliance_period_id": 7,
+                    "compliance_year": "2024",
+                    "contravention_type": "Single contravention",
+                    "offence_history": True,
+                    "deliberate": False,
+                    "efforts_to_correct": True,
+                    "economic_benefit_derived": False,
+                    "efforts_to_prevent_recurrence": True,
+                    "notes": "Sample",
+                    "penalty_amount": Decimal("250.00"),
+                }
+            ],
+            1,
+        )
+    )
+
+    result = await organizations_service.get_penalty_logs_paginated(
+        organization_id=99, pagination=pagination
+    )
+
+    assert result.pagination.page == 2
+    assert result.pagination.size == 5
+    assert result.pagination.total == 1
+    assert result.penalty_logs[0].penalty_log_id == 12
+    assert result.penalty_logs[0].penalty_amount == pytest.approx(250.0)
+
+
+@pytest.mark.anyio
+async def test_create_penalty_log(organizations_service, mock_repo):
+    payload = PenaltyLogCreateSchema(
+        compliance_period_id=10,
+        contravention_type=ContraventionTypeEnum.SINGLE,
+        offence_history=True,
+        deliberate=False,
+        efforts_to_correct=True,
+        economic_benefit_derived=False,
+        efforts_to_prevent_recurrence=False,
+        notes="Test",
+        penalty_amount=Decimal("123.45"),
+    )
+
+    penalty_model = SimpleNamespace(
+        penalty_log_id=1,
+        compliance_period_id=10,
+        compliance_period=SimpleNamespace(description="2024"),
+        contravention_type=ContraventionTypeEnum.SINGLE.value,
+        offence_history=True,
+        deliberate=False,
+        efforts_to_correct=True,
+        economic_benefit_derived=False,
+        efforts_to_prevent_recurrence=False,
+        notes="Test",
+        penalty_amount=Decimal("123.45"),
+    )
+
+    mock_repo.create_penalty_log = AsyncMock(return_value=penalty_model)
+
+    result = await organizations_service.create_penalty_log(1, payload)
+
+    assert result.penalty_log_id == 1
+    assert result.compliance_year == "2024"
+    mock_repo.create_penalty_log.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_update_penalty_log(organizations_service, mock_repo):
+    payload = PenaltyLogUpdateSchema(
+        compliance_period_id=11,
+        contravention_type=ContraventionTypeEnum.CONTINUOUS,
+        offence_history=False,
+        deliberate=True,
+        efforts_to_correct=False,
+        economic_benefit_derived=True,
+        efforts_to_prevent_recurrence=True,
+        notes="Updated",
+        penalty_amount=Decimal("500.00"),
+    )
+
+    existing = SimpleNamespace(
+        penalty_log_id=2,
+        compliance_period_id=10,
+        compliance_period=SimpleNamespace(description="2023"),
+        contravention_type=ContraventionTypeEnum.SINGLE.value,
+        offence_history=True,
+        deliberate=False,
+        efforts_to_correct=True,
+        economic_benefit_derived=False,
+        efforts_to_prevent_recurrence=False,
+        notes="Old",
+        penalty_amount=Decimal("120.00"),
+    )
+
+    updated = SimpleNamespace(
+        penalty_log_id=2,
+        compliance_period_id=11,
+        compliance_period=SimpleNamespace(description="2024"),
+        contravention_type=ContraventionTypeEnum.CONTINUOUS.value,
+        offence_history=False,
+        deliberate=True,
+        efforts_to_correct=False,
+        economic_benefit_derived=True,
+        efforts_to_prevent_recurrence=True,
+        notes="Updated",
+        penalty_amount=Decimal("500.00"),
+    )
+
+    mock_repo.get_penalty_log_by_id = AsyncMock(return_value=existing)
+    mock_repo.update_penalty_log = AsyncMock(return_value=updated)
+
+    result = await organizations_service.update_penalty_log(1, 2, payload)
+
+    assert result.penalty_log_id == 2
+    assert result.contravention_type == ContraventionTypeEnum.CONTINUOUS.value
+    assert result.penalty_amount == pytest.approx(500.0)
+    mock_repo.get_penalty_log_by_id.assert_awaited_once()
+    mock_repo.update_penalty_log.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_delete_penalty_log(organizations_service, mock_repo):
+    existing = SimpleNamespace(penalty_log_id=3)
+    mock_repo.get_penalty_log_by_id = AsyncMock(return_value=existing)
+    mock_repo.delete_penalty_log = AsyncMock(return_value=True)
+
+    result = await organizations_service.delete_penalty_log(1, 3)
+
+    assert result is None
+    mock_repo.delete_penalty_log.assert_awaited_once_with(1, 3)
 
 
 @pytest.mark.anyio

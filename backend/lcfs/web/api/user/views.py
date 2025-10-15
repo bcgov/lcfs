@@ -197,7 +197,7 @@ async def get_user_roles(
     response_model=UserActivitiesResponseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR, RoleEnum.MANAGE_USERS])
+@view_handler([RoleEnum.ADMINISTRATOR, RoleEnum.SUPPLIER])
 async def get_user_activities(
     request: Request,
     user_id: int,

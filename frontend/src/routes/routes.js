@@ -41,9 +41,10 @@ export const ROUTES = {
 
   ORGANIZATION: {
     ORG: '/organization',
+    USERS: '/organization/users',
     ADD_USER: '/organization/add-user',
-    VIEW_USER: '/organization/:userID',
-    EDIT_USER: '/organization/:userID/edit-user'
+    VIEW_USER: '/organization/users/:userID',
+    EDIT_USER: '/organization/users/:userID/edit'
   },
 
   ORGANIZATIONS: {
@@ -52,12 +53,13 @@ export const ROUTES = {
     VIEW: '/organizations/:orgID',
     EDIT: '/organizations/:orgID/edit-org',
     ADD_USER: '/organizations/:orgID/add-user',
-    VIEW_USER: '/organizations/:orgID/:userID',
-    EDIT_USER: '/organizations/:orgID/:userID/edit-user',
+    VIEW_USER: '/organizations/:orgID/users/:userID',
+    EDIT_USER: '/organizations/:orgID/users/:userID/edit',
     USERS: '/organizations/:orgID/users',
     CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
     COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
     PENALTY_LOG: '/organizations/:orgID/penalty-log',
+    PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
     SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
     COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking'
   },
