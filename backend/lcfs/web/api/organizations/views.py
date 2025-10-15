@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, status, Request, Query, HTTPException
+from fastapi import APIRouter, Body, Depends, status, Request, Query, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from starlette import status
@@ -31,6 +31,11 @@ from .schema import (
     LinkKeyOperationResponseSchema,
     LinkKeyValidationSchema,
     AvailableFormsSchema,
+    PenaltyAnalyticsResponseSchema,
+    PenaltyLogListResponseSchema,
+    PenaltyLogCreateSchema,
+    PenaltyLogUpdateSchema,
+    PenaltyLogEntrySchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -131,6 +136,85 @@ async def get_organization(
 ):
     """Fetch a single organization by id"""
     return await service.get_organization(organization_id)
+
+
+@router.get(
+    "/{organization_id}/penalties/analytics",
+    response_model=PenaltyAnalyticsResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+async def get_penalty_analytics(
+    request: Request, organization_id: int, service: OrganizationsService = Depends()
+):
+    """
+    Retrieve penalty analytics (automatic and discretionary) for the specified organization.
+    """
+    return await service.get_penalty_analytics(organization_id)
+
+
+@router.post(
+    "/{organization_id}/penalties/logs/list",
+    response_model=PenaltyLogListResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+async def get_penalty_logs(
+    request: Request,
+    organization_id: int,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: OrganizationsService = Depends(),
+):
+    """Fetch paginated penalty log entries for an organization."""
+    return await service.get_penalty_logs_paginated(organization_id, pagination)
+
+
+@router.post(
+    "/{organization_id}/penalties/logs",
+    response_model=PenaltyLogEntrySchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def create_penalty_log(
+    request: Request,
+    organization_id: int,
+    penalty_data: PenaltyLogCreateSchema,
+    service: OrganizationsService = Depends(),
+):
+    return await service.create_penalty_log(organization_id, penalty_data)
+
+
+@router.put(
+    "/{organization_id}/penalties/logs/{penalty_log_id}",
+    response_model=PenaltyLogEntrySchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def update_penalty_log(
+    request: Request,
+    organization_id: int,
+    penalty_log_id: int,
+    penalty_data: PenaltyLogUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    return await service.update_penalty_log(
+        organization_id, penalty_log_id, penalty_data
+    )
+
+
+@router.delete(
+    "/{organization_id}/penalties/logs/{penalty_log_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def delete_penalty_log(
+    request: Request,
+    organization_id: int,
+    penalty_log_id: int,
+    service: OrganizationsService = Depends(),
+):
+    await service.delete_penalty_log(organization_id, penalty_log_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.put("/{organization_id}")
