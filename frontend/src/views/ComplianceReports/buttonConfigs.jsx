@@ -81,12 +81,7 @@ class ButtonActionFactory {
       id: 'submit-report-btn',
       label: this.context.t('report:actionBtns.submitReportBtn'),
       icon: faPencil,
-      disabled: !(
-        this.context.isSigningAuthorityDeclared.certifyInfo &&
-        (this.context.isSigningAuthorityDeclared.certifyClaim ||
-          parseInt(this.context.compliancePeriod) < NEW_REGULATION_YEAR ||
-          !this.context.hasEligibleRenewableFuel)
-      ),
+      disabled: !this.context.isSigningAuthorityDeclared,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>

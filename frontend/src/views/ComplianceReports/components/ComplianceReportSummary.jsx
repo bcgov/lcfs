@@ -37,6 +37,7 @@ const ComplianceReportSummary = ({
   currentStatus,
   canEdit,
   compliancePeriodYear,
+  isSigningAuthorityDeclared,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
@@ -312,10 +313,10 @@ const ComplianceReportSummary = ({
               {!isGovernmentUser && (
                 <SigningAuthorityDeclaration
                   onChange={setIsSigningAuthorityDeclared}
+                  checked={isSigningAuthorityDeclared}
                   hasAuthority={hasRoles(roles.signing_authority)}
                   hasRecords={hasRecords}
                   hasValidAddress={hasValidAddress}
-                  hasEligibleRenewableFuel={hasEligibleRenewableFuel}
                 />
               )}
 
