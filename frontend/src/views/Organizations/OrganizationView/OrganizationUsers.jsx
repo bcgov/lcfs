@@ -58,8 +58,8 @@ export const OrganizationUsers = () => {
       cellRendererParams: {
         isAbsolute: true,
         url: (row) => {
-          // For BCeID: /organizations/:orgID/:userID
-          // For IDIR (supplier role): /organization/:userID
+          // For IDIR: /organizations/:orgID/users/:userID
+          // For BCeID (supplier role): /organization/users/:userID
           // But typically we do the organizations route with orgID if you have it:
           if (hasRoles(roles.supplier)) {
             return buildPath(ROUTES.ORGANIZATION.VIEW_USER, {

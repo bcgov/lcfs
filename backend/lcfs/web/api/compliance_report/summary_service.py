@@ -973,6 +973,18 @@ class ComplianceReportSummaryService:
         }
 
         # Line 6 & 8: Apply "lesser of" logic per LCFA s.10
+        # First, calculate Line 10 (net renewable supplied) WITHOUT considering user input for Lines 6 & 8
+        # This gives us the actual excess/deficiency to determine the caps
+        # Line 10 = Line 2 + Line 5 - Line 6 (current) + Line 7 + Line 8 (current) - Line 9
+        # For the cap calculation, we use Line 6=0 and Line 8=0 to get the "raw" Line 10
+        decimal_raw_net_renewable_supplied = {
+            category: decimal_renewable_quantities.get(category, DECIMAL_ZERO)
+            + decimal_notional_transfers_sums.get(category, DECIMAL_ZERO)
+            + decimal_previous_retained.get(category, DECIMAL_ZERO)
+            - decimal_previous_obligation.get(category, DECIMAL_ZERO)
+            for category in ["gasoline", "diesel", "jet_fuel"]
+        }
+
         # Line 6: Lesser of excess and prescribed portion (5% of Line 4)
         # Line 8: Lesser of deficiency and prescribed portion (5% of Line 4)
         decimal_retained_renewables = {}
@@ -982,7 +994,7 @@ class ComplianceReportSummaryService:
             current_required_quantity_dec = (
                 decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
-            renewable_supplied = decimal_renewable_quantities.get(category, DECIMAL_ZERO)
+            raw_net_supplied = decimal_raw_net_renewable_supplied.get(category, DECIMAL_ZERO)
 
             # Calculate prescribed portion (5% of Line 4)
             prescribed_portion = (current_required_quantity_dec * Decimal("0.05")).quantize(
@@ -991,9 +1003,9 @@ class ComplianceReportSummaryService:
 
             # Line 6 (Retention) - LCFA s.10(2)
             # Maximum retention is the LESSER of:
-            # (a) the excess (Line 2 - Line 4), and
+            # (a) the excess (Line 10 - Line 4), where Line 10 is calculated without user retention/deferral
             # (b) the prescribed portion of the target (5% of Line 4)
-            excess = max(DECIMAL_ZERO, renewable_supplied - current_required_quantity_dec)
+            excess = max(DECIMAL_ZERO, raw_net_supplied - current_required_quantity_dec)
             max_retention = min(excess, prescribed_portion)
 
             # Preserve user input but cap at calculated maximum
@@ -1011,9 +1023,9 @@ class ComplianceReportSummaryService:
 
             # Line 8 (Deferral) - LCFA s.10(3)
             # Maximum deferral is the LESSER of:
-            # (a) the deficiency (Line 4 - Line 2), and
+            # (a) the deficiency (Line 4 - Line 10), where Line 10 is calculated without user retention/deferral
             # (b) the prescribed portion of the target (5% of Line 4)
-            deficiency = max(DECIMAL_ZERO, current_required_quantity_dec - renewable_supplied)
+            deficiency = max(DECIMAL_ZERO, current_required_quantity_dec - raw_net_supplied)
             max_deferral = min(deficiency, prescribed_portion)
 
             # Preserve user input but cap at calculated maximum
