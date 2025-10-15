@@ -57,10 +57,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const [hasEligibleRenewableFuel, setHasEligibleRenewableFuel] =
     useState(false)
 
-  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] = useState({
-    certifyCompliance: false,
-    certifyClaim: false
-  })
+  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
+    useState(false)
   const alertRef = useRef()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -547,7 +545,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       createIdirSupplementalReport,
       createAnalystAdjustment,
       amendPenalties: () => {},
-      hasEligibleRenewableFuel,
+      hasEligibleRenewableFuel
     }
     return buttonClusterConfigFn(context)
   }, [
@@ -711,6 +709,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     canEdit={canEdit}
                     currentStatus={currentStatus}
                     compliancePeriodYear={compliancePeriod}
+                    isSigningAuthorityDeclared={isSigningAuthorityDeclared}
                     setIsSigningAuthorityDeclared={
                       setIsSigningAuthorityDeclared
                     }
