@@ -163,7 +163,11 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       <div data-test="bc-grid-editor">
         <div data-test="row-data">
           {rowData.map((row, index) => (
-            <div key={index} data-test="grid-row">
+            <div
+              key={index}
+              data-test="grid-row"
+              data-status={row.validationStatus || ''}
+            >
               {row.id}
             </div>
           ))}
@@ -290,8 +294,36 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
 }))
 
 vi.mock('@/components/ImportDialog', () => ({
-  default: ({ open, close }) => (
+  default: ({ open, close, onImportComplete }) => (
     <div data-test="import-dialog" aria-hidden={!open}>
+      <button
+        onClick={() =>
+          onImportComplete?.({
+            invalid_rows: [
+              {
+                row_index: 2,
+                message: 'Row 2 has issues',
+                fields: ['fuel_type'],
+                row_data: {
+                  allocation_transaction_type: 'Allocated to',
+                  transaction_partner: 'Partner Org',
+                  postal_address: '123 Street',
+                  transaction_partner_email: 'test@example.com',
+                  transaction_partner_phone: '555-555-5555',
+                  fuel_type: 'Invalid Fuel',
+                  fuel_category: 'Category',
+                  provision_of_the_act: 'Provision',
+                  fuel_code: 'FC-1',
+                  quantity: 0
+                }
+              }
+            ]
+          })
+        }
+        data-test="simulate-import-complete"
+      >
+        Simulate Import Complete
+      </button>
       <button onClick={close} data-test="close-dialog">
         Close
       </button>
@@ -632,6 +664,24 @@ describe('AddEditAllocationAgreements', () => {
       fireEvent.click(screen.getByText('common:importExport.import.dialog.buttons.append'))
 
       expect(screen.getByTestId('import-dialog')).toHaveAttribute('aria-hidden', 'false')
+    })
+
+    it('adds invalid rows from import and highlights them', async () => {
+      render(<AddEditAllocationAgreements />, { wrapper })
+
+      fireEvent.click(screen.getByText('common:importExport.import.btn'))
+      fireEvent.click(
+        screen.getByText('common:importExport.import.dialog.buttons.append')
+      )
+
+      fireEvent.click(screen.getByTestId('simulate-import-complete'))
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('grid-row')).toHaveLength(2)
+      })
+
+      const rows = screen.getAllByTestId('grid-row')
+      expect(rows[0]).toHaveAttribute('data-status', 'error')
     })
 
     it('handles download with data', async () => {
