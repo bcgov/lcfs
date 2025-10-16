@@ -1,4 +1,5 @@
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
+from io import UnsupportedOperation
 import os
 import uuid
 
@@ -14,7 +15,6 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from fastapi import Depends
 from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
@@ -31,6 +31,7 @@ from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import ServiceException
+from botocore.exceptions import ClientError
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -94,12 +95,35 @@ class DocumentService:
             self.clamav_service.scan_file(file)
 
         # Upload file to S3
-        self.s3_client.upload_fileobj(
-            Fileobj=file.file,
-            Bucket=BUCKET_NAME,
-            Key=file_key,
-            ExtraArgs={"ContentType": file.content_type},
-        )
+        file.file.seek(0)
+        try:
+            self.s3_client.upload_fileobj(
+                Fileobj=file.file,
+                Bucket=BUCKET_NAME,
+                Key=file_key,
+                ExtraArgs={"ContentType": file.content_type},
+            )
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code")
+            if error_code != "XAmzContentSHA256Mismatch":
+                raise
+            # Some S3-compatible stores struggle with signed streaming uploads.
+            file.file.seek(0)
+            file_bytes = file.file.read()
+            self.s3_client.put_object(
+                Body=file_bytes,
+                Bucket=BUCKET_NAME,
+                Key=file_key,
+                ContentType=file.content_type,
+            )
+        except Exception as exc:
+            raise ServiceException(f"Error uploading file to S3: {exc}")
+        finally:
+            try:
+                file.file.seek(0)
+            except (ValueError, AttributeError, UnsupportedOperation):
+                # Starlette's UploadFile may close the underlying SpooledTemporaryFile once streaming ends.
+                pass
 
         document = Document(
             file_key=file_key,
