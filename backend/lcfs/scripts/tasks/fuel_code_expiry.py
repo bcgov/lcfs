@@ -80,7 +80,7 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
                 # Create context for this specific email
                 context = base_context.copy()
                 context["fuel_codes"] = codes_data["codes"]
-                context["contact_email"] = "prashanth.venkateshappa@gov.bc.ca"
+                context["contact_email"] = "tfrs@gov.bc.ca"
                 context["expiry_count"] = len(codes_data["codes"])
 
                 logger.info(

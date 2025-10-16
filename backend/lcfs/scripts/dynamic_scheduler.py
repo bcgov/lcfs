@@ -85,7 +85,11 @@ class DynamicTaskScheduler:
 
         # Initialize async database engine and session factory
         self.engine = create_async_engine(str(settings.db_url))
-        self.session = sessionmaker(bind=self.engine, class_=AsyncSession)
+        self.session = sessionmaker(
+            bind=self.engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
 
         logger.info(f"Initializing Dynamic Task Scheduler")
         logger.info(f"Worker ID: {self.worker_id}")
