@@ -41,13 +41,22 @@ vi.mock('../routes', () => ({
       LIST: '/organizations',
       ADD: '/organizations/add-org',
       VIEW: '/organizations/:orgID',
+      USERS: '/organizations/:orgID/users',
+      CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
+      COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
+      PENALTY_LOG: '/organizations/:orgID/penalty-log',
+      PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
+      SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+      COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking',
       ADD_USER: '/organizations/:orgID/add-user',
       VIEW_USER: '/organizations/:orgID/users/:userID'
     },
     ORGANIZATION: {
       ORG: '/organization',
+      USERS: '/organization/users',
       ADD_USER: '/organization/add-user',
-      VIEW_USER: '/organization/users/:userID'
+      VIEW_USER: '/organization/users/:userID',
+      CREDIT_LEDGER: '/organization/credit-ledger'
     }
   }
 }))
@@ -55,7 +64,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(16)
+    expect(organizationRoutes.length).toBe(17)
   })
 
   it('should have all expected route paths', () => {
@@ -75,7 +84,8 @@ describe('organizationRoutes', () => {
       '/organization',
       '/organization/users',
       '/organization/add-user',
-      '/organization/users/:userID'
+      '/organization/users/:userID',
+      '/organization/credit-ledger'
     ]
 
     const actualPaths = organizationRoutes.map((route) => route.path)
@@ -114,17 +124,18 @@ describe('organizationRoutes', () => {
 
     it('should have correct BCeID self-service routes', () => {
       const bceidRoutes = organizationRoutes.filter(
-        (route) =>
+      (route) =>
           route.path.startsWith('/organization') &&
           !route.path.startsWith('/organizations')
       )
-      expect(bceidRoutes.length).toBe(4)
+      expect(bceidRoutes.length).toBe(5)
 
       const expectedBceidPaths = [
         '/organization',
         '/organization/users',
         '/organization/add-user',
-        '/organization/users/:userID'
+        '/organization/users/:userID',
+        '/organization/credit-ledger'
       ]
 
       bceidRoutes.forEach((route) => {
