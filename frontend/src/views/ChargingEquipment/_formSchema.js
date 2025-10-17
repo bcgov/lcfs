@@ -6,8 +6,8 @@ export const chargingEquipmentSchema = yup.object().shape({
     .required('Charging site is required')
     .positive('Please select a valid charging site'),
     
-  allocating_organization_id: yup
-    .number()
+  allocating_organization_name: yup
+    .string()
     .nullable()
     .optional(),
     
@@ -49,6 +49,12 @@ export const chargingEquipmentSchema = yup.object().shape({
   intended_use_ids: yup
     .array()
     .of(yup.number().positive())
-    .nullable()
-    .optional()
+    .min(1, 'At least one intended use is required')
+    .required('Intended uses are required'),
+
+  intended_user_ids: yup
+    .array()
+    .of(yup.number().positive())
+    .min(1, 'At least one intended user is required')
+    .required('Intended users are required')
 })

@@ -369,12 +369,6 @@ export const ChargingEquipment = () => {
 
       {!isOnNestedRoute && (
         <Grid item xs={12}>
-          <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
-        </Grid>
-      )}
-
-      {!isOnNestedRoute && (
-        <Grid item xs={12}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} lg={7}>
               <Stack spacing={1} direction="row">
@@ -500,7 +494,7 @@ export const ChargingEquipment = () => {
               <BCGridViewer
                 gridRef={gridRef}
                 alertRef={alertRef}
-                columnDefs={chargingEquipmentColDefs}
+                columnDefs={chargingEquipmentColDefs(isIDIR)}
                 defaultColDef={defaultColDef}
                 getRowId={getRowId}
                 overlayLoadingTemplate="Loading FSE data..."
@@ -518,6 +512,12 @@ export const ChargingEquipment = () => {
               />
             </BCBox>
           </BCBox>
+        </Grid>
+      )}
+
+      {!isOnNestedRoute && (
+        <Grid item xs={12}>
+          <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
         </Grid>
       )}
 

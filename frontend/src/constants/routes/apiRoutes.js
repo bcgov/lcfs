@@ -131,6 +131,7 @@ export const apiRoutes = {
     statuses: '/charging-equipment/statuses/list',
     levels: '/charging-equipment/levels/list',
     endUseTypes: '/charging-equipment/end-use-types/list',
+    endUserTypes: '/charging-equipment/end-user-types/list',
     chargingSites: '/charging-equipment/charging-sites/list',
     organizations: '/charging-equipment/organizations/list',
     hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements'
