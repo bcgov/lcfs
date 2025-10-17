@@ -101,6 +101,11 @@ export const organizationRoutes = [
     path: ROUTES.ORGANIZATION.VIEW_USER,
     element: <UserDetailsCard userType="bceid" />,
     handle: { title: 'User profile' }
+  },
+  {
+    path: ROUTES.ORGANIZATION.CREDIT_LEDGER,
+    element: <OrganizationView />,
+    handle: { title: 'Credit ledger' }
   }
 ]
 
@@ -119,6 +124,12 @@ export const orgDashboardRoutes = (orgID, isGovernment) => {
       path: ROUTES.ORGANIZATION.USERS,
       match: (pathname) => pathname.startsWith(ROUTES.ORGANIZATION.USERS),
       label: i18n.t('org:tabs.users')
+    },
+    {
+      path: ROUTES.ORGANIZATION.CREDIT_LEDGER,
+      match: (pathname) =>
+        pathname.startsWith(ROUTES.ORGANIZATION.CREDIT_LEDGER),
+      label: i18n.t('org:tabs.creditLedger')
     }
   ]
 
@@ -185,6 +196,9 @@ export const orgDashboardRenderers = (
     const bceidBasePath = ROUTES.ORGANIZATION.ORG
     if (currentPath.startsWith(ROUTES.ORGANIZATION.USERS)) {
       return <OrganizationUsers />
+    }
+    if (currentPath.startsWith(ROUTES.ORGANIZATION.CREDIT_LEDGER)) {
+      return <CreditLedger organizationId={orgID} />
     }
     if (currentPath !== bceidBasePath && currentPath !== `${bceidBasePath}/`) {
       navigate(bceidBasePath, { replace: true })

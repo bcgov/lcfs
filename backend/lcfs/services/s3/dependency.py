@@ -22,6 +22,8 @@ def get_s3_client() -> Generator:
         aws_secret_access_key=settings.s3_secret_key,  # Your AWS secret key
         endpoint_url=settings.s3_endpoint,  # Custom S3 endpoint (if any)
         region_name="us-east-1",  # AWS region
+        use_ssl=True,  # Use SSL for secure connection
+        config=boto3.session.Config(signature_version="s3v4"),  # Use AWS4-HMAC-SHA256 signature version
     )
 
     try:
