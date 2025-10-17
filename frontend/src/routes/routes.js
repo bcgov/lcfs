@@ -44,7 +44,8 @@ export const ROUTES = {
     USERS: '/organization/users',
     ADD_USER: '/organization/add-user',
     VIEW_USER: '/organization/users/:userID',
-    EDIT_USER: '/organization/users/:userID/edit'
+    EDIT_USER: '/organization/users/:userID/edit',
+    CREDIT_LEDGER: '/organization/credit-ledger'
   },
 
   ORGANIZATIONS: {
