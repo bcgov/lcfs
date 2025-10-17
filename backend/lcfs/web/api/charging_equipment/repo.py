@@ -17,6 +17,7 @@ from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.EndUseType import EndUseType
+from lcfs.db.models.compliance.EndUserType import EndUserType
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentFilterSchema,
@@ -44,6 +45,7 @@ class ChargingEquipmentRepository:
                 selectinload(ChargingEquipment.level_of_equipment),
                 selectinload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
+                selectinload(ChargingEquipment.intended_users),
             )
             .where(ChargingEquipment.charging_equipment_id == charging_equipment_id)
         )
@@ -84,11 +86,12 @@ class ChargingEquipmentRepository:
                 == Organization.organization_id,
             )
             .options(
-                joinedload(ChargingEquipment.charging_site),
+                joinedload(ChargingEquipment.charging_site).joinedload(ChargingSite.organization),
                 joinedload(ChargingEquipment.status),
                 joinedload(ChargingEquipment.level_of_equipment),
                 joinedload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
+                selectinload(ChargingEquipment.intended_users),
             )
         )
 
@@ -172,6 +175,7 @@ class ChargingEquipmentRepository:
                 joinedload(ChargingEquipment.level_of_equipment),
                 joinedload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
+                selectinload(ChargingEquipment.intended_users),
             )
             .where(ChargingSite.organization_id == organization_id)
             .order_by(ChargingEquipment.update_date.desc())
@@ -211,7 +215,7 @@ class ChargingEquipmentRepository:
         charging_equipment = ChargingEquipment(
             charging_site_id=equipment_data["charging_site_id"],
             status_id=draft_status.charging_equipment_status_id,
-            allocating_organization_id=equipment_data.get("allocating_organization_id"),
+            organization_name=equipment_data.get("allocating_organization_name"),
             serial_number=equipment_data["serial_number"],
             manufacturer=equipment_data["manufacturer"],
             model=equipment_data.get("model"),
@@ -229,6 +233,15 @@ class ChargingEquipmentRepository:
             intended_uses_result = await self.db.execute(intended_uses_query)
             intended_uses = intended_uses_result.scalars().all()
             charging_equipment.intended_uses = intended_uses
+
+        # Add intended users if provided
+        if equipment_data.get("intended_user_ids"):
+            intended_users_query = select(EndUserType).where(
+                EndUserType.end_user_type_id.in_(equipment_data["intended_user_ids"])
+            )
+            intended_users_result = await self.db.execute(intended_users_query)
+            intended_users = intended_users_result.scalars().all()
+            charging_equipment.intended_users = intended_users
 
         self.db.add(charging_equipment)
         await self.db.flush()
@@ -265,8 +278,12 @@ class ChargingEquipmentRepository:
 
         # Update fields
         for field, value in equipment_data.items():
-            if field != "intended_use_ids" and value is not None:
+            if field not in ["intended_use_ids", "intended_user_ids", "allocating_organization_name"]:
                 setattr(equipment, field, value)
+
+        # Handle allocating_organization_name -> organization_name mapping
+        if "allocating_organization_name" in equipment_data:
+            equipment.organization_name = equipment_data["allocating_organization_name"]
 
         # Update intended uses if provided
         if "intended_use_ids" in equipment_data:
@@ -277,6 +294,16 @@ class ChargingEquipmentRepository:
                 intended_uses_result = await self.db.execute(intended_uses_query)
                 intended_uses = intended_uses_result.scalars().all()
                 equipment.intended_uses = intended_uses
+
+        # Update intended users if provided
+        if "intended_user_ids" in equipment_data:
+            if equipment_data["intended_user_ids"] is not None:
+                intended_users_query = select(EndUserType).where(
+                    EndUserType.end_user_type_id.in_(equipment_data["intended_user_ids"])
+                )
+                intended_users_result = await self.db.execute(intended_users_query)
+                intended_users = intended_users_result.scalars().all()
+                equipment.intended_users = intended_users
 
         await self.db.flush()
         await self.db.refresh(equipment)
@@ -393,8 +420,15 @@ class ChargingEquipmentRepository:
 
     @repo_handler
     async def get_end_use_types(self) -> List[EndUseType]:
-        """Get all end use types."""
-        query = select(EndUseType).order_by(EndUseType.display_order)
+        """Get all end use types that are marked for intended use."""
+        query = select(EndUseType).where(EndUseType.intended_use == True).order_by(EndUseType.display_order)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_end_user_types(self) -> List[EndUserType]:
+        """Get all end user types that are marked for intended use."""
+        query = select(EndUserType).where(EndUserType.intended_use == True).order_by(EndUserType.end_user_type_id)
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -531,6 +565,7 @@ class ChargingEquipmentRepository:
                 selectinload(ChargingEquipment.level_of_equipment),
                 selectinload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
+                selectinload(ChargingEquipment.intended_users),
             )
             .where(ChargingEquipment.charging_site_id == site_id)
             .order_by(ChargingEquipment.equipment_number)
