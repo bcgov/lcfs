@@ -68,7 +68,7 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
         total_emails = len(email_groups)
 
         base_context = {
-            "subject": "Fuel Code Expiry Notification - Action Required",
+            "subject": "Important Notice from the Deputy Director: Upcoming Expiry of BC LCFS Fuel Codes",
             "message": {
                 "id": "",
                 "status": "Expiring",
@@ -79,8 +79,9 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
             try:
                 # Create context for this specific email
                 context = base_context.copy()
+                contact_email = 'prashanth.venkateshappa@gov.bc.ca'
                 context["fuel_codes"] = codes_data["codes"]
-                context["contact_email"] = "prashanth.venkateshappa@gov.bc.ca"
+                context["contact_email"] = contact_email
                 context["expiry_count"] = len(codes_data["codes"])
 
                 logger.info(
