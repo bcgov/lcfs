@@ -436,6 +436,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 organizations={organizations}
                 levels={levels}
                 endUseTypes={endUseTypes}
+                endUserTypes={endUserTypes}
               />
 
               <BCGridEditor
