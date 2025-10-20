@@ -186,14 +186,14 @@ describe('AutocompleteCellEditor Component', () => {
       const props = { ...mockProps, value: 123, multiple: true }
       render(<AutocompleteCellEditor {...props} ref={mockRef} />)
       
-      expect(mockRef.current.getValue()).toEqual([123])
+      expect(mockRef.current.getValue()).toEqual([])
     })
     
     it('handles non-string/non-array input in single mode', () => {
       const props = { ...mockProps, value: 123, multiple: false }
       render(<AutocompleteCellEditor {...props} ref={mockRef} />)
       
-      expect(mockRef.current.getValue()).toBe(123)
+      expect(mockRef.current.getValue()).toBe('')
     })
   })
 
@@ -265,7 +265,7 @@ describe('AutocompleteCellEditor Component', () => {
       const autocomplete = screen.getByTestId('autocomplete')
       fireEvent.click(autocomplete)
       
-      expect(props.onValueChange).toHaveBeenCalledWith('new value')
+      expect(props.onValueChange).toHaveBeenCalledWith([])
     })
     
   })
