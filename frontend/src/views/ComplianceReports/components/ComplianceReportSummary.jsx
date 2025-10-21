@@ -37,16 +37,20 @@ const ComplianceReportSummary = ({
   currentStatus,
   canEdit,
   compliancePeriodYear,
+  isSigningAuthorityDeclared,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
   enableCompareMode,
-  alertRef
+  alertRef,
+  hasEligibleRenewableFuel,
+  setHasEligibleRenewableFuel
 }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [hasRecords, setHasRecords] = useState(false)
   const [hasValidAddress, setHasValidAddress] = useState(false)
   const [penaltyOverrideEnabled, setPenaltyOverrideEnabled] = useState(false)
+  const [savingCellKey, setSavingCellKey] = useState(null)
   const { t } = useTranslation(['report'])
 
   const { data: snapshotData } = useOrganizationSnapshot(reportID)
@@ -60,8 +64,10 @@ const ComplianceReportSummary = ({
     useUpdateComplianceReportSummary(data?.complianceReportId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
+        setSavingCellKey(null)
       },
       onError: (error) => {
+        setSavingCellKey(null)
         alertRef.current?.triggerAlert({
           message: error.message,
           severity: 'error'
@@ -73,6 +79,11 @@ const ComplianceReportSummary = ({
       setSummaryData(data)
       setHasRecords(data && data.canSign)
       setPenaltyOverrideEnabled(data.penaltyOverrideEnabled || false)
+      setHasEligibleRenewableFuel(
+        data.renewableFuelTargetSummary[2].diesel > 0 ||
+          data.renewableFuelTargetSummary[2].gasoline > 0 ||
+          false
+      )
     }
     if (isError) {
       alertRef.current?.triggerAlert({
@@ -99,23 +110,26 @@ const ComplianceReportSummary = ({
   }, [snapshotData])
 
   const handleCellEdit = useCallback(
-    (data) => {
+    (data, cellInfo = null) => {
       // perform auto save of summary after each cell change
       const updatedData = { ...summaryData, renewableFuelTargetSummary: data }
       setSummaryData(updatedData)
+      if (cellInfo) {
+        setSavingCellKey(`renewable_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
       updateComplianceReportSummary(updatedData)
     },
     [summaryData, updateComplianceReportSummary]
   )
 
   const handlePenaltyOverrideCellEdit = useCallback(
-    (data) => {
+    (data, cellInfo = null) => {
       // Extract penalty override values from edited non-compliance penalty summary data
       // Row 0 (index 0) = Line 11 renewable fuel penalty -> renewablePenaltyOverride
       // Row 1 (index 1) = Line 21 low carbon fuel penalty -> lowCarbonPenaltyOverride
       const renewablePenaltyValue = data[0]?.totalValue || null
       const lowCarbonPenaltyValue = data[1]?.totalValue || null
-      
+
       const updatedData = {
         ...summaryData,
         nonCompliancePenaltySummary: data,
@@ -124,7 +138,10 @@ const ComplianceReportSummary = ({
         penaltyOverrideDate: new Date().toISOString(),
         penaltyOverrideUser: currentUser?.userProfileId
       }
-      
+
+      if (cellInfo) {
+        setSavingCellKey(`penalty_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
       setSummaryData(updatedData)
       updateComplianceReportSummary(updatedData)
     },
@@ -136,7 +153,7 @@ const ComplianceReportSummary = ({
     if (!summaryData?.nonCompliancePenaltySummary) return null
 
     const originalData = summaryData.nonCompliancePenaltySummary
-    
+
     if (!penaltyOverrideEnabled) {
       // When override is disabled, show original calculated values
       return originalData
@@ -160,7 +177,9 @@ const ComplianceReportSummary = ({
         // Total row: Sum of override values (calculated from backend)
         return {
           ...row,
-          totalValue: (summaryData.renewablePenaltyOverride || 0) + (summaryData.lowCarbonPenaltyOverride || 0)
+          totalValue:
+            (summaryData.renewablePenaltyOverride || 0) +
+            (summaryData.lowCarbonPenaltyOverride || 0)
         }
       }
       return row
@@ -241,6 +260,8 @@ const ComplianceReportSummary = ({
                   onCellEditStopped={handleCellEdit}
                   useParenthesis={true}
                   lines7And9Locked={summaryData?.lines7And9Locked}
+                  savingCellKey={savingCellKey}
+                  tableType="renewable"
                 />
                 <SummaryTable
                   data-test="low-carbon-summary"
@@ -255,7 +276,13 @@ const ComplianceReportSummary = ({
                   columns={nonComplianceColumns(t, penaltyOverrideEnabled)}
                   data={nonCompliancePenaltyDisplayData}
                   width={'80.65%'}
-                  onCellEditStopped={penaltyOverrideEnabled ? handlePenaltyOverrideCellEdit : undefined}
+                  onCellEditStopped={
+                    penaltyOverrideEnabled
+                      ? handlePenaltyOverrideCellEdit
+                      : undefined
+                  }
+                  savingCellKey={savingCellKey}
+                  tableType="penalty"
                 />
                 {hasRoles(roles.director) &&
                   parseInt(compliancePeriodYear) >= 2024 &&
@@ -286,6 +313,7 @@ const ComplianceReportSummary = ({
               {!isGovernmentUser && (
                 <SigningAuthorityDeclaration
                   onChange={setIsSigningAuthorityDeclared}
+                  checked={isSigningAuthorityDeclared}
                   hasAuthority={hasRoles(roles.signing_authority)}
                   hasRecords={hasRecords}
                   hasValidAddress={hasValidAddress}

@@ -276,9 +276,9 @@ describe('SummaryTable', () => {
 
       const inputs = screen.getAllByTestId('input')
 
-      // Test currency processing (converts to integer for non-currency fields)
+      // Test currency processing (preserves decimals)
       fireEvent.change(inputs[0], { target: { value: '$123.45' } })
-      expect(inputs[0].value).toBe('123') // Strips $ and decimal for integer fields using parseInt
+      expect(inputs[0].value).toBe('123.45') // Should strip $ but keep decimal
     })
 
     it('processes integer field input correctly', () => {
@@ -300,9 +300,9 @@ describe('SummaryTable', () => {
 
       const input = screen.getByTestId('input')
 
-      // Test input processing - component strips invalid characters and decimals for integer fields
+      // Test input processing - component strips invalid characters
       fireEvent.change(input, { target: { value: '123.45abc' } })
-      expect(input.value).toBe('123') // Component strips non-numeric characters and decimals using parseInt
+      expect(input.value).toBe('123.45') // Component strips non-numeric characters
     })
 
     it('handles empty string input', () => {
@@ -339,13 +339,13 @@ describe('SummaryTable', () => {
 
       const input = screen.getAllByTestId('input')[0]
 
-      // Enter decimal value (integer fields strip decimals)
+      // Enter decimal value
       fireEvent.change(input, { target: { value: '123.456' } })
-      expect(input.value).toBe('123')
+      expect(input.value).toBe('123.456')
 
-      // Blur should convert to number (integer field)
+      // Blur should round to 2 decimal places
       fireEvent.blur(input)
-      expect(input.value).toBe('123')
+      expect(input.value).toBe('123.46')
     })
 
     it('calls onCellEditStopped callback on blur', () => {
@@ -362,7 +362,13 @@ describe('SummaryTable', () => {
       fireEvent.change(input, { target: { value: '200' } })
       fireEvent.blur(input)
 
-      expect(mockOnCellEditStopped).toHaveBeenCalledWith(expect.any(Array))
+      expect(mockOnCellEditStopped).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({
+          rowIndex: expect.any(Number),
+          columnId: expect.any(String)
+        })
+      )
     })
 
     it('handles blur without callback gracefully', () => {
