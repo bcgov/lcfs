@@ -43,17 +43,3 @@ def get_s3_client() -> Generator:
     finally:
         # boto3 clients do not require explicit closing, but this ensures cleanup if needed
         pass
-
-
-def get_minio_client():
-    from minio import Minio
-    from urllib.parse import urlparse
-
-    client = Minio(
-        urlparse(settings.s3_endpoint).netloc,  # get only domain
-        access_key=settings.s3_access_key,
-        secret_key=settings.s3_secret_key,
-        secure=True,
-        region="us-east-1",
-    )
-    return client
