@@ -219,20 +219,20 @@ export const chargingSiteColDefs = (
       field: 'intendedUsers',
       headerComponent: RequiredHeader,
       headerName: i18n.t('chargingSite:columnLabels.intendedUserTypes'),
-      valueGetter: (params) =>
-        params.data?.intendedUsers?.map((i) => ({
+      valueGetter: (params) => {
+        console.log(params.data.intendedUsers)
+        return params.data?.intendedUsers?.map((i) => ({
           ...i,
           label: i.typeName,
           value: i.endUserTypeId
-        })),
-      valueSetter: (params) => {
-        const newValue = params.newValue || []
-        params.data.intendedUsers = newValue.map((i) => ({
-          endUserTypeId: i.endUserTypeId,
-          typeName: i.typeName
         }))
+      },
+      valueSetter: (params) => {
+        params.data.intendedUsers = params.newValue
         return true
       },
+      valueFormatter: (params) =>
+        params.value.map((user) => user.typeName).join(', ') || [],
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options:
@@ -243,7 +243,8 @@ export const chargingSiteColDefs = (
           })) || [],
         multiple: true,
         disableCloseOnSelect: true,
-        openOnFocus: true
+        openOnFocus: true,
+        returnObject: true
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
@@ -481,7 +482,7 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
       const siteId = params.data?.chargingSiteId
       if (!siteId) return null
 
-      const navigate = (window.navigateToFSEProcessing || (() => {}))
+      const navigate = window.navigateToFSEProcessing || (() => {})
 
       return `
         <button
