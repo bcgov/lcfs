@@ -116,9 +116,16 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   }, [])
 
   const handleChange = (event, newValue) => {
-    const processedValue = multiple
-      ? getRawValue(newValue)
-      : getRawValue(newValue)
+    let processedValue
+    if (multiple) {
+      // For multiple mode, newValue is an array of option objects or primitives
+      processedValue = Array.isArray(newValue)
+        ? newValue.map((item) => getRawValue(item))
+        : []
+    } else {
+      // For single mode, newValue is a single option object or primitive
+      processedValue = getRawValue(newValue)
+    }
     setSelectedValues(processedValue)
     if (onValueChange) {
       onValueChange(processedValue)
