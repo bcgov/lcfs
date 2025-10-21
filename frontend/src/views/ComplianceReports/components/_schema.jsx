@@ -265,14 +265,37 @@ export const renewableFuelColumns = (
   if (parseInt(compliancePeriodYear) === 2024) {
     // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
     if (!lines7And9Locked) {
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      // Line 7 should only be editable if there are NO previous year values
+      // Line 7 represents "Volume of eligible renewable fuel previously retained (from Line 6 of previous compliance period)"
+      const hasGasolinePreviousRetained = data[SUMMARY.LINE_7]?.gasoline > 0
+      const hasDieselPreviousRetained = data[SUMMARY.LINE_7]?.diesel > 0
+
+      if (!hasGasolinePreviousRetained) {
+        gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7]
+      }
+      if (!hasDieselPreviousRetained) {
+        dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7]
+      }
+      // Line 9 can always be editable when not locked
+      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_9]
+      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_9]
     }
   } else if (parseInt(compliancePeriodYear) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      // Line 7 should only be editable if there are NO previous year values
+      const hasGasolinePreviousRetained = data[SUMMARY.LINE_7]?.gasoline > 0
+      const hasDieselPreviousRetained = data[SUMMARY.LINE_7]?.diesel > 0
+
+      if (!hasGasolinePreviousRetained) {
+        gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7]
+      }
+      if (!hasDieselPreviousRetained) {
+        dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7]
+      }
+      // Line 9 can always be editable when not locked
+      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_9]
+      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_9]
     }
   }
   if (parseInt(compliancePeriodYear) < 2029) {
