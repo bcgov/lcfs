@@ -31,10 +31,41 @@ import BCButton from '@/components/BCButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
+const IMPORT_FIELD_MAP = {
+  allocation_transaction_type: 'allocationTransactionType',
+  transaction_partner: 'transactionPartner',
+  postal_address: 'postalAddress',
+  transaction_partner_email: 'transactionPartnerEmail',
+  transaction_partner_phone: 'transactionPartnerPhone',
+  fuel_type: 'fuelType',
+  fuel_type_other: 'fuelTypeOther',
+  fuel_category: 'fuelCategory',
+  provision_of_the_act: 'provisionOfTheAct',
+  fuel_code: 'fuelCode',
+  quantity: 'quantity'
+}
+
 export const AddEditAllocationAgreements = () => {
-  const [rowData, setRowData] = useState([])
+  const params = useParams()
+  const { complianceReportId, compliancePeriod } = params
+  const createEmptyRow = useCallback(
+    () => ({
+      id: uuid(),
+      complianceReportId,
+      compliancePeriod,
+      isPlaceholder: true
+    }),
+    [complianceReportId, compliancePeriod]
+  )
+
+  const [rowData, setRowData] = useState([createEmptyRow()])
   const gridRef = useRef(null)
-  const [errors, setErrors] = useState({})
+  const [gridErrors, setGridErrors] = useState({})
+  const [importErrors, setImportErrors] = useState({})
+  const errors = useMemo(
+    () => ({ ...importErrors, ...gridErrors }),
+    [importErrors, gridErrors]
+  )
   const [warnings, setWarnings] = useState({})
   const [isDownloading, setIsDownloading] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
@@ -56,8 +87,6 @@ export const AddEditAllocationAgreements = () => {
       }),
     []
   )
-  const params = useParams()
-  const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
   const { data: currentReport, isLoading } =
     useComplianceReportWithCache(complianceReportId)
@@ -76,6 +105,8 @@ export const AddEditAllocationAgreements = () => {
   const { mutateAsync: saveRow } = useSaveAllocationAgreement({
     complianceReportId
   })
+
+  const [importedInvalidRows, setImportedInvalidRows] = useState([])
 
   const {
     data,
@@ -142,38 +173,18 @@ export const AddEditAllocationAgreements = () => {
     return true // Proceed with the update
   }
 
-  const onGridReady = useCallback(
-    async (params) => {
-      if (
-        Array.isArray(data.allocationAgreements) &&
-        data.allocationAgreements.length > 0
-      ) {
-        const updatedRowData = data.allocationAgreements.map((item) => ({
-          ...item,
-          complianceReportId,
-          compliancePeriod,
-          isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId,
-          id: item.id || uuid() // Ensure every item has a unique ID
-        }))
-        setRowData([...updatedRowData, { id: uuid() }])
-      } else {
-        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
-      }
+  const onGridReady = useCallback((params) => {
+    params.api.sizeColumnsToFit()
 
-      params.api.sizeColumnsToFit()
-
-      setTimeout(() => {
-        const lastRowIndex = params.api.getLastDisplayedRowIndex()
-        params.api.setFocusedCell(lastRowIndex, 'allocationTransactionType')
-        params.api.startEditingCell({
-          rowIndex: lastRowIndex,
-          colKey: 'allocationTransactionType'
-        })
-      }, 100)
-    },
-    [data, complianceReportId, compliancePeriod, isSupplemental]
-  )
+    setTimeout(() => {
+      const lastRowIndex = Math.max(params.api.getDisplayedRowCount() - 1, 0)
+      params.api.setFocusedCell(lastRowIndex, 'allocationTransactionType')
+      params.api.startEditingCell({
+        rowIndex: lastRowIndex,
+        colKey: 'allocationTransactionType'
+      })
+    }, 100)
+  }, [])
 
   useEffect(() => {
     const orgName = currentReport?.report?.organization?.name
@@ -204,13 +215,17 @@ export const AddEditAllocationAgreements = () => {
     ) {
       const updatedRowData = data.allocationAgreements.map((item) => {
         let matchingRow = rowData.find(
-          (row) => row.allocationAgreementId === item.allocationAgreementId
+          (row) =>
+            !row.isImportedInvalidEntry &&
+            row.allocationAgreementId === item.allocationAgreementId
         )
         if (!matchingRow) {
           matchingRow = rowData.find(
             (row) =>
-              row.allocationAgreementId === undefined ||
-              row.allocationAgreementId === null
+              !row.isImportedInvalidEntry &&
+              !row.isPlaceholder &&
+              (row.allocationAgreementId === undefined ||
+                row.allocationAgreementId === null)
           )
         }
         return {
@@ -219,22 +234,26 @@ export const AddEditAllocationAgreements = () => {
           compliancePeriod,
           isNewSupplementalEntry:
             isSupplemental && item.complianceReportId === +complianceReportId,
-          id: matchingRow ? matchingRow.id : uuid()
+          id: matchingRow ? matchingRow.id : uuid(),
+          isPlaceholder: false
         }
       })
       setRowData([
+        ...importedInvalidRows,
         ...updatedRowData,
-        { id: uuid(), complianceReportId, compliancePeriod }
+        createEmptyRow()
       ])
     } else {
-      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+      setRowData([...importedInvalidRows, createEmptyRow()])
     }
   }, [
     data,
     allocationAgreementsLoading,
     isSupplemental,
     complianceReportId,
-    compliancePeriod
+    compliancePeriod,
+    importedInvalidRows,
+    createEmptyRow
   ])
 
   const onFirstDataRendered = useCallback((params) => {
@@ -398,7 +417,7 @@ export const AddEditAllocationAgreements = () => {
         idField: 'allocationAgreementId',
         labelPrefix: 'allocationAgreement:allocationAgreementColLabels',
         params,
-        setErrors,
+        setErrors: setGridErrors,
         setWarnings,
         saveRow,
         t,
@@ -406,7 +425,18 @@ export const AddEditAllocationAgreements = () => {
       })
 
       updatedData.ciOfFuel = params.node.data.ciOfFuel
-      params.node.updateData(updatedData)
+      params.node.updateData({ ...updatedData, validationMsg: undefined })
+      if (updatedData.validationStatus === 'success') {
+        const updatedId = updatedData.id || params.node.data.id
+        setImportedInvalidRows((prev) =>
+          prev.filter((row) => row.id !== updatedId)
+        )
+        setImportErrors((prev) => {
+          if (!prev[updatedId]) return prev
+          const { [updatedId]: _removed, ...rest } = prev
+          return rest
+        })
+      }
       params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
@@ -414,7 +444,7 @@ export const AddEditAllocationAgreements = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete' || action === 'undo') {
-      await handleScheduleDelete(
+      const wasDeleted = await handleScheduleDelete(
         params,
         'allocationAgreementId',
         saveRow,
@@ -422,9 +452,21 @@ export const AddEditAllocationAgreements = () => {
         setRowData,
         {
           complianceReportId,
-          compliancePeriod
+          compliancePeriod,
+          isPlaceholder: true
         }
       )
+      if (wasDeleted) {
+        const deletedId = params.node?.data?.id
+        setImportedInvalidRows((prev) =>
+          prev.filter((row) => row.id !== deletedId)
+        )
+        setImportErrors((prev) => {
+          if (!prev[deletedId]) return prev
+          const { [deletedId]: _removed, ...rest } = prev
+          return rest
+        })
+      }
     }
   }
 
@@ -472,6 +514,67 @@ export const AddEditAllocationAgreements = () => {
   const handleCloseImportMenu = () => {
     setImportAnchorEl(null)
   }
+
+  const handleImportComplete = useCallback(
+    (result) => {
+      if (!result) {
+        return
+      }
+
+      const invalidRows = Array.isArray(result.invalid_rows)
+        ? result.invalid_rows
+        : []
+
+      if (!invalidRows.length) {
+        setImportedInvalidRows([])
+        setImportErrors({})
+        return
+      }
+
+      const transformedRows = invalidRows.map((invalidRow) => {
+        const camelRow = Object.entries(invalidRow.row_data || {}).reduce(
+          (acc, [key, value]) => {
+            const mappedKey = IMPORT_FIELD_MAP[key] || key
+            acc[mappedKey] = value
+            return acc
+          },
+          {}
+        )
+
+        const rowId = uuid()
+
+        return {
+          ...camelRow,
+          id: rowId,
+          complianceReportId,
+          compliancePeriod,
+          validationStatus: 'error',
+          validationMsg: invalidRow.message,
+          isImportedInvalidEntry: true,
+          isPlaceholder: false
+        }
+      })
+
+      const errorMap = transformedRows.reduce((acc, row, index) => {
+        const fields = (invalidRows[index].fields || []).map(
+          (field) => IMPORT_FIELD_MAP[field] || field
+        )
+        acc[row.id] = fields
+        return acc
+      }, {})
+
+      setImportedInvalidRows(transformedRows)
+      setImportErrors(errorMap)
+
+      alertRef.current?.triggerAlert({
+        message: t('allocationAgreement:importValidationSummary', {
+          count: invalidRows.length
+        }),
+        severity: 'warning'
+      })
+    },
+    [complianceReportId, compliancePeriod, t]
+  )
 
   const handleNavigateBack = useCallback(() => {
     navigate(
@@ -644,6 +747,7 @@ export const AddEditAllocationAgreements = () => {
           isOverwrite={isOverwrite}
           importHook={useImportAllocationAgreement}
           getJobStatusHook={useGetAllocationAgreementImportJobStatus}
+          onImportComplete={handleImportComplete}
         />
       </Grid2>
     )

@@ -6,6 +6,7 @@
     "Report fuel volumes for which you have an allocation agreement. Report both fuels that you have allocated responsibility to another organization, and fuels you have received responsibly from another organization.",
     "Fuels that you have received responsibility for must also be reported in fuel supply."
   ],
+  "importValidationSummary": "{{count}} row(s) could not be imported. Review highlighted rows to fix the validation errors and save again.",
   "allocationAgreementColLabels": {
     "allocationTransactionType": "Responsibility",
     "transactionPartner": "Legal name of transaction partner",

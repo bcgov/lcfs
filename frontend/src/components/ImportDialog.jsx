@@ -69,7 +69,8 @@ function ImportDialog({
   complianceReportId,
   isOverwrite,
   importHook,
-  getJobStatusHook
+  getJobStatusHook,
+  onImportComplete = () => {}
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -83,6 +84,7 @@ function ImportDialog({
   )
   const [errorMsg, setErrorMsg] = useState(null)
   const [errorMsgs, setErrorMsgs] = useState([])
+  const [jobResult, setJobResult] = useState(null)
 
   // Job tracking
   const [jobID, setJobID] = useState(null)
@@ -133,7 +135,8 @@ function ImportDialog({
             setRejectedCount(data.rejected)
             if (data.progress >= 100) {
               setDialogState(DIALOG_STATES.COMPLETED)
-              setErrorMsgs(data.errors)
+              setErrorMsgs(data.errors || [])
+              setJobResult(data)
               clearInterval(intervalId)
               setIntervalID(null)
               setJobID(null)
@@ -162,6 +165,7 @@ function ImportDialog({
   }
 
   const handleClose = () => {
+    const completedResult = jobResult
     setErrorMsg(null)
     setUploadedFile(null)
     setDialogState(DIALOG_STATES.SELECT_FILE)
@@ -170,11 +174,16 @@ function ImportDialog({
     setCreatedCount(0)
     setRejectedCount(0)
     setErrorMsgs([])
+    setJobResult(null)
     setUploadStatus(t(`common:importExport.import.dialog.uploadStatusStarting`))
 
     if (intervalID) {
       clearInterval(intervalID)
       setIntervalID(null)
+    }
+
+    if (dialogState === DIALOG_STATES.COMPLETED) {
+      onImportComplete(completedResult)
     }
 
     close()
