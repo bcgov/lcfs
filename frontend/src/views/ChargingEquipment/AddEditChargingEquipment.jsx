@@ -94,6 +94,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
     statuses,
     levels,
     endUseTypes,
+    endUserTypes,
     isLoading: metadataLoading
   } = useChargingEquipmentMetadata()
 
@@ -115,6 +116,28 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const handleCancel = useCallback(() => {
     navigate(`${ROUTES.REPORTS.LIST}/fse`)
   }, [navigate])
+
+  // Unified save handler for grid rows (create/update/delete)
+  const saveRow = useCallback(async (data) => {
+    // Map API shape; when editing existing, backend uses id param
+    if (data.deleted) {
+      if (data.charging_equipment_id) {
+        await deleteMutation.mutateAsync(parseInt(data.charging_equipment_id))
+      }
+      return { data: { charging_equipment_id: data.charging_equipment_id } }
+    }
+
+    if (data.charging_equipment_id) {
+      const updated = await updateMutation.mutateAsync({
+        id: parseInt(data.charging_equipment_id),
+        data
+      })
+      return { data: updated }
+    }
+
+    const created = await createMutation.mutateAsync(data)
+    return { data: created }
+  }, [createMutation, updateMutation, deleteMutation])
 
   // Grid event handlers
   const handleCellEditingStopped = useCallback(async (params) => {
@@ -145,23 +168,23 @@ export const AddEditChargingEquipment = ({ mode }) => {
         params,
         setErrors: setGridErrors,
         setWarnings: setGridWarnings,
-        saveRow: updateMutation.mutateAsync,
+        saveRow,
         t,
         updatedData
       })
 
       params.node.updateData(responseData)
       alertRef.current?.triggerAlert({
-        message: t('chargingEquipment:updateSuccess'),
+        message: isEdit ? t('chargingEquipment:updateSuccess') : t('chargingEquipment:createSuccess'),
         severity: 'success'
       })
     } catch (error) {
       alertRef.current?.triggerAlert({
-        message: error.message || 'Failed to update equipment',
+        message: error.message || 'Failed to save equipment',
         severity: 'error'
       })
     }
-  }, [equipment, isEdit, alertRef, updateMutation.mutateAsync, t])
+  }, [equipment, isEdit, alertRef, saveRow, t])
 
   const handleGridAction = useCallback(async (action, params) => {
     if (action === 'delete' && isEdit && equipment?.status === 'Draft') {
@@ -197,14 +220,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
     resolver: yupResolver(chargingEquipmentSchema),
     defaultValues: {
       charging_site_id: '',
-      allocating_organization_id: '',
+      allocating_organization_name: '',
       serial_number: '',
       manufacturer: '',
       model: '',
       level_of_equipment_id: '',
       ports: '',
       notes: '',
-      intended_use_ids: []
+      intended_use_ids: [],
+      intended_user_ids: []
     }
   })
 
@@ -213,7 +237,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
     if (isEdit && equipment) {
       reset({
         charging_site_id: equipment.charging_site_id || '',
-        allocating_organization_id: equipment.allocating_organization_id || '',
+        allocating_organization_name: equipment.allocating_organization_name || '',
         serial_number: equipment.serial_number || '',
         manufacturer: equipment.manufacturer || '',
         model: equipment.model || '',
@@ -221,7 +245,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
         ports: equipment.ports || '',
         notes: equipment.notes || '',
         intended_use_ids:
-          equipment.intended_uses?.map((use) => use.end_use_type_id) || []
+          equipment.intended_uses?.map((use) => use.end_use_type_id) || [],
+        intended_user_ids:
+          equipment.intended_users?.map((user) => user.end_user_type_id) || []
       })
     }
   }, [equipment, reset, isEdit])
@@ -285,14 +311,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
     const newRow = {
       id: Date.now(), // Temporary ID for new rows
       charging_site_id: '',
-      allocating_organization_id: '',
+      allocating_organization_name: '',
       serial_number: '',
       manufacturer: '',
       model: '',
       level_of_equipment_id: '',
       ports: 'Single port',
       notes: '',
-      intended_use_ids: []
+      intended_use_ids: [],
+      intended_user_ids: []
     }
     setBulkData([...bulkData, newRow])
   }
@@ -304,32 +331,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }, [isBulkMode, bulkData.length])
 
-  // Unified save handler for grid rows (create/update/delete)
-  const saveRow = async (data) => {
-    // Map API shape; when editing existing, backend uses id param
-    if (data.deleted) {
-      if (data.charging_equipment_id) {
-        await deleteMutation.mutateAsync(parseInt(data.charging_equipment_id))
-      }
-      return { data: { charging_equipment_id: data.charging_equipment_id } }
-    }
-
-    if (data.charging_equipment_id) {
-      const updated = await updateMutation.mutateAsync({
-        id: parseInt(data.charging_equipment_id),
-        data
-      })
-      return { data: updated }
-    }
-
-    const created = await createMutation.mutateAsync(data)
-    return { data: created }
-  }
-
   const handleBulkSave = async () => {
     try {
+      // Get current grid data instead of using stale bulkData state
+      const rowData = []
+      gridRef.current?.api?.forEachNode((node) => rowData.push(node.data))
+
       // Filter out rows with missing required fields
-      const validRows = bulkData.filter(
+      const validRows = rowData.filter(
         (row) =>
           row.charging_site_id &&
           row.serial_number &&
@@ -345,12 +354,12 @@ export const AddEditChargingEquipment = ({ mode }) => {
         return
       }
 
-      // Save all valid rows
-      const promises = validRows.map((row) => createMutation.mutateAsync(row))
+      // Save all valid rows using saveRow (handles both create and update)
+      const promises = validRows.map((row) => saveRow(row))
       await Promise.all(promises)
 
       alertRef.current?.triggerAlert({
-        message: `Successfully created ${validRows.length} charging equipment entries.`,
+        message: `Successfully saved ${validRows.length} charging equipment entries.`,
         severity: 'success'
       })
 
@@ -411,10 +420,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
           </Grid>
 
           <Grid item xs={12}>
-            <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 1 }} />
-          </Grid>
-
-          <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <BCTypography variant="h6" gutterBottom>
                 {t('chargingEquipment:bulkInputTitle')}
@@ -426,12 +431,12 @@ export const AddEditChargingEquipment = ({ mode }) => {
               <ExcelUpload
                 onDataParsed={(data) => {
                   setBulkData(data)
-                  alertRef.current?.clearAlert()
                 }}
                 chargingSites={chargingSites}
                 organizations={organizations}
                 levels={levels}
                 endUseTypes={endUseTypes}
+                endUserTypes={endUserTypes}
               />
 
               <BCGridEditor
@@ -442,6 +447,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   organizations,
                   levels,
                   endUseTypes,
+                  endUserTypes,
                   gridErrors,
                   gridWarnings
                 )}
@@ -465,6 +471,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                         acc[key] = value
                         return acc
                       }, {}),
+                    charging_equipment_id: params.node.data.charging_equipment_id,
                     status: 'Draft'
                   }
 
@@ -480,8 +487,17 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     updatedData
                   })
 
-                  alertRef.current?.clearAlert()
                   params.node.updateData(responseData)
+
+                  // Update bulkData state with the saved data including charging_equipment_id
+                  const updatedBulkData = [...bulkData]
+                  const rowIndex = updatedBulkData.findIndex(
+                    (row) => row.id === params.data.id
+                  )
+                  if (rowIndex >= 0) {
+                    updatedBulkData[rowIndex] = responseData
+                    setBulkData(updatedBulkData)
+                  }
                 }}
                 onCellValueChanged={(params) => {
                   const updatedData = [...bulkData]
@@ -503,14 +519,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       setBulkData,
                       {
                         charging_site_id: '',
-                        allocating_organization_id: '',
+                        allocating_organization_name: '',
                         serial_number: '',
                         manufacturer: '',
                         model: '',
                         level_of_equipment_id: '',
                         ports: 'Single port',
                         notes: '',
-                        intended_use_ids: []
+                        intended_use_ids: [],
+                        intended_user_ids: []
                       }
                     )
                   }
@@ -521,14 +538,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     .map(() => ({
                       id: Date.now() + Math.random(),
                       charging_site_id: '',
-                      allocating_organization_id: '',
+                      allocating_organization_name: '',
                       serial_number: '',
                       manufacturer: '',
                       model: '',
                       level_of_equipment_id: '',
                       ports: 'Single port',
                       notes: '',
-                      intended_use_ids: []
+                      intended_use_ids: [],
+                      intended_user_ids: []
                     }))
                 }
                 saveButtonProps={{
@@ -547,6 +565,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 </BCButton>
               </Box>
             </Paper>
+          </Grid>
+
+          <Grid item xs={12}>
+            <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 1 }} />
           </Grid>
       </Grid>
     </BCBox>
@@ -595,10 +617,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
         </Grid>
 
         <Grid item xs={12}>
-          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
-        </Grid>
-
-        <Grid item xs={12}>
           <Box sx={{ width: '100%' }}>
             <BCGridEditor
               gridRef={gridRef}
@@ -608,6 +626,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 organizations,
                 levels,
                 endUseTypes,
+                endUserTypes,
                 gridErrors,
                 gridWarnings,
                 { enableDelete: isEdit && equipment?.status === 'Draft' },
@@ -620,8 +639,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   id: equipment?.charging_equipment_id || Date.now(),
                   charging_equipment_id: equipment?.charging_equipment_id,
                   charging_site_id: equipment?.charging_site_id || '',
-                  allocating_organization_id:
-                    equipment?.allocating_organization_id || '',
+                  allocating_organization_name:
+                    equipment?.allocating_organization_name || '',
                   serial_number: equipment?.serial_number || '',
                   manufacturer: equipment?.manufacturer || '',
                   model: equipment?.model || '',
@@ -630,6 +649,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   notes: equipment?.notes || '',
                   intended_use_ids:
                     equipment?.intended_uses?.map((use) => use.end_use_type_id) ||
+                    [],
+                  intended_user_ids:
+                    equipment?.intended_users?.map((user) => user.end_user_type_id) ||
                     [],
                   status: equipment?.status || 'Draft'
                 }
@@ -644,6 +666,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
               }}
             />
           </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
         </Grid>
       </Grid>
     </BCBox>

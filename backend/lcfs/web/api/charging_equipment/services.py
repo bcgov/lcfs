@@ -56,8 +56,8 @@ class ChargingEquipmentServices:
         """Get paginated list of charging equipment for the user's organization."""
 
         # Get organization scope based on user type
-        # Include all statuses for government users
-        exclude_draft = False
+        # Exclude Draft status for government users (IDIR) - they should only see Submitted, Validated, Updated, Decommissioned
+        exclude_draft = user.is_government
 
         if user.is_government:
             organization_id = (
@@ -79,18 +79,34 @@ class ChargingEquipmentServices:
                 charging_site_id=equipment.charging_site_id,
                 status=equipment.status.status,
                 site_name=equipment.charging_site.site_name,
+                organization_name=equipment.charging_site.organization.name if equipment.charging_site.organization else None,
                 registration_number=equipment.registration_number
                 or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
                 version=equipment.version,
                 allocating_organization_name=(
-                    equipment.allocating_organization.name
-                    if equipment.allocating_organization
-                    else None
+                    equipment.organization_name
+                    if equipment.organization_name
+                    else (equipment.allocating_organization.name if equipment.allocating_organization else None)
                 ),
                 serial_number=equipment.serial_number,
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 level_of_equipment_name=equipment.level_of_equipment.name,
+                intended_uses=[
+                    {
+                        "end_use_type_id": use.end_use_type_id,
+                        "type": use.type,
+                        "description": use.sub_type,
+                    }
+                    for use in equipment.intended_uses
+                ],
+                intended_users=[
+                    {
+                        "end_user_type_id": user.end_user_type_id,
+                        "type_name": user.type_name,
+                    }
+                    for user in equipment.intended_users
+                ],
                 created_date=equipment.create_date,
                 updated_date=equipment.update_date,
             )
@@ -138,9 +154,9 @@ class ChargingEquipmentServices:
             registration_number=equipment.registration_number,
             allocating_organization_id=equipment.allocating_organization_id,
             allocating_organization_name=(
-                equipment.allocating_organization.name
-                if equipment.allocating_organization
-                else None
+                equipment.organization_name
+                if equipment.organization_name
+                else (equipment.allocating_organization.name if equipment.allocating_organization else None)
             ),
             serial_number=equipment.serial_number,
             manufacturer=equipment.manufacturer,
@@ -156,6 +172,13 @@ class ChargingEquipmentServices:
                     "description": use.sub_type,
                 }
                 for use in equipment.intended_uses
+            ],
+            intended_users=[
+                {
+                    "end_user_type_id": user.end_user_type_id,
+                    "type_name": user.type_name,
+                }
+                for user in equipment.intended_users
             ],
             version=equipment.version,
         )
@@ -441,6 +464,18 @@ class ChargingEquipmentServices:
                 "end_use_type_id": t.end_use_type_id,
                 "type": t.type,
                 "sub_type": t.sub_type,
+            }
+            for t in types
+        ]
+
+    @service_handler
+    async def get_end_user_types(self):
+        """Get all end user types."""
+        types = await self.repo.get_end_user_types()
+        return [
+            {
+                "end_user_type_id": t.end_user_type_id,
+                "type_name": t.type_name,
             }
             for t in types
         ]

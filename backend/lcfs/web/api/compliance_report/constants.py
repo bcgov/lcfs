@@ -19,7 +19,7 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "eligible_renewable_fuel_required",
     },
     5: {
-        "description": "Net volume of eligible renewable fuel notionally transferred",
+        "description": "Net volume of eligible renewable fuel notionally transferred (received)",
         "field": "net_notionally_transferred",
     },
     6: {
