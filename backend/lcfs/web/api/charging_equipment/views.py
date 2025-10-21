@@ -306,6 +306,22 @@ async def get_end_use_types(
 
 
 @router.get(
+    "/end-user-types/list",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_end_user_types(
+    request: Request,
+    service: ChargingEquipmentServices = Depends(),
+) -> List[dict]:
+    """
+    Get all available end user types for intended user selection.
+    """
+    return await service.get_end_user_types()
+
+
+@router.get(
     "/charging-sites/list",
     response_model=List[dict],
     status_code=status.HTTP_200_OK,

@@ -368,13 +368,34 @@ const SummaryTable = ({
                         display: 'block'
                       }}
                     >
-                      {row.format && colIndex !== 0
-                        ? rowFormatters[row.format](
-                            row[column.id],
-                            useParenthesis,
-                            0
-                          )
-                        : row[column.id]}
+                      {(() => {
+                        // For Lines 6 and 8 (retention/deferral lines), display "0" for non-editable cells
+                        // Line 6 is at index 5, Line 8 is at index 7
+                        const isRetentionOrDeferralLine =
+                          rowIndex === 5 || rowIndex === 7
+                        const isFuelColumn =
+                          column.id === 'gasoline' ||
+                          column.id === 'diesel' ||
+                          column.id === 'jetFuel'
+
+                        if (
+                          isRetentionOrDeferralLine &&
+                          isFuelColumn &&
+                          !isCellEditable(rowIndex, column.id)
+                        ) {
+                          return row.format && colIndex !== 0
+                            ? rowFormatters[row.format](0, useParenthesis, 0)
+                            : '0'
+                        }
+
+                        return row.format && colIndex !== 0
+                          ? rowFormatters[row.format](
+                              row[column.id],
+                              useParenthesis,
+                              0
+                            )
+                          : row[column.id]
+                      })()}
                     </span>
                   )}
                 </TableCell>

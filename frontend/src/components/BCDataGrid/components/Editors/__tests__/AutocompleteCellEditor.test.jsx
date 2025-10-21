@@ -8,24 +8,25 @@ import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 
 // Mock MUI components
 vi.mock('@mui/material', () => ({
-  Autocomplete: vi.fn(({ children, onChange, onOpen, onClose, onKeyDown, getOptionLabel, renderOption, renderInput, renderTags, isOptionEqualToValue, ...props }) => {
+  Autocomplete: vi.fn(({ children, onChange, onOpen, onClose, onKeyDown, getOptionLabel, renderOption, renderInput, renderTags, isOptionEqualToValue, multiple, ...props }) => {
     // Test getOptionLabel if provided
     if (getOptionLabel) {
       getOptionLabel('test')
       getOptionLabel({ label: 'test' })
       getOptionLabel(null)
     }
-    
+
     // Test isOptionEqualToValue if provided
     if (isOptionEqualToValue) {
       isOptionEqualToValue('option', 'value')
     }
-    
+
     return (
-      <div 
+      <div
         data-test="autocomplete"
         onClick={() => {
-          if (onChange) onChange({}, 'new value')
+          // In multiple mode, MUI Autocomplete passes an array; in single mode, a single value
+          if (onChange) onChange({}, multiple ? ['new value'] : 'new value')
           if (onOpen) onOpen()
         }}
         onKeyDown={(e) => {
@@ -261,7 +262,7 @@ describe('AutocompleteCellEditor Component', () => {
     it('updates selectedValues and calls onValueChange in multiple mode', () => {
       const props = { ...mockProps, multiple: true }
       render(<AutocompleteCellEditor {...props} ref={mockRef} />)
-      
+
       const autocomplete = screen.getByTestId('autocomplete')
       fireEvent.click(autocomplete)
       

@@ -12,7 +12,8 @@ import {
   Box,
   Slide,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Link
 } from '@mui/material'
 import {
   Fullscreen as FullscreenIcon,
@@ -23,6 +24,8 @@ import BCTypography from '@/components/BCTypography'
 import { fixLeafletIcons, markerIcons } from './utils'
 import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { ROUTES } from '@/routes/routes'
 import colors from '@/themes/base/colors'
 
 // Fix Leaflet icon issue
@@ -269,6 +272,8 @@ const ChargingSitesLegend = ({ sites, isFullscreen }) => {
 // Individual marker component
 const ChargingSiteMarker = ({ site, isFullscreen }) => {
   const { t } = useTranslation('chargingSite')
+  const navigate = useNavigate()
+
   // Skip invalid coordinates
   if (
     site.latitude == null ||
@@ -282,6 +287,13 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   }
 
   const position = [site.latitude, site.longitude]
+
+  // Handle click to navigate to site page
+  const handleOpenSiteInfo = (e) => {
+    e.preventDefault()
+    const sitePath = ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', site.chargingSiteId)
+    navigate(sitePath)
+  }
 
   // Determine marker color based on status
   const getMarkerIcon = (status) => {
@@ -429,6 +441,34 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
             {new Date(site.updateDate).toLocaleDateString()} by{' '}
             {site.updateUser}
           </BCTypography>
+
+          {/* Link to site info */}
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+            <Link
+              component="button"
+              variant="body2"
+              onClick={handleOpenSiteInfo}
+              sx={{
+                cursor: 'pointer',
+                textDecoration: 'none',
+                color: 'primary.main',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                '&:hover': {
+                  textDecoration: 'underline'
+                },
+                '&:focus': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px',
+                  borderRadius: '2px'
+                }
+              }}
+              aria-label={`Open detailed information for ${site.siteName}`}
+            >
+              Open site info →
+            </Link>
+          </Box>
         </div>
       </Popup>
     </Marker>
