@@ -6,12 +6,13 @@ import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import BCButton from '@/components/BCButton'
 
-export const ExcelUpload = ({ 
-  onDataParsed, 
-  chargingSites = [], 
-  organizations = [], 
-  levels = [], 
-  endUseTypes = [] 
+export const ExcelUpload = ({
+  onDataParsed,
+  chargingSites = [],
+  organizations = [],
+  levels = [],
+  endUseTypes = [],
+  endUserTypes = []
 }) => {
   const { t } = useTranslation(['chargingEquipment', 'common'])
   const fileInputRef = useRef(null)
@@ -28,7 +29,8 @@ export const ExcelUpload = ({
         'Model': 'Model X',
         'Level of Equipment': levels[0]?.name || 'Level 3 - Direct Current',
         'Ports': 'Single port',
-        'Intended Uses': 'Public,Private',
+        'Intended Uses': endUseTypes.slice(0, 2).map(use => use.type).join(',') || 'Light duty motor vehicles',
+        'Intended Users': endUserTypes.slice(0, 2).map(user => user.type_name).join(',') || 'Multi-unit residential building,Fleet',
         'Notes': 'Optional notes'
       }
     ]
@@ -62,18 +64,8 @@ export const ExcelUpload = ({
         // Transform Excel data to match our schema
         const transformedData = jsonData.map((row, index) => {
           // Find matching charging site
-          const chargingSite = chargingSites.find(site => 
+          const chargingSite = chargingSites.find(site =>
             site.site_name === row['Charging Site']
-          )
-          
-          // Find matching organization
-          const organization = organizations.find(org => 
-            (org.legal_name || org.name) === row['Allocating Organization']
-          )
-
-          // Find matching level
-          const level = levels.find(l => 
-            l.name === row['Level of Equipment']
           )
 
           // Parse intended uses
@@ -88,23 +80,43 @@ export const ExcelUpload = ({
             })
           }
 
+          // Parse intended users
+          const intendedUserIds = []
+          if (row['Intended Users']) {
+            const userNames = row['Intended Users'].split(',').map(s => s.trim())
+            userNames.forEach(userName => {
+              const userType = endUserTypes.find(type => type.type_name === userName)
+              if (userType) {
+                intendedUserIds.push(userType.end_user_type_id)
+              }
+            })
+          }
+
+          // Find matching level
+          const level = levels.find(l =>
+            l.name === row['Level of Equipment']
+          )
+
           return {
             id: Date.now() + index, // Temporary ID
             charging_site_id: chargingSite?.charging_site_id || '',
-            allocating_organization_id: organization?.organization_id || '',
+            allocating_organization_name: row['Allocating Organization'] || '',
             serial_number: row['Serial Number'] || '',
             manufacturer: row['Manufacturer'] || '',
             model: row['Model'] || '',
             level_of_equipment_id: level?.level_of_equipment_id || '',
             ports: row['Ports'] || 'Single port',
             intended_use_ids: intendedUseIds,
+            intended_user_ids: intendedUserIds,
             notes: row['Notes'] || '',
             // Add validation flags
             _errors: {
               charging_site_id: !chargingSite ? 'Charging site not found' : '',
               level_of_equipment_id: !level ? 'Level of equipment not found' : '',
               serial_number: !row['Serial Number'] ? 'Serial number is required' : '',
-              manufacturer: !row['Manufacturer'] ? 'Manufacturer is required' : ''
+              manufacturer: !row['Manufacturer'] ? 'Manufacturer is required' : '',
+              intended_use_ids: intendedUseIds.length === 0 ? 'At least one intended use is required' : '',
+              intended_user_ids: intendedUserIds.length === 0 ? 'At least one intended user is required' : ''
             }
           }
         })

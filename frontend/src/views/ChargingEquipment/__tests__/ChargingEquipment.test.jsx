@@ -469,7 +469,9 @@ describe('ChargingEquipment', () => {
       fireEvent.click(confirmButton)
     })
 
-    expect(mockChargingEquipment.submitEquipment).toHaveBeenCalledWith([1, 2])
+    // Only equipment with 'Draft' or 'Updated' status should be submitted
+    // Equipment ID 1 has status 'Draft', Equipment ID 2 has status 'Validated'
+    expect(mockChargingEquipment.submitEquipment).toHaveBeenCalledWith([1])
   })
 
   it('handles bulk decommission action', async () => {
@@ -504,7 +506,9 @@ describe('ChargingEquipment', () => {
       fireEvent.click(confirmButton)
     })
 
-    expect(mockChargingEquipment.decommissionEquipment).toHaveBeenCalledWith([1, 2])
+    // Only equipment with 'Validated' status should be decommissioned
+    // Equipment ID 1 has status 'Draft', Equipment ID 2 has status 'Validated'
+    expect(mockChargingEquipment.decommissionEquipment).toHaveBeenCalledWith([2])
   })
 
   it('handles clear filters action', async () => {

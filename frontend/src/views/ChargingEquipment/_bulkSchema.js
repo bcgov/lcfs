@@ -22,6 +22,7 @@ export const bulkChargingEquipmentColDefs = (
   organizations = [],
   levels = [],
   endUseTypes = [],
+  endUserTypes = [],
   errors = {},
   warnings = {},
   actionsOptions = null,
@@ -81,33 +82,33 @@ export const bulkChargingEquipmentColDefs = (
       (!params.data?.charging_equipment_id || params.data?.status === 'Draft')
   },
   {
-    field: 'allocating_organization_id',
+    field: 'allocating_organization_name',
     headerName: i18n.t('chargingEquipment:allocatingOrganization'),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: organizations.map(org => ({
-        value: org.organization_id,
+        value: org.legal_name || org.name,
         label: org.legal_name || org.name
       })),
       openOnFocus: true,
-      allowEmpty: true
+      allowEmpty: true,
+      freeSolo: true
     },
-    valueGetter: (params) => params.data.allocating_organization_id,
+    valueGetter: (params) => params.data.allocating_organization_name || '',
     valueSetter: (params) => {
       const incoming = params.newValue
-      const raw = incoming && typeof incoming === 'object' ? incoming.value : incoming
-      const next = raw === '' || raw == null ? '' : Number(raw)
-      params.data.allocating_organization_id = next
+      // Handle both autocomplete object selections and free text input
+      const textValue = incoming && typeof incoming === 'object' ? incoming.value : incoming
+      const next = textValue === '' || textValue == null ? '' : String(textValue).trim()
+      params.data.allocating_organization_name = next
       params.newValue = next
       return true
     },
     editable: () => Boolean(allowAllocatingOrg),
     valueFormatter: (params) => {
-      const org = organizations.find(o => o.organization_id === params.value)
-      return org ? (org.legal_name || org.name) : ''
+      return params.value || ''
     },
-    minWidth: 200,
-    editable: () => Boolean(allowAllocatingOrg)
+    minWidth: 200
   },
   {
     field: 'serial_number',
@@ -192,6 +193,7 @@ export const bulkChargingEquipmentColDefs = (
   },
   {
     field: 'intended_use_ids',
+    headerComponent: RequiredHeader,
     headerName: i18n.t('chargingEquipment:intendedUses'),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
@@ -204,7 +206,10 @@ export const bulkChargingEquipmentColDefs = (
       openOnFocus: true
     },
     cellRenderer: MultiSelectRenderer,
-    valueGetter: (params) => params.data.intended_use_ids,
+    valueGetter: (params) => {
+      const value = params.data.intended_use_ids
+      return Array.isArray(value) ? value : []
+    },
     editable: isEditableByStatus,
     valueSetter: (params) => {
       const incoming = params.newValue
@@ -221,11 +226,56 @@ export const bulkChargingEquipmentColDefs = (
     },
     valueFormatter: (params) => {
       if (!params.value || !Array.isArray(params.value)) return ''
-      const selectedTypes = endUseTypes.filter(type => 
+      const selectedTypes = endUseTypes.filter(type =>
         params.value.includes(type.end_use_type_id)
       )
       return selectedTypes.map(type => type.type).join(', ')
     },
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 200,
+    editable: isEditableByStatus
+  },
+  {
+    field: 'intended_user_ids',
+    headerComponent: RequiredHeader,
+    headerName: i18n.t('chargingEquipment:intendedUsers'),
+    cellEditor: AutocompleteCellEditor,
+    cellEditorParams: {
+      options: endUserTypes.map(type => ({
+        value: type.end_user_type_id,
+        label: type.type_name
+      })),
+      multiple: true,
+      disableCloseOnSelect: true,
+      openOnFocus: true
+    },
+    cellRenderer: MultiSelectRenderer,
+    valueGetter: (params) => {
+      const value = params.data.intended_user_ids
+      return Array.isArray(value) ? value : []
+    },
+    editable: isEditableByStatus,
+    valueSetter: (params) => {
+      const incoming = params.newValue
+      let raw = []
+      if (Array.isArray(incoming)) {
+        raw = incoming
+          .map((v) => (typeof v === 'object' ? v.value : v))
+          .filter((v) => v != null && v !== '')
+          .map((v) => Number(v))
+      }
+      params.data.intended_user_ids = raw
+      params.newValue = raw
+      return true
+    },
+    valueFormatter: (params) => {
+      if (!params.value || !Array.isArray(params.value)) return ''
+      const selectedTypes = endUserTypes.filter(type =>
+        params.value.includes(type.end_user_type_id)
+      )
+      return selectedTypes.map(type => type.type_name).join(', ')
+    },
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 200,
     editable: isEditableByStatus
   },
