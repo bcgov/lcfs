@@ -46,7 +46,7 @@ jobs:
         run: oc version --client
 
   backend-setup:
-    name: 'Backend Setup'
+    name: "Backend Setup"
     runs-on: ubuntu-latest
     outputs:
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
@@ -73,7 +73,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10.13'
+          python-version: "3.10.13"
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -154,7 +154,7 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   backend-tests:
-    name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
+    name: "Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})"
     needs: backend-setup
     runs-on: ubuntu-latest
     if: needs.backend-setup.outputs.setup-complete == 'true'
@@ -184,7 +184,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10.13'
+          python-version: "3.10.13"
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -300,15 +300,11 @@ jobs:
           retention-days: 1
 
   post-backend-tests:
-    name: 'Publish Backend Test Results'
+    name: "Publish Backend Test Results"
     if: always()
     needs: backend-tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      pull-requests: write
+
     steps:
       - name: Download all test results
         uses: actions/download-artifact@v4
@@ -341,14 +337,14 @@ jobs:
         with:
           files: merged-pytest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: 'Backend Test Results'
-          check_name: 'Backend Test Results'
-          fail_on: 'errors'
-          report_individual_runs: 'true'
-          deduplicate_classes_by_file_name: 'true'
+          comment_title: "Backend Test Results"
+          check_name: "Backend Test Results"
+          fail_on: "errors"
+          report_individual_runs: "true"
+          deduplicate_classes_by_file_name: "true"
 
   frontend-setup:
-    name: 'Frontend Setup'
+    name: "Frontend Setup"
     runs-on: ubuntu-latest
     outputs:
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
@@ -361,7 +357,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -394,7 +390,7 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   frontend-tests:
-    name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
+    name: "Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
     needs: frontend-setup
     runs-on: ubuntu-latest
     if: needs.frontend-setup.outputs.setup-complete == 'true'
@@ -411,7 +407,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
@@ -460,8 +456,8 @@ jobs:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          VITEST_REPORTER: 'blob'
-          VITEST_POOL_THREADS: '4'
+          VITEST_REPORTER: "blob"
+          VITEST_POOL_THREADS: "4"
 
       - name: Debug test failure details
         if: failure()
@@ -487,15 +483,11 @@ jobs:
           compression-level: 9
 
   post-frontend-tests:
-    name: 'Publish Frontend Test Results'
+    name: "Publish Frontend Test Results"
     if: always()
     needs: frontend-tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -559,11 +551,11 @@ jobs:
         with:
           files: frontend/.vitest-reports/vitest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: 'Frontend Test Results'
-          check_name: 'Frontend Test Results'
-          fail_on: 'errors'
-          report_individual_runs: 'true'
-          deduplicate_classes_by_file_name: 'true'
+          comment_title: "Frontend Test Results"
+          check_name: "Frontend Test Results"
+          fail_on: "errors"
+          report_individual_runs: "true"
+          deduplicate_classes_by_file_name: "true"
 
   set-pre-release:
     name: Calculate pre-release number
@@ -582,9 +574,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [set-pre-release, install-oc]
     timeout-minutes: 60
-    permissions:
-      contents: write
-      actions: write
 
     env:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
