@@ -2,7 +2,8 @@ name: LCFS 1.0.0 Test CI
 
 permissions:
   contents: read
-
+  actions: read
+  issues: read
 on:
   push:
     branches: [release]
@@ -623,10 +624,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [set-pre-release, build]
-    permissions:
-      contents: read
-      actions: write
-      issues: write
 
     env:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
