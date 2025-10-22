@@ -1,5 +1,8 @@
 name: LCFS 1.0.0 Test CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [release]
@@ -301,6 +304,11 @@ jobs:
     if: always()
     needs: backend-tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
     steps:
       - name: Download all test results
         uses: actions/download-artifact@v4
@@ -483,6 +491,11 @@ jobs:
     if: always()
     needs: frontend-tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -569,6 +582,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [set-pre-release, install-oc]
     timeout-minutes: 60
+    permissions:
+      contents: write
+      actions: write
 
     env:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
@@ -618,6 +634,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [set-pre-release, build]
+    permissions:
+      contents: read
+      actions: write
+      issues: write
 
     env:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}

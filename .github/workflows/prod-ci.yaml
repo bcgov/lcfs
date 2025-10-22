@@ -1,5 +1,8 @@
 name: LCFS 1.0.0 Prod CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
