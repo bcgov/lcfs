@@ -35,11 +35,6 @@ vi.mock(
 )
 
 describe('_schema', () => {
-  const mockIntendedUsers = [
-    { endUserTypeId: 1, typeName: 'Public' },
-    { endUserTypeId: 2, typeName: 'Fleet' }
-  ]
-
   const mockErrors = {}
   const mockWarnings = {}
   const mockT = (key) => key
@@ -47,7 +42,6 @@ describe('_schema', () => {
   describe('chargingSiteColDefs', () => {
     it('returns column definitions array', () => {
       const colDefs = chargingSiteColDefs(
-        mockIntendedUsers,
         mockErrors,
         mockWarnings,
         true
@@ -59,7 +53,6 @@ describe('_schema', () => {
 
     it('includes required fields', () => {
       const colDefs = chargingSiteColDefs(
-        mockIntendedUsers,
         mockErrors,
         mockWarnings,
         true
@@ -72,12 +65,10 @@ describe('_schema', () => {
       expect(fieldNames).toContain('postalCode')
       expect(fieldNames).toContain('latitude')
       expect(fieldNames).toContain('longitude')
-      expect(fieldNames).toContain('intendedUsers')
     })
 
     it('configures editable fields correctly', () => {
       const colDefs = chargingSiteColDefs(
-        mockIntendedUsers,
         mockErrors,
         mockWarnings,
         true
