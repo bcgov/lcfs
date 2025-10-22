@@ -60,12 +60,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
   }
 }
 
-export const chargingSiteColDefs = (
-  intendedUsers,
-  errors,
-  warnings,
-  gridReady
-) => {
+export const chargingSiteColDefs = (errors, warnings, gridReady) => {
   return [
     validation,
     actions((params) => ({
@@ -213,44 +208,6 @@ export const chargingSiteColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: true
-    },
-    {
-      field: 'intendedUsers',
-      headerComponent: RequiredHeader,
-      headerName: i18n.t('chargingSite:columnLabels.intendedUserTypes'),
-      valueGetter: (params) => {
-        console.log(params.data.intendedUsers)
-        return params.data?.intendedUsers?.map((i) => ({
-          ...i,
-          label: i.typeName,
-          value: i.endUserTypeId
-        }))
-      },
-      valueSetter: (params) => {
-        params.data.intendedUsers = params.newValue
-        return true
-      },
-      valueFormatter: (params) =>
-        params.value.map((user) => user.typeName).join(', ') || [],
-      cellEditor: AutocompleteCellEditor,
-      cellEditorParams: {
-        options:
-          intendedUsers.map((obj) => ({
-            ...obj,
-            label: obj.typeName,
-            value: obj.endUserTypeId
-          })) || [],
-        multiple: true,
-        disableCloseOnSelect: true,
-        openOnFocus: true,
-        returnObject: true
-      },
-      cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings),
-      cellRenderer: MultiSelectRenderer,
-      suppressKeyboardEvent,
-      minWidth: 315,
       editable: true
     },
     {
