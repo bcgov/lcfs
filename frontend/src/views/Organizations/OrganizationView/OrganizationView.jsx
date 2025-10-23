@@ -135,7 +135,7 @@ export const OrganizationView = ({ addMode = false }) => {
   const organizationTitle =
     showOrganizationHeader && organizationData?.name
       ? `${organizationData.name}${
-          currentTabLabel ? ` - ${currentTabLabel}` : ''
+          currentTabLabel ? ` — ${currentTabLabel}` : ''
         }`
       : currentTabLabel
 
