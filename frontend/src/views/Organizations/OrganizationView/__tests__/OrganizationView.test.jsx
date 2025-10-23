@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { roles } from '@/constants/roles.js'
+import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
 // Mock react-router-dom hooks - SINGLE DEFINITION
 const mockNavigate = vi.fn()
@@ -186,6 +187,7 @@ describe('OrganizationView', () => {
     })
     global.addEventListener = vi.fn()
     global.removeEventListener = vi.fn()
+    useOrganizationPageStore.getState().resetOrganizationContext()
 
     // Reset mock returns to defaults
     mockUseLocation.mockReturnValue({
@@ -206,6 +208,7 @@ describe('OrganizationView', () => {
   })
 
   afterEach(() => {
+    useOrganizationPageStore.getState().resetOrganizationContext()
     cleanup()
     vi.restoreAllMocks()
   })
@@ -247,6 +250,23 @@ describe('OrganizationView', () => {
         screen.getByText('Compliance tracking')
       ).toBeInTheDocument()
     })
+
+    it('displays organization title for government users', () => {
+      renderComponent()
+
+      expect(screen.getByText('Test Org - Dashboard')).toBeInTheDocument()
+    })
+
+    it('updates organization title when navigating to users tab', () => {
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/users',
+        state: {}
+      })
+
+      renderComponent()
+
+      expect(screen.getByText('Test Org - Users')).toBeInTheDocument()
+    })
   })
 
   describe('Organization ID Logic', () => {
@@ -286,6 +306,9 @@ describe('OrganizationView', () => {
       // BCeID users should see dashboard, not credit-ledger
       expect(screen.queryByTestId('credit-ledger')).not.toBeInTheDocument()
       expect(screen.getByTestId('organization-details-card')).toBeInTheDocument()
+      expect(
+        screen.queryByText('Test Org - Dashboard')
+      ).not.toBeInTheDocument()
     })
   })
 
