@@ -33,6 +33,30 @@ export const useGetIntendedUsers = (options = {}) => {
   })
 }
 
+export const useGetAllocationOrganizations = (options = {}) => {
+  const client = useApiService()
+  const {
+    staleTime = OPTIONS_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['allocationOrganizations'],
+    queryFn: async () => {
+      const response = await client.get(apiRoutes.allocationOrganizations)
+      return response.data
+    },
+    staleTime: OPTIONS_STALE_TIME,
+    cacheTime,
+    enabled,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 export const useGetChargingSiteById = (siteId, options = {}) => {
   const client = useApiService()
   const {

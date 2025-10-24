@@ -110,6 +110,7 @@
     "postalCode": "Postal code",
     "latitude": "Latitude",
     "longitude": "Longitude",
+    "allocatingOrganization": "Allocating organization",
     "intendedUsers": "Intended users",
     "intendedUserTypes": "Intended user types",
     "notes": "Site notes"

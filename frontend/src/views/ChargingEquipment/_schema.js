@@ -76,12 +76,6 @@ export const chargingEquipmentColDefs = (isIDIR = false) => {
       type: 'numericColumn'
     },
     {
-      field: 'allocating_organization_name',
-      headerName: 'Allocating Organization',
-      flex: 1,
-      minWidth: 200
-    },
-    {
       field: 'serial_number',
       headerName: 'Serial #',
       width: 150

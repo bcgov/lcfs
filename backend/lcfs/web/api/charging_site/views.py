@@ -62,6 +62,24 @@ async def get_intended_users(
 
 
 @router.get(
+    "/allocation-organizations",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_allocation_organizations(
+    request: Request,
+    service: ChargingSiteService = Depends(),
+) -> List[dict]:
+    """
+    Endpoint to get list of organizations with allocation agreements for the logged-in supplier.
+    Returns organizations from current draft and assessed compliance reports.
+    """
+    organization_id = request.user.organization_id
+    return await service.get_allocation_agreement_organizations(organization_id)
+
+
+@router.get(
     "/equipment/statuses",
     response_model=List[ChargingEquipmentStatusSchema],
     status_code=status.HTTP_200_OK,

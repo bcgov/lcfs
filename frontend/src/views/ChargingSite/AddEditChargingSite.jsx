@@ -25,7 +25,7 @@ import {
 } from '@/utils/dateQuarterUtils'
 import {
   useSaveChargingSite,
-  useGetIntendedUsers,
+  useGetAllocationOrganizations,
   useImportChargingSites,
   useGetChargingSitesImportJobStatus
 } from '@/hooks/useChargingSite'
@@ -71,10 +71,10 @@ export const AddEditChargingSite = ({
   const navigate = useNavigate()
 
   const {
-    data: intendedUserTypes,
+    data: allocationOrganizations,
     isLoading: optionsLoading,
     isFetched
-  } = useGetIntendedUsers()
+  } = useGetAllocationOrganizations()
 
   const { mutateAsync: saveRow } = useSaveChargingSite(organizationId)
 
@@ -133,18 +133,17 @@ export const AddEditChargingSite = ({
   useEffect(() => {
     if (
       !optionsLoading &&
-      Array.isArray(intendedUserTypes) &&
-      intendedUserTypes.length > 0
+      Array.isArray(allocationOrganizations)
     ) {
       const updatedColumnDefs = chargingSiteColDefs(
-        intendedUserTypes,
+        allocationOrganizations,
         errors,
         warnings,
         isGridReady
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, warnings, intendedUserTypes, isGridReady])
+  }, [errors, warnings, allocationOrganizations, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()

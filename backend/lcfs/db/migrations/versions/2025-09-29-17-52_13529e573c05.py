@@ -131,7 +131,17 @@ def upgrade() -> None:
         "fse_compliance_reporting",
         ["organization_id"],
     )
-    
+
+    # Fix invalid date data in final_supply_equipment before migration
+    # Swap supply_from_date and supply_to_date where they are in wrong order
+    op.execute("""
+        UPDATE final_supply_equipment
+        SET
+            supply_from_date = supply_to_date,
+            supply_to_date = supply_from_date
+        WHERE supply_to_date < supply_from_date
+    """)
+
     # Migrate data from final_supply_equipment to fse_compliance_reporting
     op.execute("""
         INSERT INTO fse_compliance_reporting (
@@ -148,7 +158,7 @@ def upgrade() -> None:
             create_user,
             update_user
         )
-        SELECT 
+        SELECT
             fse.supply_from_date,
             fse.supply_to_date,
             COALESCE(fse.kwh_usage, 0)::integer,

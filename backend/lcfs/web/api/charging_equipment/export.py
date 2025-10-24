@@ -17,13 +17,13 @@ CE_EXPORT_SHEETNAME = "ChargingEquipment"
 VALIDATION_SHEETNAME = "VALUES"
 CE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Charging Site", "text"),
-    SpreadsheetColumn("Allocating Organization", "text"),
     SpreadsheetColumn("Serial Number", "text"),
     SpreadsheetColumn("Manufacturer", "text"),
     SpreadsheetColumn("Model", "text"),
     SpreadsheetColumn("Level of Equipment", "text"),
     SpreadsheetColumn("Ports", "text"),
     SpreadsheetColumn("Intended Uses", "text"),
+    SpreadsheetColumn("Intended Users", "text"),
     SpreadsheetColumn("Notes", "text"),
 ]
 
@@ -81,16 +81,16 @@ class ChargingEquipmentExporter:
         charging_sites = await self.repo.get_charging_sites_by_organization(
             organization.organization_id
         )
-        organizations = await self.repo.get_organizations()
         levels = await self.repo.get_levels_of_equipment()
         end_use_types = await self.repo.get_end_use_types()
+        end_user_types = await self.repo.get_end_user_types()
 
         ports_options = ["Single port", "Dual port"]
 
         site_names = [s.site_name for s in charging_sites]
-        org_names = [o.name for o in organizations]
         level_names = [l.name for l in levels]
         end_use_names = [e.type for e in end_use_types]
+        end_user_names = [u.type_name for u in end_user_types]
 
         # Charging Site validator (Column A)
         site_validator = DataValidation(
@@ -102,43 +102,59 @@ class ChargingEquipmentExporter:
         site_validator.add("A2:A10000")
         validators.append(site_validator)
 
-        # Allocating Organization validator (Column B)
-        org_validator = DataValidation(
+        # Level of Equipment validator (Column E)
+        level_validator = DataValidation(
             type="list",
             formula1="=VALUES!$B$2:$B$1000",
             showErrorMessage=True,
-            error="Please select a valid organization",
+            error="Please select a valid level of equipment",
         )
-        org_validator.add("B2:B10000")
-        validators.append(org_validator)
+        level_validator.add("E2:E10000")
+        validators.append(level_validator)
 
-        # Level of Equipment validator (Column F)
-        level_validator = DataValidation(
+        # Ports validator (Column F)
+        ports_validator = DataValidation(
             type="list",
             formula1="=VALUES!$C$2:$C$1000",
             showErrorMessage=True,
-            error="Please select a valid level of equipment",
-        )
-        level_validator.add("F2:F10000")
-        validators.append(level_validator)
-
-        # Ports validator (Column G)
-        ports_validator = DataValidation(
-            type="list",
-            formula1="=VALUES!$D$2:$D$1000",
-            showErrorMessage=True,
             error="Please select either 'Single port' or 'Dual port'",
         )
-        ports_validator.add("G2:G10000")
+        ports_validator.add("F2:F10000")
         validators.append(ports_validator)
 
-        # Build VALUES sheet data (A: Sites, B: Orgs, C: Levels, D: Ports, E: Intended Uses)
+        # Intended Uses validator (Column G) - Allow comma-separated values
+        intended_uses_validator = DataValidation(
+            type="list",
+            formula1="=VALUES!$D$2:$D$1000",
+            showErrorMessage=False,  # Allow comma-separated
+            showInputMessage=True,
+            promptTitle="Intended Uses",
+            prompt="Select from dropdown or type comma-separated values",
+            allow_blank=False,
+        )
+        intended_uses_validator.add("G2:G10000")
+        validators.append(intended_uses_validator)
+
+        # Intended Users validator (Column H) - Allow comma-separated values
+        intended_users_validator = DataValidation(
+            type="list",
+            formula1="=VALUES!$E$2:$E$1000",
+            showErrorMessage=False,  # Allow comma-separated
+            showInputMessage=True,
+            promptTitle="Intended Users",
+            prompt="Select from dropdown or type comma-separated values (e.g., Public, Fleet, Multi-unit residential building)",
+            allow_blank=False,
+        )
+        intended_users_validator.add("H2:H10000")
+        validators.append(intended_users_validator)
+
+        # Build VALUES sheet data (A: Sites, B: Levels, C: Ports, D: Intended Uses, E: Intended Users)
         data = [
             site_names,
-            org_names,
             level_names,
             ports_options,
             end_use_names,
+            end_user_names,
         ]
 
         # Determine the maximum length among all columns
@@ -154,10 +170,10 @@ class ChargingEquipmentExporter:
             sheet_name=VALIDATION_SHEETNAME,
             columns=[
                 SpreadsheetColumn("Charging Sites", "text"),
-                SpreadsheetColumn("Organizations", "text"),
                 SpreadsheetColumn("Levels", "text"),
                 SpreadsheetColumn("Ports", "text"),
                 SpreadsheetColumn("Intended Uses", "text"),
+                SpreadsheetColumn("Intended Users", "text"),
             ],
             rows=rows,
             styles={"bold_headers": True},
@@ -174,17 +190,13 @@ class ChargingEquipmentExporter:
             data.append(
                 [
                     eq.charging_site.site_name if eq.charging_site else "",
-                    (
-                        eq.allocating_organization.name
-                        if eq.allocating_organization
-                        else ""
-                    ),
                     eq.serial_number or "",
                     eq.manufacturer or "",
                     eq.model or "",
                     eq.level_of_equipment.name if eq.level_of_equipment else "",
                     (eq.ports.value if getattr(eq, "ports", None) else ""),
                     ", ".join(use.type for use in getattr(eq, "intended_uses", [])),
+                    ", ".join(user.type_name for user in getattr(eq, "intended_users", [])),
                     eq.notes or "",
                 ]
             )

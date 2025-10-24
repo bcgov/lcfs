@@ -61,7 +61,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
 }
 
 export const chargingSiteColDefs = (
-  intendedUsers,
+  allocationOrganizations,
   errors,
   warnings,
   gridReady
@@ -216,42 +216,43 @@ export const chargingSiteColDefs = (
       editable: true
     },
     {
-      field: 'intendedUsers',
-      headerComponent: RequiredHeader,
-      headerName: i18n.t('chargingSite:columnLabels.intendedUserTypes'),
+      field: 'allocatingOrganization',
+      headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
       valueGetter: (params) => {
-        console.log(params.data.intendedUsers)
-        return params.data?.intendedUsers?.map((i) => ({
-          ...i,
-          label: i.typeName,
-          value: i.endUserTypeId
-        }))
+        if (!params.data?.allocatingOrganization) return null
+        return {
+          ...params.data.allocatingOrganization,
+          label: params.data.allocatingOrganization.name,
+          value: params.data.allocatingOrganization.organizationId
+        }
       },
       valueSetter: (params) => {
-        params.data.intendedUsers = params.newValue
+        params.data.allocatingOrganization = params.newValue
+        params.data.allocatingOrganizationId = params.newValue?.organizationId || null
         return true
       },
-      valueFormatter: (params) =>
-        params.value.map((user) => user.typeName).join(', ') || [],
+      valueFormatter: (params) => params.value?.name || '',
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options:
-          intendedUsers.map((obj) => ({
+          allocationOrganizations?.map((obj) => ({
             ...obj,
-            label: obj.typeName,
-            value: obj.endUserTypeId
+            label: obj.name,
+            value: obj.organizationId
           })) || [],
-        multiple: true,
-        disableCloseOnSelect: true,
+        multiple: false,
         openOnFocus: true,
         returnObject: true
       },
+      tooltipValueGetter: (p) =>
+        !allocationOrganizations || allocationOrganizations.length === 0
+          ? 'No allocation agreements found. You must first enter an allocation agreement in your compliance report to use this field.'
+          : 'Allocating organizations tied to your allocation agreements. If an organization isn\'t listed you must first enter an allocation agreement in your compliance report.',
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      cellRenderer: MultiSelectRenderer,
       suppressKeyboardEvent,
       minWidth: 315,
-      editable: true
+      editable: allocationOrganizations && allocationOrganizations.length > 0
     },
     {
       field: 'notes',
@@ -462,12 +463,12 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
     headerName: i18n.t('chargingSite:columnLabels.postalCode')
   },
   {
-    field: 'intendedUsers',
-    headerName: i18n.t('chargingSite:columnLabels.intendedUsers'),
-    minWidth: 315,
-    valueGetter: (params) =>
-      params.data?.intendedUsers?.map((u) => u.typeName) || [],
-    cellRenderer: CommonArrayRenderer
+    field: 'allocatingOrganization',
+    headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
+    minWidth: 250,
+    valueGetter: (params) => params.data?.allocatingOrganization?.name || '',
+    filter: true,
+    sortable: true
   },
   {
     field: 'actions',
