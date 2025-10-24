@@ -1,6 +1,6 @@
 """Add charging equipment intended users association
 
-Revision ID: add_ce_intended_users
+Revision ID: 995ba109ca8d
 Revises: 63c126dcbecc
 Create Date: 2025-10-16 14:00:00.000000
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "add_ce_intended_users"
+revision = "995ba109ca8d"
 down_revision = "63c126dcbecc"
 branch_labels = None
 depends_on = None

@@ -118,6 +118,7 @@ export const apiRoutes = {
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',
   intendedUsers: '/charging-sites/intended-users',
+  allocationOrganizations: '/charging-sites/allocation-organizations',
 
   // charging-equipment (new FSE system)
   chargingEquipment: {

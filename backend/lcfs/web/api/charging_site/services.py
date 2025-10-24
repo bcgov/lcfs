@@ -60,6 +60,35 @@ class ChargingSiteService:
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
+    async def get_allocation_agreement_organizations(
+        self, organization_id: int
+    ) -> List[dict]:
+        """
+        Service method to get organizations that have allocation agreements
+        with the specified organization from current draft and assessed reports.
+        """
+        logger.info(
+            "Getting allocation agreement organizations",
+            organization_id=organization_id,
+        )
+        try:
+            organizations = (
+                await self.repo.get_allocation_agreement_organizations(organization_id)
+            )
+            return [
+                {
+                    "organizationId": org.organization_id,
+                    "name": org.name,
+                }
+                for org in organizations
+            ]
+        except Exception as e:
+            logger.error(
+                "Error fetching allocation agreement organizations", error=str(e)
+            )
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    @service_handler
     async def get_charging_equipment_statuses(
         self,
     ) -> List[ChargingEquipmentStatusSchema]:
@@ -346,17 +375,6 @@ class ChargingSiteService:
             ChargingSiteStatusEnum.DRAFT
         )
         try:
-            intended_users = []
-            if (
-                charging_site_data.intended_users
-                and len(charging_site_data.intended_users) > 0
-            ):
-                intended_user_ids = [
-                    i.end_user_type_id for i in charging_site_data.intended_users
-                ]
-                intended_users = await self.repo.get_end_user_types_by_ids(
-                    intended_user_ids
-                )
             charging_site = await self.repo.create_charging_site(
                 ChargingSite(
                     **charging_site_data.model_dump(
@@ -364,11 +382,9 @@ class ChargingSiteService:
                             "status_id",
                             "current_status",
                             "deleted",
-                            "intended_users",
                         }
                     ),
                     status=status,
-                    intended_users=intended_users,
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(
@@ -408,7 +424,6 @@ class ChargingSiteService:
                     "status_id",
                     "status",
                     "deleted",
-                    "intended_users",
                 },
                 exclude_unset=True,
             )
@@ -422,20 +437,6 @@ class ChargingSiteService:
             if status:
                 existing_charging_site.status = status
                 existing_charging_site.status_id = status.charging_site_status_id
-
-            # Handle intended_users if provided
-            if charging_site_data.intended_users is not None:
-                if len(charging_site_data.intended_users) > 0:
-                    intended_user_ids = [
-                        i.end_user_type_id for i in charging_site_data.intended_users
-                    ]
-                    intended_users = await self.repo.get_end_user_types_by_ids(
-                        intended_user_ids
-                    )
-                    setattr(existing_charging_site, "intended_users", intended_users)
-                else:
-                    # Clear intended users if empty list is provided
-                    existing_charging_site.intended_users = []
 
             # Save the updated object
             updated_charging_site = await self.repo.update_charging_site(

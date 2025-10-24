@@ -42,8 +42,6 @@ class ChargingEquipmentBaseSchema(BaseModel):
     status: ChargingEquipmentStatusEnum
     equipment_number: Optional[str] = None
     registration_number: Optional[str] = None
-    allocating_organization_id: Optional[int] = None
-    allocating_organization_name: Optional[str] = None
     serial_number: str
     manufacturer: str
     model: Optional[str] = None
@@ -61,7 +59,6 @@ class ChargingEquipmentBaseSchema(BaseModel):
 
 class ChargingEquipmentCreateSchema(BaseModel):
     charging_site_id: int
-    allocating_organization_name: Optional[str] = Field(None, max_length=500)
     serial_number: str = Field(..., min_length=1, max_length=100)
     manufacturer: str = Field(..., min_length=1, max_length=100)
     model: Optional[str] = Field(None, max_length=100)
@@ -73,7 +70,6 @@ class ChargingEquipmentCreateSchema(BaseModel):
 
 
 class ChargingEquipmentUpdateSchema(BaseModel):
-    allocating_organization_name: Optional[str] = Field(None, max_length=500)
     serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
     manufacturer: Optional[str] = Field(None, min_length=1, max_length=100)
     model: Optional[str] = Field(None, max_length=100)
@@ -92,7 +88,6 @@ class ChargingEquipmentListItemSchema(BaseModel):
     organization_name: Optional[str] = None
     registration_number: str
     version: int
-    allocating_organization_name: Optional[str] = None
     serial_number: str
     manufacturer: str
     model: Optional[str] = None

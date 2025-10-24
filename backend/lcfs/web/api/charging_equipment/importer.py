@@ -208,13 +208,15 @@ async def import_async(
                     site_name_to_id = {
                         s.site_name: s.charging_site_id for s in charging_sites
                     }
-                    organizations = await ce_repo.get_organizations()
-                    org_name_to_id = {o.name: o.organization_id for o in organizations}
                     levels = await ce_repo.get_levels_of_equipment()
                     level_name_to_id = {l.name: l.level_of_equipment_id for l in levels}
                     end_use_types = await ce_repo.get_end_use_types()
                     end_use_name_to_id = {
                         e.type: e.end_use_type_id for e in end_use_types
+                    }
+                    end_user_types = await ce_repo.get_end_user_types()
+                    end_user_name_to_id = {
+                        u.type_name: u.end_user_type_id for u in end_user_types
                     }
 
                     # Iterate through all data rows, skipping the header
@@ -243,13 +245,13 @@ async def import_async(
 
                         (
                             site_name,
-                            allocating_org_name,
                             serial_number,
                             manufacturer,
                             model,
                             level_name,
                             ports,
                             intended_uses_str,
+                            intended_users_str,
                             notes,
                         ) = list(row) + [None] * (9 - len(row))
 
@@ -279,18 +281,6 @@ async def import_async(
                             rejected += 1
                             continue
 
-                        allocating_org_id = None
-                        if allocating_org_name:
-                            allocating_org_id = org_name_to_id.get(
-                                str(allocating_org_name)
-                            )
-                            if allocating_org_id is None:
-                                errors.append(
-                                    f"Row {row_idx}: Allocating Organization '{allocating_org_name}' not found"
-                                )
-                                rejected += 1
-                                continue
-
                         level_id = level_name_to_id.get(str(level_name))
                         if not level_id:
                             errors.append(
@@ -313,10 +303,23 @@ async def import_async(
                                         f"Row {row_idx}: Intended Use '{clean}' not found; skipping this value"
                                     )
 
+                        intended_user_ids: List[int] = []
+                        if intended_users_str:
+                            for name in str(intended_users_str).split(","):
+                                clean = name.strip()
+                                if not clean:
+                                    continue
+                                end_user_id = end_user_name_to_id.get(clean)
+                                if end_user_id:
+                                    intended_user_ids.append(end_user_id)
+                                else:
+                                    errors.append(
+                                        f"Row {row_idx}: Intended User '{clean}' not found; skipping this value"
+                                    )
+
                         try:
                             ce_data = ChargingEquipmentCreateSchema(
                                 charging_site_id=charging_site_id,
-                                allocating_organization_id=allocating_org_id,
                                 serial_number=str(serial_number),
                                 manufacturer=str(manufacturer),
                                 model=str(model) if model else None,
@@ -324,6 +327,7 @@ async def import_async(
                                 ports=str(ports) if ports else None,
                                 notes=str(notes) if notes else None,
                                 intended_use_ids=intended_use_ids,
+                                intended_user_ids=intended_user_ids,
                             )
                             await ce_service.create_charging_equipment(user, ce_data)
                             created += 1

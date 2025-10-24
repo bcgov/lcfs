@@ -220,7 +220,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
     resolver: yupResolver(chargingEquipmentSchema),
     defaultValues: {
       charging_site_id: '',
-      allocating_organization_name: '',
       serial_number: '',
       manufacturer: '',
       model: '',
@@ -237,7 +236,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
     if (isEdit && equipment) {
       reset({
         charging_site_id: equipment.charging_site_id || '',
-        allocating_organization_name: equipment.allocating_organization_name || '',
         serial_number: equipment.serial_number || '',
         manufacturer: equipment.manufacturer || '',
         model: equipment.model || '',
@@ -311,7 +309,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
     const newRow = {
       id: Date.now(), // Temporary ID for new rows
       charging_site_id: '',
-      allocating_organization_name: '',
       serial_number: '',
       manufacturer: '',
       model: '',
@@ -519,7 +516,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       setBulkData,
                       {
                         charging_site_id: '',
-                        allocating_organization_name: '',
                         serial_number: '',
                         manufacturer: '',
                         model: '',
@@ -538,7 +534,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     .map(() => ({
                       id: Date.now() + Math.random(),
                       charging_site_id: '',
-                      allocating_organization_name: '',
                       serial_number: '',
                       manufacturer: '',
                       model: '',
@@ -639,8 +634,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   id: equipment?.charging_equipment_id || Date.now(),
                   charging_equipment_id: equipment?.charging_equipment_id,
                   charging_site_id: equipment?.charging_site_id || '',
-                  allocating_organization_name:
-                    equipment?.allocating_organization_name || '',
                   serial_number: equipment?.serial_number || '',
                   manufacturer: equipment?.manufacturer || '',
                   model: equipment?.model || '',

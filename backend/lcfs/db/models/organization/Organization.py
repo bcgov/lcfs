@@ -208,7 +208,11 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         cascade="all, delete-orphan",
     )
 
-    charging_sites = relationship("ChargingSite", back_populates="organization")
+    charging_sites = relationship(
+        "ChargingSite",
+        foreign_keys="[ChargingSite.organization_id]",
+        back_populates="organization",
+    )
     charging_equipment_compliance_associations = relationship(
         "ComplianceReportChargingEquipment", back_populates="organization"
     )

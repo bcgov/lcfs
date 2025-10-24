@@ -15,23 +15,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, Session
 
 
-charging_site_intended_user_association = Table(
-    "charging_site_intended_user_association",
-    BaseModel.metadata,
-    Column(
-        "charging_site_id",
-        Integer,
-        ForeignKey("charging_site.charging_site_id", ondelete="CASCADE"),
-        primary_key=True,
-    ),
-    Column(
-        "end_user_type_id",
-        Integer,
-        ForeignKey("end_user_type.end_user_type_id"),
-        primary_key=True,
-    ),
-)
-
 charging_site_document_association = Table(
     "charging_site_document_association",
     BaseModel.metadata,
@@ -73,6 +56,14 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         ForeignKey("organization.organization_id"),
         nullable=False,
         comment="Associated organization ID",
+        index=True,
+    )
+
+    allocating_organization_id = Column(
+        Integer,
+        ForeignKey("organization.organization_id"),
+        nullable=True,
+        comment="Organization that the charging site's reporting obligation is allocated to",
         index=True,
     )
 
@@ -134,13 +125,16 @@ class ChargingSite(BaseModel, Auditable, Versioning):
     )
 
     # Relationships
-    organization = relationship("Organization", back_populates="charging_sites")
-    status = relationship("ChargingSiteStatus", back_populates="charging_sites")
-
-    intended_users = relationship(
-        "EndUserType",
-        secondary=charging_site_intended_user_association,
+    organization = relationship(
+        "Organization",
+        foreign_keys=[organization_id],
+        back_populates="charging_sites",
     )
+    allocating_organization = relationship(
+        "Organization",
+        foreign_keys=[allocating_organization_id],
+    )
+    status = relationship("ChargingSiteStatus", back_populates="charging_sites")
 
     documents = relationship(
         "Document",

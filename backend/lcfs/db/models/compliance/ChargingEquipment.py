@@ -92,18 +92,6 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         index=True,
     )
 
-    organization_name = Column(
-        Text,
-        nullable=True,
-        comment="Name of the organization associated with the equipment",
-    )
-    allocating_organization_id = Column(
-        Integer,
-        ForeignKey("organization.organization_id"),
-        nullable=True,
-        comment="Optional allocating organization",
-    )
-
     serial_number = Column(
         String(500),
         nullable=False,
@@ -145,10 +133,6 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     # Relationships
-    allocating_organization = relationship(
-        "Organization", foreign_keys=[allocating_organization_id]
-    )
-
     charging_site = relationship("ChargingSite", back_populates="charging_equipment")
     status = relationship(
         "ChargingEquipmentStatus", back_populates="charging_equipment"

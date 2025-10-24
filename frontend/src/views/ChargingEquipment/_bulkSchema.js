@@ -82,35 +82,6 @@ export const bulkChargingEquipmentColDefs = (
       (!params.data?.charging_equipment_id || params.data?.status === 'Draft')
   },
   {
-    field: 'allocating_organization_name',
-    headerName: i18n.t('chargingEquipment:allocatingOrganization'),
-    cellEditor: AutocompleteCellEditor,
-    cellEditorParams: {
-      options: organizations.map(org => ({
-        value: org.legal_name || org.name,
-        label: org.legal_name || org.name
-      })),
-      openOnFocus: true,
-      allowEmpty: true,
-      freeSolo: true
-    },
-    valueGetter: (params) => params.data.allocating_organization_name || '',
-    valueSetter: (params) => {
-      const incoming = params.newValue
-      // Handle both autocomplete object selections and free text input
-      const textValue = incoming && typeof incoming === 'object' ? incoming.value : incoming
-      const next = textValue === '' || textValue == null ? '' : String(textValue).trim()
-      params.data.allocating_organization_name = next
-      params.newValue = next
-      return true
-    },
-    editable: () => Boolean(allowAllocatingOrg),
-    valueFormatter: (params) => {
-      return params.value || ''
-    },
-    minWidth: 200
-  },
-  {
     field: 'serial_number',
     headerComponent: RequiredHeader,
     headerName: i18n.t('chargingEquipment:serialNumber'),

@@ -5,12 +5,7 @@ export const chargingEquipmentSchema = yup.object().shape({
     .number()
     .required('Charging site is required')
     .positive('Please select a valid charging site'),
-    
-  allocating_organization_name: yup
-    .string()
-    .nullable()
-    .optional(),
-    
+
   serial_number: yup
     .string()
     .required('Serial number is required')
