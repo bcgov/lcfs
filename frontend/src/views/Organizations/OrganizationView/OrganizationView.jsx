@@ -174,7 +174,7 @@ export const OrganizationView = ({ addMode = false }) => {
         </BCAlert>
       )}
 
-      <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
+      <BCBox sx={{ mt: 0, bgcolor: 'background.paper' }}>
         <AppBar
           position="static"
           sx={{ boxShadow: 'none', border: 'none', width: 'fit-content' }}
