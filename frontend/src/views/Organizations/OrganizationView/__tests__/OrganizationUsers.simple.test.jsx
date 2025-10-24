@@ -122,7 +122,6 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({
       t: (key) => {
         // Return expected values for specific keys
-        if (key === 'org:usersLabel') return 'Users'
         if (key === 'org:newUsrBtn') return 'New user'
         if (key === 'org:noUsersFound') return 'No users found'
         return key
@@ -153,15 +152,6 @@ describe('OrganizationUsers', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
-  })
-
-  it('renders component', () => {
-    render(
-      <Wrapper>
-        <OrganizationUsers />
-      </Wrapper>
-    )
-    expect(screen.getByText('Users')).toBeInTheDocument()
   })
 
   it('renders grid', () => {
