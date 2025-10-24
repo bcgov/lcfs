@@ -301,11 +301,7 @@ export const SupplyHistory = ({ organizationId: propOrganizationId }) => {
   }), [topFuelCodesChartData, t])
 
   return (
-    <BCBox p={2}>
-      <BCTypography variant="h5" color="primary" sx={{ mb: 3 }}>
-        {t('org:supplyHistory.title')}
-      </BCTypography>
-
+    <BCBox py={0}>
       {/* Year Filter */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
