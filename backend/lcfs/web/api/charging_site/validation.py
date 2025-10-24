@@ -39,9 +39,14 @@ class ChargingSiteValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
-        if (
-            await self.cs_repo.get_charging_site_by_site_name(data.site_name)
-        ) is not None:
+        site_name = (data.site_name or "").strip()
+        if not site_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Charging site name cannot be blank.",
+            )
+
+        if await self.cs_repo.charging_site_name_exists(site_name, organization_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Duplicate charging site name.",

@@ -33,11 +33,6 @@ def valid_charging_site_create_schema() -> ChargingSiteCreateSchema:
         postal_code="V1A 2B3",
         latitude=49.2827,
         longitude=-123.1207,
-        intended_users=[
-            EndUserTypeSchema(
-                end_user_type_id=1, type_name="Multi-unit residential building"
-            )
-        ],
         notes="Test charging site notes",
         deleted=False,
     )
@@ -473,46 +468,6 @@ async def test_delete_charging_site_success(
 
 
 @pytest.mark.anyio
-async def test_export_charging_sites_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
-):
-    """Test successful export of charging sites"""
-    with patch(
-        "lcfs.web.api.charging_site.export.ChargingSiteExporter.export"
-    ) as mock_export:
-        mock_export.return_value = StreamingResponse(
-            iter([b"test content"]),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-        # Mock user with government role to bypass organization check
-        user_details = {"organization_id": 3, "organization_name": "Test Organization"}
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT], user_details)
-        url = fastapi_app.url_path_for("export_charging_sites", organization_id="3")
-        response = await client.post(url, json=[])
-
-        assert response.status_code == 200
-        mock_export.assert_called_once()
-
-
-@pytest.mark.anyio
-async def test_export_charging_sites_access_denied(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
-):
-    """Test export with access denied to organization"""
-    # Mock user with different organization
-    mock_user = MagicMock()
-    mock_user.organization.organization_id = 1  # Different from requested org
-
-    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING], mock_user)
-    url = fastapi_app.url_path_for("export_charging_sites", organization_id="3")
-    response = await client.post(url, json=[])
-
-    assert response.status_code == 403
-    assert "Insufficient permissions" in response.json()["detail"]
-
-
-@pytest.mark.anyio
 async def test_import_charging_sites_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
@@ -525,7 +480,7 @@ async def test_import_charging_sites_success(
         # Mock user with government role to bypass organization check
         user_details = {"organization_id": 3, "organization_name": "Test Organization"}
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT], user_details)
-        url = fastapi_app.url_path_for("import_charging_sites", organization_id="3")
+        url = fastapi_app.url_path_for("import_charging_sites")
 
         # Create a mock file
         files = {

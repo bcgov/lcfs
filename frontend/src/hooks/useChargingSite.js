@@ -373,33 +373,31 @@ export const useChargingSiteEquipmentPaginated = (
 }
 
 // Charging site import/export hooks
-export const useImportChargingSites = (options = {}) => {
+export const useImportChargingSites = (organizationId, options = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ organizationId, file, isOverwrite }) => {
+    mutationFn: async ({ file, isOverwrite }) => {
+      if (!file) {
+        throw new Error('File is required for import')
+      }
+
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('filename', file.name)
       formData.append('overwrite', isOverwrite)
 
-      const response = await client.post(
-        apiRoutes.importChargingSites.replace(':orgID', organizationId),
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+      return await client.post(apiRoutes.importChargingSites, formData, {
+        accept: 'application/json',
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-      )
-      return response.data
+      })
     },
     onSuccess: (data, variables, context) => {
-      // Invalidate charging site queries after import
-      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
-      queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
@@ -411,9 +409,10 @@ export const useImportChargingSites = (options = {}) => {
 
 export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
   const client = useApiService()
+  const queryClient = useQueryClient()
   const {
     staleTime = JOB_STATUS_STALE_TIME,
-    cacheTime = 0,
+    cacheTime = 1 * 60 * 1000,
     enabled = true,
     refetchInterval = 2000,
     ...restOptions
@@ -431,12 +430,19 @@ export const useGetChargingSitesImportJobStatus = (jobId, options = {}) => {
     cacheTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
+      let responseData = data?.state?.data
       // Stop polling when job is complete or failed
       if (
-        data?.status === 'Completed' ||
-        data?.status === 'Failed' ||
-        data?.progress === 100
+        responseData?.status === 'Import process completed.' ||
+        responseData?.status === 'Import process failed.' ||
+        responseData?.progress === 100
       ) {
+        // Invalidate charging site queries when job completes successfully
+        if (responseData?.progress === 100 && responseData?.status === 'Import process completed.') {
+          queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+          queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
+          queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+        }
         return false
       }
       return refetchInterval

@@ -200,9 +200,22 @@ class TestChargingSiteRepository:
         mock_result.scalars.return_value.first.return_value = mock_site
         mock_db_session.execute.return_value = mock_result
         
-        result = await charging_site_repo.get_charging_site_by_site_name("Test Site")
+        result = await charging_site_repo.get_charging_site_by_site_name("Test Site", 1)
         
         assert result == mock_site
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_charging_site_name_exists(self, charging_site_repo, mock_db_session):
+        """Test checking for existing charging site name"""
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = mock_site
+        mock_db_session.execute.return_value = mock_result
+
+        exists = await charging_site_repo.charging_site_name_exists("Test Site", 1)
+
+        assert exists is True
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
