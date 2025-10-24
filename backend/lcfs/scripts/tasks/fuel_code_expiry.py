@@ -3,14 +3,11 @@ Task functions for the dynamic scheduler.
 Contains async functions that can be called by the scheduler.
 """
 
-import asyncio
 from collections import defaultdict
 import re
 import structlog
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from typing import List, Dict, Any
-from sqlalchemy import select, and_
-from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import application modules
@@ -56,8 +53,8 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
 
         logger.info(f"Found {len(expiring_codes)} expiring fuel codes")
 
-        # Group codes by contact email
-        email_groups = _group_codes_by_email(expiring_codes)
+        # Group codes by contact email and then by company
+        email_groups = _group_codes_by_email_then_company(expiring_codes)
 
         if not email_groups:
             logger.warning("No valid contact emails found for expiring fuel codes")
@@ -68,39 +65,46 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
         total_emails = len(email_groups)
 
         base_context = {
-            "subject": "Fuel Code Expiry Notification - Action Required",
+            "subject": "Important Notice from the Deputy Director: Upcoming Expiry of BC LCFS Fuel Codes",
             "message": {
                 "id": "",
                 "status": "Expiring",
             },
         }
 
-        for contact_email, codes_data in email_groups.items():
-            try:
-                # Create context for this specific email
-                context = base_context.copy()
-                context["fuel_codes"] = codes_data["codes"]
-                context["contact_email"] = "prashanth.venkateshappa@gov.bc.ca"
-                context["expiry_count"] = len(codes_data["codes"])
+        for contact_email, email_data in email_groups.items():
+            for company_name, comp_data in email_data["companies"].items():
+                try:
+                    context = dict(base_context)  # shallow copy is fine here
+                    context["fuel_codes"] = comp_data["codes"]
+                    context["contact_email"] = contact_email
+                    context["company"] = company_name
+                    context["expiry_count"] = len(comp_data["codes"])
 
-                logger.info(
-                    f"Sending notification to {contact_email} for {len(codes_data['codes'])} expiring codes"
-                )
+                    logger.info(
+                        f"Sending notification to {contact_email} | {company_name} "
+                        f"for {len(comp_data['codes'])} expiring codes"
+                    )
 
-                # Send notification
-                if await email_service.send_fuel_code_expiry_notifications(
-                    notification_type=NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION,
-                    email=contact_email,
-                    notification_context=context,
-                ):
-                    success_count += 1
-                    logger.info(f"Successfully sent notification to {contact_email}")
-                else:
-                    logger.error(f"Failed to send notification to {contact_email}")
+                    sent = await email_service.send_fuel_code_expiry_notifications(
+                        notification_type=NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION,
+                        email=contact_email,
+                        notification_context=context,
+                    )
+                    if sent:
+                        success_count += 1
+                        logger.info(
+                            f"Successfully sent to {contact_email} | {company_name}"
+                        )
+                    else:
+                        logger.error(
+                            f"Failed to send to {contact_email} | {company_name}"
+                        )
 
-            except Exception as e:
-                logger.error(f"Error sending notification to {contact_email}: {e}")
-
+                except Exception as e:
+                    logger.error(
+                        f"Error sending to {contact_email} | {company_name}: {e}"
+                    )
         logger.info(
             f"Sent fuel code expiry notifications to {success_count}/{total_emails} contacts"
         )
@@ -113,49 +117,62 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
         return False
 
 
-def _group_codes_by_email(fuel_codes: List[Any]) -> Dict[str, Dict[str, Any]]:
+def _group_codes_by_email_then_company(
+    fuel_codes: List[Any],
+) -> Dict[str, Dict[str, Any]]:
     """
-    Group fuel codes by contact email and validate emails.
+    Returns a dict:
+    {
+      "<contact_email>": {
+        "emails": set([...]),
+        "companies": {
+           "<company_name>": {"codes": [code, ...]}
+        }
+      },
+      ...
+    }
+    Invalid emails are routed to tfrs@gov.bc.ca.
+    """
+    email_groups: Dict[str, Dict[str, Any]] = defaultdict(
+        lambda: {"emails": set(), "companies": defaultdict(lambda: {"codes": []})}
+    )
 
-    Returns:
-        Dict with email as key and dict containing 'codes' and 'contact_emails' as value
-    """
-    email_groups = defaultdict(lambda: {"codes": [], "emails": set()})
-    invalid_emails = []
+    fallback_email = "tfrs@gov.bc.ca"
+    invalid_emails: list[str] = []
 
     for code in fuel_codes:
-        contact_email = code.contact_email
-
-        # Validate email format
+        contact_email = getattr(code, "contact_email", None)
         if not _is_valid_email(contact_email):
-            email_groups["tfrs@gov.bc.ca"]["codes"].append(code)
-            email_groups["tfrs@gov.bc.ca"]["emails"].add("tfrs@gov.bc.ca")
-            logger.warning(
-                f"Invalid email format for fuel code {code.fuel_code}: {contact_email}"
-            )
-            continue
+            invalid_emails.append(contact_email)
+            contact_email = fallback_email
 
-        # Group by email
-        email_groups[contact_email]["codes"].append(code)
-        email_groups[contact_email]["emails"].add(code.contact_email)
+        company_name = getattr(code, "company", "Unknown Company")
+
+        bucket = email_groups[contact_email]
+        bucket["emails"].add(contact_email if contact_email else fallback_email)
+        bucket["companies"][company_name]["codes"].append(code)
 
     if invalid_emails:
         logger.warning(
-            f"Found {len(invalid_emails)} invalid email addresses: {invalid_emails}"
+            f"Found {len(invalid_emails)} invalid email addresses, routed to {fallback_email}: {invalid_emails}"
         )
 
-    # Convert defaultdict to regular dict and convert sets to lists for JSON serialization
-    result = {}
+    # convert nested defaultdicts/sets for JSON friendliness
+    normalized: Dict[str, Dict[str, Any]] = {}
     for email, data in email_groups.items():
-        result[email] = {
-            "codes": data["codes"],
-            "emails": data["emails"],
+        companies_dict = {}
+        for cname, cdata in data["companies"].items():
+            companies_dict[cname] = {"codes": cdata["codes"]}
+        normalized[email] = {
+            "emails": list(data["emails"]),
+            "companies": companies_dict,
         }
 
     logger.debug(
-        f"Grouped {len(fuel_codes)} fuel codes into {len(result)} email groups"
+        f"Grouped {len(fuel_codes)} fuel codes into "
+        f"{sum(len(v['companies']) for v in normalized.values())} (contact x company) buckets"
     )
-    return result
+    return normalized
 
 
 def _is_valid_email(email: str) -> bool:
