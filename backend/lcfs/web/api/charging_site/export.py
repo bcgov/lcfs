@@ -4,12 +4,10 @@ from typing import List
 from fastapi import Depends
 from openpyxl.worksheet.datavalidation import DataValidation
 from starlette.responses import StreamingResponse
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.db.models import Organization, UserProfile
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
-from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.core.decorators import service_handler
 
@@ -18,15 +16,14 @@ CS_EXPORT_SHEETNAME = "ChargingSites"
 VALIDATION_SHEETNAME = "VALUES"
 CS_EXPORT_COLUMNS = [
     SpreadsheetColumn("Organization", "text"),
-    SpreadsheetColumn("Site Code", "text"),
+    SpreadsheetColumn("Site Code (optional auto-generated)", "text"),
     SpreadsheetColumn("Site Name", "text"),
     SpreadsheetColumn("Street Address", "text"),
     SpreadsheetColumn("City", "text"),
     SpreadsheetColumn("Postal Code", "text"),
     SpreadsheetColumn("Latitude", "decimal6"),
     SpreadsheetColumn("Longitude", "decimal6"),
-    SpreadsheetColumn("Intended Users (comma-separated)", "text"),
-    SpreadsheetColumn("Status", "text"),
+    SpreadsheetColumn("Status (default)", "text"),
     SpreadsheetColumn("Notes", "text"),
 ]
 
@@ -70,7 +67,6 @@ class ChargingSiteExporter:
                 "",  # Postal Code
                 "",  # Latitude
                 "",  # Longitude
-                "",  # Intended Users
                 "Draft",  # Status (non-editable default)
                 "",  # Notes
             ]
@@ -82,13 +78,13 @@ class ChargingSiteExporter:
             rows=data,
             styles={
                 "bold_headers": True,
-                "protected_columns": [0, 9],
+                "protected_columns": [0, 8],
             },  # Protect Organization and Status columns
             validators=validators,
         )
         file_content = builder.build_spreadsheet()
 
-        filename = f"{CS_EXPORT_FILENAME}_{organization.name}.{export_format}"
+        filename = f"{CS_EXPORT_FILENAME}_template.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
         return StreamingResponse(
@@ -99,11 +95,6 @@ class ChargingSiteExporter:
 
     async def _create_validators(self, organization, builder):
         validators: List[DataValidation] = []
-        table_options = await self.repo.get_charging_site_options(organization)
-
-        # Get intended user options
-        intended_user_options = [obj.type_name for obj in table_options[1]]
-
         # Add informational prompts for protected/auto-generated columns
 
         # Organization column - protected/defaulted
@@ -142,7 +133,7 @@ class ChargingSiteExporter:
             prompt="This field is automatically set to 'Draft' for new entries and cannot be edited here.",
             allow_blank=False,
         )
-        status_validator.add("J2:J10000")  # Column J (Status)
+        status_validator.add("I2:I10000")  # Column I (Status)
         validators.append(status_validator)
 
         # Site Name column - helpful prompt
@@ -157,21 +148,6 @@ class ChargingSiteExporter:
         )
         site_name_validator.add("C2:C10000")  # Column C (Site Name)
         validators.append(site_name_validator)
-
-        # Create dropdown for intended users with no strict validation
-        # This allows multiple comma-separated values while still providing dropdown suggestions
-        range_end = len(intended_user_options)
-        intended_users_validator = DataValidation(
-            type="list",
-            formula1=f"'{VALIDATION_SHEETNAME}'!$I$2:$I${range_end + 1}",
-            showErrorMessage=False,  # Allow any input, including comma-separated values
-            showInputMessage=True,
-            promptTitle="Intended Users",
-            prompt="Select from dropdown or type comma-separated values (e.g., Public, Fleet, Multi-unit residential building)",
-            allow_blank=True,
-        )
-        intended_users_validator.add("I2:I10000")  # Column I (Intended Users)
-        validators.append(intended_users_validator)
 
         # Decimal validators for coordinates
         decimal_validator = DataValidation(
@@ -204,7 +180,6 @@ class ChargingSiteExporter:
             [],
             [],
             [],
-            intended_user_options,
             [],  # Status (protected)
             [],
         ]
@@ -251,12 +226,7 @@ class ChargingSiteExporter:
                     charging_site.postal_code,
                     charging_site.latitude,
                     charging_site.longitude,
-                    ", ".join(user.type_name for user in charging_site.intended_users),
-                    (
-                        charging_site.status.status
-                        if charging_site.status
-                        else "Draft"
-                    ),
+                    (charging_site.status.status if charging_site.status else "Draft"),
                     charging_site.notes,
                 ]
             )

@@ -105,18 +105,7 @@ export const OrganizationUsers = () => {
   )
 
   return (
-    <BCBox mt={3} px={0}>
-      {/* Title + buttons */}
-      <BCBox my={2}>
-        <BCTypography
-          variant="h5"
-          color="primary"
-          data-test="active-users-heading"
-        >
-          {t('org:usersLabel')}
-        </BCTypography>{' '}
-      </BCBox>
-
+    <BCBox mt={1} px={0}>
       {/* New user button (only if user has roles) */}
       <BCBox
         my={2}

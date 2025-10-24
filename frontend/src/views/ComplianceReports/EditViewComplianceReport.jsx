@@ -476,13 +476,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     }
 
     const shouldShowAssessmentStatement =
-      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
+      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental && currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     const shouldShowAssessmentRecommendation =
       hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
 
     const shouldShowAssessmentSectionTitle =
-      shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
+      (shouldShowAssessmentStatement || shouldShowAssessmentRecommendation) &&
+      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     return {
       shouldShowAssessmentStatement,

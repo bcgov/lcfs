@@ -56,8 +56,7 @@ class ChargingSiteImporter:
         user: UserProfile,
         org_code: str,
         file: UploadFile,
-        overwrite: bool,
-        site_ids: List[int] = None,
+        overwrite: bool = False,
     ) -> str:
         """
         Initiates the import job in a separate thread executor.
@@ -96,13 +95,7 @@ class ChargingSiteImporter:
         # Start the import task without blocking
         asyncio.create_task(
             import_async(
-                organization_id,
-                user,
-                org_code,
-                copied_file,
-                job_id,
-                overwrite,
-                site_ids,
+                organization_id, user, org_code, copied_file, job_id, overwrite
             )
         )
 
@@ -141,8 +134,7 @@ async def import_async(
     org_code: str,
     file: UploadFile,
     job_id: str,
-    overwrite: bool,
-    site_ids: List[int] = None,
+    overwrite: bool = False,
 ):
     """
     Performs the actual import in an async context.
@@ -174,13 +166,6 @@ async def import_async(
                 )
                 logger.debug(f"Progress updated for job {job_id}")
 
-                if overwrite:
-                    await _update_progress(
-                        redis_client, job_id, 10, "Deleting old data..."
-                    )
-                    if site_ids:
-                        await cs_service.delete_charging_sites_by_ids(site_ids)
-
                 # Optional: Scan the file with ClamAV if enabled
                 if settings.clamav_enabled:
                     await _update_progress(
@@ -210,11 +195,6 @@ async def import_async(
                         errors=errors,
                     )
 
-                    valid_intended_user_types = await cs_repo.get_intended_user_types()
-                    valid_user_type_names = {
-                        obj.type_name for obj in valid_intended_user_types
-                    }
-
                     # Iterate through all data rows, skipping the header
                     for row_idx, row in enumerate(
                         sheet.iter_rows(min_row=2, values_only=True), start=2
@@ -235,15 +215,14 @@ async def import_async(
                                 errors=errors,
                             )
 
-                        # Check if the entire row is empty
-                        if all(cell is None for cell in row):
-                            continue
+                        # Check if all columns are None
+                        if all(col is None for col in row):
+                            break  # End of data
 
                         row = list(row)
-                        row[8] = [row[8]] if row[8] is not None else []
 
                         # Validate row
-                        error = _validate_row(row, row_idx, valid_user_type_names)
+                        error = _validate_row(row, row_idx)
                         if error:
                             errors.append(error)
                             rejected += 1
@@ -256,6 +235,13 @@ async def import_async(
                                 cs_data, organization_id
                             )
                             created += 1
+                        except HTTPException as http_ex:
+                            logger.warning(
+                                "Charging site import validation failed",
+                                error=str(http_ex.detail),
+                            )
+                            errors.append(f"Row {row_idx}: {http_ex.detail}")
+                            rejected += 1
                         except Exception as ex:
                             logger.error(str(ex))
                             errors.append(f"Row {row_idx}: {ex}")
@@ -320,7 +306,6 @@ def _load_sheet(file: UploadFile) -> Worksheet:
 def _validate_row(
     row: tuple,
     row_idx: int,
-    valid_user_types: set[str],
 ) -> str | None:
     """
     Validates a single row of data and returns an error string if invalid.
@@ -335,7 +320,6 @@ def _validate_row(
         postal_code,
         latitude,
         longitude,
-        intended_user_types,
         status,
         notes,
     ) = row
@@ -353,8 +337,6 @@ def _validate_row(
         missing_fields.append("Latitude")
     if longitude is None:
         missing_fields.append("Longitude")
-    if not intended_user_types:
-        missing_fields.append("Intended Users")
 
     if missing_fields:
         return f"Row {row_idx}: Missing required fields: {', '.join(missing_fields)}"
@@ -363,13 +345,6 @@ def _validate_row(
     postal_code_pattern = re.compile(POSTAL_REGEX)
     if not postal_code_pattern.match(postal_code):
         return f"Row {row_idx}: Invalid postal code"
-
-    # Validate intended users
-    invalid_users = [
-        user for user in intended_user_types if user not in valid_user_types
-    ]
-    if invalid_users:
-        return f"Row {row_idx}: Invalid intended user(s): {', '.join(invalid_users)}"
 
     return None
 
@@ -387,7 +362,6 @@ def _parse_row(row: tuple, organization_id: int) -> ChargingSiteCreateSchema:
         postal_code,
         latitude,
         longitude,
-        intended_user_types,
         status,
         notes,
     ) = row
@@ -404,7 +378,6 @@ def _parse_row(row: tuple, organization_id: int) -> ChargingSiteCreateSchema:
         postal_code=postal_code or "",
         latitude=latitude,
         longitude=longitude,
-        intended_users=intended_user_types,
         current_status=status or "Draft",
         notes=notes or "",
     )

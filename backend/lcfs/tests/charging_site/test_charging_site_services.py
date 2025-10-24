@@ -205,6 +205,7 @@ class TestChargingSiteService:
         mock_status.charging_site_status_id = 1
         mock_repo.get_charging_site_status_by_name.return_value = mock_status
         mock_repo.get_end_user_types_by_ids.return_value = []
+        mock_repo.charging_site_name_exists.return_value = False
 
         # Mock the created site
         mock_site = MagicMock(spec=ChargingSite)
@@ -265,18 +266,47 @@ class TestChargingSiteService:
 
             assert isinstance(result, ChargingSiteSchema)
             mock_repo.create_charging_site.assert_called_once()
+            mock_repo.charging_site_name_exists.assert_awaited_once_with("Test Site", 1)
+
+    @pytest.mark.anyio
+    async def test_create_charging_site_duplicate_name(
+        self, charging_site_service, mock_repo
+    ):
+        """Test charging site creation failure due to duplicate name"""
+        mock_repo.charging_site_name_exists.return_value = True
+
+        create_data = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Duplicate Site",
+            street_address="123 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.2827,
+            longitude=-123.1207,
+            intended_users=[],
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await charging_site_service.create_charging_site(create_data, 1)
+
+        assert exc_info.value.status_code == 400
+        mock_repo.create_charging_site.assert_not_called()
 
     @pytest.mark.anyio
     async def test_update_charging_site_success(self, charging_site_service, mock_repo):
         """Test successful charging site update"""
         mock_existing_site = MagicMock(spec=ChargingSite)
         mock_existing_site.status.status = "Draft"
+        mock_existing_site.site_name = "Old Site"
+        mock_existing_site.organization_id = 1
+        mock_existing_site.charging_site_id = 1
         mock_repo.get_charging_site_by_id.return_value = mock_existing_site
 
         mock_status = MagicMock(spec=ChargingSiteStatus)
         mock_status.charging_site_status_id = 1
         mock_repo.get_charging_site_status_by_name.return_value = mock_status
         mock_repo.get_end_user_types_by_ids.return_value = []
+        mock_repo.charging_site_name_exists.return_value = False
 
         # Mock the updated site with all required fields
         mock_org = MagicMock()
@@ -327,6 +357,40 @@ class TestChargingSiteService:
 
         assert isinstance(result, ChargingSiteSchema)
         mock_repo.update_charging_site.assert_called_once()
+        mock_repo.charging_site_name_exists.assert_awaited_once_with(
+            "Updated Site", 1, exclude_site_id=mock_existing_site.charging_site_id
+        )
+
+    @pytest.mark.anyio
+    async def test_update_charging_site_duplicate_name(
+        self, charging_site_service, mock_repo
+    ):
+        """Test update charging site duplicate name failure"""
+        mock_existing_site = MagicMock(spec=ChargingSite)
+        mock_existing_site.status.status = "Draft"
+        mock_existing_site.site_name = "Old Site"
+        mock_existing_site.organization_id = 1
+        mock_existing_site.charging_site_id = 1
+        mock_repo.get_charging_site_by_id.return_value = mock_existing_site
+        mock_repo.charging_site_name_exists.return_value = True
+
+        update_data = ChargingSiteCreateSchema(
+            charging_site_id=1,
+            organization_id=1,
+            site_name="Updated Site",
+            street_address="123 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.2827,
+            longitude=-123.1207,
+            intended_users=[],
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await charging_site_service.update_charging_site(update_data)
+
+        assert exc_info.value.status_code == 400
+        mock_repo.update_charging_site.assert_not_called()
 
     @pytest.mark.anyio
     async def test_update_charging_site_not_found(
