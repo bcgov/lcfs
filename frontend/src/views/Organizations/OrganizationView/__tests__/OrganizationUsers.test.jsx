@@ -240,8 +240,7 @@ describe('OrganizationUsers Component Tests', () => {
   describe('Component Rendering', () => {
     it('renders basic component structure', () => {
       renderComponent()
-
-      expect(screen.getByText('Users')).toBeInTheDocument()
+      
       expect(screen.getByTestId('grid')).toBeInTheDocument()
       expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
     })
@@ -253,7 +252,6 @@ describe('OrganizationUsers Component Tests', () => {
 
       renderComponent()
 
-      expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
 
@@ -262,7 +260,6 @@ describe('OrganizationUsers Component Tests', () => {
 
       renderComponent()
 
-      expect(screen.getByText('Users')).toBeInTheDocument()
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
   })

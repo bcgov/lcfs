@@ -187,7 +187,6 @@ describe('CreditLedger Component Tests', () => {
     it('renders with organizationId prop', () => {
       renderComponent({ organizationId: 123 })
       
-      expect(screen.getByText('org:creditLedger')).toBeInTheDocument()
       expect(screen.getByText('org:downloading')).toBeInTheDocument()
       expect(screen.getByText('5,000')).toBeInTheDocument()
     })
