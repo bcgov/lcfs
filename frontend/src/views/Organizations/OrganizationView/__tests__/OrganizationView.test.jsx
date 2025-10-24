@@ -254,7 +254,7 @@ describe('OrganizationView', () => {
     it('displays organization title for government users', () => {
       renderComponent()
 
-      expect(screen.getByText('Test Org - Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Test Org — Dashboard')).toBeInTheDocument()
     })
 
     it('updates organization title when navigating to users tab', () => {
@@ -265,7 +265,7 @@ describe('OrganizationView', () => {
 
       renderComponent()
 
-      expect(screen.getByText('Test Org - Users')).toBeInTheDocument()
+      expect(screen.getByText('Test Org — Users')).toBeInTheDocument()
     })
   })
 
@@ -307,7 +307,7 @@ describe('OrganizationView', () => {
       expect(screen.queryByTestId('credit-ledger')).not.toBeInTheDocument()
       expect(screen.getByTestId('organization-details-card')).toBeInTheDocument()
       expect(
-        screen.queryByText('Test Org - Dashboard')
+        screen.queryByText('Test Org — Dashboard')
       ).not.toBeInTheDocument()
     })
   })
