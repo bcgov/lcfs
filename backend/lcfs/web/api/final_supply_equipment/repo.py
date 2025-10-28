@@ -27,7 +27,7 @@ from lcfs.db.models.compliance import (
     EndUserType,
     FinalSupplyEquipment,
     ChargingEquipmentStatus,
-    FSEComplianceReporting,
+    ComplianceReportChargingEquipment,
 )
 from lcfs.db.models.compliance.ChargingEquipment import (
     ChargingEquipment,
@@ -572,13 +572,12 @@ class FinalSupplyEquipmentRepository:
                 ChargingSite.site_name,
                 ChargingSite.charging_site_id,
                 ChargingEquipment.notes.label("equipment_notes"),
-                FSEComplianceReporting.supply_from_date,
-                FSEComplianceReporting.supply_to_date,
-                FSEComplianceReporting.kwh_usage,
-                FSEComplianceReporting.notes.label("compliance_notes"),
-                FSEComplianceReporting.fse_compliance_reporting_id,
-                FSEComplianceReporting.compliance_report_id,
-                FSEComplianceReporting.compliance_period_id,
+                ComplianceReportChargingEquipment.supply_from_date,
+                ComplianceReportChargingEquipment.supply_to_date,
+                ComplianceReportChargingEquipment.kwh_usage,
+                ComplianceReportChargingEquipment.compliance_notes,
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id,
+                ComplianceReportChargingEquipment.compliance_report_id,
                 ChargingSite.street_address,
                 ChargingSite.city,
                 ChargingSite.postal_code,
@@ -606,9 +605,9 @@ class FinalSupplyEquipmentRepository:
                 == ChargingEquipmentStatus.charging_equipment_status_id,
             )
             .outerjoin(
-                FSEComplianceReporting,
+                ComplianceReportChargingEquipment,
                 ChargingEquipment.charging_equipment_id
-                == FSEComplianceReporting.charging_equipment_id,
+                == ComplianceReportChargingEquipment.charging_equipment_id,
             )
             .where(*common_conditions, *filter_conditions)
         )
@@ -642,7 +641,7 @@ class FinalSupplyEquipmentRepository:
             ]:
                 if f.field == "compliance_notes":
                     f.field = "notes"
-                field = get_field_for_filter(FSEComplianceReporting, f.field)
+                field = get_field_for_filter(ComplianceReportChargingEquipment, f.field)
             else:
                 continue
 
@@ -674,7 +673,7 @@ class FinalSupplyEquipmentRepository:
         if compliance_report_id is not None and mode != "all":
             union_queries.append(
                 self._build_base_select(0, organization_id, filter_conditions).where(
-                    FSEComplianceReporting.compliance_report_id == compliance_report_id
+                    ComplianceReportChargingEquipment.compliance_report_id == compliance_report_id
                 )
             )
 
@@ -695,7 +694,7 @@ class FinalSupplyEquipmentRepository:
                 partition_by=combined_subquery.c.charging_equipment_id,
                 order_by=[
                     combined_subquery.c.source_priority,
-                    desc(combined_subquery.c.fse_compliance_reporting_id).nullslast(),
+                    desc(combined_subquery.c.charging_equipment_compliance_id).nullslast(),
                 ],
             )
             .label("row_number")
@@ -761,7 +760,7 @@ class FinalSupplyEquipmentRepository:
         Create FSE compliance reporting data
         """
 
-        records = [FSEComplianceReporting(**item) for item in data]
+        records = [ComplianceReportChargingEquipment(**item) for item in data]
         self.db.add_all(records)
         await self.db.flush()
         return {"message": "FSE compliance reporting data created successfully"}
@@ -769,15 +768,15 @@ class FinalSupplyEquipmentRepository:
     @repo_handler
     async def bulk_update_reporting_dates(self, data: FSEReportingDefaultDates) -> int:
         stmt = (
-            update(FSEComplianceReporting)
+            update(ComplianceReportChargingEquipment)
             .where(
                 and_(
-                    FSEComplianceReporting.charging_equipment_id.in_(
+                    ComplianceReportChargingEquipment.charging_equipment_id.in_(
                         data.equipment_ids
                     ),
-                    FSEComplianceReporting.compliance_report_id
+                    ComplianceReportChargingEquipment.compliance_report_id
                     == data.compliance_report_id,
-                    FSEComplianceReporting.organization_id == data.organization_id,
+                    ComplianceReportChargingEquipment.organization_id == data.organization_id,
                 )
             )
             .values(
@@ -791,31 +790,31 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def update_fse_reporting(
-        self, fse_compliance_reporting_id: int, data
+        self, charging_equipment_compliance_id: int, data
     ) -> dict:
         """
         Update FSE compliance reporting data
         """
         stmt = (
-            update(FSEComplianceReporting)
+            update(ComplianceReportChargingEquipment)
             .where(
-                FSEComplianceReporting.fse_compliance_reporting_id
-                == fse_compliance_reporting_id
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id
+                == charging_equipment_compliance_id
             )
             .values(**data)
         )
         await self.db.execute(stmt)
         await self.db.flush()
-        return {"id": fse_compliance_reporting_id, **data}
+        return {"id": charging_equipment_compliance_id, **data}
 
     @repo_handler
-    async def delete_fse_reporting(self, fse_compliance_reporting_id: int) -> None:
+    async def delete_fse_reporting(self, charging_equipment_compliance_id: int) -> None:
         """
         Delete FSE compliance reporting data
         """
-        stmt = delete(FSEComplianceReporting).where(
-            FSEComplianceReporting.fse_compliance_reporting_id
-            == fse_compliance_reporting_id
+        stmt = delete(ComplianceReportChargingEquipment).where(
+            ComplianceReportChargingEquipment.charging_equipment_compliance_id
+            == charging_equipment_compliance_id
         )
         await self.db.execute(stmt)
         await self.db.flush()
@@ -825,8 +824,8 @@ class FinalSupplyEquipmentRepository:
         """
         Delete multiple FSE compliance reporting records
         """
-        stmt = delete(FSEComplianceReporting).where(
-            FSEComplianceReporting.fse_compliance_reporting_id.in_(reporting_ids)
+        stmt = delete(ComplianceReportChargingEquipment).where(
+            ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(reporting_ids)
         )
         result = await self.db.execute(stmt)
         await self.db.flush()

@@ -645,8 +645,8 @@ export const getFSEReportingColDefs = (
 ) => [
   validation,
   {
-    field: 'fseComplianceReportingId',
-    headerName: i18n.t('finalSupplyEquipment:fseComplianceReportingId'),
+    field: 'chargingEquipmentComplianceId',
+    headerName: i18n.t('finalSupplyEquipment:chargingEquipmentComplianceId'),
     editable: false,
     hide: true
   },

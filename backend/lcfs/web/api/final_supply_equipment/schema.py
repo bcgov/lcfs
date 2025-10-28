@@ -85,7 +85,7 @@ class FinalSupplyEquipmentsSchema(BaseSchema):
 
 
 class FSEReportingSchema(BaseSchema):
-    fse_compliance_reporting_id: Optional[int] = None
+    charging_equipment_compliance_id: Optional[int] = None
     charging_equipment_id: int
     charging_site_id: int
     serial_number: str
@@ -114,15 +114,14 @@ class FSEReportingSchema(BaseSchema):
 
 
 class FSEReportingBaseSchema(BaseSchema):
-    fse_compliance_reporting_id: Optional[int] = None
+    charging_equipment_compliance_id: Optional[int] = None
     supply_from_date: date
     supply_to_date: date
     kwh_usage: Optional[float] = 0
-    notes: Optional[str] = None
+    compliance_notes: Optional[str] = None
     charging_equipment_id: int
     organization_id: int
     compliance_report_id: int
-    compliance_period_id: int
 
 
 class FSEReportingBatchSchema(BaseSchema):

@@ -6,7 +6,6 @@ import re
 from fastapi import Depends, HTTPException, status
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
-from lcfs.db.models.compliance import FSEComplianceReporting
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
@@ -418,7 +417,7 @@ class FinalSupplyEquipmentServices:
             ):
                 schemaData.supply_from_date = None
                 schemaData.supply_to_date = None
-                schemaData.fse_compliance_reporting_id = None
+                schemaData.charging_equipment_compliance_id = None
                 schemaData.compliance_report_id = None
                 schemaData.compliance_notes = None
                 schemaData.compliance_period_id = None
