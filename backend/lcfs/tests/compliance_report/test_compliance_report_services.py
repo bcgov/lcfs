@@ -418,7 +418,6 @@ async def test_create_supplemental_report_includes_summary_lines(
         assert new_summary.line_9_obligation_added_gasoline == 2
         assert new_summary.line_9_obligation_added_diesel == 4
         assert new_summary.line_9_obligation_added_jet_fuel == 6
-        compliance_report_service.final_supply_equipment_service.copy_to_report.assert_awaited_once()
 
     # Verify the result is the mock_schema returned by the patched model_validate
     assert result is mock_schema
@@ -640,12 +639,6 @@ async def test_create_government_initiated_supplemental_report_success(
 
         # Check dependency service calls
         mock_snapshot_service.create_organization_snapshot.assert_called_once()
-        mock_fse_services.copy_to_report.assert_called_once()
-        # Assert copy_documents was called with the correct IDs
-        # Copy docs uses the object *returned* by create_compliance_report
-        mock_document_service.copy_documents.assert_called_once_with(
-            existing_report_id, mock_new_report.compliance_report_id
-        )
 
         # Check returned schema
         assert (

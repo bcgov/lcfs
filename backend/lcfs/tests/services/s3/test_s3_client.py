@@ -66,6 +66,7 @@ def compliance_report_repo_mock():
     ) as mock:
         mock_instance = mock.return_value
         mock_instance.get_compliance_report_by_id = AsyncMock()
+        mock_instance.get_related_compliance_report_ids = AsyncMock(return_value=[1])
         return mock_instance
 
 
