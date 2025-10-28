@@ -54,6 +54,15 @@ def upgrade() -> None:
             comment="End date of the supply period",
         ),
     )
+    op.add_column(
+        "compliance_report_charging_equipment",
+        sa.Column(
+            "compliance_report_group_uuid",
+            sa.String(length=36),
+            nullable=False,
+            comment="UUID that groups all versions of a compliance report",
+        ),
+    )
     op.create_unique_constraint(
         "uix_compliance_reporting_equipment_dates",
         "compliance_report_charging_equipment",
@@ -145,6 +154,9 @@ def downgrade() -> None:
     )
     op.drop_column("compliance_report_charging_equipment", "supply_to_date")
     op.drop_column("compliance_report_charging_equipment", "supply_from_date")
+    op.drop_column(
+        "compliance_report_charging_equipment", "compliance_report_group_uuid"
+    )
     op.create_table(
         "fse_compliance_reporting",
         sa.Column(

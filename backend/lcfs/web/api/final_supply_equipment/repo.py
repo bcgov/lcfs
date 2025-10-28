@@ -578,6 +578,7 @@ class FinalSupplyEquipmentRepository:
                 ComplianceReportChargingEquipment.compliance_notes,
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id,
                 ComplianceReportChargingEquipment.compliance_report_id,
+                ComplianceReportChargingEquipment.compliance_report_group_uuid,
                 ChargingSite.street_address,
                 ChargingSite.city,
                 ChargingSite.postal_code,
@@ -657,7 +658,7 @@ class FinalSupplyEquipmentRepository:
         self,
         organization_id: int,
         pagination: PaginationRequestSchema,
-        compliance_report_id: int | None = None,
+        compliance_report_group_uuid: str | None = None,
         mode: str = "all",
     ) -> tuple[list[dict], int]:
         """
@@ -670,10 +671,11 @@ class FinalSupplyEquipmentRepository:
             self._apply_filters(filter_conditions, pagination.filters)
         union_queries: list[Any] = []
 
-        if compliance_report_id is not None and mode != "all":
+        if compliance_report_group_uuid is not None and mode != "all":
             union_queries.append(
                 self._build_base_select(0, organization_id, filter_conditions).where(
-                    ComplianceReportChargingEquipment.compliance_report_id == compliance_report_id
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid
                 )
             )
 
@@ -694,7 +696,9 @@ class FinalSupplyEquipmentRepository:
                 partition_by=combined_subquery.c.charging_equipment_id,
                 order_by=[
                     combined_subquery.c.source_priority,
-                    desc(combined_subquery.c.charging_equipment_compliance_id).nullslast(),
+                    desc(
+                        combined_subquery.c.charging_equipment_compliance_id
+                    ).nullslast(),
                 ],
             )
             .label("row_number")
@@ -748,7 +752,13 @@ class FinalSupplyEquipmentRepository:
         # Apply pagination
         offset = (pagination.page - 1) * pagination.size
         paginated_query = final_query.offset(offset).limit(pagination.size)
-
+        print("Generated SQL Query:")
+        from sqlalchemy.dialects import postgresql
+        print(
+            paginated_query.compile(
+                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+            )
+        )
         result = await self.db.execute(paginated_query)
         data = result.fetchall()
 
@@ -776,7 +786,8 @@ class FinalSupplyEquipmentRepository:
                     ),
                     ComplianceReportChargingEquipment.compliance_report_id
                     == data.compliance_report_id,
-                    ComplianceReportChargingEquipment.organization_id == data.organization_id,
+                    ComplianceReportChargingEquipment.organization_id
+                    == data.organization_id,
                 )
             )
             .values(
@@ -825,7 +836,9 @@ class FinalSupplyEquipmentRepository:
         Delete multiple FSE compliance reporting records
         """
         stmt = delete(ComplianceReportChargingEquipment).where(
-            ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(reporting_ids)
+            ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                reporting_ids
+            )
         )
         result = await self.db.execute(stmt)
         await self.db.flush()

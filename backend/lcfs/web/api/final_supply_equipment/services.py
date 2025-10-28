@@ -394,17 +394,25 @@ class FinalSupplyEquipmentServices:
         """
         Get paginated charging equipment with related charging site and FSE compliance reporting data
         """
-        if compliance_report_id and mode != "all":
+        report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id
+        )
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found",
+            )
+        if report and mode != "all":
             pagination.filters.append(
                 FilterModel(
                     filter_type="number",
-                    field="compliance_report_id",
+                    field="compliance_report_group_uuid",
                     type="equals",
-                    filter=compliance_report_id,
+                    filter=report.compliance_report_group_uuid,
                 )
             )
         data, total = await self.repo.get_fse_reporting_list_paginated(
-            organization_id, pagination, compliance_report_id, mode
+            organization_id, pagination, report.compliance_report_group_uuid, mode
         )
 
         # Process data to set fields to None if compliance_report_id doesn't match
@@ -412,15 +420,15 @@ class FinalSupplyEquipmentServices:
         for item in data:
             schemaData = FSEReportingSchema.model_validate(item)
             if (
-                compliance_report_id
-                and schemaData.compliance_report_id != compliance_report_id
+                report.compliance_report_group_uuid
+                and schemaData.compliance_report_group_uuid != report.compliance_report_group_uuid
             ):
                 schemaData.supply_from_date = None
                 schemaData.supply_to_date = None
                 schemaData.charging_equipment_compliance_id = None
                 schemaData.compliance_report_id = None
+                schemaData.compliance_report_group_uuid = None
                 schemaData.compliance_notes = None
-                schemaData.compliance_period_id = None
             processed_data.append(schemaData)
 
         return {

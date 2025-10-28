@@ -88,16 +88,27 @@ export const FinalSupplyEquipmentReporting = () => {
 
   // Initialize global selection from all data when component loads
   useEffect(() => {
-    if (data?.finalSupplyEquipments) {
-      const globalSelection = new Set()
-      data.finalSupplyEquipments.forEach((item) => {
-        if (item.complianceReportId === parseInt(complianceReportId)) {
-          globalSelection.add(item.chargingEquipmentId)
-        }
-      })
-      globalSelectionRef.current = globalSelection
-    }
-  }, [data])
+    if (!data?.finalSupplyEquipments) return
+
+    const globalSelection = new Set()
+    const currentReportId = parseInt(complianceReportId)
+    const currentGroupUuid = reportData?.report?.complianceReportGroupUuid
+
+    data.finalSupplyEquipments.forEach((item) => {
+      const belongsToCurrentReport = item.complianceReportId === currentReportId
+      const belongsToCurrentGroup =
+        item.complianceReportGroupUuid &&
+        (!currentGroupUuid ||
+          item.complianceReportGroupUuid === currentGroupUuid)
+
+      if (belongsToCurrentReport || belongsToCurrentGroup) {
+        globalSelection.add(item.chargingEquipmentId)
+      }
+    })
+
+    globalSelectionRef.current = globalSelection
+    setHasSelectedRows(globalSelection.size > 0)
+  }, [data, complianceReportId, reportData?.report?.complianceReportGroupUuid])
 
   // Set selected site option from cached pagination filters
   useEffect(() => {
@@ -195,6 +206,7 @@ export const FinalSupplyEquipmentReporting = () => {
             chargingEquipmentId: node.data.chargingEquipmentId,
             organizationId: reportData?.report?.organizationId,
             complianceReportId,
+            complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid
           }))
 
           const response = await saveRow(newRows)
@@ -211,6 +223,7 @@ export const FinalSupplyEquipmentReporting = () => {
               supplyFromDate: defaultFromDate,
               supplyToDate: defaultToDate,
               complianceReportId: parseInt(complianceReportId),
+              complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
               complianceNotes: null
             })
           })
@@ -299,7 +312,8 @@ export const FinalSupplyEquipmentReporting = () => {
         maxDate,
         errors,
         warnings,
-        parseInt(complianceReportId)
+        parseInt(complianceReportId),
+        reportData?.report?.complianceReportGroupUuid
       ),
     [minDate, maxDate, errors, warnings, handleSelectionChanged]
   )
@@ -331,6 +345,7 @@ export const FinalSupplyEquipmentReporting = () => {
         chargingEquipmentComplianceId: params.data.chargingEquipmentComplianceId,
         chargingEquipmentId: params.data.chargingEquipmentId,
         complianceReportId: parseInt(complianceReportId),
+        complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
         organizationId: reportData?.report?.organizationId
       }
 
@@ -409,6 +424,7 @@ export const FinalSupplyEquipmentReporting = () => {
         supplyToDate: defaultToDate,
         equipmentIds,
         complianceReportId: parseInt(complianceReportId),
+        complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
         organizationId: reportData?.report?.organizationId
       })
       fseGridAlertRef.current?.triggerAlert({
