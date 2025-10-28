@@ -4,12 +4,10 @@ from typing import List
 from fastapi import Depends
 from openpyxl.worksheet.datavalidation import DataValidation
 from starlette.responses import StreamingResponse
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.db.models import Organization, UserProfile
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
-from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.core.decorators import service_handler
 
@@ -18,7 +16,7 @@ CS_EXPORT_SHEETNAME = "ChargingSites"
 VALIDATION_SHEETNAME = "VALUES"
 CS_EXPORT_COLUMNS = [
     SpreadsheetColumn("Organization", "text"),
-    SpreadsheetColumn("Site Code", "text"),
+    SpreadsheetColumn("Site Code (optional auto-generated)", "text"),
     SpreadsheetColumn("Site Name", "text"),
     SpreadsheetColumn("Street Address", "text"),
     SpreadsheetColumn("City", "text"),
@@ -82,13 +80,13 @@ class ChargingSiteExporter:
             rows=data,
             styles={
                 "bold_headers": True,
-                "protected_columns": [0, 9],
+                "protected_columns": [0, 8],
             },  # Protect Organization and Status columns
             validators=validators,
         )
         file_content = builder.build_spreadsheet()
 
-        filename = f"{CS_EXPORT_FILENAME}_{organization.name}.{export_format}"
+        filename = f"{CS_EXPORT_FILENAME}_template.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
         return StreamingResponse(
@@ -145,7 +143,7 @@ class ChargingSiteExporter:
             prompt="This field is automatically set to 'Draft' for new entries and cannot be edited here.",
             allow_blank=False,
         )
-        status_validator.add("J2:J10000")  # Column J (Status)
+        status_validator.add("I2:I10000")  # Column I (Status)
         validators.append(status_validator)
 
         # Site Name column - helpful prompt

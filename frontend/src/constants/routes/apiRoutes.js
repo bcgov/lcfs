@@ -146,7 +146,7 @@ export const apiRoutes = {
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
   bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
-  importChargingSites: '/charging-sites/import/:orgID',
+  importChargingSites: '/charging-sites/import',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
   downloadChargingSitesTemplate: '/charging-sites/template/:orgID',
 

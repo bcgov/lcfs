@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, func, select, func, and_, desc, update
+from sqlalchemy import asc, desc, func, select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
 
@@ -430,19 +430,39 @@ class ChargingSiteRepository:
         )
 
     @repo_handler
-    async def get_charging_site_by_site_name(self, site_name: str) -> ChargingSite:
+    async def get_charging_site_by_site_name(
+        self, site_name: str, organization_id: int
+    ) -> Optional[ChargingSite]:
         """
-        Retrieve a charging site by its name from the database
+        Retrieve a charging site by its name within an organization.
         """
-        return (
-            (
-                await self.db.execute(
-                    select(ChargingSite).where(ChargingSite.site_name == site_name)
-                )
+        result = await self.db.execute(
+            select(ChargingSite).where(
+                ChargingSite.organization_id == organization_id,
+                func.lower(ChargingSite.site_name) == func.lower(site_name),
             )
-            .scalars()
-            .first()
         )
+        return result.scalars().first()
+
+    @repo_handler
+    async def charging_site_name_exists(
+        self,
+        site_name: str,
+        organization_id: int,
+        exclude_site_id: Optional[int] = None,
+    ) -> bool:
+        """
+        Check if a charging site name already exists within an organization.
+        """
+        query = select(ChargingSite).where(
+            ChargingSite.organization_id == organization_id,
+            func.lower(ChargingSite.site_name) == func.lower(site_name),
+        )
+        if exclude_site_id:
+            query = query.where(ChargingSite.charging_site_id != exclude_site_id)
+
+        result = await self.db.execute(query)
+        return result.scalars().first() is not None
 
     @repo_handler
     async def get_end_user_types_by_ids(self, ids: List[int]) -> List[EndUserType]:

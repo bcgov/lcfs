@@ -19,9 +19,10 @@ import logging
 import sys
 import os
 import traceback
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from datetime import datetime, timedelta, timezone
+from typing import List, Dict, Any
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -79,7 +80,7 @@ class DynamicTaskScheduler:
 
     def __init__(self, dry_run: bool = False):
         self.dry_run = dry_run
-        self.execution_start = datetime.now()
+        self.execution_start = datetime.now(timezone.utc)
         self.worker_id = self._get_worker_id()
         self.app_version = os.getenv("APP_VERSION", "unknown")
 
@@ -97,6 +98,17 @@ class DynamicTaskScheduler:
         # In OpenShift, you can use pod name
         pod_name = os.getenv("HOSTNAME", "unknown-pod")
         return f"{pod_name}-{self.execution_start.strftime('%Y%m%d%H%M%S')}"
+
+    def _get_task_timezone(self, task: ScheduledTask) -> ZoneInfo:
+        """Resolve a task's configured timezone with UTC as a fallback."""
+        tz_name = getattr(task, "timezone", None) or "UTC"
+        try:
+            return ZoneInfo(tz_name)
+        except Exception:
+            logger.warning(
+                f"Task '{task.name}' has invalid timezone '{tz_name}', using UTC instead"
+            )
+            return timezone.utc
 
     async def get_enabled_tasks(self) -> List[ScheduledTask]:
         """
@@ -123,6 +135,14 @@ class DynamicTaskScheduler:
         Determine if a task should be executed based on its schedule
         """
         try:
+            task_timezone = self._get_task_timezone(task)
+
+            # Normalize current time to the task's timezone for safe comparisons
+            if current_time.tzinfo is None:
+                current_time = current_time.replace(tzinfo=task_timezone)
+            else:
+                current_time = current_time.astimezone(task_timezone)
+
             # Validate cron expression
             if not croniter.is_valid(task.schedule):
                 logger.warning(
@@ -135,6 +155,10 @@ class DynamicTaskScheduler:
 
             # Get the most recent scheduled time before now
             last_scheduled = cron.get_prev(datetime)
+            if last_scheduled.tzinfo is None:
+                last_scheduled = last_scheduled.replace(tzinfo=task_timezone)
+            else:
+                last_scheduled = last_scheduled.astimezone(task_timezone)
 
             logger.debug(
                 f"Task '{task.name}': last_scheduled={last_scheduled}, last_run={task.last_run}"
@@ -158,15 +182,22 @@ class DynamicTaskScheduler:
                     return False
 
             # Execute if the last scheduled time is after the last execution
-            should_run = last_scheduled > task.last_run
+            last_run = (
+                task.last_run
+                if task.last_run.tzinfo is not None
+                else task.last_run.replace(tzinfo=task_timezone)
+            )
+            last_run = last_run.astimezone(task_timezone)
+
+            should_run = last_scheduled > last_run
 
             if should_run:
                 logger.info(
-                    f"Task '{task.name}' should run: last_scheduled={last_scheduled} > last_run={task.last_run}"
+                    f"Task '{task.name}' should run: last_scheduled={last_scheduled} > last_run={last_run}"
                 )
             else:
                 logger.debug(
-                    f"Task '{task.name}' should not run: last_scheduled={last_scheduled} <= last_run={task.last_run}"
+                    f"Task '{task.name}' should not run: last_scheduled={last_scheduled} <= last_run={last_run}"
                 )
 
             return should_run
@@ -296,7 +327,7 @@ class DynamicTaskScheduler:
         """
         Execute a single task and return execution result
         """
-        execution_start = datetime.now()
+        execution_start = datetime.now(timezone.utc)
         result = {
             "success": False,
             "start_time": execution_start,
@@ -372,7 +403,7 @@ class DynamicTaskScheduler:
             logger.error(traceback.format_exc())
 
         finally:
-            result["end_time"] = datetime.now()
+            result["end_time"] = datetime.now(timezone.utc)
             result["duration_seconds"] = int(
                 (result["end_time"] - result["start_time"]).total_seconds()
             )
@@ -416,10 +447,6 @@ class DynamicTaskScheduler:
         """
         Update task status and create execution record
         """
-        # expected_status = (
-        #     TaskStatus.SUCCESS if execution_result["success"] else TaskStatus.FAILURE
-        # )
-
         try:
             async with self.session() as session:
                 try:
@@ -443,8 +470,13 @@ class DynamicTaskScheduler:
 
                     # Calculate next run time
                     if croniter.is_valid(fresh_task.schedule):
-                        cron = croniter(fresh_task.schedule, datetime.now())
-                        fresh_task.next_run = cron.get_next(datetime)
+                        task_timezone = self._get_task_timezone(fresh_task)
+                        base_time = datetime.now(task_timezone)
+                        cron = croniter(fresh_task.schedule, base_time)
+                        next_run = cron.get_next(datetime)
+                        if next_run.tzinfo is None:
+                            next_run = next_run.replace(tzinfo=task_timezone)
+                        fresh_task.next_run = next_run.astimezone(timezone.utc)
 
                     # Create execution record
                     execution = TaskExecution(
@@ -467,27 +499,39 @@ class DynamicTaskScheduler:
                         # Add execution record to session
                         session.add(execution)
 
+                        # Store values before commit (while still in session context)
+                        task_status = fresh_task.status
+                        task_last_run = fresh_task.last_run
+                        task_next_run = fresh_task.next_run
+                        task_execution_count = fresh_task.execution_count
+                        task_failure_count = fresh_task.failure_count
+
                         # Commit the changes
                         await session.commit()
 
                         logger.info(
-                            f"✓ Updated task '{fresh_task.name}' - Status: {fresh_task.status}, "
-                            f"Last Run: {fresh_task.last_run.strftime('%Y-%m-%d %H:%M:%S')}, "
-                            f"Next Run: {fresh_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if fresh_task.next_run else 'N/A'}"
+                            f"✓ Updated task '{task.name}' - Status: {task_status}, "
+                            f"Last Run: {task_last_run.strftime('%Y-%m-%d %H:%M:%S')}, "
+                            f"Next Run: {task_next_run.strftime('%Y-%m-%d %H:%M:%S') if task_next_run else 'N/A'}"
                         )
 
                         # Update the original task object with the new values for reference
-                        task.status = fresh_task.status
-                        task.last_run = fresh_task.last_run
-                        task.next_run = fresh_task.next_run
-                        task.execution_count = fresh_task.execution_count
-                        task.failure_count = fresh_task.failure_count
+                        task.status = task_status
+                        task.last_run = task_last_run
+                        task.next_run = task_next_run
+                        task.execution_count = task_execution_count
+                        task.failure_count = task_failure_count
 
                     else:
+                        # For dry run, access attributes before session context closes
+                        task_status = fresh_task.status
+                        task_last_run = fresh_task.last_run
+                        task_next_run = fresh_task.next_run
+
                         logger.info(
-                            f"DRY RUN: Would update task '{fresh_task.name}' - Status: {fresh_task.status}, "
-                            f"Last Run: {fresh_task.last_run.strftime('%Y-%m-%d %H:%M:%S')}, "
-                            f"Next Run: {fresh_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if fresh_task.next_run else 'N/A'}"
+                            f"DRY RUN: Would update task '{task.name}' - Status: {task_status}, "
+                            f"Last Run: {task_last_run.strftime('%Y-%m-%d %H:%M:%S')}, "
+                            f"Next Run: {task_next_run.strftime('%Y-%m-%d %H:%M:%S') if task_next_run else 'N/A'}"
                         )
 
                 except Exception as e:
@@ -517,8 +561,8 @@ class DynamicTaskScheduler:
             )
             return {
                 "success": False,
-                "start_time": datetime.now(),
-                "end_time": datetime.now(),
+                "start_time": datetime.now(timezone.utc),
+                "end_time": datetime.now(timezone.utc),
                 "duration_seconds": timeout_seconds,
                 "result_message": "",
                 "error_message": f"Task timed out after {timeout_seconds} seconds",
@@ -528,7 +572,7 @@ class DynamicTaskScheduler:
         """
         Main scheduler cycle - check and execute all pending tasks
         """
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
         summary = {
             "cycle_start": cycle_start,
             "tasks_checked": 0,
@@ -555,7 +599,7 @@ class DynamicTaskScheduler:
                 return summary
 
             # Check which tasks should run
-            current_time = datetime.now()
+            current_time = datetime.now(timezone.utc)
 
             for task in tasks:
                 if self.should_execute_task(task, current_time):
@@ -619,7 +663,7 @@ class DynamicTaskScheduler:
             summary["errors"].append(error_msg)
 
         finally:
-            cycle_end = datetime.now()
+            cycle_end = datetime.now(timezone.utc)
             cycle_duration = (cycle_end - cycle_start).total_seconds()
 
             logger.info("=" * 60)

@@ -56,8 +56,7 @@ class ChargingSiteImporter:
         user: UserProfile,
         org_code: str,
         file: UploadFile,
-        overwrite: bool,
-        site_ids: List[int] = None,
+        overwrite: bool = False,
     ) -> str:
         """
         Initiates the import job in a separate thread executor.
@@ -96,13 +95,7 @@ class ChargingSiteImporter:
         # Start the import task without blocking
         asyncio.create_task(
             import_async(
-                organization_id,
-                user,
-                org_code,
-                copied_file,
-                job_id,
-                overwrite,
-                site_ids,
+                organization_id, user, org_code, copied_file, job_id, overwrite
             )
         )
 
@@ -141,8 +134,7 @@ async def import_async(
     org_code: str,
     file: UploadFile,
     job_id: str,
-    overwrite: bool,
-    site_ids: List[int] = None,
+    overwrite: bool = False,
 ):
     """
     Performs the actual import in an async context.
@@ -173,13 +165,6 @@ async def import_async(
                     redis_client, job_id, 5, "Initializing services..."
                 )
                 logger.debug(f"Progress updated for job {job_id}")
-
-                if overwrite:
-                    await _update_progress(
-                        redis_client, job_id, 10, "Deleting old data..."
-                    )
-                    if site_ids:
-                        await cs_service.delete_charging_sites_by_ids(site_ids)
 
                 # Optional: Scan the file with ClamAV if enabled
                 if settings.clamav_enabled:
@@ -238,9 +223,9 @@ async def import_async(
                                 errors=errors,
                             )
 
-                        # Check if the entire row is empty
-                        if all(cell is None for cell in row):
-                            continue
+                        # Check if all columns are None
+                        if all(col is None for col in row):
+                            break  # End of data
 
                         row = list(row)
                         # row[8] is now allocating_organization_name (optional string)
@@ -259,6 +244,13 @@ async def import_async(
                                 cs_data, organization_id
                             )
                             created += 1
+                        except HTTPException as http_ex:
+                            logger.warning(
+                                "Charging site import validation failed",
+                                error=str(http_ex.detail),
+                            )
+                            errors.append(f"Row {row_idx}: {http_ex.detail}")
+                            rejected += 1
                         except Exception as ex:
                             logger.error(str(ex))
                             errors.append(f"Row {row_idx}: {ex}")

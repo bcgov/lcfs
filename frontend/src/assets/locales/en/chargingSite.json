@@ -139,5 +139,7 @@
   "setToDecommissionConfirmTxt": "This will set the selected FSE to Decommissioned status. They will no longer be available in future compliance reports. Do you want to proceed?",
   "setSelectedAsSubmittedConfirmTxt": "This will set the selected FSE to Submitted status. No more edits will be possible. Do you want to proceed?",
   "equipmentBulkUpdateSuccess": "Status update on multiple equipment was completed successfully.",
-  "equipmentBulkUpdateFailed": "Status update on multiple equipment was not completed successfully."
+  "equipmentBulkUpdateFailed": "Status update on multiple equipment was not completed successfully.",
+  "importBtn": "Upload Excel",
+  "importNoRows": "No charging sites were imported."
 }

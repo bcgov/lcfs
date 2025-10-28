@@ -41,6 +41,11 @@ class ChargingSite(BaseModel, Auditable, Versioning):
     __tablename__ = "charging_site"
     __table_args__ = (
         UniqueConstraint("site_code"),
+        UniqueConstraint(
+            "organization_id",
+            "site_name",
+            name="uq_charging_site_org_name",
+        ),
         {"comment": "Charging sites"},
     )
 
@@ -162,7 +167,7 @@ def generate_site_code(mapper, connection, target):
     # Auto-generates a unique 5-character site code (base-36: 0-9, A-Z).
     # Supports up to 60,466,176 global site codes.
     code = getattr(target, "site_code", None)
-    if code:
+    if code and code != "" and code != 'None':
         target.site_code = str(code).upper()
         return
 

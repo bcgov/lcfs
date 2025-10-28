@@ -2,6 +2,7 @@ import math
 from typing import List
 import structlog
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 
 from lcfs.db.models.compliance import (
     ChargingEquipmentStatus,
@@ -371,26 +372,58 @@ class ChargingSiteService:
         Service method to create a new charging site
         """
         logger.info("Creating charging site")
+
+        site_name = (charging_site_data.site_name or "").strip()
+        if not site_name:
+            raise HTTPException(
+                status_code=400, detail="Charging site name cannot be blank."
+            )
+
+        name_exists = await self.repo.charging_site_name_exists(
+            site_name, organization_id
+        )
+        if name_exists:
+            raise HTTPException(
+                status_code=400,
+                detail="A charging site with this name already exists for the organization.",
+            )
+
         status = await self.repo.get_charging_site_status_by_name(
             ChargingSiteStatusEnum.DRAFT
         )
         try:
+            payload = charging_site_data.model_dump(
+                exclude={
+                    "site_code",
+                    "status_id",
+                    "current_status",
+                    "deleted",
+                    "intended_users",
+                }
+            )
+            payload["site_name"] = site_name
+            payload["organization_id"] = organization_id
+
             charging_site = await self.repo.create_charging_site(
                 ChargingSite(
-                    **charging_site_data.model_dump(
-                        exclude={
-                            "status_id",
-                            "current_status",
-                            "deleted",
-                        }
-                    ),
+                    **payload,
                     status=status,
+                    intended_users=[],
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(
                 charging_site.charging_site_id
             )
             return ChargingSiteSchema.model_validate(charging_site)
+        except IntegrityError as exc:
+            logger.warning(
+                "Charging site name already exists for organization",
+                error=str(exc),
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="A charging site with this name already exists for the organization.",
+            )
         except Exception as e:
             logger.error("Error creating charging site", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -410,6 +443,28 @@ class ChargingSiteService:
             raise HTTPException(
                 status_code=400, detail="Charging site is not in draft state"
             )
+
+        new_site_name = (
+            (charging_site_data.site_name or existing_charging_site.site_name)
+            .strip()
+        )
+        if not new_site_name:
+            raise HTTPException(
+                status_code=400, detail="Charging site name cannot be blank."
+            )
+
+        if new_site_name.lower() != existing_charging_site.site_name.lower():
+            name_exists = await self.repo.charging_site_name_exists(
+                new_site_name,
+                existing_charging_site.organization_id,
+                exclude_site_id=existing_charging_site.charging_site_id,
+            )
+            if name_exists:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A charging site with this name already exists for the organization.",
+                )
+
         status = await self.repo.get_charging_site_status_by_name(
             charging_site_data.current_status
             if charging_site_data.current_status
@@ -427,6 +482,7 @@ class ChargingSiteService:
                 },
                 exclude_unset=True,
             )
+            update_data["site_name"] = new_site_name
 
             # Update each field on the existing object
             for field, value in update_data.items():
@@ -445,6 +501,15 @@ class ChargingSiteService:
 
             return ChargingSiteSchema.model_validate(updated_charging_site)
 
+        except IntegrityError as exc:
+            logger.warning(
+                "Charging site name already exists for organization during update",
+                error=str(exc),
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="A charging site with this name already exists for the organization.",
+            )
         except Exception as e:
             logger.error("Error updating charging site", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
