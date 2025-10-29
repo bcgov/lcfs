@@ -64,15 +64,15 @@ describe('FinalSupplyEquipmentReporting', () => {
       {
         chargingEquipmentId: 1,
         serialNumber: 'SN001',
-        complianceReportId: 123,
-        supplyFromDate: '2024-01-01',
-        supplyToDate: '2024-12-31',
+        complianceReportId: null, // No compliance report ID means not selected
+        supplyFromDate: null,
+        supplyToDate: null,
         kwhUsage: 1000
       },
       {
         chargingEquipmentId: 2,
         serialNumber: 'SN002',
-        complianceReportId: null,
+        complianceReportId: null, // No compliance report ID means not selected
         supplyFromDate: null,
         supplyToDate: null,
         kwhUsage: 2000

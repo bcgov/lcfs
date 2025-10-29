@@ -641,12 +641,13 @@ export const getFSEReportingColDefs = (
   maxDate,
   errors = {},
   warnings = {},
-  complianceReportId
+  complianceReportId,
+  complianceReportGroupUuid
 ) => [
   validation,
   {
-    field: 'fseComplianceReportingId',
-    headerName: i18n.t('finalSupplyEquipment:fseComplianceReportingId'),
+    field: 'chargingEquipmentComplianceId',
+    headerName: i18n.t('finalSupplyEquipment:chargingEquipmentComplianceId'),
     editable: false,
     hide: true
   },
@@ -672,7 +673,7 @@ export const getFSEReportingColDefs = (
       maxDate,
       autoOpenLastRow: false
     },
-    editable: (params) => params.data.complianceReportId === complianceReportId,
+    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     valueGetter: (params) => {
       return params.data.supplyFromDate || minDate
     },
@@ -704,7 +705,7 @@ export const getFSEReportingColDefs = (
       maxDate,
       autoOpenLastRow: false
     },
-    editable: (params) => params.data.complianceReportId === complianceReportId,
+    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     valueGetter: (params) => {
       return params.data.supplyToDate || maxDate
     },
@@ -728,7 +729,7 @@ export const getFSEReportingColDefs = (
       min: 0,
       showStepperButtons: false
     },
-    editable: (params) => params.data.complianceReportId === complianceReportId,
+    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     filter: false,
     sortable: false,
     cellStyle: (params) =>
@@ -741,7 +742,7 @@ export const getFSEReportingColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
-    editable: (params) => params.data.complianceReportId === complianceReportId,
+    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',
