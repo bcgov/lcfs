@@ -75,16 +75,6 @@ def upgrade() -> None:
     )
     op.drop_column("compliance_report_charging_equipment", "date_of_supply_from")
     op.drop_column("compliance_report_charging_equipment", "date_of_supply_to")
-    # Fix supply dates for wrongly entered data where from_date > to_date
-    op.execute(
-        """
-        UPDATE final_supply_equipment fse
-        SET 
-            supply_from_date = make_date(2024, EXTRACT(MONTH FROM fse.supply_from_date)::int, EXTRACT(DAY FROM fse.supply_from_date)::int),
-            supply_to_date   = make_date(2024, EXTRACT(MONTH FROM fse.supply_to_date)::int, EXTRACT(DAY FROM fse.supply_to_date)::int)
-        WHERE fse.supply_from_date > fse.supply_to_date;
-        """
-    )
     # Migrate data from final_supply_equipment to compliance_report_charging_equipment
     op.execute(
         """
