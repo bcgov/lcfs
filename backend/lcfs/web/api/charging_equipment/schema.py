@@ -25,6 +25,11 @@ class EndUseTypeSchema(BaseModel):
     description: Optional[str] = None
 
 
+class EndUserTypeSchema(BaseModel):
+    end_user_type_id: int
+    type_name: str
+
+
 class LevelOfEquipmentSchema(BaseModel):
     level_of_equipment_id: int
     name: str
@@ -47,15 +52,16 @@ class ChargingEquipmentBaseSchema(BaseModel):
     ports: Optional[PortsEnum] = None
     notes: Optional[str] = None
     intended_uses: Optional[List[EndUseTypeSchema]] = []
+    intended_users: Optional[List[EndUserTypeSchema]] = []
     version: Optional[int] = 1
-    
+
     class Config:
         from_attributes = True
 
 
 class ChargingEquipmentCreateSchema(BaseModel):
     charging_site_id: int
-    allocating_organization_id: Optional[int] = None
+    allocating_organization_name: Optional[str] = Field(None, max_length=500)
     serial_number: str = Field(..., min_length=1, max_length=100)
     manufacturer: str = Field(..., min_length=1, max_length=100)
     model: Optional[str] = Field(None, max_length=100)
@@ -63,10 +69,11 @@ class ChargingEquipmentCreateSchema(BaseModel):
     ports: Optional[PortsEnum] = None
     notes: Optional[str] = None
     intended_use_ids: Optional[List[int]] = []
+    intended_user_ids: Optional[List[int]] = []
 
 
 class ChargingEquipmentUpdateSchema(BaseModel):
-    allocating_organization_id: Optional[int] = None
+    allocating_organization_name: Optional[str] = Field(None, max_length=500)
     serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
     manufacturer: Optional[str] = Field(None, min_length=1, max_length=100)
     model: Optional[str] = Field(None, max_length=100)
@@ -74,6 +81,7 @@ class ChargingEquipmentUpdateSchema(BaseModel):
     ports: Optional[PortsEnum] = None
     notes: Optional[str] = None
     intended_use_ids: Optional[List[int]] = None
+    intended_user_ids: Optional[List[int]] = None
 
 
 class ChargingEquipmentListItemSchema(BaseModel):
@@ -81,6 +89,7 @@ class ChargingEquipmentListItemSchema(BaseModel):
     charging_site_id: int
     status: ChargingEquipmentStatusEnum
     site_name: str
+    organization_name: Optional[str] = None
     registration_number: str
     version: int
     allocating_organization_name: Optional[str] = None
@@ -88,9 +97,11 @@ class ChargingEquipmentListItemSchema(BaseModel):
     manufacturer: str
     model: Optional[str] = None
     level_of_equipment_name: str
+    intended_uses: Optional[List[EndUseTypeSchema]] = []
+    intended_users: Optional[List[EndUserTypeSchema]] = []
     created_date: datetime
     updated_date: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 

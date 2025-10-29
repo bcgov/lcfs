@@ -81,7 +81,7 @@ export const AssessmentRecommendation = ({
 
   // Show non-assessment section only for original reports
   const shouldShowNonAssessmentSection = useMemo(() => {
-    return isGovernmentUser && isAnalyst && isOriginalReport
+    return isGovernmentUser && isAnalyst && isOriginalReport && currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
   }, [isGovernmentUser, isAnalyst, isOriginalReport])
   const governmentAdjustmentDialog = (
     <>

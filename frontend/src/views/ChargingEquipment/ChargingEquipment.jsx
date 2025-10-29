@@ -172,14 +172,19 @@ export const ChargingEquipment = () => {
   }
 
   const handleSelectAllDraftUpdated = () => {
+    // Ensure grid API is available
+    if (!gridRef.current?.api) {
+      return
+    }
+
     if (selectMode === 'draft-updated') {
       // Deselect all
-      gridRef.current?.api?.deselectAll()
+      gridRef.current.api.deselectAll()
       setSelectMode(null)
     } else {
       // Select all Draft and Updated rows
       isProgrammaticSelection.current = true
-      gridRef.current?.api?.forEachNode((node) => {
+      gridRef.current.api.forEachNode((node) => {
         if (node.data.status === 'Draft' || node.data.status === 'Updated') {
           node.setSelected(true)
         } else {
@@ -195,14 +200,19 @@ export const ChargingEquipment = () => {
   }
 
   const handleSelectAllValidated = () => {
+    // Ensure grid API is available
+    if (!gridRef.current?.api) {
+      return
+    }
+
     if (selectMode === 'validated') {
       // Deselect all
-      gridRef.current?.api?.deselectAll()
+      gridRef.current.api.deselectAll()
       setSelectMode(null)
     } else {
       // Select all Validated rows
       isProgrammaticSelection.current = true
-      gridRef.current?.api?.forEachNode((node) => {
+      gridRef.current.api.forEachNode((node) => {
         if (node.data.status === 'Validated') {
           node.setSelected(true)
         } else {
@@ -260,7 +270,19 @@ export const ChargingEquipment = () => {
   }
 
   const handleBulkSubmit = async () => {
-    const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
+    // Only submit equipment with Draft or Updated status
+    const equipmentIds = selectedRows
+      .filter((row) => row.status === 'Draft' || row.status === 'Updated')
+      .map((row) => row.charging_equipment_id)
+
+    if (equipmentIds.length === 0) {
+      alertRef.current?.triggerAlert({
+        message: 'No Draft or Updated equipment selected to submit',
+        severity: 'warning'
+      })
+      return
+    }
+
     try {
       const result = await submitEquipment(equipmentIds)
       alertRef.current?.triggerAlert({
@@ -289,7 +311,19 @@ export const ChargingEquipment = () => {
   }
 
   const handleBulkDecommission = async () => {
-    const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
+    // Only decommission equipment with Validated status
+    const equipmentIds = selectedRows
+      .filter((row) => row.status === 'Validated')
+      .map((row) => row.charging_equipment_id)
+
+    if (equipmentIds.length === 0) {
+      alertRef.current?.triggerAlert({
+        message: 'No Validated equipment selected to decommission',
+        severity: 'warning'
+      })
+      return
+    }
+
     try {
       const result = await decommissionEquipment(equipmentIds)
       alertRef.current?.triggerAlert({
@@ -364,12 +398,6 @@ export const ChargingEquipment = () => {
               ? 'Index of all FSE for all organizations. Processing FSE is done either through the charging site page or the compliance report.'
               : t('chargingEquipment:manageFSEDescription')}
           </BCTypography>
-        </Grid>
-      )}
-
-      {!isOnNestedRoute && (
-        <Grid item xs={12}>
-          <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
         </Grid>
       )}
 
@@ -500,7 +528,7 @@ export const ChargingEquipment = () => {
               <BCGridViewer
                 gridRef={gridRef}
                 alertRef={alertRef}
-                columnDefs={chargingEquipmentColDefs}
+                columnDefs={chargingEquipmentColDefs(isIDIR)}
                 defaultColDef={defaultColDef}
                 getRowId={getRowId}
                 overlayLoadingTemplate="Loading FSE data..."
@@ -518,6 +546,12 @@ export const ChargingEquipment = () => {
               />
             </BCBox>
           </BCBox>
+        </Grid>
+      )}
+
+      {!isOnNestedRoute && (
+        <Grid item xs={12}>
+          <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
         </Grid>
       )}
 

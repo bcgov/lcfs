@@ -75,7 +75,6 @@
       "description": "Overview of automatic and discretionary penalties issued to this organization.",
       "history": "Penalty history",
       "analyticsError": "Unable to load penalty analytics data.",
-      "addPenaltyBtn": "Add penalty",
       "noOrganizationSelected": "Select an organization to view penalty analytics.",
       "messages": {
         "saving": "Saving penalty log entry...",
@@ -152,7 +151,7 @@
   "snapshotTitle": "Organization Information from Compliance Report",
   "penaltyLog": {
     "history": "Penalty history",
-    "addPenaltyBtn": "Add discretionary penalty",
+    "addPenaltyBtn": "Add/Edit discretionary penalties",
     "columns": {
       "complianceYear": "Compliance year",
       "contraventionType": "Continuous or single contravention",

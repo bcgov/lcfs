@@ -1,9 +1,10 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import Crumb from '../Crumb'
-import { vi, describe, it, expect } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useLocation, useMatches, useParams } from 'react-router-dom'
+import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
 // Mock router hooks
 vi.mock('react-router-dom', async () => {
@@ -30,6 +31,11 @@ describe('Crumb', () => {
 
   beforeEach(() => {
     setupRouterMocks()
+    useOrganizationPageStore.getState().resetOrganizationContext()
+  })
+
+  afterEach(() => {
+    useOrganizationPageStore.getState().resetOrganizationContext()
   })
 
   it('renders the home link when on a path', () => {
@@ -105,6 +111,26 @@ describe('Crumb', () => {
 
     expect(screen.getByText('ID: 456')).toBeInTheDocument()
     expect(screen.getByText('Organizations')).toBeInTheDocument()
+  })
+
+  it('shows organization name with active tab when context is set', () => {
+    setupRouterMocks({
+      pathname: '/organizations/456/users',
+      params: { orgID: '456' },
+      matches: [{ handle: { title: 'Organization users' } }]
+    })
+
+    useOrganizationPageStore
+      .getState()
+      .setOrganizationContext({
+        organizationName: 'LCFS Org 1',
+        activeTabLabel: 'Users'
+      })
+
+    render(<Crumb />, { wrapper })
+
+    expect(screen.getByText('LCFS Org 1 - Users')).toBeInTheDocument()
+    expect(screen.queryByText('Organization profile')).not.toBeInTheDocument()
   })
 
   it('handles compliance report paths correctly', () => {

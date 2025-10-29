@@ -79,12 +79,12 @@ class TestChargingSiteValidation:
     async def test_charging_site_create_access_success(self, validation, mock_request, mock_charging_site_create_schema):
         """Test successful create access validation"""
         mock_request.user.organization.organization_id = 1
-        validation.cs_repo.get_charging_site_by_site_name.return_value = None
+        validation.cs_repo.charging_site_name_exists.return_value = False
         
         result = await validation.charging_site_create_access(1, mock_charging_site_create_schema)
         
         assert result is True
-        validation.cs_repo.get_charging_site_by_site_name.assert_called_once_with("Test Site")
+        validation.cs_repo.charging_site_name_exists.assert_awaited_once_with("Test Site", 1)
 
     @pytest.mark.anyio
     async def test_charging_site_create_access_forbidden_org(self, validation, mock_request, mock_charging_site_create_schema):
@@ -100,7 +100,7 @@ class TestChargingSiteValidation:
     async def test_charging_site_create_access_duplicate_name(self, validation, mock_request, mock_charging_site_create_schema, mock_charging_site):
         """Test create access validation failure - duplicate site name"""
         mock_request.user.organization.organization_id = 1
-        validation.cs_repo.get_charging_site_by_site_name.return_value = mock_charging_site
+        validation.cs_repo.charging_site_name_exists.return_value = True
         
         with pytest.raises(HTTPException) as exc_info:
             await validation.charging_site_create_access(1, mock_charging_site_create_schema)
@@ -122,7 +122,7 @@ class TestChargingSiteValidation:
             longitude=-123.1207,
             intended_users=[]
         )
-        validation.cs_repo.get_charging_site_by_site_name.return_value = None
+        validation.cs_repo.charging_site_name_exists.return_value = False
         
         with pytest.raises(HTTPException) as exc_info:
             await validation.charging_site_create_access(1, schema)

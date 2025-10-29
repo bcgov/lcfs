@@ -268,85 +268,43 @@ export const renewableFuelColumns = (
   }
 
   // ========= Gasoline Logic ============
-  if (
-    data[SUMMARY.LINE_2].gasoline > 0 &&
-    data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
-  )
+  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
+  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
+  // Only one should be editable at a time
+  if (data[SUMMARY.LINE_2].gasoline > data[SUMMARY.LINE_4].gasoline) {
+    // Surplus: Line 6 editable, Line 8 not editable
     gasolineEditableCells = [SUMMARY.LINE_6]
-  else if (
-    data[SUMMARY.LINE_1].gasoline > 0 &&
-    data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
-  )
+  } else if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
+    // Deficiency: Line 8 editable, Line 6 not editable
     gasolineEditableCells = [SUMMARY.LINE_8]
-
-  // Line 8
-  if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
-    // If Line 2 is less than Line 4, ensure Line 8 is available
-    if (!gasolineEditableCells.includes(SUMMARY.LINE_8)) {
-      gasolineEditableCells.push(SUMMARY.LINE_8)
-    }
-  } else {
-    // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
-    gasolineEditableCells = gasolineEditableCells.filter(
-      (line) => line !== SUMMARY.LINE_8
-    )
   }
 
   // ============ Diesel Logic ============
-  if (
-    data[SUMMARY.LINE_2].diesel > 0 &&
-    data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
-  )
+  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
+  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
+  // Only one should be editable at a time
+  if (data[SUMMARY.LINE_2].diesel > data[SUMMARY.LINE_4].diesel) {
+    // Surplus: Line 6 editable, Line 8 not editable
     dieselEditableCells = [SUMMARY.LINE_6]
-  else if (
-    data[SUMMARY.LINE_1].diesel > 0 &&
-    data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
-  )
+  } else if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
+    // Deficiency: Line 8 editable, Line 6 not editable
     dieselEditableCells = [SUMMARY.LINE_8]
-
-  // Line 8
-  if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
-    // If Line 2 is less than Line 4, ensure Line 8 is available
-    if (!dieselEditableCells.includes(SUMMARY.LINE_8)) {
-      dieselEditableCells.push(SUMMARY.LINE_8)
-    }
-  } else {
-    // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
-    dieselEditableCells = dieselEditableCells.filter(
-      (line) => line !== SUMMARY.LINE_8
-    )
   }
 
   // ============ Jet Fuel Logic ============
-  if (
-    data[SUMMARY.LINE_2].jetFuel > 0 &&
-    data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
-  )
+  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
+  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
+  // Only one should be editable at a time
+  // Line 8 is only available for Jet Fuel from 2028 onward
+  if (data[SUMMARY.LINE_2].jetFuel > data[SUMMARY.LINE_4].jetFuel) {
+    // Surplus: Line 6 editable, Line 8 not editable
     jetFuelEditableCells = [SUMMARY.LINE_6]
-  else if (
-    data[SUMMARY.LINE_1].jetFuel > 0 &&
-    data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
-  )
+  } else if (
+    data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel &&
+    parseInt(compliancePeriodYear) >= 2028
+  ) {
+    // Deficiency: Line 8 editable (only from 2028 onward), Line 6 not editable
     jetFuelEditableCells = [SUMMARY.LINE_8]
-
-  // Line 8
-  if (parseInt(compliancePeriodYear) >= 2028) {
-    if (data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel) {
-      // If Line 2 is less than Line 4, ensure Line 8 is available
-      if (!jetFuelEditableCells.includes(SUMMARY.LINE_8)) {
-        jetFuelEditableCells.push(SUMMARY.LINE_8)
-      }
-    } else {
-      // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
-      jetFuelEditableCells = jetFuelEditableCells.filter(
-        (line) => line !== SUMMARY.LINE_8
-      )
-    }
-  } else {
-    // Before 2028, Line 8 is unavailable for Jet Fuel
-    jetFuelEditableCells = jetFuelEditableCells.filter(
-      (line) => line !== SUMMARY.LINE_8
-    )
   }
 
   if (parseInt(compliancePeriodYear) === 2024) {

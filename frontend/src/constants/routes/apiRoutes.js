@@ -131,6 +131,7 @@ export const apiRoutes = {
     statuses: '/charging-equipment/statuses/list',
     levels: '/charging-equipment/levels/list',
     endUseTypes: '/charging-equipment/end-use-types/list',
+    endUserTypes: '/charging-equipment/end-user-types/list',
     chargingSites: '/charging-equipment/charging-sites/list',
     organizations: '/charging-equipment/organizations/list',
     hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements'
@@ -144,7 +145,7 @@ export const apiRoutes = {
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
   bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
-  importChargingSites: '/charging-sites/import/:orgID',
+  importChargingSites: '/charging-sites/import',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
   downloadChargingSitesTemplate: '/charging-sites/template/:orgID',
 

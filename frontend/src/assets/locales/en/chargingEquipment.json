@@ -26,7 +26,8 @@
   "singlePort": "Single port",
   "dualPort": "Dual port",
   "intendedUses": "Intended Uses",
-  "notes": "Notes",
+  "intendedUsers": "Intended Users",
+  "complianceNotes": "Notes",
   "registrationNumber": "Registration Number",
   
   "submitConfirmTitle": "Submit Confirmation",

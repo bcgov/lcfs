@@ -1,31 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Grid2'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
+
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, chargingSiteColDefs } from './components/_schema'
 import { v4 as uuid } from 'uuid'
-import { ROUTES, buildPath } from '@/routes/routes'
+import { ROUTES } from '@/routes/routes'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 import { isArrayEmpty } from '@/utils/array'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes/index'
 import BCButton from '@/components/BCButton/index.jsx'
-import { Menu, MenuItem } from '@mui/material'
-import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportDialog from '@/components/ImportDialog'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import {
-  getCurrentQuarter,
-  getQuarterDateRange
-} from '@/utils/dateQuarterUtils'
-import {
   useSaveChargingSite,
-  useGetIntendedUsers,
   useImportChargingSites,
   useGetChargingSitesImportJobStatus
 } from '@/hooks/useChargingSite'
@@ -46,35 +41,21 @@ export const AddEditChargingSite = ({
   const [isDownloading, setIsDownloading] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isOverwrite, setIsOverwrite] = useState(false)
-  const [hideOverwrite, setHideOverwrite] = useState(false)
-  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
-  const [importAnchorEl, setImportAnchorEl] = useState(null)
-  const isDownloadOpen = Boolean(downloadAnchorEl)
-  const isImportOpen = Boolean(importAnchorEl)
   const apiService = useApiService()
 
   const alertRef = useRef()
+  const importResultAppliedRef = useRef(false)
+  const lastImportSummaryRef = useRef(null)
   const location = useLocation()
   const { t } = useTranslation(['common', 'chargingSite'])
 
-  const {
-    data: currentUser,
-    isLoading: isCurrentUserLoading,
-    hasRoles,
-    hasAnyRole
-  } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
 
   const organizationId = useMemo(
-    () => currentUser.organization?.organizationId,
+    () => currentUser?.organization?.organizationId ?? null,
     [currentUser]
   )
   const navigate = useNavigate()
-
-  const {
-    data: intendedUserTypes,
-    isLoading: optionsLoading,
-    isFetched
-  } = useGetIntendedUsers()
 
   const { mutateAsync: saveRow } = useSaveChargingSite(organizationId)
 
@@ -105,46 +86,45 @@ export const AddEditChargingSite = ({
   }
 
   useEffect(() => {
-    if (isGridReady) {
-      const defaultOrgName = ''
-      if (isEditMode) {
-        setRowData([{ ...data, id: uuid() }])
-      } else if (isArrayEmpty(rowData)) {
-        setRowData([
-          {
-            id: uuid(),
-            chargingSiteId: null,
-            organizationId
-          }
-        ])
-      }
-      gridRef?.current?.api.sizeColumnsToFit()
+    if (!isGridReady) return
 
-      setTimeout(() => {
-        const lastRowIndex = gridRef?.current?.api.getLastDisplayedRowIndex()
-        gridRef?.current?.api.startEditingCell({
+    if (
+      isEditMode &&
+      data &&
+      (rowData.length !== 1 ||
+        rowData[0]?.chargingSiteId !== data.chargingSiteId)
+    ) {
+      setRowData([{ ...data, id: uuid() }])
+    } else if (!isEditMode && isArrayEmpty(rowData)) {
+      setRowData([
+        {
+          id: uuid(),
+          chargingSiteId: null,
+          organizationId
+        }
+      ])
+    }
+
+    const gridApi = gridRef.current?.api
+    gridApi?.sizeColumnsToFit()
+
+    const timeout = setTimeout(() => {
+      const lastRowIndex = gridApi?.getLastDisplayedRowIndex?.()
+      if (typeof lastRowIndex === 'number') {
+        gridApi.startEditingCell({
           rowIndex: lastRowIndex,
           colKey: 'siteName'
         })
-      }, 100)
-    }
-  }, [isGridReady, gridRef, isEditMode])
+      }
+    }, 100)
+
+    return () => clearTimeout(timeout)
+  }, [isGridReady, isEditMode, data, rowData, organizationId])
 
   useEffect(() => {
-    if (
-      !optionsLoading &&
-      Array.isArray(intendedUserTypes) &&
-      intendedUserTypes.length > 0
-    ) {
-      const updatedColumnDefs = chargingSiteColDefs(
-        intendedUserTypes,
-        errors,
-        warnings,
-        isGridReady
-      )
-      setColumnDefs(updatedColumnDefs)
-    }
-  }, [errors, warnings, intendedUserTypes, isGridReady])
+    const updatedColumnDefs = chargingSiteColDefs(errors, warnings, isGridReady)
+    setColumnDefs(updatedColumnDefs)
+  }, [errors, warnings, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
@@ -212,29 +192,19 @@ export const AddEditChargingSite = ({
     }
   }
 
-  const handleDownload = async (includeData) => {
-    try {
-      handleCloseDownloadMenu()
-      setIsDownloading(true)
-      const endpoint = includeData
-        ? apiRoutes.exportChargingSites.replace(':orgID', organizationId)
-        : apiRoutes.downloadChargingSitesTemplate.replace(
-            ':orgID',
-            organizationId
-          )
+  const handleDownload = async () => {
+    if (!organizationId) {
+      return
+    }
 
-      if (includeData) {
-        const siteIds = rowData
-          .filter((row) => row.chargingSiteId)
-          .map((row) => row.chargingSiteId)
-        await apiService.download({
-          url: endpoint,
-          method: 'post',
-          data: siteIds
-        })
-      } else {
-        await apiService.download({ url: endpoint })
-      }
+    try {
+      setIsDownloading(true)
+      const endpoint = apiRoutes.downloadChargingSitesTemplate.replace(
+        ':orgID',
+        organizationId
+      )
+
+      await apiService.download({ url: endpoint })
     } catch (error) {
       console.error(
         'Error downloading final supply equipment information:',
@@ -248,17 +218,154 @@ export const AddEditChargingSite = ({
   const openFileImportDialog = (isOverwrite) => {
     setIsImportDialogOpen(true)
     setIsOverwrite(isOverwrite)
-    handleCloseDownloadMenu()
+    importResultAppliedRef.current = false
+    lastImportSummaryRef.current = null
+  }
+
+  const loadImportedChargingSites = useCallback(
+    async (jobSummary = null) => {
+      if (jobSummary) {
+        lastImportSummaryRef.current = jobSummary
+      } else if (lastImportSummaryRef.current) {
+        jobSummary = lastImportSummaryRef.current
+      }
+
+      const isGovernmentUser = hasRoles?.('Government')
+      const createdCount = jobSummary?.created ?? null
+
+      if (!isGovernmentUser && !organizationId) {
+        return
+      }
+
+      if (createdCount === 0) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingSite:importNoRows', {
+            defaultValue: 'No charging sites were imported.'
+          }),
+          severity: 'info'
+        })
+        setRowData([
+          {
+            id: uuid(),
+            chargingSiteId: null,
+            organizationId,
+            validationStatus: 'error',
+            modified: true
+          }
+        ])
+        setErrors({})
+        setWarnings({})
+        importResultAppliedRef.current = true
+        return
+      }
+
+      if (!createdCount) {
+        return
+      }
+
+      try {
+        const paginationPayload = {
+          page: 1,
+          size: createdCount,
+          sortOrders: [
+            {
+              field: 'createDate',
+              direction: 'desc'
+            }
+          ],
+          filters: []
+        }
+
+        if (organizationId) {
+          paginationPayload.filters.push({
+            field: 'organizationId',
+            filterType: 'number',
+            type: 'equals',
+            filter: organizationId
+          })
+        }
+
+        const endpoint = isGovernmentUser
+          ? apiRoutes.getAllChargingSites
+          : apiRoutes.getAllChargingSitesByOrg.replace(':orgID', organizationId)
+
+        const response = await apiService.post(endpoint, paginationPayload)
+        const payload = response?.data ?? response
+        const sites = payload?.chargingSites || []
+
+        const limitedSites = sites.slice(0, createdCount).reverse()
+
+        const formattedRows = limitedSites.map((site) => ({
+          ...site,
+          id: uuid(),
+          organizationId: site.organizationId ?? organizationId,
+          currentStatus: site.status?.status || site.currentStatus || 'Draft',
+          validationStatus: 'valid',
+          modified: false
+        }))
+
+        if (!isGovernmentUser) {
+          formattedRows.push({
+            id: uuid(),
+            chargingSiteId: null,
+            organizationId,
+            validationStatus: 'error',
+            modified: true
+          })
+        }
+
+        setRowData(formattedRows)
+        setErrors({})
+        setWarnings({})
+        importResultAppliedRef.current = true
+
+        setTimeout(() => {
+          gridRef.current?.api?.sizeColumnsToFit()
+        }, 0)
+
+        alertRef.current?.triggerAlert({
+          message: t('chargingSite:importSuccess', {
+            defaultValue: 'Charging sites have been refreshed.'
+          }),
+          severity: 'success'
+        })
+      } catch (error) {
+        console.error('Error loading charging sites after import:', error)
+        alertRef.current?.triggerAlert({
+          message: t('chargingSite:importRefreshError', {
+            defaultValue: 'Unable to refresh charging site data after import.'
+          }),
+          severity: 'error'
+        })
+      }
+    },
+    [apiService, organizationId, hasRoles, t, gridRef, setErrors, setWarnings]
+  )
+
+  const handleImportComplete = () => {
+    // Refresh the current data if in edit mode
+    if (isEditMode && refetch) {
+      refetch()
+    } else if (
+      !isEditMode &&
+      !importResultAppliedRef.current &&
+      lastImportSummaryRef.current
+    ) {
+      loadImportedChargingSites(lastImportSummaryRef.current)
+    }
+    // Close the dialog
+    setIsImportDialogOpen(false)
   }
 
   const handleNavigateBack = useCallback(() => {
     if (isEditMode) {
-      setIsEditMode(false)
-      refetch && refetch()
-    } else {
-      navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+      setIsEditMode?.(false)
+      refetch?.()
+      return
     }
-  }, [navigate, t])
+
+    navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+  }, [isEditMode, navigate, refetch, setIsEditMode])
 
   const onAddRows = useCallback(
     (numRows) => {
@@ -273,175 +380,77 @@ export const AddEditChargingSite = ({
     },
     [organizationId]
   )
-  const handleDownloadClick = (event) => {
-    setDownloadAnchorEl(event.currentTarget)
-  }
-  const handleCloseDownloadMenu = () => {
-    setDownloadAnchorEl(null)
-  }
-  const handleImportClick = (event) => {
-    setImportAnchorEl(event.currentTarget)
-  }
-  const handleCloseImportMenu = () => {
-    setImportAnchorEl(null)
-  }
 
   return (
-    isFetched && (
-      <Grid2 className="add-edit-charging-site-container">
-        <div className="header">
-          <BCTypography variant="h5" color="primary">
-            {isEditMode ? data.siteName : t('chargingSite:addNewSite')}
-          </BCTypography>
-          {!isEditMode && (
-            <BCBox my={2.5} component="div">
-              <BCTypography
-                variant="body4"
-                color="text"
-                mt={0.5}
-                component="div"
-              >
-                {t('chargingSite:templateDescriptor')}
-              </BCTypography>
-            </BCBox>
-          )}
-        </div>
-        {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && !isEditMode && (
-          <BCBox>
-            <BCButton
-              color="primary"
-              variant="outlined"
-              aria-controls={isDownloadOpen ? 'download-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={isDownloadOpen ? 'true' : undefined}
-              onClick={handleDownloadClick}
-              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-              isLoading={isDownloading}
-            >
-              {t('common:importExport.export.btn')}
-            </BCButton>
-            <Menu
-              id="download-menu"
-              anchorEl={downloadAnchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={isDownloadOpen}
-              onClose={handleCloseDownloadMenu}
-            >
-              <MenuItem
-                disabled={isDownloading}
-                onClick={() => {
-                  handleDownload(true)
-                }}
-              >
-                {t('common:importExport.export.withDataBtn')}
-              </MenuItem>
-              <MenuItem
-                disabled={isDownloading}
-                onClick={() => {
-                  handleDownload(false)
-                }}
-              >
-                {t('common:importExport.export.withoutDataBtn')}
-              </MenuItem>
-            </Menu>
-            <BCButton
-              style={{ marginLeft: '12px' }}
-              color="primary"
-              variant="outlined"
-              aria-controls={isImportOpen ? 'import-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={isImportOpen ? 'true' : undefined}
-              onClick={handleImportClick}
-              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-            >
-              {t('common:importExport.import.btn')}
-            </BCButton>
-
-            <Menu
-              id="import-menu"
-              slotProps={{
-                paper: {
-                  style: {
-                    maxWidth: 240
-                  }
-                }
-              }}
-              anchorEl={importAnchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={isImportOpen}
-              onClose={handleCloseImportMenu}
-            >
-              {' '}
-              {!hideOverwrite && (
-                <MenuItem
-                  onClick={() => {
-                    openFileImportDialog(true)
-                    handleCloseImportMenu()
-                  }}
-                >
-                  {t('common:importExport.import.dialog.buttons.overwrite')}
-                </MenuItem>
-              )}
-              <MenuItem
-                onClick={() => {
-                  openFileImportDialog(false)
-                  handleCloseImportMenu()
-                }}
-              >
-                {t('common:importExport.import.dialog.buttons.append')}
-              </MenuItem>
-            </Menu>
+    <Grid2 className="add-edit-charging-site-container">
+      <div className="header">
+        <BCTypography variant="h5" color="primary">
+          {isEditMode ? data.siteName : t('chargingSite:addNewSite')}
+        </BCTypography>
+        {!isEditMode && (
+          <BCBox my={2.5} component="div">
+            <BCTypography variant="body4" color="text" mt={0.5} component="div">
+              {t('chargingSite:templateDescriptor')}
+            </BCTypography>
           </BCBox>
         )}
-        <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-          <BCGridEditor
-            gridRef={gridRef}
-            alertRef={alertRef}
-            columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
-            onGridReady={onGridReady}
-            rowData={rowData}
-            onAddRows={onAddRows}
-            gridOptions={gridOptions}
-            loading={optionsLoading}
-            onCellEditingStopped={onCellEditingStopped}
-            onAction={onAction}
-            onFirstDataRendered={onFirstDataRendered}
-            showAddRowsButton={!isEditMode}
-            saveButtonProps={{
-              enabled: true,
-              text: t('common:saveReturnBtn'),
-              onSave: handleNavigateBack
-              // confirmText: t('report:incompleteReport'),
-              // confirmLabel: t('report:returnToReport')
+      </div>
+      {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && !isEditMode && (
+        <BCBox>
+          <BCButton
+            color="primary"
+            variant="outlined"
+            startIcon={<FontAwesomeIcon icon={faDownload} />}
+            onClick={handleDownload}
+            isLoading={isDownloading}
+          >
+            {t('common:importExport.export.btn')}
+          </BCButton>
+          <BCButton
+            style={{ marginLeft: '12px' }}
+            color="primary"
+            variant="outlined"
+            startIcon={<FontAwesomeIcon icon={faUpload} />}
+            onClick={() => {
+              openFileImportDialog(true)
             }}
-          />
+          >
+            {t('chargingSite:importBtn')}
+          </BCButton>
         </BCBox>
-        <ImportDialog
-          open={isImportDialogOpen}
-          close={() => {
-            setIsImportDialogOpen(false)
+      )}
+      <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
+        <BCGridEditor
+          gridRef={gridRef}
+          alertRef={alertRef}
+          columnDefs={columnDefs}
+          defaultColDef={defaultColDef}
+          onGridReady={onGridReady}
+          rowData={rowData}
+          onAddRows={onAddRows}
+          gridOptions={gridOptions}
+          onCellEditingStopped={onCellEditingStopped}
+          onAction={onAction}
+          onFirstDataRendered={onFirstDataRendered}
+          showAddRowsButton={!isEditMode}
+          saveButtonProps={{
+            enabled: true,
+            text: t('common:saveReturnBtn'),
+            onSave: handleNavigateBack
+            // confirmText: t('report:incompleteReport'),
+            // confirmLabel: t('report:returnToReport')
           }}
-          organizationId={organizationId}
-          isOverwrite={isOverwrite}
-          importHook={useImportChargingSites}
-          getJobStatusHook={useGetChargingSitesImportJobStatus}
         />
-      </Grid2>
-    )
+      </BCBox>
+      <ImportDialog
+        open={isImportDialogOpen}
+        close={handleImportComplete}
+        complianceReportId={organizationId}
+        isOverwrite={isOverwrite}
+        importHook={useImportChargingSites}
+        getJobStatusHook={useGetChargingSitesImportJobStatus}
+        onComplete={loadImportedChargingSites}
+      />
+    </Grid2>
   )
 }

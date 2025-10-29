@@ -7,10 +7,7 @@ export const ComplianceTracking = () => {
   const { t } = useTranslation(['org'])
 
   return (
-    <BCBox p={2}>
-      <BCTypography variant="h5" color="primary" sx={{ mb: 2 }}>
-        {t('org:sections.complianceTracking.title')}
-      </BCTypography>
+    <BCBox py={0}>
       <BCTypography variant="body1" color="text.secondary">
         {t('org:sections.complianceTracking.description')}
       </BCTypography>

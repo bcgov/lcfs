@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
+import BCTypography from '@/components/BCTypography'
 import { OrganizationDetailsCard } from './OrganizationDetailsCard'
 import { OrganizationUsers } from './OrganizationUsers'
 import { CreditLedger } from './CreditLedger'
@@ -19,6 +20,8 @@ import {
   orgDashboardRenderers,
   orgDashboardRoutes
 } from '@/routes/routeConfig/organizationRoutes'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
 function TabPanel({ children, value, index }) {
   return (
@@ -42,12 +45,23 @@ export const OrganizationView = ({ addMode = false }) => {
   const [alert, setAlert] = useState(null)
 
   const { data: currentUser, hasRoles } = useCurrentUser()
+  const setOrganizationContext = useOrganizationPageStore(
+    (state) => state.setOrganizationContext
+  )
+  const resetOrganizationContext = useOrganizationPageStore(
+    (state) => state.resetOrganizationContext
+  )
 
   // Get the organization ID - either from URL params (IDIR users) or from current user (BCeID users)
   const organizationId = orgID ?? currentUser?.organization?.organizationId
 
   // Check if user is government (IDIR) - only they should see all tabs
   const isGovernment = hasRoles(roles.government)
+  const showOrganizationHeader = isGovernment && !addMode
+
+  const { data: organizationData } = useOrganization(organizationId, {
+    enabled: showOrganizationHeader && !!organizationId
+  })
 
   useEffect(() => {
     if (location.state?.message) {
@@ -115,6 +129,43 @@ export const OrganizationView = ({ addMode = false }) => {
     )
   }, [isGovernment, organizationId, location, addMode, navigate])
 
+  const currentTab = tabConfig[tabIndex] || null
+  const currentTabLabel = currentTab?.label || null
+
+  const organizationTitle =
+    showOrganizationHeader && organizationData?.name
+      ? `${organizationData.name}${
+          currentTabLabel ? ` — ${currentTabLabel}` : ''
+        }`
+      : currentTabLabel
+
+  useEffect(() => {
+    if (!showOrganizationHeader) {
+      resetOrganizationContext()
+      return
+    }
+
+    if (!organizationData?.name) {
+      resetOrganizationContext()
+      return
+    }
+
+    setOrganizationContext({
+      organizationName: organizationData.name,
+      activeTabLabel: currentTabLabel
+    })
+
+    return () => {
+      resetOrganizationContext()
+    }
+  }, [
+    showOrganizationHeader,
+    organizationData?.name,
+    currentTabLabel,
+    setOrganizationContext,
+    resetOrganizationContext
+  ])
+
   return (
     <BCBox>
       {alert && (
@@ -123,7 +174,7 @@ export const OrganizationView = ({ addMode = false }) => {
         </BCAlert>
       )}
 
-      <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
+      <BCBox sx={{ mt: 0, bgcolor: 'background.paper' }}>
         <AppBar
           position="static"
           sx={{ boxShadow: 'none', border: 'none', width: 'fit-content' }}
@@ -154,7 +205,11 @@ export const OrganizationView = ({ addMode = false }) => {
             ))}
           </Tabs>
         </AppBar>
-
+        {organizationTitle && (
+          <BCTypography variant="h5" color="primary" mt={3}>
+            {organizationTitle}
+          </BCTypography>
+        )}
         <BCBox sx={{ pt: 3 }}>{renderContent()}</BCBox>
       </BCBox>
     </BCBox>

@@ -212,9 +212,6 @@ export const PenaltyLog = () => {
           {analyticsErrorMessage ? ` (${analyticsErrorMessage})` : ''}
         </BCAlert>
       )}
-      <BCTypography variant="h5" color="primary" fontWeight="medium" my={1}>
-        {t('org:sections.penaltyLog.title')}
-      </BCTypography>
       <Stack spacing={2} sx={{ width: '100%' }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4} ml={-2}>
