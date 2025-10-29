@@ -172,14 +172,19 @@ export const ChargingEquipment = () => {
   }
 
   const handleSelectAllDraftUpdated = () => {
+    // Ensure grid API is available
+    if (!gridRef.current?.api) {
+      return
+    }
+
     if (selectMode === 'draft-updated') {
       // Deselect all
-      gridRef.current?.api?.deselectAll()
+      gridRef.current.api.deselectAll()
       setSelectMode(null)
     } else {
       // Select all Draft and Updated rows
       isProgrammaticSelection.current = true
-      gridRef.current?.api?.forEachNode((node) => {
+      gridRef.current.api.forEachNode((node) => {
         if (node.data.status === 'Draft' || node.data.status === 'Updated') {
           node.setSelected(true)
         } else {
@@ -195,14 +200,19 @@ export const ChargingEquipment = () => {
   }
 
   const handleSelectAllValidated = () => {
+    // Ensure grid API is available
+    if (!gridRef.current?.api) {
+      return
+    }
+
     if (selectMode === 'validated') {
       // Deselect all
-      gridRef.current?.api?.deselectAll()
+      gridRef.current.api.deselectAll()
       setSelectMode(null)
     } else {
       // Select all Validated rows
       isProgrammaticSelection.current = true
-      gridRef.current?.api?.forEachNode((node) => {
+      gridRef.current.api.forEachNode((node) => {
         if (node.data.status === 'Validated') {
           node.setSelected(true)
         } else {
