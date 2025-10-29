@@ -133,13 +133,41 @@ def upgrade() -> None:
     )
 
     # Fix invalid date data in final_supply_equipment before migration
+
+    # First, identify and log records with clearly invalid dates (typos, wrong century, etc.)
+    # These need manual review and cannot be automatically fixed
+    op.execute("""
+        DO $$
+        DECLARE
+            invalid_record RECORD;
+        BEGIN
+            FOR invalid_record IN
+                SELECT final_supply_equipment_id, supply_from_date, supply_to_date
+                FROM final_supply_equipment
+                WHERE supply_from_date < '2000-01-01'::date
+                   OR supply_to_date < '2000-01-01'::date
+                   OR supply_from_date > CURRENT_DATE + interval '10 years'
+                   OR supply_to_date > CURRENT_DATE + interval '10 years'
+            LOOP
+                RAISE WARNING 'Invalid date found in final_supply_equipment_id=%: from=%, to=%',
+                    invalid_record.final_supply_equipment_id,
+                    invalid_record.supply_from_date,
+                    invalid_record.supply_to_date;
+            END LOOP;
+        END $$;
+    """)
+
     # Swap supply_from_date and supply_to_date where they are in wrong order
+    # Only swap dates that appear to be valid (reasonable date range)
+    # Using tuple syntax to ensure proper swap operation
     op.execute("""
         UPDATE final_supply_equipment
-        SET
-            supply_from_date = supply_to_date,
-            supply_to_date = supply_from_date
+        SET (supply_from_date, supply_to_date) = (supply_to_date, supply_from_date)
         WHERE supply_to_date < supply_from_date
+            AND supply_from_date >= '2000-01-01'::date
+            AND supply_to_date >= '2000-01-01'::date
+            AND supply_from_date <= CURRENT_DATE + interval '10 years'
+            AND supply_to_date <= CURRENT_DATE + interval '10 years'
     """)
 
     # Migrate data from final_supply_equipment to fse_compliance_reporting
