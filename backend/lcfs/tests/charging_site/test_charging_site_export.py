@@ -107,9 +107,9 @@ class TestChargingSiteExporter:
         exporter.repo.get_charging_sites_by_ids.return_value = mock_charging_sites
         
         data = await exporter.load_charging_site_data([1])
-        
+
         assert len(data) == 1
-        assert len(data[0]) == 10  # Should have 10 columns based on CS_EXPORT_COLUMNS
+        assert len(data[0]) == 11  # Should have 11 columns (added Allocating Organization)
         exporter.repo.get_charging_sites_by_ids.assert_called_once_with([1])
 
     @pytest.mark.anyio

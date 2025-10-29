@@ -155,11 +155,11 @@ class TestChargingSiteRepository:
         mock_db_session.refresh.return_value = None
         
         result = await charging_site_repo.update_charging_site(mock_site)
-        
+
         assert result == mock_site
         mock_db_session.merge.assert_called_once_with(mock_site)
         mock_db_session.flush.assert_called_once()
-        mock_db_session.refresh.assert_called_once_with(mock_site)
+        mock_db_session.refresh.assert_called_once_with(mock_site, ['allocating_organization', 'organization', 'status'])
 
     @pytest.mark.anyio
     async def test_delete_charging_site(self, charging_site_repo, mock_db_session):
