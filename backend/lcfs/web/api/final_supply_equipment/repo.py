@@ -752,13 +752,7 @@ class FinalSupplyEquipmentRepository:
         # Apply pagination
         offset = (pagination.page - 1) * pagination.size
         paginated_query = final_query.offset(offset).limit(pagination.size)
-        print("Generated SQL Query:")
-        from sqlalchemy.dialects import postgresql
-        print(
-            paginated_query.compile(
-                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-            )
-        )
+
         result = await self.db.execute(paginated_query)
         data = result.fetchall()
 

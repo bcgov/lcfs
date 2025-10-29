@@ -71,7 +71,7 @@ def upgrade() -> None:
     op.create_unique_constraint(
         "uix_compliance_reporting_period_by_org",
         "compliance_report_charging_equipment",
-        ["compliance_report_id", "charging_equipment_id", "organization_id"],
+        ["compliance_report_group_uuid", "charging_equipment_id", "organization_id"],
     )
     op.drop_column("compliance_report_charging_equipment", "date_of_supply_from")
     op.drop_column("compliance_report_charging_equipment", "date_of_supply_to")

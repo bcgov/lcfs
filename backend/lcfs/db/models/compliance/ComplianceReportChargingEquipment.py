@@ -31,7 +31,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
             name="uix_compliance_reporting_equipment_dates",
         ),
         UniqueConstraint(
-            "compliance_report_id",
+            "compliance_report_group_uuid",
             "charging_equipment_id",
             "organization_id",
             name="uix_compliance_reporting_period_by_org",
@@ -135,5 +135,5 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
     def supply_period_days(self):
         """Calculate the number of days in the supply period."""
         if self.supply_from_date and self.supply_to_date:
-            return (self.supply_to_date - self.date_of_supply_from).days + 1
+            return (self.supply_to_date - self.supply_from_date).days + 1
         return None
