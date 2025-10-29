@@ -224,7 +224,7 @@ export const orgDashboardRenderers = (
     return <PenaltyLog />
   }
   if (currentPath.includes('/supply-history')) {
-    return <SupplyHistory />
+    return <SupplyHistory organizationId={orgID} />
   }
   if (currentPath.includes('/compliance-tracking')) {
     return <ComplianceTracking />
