@@ -1,3 +1,11 @@
+{% if environment == 'dev' %}
+    {% set base_url = "https://lcfs-dev.apps.silver.devops.gov.bc.ca" %}
+{% elif environment == 'test' %}
+    {% set base_url = "https://lcfs-test.apps.silver.devops.gov.bc.ca" %}
+{% else %}
+    {# Default to production #}
+    {% set base_url = "https://lowcarbonfuels.gov.bc.ca" %}
+{% endif %}
 <!DOCTYPE html>
 <html>
 
