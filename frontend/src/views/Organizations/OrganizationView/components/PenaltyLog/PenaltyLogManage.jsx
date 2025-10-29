@@ -87,10 +87,25 @@ export const PenaltyLogManage = () => {
 
   const compliancePeriodOptions = useMemo(() => {
     if (!compliancePeriods) return []
-    return compliancePeriods.map((period) => ({
-      value: period.compliancePeriodId ?? period.compliance_period_id,
-      label: period.description
-    }))
+    const currentYear = new Date().getFullYear()
+
+    // Filter out future years and map to options
+    return compliancePeriods
+      .filter((period) => {
+        const description = period.description || ''
+        // Extract year from description (e.g., "2024" from "2024 Compliance Period")
+        const yearMatch = description.match(/(\d{4})/)
+        if (yearMatch) {
+          const year = parseInt(yearMatch[1], 10)
+          return year <= currentYear
+        }
+        // If we can't extract a year, include it to be safe
+        return true
+      })
+      .map((period) => ({
+        value: period.compliancePeriodId ?? period.compliance_period_id,
+        label: period.description
+      }))
   }, [compliancePeriods])
 
   const compliancePeriodLabelMap = useMemo(() => {

@@ -88,16 +88,27 @@ export const FinalSupplyEquipmentReporting = () => {
 
   // Initialize global selection from all data when component loads
   useEffect(() => {
-    if (data?.finalSupplyEquipments) {
-      const globalSelection = new Set()
-      data.finalSupplyEquipments.forEach((item) => {
-        if (item.complianceReportId === parseInt(complianceReportId)) {
-          globalSelection.add(item.chargingEquipmentId)
-        }
-      })
-      globalSelectionRef.current = globalSelection
-    }
-  }, [data])
+    if (!data?.finalSupplyEquipments) return
+
+    const globalSelection = new Set()
+    const currentReportId = parseInt(complianceReportId)
+    const currentGroupUuid = reportData?.report?.complianceReportGroupUuid
+
+    data.finalSupplyEquipments.forEach((item) => {
+      const belongsToCurrentReport = item.complianceReportId === currentReportId
+      const belongsToCurrentGroup =
+        item.complianceReportGroupUuid &&
+        (!currentGroupUuid ||
+          item.complianceReportGroupUuid === currentGroupUuid)
+
+      if (belongsToCurrentReport || belongsToCurrentGroup) {
+        globalSelection.add(item.chargingEquipmentId)
+      }
+    })
+
+    globalSelectionRef.current = globalSelection
+    setHasSelectedRows(globalSelection.size > 0)
+  }, [data, complianceReportId, reportData?.report?.complianceReportGroupUuid])
 
   // Set selected site option from cached pagination filters
   useEffect(() => {
@@ -167,7 +178,7 @@ export const FinalSupplyEquipmentReporting = () => {
       const newlySelected = selectedNodes.filter(
         (node) =>
           !previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
-          !node.data.fseComplianceReportingId
+          !node.data.chargingEquipmentComplianceId
       )
 
       // Find newly unselected rows (previously selected but now unselected)
@@ -177,9 +188,9 @@ export const FinalSupplyEquipmentReporting = () => {
         if (
           previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
           !currentSelection.has(node.data.chargingEquipmentId) &&
-          node.data.fseComplianceReportingId
+          node.data.chargingEquipmentComplianceId
         ) {
-          newlyUnselected.push(parseInt(node.data.fseComplianceReportingId))
+          newlyUnselected.push(parseInt(node.data.chargingEquipmentComplianceId))
           newlyUnselectedEquipmentIds.push(node.data.chargingEquipmentId)
         }
       })
@@ -191,11 +202,11 @@ export const FinalSupplyEquipmentReporting = () => {
             supplyFromDate: defaultFromDate,
             supplyToDate: defaultToDate,
             kwhUsage: node.data.kwhUsage,
-            notes: null,
+            complianceNotes: null,
             chargingEquipmentId: node.data.chargingEquipmentId,
             organizationId: reportData?.report?.organizationId,
             complianceReportId,
-            compliancePeriodId: reportData?.report?.compliancePeriodId
+            complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid
           }))
 
           const response = await saveRow(newRows)
@@ -207,11 +218,12 @@ export const FinalSupplyEquipmentReporting = () => {
               : response.data
             node.updateData({
               ...node.data,
-              fseComplianceReportingId:
-                createdData?.fseComplianceReportingId || createdData?.id,
+              chargingEquipmentComplianceId:
+                createdData?.chargingEquipmentComplianceId || createdData?.id,
               supplyFromDate: defaultFromDate,
               supplyToDate: defaultToDate,
               complianceReportId: parseInt(complianceReportId),
+              complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
               complianceNotes: null
             })
           })
@@ -230,11 +242,10 @@ export const FinalSupplyEquipmentReporting = () => {
               supplyFromDate: defaultFromDate,
               supplyToDate: defaultToDate,
               kwhUsage: node.data.kwhUsage,
-              notes: null,
+              complianceNotes: null,
               chargingEquipmentId: node.data.chargingEquipmentId,
               organizationId: reportData?.report?.organizationId,
-              complianceReportId: null,
-              compliancePeriodId: null
+              complianceReportId: null
             })
           })
         }
@@ -301,7 +312,8 @@ export const FinalSupplyEquipmentReporting = () => {
         maxDate,
         errors,
         warnings,
-        parseInt(complianceReportId)
+        parseInt(complianceReportId),
+        reportData?.report?.complianceReportGroupUuid
       ),
     [minDate, maxDate, errors, warnings, handleSelectionChanged]
   )
@@ -329,17 +341,17 @@ export const FinalSupplyEquipmentReporting = () => {
         supplyFromDate: params.data.supplyFromDate,
         supplyToDate: params.data.supplyToDate,
         kwhUsage: params.data.kwhUsage,
-        notes: params.data.complianceNotes,
-        fseComplianceReportingId: params.data.fseComplianceReportingId,
+        complianceNotes: params.data.complianceNotes,
+        chargingEquipmentComplianceId: params.data.chargingEquipmentComplianceId,
         chargingEquipmentId: params.data.chargingEquipmentId,
         complianceReportId: parseInt(complianceReportId),
-        compliancePeriodId: reportData?.report?.compliancePeriodId,
+        complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
         organizationId: reportData?.report?.organizationId
       }
 
       const responseData = await handleScheduleSave({
         alertRef: fseGridAlertRef,
-        idField: 'fseComplianceReportingId',
+        idField: 'chargingEquipmentComplianceId',
         labelPrefix: 'finalSupplyEquipment',
         params,
         setErrors,
@@ -395,7 +407,7 @@ export const FinalSupplyEquipmentReporting = () => {
     }
 
     const equipmentIds = selectedNodes
-      .filter((node) => node.data.fseComplianceReportingId)
+      .filter((node) => node.data.chargingEquipmentComplianceId)
       .map((node) => node.data.chargingEquipmentId)
 
     if (equipmentIds.length === 0) {
@@ -412,6 +424,7 @@ export const FinalSupplyEquipmentReporting = () => {
         supplyToDate: defaultToDate,
         equipmentIds,
         complianceReportId: parseInt(complianceReportId),
+        complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
         organizationId: reportData?.report?.organizationId
       })
       fseGridAlertRef.current?.triggerAlert({

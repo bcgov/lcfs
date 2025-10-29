@@ -469,7 +469,9 @@ describe('ChargingEquipment', () => {
       fireEvent.click(confirmButton)
     })
 
-    expect(mockChargingEquipment.submitEquipment).toHaveBeenCalledWith([1, 2])
+    // Only equipment with 'Draft' or 'Updated' status should be submitted
+    // Equipment ID 1 has status 'Draft', Equipment ID 2 has status 'Validated'
+    expect(mockChargingEquipment.submitEquipment).toHaveBeenCalledWith([1])
   })
 
   it('handles bulk decommission action', async () => {
@@ -504,7 +506,9 @@ describe('ChargingEquipment', () => {
       fireEvent.click(confirmButton)
     })
 
-    expect(mockChargingEquipment.decommissionEquipment).toHaveBeenCalledWith([1, 2])
+    // Only equipment with 'Validated' status should be decommissioned
+    // Equipment ID 1 has status 'Draft', Equipment ID 2 has status 'Validated'
+    expect(mockChargingEquipment.decommissionEquipment).toHaveBeenCalledWith([2])
   })
 
   it('handles clear filters action', async () => {
@@ -730,6 +734,82 @@ describe('ChargingEquipment', () => {
       // UI should remain stable
       expect(screen.getByText('Manage FSE')).toBeInTheDocument()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  // Tests for Select All functionality
+  describe('Select All Buttons', () => {
+    it('shows Select All Draft/Updated button for supplier users', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      expect(screen.getByText('Select All Draft/Updated')).toBeInTheDocument()
+      expect(screen.getByText('Select All Validated')).toBeInTheDocument()
+    })
+
+    it('handles Select All Draft/Updated button click when grid API is available', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      const selectAllButton = screen.getByText('Select All Draft/Updated')
+      fireEvent.click(selectAllButton)
+
+      // Button should work on first click when grid API is ready
+      await waitFor(() => {
+        expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      })
+    })
+
+    it('does not crash when Select All is clicked before grid API is ready', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      const selectAllButton = screen.getByText('Select All Draft/Updated')
+
+      // Clicking before grid is ready should not crash
+      expect(() => {
+        fireEvent.click(selectAllButton)
+      }).not.toThrow()
+    })
+
+    it('handles Select All Validated button click when grid API is available', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      const selectAllValidatedButton = screen.getByText('Select All Validated')
+      fireEvent.click(selectAllValidatedButton)
+
+      // Button should work on first click when grid API is ready
+      await waitFor(() => {
+        expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      })
+    })
+
+    it('does not crash when Select All Validated is clicked before grid API is ready', async () => {
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      const selectAllValidatedButton = screen.getByText('Select All Validated')
+
+      // Clicking before grid is ready should not crash
+      expect(() => {
+        fireEvent.click(selectAllValidatedButton)
+      }).not.toThrow()
     })
   })
 })

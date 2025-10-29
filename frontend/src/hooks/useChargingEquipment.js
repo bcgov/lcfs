@@ -174,11 +174,20 @@ export const useChargingEquipmentMetadata = () => {
     }
   })
 
+  const endUserTypesQuery = useQuery({
+    queryKey: ['charging-equipment-end-user-types'],
+    queryFn: async () => {
+      const response = await apiService.get(apiRoutes.chargingEquipment.endUserTypes)
+      return response.data
+    }
+  })
+
   return {
     statuses: statusesQuery.data,
     levels: levelsQuery.data,
     endUseTypes: endUseTypesQuery.data,
-    isLoading: statusesQuery.isLoading || levelsQuery.isLoading || endUseTypesQuery.isLoading
+    endUserTypes: endUserTypesQuery.data,
+    isLoading: statusesQuery.isLoading || levelsQuery.isLoading || endUseTypesQuery.isLoading || endUserTypesQuery.isLoading
   }
 }
 
