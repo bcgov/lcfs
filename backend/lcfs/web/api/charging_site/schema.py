@@ -28,6 +28,7 @@ class ChargingSiteSchema(BaseSchema):
     organization: Optional[OrganizationSchema] = None
     allocating_organization_id: Optional[int] = None
     allocating_organization: Optional[OrganizationSchema] = None
+    allocating_organization_name: Optional[str] = None
     status_id: int
     status: Optional[ChargingSiteStatusSchema] = None
 
@@ -60,6 +61,7 @@ class ChargingSiteCreateSchema(BaseSchema):
     charging_site_id: Optional[int] = None
     organization_id: int
     allocating_organization_id: Optional[int] = None
+    allocating_organization_name: Optional[str] = None
     status_id: Optional[int] = None
     current_status: Optional[str] = None
     site_name: str

@@ -64,10 +64,18 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         index=True,
     )
 
+    allocating_organization_id = Column(
+        Integer,
+        ForeignKey("organization.organization_id"),
+        nullable=True,
+        comment="FK to allocating organization (null if not matched)",
+        index=True,
+    )
+
     allocating_organization_name = Column(
         Text,
         nullable=True,
-        comment="Name of the allocating organization (text field for simplicity)",
+        comment="Name of the allocating organization (text field, used when ID cannot be matched)",
     )
 
     status_id = Column(
@@ -133,6 +141,12 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         foreign_keys=[organization_id],
         back_populates="charging_sites",
     )
+
+    allocating_organization = relationship(
+        "Organization",
+        foreign_keys=[allocating_organization_id],
+    )
+
     status = relationship("ChargingSiteStatus", back_populates="charging_sites")
 
     documents = relationship(
