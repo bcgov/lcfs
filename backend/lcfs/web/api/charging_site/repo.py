@@ -551,11 +551,10 @@ class ChargingSiteRepository:
     @repo_handler
     async def get_charging_site_options(self, organization):
         """
-        Get options for charging site dropdowns (statuses and intended users)
+        Get options for charging site dropdowns (statuses only)
         """
         statuses = await self.get_charging_site_statuses()
-        intended_users = await self.get_intended_user_types()
-        return [statuses, intended_users]
+        return [statuses]
 
     @repo_handler
     async def get_charging_site_status_by_name(

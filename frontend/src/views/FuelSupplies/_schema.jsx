@@ -831,7 +831,8 @@ export const fuelSupplyColDefs = (
 export const fuelSupplySummaryColDef = (
   isEarlyIssuance,
   showFuelTypeOther,
-  complianceYear
+  complianceYear,
+  optionsData
 ) => {
   const baseColumns = [
     {
@@ -1207,7 +1208,8 @@ export const changelogCommonColDefs = (
 export const changelogColDefs = (
   highlight = true,
   isEarlyIssuance = false,
-  complianceYear
+  complianceYear,
+  optionsData
 ) => {
   const baseColumns = [
     {
