@@ -3,10 +3,9 @@
 import structlog
 from typing import List, Optional, Dict, Any
 from fastapi import Depends
-from sqlalchemy import select, func, and_, or_, update, delete, exists
+from sqlalchemy import select, func, and_, or_, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy.exc import DatabaseError
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
@@ -19,10 +18,7 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.compliance.EndUserType import EndUserType
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.charging_equipment.schema import (
-    ChargingEquipmentFilterSchema,
-    ChargingEquipmentStatusEnum,
-)
+from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -86,7 +82,9 @@ class ChargingEquipmentRepository:
                 == Organization.organization_id,
             )
             .options(
-                joinedload(ChargingEquipment.charging_site).joinedload(ChargingSite.organization),
+                joinedload(ChargingEquipment.charging_site).joinedload(
+                    ChargingSite.organization
+                ),
                 joinedload(ChargingEquipment.status),
                 joinedload(ChargingEquipment.level_of_equipment),
                 joinedload(ChargingEquipment.allocating_organization),
@@ -278,7 +276,11 @@ class ChargingEquipmentRepository:
 
         # Update fields
         for field, value in equipment_data.items():
-            if field not in ["intended_use_ids", "intended_user_ids", "allocating_organization_name"]:
+            if field not in [
+                "intended_use_ids",
+                "intended_user_ids",
+                "allocating_organization_name",
+            ]:
                 setattr(equipment, field, value)
 
         # Handle allocating_organization_name -> organization_name mapping
@@ -299,7 +301,9 @@ class ChargingEquipmentRepository:
         if "intended_user_ids" in equipment_data:
             if equipment_data["intended_user_ids"] is not None:
                 intended_users_query = select(EndUserType).where(
-                    EndUserType.end_user_type_id.in_(equipment_data["intended_user_ids"])
+                    EndUserType.end_user_type_id.in_(
+                        equipment_data["intended_user_ids"]
+                    )
                 )
                 intended_users_result = await self.db.execute(intended_users_query)
                 intended_users = intended_users_result.scalars().all()
@@ -421,14 +425,22 @@ class ChargingEquipmentRepository:
     @repo_handler
     async def get_end_use_types(self) -> List[EndUseType]:
         """Get all end use types that are marked for intended use."""
-        query = select(EndUseType).where(EndUseType.intended_use == True).order_by(EndUseType.display_order)
+        query = (
+            select(EndUseType)
+            .where(EndUseType.intended_use == True)
+            .order_by(EndUseType.display_order)
+        )
         result = await self.db.execute(query)
         return result.scalars().all()
 
     @repo_handler
     async def get_end_user_types(self) -> List[EndUserType]:
         """Get all end user types that are marked for intended use."""
-        query = select(EndUserType).where(EndUserType.intended_use == True).order_by(EndUserType.end_user_type_id)
+        query = (
+            select(EndUserType)
+            .where(EndUserType.intended_use == True)
+            .order_by(EndUserType.end_user_type_id)
+        )
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -582,3 +594,75 @@ class ChargingEquipmentRepository:
         total_count = count_result.scalar()
 
         return equipment_list, total_count
+
+    @repo_handler
+    async def auto_validate_submitted_fse_for_report(
+        self, compliance_report_id: int
+    ) -> int:
+        """
+        Auto-validate all charging equipment (FSE) records in 'Submitted' status
+        that are associated with the given compliance report.
+
+        Args:
+            compliance_report_id: The ID of the compliance report being recommended
+
+        Returns:
+            int: The number of equipment records that were updated to Validated status
+        """
+        from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
+            ComplianceReportChargingEquipment,
+        )
+
+        # Get the status IDs for Submitted and Validated 
+        status_query = select(ChargingEquipmentStatus).where(
+            ChargingEquipmentStatus.status.in_(["Submitted", "Validated"])
+        )
+        status_result = await self.db.execute(status_query)
+        statuses = {
+            s.status: s.charging_equipment_status_id
+            for s in status_result.scalars().all()
+        }
+
+        submitted_status_id = statuses.get("Submitted")
+        validated_status_id = statuses.get("Validated")
+
+        if not submitted_status_id or not validated_status_id:
+            return 0
+
+        # Get all charging equipment IDs associated with this compliance report
+        # that are currently in Submitted status
+        equipment_query = (
+            select(ChargingEquipment.charging_equipment_id)
+            .join(
+                ComplianceReportChargingEquipment,
+                ChargingEquipment.charging_equipment_id
+                == ComplianceReportChargingEquipment.charging_equipment_id,
+            )
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.compliance_report_id
+                    == compliance_report_id,
+                    ChargingEquipment.status_id == submitted_status_id,
+                )
+            )
+        )
+
+        equipment_result = await self.db.execute(equipment_query)
+        equipment_ids = [row[0] for row in equipment_result.all()]
+
+        if not equipment_ids:
+            return 0
+
+        # Update the status to Validated
+        update_stmt = (
+            update(ChargingEquipment)
+            .where(ChargingEquipment.charging_equipment_id.in_(equipment_ids))
+            .values(status_id=validated_status_id)
+        )
+
+        result = await self.db.execute(update_stmt)
+        await self.db.flush()
+
+        updated_count = result.rowcount or 0
+
+        return updated_count
