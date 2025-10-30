@@ -94,9 +94,13 @@ export const HistoryCard = ({
     assessedMessage &&
     ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser)
 
+  const shouldShowRenewableAssesessmentLine = useMemo(
+    () => isCurrentAssessed && report?.summary?.totalRenewableFuelSupplied > 0,
+    [isCurrentAssessed, report?.summary?.totalRenewableFuelSupplied]
+  )
+
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
-
 
   /**
    * Helper: build the two assessment list items.
@@ -119,20 +123,22 @@ export const HistoryCard = ({
     // Default assessment lines for normal reports
     return (
       <>
-        <StyledListItem disablePadding>
-          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
-            <strong>
-              {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
-            </strong>
-            {t('report:assessmentLn1', {
-              name: report.organization.name,
-              hasMet:
-                report.summary.line11FossilDerivedBaseFuelTotal <= 0
-                  ? 'has met'
-                  : 'has not met'
-            })}
-          </ListItemText>
-        </StyledListItem>
+        {shouldShowRenewableAssesessmentLine && (
+          <StyledListItem disablePadding>
+            <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+              <strong>
+                {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+              </strong>
+              {t('report:assessmentLn1', {
+                name: report.organization.name,
+                hasMet:
+                  report.summary.line11FossilDerivedBaseFuelTotal <= 0
+                    ? 'has met'
+                    : 'has not met'
+              })}
+            </ListItemText>
+          </StyledListItem>
+        )}
         <StyledListItem disablePadding>
           <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
             <strong>

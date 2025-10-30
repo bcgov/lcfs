@@ -54,6 +54,7 @@ class SummarySchema(BaseSchema):
     is_locked: bool
     line_11_fossil_derived_base_fuel_total: float
     line_21_non_compliance_penalty_payable: float
+    total_renewable_fuel_supplied: float
 
     class Config:
         extra = "allow"
