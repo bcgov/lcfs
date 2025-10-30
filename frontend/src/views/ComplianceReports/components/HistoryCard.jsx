@@ -95,7 +95,9 @@ export const HistoryCard = ({
     ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser)
 
   const shouldShowRenewableAssesessmentLine = useMemo(
-    () => isCurrentAssessed && report?.summary?.totalRenewableFuelSupplied > 0,
+    () =>
+      (isCurrentAssessed && report?.summary?.totalRenewableFuelSupplied > 0) ||
+      !isCurrentAssessed,
     [isCurrentAssessed, report?.summary?.totalRenewableFuelSupplied]
   )
 
