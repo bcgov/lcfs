@@ -11,7 +11,6 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
-  CommonArrayRenderer: ({ value }) => <div>{value?.join(', ')}</div>,
   createStatusRenderer: () => ({ data }) => <span>{data?.status?.status}</span>
 }))
 
@@ -28,10 +27,6 @@ describe('ChargingSiteProfile', () => {
     streetAddress: '123 Main St',
     city: 'Vancouver',
     postalCode: 'V6B 1A1',
-    intendedUsers: [
-      { typeName: 'Public' },
-      { typeName: 'Fleet' }
-    ],
     notes: 'Test notes',
     organization: { name: 'Test Organization' }
   }
@@ -51,14 +46,8 @@ describe('ChargingSiteProfile', () => {
 
   it('displays address information', () => {
     render(<ChargingSiteProfile data={mockData} />, { wrapper })
-    
-    expect(screen.getByText('123 Main St, Vancouver, V6B 1A1')).toBeInTheDocument()
-  })
 
-  it('shows intended user types', () => {
-    render(<ChargingSiteProfile data={mockData} />, { wrapper })
-    
-    expect(screen.getByText('Public, Fleet')).toBeInTheDocument()
+    expect(screen.getByText('123 Main St, Vancouver, V6B 1A1')).toBeInTheDocument()
   })
 
   it('displays notes', () => {

@@ -1,17 +1,10 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { useGetChargingSiteById } from '@/hooks/useChargingSite'
-import { constructAddress } from '@/utils/constructAddress'
-import {
-  CommonArrayRenderer,
-  createStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
 
 export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
   const { t } = useTranslation('chargingSite')
