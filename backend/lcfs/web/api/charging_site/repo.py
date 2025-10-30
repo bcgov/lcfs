@@ -483,7 +483,7 @@ class ChargingSiteRepository:
         await self.db.flush()
         await self.db.refresh(
             charging_site,
-            ["allocating_organization", "organization", "status"]
+            ["allocating_organization", "organization", "status", "update_date"]
         )
         return charging_site
 
@@ -496,7 +496,7 @@ class ChargingSiteRepository:
         await self.db.flush()
         await self.db.refresh(
             merged_site,
-            ["allocating_organization", "organization", "status"]
+            ["allocating_organization", "organization", "status", "update_date"]
         )
         return merged_site
 
