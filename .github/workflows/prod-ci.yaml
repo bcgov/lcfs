@@ -1,9 +1,9 @@
 name: LCFS 1.0.0 Prod CI
 
 permissions:
-  contents: write
+  contents: write  # Required to push git tags
   actions: read
-  issues: read
+  issues: write  # Required to create approval issues
 
 on:
   push:
