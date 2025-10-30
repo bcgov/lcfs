@@ -216,29 +216,52 @@ export const chargingSiteColDefs = (
       editable: true
     },
     {
-      field: 'allocatingOrganization',
+      field: 'allocatingOrganizationName',
       headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
       valueGetter: (params) => {
-        if (!params.data?.allocatingOrganization) return null
+        // Return the organization name text or find in list for display
+        const storedName = params.data?.allocatingOrganizationName
+        if (!storedName) return null
+
+        // Find matching org in list to return object for autocomplete
+        const matchingOrg = allocationOrganizations?.find(
+          org => org.name === storedName
+        )
+
+        if (matchingOrg) {
+          return {
+            label: matchingOrg.name,
+            value: matchingOrg.name,
+            name: matchingOrg.name
+          }
+        }
+
+        // Return as simple text if not in list
         return {
-          ...params.data.allocatingOrganization,
-          label: params.data.allocatingOrganization.name,
-          value: params.data.allocatingOrganization.organizationId
+          label: storedName,
+          value: storedName,
+          name: storedName
         }
       },
       valueSetter: (params) => {
-        params.data.allocatingOrganization = params.newValue
-        params.data.allocatingOrganizationId = params.newValue?.organizationId || null
+        // Store only the organization name as text
+        if (params.newValue === '' || params.newValue === null) {
+          params.data.allocatingOrganizationName = null
+        } else if (typeof params.newValue === 'string') {
+          params.data.allocatingOrganizationName = params.newValue
+        } else {
+          params.data.allocatingOrganizationName = params.newValue?.name || params.newValue?.label || null
+        }
         return true
       },
-      valueFormatter: (params) => params.value?.name || '',
+      valueFormatter: (params) => params.value?.name || params.value || '',
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options:
           allocationOrganizations?.map((obj) => ({
-            ...obj,
             label: obj.name,
-            value: obj.organizationId
+            value: obj.name,
+            name: obj.name
           })) || [],
         multiple: false,
         openOnFocus: true,
@@ -463,10 +486,10 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
     headerName: i18n.t('chargingSite:columnLabels.postalCode')
   },
   {
-    field: 'allocatingOrganization',
+    field: 'allocatingOrganizationName',
     headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
     minWidth: 250,
-    valueGetter: (params) => params.data?.allocatingOrganization?.name || '',
+    valueGetter: (params) => params.data?.allocatingOrganizationName || '',
     filter: true,
     sortable: true
   },

@@ -1,11 +1,15 @@
+import uuid
 from lcfs.db.base import BaseModel, Auditable
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     Integer,
+    String,
     Text,
     ForeignKey,
     Double,
     DateTime,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -19,9 +23,26 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
     """
 
     __tablename__ = "compliance_report_charging_equipment"
-    __table_args__ = {
-        "comment": "Association between Charging Equipment, Compliance Report, and Organization with supply data"
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "charging_equipment_id",
+            "supply_from_date",
+            "supply_to_date",
+            name="uix_compliance_reporting_equipment_dates",
+        ),
+        UniqueConstraint(
+            "compliance_report_id",
+            "charging_equipment_id",
+            "organization_id",
+            name="uix_compliance_reporting_period_by_org",
+        ),
+        CheckConstraint(
+            "supply_to_date >= supply_from_date", name="check_supply_date_order"
+        ),
+        {
+            "comment": "Association between Charging Equipment, Compliance Report, and Organization with supply data"
+        },
+    )
 
     # Primary key
     charging_equipment_compliance_id = Column(
@@ -47,6 +68,12 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
         comment="Reference to compliance report",
         index=True,
     )
+    compliance_report_group_uuid = Column(
+        String(36),
+        nullable=False,
+        default=lambda: str(uuid.uuid4()),
+        comment="UUID that groups all versions of a compliance report",
+    )
 
     organization_id = Column(
         Integer,
@@ -57,13 +84,13 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
     )
 
     # Required data columns
-    date_of_supply_from = Column(
+    supply_from_date = Column(
         DateTime,
         nullable=False,
         comment="Start date of the supply period",
     )
 
-    date_of_supply_to = Column(
+    supply_to_date = Column(
         DateTime,
         nullable=False,
         comment="End date of the supply period",
@@ -100,13 +127,13 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
             f"charging_equipment_id={self.charging_equipment_id}, "
             f"compliance_report_id={self.compliance_report_id}, "
             f"organization_id={self.organization_id}, "
-            f"supply_period={self.date_of_supply_from} to {self.date_of_supply_to}"
+            f"supply_period={self.supply_from_date} to {self.supply_to_date}"
             f")>"
         )
 
     @property
     def supply_period_days(self):
         """Calculate the number of days in the supply period."""
-        if self.date_of_supply_from and self.date_of_supply_to:
-            return (self.date_of_supply_to - self.date_of_supply_from).days + 1
+        if self.supply_from_date and self.supply_to_date:
+            return (self.supply_to_date - self.supply_from_date).days + 1
         return None

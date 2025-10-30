@@ -64,12 +64,10 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         index=True,
     )
 
-    allocating_organization_id = Column(
-        Integer,
-        ForeignKey("organization.organization_id"),
+    allocating_organization_name = Column(
+        Text,
         nullable=True,
-        comment="Organization that the charging site's reporting obligation is allocated to",
-        index=True,
+        comment="Name of the allocating organization (text field for simplicity)",
     )
 
     status_id = Column(
@@ -134,10 +132,6 @@ class ChargingSite(BaseModel, Auditable, Versioning):
         "Organization",
         foreign_keys=[organization_id],
         back_populates="charging_sites",
-    )
-    allocating_organization = relationship(
-        "Organization",
-        foreign_keys=[allocating_organization_id],
     )
     status = relationship("ChargingSiteStatus", back_populates="charging_sites")
 

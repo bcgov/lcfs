@@ -17,35 +17,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Step 1: Add allocating_organization_id to charging_site table
+    # Step 1: Add allocating_organization_name to charging_site (text-only approach)
     op.add_column(
         "charging_site",
         sa.Column(
-            "allocating_organization_id",
-            sa.Integer(),
-            sa.ForeignKey("organization.organization_id", ondelete="SET NULL"),
+            "allocating_organization_name",
+            sa.Text(),
             nullable=True,
-            comment="Organization that the charging site's reporting obligation is allocated to",
+            comment="Name of the allocating organization (text field for simplicity)",
         ),
     )
 
-    # Step 2: Create index for the new foreign key
-    op.create_index(
-        "ix_charging_site_allocating_org_id",
-        "charging_site",
-        ["allocating_organization_id"],
-    )
-
-    # Step 3: Migrate data - copy first allocating_organization_id from equipment to site
-    # This uses a subquery to get the first allocating_organization_id for each site
+    # Step 2: Migrate organization_name data from charging_equipment before it's dropped
+    # Priority: use organization_name if present, otherwise lookup name from organization_id
     op.execute(
         """
         UPDATE charging_site cs
-        SET allocating_organization_id = (
-            SELECT ce.allocating_organization_id
+        SET allocating_organization_name = (
+            SELECT COALESCE(
+                ce.organization_name,
+                o.name
+            )
             FROM charging_equipment ce
+            LEFT JOIN organization o ON ce.allocating_organization_id = o.organization_id
             WHERE ce.charging_site_id = cs.charging_site_id
-              AND ce.allocating_organization_id IS NOT NULL
+              AND (ce.organization_name IS NOT NULL OR ce.allocating_organization_id IS NOT NULL)
             ORDER BY ce.charging_equipment_id
             LIMIT 1
         )
@@ -53,17 +49,17 @@ def upgrade() -> None:
             SELECT 1
             FROM charging_equipment ce
             WHERE ce.charging_site_id = cs.charging_site_id
-              AND ce.allocating_organization_id IS NOT NULL
+              AND (ce.organization_name IS NOT NULL OR ce.allocating_organization_id IS NOT NULL)
         )
         """
     )
 
-    # Step 4: Drop indexes for charging_equipment.allocating_organization_id (if exists)
+    # Step 3: Drop indexes for charging_equipment.allocating_organization_id (if exists)
     op.execute("""
         DROP INDEX IF EXISTS ix_charging_equipment_allocating_org_id
     """)
 
-    # Step 5: Drop allocating_organization_id column from charging_equipment
+    # Step 4: Drop allocating_organization_id column from charging_equipment
     # Drop the foreign key constraint if it exists (handle different naming conventions)
     op.execute("""
         DO $$
@@ -86,10 +82,10 @@ def upgrade() -> None:
     """)
     op.drop_column("charging_equipment", "allocating_organization_id")
 
-    # Step 6: Drop organization_name column from charging_equipment (related field)
+    # Step 5: Drop organization_name column from charging_equipment (related field)
     op.drop_column("charging_equipment", "organization_name")
 
-    # Step 7: Drop indexes for charging_site_intended_user_association (if exist)
+    # Step 6: Drop indexes for charging_site_intended_user_association (if exist)
     op.execute("""
         DROP INDEX IF EXISTS ix_cs_intended_user_site_id
     """)
@@ -97,7 +93,7 @@ def upgrade() -> None:
         DROP INDEX IF EXISTS ix_cs_intended_user_user_type_id
     """)
 
-    # Step 8: Drop charging_site_intended_user_association table
+    # Step 7: Drop charging_site_intended_user_association table
     op.drop_table("charging_site_intended_user_association")
 
 
@@ -164,12 +160,12 @@ def downgrade() -> None:
         ["allocating_organization_id"],
     )
 
-    # Step 6: Migrate data back - copy allocating_organization_id from site to all its equipment
+    # Step 6: Migrate organization_name data back from site to equipment (text field only)
     op.execute(
         """
         UPDATE charging_equipment ce
-        SET allocating_organization_id = (
-            SELECT cs.allocating_organization_id
+        SET organization_name = (
+            SELECT cs.allocating_organization_name
             FROM charging_site cs
             WHERE cs.charging_site_id = ce.charging_site_id
         )
@@ -177,26 +173,10 @@ def downgrade() -> None:
             SELECT 1
             FROM charging_site cs
             WHERE cs.charging_site_id = ce.charging_site_id
-              AND cs.allocating_organization_id IS NOT NULL
+              AND cs.allocating_organization_name IS NOT NULL
         )
         """
     )
 
-    # Step 7: Drop index for charging_site.allocating_organization_id
-    op.drop_index("ix_charging_site_allocating_org_id", table_name="charging_site")
-
-    # Step 8: Drop allocating_organization_id from charging_site
-    # Drop the foreign key constraint if it exists (handle different naming conventions)
-    op.execute("""
-        DO $$
-        BEGIN
-            IF EXISTS (
-                SELECT 1 FROM pg_constraint
-                WHERE conname = 'charging_site_allocating_organization_id_fkey'
-                  AND conrelid = 'charging_site'::regclass
-            ) THEN
-                ALTER TABLE charging_site DROP CONSTRAINT charging_site_allocating_organization_id_fkey;
-            END IF;
-        END $$;
-    """)
-    op.drop_column("charging_site", "allocating_organization_id")
+    # Step 7: Drop allocating_organization_name from charging_site
+    op.drop_column("charging_site", "allocating_organization_name")
