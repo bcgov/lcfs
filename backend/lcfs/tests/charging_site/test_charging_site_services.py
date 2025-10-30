@@ -129,6 +129,10 @@ class TestChargingSiteService:
         mock_org.organization_id = 1
         mock_org.name = "Test Org"
 
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+
         mock_status = MagicMock()
         mock_status.charging_site_status_id = 1
         mock_status.status = "Draft"
@@ -137,6 +141,8 @@ class TestChargingSiteService:
         mock_site.charging_site_id = 1
         mock_site.organization_id = 1
         mock_site.organization = mock_org
+        mock_site.allocating_organization = mock_allocating_org
+        mock_site.allocating_organization_name = "Allocating Org"
         mock_site.status_id = 1
         mock_site.status = mock_status
         mock_site.version = 1
@@ -217,6 +223,10 @@ class TestChargingSiteService:
         mock_org.organization_id = 1
         mock_org.name = "Test Org"
 
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+
         mock_status_obj = MagicMock()
         mock_status_obj.charging_site_status_id = 1
         mock_status_obj.status = "Draft"
@@ -225,6 +235,8 @@ class TestChargingSiteService:
         mock_retrieved_site.charging_site_id = 1
         mock_retrieved_site.organization_id = 1
         mock_retrieved_site.organization = mock_org
+        mock_retrieved_site.allocating_organization = mock_allocating_org
+        mock_retrieved_site.allocating_organization_name = "Allocating Org"
         mock_retrieved_site.status_id = 1
         mock_retrieved_site.status = mock_status_obj
         mock_retrieved_site.version = 1
@@ -313,6 +325,10 @@ class TestChargingSiteService:
         mock_org.organization_id = 1
         mock_org.name = "Test Org"
 
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+
         mock_status_obj = MagicMock()
         mock_status_obj.charging_site_status_id = 1
         mock_status_obj.status = "Draft"
@@ -321,6 +337,8 @@ class TestChargingSiteService:
         mock_updated_site.charging_site_id = 1
         mock_updated_site.organization_id = 1
         mock_updated_site.organization = mock_org
+        mock_updated_site.allocating_organization = mock_allocating_org
+        mock_updated_site.allocating_organization_name = "Allocating Org"
         mock_updated_site.status_id = 1
         mock_updated_site.status = mock_status_obj
         mock_updated_site.version = 1
@@ -460,6 +478,10 @@ class TestChargingSiteService:
         mock_org.organization_id = 1
         mock_org.name = "Test Org"
 
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+
         mock_status = MagicMock()
         mock_status.charging_site_status_id = 1
         mock_status.status = "Draft"
@@ -468,6 +490,8 @@ class TestChargingSiteService:
         mock_site.charging_site_id = 1
         mock_site.organization_id = 1
         mock_site.organization = mock_org
+        mock_site.allocating_organization = mock_allocating_org
+        mock_site.allocating_organization_name = "Allocating Org"
         mock_site.status_id = 1
         mock_site.status = mock_status
         mock_site.version = 1
@@ -503,6 +527,10 @@ class TestChargingSiteService:
         mock_org.organization_id = 1
         mock_org.name = "Test Org"
 
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+
         mock_status = MagicMock()
         mock_status.charging_site_status_id = 1
         mock_status.status = "Draft"
@@ -511,6 +539,8 @@ class TestChargingSiteService:
         mock_site.charging_site_id = 1
         mock_site.organization_id = 1
         mock_site.organization = mock_org
+        mock_site.allocating_organization = mock_allocating_org
+        mock_site.allocating_organization_name = "Allocating Org"
         mock_site.status_id = 1
         mock_site.status = mock_status
         mock_site.version = 1
@@ -645,6 +675,8 @@ class TestChargingSiteService:
         mock_charging_site = MagicMock()
         mock_charging_site.charging_site_id = 1
         mock_charging_site.organization_id = 1
+        mock_charging_site.allocating_organization_name = "Allocating Org"
+        mock_charging_site.allocatingOrganizationName = "Allocating Org"  # camelCase version
         mock_charging_site.status_id = 1
         mock_charging_site.current_status = "Draft"
         mock_charging_site.currentStatus = "Draft"  # camelCase version
@@ -710,6 +742,10 @@ class TestChargingSiteService:
         mock_org.organization_id = 1
         mock_org.name = "Test Org"
 
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+
         mock_status = MagicMock()
         mock_status.charging_site_status_id = 1
         mock_status.status = "Draft"
@@ -718,6 +754,8 @@ class TestChargingSiteService:
         mock_site.charging_site_id = 1
         mock_site.organization_id = 1
         mock_site.organization = mock_org
+        mock_site.allocating_organization = mock_allocating_org
+        mock_site.allocating_organization_name = "Allocating Org"
         mock_site.status_id = 1
         mock_site.status = mock_status
         mock_site.version = 1

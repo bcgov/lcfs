@@ -172,12 +172,11 @@ describe('Comments Component', () => {
   })
 
   it('calls getValues with commentField in useEffect', async () => {
-    await act(async () => {
-      renderComponent({ commentField: 'testField', isEditable: true })
-      await new Promise(resolve => setTimeout(resolve, 10))
+    renderComponent({ commentField: 'testField', isEditable: true })
+
+    await waitFor(() => {
+      expect(mockGetValues).toHaveBeenCalledWith('testField')
     })
-    
-    expect(mockGetValues).toHaveBeenCalledWith('testField')
   })
 
   it('toggles expansion state when clicked', async () => {

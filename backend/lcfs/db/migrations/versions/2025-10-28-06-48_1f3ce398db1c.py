@@ -1,7 +1,7 @@
-"""Fix Charging Equipment Compliance association table
+"""Fix Charging Equipment Compliance association table and preserve data
 
 Revision ID: 1f3ce398db1c
-Revises: add_ce_intended_users
+Revises: adee8bc4a278
 Create Date: 2025-10-28 06:48:03.332799
 
 """
@@ -13,12 +13,19 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "1f3ce398db1c"
-down_revision = "add_ce_intended_users"
+down_revision = "adee8bc4a278"  # Fixed: was "add_ce_intended_users" which doesn't exist
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    # Note: organization_name preservation is now handled in migration adee8bc4a278
+    # The allocating_organization_name field is added to charging_site in that migration
+
+    # =========================================================================
+    # PART 1: Drop and recreate fse_compliance_reporting table
+    # =========================================================================
+
     op.drop_index(
         op.f("ix_fse_compliance_reporting_charging_equipment_id"),
         table_name="fse_compliance_reporting",
@@ -36,6 +43,11 @@ def upgrade() -> None:
         table_name="fse_compliance_reporting",
     )
     op.drop_table("fse_compliance_reporting")
+
+    # =========================================================================
+    # PART 2: Add new columns to compliance_report_charging_equipment
+    # =========================================================================
+
     op.add_column(
         "compliance_report_charging_equipment",
         sa.Column(
@@ -63,6 +75,11 @@ def upgrade() -> None:
             comment="UUID that groups all versions of a compliance report",
         ),
     )
+
+    # =========================================================================
+    # PART 3: Add constraints
+    # =========================================================================
+
     op.create_unique_constraint(
         "uix_compliance_reporting_equipment_dates",
         "compliance_report_charging_equipment",
@@ -71,11 +88,33 @@ def upgrade() -> None:
     op.create_unique_constraint(
         "uix_compliance_reporting_period_by_org",
         "compliance_report_charging_equipment",
-        ["compliance_report_group_uuid", "charging_equipment_id", "organization_id"],
+        ["compliance_report_id", "charging_equipment_id", "organization_id"],
     )
+
+    # Drop old columns
     op.drop_column("compliance_report_charging_equipment", "date_of_supply_from")
     op.drop_column("compliance_report_charging_equipment", "date_of_supply_to")
-    # Migrate data from final_supply_equipment to compliance_report_charging_equipment
+
+    # =========================================================================
+    # PART 4: Fix malformed date data
+    # =========================================================================
+
+    # Fix supply dates for wrongly entered data where from_date > to_date
+    op.execute(
+        """
+        UPDATE final_supply_equipment fse
+        SET
+            supply_from_date = make_date(2024, EXTRACT(MONTH FROM fse.supply_from_date)::int, EXTRACT(DAY FROM fse.supply_from_date)::int),
+            supply_to_date   = make_date(2024, EXTRACT(MONTH FROM fse.supply_to_date)::int, EXTRACT(DAY FROM fse.supply_to_date)::int)
+        WHERE fse.supply_from_date > fse.supply_to_date;
+        """
+    )
+
+    # =========================================================================
+    # PART 5: Migrate FSE data to compliance_report_charging_equipment
+    # =========================================================================
+
+    # Migrate core FSE data
     op.execute(
         """
         INSERT INTO compliance_report_charging_equipment (
@@ -92,7 +131,7 @@ def upgrade() -> None:
             create_user,
             update_user
         )
-        SELECT 
+        SELECT
             fse.supply_from_date,
             fse.supply_to_date,
             COALESCE(fse.kwh_usage, 0)::integer,
@@ -109,11 +148,100 @@ def upgrade() -> None:
         JOIN compliance_report cr ON fse.compliance_report_id = cr.compliance_report_id
         JOIN charging_equipment ce ON ce.charging_equipment_id = fse.final_supply_equipment_id
         WHERE fse.kwh_usage IS NOT NULL
-    """
+        ON CONFLICT DO NOTHING;
+        """
+    )
+
+    # =========================================================================
+    # PART 6: Migrate Intended Uses associations from FSE to ChargingEquipment
+    # =========================================================================
+
+    print("Migrating intended uses associations from FSE to ChargingEquipment...")
+
+    # Copy intended uses from final_supply_equipment to charging_equipment
+    op.execute(
+        """
+        INSERT INTO charging_equipment_intended_use_association (
+            charging_equipment_id,
+            end_use_type_id
+        )
+        SELECT DISTINCT
+            fse.final_supply_equipment_id,
+            fsiu.end_use_type_id
+        FROM final_supply_intended_use_association fsiu
+        JOIN final_supply_equipment fse
+            ON fse.final_supply_equipment_id = fsiu.final_supply_equipment_id
+        WHERE fse.final_supply_equipment_id IN (
+            SELECT charging_equipment_id FROM charging_equipment
+        )
+        ON CONFLICT DO NOTHING;
+        """
+    )
+
+    # =========================================================================
+    # PART 7: Migrate Intended Users associations from FSE to ChargingEquipment
+    # =========================================================================
+
+    print("Migrating intended users associations from FSE to ChargingEquipment...")
+
+    # Copy intended users from final_supply_equipment to charging_equipment
+    op.execute(
+        """
+        INSERT INTO charging_equipment_intended_user_association (
+            charging_equipment_id,
+            end_user_type_id
+        )
+        SELECT DISTINCT
+            fse.final_supply_equipment_id,
+            fsiu.end_user_type_id
+        FROM final_supply_intended_user_association fsiu
+        JOIN final_supply_equipment fse
+            ON fse.final_supply_equipment_id = fsiu.final_supply_equipment_id
+        WHERE fse.final_supply_equipment_id IN (
+            SELECT charging_equipment_id FROM charging_equipment
+        )
+        ON CONFLICT DO NOTHING;
+        """
+    )
+
+    # =========================================================================
+    # PART 8: Data validation and logging
+    # =========================================================================
+
+    # Log statistics about the migration
+    op.execute(
+        """
+        DO $$
+        DECLARE
+            fse_count INTEGER;
+            crce_count INTEGER;
+            use_count INTEGER;
+            user_count INTEGER;
+        BEGIN
+            SELECT COUNT(*) INTO fse_count FROM final_supply_equipment;
+            SELECT COUNT(*) INTO crce_count FROM compliance_report_charging_equipment;
+            SELECT COUNT(*) INTO use_count FROM charging_equipment_intended_use_association;
+            SELECT COUNT(*) INTO user_count FROM charging_equipment_intended_user_association;
+
+            RAISE NOTICE 'Migration complete:';
+            RAISE NOTICE '  - Final Supply Equipment records: %', fse_count;
+            RAISE NOTICE '  - Compliance Report Charging Equipment records: %', crce_count;
+            RAISE NOTICE '  - Charging Equipment Intended Use associations: %', use_count;
+            RAISE NOTICE '  - Charging Equipment Intended User associations: %', user_count;
+        END $$;
+        """
     )
 
 
 def downgrade() -> None:
+    """
+    WARNING: This downgrade is partially destructive.
+    - Intended uses/users associations cannot be fully restored
+    """
+
+    # Note: allocating_organization_name is handled in migration adee8bc4a278
+
+    # Add back old columns
     op.add_column(
         "compliance_report_charging_equipment",
         sa.Column(
@@ -132,6 +260,8 @@ def downgrade() -> None:
             comment="Start date of the supply period",
         ),
     )
+
+    # Drop constraints
     op.drop_constraint(
         "uix_compliance_reporting_period_by_org",
         "compliance_report_charging_equipment",
@@ -142,11 +272,15 @@ def downgrade() -> None:
         "compliance_report_charging_equipment",
         type_="unique",
     )
+
+    # Drop new columns
     op.drop_column("compliance_report_charging_equipment", "supply_to_date")
     op.drop_column("compliance_report_charging_equipment", "supply_from_date")
     op.drop_column(
         "compliance_report_charging_equipment", "compliance_report_group_uuid"
     )
+
+    # Recreate fse_compliance_reporting table
     op.create_table(
         "fse_compliance_reporting",
         sa.Column(
@@ -249,6 +383,8 @@ def downgrade() -> None:
         ),
         comment="FSE compliance reporting",
     )
+
+    # Recreate indexes
     op.create_index(
         op.f("ix_fse_compliance_reporting_organization_id"),
         "fse_compliance_reporting",
