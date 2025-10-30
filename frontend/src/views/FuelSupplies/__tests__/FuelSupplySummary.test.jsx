@@ -54,7 +54,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 
 // Mock the schema
 vi.mock('@/views/FuelSupplies/_schema.jsx', () => ({
-  fuelSupplySummaryColDef: (isEarlyIssuance, showFuelTypeOther) => [
+  fuelSupplySummaryColDef: (isEarlyIssuance, showFuelTypeOther, complianceYear, optionsData) => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' }
   ]
@@ -73,6 +73,16 @@ vi.mock('@/constants/schedules.js', () => ({
     filters: [],
     sortOrders: []
   }
+}))
+
+// Mock useFuelSupplyOptions hook
+vi.mock('@/hooks/useFuelSupply', () => ({
+  useFuelSupplyOptions: () => ({
+    data: {
+      fuelTypes: []
+    },
+    isLoading: false
+  })
 }))
 
 describe('FuelSupplySummary', () => {
