@@ -493,7 +493,6 @@ jobs:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          VITEST_REPORTER: "blob"
           VITEST_POOL_THREADS: "4"
 
       - name: Debug test failure details

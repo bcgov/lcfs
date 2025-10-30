@@ -350,7 +350,12 @@ export const ChargingSiteFSEGrid = ({
           <BCGridViewer
             gridRef={gridRef}
             alertRef={alertRef}
-            columnDefs={chargingEquipmentColDefs(t, isIDIR)}
+            columnDefs={chargingEquipmentColDefs(t, isIDIR, {
+              enableSelection: false,
+              showIntendedUsers: true,
+              showLocationFields: true,
+              showNotes: true
+            })}
             queryData={equipmentQuery}
             dataKey="equipments"
             getRowId={(params) => String(params.data.chargingEquipmentId)}
