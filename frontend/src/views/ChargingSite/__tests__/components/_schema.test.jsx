@@ -38,10 +38,15 @@ describe('_schema', () => {
   const mockErrors = {}
   const mockWarnings = {}
   const mockT = (key) => key
+  const mockAllocationOrganizations = [
+    { organization_id: 1, name: 'Org 1' },
+    { organization_id: 2, name: 'Org 2' }
+  ]
 
   describe('chargingSiteColDefs', () => {
     it('returns column definitions array', () => {
       const colDefs = chargingSiteColDefs(
+        mockAllocationOrganizations,
         mockErrors,
         mockWarnings,
         true
@@ -53,6 +58,7 @@ describe('_schema', () => {
 
     it('includes required fields', () => {
       const colDefs = chargingSiteColDefs(
+        mockAllocationOrganizations,
         mockErrors,
         mockWarnings,
         true
@@ -69,6 +75,7 @@ describe('_schema', () => {
 
     it('configures editable fields correctly', () => {
       const colDefs = chargingSiteColDefs(
+        mockAllocationOrganizations,
         mockErrors,
         mockWarnings,
         true

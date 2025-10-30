@@ -33,10 +33,7 @@ from lcfs.db.models.compliance.ChargingEquipment import (
     ChargingEquipment,
     charging_equipment_intended_use_association,
 )
-from lcfs.db.models.compliance.ChargingSite import (
-    ChargingSite,
-    charging_site_intended_user_association,
-)
+from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
@@ -542,22 +539,6 @@ class FinalSupplyEquipmentRepository:
             .scalar_subquery()
         )
 
-        # Subquery for intended_users (from charging site)
-        intended_users_subquery = (
-            select(func.array_agg(EndUserType.type_name).label("intended_users"))
-            .select_from(charging_site_intended_user_association)
-            .join(
-                EndUserType,
-                charging_site_intended_user_association.c.end_user_type_id
-                == EndUserType.end_user_type_id,
-            )
-            .where(
-                charging_site_intended_user_association.c.charging_site_id
-                == ChargingSite.charging_site_id
-            )
-            .correlate(ChargingSite)
-            .scalar_subquery()
-        )
 
         common_conditions = [
             ChargingSite.organization_id == organization_id,
@@ -570,7 +551,6 @@ class FinalSupplyEquipmentRepository:
                 ChargingEquipment.serial_number,
                 ChargingEquipment.manufacturer,
                 ChargingEquipment.model,
-                ChargingEquipment.organization_name,
                 (
                     ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
                 ).label("registration_number"),
@@ -592,7 +572,6 @@ class FinalSupplyEquipmentRepository:
                 LevelOfEquipment.name.label("level_of_equipment"),
                 ChargingEquipment.ports,
                 intended_uses_subquery.label("intended_uses"),
-                intended_users_subquery.label("intended_users"),
                 literal(source_priority).label("source_priority"),
             )
             .select_from(ChargingEquipment)

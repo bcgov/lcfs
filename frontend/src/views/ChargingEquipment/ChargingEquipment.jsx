@@ -21,7 +21,18 @@ import {
   useSearchParams
 } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { defaultSortModel, chargingEquipmentColDefs } from './_schema'
+import { chargingEquipmentColDefs } from '@/views/ChargingSite/components/_schema'
+
+const defaultSortModel = [{ field: 'updated_date', direction: 'desc' }]
+
+const defaultColDef = {
+  editable: false,
+  resizable: true,
+  filter: 'agTextColumnFilter',
+  floatingFilter: false,
+  sortable: true,
+  minWidth: 100
+}
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
@@ -528,7 +539,12 @@ export const ChargingEquipment = () => {
               <BCGridViewer
                 gridRef={gridRef}
                 alertRef={alertRef}
-                columnDefs={chargingEquipmentColDefs(isIDIR)}
+                columnDefs={chargingEquipmentColDefs(t, isIDIR, {
+                  enableSelection: true,
+                  showDateColumns: true,
+                  showIntendedUsers: true,
+                  showOrganizationColumn: isIDIR
+                })}
                 defaultColDef={defaultColDef}
                 getRowId={getRowId}
                 overlayLoadingTemplate="Loading FSE data..."
