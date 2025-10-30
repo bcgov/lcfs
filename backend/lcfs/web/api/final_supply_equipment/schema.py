@@ -85,7 +85,7 @@ class FinalSupplyEquipmentsSchema(BaseSchema):
 
 
 class FSEReportingSchema(BaseSchema):
-    fse_compliance_reporting_id: Optional[int] = None
+    charging_equipment_compliance_id: Optional[int] = None
     charging_equipment_id: int
     charging_site_id: int
     serial_number: str
@@ -105,7 +105,7 @@ class FSEReportingSchema(BaseSchema):
     compliance_notes: Optional[str] = None
     equipment_notes: Optional[str] = None
     compliance_report_id: Optional[int] = None
-    compliance_period_id: Optional[int] = None
+    compliance_report_group_uuid: Optional[str] = None
     organization_name: Optional[str] = None
     registration_number: Optional[str] = None
     intended_uses: Optional[List[str]] = []
@@ -114,20 +114,21 @@ class FSEReportingSchema(BaseSchema):
 
 
 class FSEReportingBaseSchema(BaseSchema):
-    fse_compliance_reporting_id: Optional[int] = None
+    charging_equipment_compliance_id: Optional[int] = None
     supply_from_date: date
     supply_to_date: date
     kwh_usage: Optional[float] = 0
-    notes: Optional[str] = None
+    compliance_notes: Optional[str] = None
     charging_equipment_id: int
     organization_id: int
     compliance_report_id: int
-    compliance_period_id: int
+    compliance_report_group_uuid: Optional[str] = None
 
 
 class FSEReportingBatchSchema(BaseSchema):
     fse_reports: Union[List[FSEReportingBaseSchema], FSEReportingBaseSchema] = []
     compliance_report_id: int
+    compliance_report_group_uuid: Optional[str] = None
     organization_id: int
 
 
@@ -136,10 +137,12 @@ class FSEReportingDefaultDates(BaseSchema):
     supply_to_date: Optional[date] = None
     equipment_ids: List[int] = []
     compliance_report_id: int
+    compliance_report_group_uuid: Optional[str] = None
     organization_id: int
 
 
 class FSEReportingBatchDeleteSchema(BaseSchema):
     reporting_ids: List[int]
     compliance_report_id: int
+    compliance_report_group_uuid: Optional[str] = None
     organization_id: int

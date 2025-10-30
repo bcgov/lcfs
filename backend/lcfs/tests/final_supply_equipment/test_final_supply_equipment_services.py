@@ -380,7 +380,7 @@ async def test_copy_fse_between_reports(
 
 @pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_success(
-    service, mock_repo
+    service, mock_repo, mock_comp_report_repo
 ):
     """Test successful retrieval of paginated FSE reporting list"""
     mock_data = [
@@ -391,6 +391,7 @@ async def test_get_fse_reporting_list_paginated_success(
             "supply_from_date": "2024-01-01",
             "supply_to_date": "2024-12-31",
             "compliance_report_id": 10,
+            "compliance_report_group_uuid": "uuid-1234",
             "charging_site_id": 1,
             "site_name": "Test Site",
             "city": "Test City",
@@ -401,6 +402,9 @@ async def test_get_fse_reporting_list_paginated_success(
         }
     ]
     mock_repo.get_fse_reporting_list_paginated.return_value = (mock_data, 1)
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        compliance_report_group_uuid="uuid-1234"
+    )
     
     pagination = MagicMock(page=1, size=10, filters=[])
     result = await service.get_fse_reporting_list_paginated(1, pagination, 10, "current")
@@ -408,7 +412,7 @@ async def test_get_fse_reporting_list_paginated_success(
     assert "finalSupplyEquipments" in result
     assert "pagination" in result
     assert result["pagination"].total == 1
-    mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(1, pagination, 10, "current")
+    mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(1, pagination, "uuid-1234", "current")
 
 
 @pytest.mark.anyio

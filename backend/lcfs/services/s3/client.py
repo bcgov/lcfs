@@ -382,11 +382,20 @@ class DocumentService:
         association_table, column_name = association_info
 
         # Construct the SQL statement dynamically
-        stmt = (
-            select(Document)
-            .join(association_table)
-            .where(getattr(association_table.c, column_name) == parent_id)
-        )
+        stmt = select(Document)
+        if parent_type == "compliance_report":
+            parent_ids = (
+                await self.compliance_report_repo.get_related_compliance_report_ids(
+                    parent_id
+                )
+            )
+            stmt = stmt.join(association_table).where(
+                getattr(association_table.c, column_name).in_(parent_ids)
+            ).distinct(Document.document_id)
+        else:
+            stmt = stmt.join(association_table).where(
+                getattr(association_table.c, column_name) == parent_id
+            )
 
         # Execute the statement and fetch results
         result = await self.db.execute(stmt)

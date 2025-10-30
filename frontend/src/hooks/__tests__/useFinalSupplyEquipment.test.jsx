@@ -446,8 +446,8 @@ describe('useFinalSupplyEquipment', () => {
     it('should fetch FSE reporting list successfully', async () => {
       const mockData = {
         fseReports: [
-          { id: 1, fseComplianceReportingId: 1 },
-          { id: 2, fseComplianceReportingId: 2 }
+          { id: 1, chargingEquipmentComplianceId: 1 },
+          { id: 2, chargingEquipmentComplianceId: 2 }
         ],
         pagination: { total: 2, page: 1 }
       }
@@ -529,7 +529,7 @@ describe('useFinalSupplyEquipment', () => {
       })
 
       const reportData = {
-        fseComplianceReportingId: 1,
+        chargingEquipmentComplianceId: 1,
         quantity: 100
       }
 
@@ -554,8 +554,8 @@ describe('useFinalSupplyEquipment', () => {
       })
 
       const batchData = [
-        { fseComplianceReportingId: 1, quantity: 100 },
-        { fseComplianceReportingId: 2, quantity: 200 }
+        { chargingEquipmentComplianceId: 1, quantity: 100 },
+        { chargingEquipmentComplianceId: 2, quantity: 200 }
       ]
 
       result.current.mutate(batchData)
@@ -582,7 +582,7 @@ describe('useFinalSupplyEquipment', () => {
         wrapper: createWrapper()
       })
 
-      result.current.mutate({ fseComplianceReportingId: 1 })
+      result.current.mutate({ chargingEquipmentComplianceId: 1 })
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
