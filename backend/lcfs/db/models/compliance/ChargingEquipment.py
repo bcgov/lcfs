@@ -152,10 +152,6 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         back_populates="charging_equipment",
         cascade="all, delete-orphan",
     )
-    fse_compliance_reports = relationship(
-        "FSEComplianceReporting",
-        back_populates="charging_equipment",
-    )
 
     @property
     def registration_number(self):

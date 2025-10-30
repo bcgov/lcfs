@@ -31,7 +31,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
             name="uix_compliance_reporting_equipment_dates",
         ),
         UniqueConstraint(
-            "compliance_report_id",
+            "compliance_report_group_uuid",
             "charging_equipment_id",
             "organization_id",
             name="uix_compliance_reporting_period_by_org",

@@ -492,12 +492,12 @@ export const useSaveFSEReporting = (
         })
       }
 
-      const fseComplianceReportingId = data.fseComplianceReportingId || null
+      const chargingEquipmentComplianceId = data.chargingEquipmentComplianceId || null
 
       // UPDATE operation (has ID and not deleted)
-      if (fseComplianceReportingId) {
+      if (chargingEquipmentComplianceId) {
         return await client.put(
-          `/final-supply-equipments/reporting/${fseComplianceReportingId}`,
+          `/final-supply-equipments/reporting/${chargingEquipmentComplianceId}`,
           { ...data }
         )
       }

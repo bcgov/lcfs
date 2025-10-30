@@ -258,23 +258,6 @@ class ComplianceReportServices:
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
 
-        # Copy over FSE
-        await self.final_supply_equipment_service.copy_to_report(
-            existing_report_id,
-            new_report.compliance_report_id,
-            current_report.organization_id,
-        )
-
-        # Copy documents from the original report
-        await self.document_service.copy_documents(
-            existing_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            existing_report_id, new_report.compliance_report_id
-        )
-
         # Release the transaction from the current report being superseded
         await self._release_superseded_transaction(current_report)
 
@@ -388,23 +371,6 @@ class ComplianceReportServices:
 
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
-
-        # Copy over FSE
-        await self.final_supply_equipment_service.copy_to_report(
-            original_report_id,
-            new_report.compliance_report_id,
-            current_report.organization_id,
-        )
-
-        # Copy documents from the original report
-        await self.document_service.copy_documents(
-            original_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            original_report_id, new_report.compliance_report_id
-        )
 
         return ComplianceReportBaseSchema.model_validate(new_report)
 
@@ -523,23 +489,6 @@ class ComplianceReportServices:
         # 8. Create the history record for the *new* supplemental report
         # The user here is the government analyst who initiated the creation
         await self.repo.add_compliance_report_history(new_report, user)
-
-        # 9. Copy over Final Supply Equipment (FSE) from the current report
-        await self.final_supply_equipment_service.copy_to_report(
-            existing_report_id,
-            new_report.compliance_report_id,
-            current_report.organization_id,
-        )
-
-        # Copy documents from the original report
-        await self.document_service.copy_documents(
-            existing_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            existing_report_id, new_report.compliance_report_id
-        )
 
         # Release the transaction from the current report being superseded
         await self._release_superseded_transaction(current_report)
