@@ -244,17 +244,14 @@ class TestChargingSiteRepository:
     async def test_get_charging_site_options(self, charging_site_repo, mock_db_session):
         """Test getting charging site options"""
         mock_statuses = [MagicMock(spec=ChargingSiteStatus)]
-        mock_users = [MagicMock(spec=EndUserType)]
-        
+
         # Mock the individual method calls
         charging_site_repo.get_charging_site_statuses = AsyncMock(return_value=mock_statuses)
-        charging_site_repo.get_intended_user_types = AsyncMock(return_value=mock_users)
-        
+
         result = await charging_site_repo.get_charging_site_options(MagicMock())
-        
-        assert len(result) == 2
+
+        assert len(result) == 1
         assert result[0] == mock_statuses
-        assert result[1] == mock_users
 
     @pytest.mark.anyio
     async def test_get_site_names_by_organization(self, charging_site_repo, mock_db_session):
