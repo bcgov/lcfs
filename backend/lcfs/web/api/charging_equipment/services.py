@@ -83,11 +83,6 @@ class ChargingEquipmentServices:
                 registration_number=equipment.registration_number
                 or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
                 version=equipment.version,
-                allocating_organization_name=(
-                    equipment.organization_name
-                    if equipment.organization_name
-                    else (equipment.allocating_organization.name if equipment.allocating_organization else None)
-                ),
                 serial_number=equipment.serial_number,
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
@@ -152,12 +147,6 @@ class ChargingEquipmentServices:
             status=equipment.status.status,
             equipment_number=equipment.equipment_number,
             registration_number=equipment.registration_number,
-            allocating_organization_id=equipment.allocating_organization_id,
-            allocating_organization_name=(
-                equipment.organization_name
-                if equipment.organization_name
-                else (equipment.allocating_organization.name if equipment.allocating_organization else None)
-            ),
             serial_number=equipment.serial_number,
             manufacturer=equipment.manufacturer,
             model=equipment.model,
@@ -677,11 +666,6 @@ class ChargingEquipmentServices:
                 "registration_number": equipment.registration_number
                 or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
                 "version": equipment.version,
-                "allocating_organization_name": (
-                    equipment.allocating_organization.name
-                    if equipment.allocating_organization
-                    else None
-                ),
                 "serial_number": equipment.serial_number,
                 "manufacturer": equipment.manufacturer,
                 "model": equipment.model,
