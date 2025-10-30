@@ -72,28 +72,6 @@ export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
             {[streetAddress, city, postalCode].join(', ')}
           </BCTypography>
 
-          <BCTypography
-            variant="body4"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: 1,
-              '& > div': {
-                margin: 0,
-                width: { xs: '200px', md: '350px' }
-              }
-            }}
-          >
-            <BCTypography variant="label">
-              {t('cardLabels.intendedUserTypes')}:
-            </BCTypography>{' '}
-            <CommonArrayRenderer
-              value={data?.intendedUsers?.map((i) => i.typeName)}
-              disableLink={true}
-            />
-          </BCTypography>
-
           <BCTypography variant="body4">
             <BCTypography variant="label">
               {t('cardLabels.notes')}:
