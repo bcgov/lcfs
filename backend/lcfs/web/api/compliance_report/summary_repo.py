@@ -128,6 +128,56 @@ class ComplianceReportSummaryRepository:
                 # Skip non-numeric line numbers
                 continue
 
+    async def _validate_lines_7_and_9_mutual_exclusivity(
+        self,
+        summary: ComplianceReportSummaryUpdateSchema,
+    ) -> None:
+        """
+        Validate that Lines 7 and 9 are mutually exclusive - only one can have non-zero values per column.
+
+        Args:
+            summary: The summary update data
+
+        Raises:
+            ServiceException: If both Line 7 and Line 9 have non-zero values in the same column
+        """
+        line_7_values = {}
+        line_9_values = {}
+
+        # Extract values from Lines 7 and 9
+        for row in summary.renewable_fuel_target_summary:
+            try:
+                line_number = int(row.line)
+                if line_number == 7:
+                    line_7_values = {
+                        "gasoline": float(getattr(row, "gasoline", 0) or 0),
+                        "diesel": float(getattr(row, "diesel", 0) or 0),
+                        "jet_fuel": float(getattr(row, "jet_fuel", 0) or 0),
+                    }
+                elif line_number == 9:
+                    line_9_values = {
+                        "gasoline": float(getattr(row, "gasoline", 0) or 0),
+                        "diesel": float(getattr(row, "diesel", 0) or 0),
+                        "jet_fuel": float(getattr(row, "jet_fuel", 0) or 0),
+                    }
+            except (ValueError, TypeError):
+                # Skip non-numeric line numbers
+                continue
+
+        # Check mutual exclusivity for each fuel type
+        for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
+            line_7_value = line_7_values.get(fuel_type, 0)
+            line_9_value = line_9_values.get(fuel_type, 0)
+
+            # Both values are non-zero (allowing small floating point tolerance)
+            if abs(line_7_value) > 0.01 and abs(line_9_value) > 0.01:
+                fuel_display = fuel_type.replace("_", " ").title()
+                raise ServiceException(
+                    f"Lines 7 and 9 cannot both contain non-zero values in the same column. "
+                    f"For {fuel_display}: Line 7 has {line_7_value}, Line 9 has {line_9_value}. "
+                    f"Please set one of these values to 0 to ensure mutual exclusivity."
+                )
+
     @repo_handler
     async def add_compliance_report_summary(
         self, summary: ComplianceReportSummary
@@ -178,6 +228,9 @@ class ComplianceReportSummaryRepository:
 
         # Validate Lines 7 and 9 for 2025+ reports
         await self._validate_lines_7_and_9_locked(summary, compliance_report)
+
+        # Validate mutual exclusivity between Lines 7 and 9
+        await self._validate_lines_7_and_9_mutual_exclusivity(summary)
 
         existing_summary = await self.get_summary_by_report_id(
             summary.compliance_report_id
