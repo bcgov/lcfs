@@ -60,7 +60,12 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
   }
 }
 
-export const chargingSiteColDefs = (errors, warnings, gridReady) => {
+export const chargingSiteColDefs = (
+  allocationOrganizations,
+  errors,
+  warnings,
+  gridReady
+) => {
   return [
     validation,
     actions((params) => ({
@@ -211,6 +216,103 @@ export const chargingSiteColDefs = (errors, warnings, gridReady) => {
       editable: true
     },
     {
+      field: 'allocatingOrganization',
+      headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
+      valueGetter: (params) => {
+        // Hybrid approach: prefer ID, fallback to name
+        const storedId = params.data?.allocatingOrganizationId
+        const storedName = params.data?.allocatingOrganizationName
+
+        // If we have an ID, find the org by ID
+        if (storedId) {
+          const matchingOrg = allocationOrganizations?.find(
+            org => org.organizationId === storedId
+          )
+          if (matchingOrg) {
+            return {
+              label: matchingOrg.name,
+              value: matchingOrg.organizationId,
+              organizationId: matchingOrg.organizationId,
+              name: matchingOrg.name
+            }
+          }
+        }
+
+        // If we have a name but no ID, try to find by name
+        if (storedName) {
+          const matchingOrg = allocationOrganizations?.find(
+            org => org.name === storedName
+          )
+          if (matchingOrg) {
+            return {
+              label: matchingOrg.name,
+              value: matchingOrg.organizationId,
+              organizationId: matchingOrg.organizationId,
+              name: matchingOrg.name
+            }
+          }
+
+          // Return as simple text if not in list
+          return {
+            label: storedName,
+            value: null,
+            organizationId: null,
+            name: storedName
+          }
+        }
+
+        return null
+      },
+      valueSetter: (params) => {
+        // Store both the ID and name (hybrid approach)
+        if (params.newValue === '' || params.newValue === null) {
+          params.data.allocatingOrganizationId = null
+          params.data.allocatingOrganizationName = null
+        } else if (typeof params.newValue === 'string') {
+          // Custom text input - try to match to an org
+          const matchingOrg = allocationOrganizations?.find(
+            org => org.name.toLowerCase() === params.newValue.toLowerCase()
+          )
+          if (matchingOrg) {
+            params.data.allocatingOrganizationId = matchingOrg.organizationId
+            params.data.allocatingOrganizationName = matchingOrg.name
+          } else {
+            // No match, store as name only
+            params.data.allocatingOrganizationId = null
+            params.data.allocatingOrganizationName = params.newValue
+          }
+        } else {
+          // Object from autocomplete
+          params.data.allocatingOrganizationId = params.newValue?.organizationId || null
+          params.data.allocatingOrganizationName = params.newValue?.name || params.newValue?.label || null
+        }
+        return true
+      },
+      valueFormatter: (params) => params.value?.name || params.value || '',
+      cellEditor: AutocompleteCellEditor,
+      cellEditorParams: {
+        options:
+          allocationOrganizations?.map((obj) => ({
+            label: obj.name,
+            value: obj.organizationId,
+            organizationId: obj.organizationId,
+            name: obj.name
+          })) || [],
+        multiple: false,
+        openOnFocus: true,
+        returnObject: true
+      },
+      tooltipValueGetter: (p) =>
+        !allocationOrganizations || allocationOrganizations.length === 0
+          ? 'No allocation agreements found. You must first enter an allocation agreement in your compliance report to use this field.'
+          : 'Allocating organizations tied to your allocation agreements. If an organization isn\'t listed you must first enter an allocation agreement in your compliance report.',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      suppressKeyboardEvent,
+      minWidth: 315,
+      editable: allocationOrganizations && allocationOrganizations.length > 0
+    },
+    {
       field: 'notes',
       headerName: i18n.t('chargingSite:columnLabels.notes'),
       cellEditor: 'agTextCellEditor',
@@ -220,129 +322,244 @@ export const chargingSiteColDefs = (errors, warnings, gridReady) => {
   ]
 }
 
-export const chargingEquipmentColDefs = (t, isIDIR = false) => {
-  return [
-    {
-      field: 'status',
-      minWidth: 175,
-      filter: true,
-      headerName: t('fseColumnLabels.status'),
+export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
+  const {
+    enableSelection = false,
+    showDateColumns = false,
+    showIntendedUsers = false,
+    showLocationFields = false,
+    showPorts = false,
+    showFuelMeasurement = false,
+    showNotes = false,
+    showOrganizationColumn = false
+  } = options
+
+  const cols = []
+
+  // Add checkbox selection column if enabled (for list view)
+  if (enableSelection) {
+    cols.push({
+      headerName: '',
+      field: '__select__',
+      width: 52,
+      minWidth: 52,
+      maxWidth: 60,
+      pinned: 'left',
+      lockPinned: true,
+      filter: false,
+      sortable: false,
+      suppressHeaderMenuButton: true,
+      checkboxSelection: (params) => {
+        const status = params.data?.status
+        return status !== 'Decommissioned' && status !== 'Submitted'
+      },
+      headerCheckboxSelection: true,
+      headerCheckboxSelectionFilteredOnly: true,
+      suppressSizeToFit: true
+    })
+  }
+
+  // Status column
+  cols.push({
+    field: 'status',
+    minWidth: 175,
+    filter: true,
+    headerName: t('fseColumnLabels.status'),
+    valueGetter: (params) => {
+      return params.data?.status?.status || params.data?.status || ''
+    },
+    cellRenderer: createStatusRenderer(
+      {
+        Draft: 'info',
+        Updated: 'info',
+        Submitted: 'warning',
+        Validated: 'success',
+        Decommissioned: enableSelection ? 'smoky' : 'error'
+      },
+      { statusField: 'status', replaceUnderscores: false }
+    ),
+    cellClass: 'vertical-middle',
+    floatingFilterComponent: enableSelection ? undefined : BCSelectFloatingFilter,
+    floatingFilterComponentParams: enableSelection ? undefined : {
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useChargingEquipmentStatuses
+    },
+    suppressFloatingFilterButton: enableSelection ? undefined : true,
+    filterParams: enableSelection ? {
+      values: ['Draft', 'Updated', 'Submitted', 'Validated', 'Decommissioned']
+    } : {
+      textMatcher: () => {
+        return true
+      }
+    }
+  })
+
+  // Site Name column
+  cols.push({
+    field: 'siteName',
+    headerName: enableSelection ? 'Site Name' : t('fseColumnLabels.siteName'),
+    sortable: false,
+    flex: enableSelection ? 1 : undefined,
+    minWidth: enableSelection ? 200 : 310,
+    valueGetter: (params) => params.data?.chargingSite?.siteName || params.data?.site_name || ''
+  })
+
+  // Organization column for IDIR users in list view
+  if (showOrganizationColumn) {
+    cols.push({
+      field: 'organization_name',
+      headerName: 'Organization',
+      flex: 1,
+      minWidth: 200
+    })
+  }
+
+  // Registration Number
+  cols.push({
+    field: 'registrationNumber',
+    headerName: enableSelection ? 'Registration #' : t('fseColumnLabels.registrationNumber'),
+    sortable: false,
+    width: enableSelection ? 150 : undefined,
+    minWidth: enableSelection ? undefined : 180
+  })
+
+  // Version
+  cols.push({
+    field: 'version',
+    headerName: enableSelection ? 'Version' : t('fseColumnLabels.version'),
+    width: enableSelection ? 90 : undefined,
+    type: enableSelection ? 'numericColumn' : undefined
+  })
+
+  // Serial Number
+  cols.push({
+    field: 'serialNumber',
+    headerName: enableSelection ? 'Serial #' : t('fseColumnLabels.serialNumber'),
+    minWidth: enableSelection ? undefined : 220,
+    width: enableSelection ? 150 : undefined
+  })
+
+  // Manufacturer
+  cols.push({
+    field: 'manufacturer',
+    headerName: enableSelection ? 'Manufacturer' : t('fseColumnLabels.manufacturer'),
+    minWidth: enableSelection ? undefined : 320,
+    width: enableSelection ? 150 : undefined
+  })
+
+  // Model
+  cols.push({
+    field: 'model',
+    headerName: enableSelection ? 'Model' : t('fseColumnLabels.model'),
+    minWidth: enableSelection ? undefined : 220,
+    width: enableSelection ? 150 : undefined
+  })
+
+  // Level of Equipment
+  cols.push({
+    field: 'levelOfEquipment',
+    headerName: enableSelection ? 'Level of Equipment' : t('fseColumnLabels.levelOfEquipment'),
+    minWidth: enableSelection ? undefined : 400,
+    width: enableSelection ? 180 : undefined,
+    sortable: false,
+    valueGetter: (params) => {
+      return params.data?.levelOfEquipment?.name || params.data?.level_of_equipment_name || ''
+    }
+  })
+
+  // Intended Uses
+  cols.push({
+    field: enableSelection ? 'intended_uses' : 'intendedUse',
+    headerName: enableSelection ? 'Intended Uses' : t('fseColumnLabels.intendedUse'),
+    minWidth: enableSelection ? undefined : 380,
+    width: enableSelection ? 200 : undefined,
+    sortable: false,
+    valueGetter: (params) => params.data?.intendedUseTypes?.map((i) => i.type),
+    valueFormatter: enableSelection ? (params) => {
+      if (!params.value || !Array.isArray(params.value)) return ''
+      return params.value.map(use => use.type || use).join(', ')
+    } : undefined,
+    cellRenderer: enableSelection ? undefined : CommonArrayRenderer,
+    cellRendererParams: enableSelection ? undefined : { disableLink: true }
+  })
+
+  // Intended Users
+  if (showIntendedUsers) {
+    cols.push({
+      field: enableSelection ? 'intended_users' : 'intendedUsers',
+      headerName: enableSelection ? 'Intended Users' : t('fseColumnLabels.intendedUsers'),
+      minWidth: enableSelection ? undefined : 380,
+      width: enableSelection ? 200 : undefined,
+      sortable: false,
       valueGetter: (params) => {
-        return params.data?.status?.status || ''
+        // Handle both data structures: intendedUserTypes (site view) and intended_users (list view)
+        return params.data?.intendedUserTypes?.map((i) => i.typeName || i.type_name) ||
+               params.data?.intended_users?.map((i) => i.typeName || i.type_name)
       },
-      cellRenderer: createStatusRenderer(
-        {
-          Draft: 'info',
-          Updated: 'info',
-          Submitted: 'warning',
-          Validated: 'success',
-          Decommissioned: 'error'
-        },
-        { statusField: 'status', replaceUnderscores: false }
-      ),
-      cellClass: 'vertical-middle',
-      floatingFilterComponent: BCSelectFloatingFilter,
-      floatingFilterComponentParams: {
-        valueKey: 'status',
-        labelKey: 'status',
-        optionsQuery: useChargingEquipmentStatuses
+      valueFormatter: enableSelection ? (params) => {
+        if (!params.value || !Array.isArray(params.value)) return ''
+        return params.value.join(', ')
+      } : undefined,
+      cellRenderer: enableSelection ? undefined : CommonArrayRenderer,
+      cellRendererParams: enableSelection ? undefined : { disableLink: true }
+    })
+  }
+
+  // Date columns (only for list view)
+  if (showDateColumns) {
+    cols.push(
+      {
+        field: 'created_date',
+        headerName: 'Created',
+        width: 120,
+        type: 'dateColumn',
+        valueFormatter: (params) => {
+          if (!params.value) return ''
+          return new Date(params.value).toLocaleDateString()
+        }
       },
-      suppressFloatingFilterButton: true,
-      filterParams: {
-        textMatcher: () => {
-          return true
+      {
+        field: 'updated_date',
+        headerName: 'Last Updated',
+        width: 120,
+        type: 'dateColumn',
+        valueFormatter: (params) => {
+          if (!params.value) return ''
+          return new Date(params.value).toLocaleDateString()
         }
       }
-    },
-    {
-      field: 'siteName',
-      headerName: t('fseColumnLabels.siteName'),
-      sortable: false,
-      minWidth: 310,
-      valueGetter: (params) => params.data?.chargingSite?.siteName || ''
-    },
-    {
-      field: 'registrationNumber',
-      sortable: false,
-      minWidth: 180,
-      headerName: t('fseColumnLabels.registrationNumber')
-    },
-    {
-      field: 'version',
-      headerName: t('fseColumnLabels.version')
-    },
-    {
-      field: 'allocatingOrganization',
-      minWidth: 400,
-      headerName: t('fseColumnLabels.allocatingOrg'),
-      valueGetter: (params) => {
-        return (
-          params.data?.allocatingOrganization?.name ||
-          params.data?.organizationName
-        )
-      }
-    },
-    {
-      field: 'serialNumber',
-      minWidth: 220,
-      headerName: t('fseColumnLabels.serialNumber')
-    },
-    {
-      field: 'manufacturer',
-      minWidth: 320,
-      headerName: t('fseColumnLabels.manufacturer')
-    },
-    {
-      field: 'model',
-      minWidth: 220,
-      headerName: t('fseColumnLabels.model')
-    },
-    {
-      field: 'levelOfEquipment',
-      minWidth: 400,
-      sortable: false,
-      valueGetter: (params) => {
-        return params.data?.levelOfEquipment?.name || ''
+    )
+  }
+
+  // Location fields (only for site view)
+  if (showLocationFields) {
+    cols.push(
+      {
+        field: 'latitude',
+        sortable: false,
+        headerName: t('fseColumnLabels.latitude'),
+        valueGetter: (params) => params.data?.chargingSite?.latitude || ''
       },
-      headerName: t('fseColumnLabels.levelOfEquipment')
-    },
-    {
-      field: 'ports',
-      headerName: t('fseColumnLabels.ports')
-    },
-    {
-      field: 'fuelMeasurementType',
-      minWidth: 250,
-      headerName: t('fseColumnLabels.fuelMeasurementType')
-    },
-    {
-      field: 'intendedUse',
-      headerName: t('fseColumnLabels.intendedUse'),
-      sortable: false,
-      minWidth: 380,
-      valueGetter: (params) =>
-        params.data?.intendedUseTypes?.map((i) => i.type),
-      cellRenderer: CommonArrayRenderer,
-      cellRendererParams: { disableLink: true }
-    },
-    {
-      field: 'latitude',
-      sortable: false,
-      headerName: t('fseColumnLabels.latitude'),
-      valueGetter: (params) => params.data?.chargingSite?.latitude || ''
-    },
-    {
-      field: 'longitude',
-      sortable: false,
-      headerName: t('fseColumnLabels.longitude'),
-      valueGetter: (params) => params.data?.chargingSite?.longitude || ''
-    },
-    {
+      {
+        field: 'longitude',
+        sortable: false,
+        headerName: t('fseColumnLabels.longitude'),
+        valueGetter: (params) => params.data?.chargingSite?.longitude || ''
+      }
+    )
+  }
+
+  // Notes (only for site view)
+  if (showNotes) {
+    cols.push({
       field: 'notes',
       minWidth: 600,
       headerName: t('fseColumnLabels.notes')
-    }
-  ]
+    })
+  }
+
+  return cols
 }
 
 export const defaultColDef = {
@@ -419,12 +636,19 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
     headerName: i18n.t('chargingSite:columnLabels.postalCode')
   },
   {
-    field: 'intendedUsers',
-    headerName: i18n.t('chargingSite:columnLabels.intendedUsers'),
-    minWidth: 315,
-    valueGetter: (params) =>
-      params.data?.intendedUsers?.map((u) => u.typeName) || [],
-    cellRenderer: CommonArrayRenderer
+    field: 'allocatingOrganization',
+    headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
+    minWidth: 250,
+    valueGetter: (params) => {
+      // Hybrid approach: prefer the org object name, fallback to text name
+      return (
+        params.data?.allocatingOrganization?.name ||
+        params.data?.allocatingOrganizationName ||
+        ''
+      )
+    },
+    filter: true,
+    sortable: true
   },
   {
     field: 'actions',

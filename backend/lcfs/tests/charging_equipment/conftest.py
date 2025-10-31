@@ -75,7 +75,6 @@ def valid_charging_equipment(
         charging_site_id=1,
         status_id=1,
         equipment_number="001",
-        allocating_organization_id=1,
         serial_number="ABC123456",
         manufacturer="Tesla",
         model="Supercharger V3",

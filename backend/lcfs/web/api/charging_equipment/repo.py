@@ -43,7 +43,6 @@ class ChargingEquipmentRepository:
                 selectinload(ChargingEquipment.charging_site),
                 selectinload(ChargingEquipment.status),
                 selectinload(ChargingEquipment.level_of_equipment),
-                selectinload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
                 selectinload(ChargingEquipment.intended_users),
             )
@@ -80,16 +79,10 @@ class ChargingEquipmentRepository:
                 ChargingEquipment.level_of_equipment_id
                 == LevelOfEquipment.level_of_equipment_id,
             )
-            .outerjoin(
-                Organization,
-                ChargingEquipment.allocating_organization_id
-                == Organization.organization_id,
-            )
             .options(
                 joinedload(ChargingEquipment.charging_site).joinedload(ChargingSite.organization),
                 joinedload(ChargingEquipment.status),
                 joinedload(ChargingEquipment.level_of_equipment),
-                joinedload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
                 selectinload(ChargingEquipment.intended_users),
             )
@@ -173,7 +166,6 @@ class ChargingEquipmentRepository:
                 joinedload(ChargingEquipment.charging_site),
                 joinedload(ChargingEquipment.status),
                 joinedload(ChargingEquipment.level_of_equipment),
-                joinedload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
                 selectinload(ChargingEquipment.intended_users),
             )
@@ -215,7 +207,6 @@ class ChargingEquipmentRepository:
         charging_equipment = ChargingEquipment(
             charging_site_id=equipment_data["charging_site_id"],
             status_id=draft_status.charging_equipment_status_id,
-            organization_name=equipment_data.get("allocating_organization_name"),
             serial_number=equipment_data["serial_number"],
             manufacturer=equipment_data["manufacturer"],
             model=equipment_data.get("model"),
@@ -278,12 +269,8 @@ class ChargingEquipmentRepository:
 
         # Update fields
         for field, value in equipment_data.items():
-            if field not in ["intended_use_ids", "intended_user_ids", "allocating_organization_name"]:
+            if field not in ["intended_use_ids", "intended_user_ids"]:
                 setattr(equipment, field, value)
-
-        # Handle allocating_organization_name -> organization_name mapping
-        if "allocating_organization_name" in equipment_data:
-            equipment.organization_name = equipment_data["allocating_organization_name"]
 
         # Update intended uses if provided
         if "intended_use_ids" in equipment_data:
@@ -563,7 +550,6 @@ class ChargingEquipmentRepository:
                 selectinload(ChargingEquipment.charging_site),
                 selectinload(ChargingEquipment.status),
                 selectinload(ChargingEquipment.level_of_equipment),
-                selectinload(ChargingEquipment.allocating_organization),
                 selectinload(ChargingEquipment.intended_uses),
                 selectinload(ChargingEquipment.intended_users),
             )

@@ -23,7 +23,8 @@ CS_EXPORT_COLUMNS = [
     SpreadsheetColumn("Postal Code", "text"),
     SpreadsheetColumn("Latitude", "decimal6"),
     SpreadsheetColumn("Longitude", "decimal6"),
-    SpreadsheetColumn("Status (default)", "text"),
+    SpreadsheetColumn("Allocating Organization", "text"),
+    SpreadsheetColumn("Status", "text"),
     SpreadsheetColumn("Notes", "text"),
 ]
 
@@ -67,6 +68,7 @@ class ChargingSiteExporter:
                 "",  # Postal Code
                 "",  # Latitude
                 "",  # Longitude
+                "",  # Allocating Organization
                 "Draft",  # Status (non-editable default)
                 "",  # Notes
             ]
@@ -95,6 +97,14 @@ class ChargingSiteExporter:
 
     async def _create_validators(self, organization, builder):
         validators: List[DataValidation] = []
+        table_options = await self.repo.get_charging_site_options(organization)
+
+        # Get allocating organization options (from allocation agreements)
+        allocating_org_options = await self.repo.get_allocation_agreement_organizations(
+            organization.organization_id
+        )
+        allocating_org_names = [org.name for org in allocating_org_options]
+
         # Add informational prompts for protected/auto-generated columns
 
         # Organization column - protected/defaulted
@@ -149,6 +159,34 @@ class ChargingSiteExporter:
         site_name_validator.add("C2:C10000")  # Column C (Site Name)
         validators.append(site_name_validator)
 
+        # Create dropdown for allocating organization
+        if allocating_org_names:
+            range_end = len(allocating_org_names)
+            allocating_org_validator = DataValidation(
+                type="list",
+                formula1=f"'{VALIDATION_SHEETNAME}'!$I$2:$I${range_end + 1}",
+                showErrorMessage=False,
+                showInputMessage=True,
+                promptTitle="Allocating Organization",
+                prompt="Allocating organizations tied to your allocation agreements. If an organization isn't listed you must first enter an allocation agreement in your compliance report.",
+                allow_blank=True,
+            )
+            allocating_org_validator.add("I2:I10000")  # Column I (Allocating Organization)
+            validators.append(allocating_org_validator)
+        else:
+            # If no allocation agreements, show informational message
+            no_alloc_validator = DataValidation(
+                type="textLength",
+                operator="greaterThan",
+                formula1=0,
+                showInputMessage=True,
+                promptTitle="Allocating Organization",
+                prompt="No allocation agreements found. You must first enter an allocation agreement in your compliance report to use this field.",
+                allow_blank=True,
+            )
+            no_alloc_validator.add("I2:I10000")  # Column I (Allocating Organization)
+            validators.append(no_alloc_validator)
+
         # Decimal validators for coordinates
         decimal_validator = DataValidation(
             type="decimal",
@@ -180,6 +218,7 @@ class ChargingSiteExporter:
             [],
             [],
             [],
+            allocating_org_names,  # Allocating Organization options
             [],  # Status (protected)
             [],
         ]
@@ -226,7 +265,16 @@ class ChargingSiteExporter:
                     charging_site.postal_code,
                     charging_site.latitude,
                     charging_site.longitude,
-                    (charging_site.status.status if charging_site.status else "Draft"),
+                    (
+                        charging_site.allocating_organization.name
+                        if charging_site.allocating_organization
+                        else ""
+                    ),
+                    (
+                        charging_site.status.status
+                        if charging_site.status
+                        else "Draft"
+                    ),
                     charging_site.notes,
                 ]
             )
