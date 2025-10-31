@@ -23,11 +23,7 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
-import {
-  formatFuelCodeOptions,
-  extractOriginalFuelCode,
-  formatFuelCodeWithCountryPrefix
-} from '@/utils/fuelCodeCountryPrefix'
+import { formatFuelCodeOptions } from '@/utils/fuelCodeCountryPrefix'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -372,7 +368,7 @@ export const allocationAgreementColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       suppressKeyboardEvent,
-      minWidth: 150,
+      minWidth: 175,
       editable: (params) =>
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
         optionsData?.fuelTypes?.find(
@@ -383,23 +379,6 @@ export const allocationAgreementColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         if (!fuelTypeObj) {
-          // If we have a fuel code, format it with country prefix for display
-          if (params.data.fuelCode) {
-            // Find the fuel code details to get the country
-            const allFuelCodes =
-              optionsData?.fuelTypes?.flatMap((ft) => ft.fuelCodes) || []
-            const fuelCodeDetails = allFuelCodes.find(
-              (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-            )
-            const country =
-              fuelCodeDetails?.fuelProductionFacilityCountry ||
-              fuelCodeDetails?.fuel_production_facility_country
-            return formatFuelCodeWithCountryPrefix(
-              params.data.fuelCode,
-              country,
-              compliancePeriod
-            )
-          }
           return params.data.fuelCode
         }
 
@@ -421,27 +400,12 @@ export const allocationAgreementColDefs = (
           }
         }
 
-        // Format the fuel code with country prefix for display
-        if (params.data.fuelCode) {
-          const fuelCodeDetails = fuelTypeObj.fuelCodes.find(
-            (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-          )
-          const country =
-            fuelCodeDetails?.fuelProductionFacilityCountry ||
-            fuelCodeDetails?.fuel_production_facility_country
-          return formatFuelCodeWithCountryPrefix(
-            params.data.fuelCode,
-            country,
-            compliancePeriod
-          )
-        }
-
         return params.data.fuelCode
       },
       valueSetter: (params) => {
         if (params.newValue) {
           // Extract the original fuel code from the formatted display value
-          const originalFuelCode = extractOriginalFuelCode(params.newValue)
+          const originalFuelCode = eparams.newValue
           params.data.fuelCode = originalFuelCode
 
           const fuelType = optionsData?.fuelTypes?.find(
@@ -722,7 +686,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.fuelCode'
       ),
-      minWidth: 150,
+      minWidth: 175,
       field: 'fuelCode'
     },
     {
@@ -911,7 +875,7 @@ export const changelogCommonColDefs = (
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.fuelCode'
       ),
-      minWidth: 150,
+      minWidth: 175,
       field: 'fuelCode.fuel_code',
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
