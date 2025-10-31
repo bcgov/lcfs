@@ -9,7 +9,7 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 60 * 60 * 1000 // 1 hr (options change less frequently)
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
-export const useGetIntendedUsers = (options = {}) => {
+export const useGetAllocationOrganizations = (options = {}) => {
   const client = useApiService()
   const {
     staleTime = OPTIONS_STALE_TIME,
@@ -19,9 +19,9 @@ export const useGetIntendedUsers = (options = {}) => {
   } = options
 
   return useQuery({
-    queryKey: ['intendedUsers'],
+    queryKey: ['allocationOrganizations'],
     queryFn: async () => {
-      const response = await client.get(apiRoutes.intendedUsers)
+      const response = await client.get(apiRoutes.allocationOrganizations)
       return response.data
     },
     staleTime: OPTIONS_STALE_TIME,

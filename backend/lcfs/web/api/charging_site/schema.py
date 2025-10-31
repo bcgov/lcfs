@@ -26,6 +26,9 @@ class ChargingSiteSchema(BaseSchema):
     charging_site_id: int
     organization_id: int
     organization: Optional[OrganizationSchema] = None
+    allocating_organization_id: Optional[int] = None
+    allocating_organization: Optional[OrganizationSchema] = None
+    allocating_organization_name: Optional[str] = None
     status_id: int
     status: Optional[ChargingSiteStatusSchema] = None
 
@@ -37,7 +40,6 @@ class ChargingSiteSchema(BaseSchema):
     postal_code: str
     latitude: float
     longitude: float
-    intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
     documents: Optional[List[FileResponseSchema]] = Field(default_factory=list)
     notes: Optional[str] = None
     create_date: Optional[datetime] = None
@@ -58,6 +60,8 @@ class ChargingSitesSchema(BaseSchema):
 class ChargingSiteCreateSchema(BaseSchema):
     charging_site_id: Optional[int] = None
     organization_id: int
+    allocating_organization_id: Optional[int] = None
+    allocating_organization_name: Optional[str] = None
     status_id: Optional[int] = None
     current_status: Optional[str] = None
     site_name: str
@@ -67,7 +71,6 @@ class ChargingSiteCreateSchema(BaseSchema):
     postal_code: str
     latitude: float
     longitude: float
-    intended_users: List[EndUserTypeSchema] = []
     notes: Optional[str] = None
     deleted: Optional[bool] = None
 
@@ -89,8 +92,8 @@ class ChargingSiteBaseSchema(BaseSchema):
     notes: Optional[str] = None
     status: str
     organization_name: str
+    allocating_organization_name: Optional[str] = None
     version: int
-    intended_users: List[EndUserTypeSchema] = Field(default_factory=list)
 
 
 class ChargingEquipmentStatusSchema(BaseSchema):
@@ -116,8 +119,6 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
     charging_site_id: Optional[int]
     status: Optional[ChargingEquipmentStatusSchema] = None
     equipment_number: str
-    organization_name: Optional[str] = None
-    allocating_organization: Optional[OrganizationSchema] = None
     registration_number: str
     version: int = 1
     serial_number: str
@@ -126,14 +127,17 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
     level_of_equipment: Optional[LevelOfEquipmentSchema] = None
     ports: Optional[PortsEnum] = None
     intended_use_types: List[EndUseTypeSchema] = Field(default_factory=list)
+    intended_user_types: List[EndUserTypeSchema] = Field(default_factory=list)
     notes: Optional[str] = None
     charging_site: Optional[ChargingSiteCreateSchema] = None
 
     @classmethod
     def model_validate(cls, obj, **kwargs):
-        # Map intended_uses to intended_use_types
+        # Map intended_uses to intended_use_types and intended_users to intended_user_types
         if hasattr(obj, "intended_uses") and not hasattr(obj, "intended_use_types"):
             obj.intended_use_types = obj.intended_uses
+        if hasattr(obj, "intended_users") and not hasattr(obj, "intended_user_types"):
+            obj.intended_user_types = obj.intended_users
         return super().model_validate(obj, **kwargs)
 
 

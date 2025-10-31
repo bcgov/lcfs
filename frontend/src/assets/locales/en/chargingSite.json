@@ -110,6 +110,7 @@
     "postalCode": "Postal code",
     "latitude": "Latitude",
     "longitude": "Longitude",
+    "allocatingOrganization": "Allocating organization",
     "intendedUsers": "Intended users",
     "intendedUserTypes": "Intended user types",
     "notes": "Site notes"
@@ -128,6 +129,7 @@
     "ports": "Ports",
     "fuelMeasurementType": "Fuel measurement type",
     "intendedUse": "Intended use",
+    "intendedUsers": "Intended users",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "notes": "FSE notes"

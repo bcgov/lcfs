@@ -195,6 +195,14 @@ async def import_async(
                         errors=errors,
                     )
 
+                    # Get valid organizations for allocating_organization field
+                    valid_allocating_orgs = await cs_repo.get_allocation_agreement_organizations(
+                        organization_id
+                    )
+                    valid_org_names = {org.name for org in valid_allocating_orgs}
+                    # Create map from organization name to ID for efficient lookup
+                    allocating_org_map = {org.name: org.organization_id for org in valid_allocating_orgs}
+
                     # Iterate through all data rows, skipping the header
                     for row_idx, row in enumerate(
                         sheet.iter_rows(min_row=2, values_only=True), start=2
@@ -220,9 +228,10 @@ async def import_async(
                             break  # End of data
 
                         row = list(row)
+                        # row[8] is now allocating_organization_name (optional string)
 
                         # Validate row
-                        error = _validate_row(row, row_idx)
+                        error = _validate_row(row, row_idx, valid_org_names)
                         if error:
                             errors.append(error)
                             rejected += 1
@@ -230,7 +239,7 @@ async def import_async(
 
                         # Parse row data and insert into DB
                         try:
-                            cs_data = _parse_row(row, organization_id)
+                            cs_data = _parse_row(row, organization_id, allocating_org_map)
                             await cs_service.create_charging_site(
                                 cs_data, organization_id
                             )
@@ -306,6 +315,7 @@ def _load_sheet(file: UploadFile) -> Worksheet:
 def _validate_row(
     row: tuple,
     row_idx: int,
+    valid_org_names: set[str],
 ) -> str | None:
     """
     Validates a single row of data and returns an error string if invalid.
@@ -320,6 +330,7 @@ def _validate_row(
         postal_code,
         latitude,
         longitude,
+        allocating_org_name,
         status,
         notes,
     ) = row
@@ -346,10 +357,14 @@ def _validate_row(
     if not postal_code_pattern.match(postal_code):
         return f"Row {row_idx}: Invalid postal code"
 
+    # Validate allocating organization (optional field)
+    if allocating_org_name and allocating_org_name not in valid_org_names:
+        return f"Row {row_idx}: Invalid allocating organization: {allocating_org_name}. Must be from your allocation agreements."
+
     return None
 
 
-def _parse_row(row: tuple, organization_id: int) -> ChargingSiteCreateSchema:
+def _parse_row(row: tuple, organization_id: int, allocating_org_map: dict) -> ChargingSiteCreateSchema:
     """
     Parses a valid row into a ChargingSiteCreateSchema object.
     """
@@ -362,6 +377,7 @@ def _parse_row(row: tuple, organization_id: int) -> ChargingSiteCreateSchema:
         postal_code,
         latitude,
         longitude,
+        allocating_org_name,
         status,
         notes,
     ) = row
@@ -369,8 +385,14 @@ def _parse_row(row: tuple, organization_id: int) -> ChargingSiteCreateSchema:
     latitude = float(latitude) if latitude else 0.0
     longitude = float(longitude) if longitude else 0.0
 
+    # Map allocating organization name to ID
+    allocating_organization_id = None
+    if allocating_org_name and allocating_org_name in allocating_org_map:
+        allocating_organization_id = allocating_org_map[allocating_org_name]
+
     return ChargingSiteCreateSchema(
         organization_id=organization_id,
+        allocating_organization_id=allocating_organization_id,
         site_code=str(site_code) or "",
         site_name=str(site_name) or "",
         street_address=str(street_address) or "",

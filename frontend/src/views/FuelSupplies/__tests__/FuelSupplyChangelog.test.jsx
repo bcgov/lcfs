@@ -68,6 +68,15 @@ vi.mock('react-i18next', () => ({
   useTranslation: vi.fn()
 }))
 
+vi.mock('@/hooks/useFuelSupply', () => ({
+  useFuelSupplyOptions: vi.fn(() => ({
+    data: {
+      fuelTypes: []
+    },
+    isLoading: false
+  }))
+}))
+
 vi.mock('../_schema', () => ({
   changelogColDefs: vi.fn(() => [{ field: 'actionType' }]),
   changelogCommonColDefs: vi.fn((showActions) => [{ field: 'common', showActions }])
