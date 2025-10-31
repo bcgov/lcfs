@@ -507,19 +507,34 @@ export const fuelSupplyColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       editable: (params) => {
+        // Only editable for eligible renewable fuels with Default CI
         const isEligible = isEligibleRenewableFuel(
           params.data.fuelType,
           params.data.fuelCategory,
           optionsData
         )
-        return parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && isEligible
+        const isDefaultCI = params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        return parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && isEligible && isDefaultCI
       },
-      valueGetter: (params) =>
-        params.data.isCanadaProduced
+      valueGetter: (params) => {
+        // For fuel codes with known location, show the system-determined value
+        const isDefaultCI = params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        if (!isDefaultCI) {
+          // Check if fuel code is Canadian
+          const isCanadian = isFuelCodeCanadian(
+            params.data.fuelType,
+            params.data.fuelCode,
+            optionsData
+          )
+          return isCanadian ? 'Yes' : 'No'
+        }
+        // For Default CI, show user-selected value or default to 'No'
+        return params.data.isCanadaProduced
           ? 'Yes'
           : params.colDef?.editable(params)
             ? 'No'
-            : '',
+            : ''
+      },
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.isCanadaProduced =
@@ -816,7 +831,8 @@ export const fuelSupplyColDefs = (
 export const fuelSupplySummaryColDef = (
   isEarlyIssuance,
   showFuelTypeOther,
-  complianceYear
+  complianceYear,
+  optionsData
 ) => {
   const baseColumns = [
     {
@@ -868,7 +884,21 @@ export const fuelSupplySummaryColDef = (
       field: 'isCanadaProduced',
       minWidth: 240,
       hide: complianceYear < NEW_REGULATION_YEAR,
-      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
+      valueGetter: (params) => {
+        // For fuel codes with known location, show the system-determined value
+        const isDefaultCI = params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        if (!isDefaultCI) {
+          // Check if fuel code is Canadian
+          const isCanadian = isFuelCodeCanadian(
+            params.data.fuelType,
+            params.data.fuelCode,
+            optionsData
+          )
+          return isCanadian ? 'Yes' : 'No'
+        }
+        // For Default CI, show user-selected value
+        return params.data.isCanadaProduced ? 'Yes' : ''
+      }
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
@@ -1047,7 +1077,22 @@ export const changelogCommonColDefs = (
       field: 'isCanadaProduced',
       minWidth: 240,
       hide: complianceYear < NEW_REGULATION_YEAR,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+      valueGetter: (params) => {
+        // For changelog, show system-determined value based on fuel code
+        const provisionName = params.data.provisionOfTheAct?.name || params.data.provisionOfTheAct
+        const isDefaultCI = provisionName === DEFAULT_CI_FUEL_CODE
+        if (!isDefaultCI) {
+          const fuelCodeValue = params.data.fuelCode?.fuelCode || params.data.fuelCode
+          const isCanadian = isFuelCodeCanadian(
+            params.data.fuelType?.fuelType || params.data.fuelType,
+            fuelCodeValue,
+            optionsData
+          )
+          return isCanadian ? 'Yes' : 'No'
+        }
+        return params.data.isCanadaProduced ? 'Yes' : ''
+      },
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'isCanadaProduced')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
@@ -1163,7 +1208,8 @@ export const changelogCommonColDefs = (
 export const changelogColDefs = (
   highlight = true,
   isEarlyIssuance = false,
-  complianceYear
+  complianceYear,
+  optionsData
 ) => {
   const baseColumns = [
     {

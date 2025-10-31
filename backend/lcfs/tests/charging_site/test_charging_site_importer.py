@@ -188,11 +188,13 @@ class TestValidateRow:
             "V6B 1A1",  # postal_code
             49.2827,  # latitude
             -123.1207,  # longitude
+            "Org 1",  # allocating_org_name
             "Draft",  # status
             "Notes",  # notes
         )
+        valid_org_names = {"Org 1", "Org 2"}
 
-        result = _validate_row(valid_row, 2)
+        result = _validate_row(valid_row, 2, valid_org_names)
 
         assert result is None
 
@@ -207,11 +209,13 @@ class TestValidateRow:
             "V6B 1A1",  # postal_code
             49.2827,  # latitude
             -123.1207,  # longitude
+            None,  # allocating_org_name
             "Draft",  # status
             "Notes",  # notes
         )
+        valid_org_names = {"Org 1", "Org 2"}
 
-        result = _validate_row(invalid_row, 2)
+        result = _validate_row(invalid_row, 2, valid_org_names)
 
         assert result is not None
         assert "Missing required fields" in result
@@ -229,11 +233,13 @@ class TestValidateRow:
             "INVALID",  # postal_code - INVALID FORMAT
             49.2827,  # latitude
             -123.1207,  # longitude
+            None,  # allocating_org_name
             "Draft",  # status
             "Notes",  # notes
         )
+        valid_org_names = {"Org 1", "Org 2"}
 
-        result = _validate_row(invalid_row, 2)
+        result = _validate_row(invalid_row, 2, valid_org_names)
 
         assert result is not None
         assert "Invalid postal code" in result
@@ -254,14 +260,17 @@ class TestParseRow:
             "V6B 1A1",  # postal_code
             49.2827,  # latitude
             -123.1207,  # longitude
+            "Org 1",  # allocating_org_name
             "Draft",  # status
             "Notes",  # notes
         )
+        allocating_org_map = {"Org 1": 10, "Org 2": 20}
 
-        result = _parse_row(valid_row, 1)
+        result = _parse_row(valid_row, 1, allocating_org_map)
 
         assert isinstance(result, ChargingSiteCreateSchema)
         assert result.organization_id == 1
+        assert result.allocating_organization_id == 10
         assert result.site_code == "SITE001"
         assert result.site_name == "Test Site"
         assert result.street_address == "123 Main St"
@@ -283,15 +292,18 @@ class TestParseRow:
             "V6B 1A1",  # postal_code
             None,  # latitude
             None,  # longitude
+            None,  # allocating_org_name
             None,  # status
             None,  # notes
         )
+        allocating_org_map = {"Org 1": 10}
 
-        result = _parse_row(row_with_nones, 1)
+        result = _parse_row(row_with_nones, 1, allocating_org_map)
 
         assert isinstance(result, ChargingSiteCreateSchema)
         # The actual parsing logic converts None to string "None", not empty string
         assert result.site_code == "None"  # str(None) = "None"
+        assert result.allocating_organization_id is None
         assert result.latitude == 0.0
         assert result.longitude == 0.0
         assert result.current_status == "Draft"

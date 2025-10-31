@@ -110,6 +110,7 @@
     "postalCode": "Postal code",
     "latitude": "Latitude",
     "longitude": "Longitude",
+    "allocatingOrganization": "Allocating organization",
     "intendedUsers": "Intended users",
     "intendedUserTypes": "Intended user types",
     "notes": "Site notes"
@@ -128,6 +129,7 @@
     "ports": "Ports",
     "fuelMeasurementType": "Fuel measurement type",
     "intendedUse": "Intended use",
+    "intendedUsers": "Intended users",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "notes": "FSE notes"
@@ -139,6 +141,6 @@
   "setSelectedAsSubmittedConfirmTxt": "This will set the selected FSE to Submitted status. No more edits will be possible. Do you want to proceed?",
   "equipmentBulkUpdateSuccess": "Status update on multiple equipment was completed successfully.",
   "equipmentBulkUpdateFailed": "Status update on multiple equipment was not completed successfully.",
-  "importBtn": "Upload Excel",
+  "importBtn": "Upload Excel template",
   "importNoRows": "No charging sites were imported."
 }
