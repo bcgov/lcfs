@@ -58,7 +58,7 @@ const OrgDetailsCard = () => {
               >
                 <ListItemButton
                   component="a"
-                  onClick={() => navigate(ROUTES.ORGANIZATION.ORG)}
+                  onClick={() => navigate(ROUTES.ORGANIZATION.USERS)}
                   sx={{ padding: '4px 0' }}
                 >
                   <BCTypography
