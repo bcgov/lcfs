@@ -6,7 +6,17 @@ import { pxToRem, linearGradient } from '@/themes/utils'
 const { borderWidth, borderColor } = borders
 const { transparent, primary, background } = colors
 
+const handleToggleOnEnter = (event) => {
+  if (event.key !== 'Enter' || event.defaultPrevented) return
+
+  event.preventDefault()
+  event.currentTarget.click()
+}
+
 const checkbox = {
+  defaultProps: {
+    onKeyDown: handleToggleOnEnter
+  },
   styleOverrides: {
     root: {
       padding: 0,
