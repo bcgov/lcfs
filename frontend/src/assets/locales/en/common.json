@@ -20,6 +20,11 @@
   "supplier": "Fuel Supplier",
   "balance": "Balance",
   "logout": "Logout",
+  "roleSwitcher": {
+    "buttonLabel": "Role switcher",
+    "title": "Role switcher",
+    "close": "Close role switcher"
+  },
   "complianceUnits": "Compliance units",
   "quantity": "Quantity",
   "inReserve": "In reserve",

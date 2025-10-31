@@ -38,6 +38,7 @@ export const FEATURE_FLAGS = {
   FSE_IMPORT_EXPORT: 'fseImportExport',
   ALLOCATION_AGREEMENT_IMPORT_EXPORT: 'allocationAgreementImportExport',
   GOVERNMENT_ADJUSTMENT: 'governmentAdjustment',
+  ROLE_SWITCHER: 'roleSwitcher',
   OBFUSCATED_LINKS: 'obfuscatedLinks',
   REPORTING_2025_ENABLED: 'reporting2025Enabled'
 }
@@ -69,6 +70,7 @@ export const CONFIG = {
       window.lcfs_config.feature_flags.allocationAgreementImportExport ?? false,
     governmentAdjustment:
       window.lcfs_config.feature_flags.governmentAdjustment ?? false,
+    roleSwitcher: window.lcfs_config.feature_flags.roleSwitcher ?? false,
     obfuscatedLinks: window.lcfs_config.feature_flags.obfuscatedLinks ?? false,
     reporting2025Enabled: window.lcfs_config.feature_flags.reporting2025Enabled ?? false
   }

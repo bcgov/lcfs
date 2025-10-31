@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { logout } from '@/utils/keycloak'
 import { useKeycloak } from '@react-keycloak/web'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +8,8 @@ import BCTypography from '@/components/BCTypography'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
+import { roles } from '@/constants/roles'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import {
   Badge,
   IconButton,
@@ -15,15 +17,25 @@ import {
   CircularProgress,
   Tooltip
 } from '@mui/material'
-import { Notifications, Logout } from '@mui/icons-material'
+import { Notifications, Logout, KeyboardArrowDown } from '@mui/icons-material'
 import { NavLink } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
+import { RoleSwitcher } from './RoleSwitcher'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const { keycloak } = useKeycloak()
   const intervalRef = useRef(null)
+  const roleSwitcherAnchorRef = useRef(null)
+
+  const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState(false)
+  const isGovernmentAdmin =
+    currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
+  const isRoleSwitcherEnabled = isFeatureEnabled(
+    FEATURE_FLAGS.ROLE_SWITCHER
+  )
+  const canUseRoleSwitcher = isGovernmentAdmin && isRoleSwitcherEnabled
 
   // TODO:
   // Alternatively, for better efficiency and scalability, consider implementing
@@ -38,7 +50,20 @@ export const UserProfileActions = () => {
     staleTime: 0, // Consider data stale immediately so manual refetch works
     cacheTime: 5 * 60 * 1000 // Keep in cache for 5 minutes
   })
+
   const notificationsCount = notificationsData?.count || 0
+
+  useEffect(() => {
+    if (!isRoleSwitcherEnabled) {
+      setIsRoleSwitcherOpen(false)
+    }
+  }, [isRoleSwitcherEnabled])
+
+  useEffect(() => {
+    if (!isGovernmentAdmin) {
+      setIsRoleSwitcherOpen(false)
+    }
+  }, [isGovernmentAdmin])
 
   // Set up manual interval for refetching
   useEffect(() => {
@@ -100,6 +125,18 @@ export const UserProfileActions = () => {
     </IconButton>
   )
 
+  const handleRoleSwitcherToggle = (event) => {
+    event.preventDefault()
+    if (!canUseRoleSwitcher) {
+      return
+    }
+    setIsRoleSwitcherOpen((prev) => !prev)
+  }
+
+  const handleRoleSwitcherClose = () => {
+    setIsRoleSwitcherOpen(false)
+  }
+
   return (
     keycloak.authenticated && (
       <BCBox
@@ -110,30 +147,55 @@ export const UserProfileActions = () => {
       >
         {currentUser?.firstName && (
           <>
-            <BCTypography
-              component={NavLink}
-              to={buildPath(
-                currentUser?.isGovernmentUser
-                  ? ROUTES.ADMIN.USERS.VIEW
-                  : ROUTES.ORGANIZATION.VIEW_USER,
-                {
-                  orgID: currentUser?.organization?.organizationId,
-                  userID: currentUser?.userProfileId
-                }
-              )}
-              style={{
+            <BCBox
+              display="flex"
+              alignItems="center"
+              ref={roleSwitcherAnchorRef}
+              sx={{
+                maxWidth: '17vw',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                flexShrink: 1,
-                marginRight: '12px',
-                maxWidth: '17vw'
+                textOverflow: 'ellipsis'
               }}
-              variant="subtitle1"
-              color="light"
             >
-              {`${currentUser.firstName} ${currentUser.lastName}`}
-            </BCTypography>
+              <BCTypography
+                component={NavLink}
+                to={buildPath(
+                  currentUser?.isGovernmentUser
+                    ? ROUTES.ADMIN.USERS.VIEW
+                    : ROUTES.ORGANIZATION.VIEW_USER,
+                  {
+                    orgID: currentUser?.organization?.organizationId,
+                    userID: currentUser?.userProfileId
+                  }
+                )}
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  flexShrink: 1,
+                  marginRight: canUseRoleSwitcher ? '4px' : '12px'
+                }}
+                variant="subtitle1"
+                color="light"
+              >
+                {`${currentUser.firstName} ${currentUser.lastName}`}
+              </BCTypography>
+              {canUseRoleSwitcher && (
+                <IconButton
+                  aria-label={t('roleSwitcher.buttonLabel')}
+                  size="small"
+                  onClick={handleRoleSwitcherToggle}
+                  sx={{
+                    color: '#fff',
+                    padding: '2px',
+                    marginLeft: '2px'
+                  }}
+                >
+                  <KeyboardArrowDown fontSize="small" />
+                </IconButton>
+              )}
+            </BCBox>
             <Divider
               orientation="vertical"
               variant="middle"
@@ -148,49 +210,54 @@ export const UserProfileActions = () => {
             />
           </>
         )}
-        <>
-          {isLoading ? (
-            <CircularProgress size={24} sx={{ color: '#fff', mx: 2 }} />
-          ) : (
-            <Tooltip title={t('Notifications')}>
-              <DefaultNavbarLink
-                icon={iconBtn}
-                name={''}
-                route={ROUTES.NOTIFICATIONS.LIST}
-                light={false}
-                isMobileView={false}
-                sx={{
-                  '&': {
-                    marginRight: 0,
-                    marginLeft: 0,
-                    padding: '2px',
-                    paddingBottom: '10px'
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)'
-                  },
-                  '&.active': {
-                    borderBottom: '3px solid #fcc219',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    paddingBottom: '7px'
-                  }
-                }}
-              />
-            </Tooltip>
-          )}
-          <Divider
-            orientation="vertical"
-            variant="middle"
-            flexItem
-            sx={({ palette: { secondary } }) => ({
-              backgroundColor: secondary.main,
-              height: '60%',
-              alignSelf: 'center',
-              marginLeft: '0.6rem',
-              marginRight: 3
-            })}
-          />
-        </>
+        <RoleSwitcher
+          currentUser={currentUser}
+          hasRoles={hasRoles}
+          open={isRoleSwitcherOpen && canUseRoleSwitcher}
+          anchorEl={roleSwitcherAnchorRef.current}
+          onClose={handleRoleSwitcherClose}
+        />
+        {isLoading ? (
+          <CircularProgress size={24} sx={{ color: '#fff', mx: 2 }} />
+        ) : (
+          <Tooltip title={t('Notifications')}>
+            <DefaultNavbarLink
+              icon={iconBtn}
+              name=""
+              route={ROUTES.NOTIFICATIONS.LIST}
+              light={false}
+              isMobileView={false}
+              sx={{
+                '&': {
+                  marginRight: 0,
+                  marginLeft: 0,
+                  padding: '2px',
+                  paddingBottom: '10px'
+                },
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)'
+                },
+                '&.active': {
+                  borderBottom: '3px solid #fcc219',
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  paddingBottom: '7px'
+                }
+              }}
+            />
+          </Tooltip>
+        )}
+        <Divider
+          orientation="vertical"
+          variant="middle"
+          flexItem
+          sx={({ palette: { secondary } }) => ({
+            backgroundColor: secondary.main,
+            height: '60%',
+            alignSelf: 'center',
+            marginLeft: '0.6rem',
+            marginRight: 3
+          })}
+        />
         <BCButton
           style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           onClick={logout}
