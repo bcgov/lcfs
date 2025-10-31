@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import {
   describe,
   it,
@@ -21,11 +21,40 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({
+    children,
+    display,
+    alignItems,
+    justifyContent,
+    px,
+    py,
+    sx,
+    style,
+    ...props
+  }) => (
+    <div
+      {...props}
+      style={{
+        display,
+        alignItems,
+        justifyContent,
+        paddingLeft: px ? `${px}rem` : undefined,
+        paddingRight: px ? `${px}rem` : undefined,
+        paddingTop: py ? `${py}rem` : undefined,
+        paddingBottom: py ? `${py}rem` : undefined,
+        ...style
+      }}
+    >
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <span {...props}>{children}</span>
+  default: ({ children, variant, color, sx, component, ...props }) => {
+    const Component = component || 'span'
+    return <Component {...props}>{children}</Component>
+  }
 }))
 
 vi.mock('@/components/BCForm/CustomLabel', () => ({
@@ -43,6 +72,7 @@ const defaultUser = {
   userProfileId: 'user123',
   firstName: 'John',
   lastName: 'Doe',
+  isGovernmentUser: true,
   title: 'Manager',
   keycloakUsername: 'jdoe',
   keycloakEmail: 'john.doe@example.com',
@@ -62,6 +92,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mutateMock.mockReset()
   hookOptions = null
+  CONFIG.feature_flags.roleSwitcher = true
 
   vi.mocked(idirRoleOptions).mockReturnValue([
     { label: 'Analyst', value: 'analyst' },
@@ -218,7 +249,7 @@ describe('RoleSwitcher', () => {
     anchor.remove()
   })
 
-  it('displays an error when the user profile id is missing', () => {
+  it('displays an error when the user profile id is missing', async () => {
     const anchor = createAnchor()
     const onClose = vi.fn()
     const userWithoutId = {
@@ -237,13 +268,19 @@ describe('RoleSwitcher', () => {
       { wrapper }
     )
 
-    const analystRadio = screen.getByRole('radio', { name: 'Analyst' })
-    fireEvent.click(analystRadio)
+    const directorRadio = screen.getByRole('radio', { name: 'Director' })
+
+    act(() => {
+      fireEvent.click(directorRadio)
+    })
 
     expect(mutateMock).not.toHaveBeenCalled()
-    expect(
-      screen.getByText('common:submitError')
-    ).toBeInTheDocument()
+    
+    await waitFor(() => {
+      expect(
+        screen.getByText('common:submitError')
+      ).toBeInTheDocument()
+    }, { timeout: 3000 })
 
     anchor.remove()
   })

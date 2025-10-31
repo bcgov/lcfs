@@ -76,6 +76,7 @@ describe('UserProfileActions', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    CONFIG.feature_flags.roleSwitcher = true
     mockRefetch.mockReset()
     mockRoleSwitcher.mockReset()
 
