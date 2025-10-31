@@ -36,10 +36,14 @@ def create_fuel_entry(
     fuel_status_id=2,
     prefix_id=1,
 ):
+    # Set prefix_id to 3 if fuel_production_facility_country is "Canada"
+    if base_fuel_data.get("fuel_production_facility_country") == "Canada":
+        prefix_id = 3
+    
     return {
         **base_fuel_data,  # Extend with the base fields
         "fuel_status_id": fuel_status_id,
-        "prefix_id": prefix_id,  # Default to BCLCF prefix (1)
+        "prefix_id": prefix_id,
         "fuel_suffix": fuel_suffix,
         "company": company,
         "carbon_intensity": carbon_intensity,
