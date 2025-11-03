@@ -15,7 +15,8 @@ import {
   IconButton,
   Divider,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Fab
 } from '@mui/material'
 import { Notifications, Logout, KeyboardArrowDown } from '@mui/icons-material'
 import { NavLink } from 'react-router-dom'
@@ -32,9 +33,7 @@ export const UserProfileActions = () => {
   const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState(false)
   const isGovernmentAdmin =
     currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
-  const isRoleSwitcherEnabled = isFeatureEnabled(
-    FEATURE_FLAGS.ROLE_SWITCHER
-  )
+  const isRoleSwitcherEnabled = isFeatureEnabled(FEATURE_FLAGS.ROLE_SWITCHER)
   const canUseRoleSwitcher = isGovernmentAdmin && isRoleSwitcherEnabled
 
   // TODO:
@@ -181,20 +180,6 @@ export const UserProfileActions = () => {
               >
                 {`${currentUser.firstName} ${currentUser.lastName}`}
               </BCTypography>
-              {canUseRoleSwitcher && (
-                <IconButton
-                  aria-label={t('roleSwitcher.buttonLabel')}
-                  size="small"
-                  onClick={handleRoleSwitcherToggle}
-                  sx={{
-                    color: '#fff',
-                    padding: '2px',
-                    marginLeft: '2px'
-                  }}
-                >
-                  <KeyboardArrowDown fontSize="small" />
-                </IconButton>
-              )}
             </BCBox>
             <Divider
               orientation="vertical"
@@ -277,6 +262,32 @@ export const UserProfileActions = () => {
         >
           {t('logout')}
         </BCButton>
+        {canUseRoleSwitcher && (
+          <Fab
+            onClick={handleRoleSwitcherToggle}
+            sx={{
+              position: 'fixed',
+              bottom: -40,
+              right: 90,
+              zIndex: 1000,
+              borderRadius: '0 0px 8px 8px',
+              width: '240px',
+              height: '35px',
+              justifyContent: 'left'
+            }}
+            variant="extended"
+            aria-label={t('roleSwitcher.buttonLabel')}
+            color="secondary"
+          >
+            {' '}
+            <BCTypography
+              variant="subtitle2"
+              sx={{ fontWeight: 600, color: '#003366' }}
+            >
+              {t('roleSwitcher.title')}
+            </BCTypography>
+          </Fab>
+        )}
       </BCBox>
     )
   )

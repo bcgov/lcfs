@@ -171,7 +171,7 @@ const RoleSwitcherComponent = ({
         {
           name: 'offset',
           options: {
-            offset: [0, 8]
+            offset: [1, 15]
           }
         }
       ]}
@@ -181,9 +181,9 @@ const RoleSwitcherComponent = ({
           elevation={6}
           sx={{
             minWidth: 240,
-            borderRadius: '8px',
+            borderRadius: '0 0 8px 8px',
             overflow: 'hidden',
-            border: '1px solid #e0e0e0'
+            border: 'none'
           }}
         >
           <BCBox
@@ -193,7 +193,10 @@ const RoleSwitcherComponent = ({
             px={2}
             py={1}
             sx={{
-              backgroundColor: '#fcc219'
+              backgroundColor: 'secondary.main',
+              height: '35px',
+              width: '100%',
+              borderRadius: '0'
             }}
           >
             <BCTypography
@@ -213,7 +216,6 @@ const RoleSwitcherComponent = ({
               <Close fontSize="small" />
             </IconButton>
           </BCBox>
-          <Divider flexItem sx={{ backgroundColor: '#e0e0e0' }} />
           <BCBox px={2} py={1}>
             <FormControl component="fieldset" disabled={isUpdatingRoles}>
               <RadioGroup
@@ -237,7 +239,7 @@ const RoleSwitcherComponent = ({
                     label={
                       option.header ? (
                         <BCTypography variant="body4" component="span">
-                          <strong>{option.header}</strong>
+                          {option.header}
                         </BCTypography>
                       ) : (
                         option.label
