@@ -219,7 +219,8 @@ describe('HistoryCard', () => {
         history,
         summary: {
           line11FossilDerivedBaseFuelTotal: 0,
-          line21NonCompliancePenaltyPayable: 0
+          line21NonCompliancePenaltyPayable: 0,
+          totalRenewableFuelSupplied: 5000.0
         }
       },
       { defaultExpanded: true }
@@ -259,7 +260,8 @@ describe('HistoryCard', () => {
         history,
         summary: {
           line11FossilDerivedBaseFuelTotal: 0.0,
-          line21NonCompliancePenaltyPayable: 0.0
+          line21NonCompliancePenaltyPayable: 0.0,
+          totalRenewableFuelSupplied: 5000.0
         }
       },
       { defaultExpanded: true }
@@ -293,7 +295,8 @@ describe('HistoryCard', () => {
       history,
       summary: {
         line11FossilDerivedBaseFuelTotal: 1.0,
-        line21NonCompliancePenaltyPayable: 1.0
+        line21NonCompliancePenaltyPayable: 1.0,
+        totalRenewableFuelSupplied: 5000.0
       }
     })
 
@@ -325,7 +328,8 @@ describe('HistoryCard', () => {
       history,
       summary: {
         line11FossilDerivedBaseFuelTotal: 0,
-        line21NonCompliancePenaltyPayable: 0
+        line21NonCompliancePenaltyPayable: 0,
+        totalRenewableFuelSupplied: 5000.0
       }
     })
 
@@ -783,14 +787,14 @@ describe('Non-Assessment Report', () => {
       isNonAssessment: false
     }
 
-    render(<HistoryCard {...defaultProps} report={report} />)
+    render(<HistoryCard {...defaultProps} report={report} defaultExpanded={true} />)
 
     expect(screen.getAllByText(/has met/i).length).toBe(2)
   })
 
   it('shows assessment lines for government users before assessment', () => {
     // isgovernment is true by default in test setup
-    render(<HistoryCard {...defaultProps} />)
+    render(<HistoryCard {...defaultProps} defaultExpanded={true} />)
 
     expect(screen.getAllByText(/has met/i).length).toBe(2)
   })
