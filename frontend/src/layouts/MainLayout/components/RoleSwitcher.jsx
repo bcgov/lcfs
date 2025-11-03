@@ -171,7 +171,7 @@ const RoleSwitcherComponent = ({
         {
           name: 'offset',
           options: {
-            offset: [1, 15]
+            offset: [0.5, 15]
           }
         }
       ]}

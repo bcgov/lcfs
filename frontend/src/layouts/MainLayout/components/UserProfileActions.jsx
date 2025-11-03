@@ -273,7 +273,13 @@ export const UserProfileActions = () => {
               borderRadius: '0 0px 8px 8px',
               width: '240px',
               height: '35px',
-              justifyContent: 'left'
+              justifyContent: 'left',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none',
+                backgroundColor: 'rgba(252, 186, 25, 0.8)'
+              },
+              
             }}
             variant="extended"
             aria-label={t('roleSwitcher.buttonLabel')}
