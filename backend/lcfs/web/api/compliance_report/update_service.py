@@ -240,6 +240,11 @@ class ComplianceReportUpdateService:
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
+        # Auto-submit all FSE records in Draft or Updated status to Submitted status
+        await self.charging_equipment_repo.auto_submit_draft_updated_fse_for_report(
+            report.compliance_report_id
+        )
+
         # Simply ensure summary exists - it will continue to refresh dynamically
         # because we're NOT locking it (unlike the old behavior)
         if not report.summary:

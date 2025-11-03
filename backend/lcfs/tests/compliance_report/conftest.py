@@ -264,6 +264,10 @@ def compliance_report_update_service(
     service.org_service = mock_org_service
     service.trx_service = mock_trx_service
     service.notfn_service = mock_notfn_service
+    service._charging_equipment_repo = AsyncMock()
+    service._charging_equipment_repo.auto_submit_draft_updated_fse_for_report = (
+        AsyncMock(return_value=0)
+    )
     return service
 
 

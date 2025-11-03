@@ -595,7 +595,7 @@ class ChargingEquipmentRepository:
             ComplianceReportChargingEquipment,
         )
 
-        # Get the status IDs for Submitted and Validated 
+        # Get the status IDs for Submitted and Validated
         status_query = select(ChargingEquipmentStatus).where(
             ChargingEquipmentStatus.status.in_(["Submitted", "Validated"])
         )
@@ -640,6 +640,81 @@ class ChargingEquipmentRepository:
             update(ChargingEquipment)
             .where(ChargingEquipment.charging_equipment_id.in_(equipment_ids))
             .values(status_id=validated_status_id)
+        )
+
+        result = await self.db.execute(update_stmt)
+        await self.db.flush()
+
+        updated_count = result.rowcount or 0
+
+        return updated_count
+
+    @repo_handler
+    async def auto_submit_draft_updated_fse_for_report(
+        self, compliance_report_id: int
+    ) -> int:
+        """
+        Auto-submit all charging equipment (FSE) records in 'Draft' or 'Updated' status
+        that are associated with the given compliance report.
+
+        Args:
+            compliance_report_id: The ID of the compliance report being submitted
+
+        Returns:
+            int: The number of equipment records that were updated to Submitted status
+        """
+        from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
+            ComplianceReportChargingEquipment,
+        )
+
+        # Get the status IDs for Draft, Updated, and Submitted
+        status_query = select(ChargingEquipmentStatus).where(
+            ChargingEquipmentStatus.status.in_(["Draft", "Updated", "Submitted"])
+        )
+        status_result = await self.db.execute(status_query)
+        statuses = {
+            s.status: s.charging_equipment_status_id
+            for s in status_result.scalars().all()
+        }
+
+        draft_status_id = statuses.get("Draft")
+        updated_status_id = statuses.get("Updated")
+        submitted_status_id = statuses.get("Submitted")
+
+        if not draft_status_id or not updated_status_id or not submitted_status_id:
+            return 0
+
+        # Get all charging equipment IDs associated with this compliance report
+        # that are currently in Draft or Updated status
+        equipment_query = (
+            select(ChargingEquipment.charging_equipment_id)
+            .join(
+                ComplianceReportChargingEquipment,
+                ChargingEquipment.charging_equipment_id
+                == ComplianceReportChargingEquipment.charging_equipment_id,
+            )
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.compliance_report_id
+                    == compliance_report_id,
+                    ChargingEquipment.status_id.in_(
+                        [draft_status_id, updated_status_id]
+                    ),
+                )
+            )
+        )
+
+        equipment_result = await self.db.execute(equipment_query)
+        equipment_ids = [row[0] for row in equipment_result.all()]
+
+        if not equipment_ids:
+            return 0
+
+        # Update the status to Submitted
+        update_stmt = (
+            update(ChargingEquipment)
+            .where(ChargingEquipment.charging_equipment_id.in_(equipment_ids))
+            .values(status_id=submitted_status_id)
         )
 
         result = await self.db.execute(update_stmt)
