@@ -11,7 +11,7 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentBaseSchema,
@@ -113,10 +113,12 @@ class ChargingEquipmentServices:
 
         return ChargingEquipmentListSchema(
             items=items,
-            total_count=total_count,
-            current_page=pagination.page,
-            total_pages=total_pages,
-            page_size=pagination.size,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=total_pages,
+            ),
         )
 
     @service_handler

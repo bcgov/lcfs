@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import Optional, List
-from lcfs.web.api.base import BaseSchema
+from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from pydantic import Field
 from enum import Enum
 
@@ -105,10 +105,7 @@ class ChargingEquipmentListItemSchema(BaseSchema):
 
 class ChargingEquipmentListSchema(BaseSchema):
     items: List[ChargingEquipmentListItemSchema]
-    total_count: int
-    current_page: int
-    total_pages: int
-    page_size: int
+    pagination: PaginationResponseSchema
 
 
 class ChargingEquipmentFilterSchema(BaseSchema):
