@@ -440,16 +440,26 @@ class ComplianceReportSummaryService:
             ("legacy" if compliance_data_service.is_legacy_year() else "description"),
             descriptions_dict[line].get("description"),
         )
+        # Use quantize with ROUND_HALF_UP for consistent rounding before formatting
+        gasoline_cap = float(
+            Decimal(
+                str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        )
+        diesel_cap = float(
+            Decimal(
+                str(summary_obj.line_4_eligible_renewable_fuel_required_diesel * 0.05)
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        )
+        jet_fuel_cap = float(
+            Decimal(
+                str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel * 0.05)
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        )
         return base_desc.format(
-            "{:,}".format(
-                int(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
-            ),
-            "{:,}".format(
-                int(summary_obj.line_4_eligible_renewable_fuel_required_diesel * 0.05)
-            ),
-            "{:,}".format(
-                int(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel * 0.05)
-            ),
+            "{:,.0f}".format(gasoline_cap),
+            "{:,.0f}".format(diesel_cap),
+            "{:,.0f}".format(jet_fuel_cap),
         )
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
@@ -534,9 +544,11 @@ class ComplianceReportSummaryService:
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        prev_compliance_report = await self.cr_repo.get_assessed_compliance_report_by_period(
-            compliance_report.organization_id,
-            int(compliance_report.compliance_period.description) - 1,
+        prev_compliance_report = (
+            await self.cr_repo.get_assessed_compliance_report_by_period(
+                compliance_report.organization_id,
+                int(compliance_report.compliance_period.description) - 1,
+            )
         )
 
         previous_year_required = {
@@ -596,12 +608,8 @@ class ComplianceReportSummaryService:
             current_line_7_gasoline = (
                 summary_model.line_7_previously_retained_gasoline or 0
             )
-            current_line_7_diesel = (
-                summary_model.line_7_previously_retained_diesel or 0
-            )
-            current_line_7_jet = (
-                summary_model.line_7_previously_retained_jet_fuel or 0
-            )
+            current_line_7_diesel = summary_model.line_7_previously_retained_diesel or 0
+            current_line_7_jet = summary_model.line_7_previously_retained_jet_fuel or 0
 
             if current_line_7_gasoline == 0 and previous_retained["gasoline"]:
                 current_line_7_gasoline = previous_retained["gasoline"]
@@ -623,9 +631,7 @@ class ComplianceReportSummaryService:
             current_line_9_gasoline = (
                 summary_model.line_9_obligation_added_gasoline or 0
             )
-            current_line_9_diesel = (
-                summary_model.line_9_obligation_added_diesel or 0
-            )
+            current_line_9_diesel = summary_model.line_9_obligation_added_diesel or 0
             current_line_9_jet = summary_model.line_9_obligation_added_jet_fuel or 0
 
             if current_line_9_gasoline == 0 and previous_obligation["gasoline"]:
@@ -734,11 +740,15 @@ class ComplianceReportSummaryService:
         # Ensure renewable volumes counted towards line 2 meet 2025+ eligibility criteria.
 
         filtered_renewable_fuel_supplies = [
-            fs for fs in effective_fuel_supplies if self._is_eligible_renewable(fs, compliance_year)
+            fs
+            for fs in effective_fuel_supplies
+            if self._is_eligible_renewable(fs, compliance_year)
         ]
 
         filtered_renewable_other_uses = [
-            ou for ou in effective_other_uses if self._is_eligible_renewable(ou, compliance_year)
+            ou
+            for ou in effective_other_uses
+            if self._is_eligible_renewable(ou, compliance_year)
         ]
 
         all_renewable_records = [
@@ -938,9 +948,9 @@ class ComplianceReportSummaryService:
             )
             max_cap = DECIMAL_ZERO
             if prev_required_value:
-                max_cap = (
-                    prev_required_value * Decimal("0.05")
-                ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                max_cap = (prev_required_value * Decimal("0.05")).quantize(
+                    Decimal("1"), rounding=ROUND_HALF_UP
+                )
             max_cap = max(
                 max_cap, decimal_previous_retained.get(category, DECIMAL_ZERO)
             )
@@ -993,12 +1003,14 @@ class ComplianceReportSummaryService:
             current_required_quantity_dec = (
                 decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
-            raw_net_supplied = decimal_raw_net_renewable_supplied.get(category, DECIMAL_ZERO)
+            raw_net_supplied = decimal_raw_net_renewable_supplied.get(
+                category, DECIMAL_ZERO
+            )
 
             # Calculate prescribed portion (5% of Line 4)
-            prescribed_portion = (current_required_quantity_dec * Decimal("0.05")).quantize(
-                Decimal("1"), rounding=ROUND_HALF_UP
-            )
+            prescribed_portion = (
+                current_required_quantity_dec * Decimal("0.05")
+            ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
 
             # Line 6 (Retention) - LCFA s.10(2)
             # Maximum retention is the LESSER of:
@@ -1024,7 +1036,9 @@ class ComplianceReportSummaryService:
             # Maximum deferral is the LESSER of:
             # (a) the deficiency (Line 4 - Line 10), where Line 10 is calculated without user retention/deferral
             # (b) the prescribed portion of the target (5% of Line 4)
-            deficiency = max(DECIMAL_ZERO, current_required_quantity_dec - raw_net_supplied)
+            deficiency = max(
+                DECIMAL_ZERO, current_required_quantity_dec - raw_net_supplied
+            )
             max_deferral = min(deficiency, prescribed_portion)
 
             # Preserve user input but cap at calculated maximum
@@ -1097,18 +1111,20 @@ class ComplianceReportSummaryService:
                 "jet_fuel": float(decimal_tracked_totals.get("jet_fuel", DECIMAL_ZERO)),
             },
             4: {
-                "gasoline": int(
+                "gasoline": float(
                     decimal_eligible_renewable_fuel_required.get(
                         "gasoline", DECIMAL_ZERO
-                    )
+                    ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
                 ),
-                "diesel": int(
-                    decimal_eligible_renewable_fuel_required.get("diesel", DECIMAL_ZERO)
+                "diesel": float(
+                    decimal_eligible_renewable_fuel_required.get(
+                        "diesel", DECIMAL_ZERO
+                    ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
                 ),
-                "jet_fuel": int(
+                "jet_fuel": float(
                     decimal_eligible_renewable_fuel_required.get(
                         "jet_fuel", DECIMAL_ZERO
-                    )
+                    ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
                 ),
             },
             5: {
@@ -1193,18 +1209,14 @@ class ComplianceReportSummaryService:
             additional_kwargs = {}
             if line == 7:
                 additional_kwargs = {
-                    "max_gasoline": int(
-                        line7_max_caps.get("gasoline", DECIMAL_ZERO)
-                    ),
-                    "max_diesel": int(
-                        line7_max_caps.get("diesel", DECIMAL_ZERO)
-                    ),
-                    "max_jet_fuel": int(
-                        line7_max_caps.get("jet_fuel", DECIMAL_ZERO)
-                    ),
+                    "max_gasoline": int(line7_max_caps.get("gasoline", DECIMAL_ZERO)),
+                    "max_diesel": int(line7_max_caps.get("diesel", DECIMAL_ZERO)),
+                    "max_jet_fuel": int(line7_max_caps.get("jet_fuel", DECIMAL_ZERO)),
                 }
 
-            description_template = RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+            description_template = RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line][
+                "description"
+            ]
 
             if line in [6, 8]:
                 description_value = description_template.format(
@@ -1255,7 +1267,9 @@ class ComplianceReportSummaryService:
                             + values.get("jet_fuel", 0)
                         )
                     ),
-                    format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
+                    format=(
+                        FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER
+                    ),
                     **additional_kwargs,
                 )
             )
@@ -1286,8 +1300,10 @@ class ComplianceReportSummaryService:
             Tuple of (transaction_start_date, transaction_end_date)
         """
         # Check if there's a previous assessed report for the prior year
-        prev_assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
-            organization_id, compliance_year - 1, exclude_report_id
+        prev_assessed_report = (
+            await self.cr_repo.get_assessed_compliance_report_by_period(
+                organization_id, compliance_year - 1, exclude_report_id
+            )
         )
 
         # Transaction period always ends on March 31 of the following year
@@ -1314,15 +1330,19 @@ class ComplianceReportSummaryService:
         # Get the last assessed report for this organization and compliance period
         # Exclude current report to avoid circular reference
         assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
-            organization_id, compliance_period_start.year, compliance_report.compliance_report_id
+            organization_id,
+            compliance_period_start.year,
+            compliance_report.compliance_report_id,
         )
 
         # Calculate correct transaction period dates for Line 12 and Line 13
         # First report: Jan 1 - Mar 31 (next year)
         # Subsequent reports: Apr 1 - Mar 31 (next year) to avoid overlap
         compliance_year = compliance_period_start.year
-        transaction_start_date, transaction_end_date = await self._calculate_transaction_period_dates(
-            compliance_year, organization_id, compliance_report.compliance_report_id
+        transaction_start_date, transaction_end_date = (
+            await self._calculate_transaction_period_dates(
+                compliance_year, organization_id, compliance_report.compliance_report_id
+            )
         )
 
         compliance_units_transferred_out = int(
