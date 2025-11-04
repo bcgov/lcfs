@@ -42,10 +42,12 @@ async def test_get_charging_equipment_list_success(
                 "updated_date": "2024-01-02T00:00:00Z",
             }
         ],
-        "total_count": 1,
-        "current_page": 1,
-        "total_pages": 1,
-        "page_size": 10,
+        "pagination": {
+            "total": 1,
+            "page": 1,
+            "total_pages": 1,
+            "size": 10,
+        },
     }
 
     # Mock the service dependency
@@ -65,7 +67,7 @@ async def test_get_charging_equipment_list_success(
         # Verify response
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["totalCount"] == 1
+        assert data["pagination"]["total"] == 1
         assert len(data["items"]) == 1
         assert data["items"][0]["chargingEquipmentId"] == 1
     finally:
