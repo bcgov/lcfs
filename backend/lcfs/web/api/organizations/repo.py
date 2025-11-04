@@ -431,18 +431,28 @@ class OrganizationsRepository:
         result = await self.db.execute(query)
         organizations = result.scalars().all()
 
-        return [
-            {
-                "organization_id": org.organization_id,
-                "name": org.name,
-                "operating_name": org.operating_name,
-                "total_balance": org.total_balance,
-                "reserved_balance": org.reserved_balance,
-                "status": org.org_status,
-                "org_type": getattr(org.org_type, "org_type", None),
-            }
-            for org in organizations
-        ]
+        organization_summaries = []
+        for org in organizations:
+            org_type_value = None
+            if org.org_type is not None:
+                try:
+                    org_type_value = org.org_type.org_type
+                except AttributeError:
+                    org_type_value = None
+
+            organization_summaries.append(
+                {
+                    "organization_id": org.organization_id,
+                    "name": org.name,
+                    "operating_name": org.operating_name,
+                    "total_balance": org.total_balance,
+                    "reserved_balance": org.reserved_balance,
+                    "status": org.org_status,
+                    "org_type": org_type_value,
+                }
+            )
+
+        return organization_summaries
 
     @repo_handler
     async def get_externally_registered_organizations(self, conditions):
