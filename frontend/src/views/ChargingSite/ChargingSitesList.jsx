@@ -30,7 +30,9 @@ export const ChargingSitesList = ({ alertRef }) => {
   useEffect(() => {
     if (isIDIR) {
       window.navigateToFSEProcessing = (siteId) => {
-        navigate(ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING.replace(':siteId', siteId))
+        navigate(
+          ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING.replace(':siteId', siteId)
+        )
       }
     }
 
@@ -84,11 +86,11 @@ export const ChargingSitesList = ({ alertRef }) => {
       <li {...props}>
         <Box display="flex" flexDirection="column">
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
-          {orgTypeLabel && (
+          {/* {orgTypeLabel && (
             <BCTypography variant="caption" color="text.secondary">
               {orgTypeLabel.replace('_', ' ')}
             </BCTypography>
-          )}
+          )} */}
         </Box>
       </li>
     )

@@ -110,27 +110,26 @@ def upgrade() -> None:
             name="uix_fse_compliance_reporting_period_by_org",
         ),
         comment="FSE compliance reporting",
-        replace_if_exists=True,
     )
     op.create_index(
         op.f("ix_fse_compliance_reporting_charging_equipment_id"),
         "fse_compliance_reporting",
-        ["charging_equipment_id"], replace_if_exists=True,
+        ["charging_equipment_id"],
     )
     op.create_index(
         op.f("ix_fse_compliance_reporting_compliance_period_id"),
         "fse_compliance_reporting",
-        ["compliance_period_id"], replace_if_exists=True,
+        ["compliance_period_id"],
     )
     op.create_index(
         op.f("ix_fse_compliance_reporting_compliance_report_id"),
         "fse_compliance_reporting",
-        ["compliance_report_id"], replace_if_exists=True,
+        ["compliance_report_id"],
     )
     op.create_index(
         op.f("ix_fse_compliance_reporting_organization_id"),
         "fse_compliance_reporting",
-        ["organization_id"], replace_if_exists=True,
+        ["organization_id"],
     )
 
     # Fix invalid date data in final_supply_equipment before migration

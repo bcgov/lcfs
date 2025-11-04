@@ -100,11 +100,11 @@ export const ChargingEquipment = () => {
       <li {...props}>
         <Box display="flex" flexDirection="column">
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
-          {orgTypeLabel && (
+          {/* {orgTypeLabel && (
             <BCTypography variant="caption" color="text.secondary">
               {orgTypeLabel.replace('_', ' ')}
             </BCTypography>
-          )}
+          )} */}
         </Box>
       </li>
     )
