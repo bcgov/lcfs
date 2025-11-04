@@ -616,6 +616,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
             <BCGridEditor
               gridRef={gridRef}
               alertRef={alertRef}
+              stopEditingWhenCellsLoseFocus
               columnDefs={bulkChargingEquipmentColDefs(
                 chargingSites,
                 organizations,
