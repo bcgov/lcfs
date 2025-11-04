@@ -86,7 +86,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     }
 
     return (
-      <div data-test="bc-grid-viewer" data-test="grid" {...otherProps}>
+      <div data-test="bc-grid-viewer" {...otherProps}>
         BCGridViewer
       </div>
     )

@@ -102,7 +102,7 @@ export const ChargingEquipment = () => {
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
           {orgTypeLabel && (
             <BCTypography variant="caption" color="text.secondary">
-              {orgTypeLabel}
+              {orgTypeLabel.replace('_', ' ')}
             </BCTypography>
           )}
         </Box>
