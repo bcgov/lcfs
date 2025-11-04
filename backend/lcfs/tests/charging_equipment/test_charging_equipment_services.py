@@ -75,7 +75,7 @@ async def test_get_charging_equipment_list_supplier_success(
     result = await service.get_charging_equipment_list(mock_user, pagination)
 
     # Verify the result
-    assert result.total_count == 1
+    assert result.pagination.total == 1
     assert len(result.items) == 1
     assert (
         result.items[0].charging_equipment_id
@@ -104,7 +104,7 @@ async def test_get_charging_equipment_list_government_with_org_filter(
     )
 
     # Verify the result
-    assert result.total_count == 1
+    assert result.pagination.total == 1
     assert len(result.items) == 1
 
     # Verify repo was called with filtered organization_id and exclude_draft=True for government users
@@ -126,7 +126,7 @@ async def test_get_charging_equipment_list_government_no_org_filter_success(
     result = await service.get_charging_equipment_list(mock_government_user, pagination)
 
     # Verify the result
-    assert result.total_count == 1
+    assert result.pagination.total == 1
     assert len(result.items) == 1
 
     # Government users without an org filter should query all organizations (organization_id None) and exclude_draft=True
