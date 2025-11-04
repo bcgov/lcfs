@@ -4,7 +4,7 @@ from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
-from typing import List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import joinedload
@@ -370,7 +370,13 @@ class OrganizationsRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
-    async def get_organization_names(self, conditions=None, order_by=("name", "asc")):
+    async def get_organization_names(
+        self,
+        conditions=None,
+        order_by=("name", "asc"),
+        org_type_filter: str = "fuel_supplier",
+        org_filters: Dict[str, List[str]] | None = None,
+    ):
         """
         Fetches organization names and details based on provided conditions and dynamic ordering.
         Only returns organizations with type 'fuel_supplier'.
@@ -383,15 +389,33 @@ class OrganizationsRepository:
         Returns:
             List of dictionaries with organization details including ID, names, balances, and status.
         """
+        normalized_org_type = (org_type_filter or "fuel_supplier").lower()
         query = (
             select(Organization)
+            .options(joinedload(Organization.org_type))
             .join(OrganizationStatus)
-            .join(Organization.org_type)
-            .filter(OrganizationType.org_type == "fuel_supplier")
+            .join(Organization.org_type, isouter=True)
         )
+
+        if normalized_org_type != "all":
+            query = query.filter(OrganizationType.org_type == normalized_org_type)
 
         if conditions:
             query = query.filter(*conditions)
+
+        if org_filters:
+            for field, values in org_filters.items():
+                if not values:
+                    continue
+
+                column_attr = getattr(Organization, field, None)
+                if column_attr is None:
+                    continue
+
+                if isinstance(values, list) and len(values) > 1:
+                    query = query.filter(column_attr.in_(values))
+                else:
+                    query = query.filter(column_attr == values[0])
 
         # Apply dynamic ordering
         if order_by:
@@ -415,6 +439,7 @@ class OrganizationsRepository:
                 "total_balance": org.total_balance,
                 "reserved_balance": org.reserved_balance,
                 "status": org.org_status,
+                "org_type": getattr(org.org_type, "org_type", None),
             }
             for org in organizations
         ]

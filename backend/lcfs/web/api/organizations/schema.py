@@ -295,6 +295,7 @@ class OrganizationSummaryResponseSchema(BaseSchema):
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
+    org_type: Optional[str] = None
 
 
 class OrganizationCreateResponseSchema(BaseSchema):

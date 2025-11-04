@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from decimal import Decimal
 import structlog
-from typing import List
+from typing import List, Dict
 
 from lcfs.settings import settings
 from fastapi import Depends, Request
@@ -829,6 +829,8 @@ class OrganizationsService:
         self,
         order_by=("name", "asc"),
         statuses: List[str] = None,
+        org_type_filter: str = "fuel_supplier",
+        org_filters: Dict[str, List[str]] | None = None,
     ) -> List[OrganizationSummaryResponseSchema]:
         """
         Fetches all organization names and their detailed information, formatted as per OrganizationSummaryResponseSchema.
@@ -853,7 +855,9 @@ class OrganizationsService:
                 conditions.append(OrganizationStatus.status.in_(status_enums))
 
         # The order_by tuple directly specifies both the sort field and direction
-        organization_data = await self.repo.get_organization_names(conditions, order_by)
+        organization_data = await self.repo.get_organization_names(
+            conditions, order_by, org_type_filter, org_filters
+        )
 
         return [
             OrganizationSummaryResponseSchema(
@@ -863,6 +867,7 @@ class OrganizationsService:
                 total_balance=org["total_balance"],
                 reserved_balance=org["reserved_balance"],
                 org_status=org["status"],
+                org_type=org.get("org_type"),
             )
             for org in organization_data
         ]

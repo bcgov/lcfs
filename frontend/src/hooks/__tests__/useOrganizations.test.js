@@ -157,7 +157,7 @@ describe('useOrganizations', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(mockGet).toHaveBeenCalledWith('/organizations/names/?')
+      expect(mockGet).toHaveBeenCalledWith('/organizations/names/')
     })
 
     it('should handle null status parameter', async () => {
@@ -219,6 +219,69 @@ describe('useOrganizations', () => {
 
       expect(mockGet).toHaveBeenCalledWith(
         '/organizations/names/?statuses=active'
+      )
+    })
+
+    it('should support custom org filters', async () => {
+      const mockData = { organizations: [] }
+      mockGet.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(
+        () => useOrganizationNames(['active'], { orgFilter: 'all' }),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/organizations/names/all?statuses=active'
+      )
+    })
+
+    it('should append arbitrary organization filters', async () => {
+      const mockData = { organizations: [] }
+      mockGet.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(
+        () =>
+          useOrganizationNames(null, {
+            orgFilter: 'all',
+            filters: { name: ['Org A'], city: 'Victoria', active: true }
+          }),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/organizations/names/all?name=Org%20A&city=Victoria&active=true'
+      )
+    })
+
+    it('should allow query params and react-query options together', async () => {
+      const mockData = { organizations: [] }
+      mockGet.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(
+        () =>
+          useOrganizationNames(
+            ['Registered'],
+            { orgFilter: 'all', filters: { city: 'Victoria' } },
+            { staleTime: 1000 }
+          ),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockGet).toHaveBeenCalledWith(
+        '/organizations/names/all?statuses=Registered&city=Victoria'
       )
     })
   })

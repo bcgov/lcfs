@@ -194,12 +194,38 @@ async def test_get_organization_names_invalid_statuses(
     result = await organizations_service.get_organization_names(
         order_by=("name", "asc"), statuses=statuses
     )
-
-    # Should still call the repo (invalid statuses are filtered out in the service)
     mock_repo.get_organization_names.assert_called_once()
-
-    # Result should be valid even with invalid statuses passed
     assert isinstance(result, list)
+
+
+@pytest.mark.anyio
+async def test_get_organization_names_passes_org_filters(
+    organizations_service, mock_repo
+):
+    """Ensure org-level filters are forwarded to the repository."""
+
+    mock_org_data = [
+        {
+            "organization_id": 3,
+            "name": "Filtered Org",
+            "operating_name": "Filtered Operating",
+            "total_balance": 1500,
+            "reserved_balance": 300,
+            "status": create_mock_org_status(OrgStatusEnum.Registered),
+        }
+    ]
+
+    mock_repo.get_organization_names = AsyncMock(return_value=mock_org_data)
+
+    org_filters = {"name": ["Filtered Org"], "registration_number": ["12345"]}
+    await organizations_service.get_organization_names(
+        order_by=("name", "asc"),
+        statuses=None,
+        org_filters=org_filters,
+    )
+
+    _, _, _, forwarded_filters = mock_repo.get_organization_names.call_args[0]
+    assert forwarded_filters == org_filters
 
 
 @pytest.mark.anyio
