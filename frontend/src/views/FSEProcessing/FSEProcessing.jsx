@@ -157,25 +157,38 @@ export const FSEProcessing = () => {
   }
 
   const handleSelectAllSubmitted = () => {
+    // Ensure grid API is available
+    if (!gridRef.current?.api) {
+      return
+    }
+
     if (selectMode === 'submitted') {
       // Deselect all
-      gridRef.current?.api?.deselectAll()
+      isProgrammaticSelection.current = true
+      gridRef.current.api.deselectAll()
       setSelectMode(null)
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 150)
     } else {
       // Select all Submitted rows
       isProgrammaticSelection.current = true
-      gridRef.current?.api?.forEachNode((node) => {
-        if (node.data.status === 'Submitted') {
-          node.setSelected(true)
-        } else {
-          node.setSelected(false)
-        }
-      })
+      // Clear any existing selections first
+      gridRef.current.api.deselectAll()
+      // Set mode state before starting selections
       setSelectMode('submitted')
-      // Let ag-Grid finish emitting selection events before re-enabling handler logic
+      // Use a small delay to ensure deselectAll completes
       setTimeout(() => {
-        isProgrammaticSelection.current = false
-      }, 0)
+        gridRef.current.api.forEachNode((node) => {
+          if (node.data.status === 'Submitted') {
+            node.setSelected(true)
+          }
+        })
+        // Let ag-Grid finish emitting selection events before re-enabling handler logic
+        setTimeout(() => {
+          isProgrammaticSelection.current = false
+        }, 150)
+      }, 50)
     }
   }
 
