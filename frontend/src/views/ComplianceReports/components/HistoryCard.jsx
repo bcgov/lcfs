@@ -116,7 +116,7 @@ export const HistoryCard = ({
         <StyledListItem disablePadding>
           <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
             <strong>{t('report:notSubjectToAssessment')}:&nbsp;</strong>
-            {t('report:notSubjectToAssessmentDescription')}
+            {t('report:notSubjectToAssessmentHistoryMessage')}
           </ListItemText>
         </StyledListItem>
       )

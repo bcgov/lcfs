@@ -67,7 +67,7 @@ vi.mock('@/components/BCBox/index.jsx', () => ({
 }))
 
 vi.mock('@/components/BCModal.jsx', () => ({
-  default: ({ open, data, onClose, ...props }) => 
+  default: ({ open, data, onClose, ...props }) =>
     open ? (
       <div data-test="modal" {...props}>
         <div>{data?.title}</div>
@@ -75,9 +75,7 @@ vi.mock('@/components/BCModal.jsx', () => ({
         <button onClick={data?.primaryButtonAction}>
           {data?.primaryButtonText}
         </button>
-        <button onClick={onClose}>
-          {data?.secondaryButtonText}
-        </button>
+        <button onClick={onClose}>{data?.secondaryButtonText}</button>
       </div>
     ) : null
 }))
@@ -92,14 +90,14 @@ vi.mock('@mui/material', () => ({
     </label>
   ),
   Checkbox: ({ checked, onChange, disabled }) => (
-    <input 
-      type="checkbox" 
-      checked={checked} 
+    <input
+      type="checkbox"
+      checked={checked}
       onChange={(e) => onChange?.(e)}
       disabled={disabled}
     />
   ),
-  Fade: ({ children, in: fadeIn }) => fadeIn ? <div>{children}</div> : null
+  Fade: ({ children, in: fadeIn }) => (fadeIn ? <div>{children}</div> : null)
 }))
 
 vi.mock('@mui/icons-material', () => ({
@@ -112,7 +110,7 @@ describe('AssessmentRecommendation', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Reset mocks to defaults
     mockHasRoles.mockReturnValue(false)
     vi.mocked(isFeatureEnabled).mockReturnValue(false)
@@ -138,7 +136,9 @@ describe('AssessmentRecommendation', () => {
 
   describe('Basic Rendering', () => {
     it('renders the component without crashing', () => {
-      const { container } = render(<AssessmentRecommendation {...defaultProps} />)
+      const { container } = render(
+        <AssessmentRecommendation {...defaultProps} />
+      )
       expect(container).toBeInTheDocument()
     })
   })
@@ -243,7 +243,9 @@ describe('AssessmentRecommendation', () => {
       mockCurrentUserData.isGovernmentUser = true
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      expect(screen.getByText('report:notSubjectToAssessment')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:notSubjectToAssessment')
+      ).toBeInTheDocument()
     })
 
     it('hides non-assessment section when user is not government user', () => {
@@ -251,7 +253,9 @@ describe('AssessmentRecommendation', () => {
       mockCurrentUserData.isGovernmentUser = false
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      expect(screen.queryByText('report:notSubjectToAssessment')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:notSubjectToAssessment')
+      ).not.toBeInTheDocument()
     })
 
     it('hides non-assessment section when user is not analyst', () => {
@@ -259,7 +263,9 @@ describe('AssessmentRecommendation', () => {
       mockCurrentUserData.isGovernmentUser = true
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      expect(screen.queryByText('report:notSubjectToAssessment')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:notSubjectToAssessment')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -273,7 +279,9 @@ describe('AssessmentRecommendation', () => {
       }
 
       render(<AssessmentRecommendation {...props} />)
-      expect(screen.getByText('report:createReassessmentBtn')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:createReassessmentBtn')
+      ).toBeInTheDocument()
     })
 
     it('hides reassessment button when feature disabled', () => {
@@ -285,7 +293,9 @@ describe('AssessmentRecommendation', () => {
       }
 
       render(<AssessmentRecommendation {...props} />)
-      expect(screen.queryByText('report:createReassessmentBtn')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:createReassessmentBtn')
+      ).not.toBeInTheDocument()
     })
 
     it('disables reassessment button when report is not newest', () => {
@@ -311,7 +321,7 @@ describe('AssessmentRecommendation', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      
+
       const button = screen.getByText('Analyst adjustment')
       fireEvent.click(button)
 
@@ -327,7 +337,7 @@ describe('AssessmentRecommendation', () => {
       }
 
       render(<AssessmentRecommendation {...props} />)
-      
+
       const button = screen.getByText('report:createReassessmentBtn')
       fireEvent.click(button)
 
@@ -338,7 +348,7 @@ describe('AssessmentRecommendation', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      
+
       // Open dialog
       const button = screen.getByText('Analyst adjustment')
       fireEvent.click(button)
@@ -355,14 +365,198 @@ describe('AssessmentRecommendation', () => {
       mockCurrentUserData.isGovernmentUser = true
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      
+
       const checkbox = screen.getByRole('checkbox')
       fireEvent.click(checkbox)
 
-      expect(defaultProps.methods.setValue).toHaveBeenCalledWith('isNonAssessment', true)
+      expect(defaultProps.methods.setValue).toHaveBeenCalledWith(
+        'isNonAssessment',
+        true
+      )
       expect(mockUpdateComplianceReport).toHaveBeenCalledWith({
         status: COMPLIANCE_REPORT_STATUSES.SUBMITTED,
         isNonAssessment: true
+      })
+    })
+  })
+
+  describe('Non-Assessment Action Interface Message', () => {
+    it('shows instructional text in action interface for analysts', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      render(<AssessmentRecommendation {...defaultProps} />)
+
+      // Should show the section heading
+      expect(
+        screen.getByText('report:notSubjectToAssessment')
+      ).toBeInTheDocument()
+
+      // Should show the description with instructional text
+      expect(
+        screen.getByText('report:notSubjectToAssessmentDescription')
+      ).toBeInTheDocument()
+    })
+
+    it('uses description key with instructions in checkbox label', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      render(<AssessmentRecommendation {...defaultProps} />)
+
+      const checkbox = screen.getByRole('checkbox')
+      const label = checkbox.parentElement
+
+      // The label should use the description translation key (which includes instructions)
+      expect(label?.textContent).toContain(
+        'report:notSubjectToAssessmentDescription'
+      )
+    })
+
+    it('shows non-assessment section for submitted reports only', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      const submittedProps = {
+        ...defaultProps,
+        currentStatus: COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      }
+
+      render(<AssessmentRecommendation {...submittedProps} />)
+
+      expect(
+        screen.getByText('report:notSubjectToAssessment')
+      ).toBeInTheDocument()
+    })
+
+    it('does not show non-assessment section for assessed reports', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      const assessedProps = {
+        ...defaultProps,
+        currentStatus: COMPLIANCE_REPORT_STATUSES.ASSESSED
+      }
+
+      render(<AssessmentRecommendation {...assessedProps} />)
+
+      expect(
+        screen.queryByText('report:notSubjectToAssessment')
+      ).not.toBeInTheDocument()
+    })
+
+    it('disables checkbox when user is not analyst with edit rights', () => {
+      mockHasRoles.mockImplementation(
+        (role) => role === roles.compliance_reporting
+      )
+      mockCurrentUserData.isGovernmentUser = true
+
+      render(<AssessmentRecommendation {...defaultProps} />)
+
+      // Non-assessment section should not be shown if user doesn't have rights
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    })
+
+    it('shows non-assessment checkbox for original reports only', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      const originalReportProps = {
+        ...defaultProps,
+        reportData: {
+          ...defaultProps.reportData,
+          report: {
+            version: 0,
+            supplementalInitiator: null,
+            reportingFrequency: 'Annual'
+          }
+        }
+      }
+
+      render(<AssessmentRecommendation {...originalReportProps} />)
+
+      expect(
+        screen.getByText('report:notSubjectToAssessment')
+      ).toBeInTheDocument()
+    })
+
+    it('hides non-assessment section for supplemental reports', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      const supplementalReportProps = {
+        ...defaultProps,
+        reportData: {
+          ...defaultProps.reportData,
+          report: {
+            version: 1,
+            supplementalInitiator: null,
+            reportingFrequency: 'Annual'
+          }
+        }
+      }
+
+      render(<AssessmentRecommendation {...supplementalReportProps} />)
+
+      expect(
+        screen.queryByText('report:notSubjectToAssessment')
+      ).not.toBeInTheDocument()
+    })
+
+    it('saves non-assessment status immediately on checkbox change', async () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      render(<AssessmentRecommendation {...defaultProps} />)
+
+      const checkbox = screen.getByRole('checkbox')
+
+      // Initially unchecked
+      expect(checkbox).not.toBeChecked()
+
+      // Check the checkbox
+      fireEvent.click(checkbox)
+
+      // Should call the update mutation
+      await waitFor(() => {
+        expect(mockUpdateComplianceReport).toHaveBeenCalledWith({
+          status: COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+          isNonAssessment: true
+        })
+      })
+    })
+
+    it('unchecks non-assessment status on second click', async () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      // Set initial value to true
+      const propsWithNonAssessment = {
+        ...defaultProps,
+        methods: {
+          ...defaultProps.methods,
+          watch: vi.fn((field) =>
+            field === 'isNonAssessment' ? true : undefined
+          )
+        }
+      }
+
+      render(<AssessmentRecommendation {...propsWithNonAssessment} />)
+
+      const checkbox = screen.getByRole('checkbox')
+
+      // Should be initially checked
+      expect(checkbox).toBeChecked()
+
+      // Uncheck the checkbox
+      fireEvent.click(checkbox)
+
+      // Should call the update mutation with false
+      await waitFor(() => {
+        expect(propsWithNonAssessment.methods.setValue).toHaveBeenCalledWith(
+          'isNonAssessment',
+          false
+        )
       })
     })
   })
@@ -372,12 +566,14 @@ describe('AssessmentRecommendation', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      
+
       const button = screen.getByText('Analyst adjustment')
       fireEvent.click(button)
 
       expect(screen.getByText('Create analyst adjustment')).toBeInTheDocument()
-      expect(screen.getByText(/This will put the report into edit mode/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/This will put the report into edit mode/)
+      ).toBeInTheDocument()
     })
 
     it('renders reassessment modal with correct content', () => {
@@ -389,19 +585,21 @@ describe('AssessmentRecommendation', () => {
       }
 
       render(<AssessmentRecommendation {...props} />)
-      
+
       const button = screen.getByText('report:createReassessmentBtn')
       fireEvent.click(button)
 
       expect(screen.getByText('Create reassessment')).toBeInTheDocument()
-      expect(screen.getByText(/This will create a new version/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/This will create a new version/)
+      ).toBeInTheDocument()
     })
 
     it('closes dialogs when cancel button clicked', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
 
       render(<AssessmentRecommendation {...defaultProps} />)
-      
+
       // Open dialog
       const button = screen.getByText('Analyst adjustment')
       fireEvent.click(button)
@@ -412,7 +610,9 @@ describe('AssessmentRecommendation', () => {
       const cancelButton = screen.getByText('Cancel')
       fireEvent.click(cancelButton)
 
-      expect(screen.queryByText('Create analyst adjustment')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('Create analyst adjustment')
+      ).not.toBeInTheDocument()
     })
   })
 })
