@@ -1,5 +1,6 @@
 import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
+import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 
 export const useOrganizationStatuses = (options) => {
   const client = useApiService()

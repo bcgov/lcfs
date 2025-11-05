@@ -272,9 +272,10 @@ class ComplianceReportSummaryService:
             default_format=FORMATS.NUMBER if line != 11 else FORMATS.CURRENCY,
             default_descriptions=RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
             summary_obj=summary_obj,
-            # Provide a special description function for lines 6 or 8:
+            # Provide a special description function for lines 4, 6, or 8:
             special_description_func=(
-                self._renewable_special_description if line in [6, 8] else None
+                self._line_4_special_description if line == 4
+                else (self._renewable_special_description if line in [6, 8] else None)
             ),
         )
 
@@ -430,6 +431,26 @@ class ComplianceReportSummaryService:
             descriptions_dict[line].get("description"),
         )
         return base_desc  # By default, no fancy placeholders used here.
+
+    def _line_4_special_description(self, line, summary_obj, descriptions_dict):
+        """
+        For line 4, replace the {diesel_percent} placeholder with the actual percentage
+        based on the compliance period (4% for 2024 and earlier, 8% for 2025+).
+        """
+        base_desc = descriptions_dict[line].get(
+            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
+            descriptions_dict[line].get("description"),
+        )
+        # Determine the compliance period from the summary object
+        compliance_period = (
+            int(summary_obj.compliance_report.compliance_period.description)
+            if summary_obj.compliance_report
+            and summary_obj.compliance_report.compliance_period
+            else 2024  # fallback year
+        )
+        # Determine the diesel percentage based on the compliance period
+        diesel_percent_display = "8%" if compliance_period >= 2025 else "4%"
+        return base_desc.format(diesel_percent=diesel_percent_display)
 
     def _renewable_special_description(self, line, summary_obj, descriptions_dict):
         """

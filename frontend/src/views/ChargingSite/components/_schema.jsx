@@ -516,14 +516,14 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     cols.push(
       {
         field: 'createdDate',
-        headerName: 'Created',
+        headerName: headerName: t('chargingSite:fseColumnLabels.created'),
         minWidth: 150,
         type: 'dateColumn',
         valueFormatter: dateFormatter
       },
       {
         field: 'updatedDate',
-        headerName: 'Last Updated',
+        headerName: t('chargingSite:fseColumnLabels.lastUpdated'),
         minWidth: 150,
         type: 'dateColumn',
         valueFormatter: dateFormatter

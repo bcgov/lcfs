@@ -69,7 +69,6 @@ export const AddEditChargingSite = ({
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('chargingSite:noSitesFound'),
-      stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -440,6 +439,7 @@ export const AddEditChargingSite = ({
         <BCGridEditor
           gridRef={gridRef}
           alertRef={alertRef}
+          stopEditingWhenCellsLoseFocus
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}

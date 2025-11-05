@@ -209,23 +209,31 @@ export const ChargingEquipment = () => {
 
     if (selectMode === 'draft-updated') {
       // Deselect all
+      isProgrammaticSelection.current = true
       gridRef.current.api.deselectAll()
       setSelectMode(null)
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 150)
     } else {
       // Select all Draft and Updated rows
       isProgrammaticSelection.current = true
-      gridRef.current.api.forEachNode((node) => {
-        if (node.data.status === 'Draft' || node.data.status === 'Updated') {
-          node.setSelected(true)
-        } else {
-          node.setSelected(false)
-        }
-      })
+      // Clear any existing selections first
+      gridRef.current.api.deselectAll()
+      // Set mode state before starting selections
       setSelectMode('draft-updated')
-      // Let ag-Grid finish emitting selection events before re-enabling handler logic
+      // Use a small delay to ensure deselectAll completes
       setTimeout(() => {
-        isProgrammaticSelection.current = false
-      }, 0)
+        gridRef.current.api.forEachNode((node) => {
+          if (node.data.status === 'Draft' || node.data.status === 'Updated') {
+            node.setSelected(true)
+          }
+        })
+        // Let ag-Grid finish emitting selection events before re-enabling handler logic
+        setTimeout(() => {
+          isProgrammaticSelection.current = false
+        }, 150)
+      }, 50)
     }
   }
 
@@ -237,22 +245,31 @@ export const ChargingEquipment = () => {
 
     if (selectMode === 'validated') {
       // Deselect all
+      isProgrammaticSelection.current = true
       gridRef.current.api.deselectAll()
       setSelectMode(null)
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 150)
     } else {
       // Select all Validated rows
       isProgrammaticSelection.current = true
-      gridRef.current.api.forEachNode((node) => {
-        if (node.data.status === 'Validated') {
-          node.setSelected(true)
-        } else {
-          node.setSelected(false)
-        }
-      })
+      // Clear any existing selections first
+      gridRef.current.api.deselectAll()
+      // Set mode state before starting selections
       setSelectMode('validated')
+      // Use a small delay to ensure deselectAll completes
       setTimeout(() => {
-        isProgrammaticSelection.current = false
-      }, 0)
+        gridRef.current.api.forEachNode((node) => {
+          if (node.data.status === 'Validated') {
+            node.setSelected(true)
+          }
+        })
+        // Let ag-Grid finish emitting selection events before re-enabling handler logic
+        setTimeout(() => {
+          isProgrammaticSelection.current = false
+        }, 150)
+      }, 50)
     }
   }
 
