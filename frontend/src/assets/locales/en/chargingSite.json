@@ -132,7 +132,9 @@
     "intendedUsers": "Intended users",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "notes": "FSE notes"
+    "notes": "FSE notes",
+    "created": "Created",
+    "lastUpdated": "Last updated"
   },
   "noChargingEquipmentsFnd": "No charging equipments found at the selected site",
   "confirmation": "Confirmation",
