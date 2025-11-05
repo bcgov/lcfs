@@ -100,6 +100,33 @@ const SummaryTable = ({
     setData((prevData) => {
       const newData = [...prevData]
       newData[rowIndex] = { ...newData[rowIndex], [columnId]: value }
+
+      // Enforce mutual exclusivity between Line 7 and Line 9
+      // Only apply for fuel columns (gasoline, diesel, jetFuel)
+      const isFuelColumn = ['gasoline', 'diesel', 'jetFuel'].includes(columnId)
+      const currentRow = newData[rowIndex]
+      const lineNumber = parseInt(currentRow?.line)
+
+      if (isFuelColumn && (lineNumber === 7 || lineNumber === 9)) {
+        const numericValue = parseInt(value) || 0
+
+        // If user enters a non-zero value in Line 7, zero out Line 9 in same column
+        if (lineNumber === 7 && numericValue !== 0) {
+          const line9Index = newData.findIndex(row => parseInt(row?.line) === 9)
+          if (line9Index !== -1) {
+            newData[line9Index] = { ...newData[line9Index], [columnId]: 0 }
+          }
+        }
+
+        // If user enters a non-zero value in Line 9, zero out Line 7 in same column
+        if (lineNumber === 9 && numericValue !== 0) {
+          const line7Index = newData.findIndex(row => parseInt(row?.line) === 7)
+          if (line7Index !== -1) {
+            newData[line7Index] = { ...newData[line7Index], [columnId]: 0 }
+          }
+        }
+      }
+
       return newData
     })
     setEditingCell({ rowIndex, columnId })

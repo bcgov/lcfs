@@ -5,7 +5,7 @@ import {
   YesNoTextRenderer
 } from '@/utils/grid/cellRenderers'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
-import { useOrganizationStatuses } from '@/hooks/useOrganizations'
+import { useOrganizationListStatuses } from '@/hooks/useOrganizations'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 export const organizationsColDefs = (t) => [
@@ -22,7 +22,7 @@ export const organizationsColDefs = (t) => [
     floatingFilterComponentParams: {
       valueKey: 'status',
       labelKey: 'status',
-      optionsQuery: useOrganizationStatuses
+      optionsQuery: useOrganizationListStatuses
     },
     suppressFloatingFilterButton: true
   },
