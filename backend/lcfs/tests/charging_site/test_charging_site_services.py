@@ -14,7 +14,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingEquipmentStatusSchema,
     ChargingSiteStatusSchema,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, FilterModel
 from lcfs.db.models.compliance import (
     ChargingEquipment,
     ChargingSite,
@@ -792,6 +792,56 @@ class TestChargingSiteService:
         # With no filters supplied, service should not add implicit status conditions
         args, _ = mock_repo.get_all_charging_sites_paginated.call_args
         assert args[2] == []
+
+    @pytest.mark.anyio
+    async def test_get_all_charging_sites_paginated_with_org_filter(
+        self, charging_site_service, mock_repo
+    ):
+        """Ensure organization name filters are converted to query conditions"""
+        mock_repo.get_all_charging_sites_paginated.return_value = ([], 0)
+
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(field="organization", filter="Test Org", type="contains")
+            ],
+        )
+
+        await charging_site_service.get_all_charging_sites_paginated(pagination)
+
+        args, _ = mock_repo.get_all_charging_sites_paginated.call_args
+        conditions = args[2]
+        assert len(conditions) == 1
+        assert "organization" in str(conditions[0]).lower()
+
+    @pytest.mark.anyio
+    async def test_get_all_charging_sites_paginated_with_allocating_org_filter(
+        self, charging_site_service, mock_repo
+    ):
+        """Ensure allocating organization filters include correlated expressions"""
+        mock_repo.get_all_charging_sites_paginated.return_value = ([], 0)
+
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[
+                FilterModel(
+                    field="allocatingOrganization",
+                    filter="Alloc Org",
+                    type="contains",
+                )
+            ],
+        )
+
+        await charging_site_service.get_all_charging_sites_paginated(pagination)
+
+        args, _ = mock_repo.get_all_charging_sites_paginated.call_args
+        conditions = args[2]
+        assert len(conditions) == 1
+        assert "allocating" in str(conditions[0]).lower()
 
     @pytest.mark.anyio
     async def test_delete_all_charging_sites(self, charging_site_service, mock_repo):
