@@ -550,4 +550,277 @@ describe('SummaryTable', () => {
       expect(container).toBeInTheDocument()
     })
   })
+
+  describe('Lines 7 and 9 Mutual Exclusivity', () => {
+    const line7And9Columns = [
+      { id: 'line', label: 'Line', align: 'center' },
+      { id: 'description', label: 'Description', align: 'left' },
+      {
+        id: 'gasoline',
+        label: 'Gasoline',
+        align: 'right',
+        editable: true,
+        editableCells: [0, 1] // Both Line 7 and Line 9 editable
+      },
+      {
+        id: 'diesel',
+        label: 'Diesel',
+        align: 'right',
+        editable: true,
+        editableCells: [0, 1]
+      }
+    ]
+
+    const line7And9Data = [
+      {
+        line: 7,
+        description: 'Previously Retained',
+        gasoline: 0,
+        diesel: 0
+      },
+      {
+        line: 9,
+        description: 'Obligation Added',
+        gasoline: 0,
+        diesel: 0
+      }
+    ]
+
+    it('zeros out Line 9 when Line 7 gasoline gets a non-zero value', () => {
+      customRender(
+        <SummaryTable
+          columns={line7And9Columns}
+          data={line7And9Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      // Enter value in Line 7 gasoline
+      const line7GasolineInput = screen.getAllByTestId('input')[0]
+      fireEvent.change(line7GasolineInput, { target: { value: '100' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Line 9 gasoline should be zeroed (empty string or '0')
+      expect(updatedInputs[2].value).toMatch(/^0?$/)
+    })
+
+    it('zeros out Line 7 when Line 9 gasoline gets a non-zero value', () => {
+      customRender(
+        <SummaryTable
+          columns={line7And9Columns}
+          data={line7And9Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      // Enter value in Line 9 gasoline
+      const line9GasolineInput = screen.getAllByTestId('input')[2]
+      fireEvent.change(line9GasolineInput, { target: { value: '50' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Line 7 gasoline should be zeroed (empty string or '0')
+      expect(updatedInputs[0].value).toMatch(/^0?$/)
+    })
+
+    it('zeros out Line 9 diesel when Line 7 diesel gets a non-zero value', () => {
+      customRender(
+        <SummaryTable
+          columns={line7And9Columns}
+          data={line7And9Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      // Enter value in Line 7 diesel
+      const line7DieselInput = screen.getAllByTestId('input')[1]
+      fireEvent.change(line7DieselInput, { target: { value: '200' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Line 9 diesel should be zeroed (empty string or '0')
+      expect(updatedInputs[3].value).toMatch(/^0?$/)
+    })
+
+    it('zeros out Line 7 diesel when Line 9 diesel gets a non-zero value', () => {
+      customRender(
+        <SummaryTable
+          columns={line7And9Columns}
+          data={line7And9Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      // Enter value in Line 9 diesel
+      const line9DieselInput = screen.getAllByTestId('input')[3]
+      fireEvent.change(line9DieselInput, { target: { value: '75' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Line 7 diesel should be zeroed (empty string or '0')
+      expect(updatedInputs[1].value).toMatch(/^0?$/)
+    })
+
+    it('allows different fuel types to have values in different lines (per-column exclusivity)', () => {
+      customRender(
+        <SummaryTable
+          columns={line7And9Columns}
+          data={line7And9Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const inputs = screen.getAllByTestId('input')
+
+      // Enter value in Line 7 gasoline
+      fireEvent.change(inputs[0], { target: { value: '100' } })
+
+      // Enter value in Line 9 diesel (different fuel type)
+      fireEvent.change(inputs[3], { target: { value: '50' } })
+
+      // Both should retain their values (different columns)
+      expect(inputs[0].value).toBe('100') // Line 7 gasoline
+      expect(inputs[3].value).toBe('50') // Line 9 diesel
+    })
+
+    it('does not zero out when entering zero value', () => {
+      const dataWithValues = [
+        {
+          line: 7,
+          description: 'Previously Retained',
+          gasoline: 100,
+          diesel: 0
+        },
+        {
+          line: 9,
+          description: 'Obligation Added',
+          gasoline: 0,
+          diesel: 50
+        }
+      ]
+
+      customRender(
+        <SummaryTable
+          columns={line7And9Columns}
+          data={dataWithValues}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      // Enter 0 in Line 7 gasoline (already has 100)
+      const line7GasolineInput = screen.getAllByTestId('input')[0]
+      fireEvent.change(line7GasolineInput, { target: { value: '0' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Line 9 gasoline should still be 0 (not affected, empty string or '0')
+      expect(updatedInputs[2].value).toMatch(/^0?$/)
+    })
+
+    it('handles mutual exclusivity for jetFuel column', () => {
+      const jetFuelColumns = [
+        ...line7And9Columns,
+        {
+          id: 'jetFuel',
+          label: 'Jet Fuel',
+          align: 'right',
+          editable: true,
+          editableCells: [0, 1]
+        }
+      ]
+
+      const jetFuelData = [
+        {
+          line: 7,
+          description: 'Previously Retained',
+          gasoline: 0,
+          diesel: 0,
+          jetFuel: 0
+        },
+        {
+          line: 9,
+          description: 'Obligation Added',
+          gasoline: 0,
+          diesel: 0,
+          jetFuel: 0
+        }
+      ]
+
+      customRender(
+        <SummaryTable
+          columns={jetFuelColumns}
+          data={jetFuelData}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      // inputs[4] = Line 7 jetFuel, inputs[5] = Line 9 jetFuel
+      const line7JetFuelInput = screen.getAllByTestId('input')[4]
+
+      // Enter value in Line 7 jetFuel
+      fireEvent.change(line7JetFuelInput, { target: { value: '30' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Line 9 jetFuel should be zeroed (empty string or '0')
+      expect(updatedInputs[5].value).toMatch(/^0?$/)
+    })
+
+    it('does not affect mutual exclusivity for non-fuel columns', () => {
+      const mixedColumns = [
+        ...line7And9Columns,
+        {
+          id: 'notes',
+          label: 'Notes',
+          align: 'left',
+          editable: true,
+          editableCells: [0, 1]
+        }
+      ]
+
+      const mixedData = [
+        {
+          line: 7,
+          description: 'Previously Retained',
+          gasoline: 0,
+          diesel: 0,
+          notes: ''
+        },
+        {
+          line: 9,
+          description: 'Obligation Added',
+          gasoline: 0,
+          diesel: 0,
+          notes: ''
+        }
+      ]
+
+      customRender(
+        <SummaryTable
+          columns={mixedColumns}
+          data={mixedData}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const notesInput = screen.getAllByTestId('input')[4]
+
+      // Change notes field (should not trigger mutual exclusivity)
+      fireEvent.change(notesInput, { target: { value: 'test notes' } })
+
+      // After state update, get fresh input references
+      const updatedInputs = screen.getAllByTestId('input')
+
+      // Gasoline and diesel values should remain unchanged (empty string or '0')
+      expect(updatedInputs[0].value).toMatch(/^0?$/) // Line 7 gasoline
+      expect(updatedInputs[2].value).toMatch(/^0?$/) // Line 9 gasoline
+    })
+  })
 })

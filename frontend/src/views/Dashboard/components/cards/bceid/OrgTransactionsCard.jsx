@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Stack, List, ListItemButton } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
@@ -58,18 +56,7 @@ const OrgTransactionsCard = () => {
     navigate(route)
   }
 
-  function openExternalLink(event, url) {
-    event.preventDefault()
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
-  const renderLinkWithCount = (
-    text,
-    count,
-    onClick,
-    icons = [],
-    title = ''
-  ) => {
+  const renderLinkWithCount = (text, count, onClick) => {
     return (
       <>
         <CountDisplay count={count} />
@@ -82,16 +69,8 @@ const OrgTransactionsCard = () => {
             cursor: 'pointer'
           }}
           onClick={onClick}
-          title={title}
         >
           {text}
-          {icons.map((icon, index) => (
-            <FontAwesomeIcon
-              key={index}
-              icon={icon}
-              style={{ color: '#547D59', marginLeft: 6 }}
-            />
-          ))}
         </BCTypography>
       </>
     )
@@ -133,23 +112,21 @@ const OrgTransactionsCard = () => {
 
               <ListItemButton
                 component="a"
-                onClick={(e) =>
-                  openExternalLink(
-                    e,
-                    'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf'
-                  )
+                onClick={() =>
+                  navigate({
+                    pathname: ROUTES.TRANSACTIONS.LIST,
+                    search: '?tab=credit-trading-market'
+                  })
                 }
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.organizationsRegistered'),
                   null,
-                  (e) =>
-                    openExternalLink(
-                      e,
-                      'https://www2.gov.bc.ca/gov/content?id=4B2DC59D77F64C8491C5CDFCF8732F10'
-                    ),
-                  [faShareFromSquare],
-                  t('dashboard:orgTransactions.linkTooltip')
+                  () =>
+                    navigate({
+                      pathname: ROUTES.TRANSACTIONS.LIST,
+                      search: '?tab=credit-trading-market'
+                    })
                 )}
               </ListItemButton>
 

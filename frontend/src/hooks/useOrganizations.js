@@ -1,5 +1,6 @@
 import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
+import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 
 export const useOrganizationStatuses = (options) => {
   const client = useApiService()
@@ -9,6 +10,25 @@ export const useOrganizationStatuses = (options) => {
     queryFn: async () => (await client.get('/organizations/statuses/')).data,
     ...options
   })
+}
+
+export const useOrganizationListStatuses = (options) => {
+  const { data, isLoading, ...rest } = useOrganizationStatuses(options)
+
+  const validStatuses = [
+    ORGANIZATION_STATUSES.REGISTERED,
+    ORGANIZATION_STATUSES.UNREGISTERED
+  ]
+
+  const filteredData = data?.filter((status) =>
+    validStatuses.includes(status.status)
+  )
+
+  return {
+    data: filteredData,
+    isLoading,
+    ...rest
+  }
 }
 
 export const useOrganizationNames = (statuses = null, options) => {
