@@ -707,3 +707,253 @@ async def test_penalty_override_user_relationship(
     assert result.penalty_override_user == users[0].user_profile_id
     # Test the relationship is properly configured
     assert hasattr(result, "penalty_override_user_profile")
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_mutual_exclusivity_both_nonzero_gasoline(
+    summary_repo, compliance_reports, compliance_report_summaries
+):
+    """Test that validation fails when both Line 7 and Line 9 have non-zero gasoline values"""
+    from lcfs.web.api.compliance_report.schema import (
+        ComplianceReportSummarySchema,
+        ComplianceReportSummaryRowSchema,
+    )
+    from lcfs.web.exception.exceptions import ServiceException
+
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=7,
+                field="previously_retained",
+                gasoline=100,
+                diesel=0,
+                jet_fuel=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=9,
+                field="obligation_added",
+                gasoline=50,  # Non-zero value conflicts with Line 7
+                diesel=0,
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    with pytest.raises(ServiceException) as exc_info:
+        await summary_repo.save_compliance_report_summary(
+            summary=summary_schema, compliance_year=2024
+        )
+
+    assert "Lines 7 and 9 cannot both contain non-zero values" in str(exc_info.value)
+    assert "Gasoline" in str(exc_info.value)
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_mutual_exclusivity_both_nonzero_diesel(
+    summary_repo, compliance_reports, compliance_report_summaries
+):
+    """Test that validation fails when both Line 7 and Line 9 have non-zero diesel values"""
+    from lcfs.web.api.compliance_report.schema import (
+        ComplianceReportSummarySchema,
+        ComplianceReportSummaryRowSchema,
+    )
+    from lcfs.web.exception.exceptions import ServiceException
+
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=7,
+                field="previously_retained",
+                gasoline=0,
+                diesel=200,
+                jet_fuel=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=9,
+                field="obligation_added",
+                gasoline=0,
+                diesel=75,  # Non-zero value conflicts with Line 7
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    with pytest.raises(ServiceException) as exc_info:
+        await summary_repo.save_compliance_report_summary(
+            summary=summary_schema, compliance_year=2024
+        )
+
+    assert "Lines 7 and 9 cannot both contain non-zero values" in str(exc_info.value)
+    assert "Diesel" in str(exc_info.value)
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_mutual_exclusivity_line_7_only(
+    summary_repo, compliance_reports, compliance_report_summaries
+):
+    """Test that validation passes when only Line 7 has non-zero values"""
+    from lcfs.web.api.compliance_report.schema import (
+        ComplianceReportSummarySchema,
+        ComplianceReportSummaryRowSchema,
+    )
+
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=7,
+                field="previously_retained",
+                gasoline=100,
+                diesel=200,
+                jet_fuel=50,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=9,
+                field="obligation_added",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    # Should not raise an exception
+    result = await summary_repo.save_compliance_report_summary(
+        summary=summary_schema, compliance_year=2024
+    )
+
+    assert result is not None
+    assert result.line_7_previously_retained_gasoline == 100
+    assert result.line_9_obligation_added_gasoline == 0
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_mutual_exclusivity_line_9_only(
+    summary_repo, compliance_reports, compliance_report_summaries
+):
+    """Test that validation passes when only Line 9 has non-zero values"""
+    from lcfs.web.api.compliance_report.schema import (
+        ComplianceReportSummarySchema,
+        ComplianceReportSummaryRowSchema,
+    )
+
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=7,
+                field="previously_retained",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=9,
+                field="obligation_added",
+                gasoline=150,
+                diesel=250,
+                jet_fuel=75,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    # Should not raise an exception
+    result = await summary_repo.save_compliance_report_summary(
+        summary=summary_schema, compliance_year=2024
+    )
+
+    assert result is not None
+    assert result.line_7_previously_retained_gasoline == 0
+    assert result.line_9_obligation_added_gasoline == 150
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_mutual_exclusivity_both_zero(
+    summary_repo, compliance_reports, compliance_report_summaries
+):
+    """Test that validation passes when both Line 7 and Line 9 have zero values"""
+    from lcfs.web.api.compliance_report.schema import (
+        ComplianceReportSummarySchema,
+        ComplianceReportSummaryRowSchema,
+    )
+
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=7,
+                field="previously_retained",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=9,
+                field="obligation_added",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    # Should not raise an exception
+    result = await summary_repo.save_compliance_report_summary(
+        summary=summary_schema, compliance_year=2024
+    )
+
+    assert result is not None
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_mutual_exclusivity_mixed_columns(
+    summary_repo, compliance_reports, compliance_report_summaries
+):
+    """Test that validation allows different fuel types to have values in different lines"""
+    from lcfs.web.api.compliance_report.schema import (
+        ComplianceReportSummarySchema,
+        ComplianceReportSummaryRowSchema,
+    )
+
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=7,
+                field="previously_retained",
+                gasoline=100,  # Line 7 has gasoline
+                diesel=0,
+                jet_fuel=0,
+            ),
+            ComplianceReportSummaryRowSchema(
+                line=9,
+                field="obligation_added",
+                gasoline=0,
+                diesel=200,  # Line 9 has diesel (different fuel type)
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    # Should not raise an exception - mutual exclusivity is per column
+    result = await summary_repo.save_compliance_report_summary(
+        summary=summary_schema, compliance_year=2024
+    )
+
+    assert result is not None
+    assert result.line_7_previously_retained_gasoline == 100
+    assert result.line_9_obligation_added_diesel == 200
