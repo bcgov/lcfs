@@ -220,7 +220,25 @@ export const renewableFuelColumns = (
     )
   }
 
+  const line9Constraints = {
+    gasoline: buildLineSevenConstraint(
+      data[SUMMARY.LINE_9]?.maxGasoline,
+      data[SUMMARY.LINE_9]?.gasoline
+    ),
+    diesel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_9]?.maxDiesel,
+      data[SUMMARY.LINE_9]?.diesel
+    ),
+    jetFuel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_9]?.maxJetFuel,
+      data[SUMMARY.LINE_9]?.jetFuel
+    )
+  }
+
   const unlockedLineSevenConstraint = (constraint) =>
+    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+
+  const unlockedLineNineConstraint = (constraint) =>
     lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
 
   // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
@@ -364,7 +382,8 @@ export const renewableFuelColumns = (
       cellConstraints: {
         [SUMMARY.LINE_6]: { min: 0, max: line6Caps.gasoline },
         [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.gasoline),
-        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.gasoline }
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.gasoline },
+        [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.gasoline)
       }
     },
     {
@@ -377,7 +396,8 @@ export const renewableFuelColumns = (
       cellConstraints: {
         [SUMMARY.LINE_6]: { min: 0, max: line6Caps.diesel },
         [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.diesel),
-        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.diesel }
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.diesel },
+        [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.diesel)
       }
     },
     {
@@ -390,7 +410,8 @@ export const renewableFuelColumns = (
       cellConstraints: {
         [SUMMARY.LINE_6]: { min: 0, max: line6Caps.jetFuel },
         [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.jetFuel),
-        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.jetFuel }
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.jetFuel },
+        [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.jetFuel)
       }
     }
   ]
