@@ -71,7 +71,11 @@ vi.mock('@/hooks/useOrganizations', () => ({
     isError: false,
     error: null
   }),
-  useOrganizationStatuses: () => ({ data: [] })
+  useOrganizationStatuses: () => ({ data: [] }),
+  useOrganizationListStatuses: () => ({
+    data: [{ status: 'Registered' }, { status: 'Unregistered' }],
+    isLoading: false
+  })
 }))
 
 // Mock react-i18next

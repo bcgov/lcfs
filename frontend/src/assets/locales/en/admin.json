@@ -80,7 +80,8 @@
     "compliance_reporting": "can create/save compliance reports and submit files.",
     "signing_authority": "can sign and submit compliance reports to government and transfers to trade partners/government.",
     "read_only": "can view transactions, compliance reports and files.",
-    "optional": "optional"
+    "optional": "optional",
+    "selectRolePrompt": "Select a role before saving."
   },
   "userActivity": {
     "actionTaken": "Action taken",
