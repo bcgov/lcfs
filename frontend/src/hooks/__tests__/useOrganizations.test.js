@@ -2,8 +2,10 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
+import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import {
   useOrganizationStatuses,
+  useOrganizationListStatuses,
   useOrganizationNames,
   useRegExtOrgs
 } from '../useOrganizations'
@@ -68,6 +70,100 @@ describe('useOrganizations', () => {
 
       const { result } = renderHook(
         () => useOrganizationStatuses(customOptions),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockGet).toHaveBeenCalledWith('/organizations/statuses/')
+    })
+  })
+
+  describe('useOrganizationListStatuses', () => {
+    it('should filter organization statuses to only Registered and Unregistered', async () => {
+      const mockData = [
+        { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 },
+        { status: ORGANIZATION_STATUSES.UNREGISTERED, organizationStatusId: 2 },
+        { status: ORGANIZATION_STATUSES.SUSPENDED, organizationStatusId: 3 },
+        { status: ORGANIZATION_STATUSES.CANCELED, organizationStatusId: 4 }
+      ]
+      mockGet.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(() => useOrganizationListStatuses(), {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toHaveLength(2)
+      expect(result.current.data).toEqual([
+        { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 },
+        { status: ORGANIZATION_STATUSES.UNREGISTERED, organizationStatusId: 2 }
+      ])
+      expect(mockGet).toHaveBeenCalledWith('/organizations/statuses/')
+    })
+
+    it('should handle empty data', async () => {
+      mockGet.mockResolvedValue({ data: [] })
+
+      const { result } = renderHook(() => useOrganizationListStatuses(), {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual([])
+    })
+
+    it('should handle only valid statuses in response', async () => {
+      const mockData = [
+        { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 },
+        { status: ORGANIZATION_STATUSES.UNREGISTERED, organizationStatusId: 2 }
+      ]
+      mockGet.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(() => useOrganizationListStatuses(), {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toHaveLength(2)
+      expect(result.current.data).toEqual(mockData)
+    })
+
+    it('should handle API errors', async () => {
+      const mockError = new Error('Failed to fetch statuses')
+      mockGet.mockRejectedValue(mockError)
+
+      const { result } = renderHook(() => useOrganizationListStatuses(), {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+
+    it('should pass through custom options', async () => {
+      const mockData = [
+        { status: ORGANIZATION_STATUSES.REGISTERED, organizationStatusId: 1 }
+      ]
+      mockGet.mockResolvedValue({ data: mockData })
+      const customOptions = { retry: 3 }
+
+      const { result } = renderHook(
+        () => useOrganizationListStatuses(customOptions),
         { wrapper }
       )
 
