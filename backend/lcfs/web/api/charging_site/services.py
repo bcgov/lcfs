@@ -1,14 +1,16 @@
 import math
-from typing import List
+from typing import List, Optional
 import structlog
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
 
 from lcfs.db.models.compliance import (
     ChargingEquipmentStatus,
     ChargingSite,
     ChargingSiteStatus,
 )
+from lcfs.db.models.organization import Organization
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -36,6 +38,58 @@ from lcfs.web.core.decorators import service_handler
 
 
 logger = structlog.get_logger(__name__)
+
+
+def _get_organization_name_expression():
+    """
+    Build a correlated subquery expression that resolves the organization name for a charging site.
+    """
+    return (
+        select(Organization.name)
+        .where(Organization.organization_id == ChargingSite.organization_id)
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+
+
+def _get_allocating_organization_display_name_expression():
+    """
+    Build an expression that resolves the allocating organization display name for a charging site.
+    Prefers the linked organization name when available, otherwise falls back to the free-text name.
+    """
+    allocating_org_name_subquery = (
+        select(Organization.name)
+        .where(
+            Organization.organization_id == ChargingSite.allocating_organization_id
+        )
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+    return func.coalesce(
+        allocating_org_name_subquery, ChargingSite.allocating_organization_name
+    )
+
+
+def _build_charging_site_filter_condition(filter_model) -> Optional:
+    """
+    Convert a filter model into a SQLAlchemy filter condition for charging site queries.
+    Handles relationship-backed fields like organization and allocating organization.
+    """
+    if filter_model.field == "status":
+        field = get_field_for_filter(ChargingSiteStatus, "status")
+    elif filter_model.field == "organization":
+        field = _get_organization_name_expression()
+    elif filter_model.field == "allocating_organization":
+        field = _get_allocating_organization_display_name_expression()
+    else:
+        field = get_field_for_filter(ChargingSite, filter_model.field)
+
+    return apply_filter_conditions(
+        field,
+        filter_model.filter,
+        filter_model.type,
+        filter_model.filter_type,
+    )
 
 
 class ChargingSiteService:
@@ -260,21 +314,9 @@ class ChargingSiteService:
         # Apply filters
         if pagination.filters:
             for f in pagination.filters:
-                # Handle status field specially since it's a relationship
-                if f.field == "status":
-                    field = get_field_for_filter(ChargingSiteStatus, "status")
-                else:
-                    field = get_field_for_filter(ChargingSite, f.field)
-
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field,
-                        f.filter,
-                        f.type,
-                        f.filter_type,
-                    )
-                    if condition is not None:
-                        conditions.append(condition)
+                condition = _build_charging_site_filter_condition(f)
+                if condition is not None:
+                    conditions.append(condition)
 
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
@@ -306,21 +348,9 @@ class ChargingSiteService:
 
         if pagination.filters:
             for f in pagination.filters:
-                # Handle status field specially since it's a relationship
-                if f.field == "status":
-                    field = get_field_for_filter(ChargingSiteStatus, "status")
-                else:
-                    field = get_field_for_filter(ChargingSite, f.field)
-
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field,
-                        f.filter,
-                        f.type,
-                        f.filter_type,
-                    )
-                    if condition is not None:
-                        conditions.append(condition)
+                condition = _build_charging_site_filter_condition(f)
+                if condition is not None:
+                    conditions.append(condition)
 
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
