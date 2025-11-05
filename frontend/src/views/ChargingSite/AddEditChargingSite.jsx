@@ -128,10 +128,7 @@ export const AddEditChargingSite = ({
   }, [isGridReady, isEditMode, data, rowData, organizationId])
 
   useEffect(() => {
-    if (
-      !optionsLoading &&
-      Array.isArray(allocationOrganizations)
-    ) {
+    if (!optionsLoading && Array.isArray(allocationOrganizations)) {
       const updatedColumnDefs = chargingSiteColDefs(
         allocationOrganizations,
         errors,
@@ -177,7 +174,7 @@ export const AddEditChargingSite = ({
       const responseData = await handleScheduleSave({
         alertRef,
         idField: 'chargingSiteId',
-        labelPrefix: 'columnLabels',
+        labelPrefix: 'chargingSite:columnLabels',
         params,
         setErrors,
         setWarnings,
@@ -185,8 +182,15 @@ export const AddEditChargingSite = ({
         t,
         updatedData
       })
-      alertRef.current?.clearAlert()
-      params.node.updateData({ ...responseData, validationStatus: 'valid' })
+
+      // Only clear alert and set to valid if the save was successful
+      if (responseData.validationStatus === 'success') {
+        alertRef.current?.clearAlert()
+        params.node.updateData({ ...responseData, validationStatus: 'valid' })
+      } else {
+        // Update with error/warning status but keep the alert visible
+        params.node.updateData({ ...responseData })
+      }
       params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
