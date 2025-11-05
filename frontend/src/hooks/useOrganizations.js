@@ -11,6 +11,24 @@ export const useOrganizationStatuses = (options) => {
     ...options
   })
 }
+export const useOrganizationListStatuses = (options) => {
+  const { data, isLoading, ...rest } = useOrganizationStatuses(options)
+
+  const validStatuses = [
+    ORGANIZATION_STATUSES.REGISTERED,
+    ORGANIZATION_STATUSES.UNREGISTERED
+  ]
+
+  const filteredData = data?.filter((status) =>
+    validStatuses.includes(status.status)
+  )
+
+  return {
+    data: filteredData,
+    isLoading,
+    ...rest
+  }
+}
 
 /**
  * Fetches organization summaries for dropdowns and selectors.
@@ -60,8 +78,8 @@ export const useOrganizationNames = (
   }
 
   const queryOptions = hasQueryParams
-    ? options ?? {}
-    : queryParamsOrOptions ?? options ?? {}
+    ? (options ?? {})
+    : (queryParamsOrOptions ?? options ?? {})
 
   const basePath =
     queryParams.orgFilter && queryParams.orgFilter !== 'fuel_supplier'
@@ -99,7 +117,8 @@ export const useOrganizationNames = (
   }
 
   const querySegments = [...statusParams, ...filterEntries]
-  const queryString = querySegments.length > 0 ? `?${querySegments.join('&')}` : ''
+  const queryString =
+    querySegments.length > 0 ? `?${querySegments.join('&')}` : ''
   const filtersKey = JSON.stringify(queryParams.filters || {})
 
   return useQuery({
