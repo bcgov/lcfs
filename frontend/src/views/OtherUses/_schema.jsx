@@ -15,11 +15,7 @@ import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import {
-  formatFuelCodeOptions,
-  extractOriginalFuelCode,
-  formatFuelCodeWithCountryPrefix
-} from '@/utils/fuelCodeCountryPrefix'
+import { formatFuelCodeOptions } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,
@@ -183,7 +179,7 @@ export const otherUsesColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
     suppressKeyboardEvent,
-    minWidth: 150,
+    minWidth: 175,
     editable: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -194,29 +190,11 @@ export const otherUsesColDefs = (
       )
     },
     tooltipValueGetter: () => 'Select the approved fuel code',
-    valueGetter: (params) => {
-      // Format the fuel code with country prefix for display
-      if (params.data.fuelCode) {
-        const fuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )
-        const fuelCodeDetails = fuelType?.fuelCodes?.find(
-          (fc) => fc.fuelCode === params.data.fuelCode
-        )
-        const country = fuelCodeDetails?.fuelProductionFacilityCountry
-        params.data.isCanadaProduced = country === 'Canada'
-        return formatFuelCodeWithCountryPrefix(
-          params.data.fuelCode,
-          country,
-          compliancePeriod
-        )
-      }
-      return params.data.fuelCode
-    },
+    valueGetter: (params) => params.data.fuelCode || '',
     valueSetter: (params) => {
       if (params.newValue) {
         // Extract the original fuel code from the formatted display value
-        const originalFuelCode = extractOriginalFuelCode(params.newValue)
+        const originalFuelCode = params.newValue
         params.data.fuelCode = originalFuelCode
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
@@ -456,6 +434,7 @@ export const otherUsesSummaryColDefs = (complianceYear) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     field: 'fuelCode',
+    minWidth: 175,
     floatingFilter: false,
     valueGetter: (params) => {
       return params.data.fuelCode || ''
@@ -540,6 +519,7 @@ export const changelogCommonColDefs = (highlight = true, complianceYear) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
+    minWidth: 175,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode'),
     valueGetter: (params) => {
       const fuelCode = params.data.fuelCode

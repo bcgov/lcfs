@@ -197,6 +197,98 @@ async def test_handle_submitted_status_insufficient_permissions(
 
 
 @pytest.mark.anyio
+async def test_handle_submitted_status_auto_submits_fse_records(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    mock_summary_service,
+):
+    """Test that FSE records in Draft/Updated status are auto-submitted when report is submitted."""
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = 100
+
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Mock calculated summary
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=6,
+                field="renewable_fuel_retained",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=12, field="low_carbon_fuel_required", value=0
+            ),
+        ],
+        non_compliance_penalty_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=21, field="non_compliance_penalty_payable", value=0
+            ),
+        ],
+        can_sign=True,
+        line_20_surplus_deficit_units=100,
+    )
+
+    # Mock the returned summary
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 100
+
+    # Set up mocks
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Mock the charging equipment repo
+    mock_charging_equipment_repo = AsyncMock()
+    mock_charging_equipment_repo.auto_submit_draft_updated_fse_for_report = AsyncMock(
+        return_value=3  # 3 FSE records were auto-submitted
+    )
+    compliance_report_update_service._charging_equipment_repo = (
+        mock_charging_equipment_repo
+    )
+
+    # Inject the mocked org_service
+    compliance_report_update_service.org_service = mock_org_service
+    mock_org_service.adjust_balance.return_value = MagicMock()
+
+    # Call the method
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    # Assertions
+    mock_user_has_roles.assert_called_once_with(
+        mock.ANY,
+        [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
+    )
+
+    # Verify that auto_submit_draft_updated_fse_for_report was called
+    mock_charging_equipment_repo.auto_submit_draft_updated_fse_for_report.assert_called_once_with(
+        report_id
+    )
+
+    # Summary service should be called to recalculate
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+
+
+@pytest.mark.anyio
 async def test_handle_submitted_status_with_existing_summary(
     compliance_report_update_service,
     mock_repo,
