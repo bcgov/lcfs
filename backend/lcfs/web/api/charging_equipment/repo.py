@@ -210,6 +210,8 @@ class ChargingEquipmentRepository:
             model=equipment_data.get("model"),
             level_of_equipment_id=equipment_data["level_of_equipment_id"],
             ports=equipment_data.get("ports"),
+            latitude=equipment_data.get("latitude"),
+            longitude=equipment_data.get("longitude"),
             notes=equipment_data.get("notes"),
             version=1,
         )
