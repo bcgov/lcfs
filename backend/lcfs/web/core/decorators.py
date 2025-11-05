@@ -259,7 +259,7 @@ def repo_handler(func):
         try:
             return await func(*args, **kwargs)
         # raise the error to the service layer
-        except (HTTPException, DataNotFoundException, VirusScanException, ValueError):
+        except (HTTPException, DataNotFoundException, VirusScanException, ValueError, ServiceException):
             raise
         # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
         except Exception as e:
