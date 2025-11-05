@@ -76,7 +76,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
       navigate(ROUTES.REPORTS.LIST + '/fse', {
         replace: true,
         state: {
-          message: 'IDIR users cannot edit FSE equipment directly. Use the FSE processing workflow through charging sites.',
+          message:
+            'IDIR users cannot edit FSE equipment directly. Use the FSE processing workflow through charging sites.',
           severity: 'info'
         }
       })
@@ -118,94 +119,107 @@ export const AddEditChargingEquipment = ({ mode }) => {
   }, [navigate])
 
   // Unified save handler for grid rows (create/update/delete)
-  const saveRow = useCallback(async (data) => {
-    // Map API shape; when editing existing, backend uses id param
-    if (data.deleted) {
-      if (data.charging_equipment_id) {
-        await deleteMutation.mutateAsync(parseInt(data.charging_equipment_id))
+  const saveRow = useCallback(
+    async (data) => {
+      // Map API shape; when editing existing, backend uses id param
+      if (data.deleted) {
+        if (data.chargingEquipmentId) {
+          await deleteMutation.mutateAsync(parseInt(data.chargingEquipmentId))
+        }
+        return { data: { chargingEquipmentId: data.chargingEquipmentId } }
       }
-      return { data: { charging_equipment_id: data.charging_equipment_id } }
-    }
 
-    if (data.charging_equipment_id) {
-      const updated = await updateMutation.mutateAsync({
-        id: parseInt(data.charging_equipment_id),
-        data
-      })
-      return { data: updated }
-    }
+      if (data.chargingEquipmentId) {
+        const updated = await updateMutation.mutateAsync({
+          id: parseInt(data.chargingEquipmentId),
+          data
+        })
+        return { data: updated }
+      }
 
-    const created = await createMutation.mutateAsync(data)
-    return { data: created }
-  }, [createMutation, updateMutation, deleteMutation])
+      const created = await createMutation.mutateAsync(data)
+      return { data: created }
+    },
+    [createMutation, updateMutation, deleteMutation]
+  )
 
   // Grid event handlers
-  const handleCellEditingStopped = useCallback(async (params) => {
-    if (params.oldValue === params.newValue) return
+  const handleCellEditingStopped = useCallback(
+    async (params) => {
+      if (params.oldValue === params.newValue) return
 
-    const updatedData = {
-      ...Object.entries(params.node.data)
-        .filter(
-          ([, value]) =>
-            value !== null && value !== '' && value !== undefined
-        )
-        .reduce((acc, [key, value]) => {
-          acc[key] = value
-          return acc
-        }, {}),
-      charging_equipment_id: equipment?.charging_equipment_id,
-      status: equipment?.status || 'Draft'
-    }
+      const updatedData = {
+        ...Object.entries(params.node.data)
+          .filter(
+            ([, value]) => value !== null && value !== '' && value !== undefined
+          )
+          .reduce((acc, [key, value]) => {
+            acc[key] = value
+            return acc
+          }, {}),
+        chargingEquipmentId: equipment?.chargingEquipmentId,
+        status: equipment?.status || 'Draft'
+      }
 
-    const canEdit = !isEdit || (equipment?.status && ['Draft', 'Updated', 'Validated'].includes(equipment.status))
-    if (!canEdit) return
+      const canEdit =
+        !isEdit ||
+        (equipment?.status &&
+          ['Draft', 'Updated', 'Validated'].includes(equipment.status))
+      if (!canEdit) return
 
-    try {
-      const responseData = await handleScheduleSave({
-        alertRef,
-        idField: 'charging_equipment_id',
-        labelPrefix: 'chargingEquipment',
-        params,
-        setErrors: setGridErrors,
-        setWarnings: setGridWarnings,
-        saveRow,
-        t,
-        updatedData
-      })
-
-      params.node.updateData(responseData)
-      alertRef.current?.triggerAlert({
-        message: isEdit ? t('chargingEquipment:updateSuccess') : t('chargingEquipment:createSuccess'),
-        severity: 'success'
-      })
-    } catch (error) {
-      alertRef.current?.triggerAlert({
-        message: error.message || 'Failed to save equipment',
-        severity: 'error'
-      })
-    }
-  }, [equipment, isEdit, alertRef, saveRow, t])
-
-  const handleGridAction = useCallback(async (action, params) => {
-    if (action === 'delete' && isEdit && equipment?.status === 'Draft') {
       try {
-        await handleScheduleDelete(
-          params,
-          'charging_equipment_id',
-          deleteMutation.mutateAsync,
+        const responseData = await handleScheduleSave({
           alertRef,
-          () => {},
-          {}
-        )
-        handleCancel()
+          idField: 'chargingEquipmentId',
+          labelPrefix: 'chargingEquipment',
+          params,
+          setErrors: setGridErrors,
+          setWarnings: setGridWarnings,
+          saveRow,
+          t,
+          updatedData
+        })
+
+        params.node.updateData(responseData)
+        alertRef.current?.triggerAlert({
+          message: isEdit
+            ? t('chargingEquipment:updateSuccess')
+            : t('chargingEquipment:createSuccess'),
+          severity: 'success'
+        })
       } catch (error) {
         alertRef.current?.triggerAlert({
-          message: error.message || 'Failed to delete equipment',
+          message: error.message || 'Failed to save equipment',
           severity: 'error'
         })
       }
-    }
-  }, [isEdit, equipment, deleteMutation.mutateAsync, handleCancel])
+    },
+    [equipment, isEdit, alertRef, saveRow, t]
+  )
+
+  const handleGridAction = useCallback(
+    async (action, params) => {
+      if (action === 'delete' && isEdit && equipment?.status === 'Draft') {
+        try {
+          await handleScheduleDelete(
+            params,
+            'chargingEquipmentId',
+            deleteMutation.mutateAsync,
+            alertRef,
+            () => {},
+            {}
+          )
+          handleCancel()
+        } catch (error) {
+          alertRef.current?.triggerAlert({
+            message: error.message || 'Failed to delete equipment',
+            severity: 'error'
+          })
+        }
+      }
+    },
+    [isEdit, equipment, deleteMutation.mutateAsync, handleCancel]
+  )
 
   // Form setup with react-hook-form and yup validation
   const {
@@ -219,15 +233,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
   } = useForm({
     resolver: yupResolver(chargingEquipmentSchema),
     defaultValues: {
-      charging_site_id: '',
-      serial_number: '',
+      chargingSiteId: '',
+      serialNumber: '',
       manufacturer: '',
       model: '',
-      level_of_equipment_id: '',
+      levelOfEquipmentId: '',
       ports: '',
       notes: '',
-      intended_use_ids: [],
-      intended_user_ids: []
+      intendedUseIds: [],
+      intendedUserIds: []
     }
   })
 
@@ -235,17 +249,17 @@ export const AddEditChargingEquipment = ({ mode }) => {
   useEffect(() => {
     if (isEdit && equipment) {
       reset({
-        charging_site_id: equipment.charging_site_id || '',
-        serial_number: equipment.serial_number || '',
+        chargingSiteId: equipment.chargingSiteId || '',
+        serialNumber: equipment.serialNumber || '',
         manufacturer: equipment.manufacturer || '',
         model: equipment.model || '',
-        level_of_equipment_id: equipment.level_of_equipment_id || '',
+        levelOfEquipmentId: equipment.levelOfEquipmentId || '',
         ports: equipment.ports || '',
         notes: equipment.notes || '',
-        intended_use_ids:
-          equipment.intended_uses?.map((use) => use.end_use_type_id) || [],
-        intended_user_ids:
-          equipment.intended_users?.map((user) => user.end_user_type_id) || []
+        intendedUseIds:
+          equipment.intendedUses?.map((use) => use.endUseTypeId) || [],
+        intendedUserIds:
+          equipment.intendedUsers?.map((user) => user.endUserTypeId) || []
       })
     }
   }, [equipment, reset, isEdit])
@@ -270,7 +284,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         })
         // Navigate to edit mode for the new equipment
         navigate(
-          `${ROUTES.REPORTS.LIST}/fse/${result.charging_equipment_id}/edit`
+          `${ROUTES.REPORTS.LIST}/fse/${result.chargingEquipmentId}/edit`
         )
       }
     } catch (error) {
@@ -303,20 +317,19 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }
 
-
   // Bulk mode handlers
   const handleAddRow = () => {
     const newRow = {
       id: Date.now(), // Temporary ID for new rows
-      charging_site_id: '',
-      serial_number: '',
+      chargingSiteId: '',
+      serialNumber: '',
       manufacturer: '',
       model: '',
-      level_of_equipment_id: '',
+      levelOfEquipmentId: '',
       ports: 'Single port',
       notes: '',
-      intended_use_ids: [],
-      intended_user_ids: []
+      intendedUseIds: [],
+      intendedUserIds: []
     }
     setBulkData([...bulkData, newRow])
   }
@@ -337,10 +350,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
       // Filter out rows with missing required fields
       const validRows = rowData.filter(
         (row) =>
-          row.charging_site_id &&
-          row.serial_number &&
+          row.chargingSiteId &&
+          row.serialNumber &&
           row.manufacturer &&
-          row.level_of_equipment_id
+          row.levelOfEquipmentId
       )
 
       if (validRows.length === 0) {
@@ -468,13 +481,13 @@ export const AddEditChargingEquipment = ({ mode }) => {
                         acc[key] = value
                         return acc
                       }, {}),
-                    charging_equipment_id: params.node.data.charging_equipment_id,
+                    chargingEquipmentId: params.node.data.chargingEquipmentId,
                     status: 'Draft'
                   }
 
                   const responseData = await handleScheduleSave({
                     alertRef,
-                    idField: 'charging_equipment_id',
+                    idField: 'chargingEquipmentId',
                     labelPrefix: 'chargingEquipment',
                     params,
                     setErrors: setGridErrors,
@@ -486,7 +499,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
                   params.node.updateData(responseData)
 
-                  // Update bulkData state with the saved data including charging_equipment_id
+                  // Update bulkData state with the saved data including chargingEquipmentId
                   const updatedBulkData = [...bulkData]
                   const rowIndex = updatedBulkData.findIndex(
                     (row) => row.id === params.data.id
@@ -510,20 +523,20 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   if (action === 'delete') {
                     await handleScheduleDelete(
                       params,
-                      'charging_equipment_id',
+                      'chargingEquipmentId',
                       saveRow,
                       alertRef,
                       setBulkData,
                       {
-                        charging_site_id: '',
-                        serial_number: '',
+                        chargingSiteId: '',
+                        serialNumber: '',
                         manufacturer: '',
                         model: '',
-                        level_of_equipment_id: '',
+                        levelOfEquipmentId: '',
                         ports: 'Single port',
                         notes: '',
-                        intended_use_ids: [],
-                        intended_user_ids: []
+                        intendedUseIds: [],
+                        intendedUserIds: []
                       }
                     )
                   }
@@ -533,15 +546,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     .fill()
                     .map(() => ({
                       id: Date.now() + Math.random(),
-                      charging_site_id: '',
-                      serial_number: '',
+                      chargingSiteId: '',
+                      serialNumber: '',
                       manufacturer: '',
                       model: '',
-                      level_of_equipment_id: '',
+                      levelOfEquipmentId: '',
                       ports: 'Single port',
                       notes: '',
-                      intended_use_ids: [],
-                      intended_user_ids: []
+                      intendedUseIds: [],
+                      intendedUserIds: []
                     }))
                 }
                 saveButtonProps={{
@@ -565,10 +578,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
           <Grid item xs={12}>
             <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 1 }} />
           </Grid>
-      </Grid>
-    </BCBox>
-  )
-}
+        </Grid>
+      </BCBox>
+    )
+  }
 
   // Render single edit mode (simpler styling and conditional read-only per status)
   // Match Charging Site add/edit container layout
@@ -597,7 +610,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   color="text.secondary"
                   component="div"
                 >
-                  {equipment.status} • {t('chargingEquipment:registrationNumber')}: {equipment.registration_number || ''}
+                  {equipment.status} •{' '}
+                  {t('chargingEquipment:registrationNumber')}:{' '}
+                  {equipment.registrationNumber || ''}
                 </BCTypography>
               )}
             </Box>
@@ -632,21 +647,22 @@ export const AddEditChargingEquipment = ({ mode }) => {
               defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
               rowData={[
                 {
-                  id: equipment?.charging_equipment_id || Date.now(),
-                  charging_equipment_id: equipment?.charging_equipment_id,
-                  charging_site_id: equipment?.charging_site_id || '',
-                  serial_number: equipment?.serial_number || '',
+                  id: equipment?.chargingEquipmentId || Date.now(),
+                  chargingEquipmentId: equipment?.chargingEquipmentId,
+                  chargingSiteId: equipment?.chargingSiteId || '',
+                  serialNumber: equipment?.serialNumber || '',
                   manufacturer: equipment?.manufacturer || '',
                   model: equipment?.model || '',
-                  level_of_equipment_id: equipment?.level_of_equipment_id || '',
+                  levelOfEquipmentId: equipment?.levelOfEquipmentId || '',
                   ports: equipment?.ports || 'Single port',
                   notes: equipment?.notes || '',
-                  intended_use_ids:
-                    equipment?.intended_uses?.map((use) => use.end_use_type_id) ||
+                  intendedUseIds:
+                    equipment?.intendedUses?.map((use) => use.endUseTypeId) ||
                     [],
-                  intended_user_ids:
-                    equipment?.intended_users?.map((user) => user.end_user_type_id) ||
-                    [],
+                  intendedUserIds:
+                    equipment?.intendedUsers?.map(
+                      (user) => user.endUserTypeId
+                    ) || [],
                   status: equipment?.status || 'Draft'
                 }
               ]}

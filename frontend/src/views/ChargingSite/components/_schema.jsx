@@ -17,7 +17,7 @@ import {
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
-import { numberFormatter } from '@/utils/formatters.js'
+import { dateFormatter, numberFormatter } from '@/utils/formatters.js'
 import {
   useChargingEquipmentStatuses,
   useChargingSiteStatuses
@@ -381,32 +381,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       { statusField: 'status', replaceUnderscores: false }
     ),
     cellClass: 'vertical-middle',
-    floatingFilterComponent: enableSelection
-      ? undefined
-      : BCSelectFloatingFilter,
-    floatingFilterComponentParams: enableSelection
-      ? undefined
-      : {
-          valueKey: 'status',
-          labelKey: 'status',
-          optionsQuery: useChargingEquipmentStatuses
-        },
-    suppressFloatingFilterButton: enableSelection ? undefined : true,
-    filterParams: enableSelection
-      ? {
-          values: [
-            'Draft',
-            'Updated',
-            'Submitted',
-            'Validated',
-            'Decommissioned'
-          ]
-        }
-      : {
-          textMatcher: () => {
-            return true
-          }
-        }
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useChargingEquipmentStatuses
+    },
+    suppressFloatingFilterButton: true,
+    filterParams: {
+      values: ['Draft', 'Updated', 'Submitted', 'Validated', 'Decommissioned']
+    }
   })
 
   // Site Name column
@@ -415,16 +399,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     headerName: t('chargingSite:fseColumnLabels.siteName'),
     sortable: false,
     flex: enableSelection ? 1 : undefined,
-    minWidth: enableSelection ? 200 : 310,
+    minWidth: 310,
     valueGetter: (params) =>
-      params.data?.chargingSite?.siteName || params.data?.site_name || ''
+      params.data.chargingSite?.siteName || params.data.siteName || ''
   })
 
   // Organization column for IDIR users in list view
   if (showOrganizationColumn) {
     cols.push({
-      field: 'organization_name',
-      headerName: t('chargingSite:fseColumnLabels.allocatingOrg'),
+      field: 'organizationName',
+      headerName: t('chargingSite:fseColumnLabels.organizationName'),
       flex: 1,
       minWidth: 200
     })
@@ -435,15 +419,14 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     field: 'registrationNumber',
     headerName: t('chargingSite:fseColumnLabels.registrationNumber'),
     sortable: false,
-    width: enableSelection ? 150 : undefined,
-    minWidth: enableSelection ? undefined : 180
+    minWidth: 180
   })
 
   // Version
   cols.push({
     field: 'version',
     headerName: t('chargingSite:fseColumnLabels.version'),
-    width: enableSelection ? 90 : undefined,
+    minWidth: 120,
     type: enableSelection ? 'numericColumn' : undefined
   })
 
@@ -451,58 +434,59 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
   cols.push({
     field: 'serialNumber',
     headerName: t('chargingSite:fseColumnLabels.serialNumber'),
-    minWidth: enableSelection ? undefined : 220,
-    width: enableSelection ? 150 : undefined
+    minWidth: 220
   })
 
   // Manufacturer
   cols.push({
     field: 'manufacturer',
     headerName: t('chargingSite:fseColumnLabels.manufacturer'),
-    minWidth: enableSelection ? undefined : 320,
-    width: enableSelection ? 150 : undefined
+    minWidth: 320
   })
 
   // Model
   cols.push({
     field: 'model',
     headerName: t('chargingSite:fseColumnLabels.model'),
-    minWidth: enableSelection ? undefined : 220,
-    width: enableSelection ? 150 : undefined
+    minWidth: 220
   })
 
   // Level of Equipment
   cols.push({
     field: 'levelOfEquipment',
     headerName: t('chargingSite:fseColumnLabels.levelOfEquipment'),
-    minWidth: enableSelection ? undefined : 400,
-    width: enableSelection ? 180 : undefined,
+    minWidth: 400,
     sortable: false,
-    valueGetter: (params) => {
-      return (
-        params.data?.levelOfEquipment?.name ||
-        params.data?.level_of_equipment_name ||
-        ''
-      )
-    }
+    valueGetter: (params) =>
+      params.data.levelOfEquipment?.name ||
+      params.data.levelOfEquipmentName ||
+      ''
+  })
+  // ports
+  cols.push({
+    field: 'ports',
+    headerName: t('chargingSite:fseColumnLabels.ports'),
+    minWidth: 160,
+    sortable: false
   })
 
   // Intended Uses
   cols.push({
     field: enableSelection ? 'intended_uses' : 'intendedUse',
     headerName: t('chargingSite:fseColumnLabels.intendedUse'),
-    minWidth: enableSelection ? undefined : 380,
-    width: enableSelection ? 200 : undefined,
+    minWidth: 380,
     sortable: false,
-    valueGetter: (params) => params.data?.intendedUseTypes?.map((i) => i.type),
-    valueFormatter: enableSelection
-      ? (params) => {
-          if (!params.value || !Array.isArray(params.value)) return ''
-          return params.value.map((use) => use.type || use).join(', ')
-        }
-      : undefined,
-    cellRenderer: enableSelection ? undefined : CommonArrayRenderer,
-    cellRendererParams: enableSelection ? undefined : { disableLink: true }
+    valueGetter: (params) => {
+      const intendedUseTypes =
+        params.data.intendedUseTypes || params.data.intendedUses || []
+      return intendedUseTypes?.map((i) => i.type)
+    },
+    valueFormatter: (params) => {
+      if (!params.value || !Array.isArray(params.value)) return ''
+      return params.value.map((use) => use.type || use).join(', ')
+    },
+    cellRenderer: CommonArrayRenderer,
+    cellRendererParams: { disableLink: true }
   })
 
   // Intended Users
@@ -510,26 +494,20 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     cols.push({
       field: enableSelection ? 'intended_users' : 'intendedUsers',
       headerName: t('chargingSite:fseColumnLabels.intendedUsers'),
-      minWidth: enableSelection ? undefined : 380,
-      width: enableSelection ? 200 : undefined,
+      minWidth: 380,
       sortable: false,
       valueGetter: (params) => {
         // Handle both data structures: intendedUserTypes (site view) and intended_users (list view)
-        return (
-          params.data?.intendedUserTypes?.map(
-            (i) => i.typeName || i.type_name
-          ) ||
-          params.data?.intended_users?.map((i) => i.typeName || i.type_name)
-        )
+        const intendedUsers =
+          params.data.intendedUsers || params.data.intendedUserTypes || []
+        return intendedUsers?.map((i) => i.typeName)
       },
-      valueFormatter: enableSelection
-        ? (params) => {
-            if (!params.value || !Array.isArray(params.value)) return ''
-            return params.value.join(', ')
-          }
-        : undefined,
-      cellRenderer: enableSelection ? undefined : CommonArrayRenderer,
-      cellRendererParams: enableSelection ? undefined : { disableLink: true }
+      valueFormatter: (params) => {
+        if (!params.value || !Array.isArray(params.value)) return ''
+        return params.value.join(', ')
+      },
+      cellRenderer: CommonArrayRenderer,
+      cellRendererParams: { disableLink: true }
     })
   }
 
@@ -537,24 +515,18 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
   if (showDateColumns) {
     cols.push(
       {
-        field: 'created_date',
+        field: 'createdDate',
         headerName: t('chargingSite:fseColumnLabels.created'),
-        width: 120,
+        minWidth: 150,
         type: 'dateColumn',
-        valueFormatter: (params) => {
-          if (!params.value) return ''
-          return new Date(params.value).toLocaleDateString()
-        }
+        valueFormatter: dateFormatter
       },
       {
-        field: 'updated_date',
+        field: 'updatedDate',
         headerName: t('chargingSite:fseColumnLabels.lastUpdated'),
-        width: 120,
+        minWidth: 150,
         type: 'dateColumn',
-        valueFormatter: (params) => {
-          if (!params.value) return ''
-          return new Date(params.value).toLocaleDateString()
-        }
+        valueFormatter: dateFormatter
       }
     )
   }

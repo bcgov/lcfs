@@ -121,6 +121,7 @@
     "siteName": "Site name",
     "registrationNumber": "Registration #",
     "version": "Version #",
+    "organizationName": "Organization",
     "allocatingOrg": "Allocating organization",
     "serialNumber": "Serial #",
     "manufacturer": "Manufacturer",

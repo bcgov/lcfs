@@ -210,17 +210,21 @@ def downgrade() -> None:
     op.drop_index(
         op.f("ix_fse_compliance_reporting_organization_id"),
         table_name="fse_compliance_reporting",
+        if_exists=True,
     )
     op.drop_index(
         op.f("ix_fse_compliance_reporting_compliance_report_id"),
         table_name="fse_compliance_reporting",
+        if_exists=True,
     )
     op.drop_index(
         op.f("ix_fse_compliance_reporting_compliance_period_id"),
         table_name="fse_compliance_reporting",
+        if_exists=True,
     )
     op.drop_index(
         op.f("ix_fse_compliance_reporting_charging_equipment_id"),
         table_name="fse_compliance_reporting",
+        if_exists=True,
     )
     op.drop_table("fse_compliance_reporting")

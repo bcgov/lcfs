@@ -18,7 +18,8 @@ import {
 import {
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  OpenInNew as OpenInNewIcon
 } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import { fixLeafletIcons, markerIcons } from './utils'
@@ -291,7 +292,10 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   // Handle click to navigate to site page
   const handleOpenSiteInfo = (e) => {
     e.preventDefault()
-    const sitePath = ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', site.chargingSiteId)
+    const sitePath = ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(
+      ':siteId',
+      site.chargingSiteId
+    )
     navigate(sitePath)
   }
 
@@ -327,6 +331,8 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
         return '#9e9e9e'
     }
   }
+
+  const googleMapsUrl = `https://www.google.com/maps?q=${site.latitude},${site.longitude}`
 
   const markerIcon = getMarkerIcon(site.status?.status)
 
@@ -443,7 +449,17 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
           </BCTypography>
 
           {/* Link to site info */}
-          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+          <Box
+            sx={{
+              mt: 2,
+              pt: 2,
+              borderTop: '1px solid #e0e0e0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 1
+            }}
+          >
             <Link
               component="button"
               variant="body2"
@@ -466,7 +482,28 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
               }}
               aria-label={`Open detailed information for ${site.siteName}`}
             >
-              Open site info →
+              View full site info →
+            </Link>
+            <Link
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ textDecoration: 'none', width: '100%' }}
+              aria-label={`Open ${site.siteName} in Google Maps`}
+            >
+              <Chip
+                label="Open in Google Maps"
+                size="small"
+                clickable
+                icon={<OpenInNewIcon sx={{ fontSize: '14px !important' }} />}
+                sx={{
+                  backgroundColor: '#f6f8fcff',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#aec7fcff'
+                  }
+                }}
+              />
             </Link>
           </Box>
         </div>

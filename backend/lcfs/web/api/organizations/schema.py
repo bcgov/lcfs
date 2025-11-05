@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from lcfs.web.api.base import BaseSchema
+from pydantic import field_validator
 from lcfs.web.api.base import PaginationResponseSchema
 
 
@@ -295,6 +296,19 @@ class OrganizationSummaryResponseSchema(BaseSchema):
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
+    org_type: Optional[str] = None
+
+    @field_validator("org_type", mode="before")
+    @classmethod
+    def _normalize_org_type(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, str):
+            return value
+        extracted = getattr(value, "org_type", None)
+        if isinstance(extracted, str):
+            return extracted
+        return None
 
 
 class OrganizationCreateResponseSchema(BaseSchema):

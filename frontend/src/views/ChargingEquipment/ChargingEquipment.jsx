@@ -23,7 +23,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { chargingEquipmentColDefs } from '@/views/ChargingSite/components/_schema'
 
-const defaultSortModel = [{ field: 'updated_date', direction: 'desc' }]
+const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 
 const defaultColDef = {
   editable: false,
@@ -89,8 +89,26 @@ export const ChargingEquipment = () => {
   // Get organization names for IDIR users
   const { data: orgNames = [], isLoading: orgLoading } = useOrganizationNames(
     null,
+    { orgFilter: 'all' },
     { enabled: isIDIR }
   )
+
+  const renderOrganizationOption = (props, option) => {
+    const orgTypeLabel = option?.orgType || option?.org_type
+
+    return (
+      <li {...props}>
+        <Box display="flex" flexDirection="column">
+          <BCTypography variant="body2">{option?.name || ''}</BCTypography>
+          {/* {orgTypeLabel && (
+            <BCTypography variant="caption" color="text.secondary">
+              {orgTypeLabel.replace('_', ' ')}
+            </BCTypography>
+          )} */}
+        </Box>
+      </li>
+    )
+  }
 
   // Enhanced organization change handler with caching
   const handleOrganizationChange = useCallback((event, option) => {
@@ -132,13 +150,14 @@ export const ChargingEquipment = () => {
     return options
   }, [paginationOptions, isIDIR, selectedOrg.id])
 
+  const equipmentQuery = useChargingEquipment(enhancedPaginationOptions)
   const {
     data: equipmentData,
     isLoading,
     isError,
     error,
     refetch
-  } = useChargingEquipment(enhancedPaginationOptions)
+  } = equipmentQuery
 
   const {
     submitEquipment,
@@ -161,7 +180,7 @@ export const ChargingEquipment = () => {
   }, [location, navigate])
 
   const getRowId = useCallback((params) => {
-    return params.data.charging_equipment_id
+    return params.data.chargingEquipmentId
   }, [])
 
   const defaultColDef = useMemo(
@@ -262,18 +281,18 @@ export const ChargingEquipment = () => {
     // Check if user is IDIR/government
     const isIDIR = hasAnyRole(...govRoles)
 
-    const { charging_equipment_id, charging_site_id } = params.data
+    const { chargingEquipmentId, chargingSiteId } = params.data
 
     if (isIDIR) {
       // For IDIR users, navigate to the charging site page for this FSE
       navigate(
-        ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', charging_site_id)
+        ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', chargingSiteId)
       )
       return
     }
 
     // For supplier users, navigate to edit route
-    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', charging_equipment_id))
+    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', chargingEquipmentId))
   }
 
   const handleSelectionChanged = (event) => {
@@ -301,7 +320,7 @@ export const ChargingEquipment = () => {
     // Only submit equipment with Draft or Updated status
     const equipmentIds = selectedRows
       .filter((row) => row.status === 'Draft' || row.status === 'Updated')
-      .map((row) => row.charging_equipment_id)
+      .map((row) => row.chargingEquipmentId)
 
     if (equipmentIds.length === 0) {
       alertRef.current?.triggerAlert({
@@ -320,7 +339,7 @@ export const ChargingEquipment = () => {
       // Optimistically update grid statuses
       gridRef.current?.api?.forEachNode((node) => {
         if (
-          equipmentIds.includes(node.data.charging_equipment_id) &&
+          equipmentIds.includes(node.data.chargingEquipmentId) &&
           (node.data.status === 'Draft' || node.data.status === 'Updated')
         ) {
           node.updateData({ ...node.data, status: 'Submitted' })
@@ -342,7 +361,7 @@ export const ChargingEquipment = () => {
     // Only decommission equipment with Validated status
     const equipmentIds = selectedRows
       .filter((row) => row.status === 'Validated')
-      .map((row) => row.charging_equipment_id)
+      .map((row) => row.chargingEquipmentId)
 
     if (equipmentIds.length === 0) {
       alertRef.current?.triggerAlert({
@@ -361,7 +380,7 @@ export const ChargingEquipment = () => {
       // Optimistically update grid statuses
       gridRef.current?.api?.forEachNode((node) => {
         if (
-          equipmentIds.includes(node.data.charging_equipment_id) &&
+          equipmentIds.includes(node.data.chargingEquipmentId) &&
           node.data.status === 'Validated'
         ) {
           node.updateData({ ...node.data, status: 'Decommissioned' })
@@ -471,11 +490,12 @@ export const ChargingEquipment = () => {
                       loading={orgLoading}
                       options={orgNames}
                       value={selectedOrgOption}
-                      getOptionLabel={(option) => option.name}
+                      getOptionLabel={(option) => option?.name || ''}
                       isOptionEqualToValue={(option, value) =>
                         option.organizationId === value.organizationId
                       }
                       onChange={handleOrganizationChange}
+                      renderOption={renderOrganizationOption}
                       sx={({ functions: { pxToRem } }) => ({
                         width: 300,
                         '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
@@ -557,7 +577,7 @@ export const ChargingEquipment = () => {
                 gridRef={gridRef}
                 alertRef={alertRef}
                 columnDefs={chargingEquipmentColDefs(t, isIDIR, {
-                  enableSelection: true,
+                  enableSelection: true && !isIDIR,
                   showDateColumns: true,
                   showIntendedUsers: true,
                   showOrganizationColumn: isIDIR
@@ -569,7 +589,7 @@ export const ChargingEquipment = () => {
                 gridKey="charging-equipment"
                 paginationOptions={paginationOptions}
                 onPaginationChange={(opts) => setPaginationOptions(opts)}
-                queryData={{ data: equipmentData, isLoading, isError, error }}
+                queryData={equipmentQuery}
                 onRowClicked={handleRowClick}
                 rowSelection="multiple"
                 onSelectionChanged={handleSelectionChanged}

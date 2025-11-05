@@ -30,7 +30,9 @@ export const ChargingSitesList = ({ alertRef }) => {
   useEffect(() => {
     if (isIDIR) {
       window.navigateToFSEProcessing = (siteId) => {
-        navigate(ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING.replace(':siteId', siteId))
+        navigate(
+          ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING.replace(':siteId', siteId)
+        )
       }
     }
 
@@ -73,8 +75,26 @@ export const ChargingSitesList = ({ alertRef }) => {
 
   const { data: orgNames = [], isLoading: orgLoading } = useOrganizationNames(
     null,
+    { orgFilter: 'all' },
     { enabled: isIDIR }
   )
+
+  const renderOrganizationOption = (props, option) => {
+    const orgTypeLabel = option?.orgType || option?.org_type
+
+    return (
+      <li {...props}>
+        <Box display="flex" flexDirection="column">
+          <BCTypography variant="body2">{option?.name || ''}</BCTypography>
+          {/* {orgTypeLabel && (
+            <BCTypography variant="caption" color="text.secondary">
+              {orgTypeLabel.replace('_', ' ')}
+            </BCTypography>
+          )} */}
+        </Box>
+      </li>
+    )
+  }
 
   const onRowClicked = (params) => {
     navigate(
@@ -246,11 +266,12 @@ export const ChargingSitesList = ({ alertRef }) => {
                 loading={orgLoading}
                 options={orgNames}
                 value={selectedOrgOption}
-                getOptionLabel={(option) => option.name}
+                getOptionLabel={(option) => option?.name || ''}
                 isOptionEqualToValue={(option, value) =>
                   option.organizationId === value.organizationId
                 }
                 onChange={handleOrganizationChange}
+                renderOption={renderOrganizationOption}
                 sx={({ functions: { pxToRem } }) => ({
                   width: 300,
                   '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
