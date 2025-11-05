@@ -131,13 +131,13 @@ def _group_codes_by_email_then_company(
       },
       ...
     }
-    Invalid emails are routed to tfrs@gov.bc.ca.
+    Invalid emails are routed to lcfs@gov.bc.ca.
     """
     email_groups: Dict[str, Dict[str, Any]] = defaultdict(
         lambda: {"emails": set(), "companies": defaultdict(lambda: {"codes": []})}
     )
 
-    fallback_email = "tfrs@gov.bc.ca"
+    fallback_email = "lcfs@gov.bc.ca"
     invalid_emails: list[str] = []
 
     for code in fuel_codes:

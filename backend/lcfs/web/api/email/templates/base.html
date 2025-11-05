@@ -1,3 +1,11 @@
+{% if environment == 'dev' %}
+{% set base_url = "https://lcfs-dev.apps.silver.devops.gov.bc.ca" %}
+{% elif environment == 'test' %}
+{% set base_url = "https://lcfs-test.apps.silver.devops.gov.bc.ca" %}
+{% else %}
+{# Default to production #}
+{% set base_url = "https://lowcarbonfuels.gov.bc.ca" %}
+{% endif %}
 <!DOCTYPE html>
 <html>
 
@@ -78,13 +86,11 @@
             {% endblock %}
 
             <p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;">
-              <span style="font-family:BC Sans;" lang="en-US">Should you have any queries or require additional
-                information, please contact the Low
-                Carbon Fuels Branch inbox at <a href="mailto:lcfs@gov.bc.ca" data-linkindex="4"
+              <span style="font-family:BC Sans;" lang="en-US">If you have any questions or require further assistance,
+                please contact the Low Carbon Fuels Branch inbox at <a href="mailto:lcfs@gov.bc.ca" data-linkindex="4"
                   title="mailto:lcfs@gov.bc.ca">lcfs@gov.bc.ca</a>.
               </span>
             </p>
-            <p>Thank you for your attention to this matter.</p>
           </div>
         </td>
       </tr>

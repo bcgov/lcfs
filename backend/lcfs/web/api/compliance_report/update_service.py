@@ -36,6 +36,12 @@ from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
+# Import TYPE_CHECKING to avoid circular imports at runtime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
+
 
 class ComplianceReportUpdateService:
     def __init__(
@@ -53,6 +59,18 @@ class ComplianceReportUpdateService:
         self.org_service = org_service
         self.trx_service = trx_service
         self.notfn_service = notfn_service
+        self._charging_equipment_repo = None
+
+    @property
+    def charging_equipment_repo(self) -> "ChargingEquipmentRepository":
+        """Lazy-load charging equipment repository to avoid circular imports."""
+        if self._charging_equipment_repo is None:
+            from lcfs.web.api.charging_equipment.repo import (
+                ChargingEquipmentRepository,
+            )
+
+            self._charging_equipment_repo = ChargingEquipmentRepository(db=self.repo.db)
+        return self._charging_equipment_repo
 
     async def update_compliance_report(
         self,
@@ -98,19 +116,19 @@ class ComplianceReportUpdateService:
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
         report.assessment_statement = report_data.assessment_statement
-        
+
         # Handle non-assessment flag changes
         if report_data.is_non_assessment is not None:
             old_is_non_assessment = report.is_non_assessment
             report.is_non_assessment = report_data.is_non_assessment
-            
+
             # If changing TO non-assessment, lock summary
             if not old_is_non_assessment and report_data.is_non_assessment:
                 # Lock the summary since this report won't go through normal assessment workflow
                 await self._calculate_and_lock_summary(
                     report, user, skip_can_sign_check=True
                 )
-                    
+
         updated_report = await self.repo.update_compliance_report(report)
 
         # Handle status change related actions
@@ -272,10 +290,13 @@ class ComplianceReportUpdateService:
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # Lock the summary when report is recommended by analyst - this is the snapshot point
-        calculated_summary = await self._calculate_and_lock_summary(
-            report, user, skip_can_sign_check=True
+        # Auto-validate all submitted FSE records associated with this report
+        await self.charging_equipment_repo.auto_validate_submitted_fse_for_report(
+            report.compliance_report_id
         )
+
+        # Lock the summary when report is recommended by analyst - this is the snapshot point
+        await self._calculate_and_lock_summary(report, user, skip_can_sign_check=True)
         await self.repo.update_compliance_report(report)
 
     async def handle_recommended_by_manager_status(
@@ -325,10 +346,10 @@ class ComplianceReportUpdateService:
             # Summary should already be locked from "Recommended by Analyst" step
             if not report.summary or not report.summary.is_locked:
                 raise HTTPException(
-                    status_code=400, 
-                    detail="Report summary must be locked before assessment. Please ensure the report was recommended by an analyst first."
+                    status_code=400,
+                    detail="Report summary must be locked before assessment. Please ensure the report was recommended by an analyst first.",
                 )
-            
+
             credit_change = report.summary.line_20_surplus_deficit_units
 
             if report.transaction:

@@ -13,9 +13,8 @@
     "title": "Transactions",
     "orgHas": "{{name}} has:",
     "transfersInProgress": "Transfer(s) in progress",
-    "organizationsRegistered": "Organizations registered for transfers (see bulletin RLCF-013)",
+    "organizationsRegistered": "Credit trading market",
     "startNewTransfer": "Start a new transfer",
-    "linkTooltip": "Link opens in a new browser tab",
     "loadingMessage": "Loading transactions card..."
   },
   "transactions": {
