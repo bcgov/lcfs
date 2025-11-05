@@ -51,7 +51,7 @@ const initialPaginationOptions = {
 }
 
 export const ChargingEquipment = () => {
-  const { t } = useTranslation(['common', 'chargingEquipment'])
+  const { t } = useTranslation(['common', 'chargingEquipment', 'chargingSite'])
   const navigate = useNavigate()
   const location = useLocation()
   const gridRef = useRef()
