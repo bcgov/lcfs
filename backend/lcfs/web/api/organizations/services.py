@@ -192,7 +192,7 @@ class OrganizationsService:
                 SpreadsheetColumn("ID", "int"),
                 SpreadsheetColumn("Organization Name", "text"),
                 SpreadsheetColumn("Compliance Units", "int"),
-                SpreadsheetColumn("In Reserve", "text"),
+                SpreadsheetColumn("In Reserve", "int"),
                 SpreadsheetColumn("Registered", "date"),
             ],
             rows=data,
@@ -491,7 +491,7 @@ class OrganizationsService:
             and new_credits_to_sell > 0
             and (not was_displayed_in_market or old_credits_to_sell == 0)
         )
-        
+
         if is_new_listing and settings.feature_credit_market_notifications:
             await self._send_credit_market_notification(updated_organization, user)
 
@@ -646,9 +646,7 @@ class OrganizationsService:
                     offence_history=bool(log.get("offence_history")),
                     deliberate=bool(log.get("deliberate")),
                     efforts_to_correct=bool(log.get("efforts_to_correct")),
-                    economic_benefit_derived=bool(
-                        log.get("economic_benefit_derived")
-                    ),
+                    economic_benefit_derived=bool(log.get("economic_benefit_derived")),
                     efforts_to_prevent_recurrence=bool(
                         log.get("efforts_to_prevent_recurrence")
                     ),
@@ -742,7 +740,9 @@ class OrganizationsService:
         return self._map_penalty_log_model(updated)
 
     @service_handler
-    async def delete_penalty_log(self, organization_id: int, penalty_log_id: int) -> None:
+    async def delete_penalty_log(
+        self, organization_id: int, penalty_log_id: int
+    ) -> None:
         existing = await self.repo.get_penalty_log_by_id(
             organization_id, penalty_log_id
         )
