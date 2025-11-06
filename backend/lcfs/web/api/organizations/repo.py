@@ -59,6 +59,23 @@ from .schema import (
 
 logger = structlog.get_logger(__name__)
 
+ORG_TYPE_SHORT_LABELS = {
+    "fuel_supplier": "Supplier",
+    "aggregator": "Aggregator",
+    "fuel_producer": "Producer",
+    "exempted_supplier": "Exempted",
+    "initiative_agreement_holder": "IA Holder",
+}
+
+
+def get_short_org_type_label(org_type_key: str | None, description: str | None) -> str:
+    if org_type_key:
+        key = org_type_key.lower()
+        if key in ORG_TYPE_SHORT_LABELS:
+            return ORG_TYPE_SHORT_LABELS[key]
+        return org_type_key.replace("_", " ").title()
+    return description or ""
+
 
 class OrganizationsRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
@@ -86,6 +103,8 @@ class OrganizationsRepository:
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
+                OrganizationType.org_type,
+                OrganizationType.description,
                 func.abs(
                     func.sum(
                         case(
@@ -120,10 +139,17 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
+            .outerjoin(
+                OrganizationType,
+                Organization.organization_type_id
+                == OrganizationType.organization_type_id,
+            )
             .group_by(
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
+                OrganizationType.org_type,
+                OrganizationType.description,
             )
             .order_by(Organization.organization_id)
         )
@@ -131,11 +157,12 @@ class OrganizationsRepository:
             [
                 org_id,
                 name,
+                get_short_org_type_label(org_type, org_description),
                 total_balance or 0,
                 reserved_balance or 0,
                 status.value,
             ]
-            for org_id, name, status, reserved_balance, total_balance in result
+            for org_id, name, status, org_type, org_description, reserved_balance, total_balance in result
         ]
 
     @repo_handler
@@ -229,6 +256,11 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
+            .join(
+                OrganizationType,
+                Organization.organization_type_id
+                == OrganizationType.organization_type_id,
+            )
             .options(
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),
@@ -243,6 +275,11 @@ class OrganizationsRepository:
                 OrganizationStatus,
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
+            )
+            .join(
+                OrganizationType,
+                Organization.organization_type_id
+                == OrganizationType.organization_type_id,
             )
         )
 
@@ -295,6 +332,8 @@ class OrganizationsRepository:
             if field_name == "status":
                 # Sort by organization status description
                 query = query.order_by(sort_method(OrganizationStatus.status))
+            elif field_name == "org_type":
+                query = query.order_by(sort_method(OrganizationType.description))
             elif field_name == "registrationStatus":
                 # Sort by whether the organization is registered (status == "Registered")
                 registration_case = case(

@@ -15,6 +15,7 @@ from lcfs.db.models.organization.Organization import (
     Organization,
     generate_secure_link_key,
 )
+from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
@@ -163,7 +164,9 @@ class OrganizationsService:
                     )
                 continue
 
-            if field_name == "status":
+            if field_name == "org_type":
+                field = get_field_for_filter(OrganizationType, "org_type")
+            elif field_name == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
                 field = get_field_for_filter(Organization, field_name)
@@ -191,6 +194,7 @@ class OrganizationsService:
             columns=[
                 SpreadsheetColumn("ID", "int"),
                 SpreadsheetColumn("Organization Name", "text"),
+                SpreadsheetColumn("Organization Type", "text"),
                 SpreadsheetColumn("Compliance Units", "int"),
                 SpreadsheetColumn("In Reserve", "text"),
                 SpreadsheetColumn("Registered", "date"),
