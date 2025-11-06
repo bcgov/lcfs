@@ -43,7 +43,11 @@ export const creditMarketColDefs = (t) => [
       const roles = []
       if (params.data.isSeller) roles.push('Seller')
       if (params.data.isBuyer) roles.push('Buyer')
-      return roles.length > 0 ? <RoleRenderer value={roles} /> : 'N/A'
+      return roles.length > 0 ? (
+        <RoleRenderer value={roles} disableLink={true} />
+      ) : (
+        'N/A'
+      )
     }
   },
   {
