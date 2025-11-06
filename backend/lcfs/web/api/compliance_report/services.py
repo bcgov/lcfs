@@ -207,7 +207,7 @@ class ComplianceReportServices:
             "Government adjustment"
             if current_report.current_status.status
             == ComplianceReportStatusEnum.Submitted
-            else "Government re-assessment"
+            else "Reassessment"
         )
         # Fetch the latest version number for the given group_uuid
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
@@ -502,7 +502,7 @@ class ComplianceReportServices:
         Deletes a compliance report.
         - The report_id can be any report in the series (original or supplemental).
         - Supplemental reports are only allowed if the status of the current report is 'Draft'.
-        - Compliance/Supplemental report that is in 'Analyst_adjustment / In Re-assessment
+        - Compliance/Supplemental report that is in 'Analyst_adjustment / In Reassessment
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
