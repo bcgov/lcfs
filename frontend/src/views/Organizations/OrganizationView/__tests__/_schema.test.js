@@ -7,6 +7,7 @@ import {
 import {
   LinkRenderer,
   OrgStatusRenderer,
+  OrgTypeRenderer,
   YesNoTextRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter } from '@/utils/formatters'
@@ -14,6 +15,26 @@ import { numberFormatter } from '@/utils/formatters'
 // Mock dependencies
 vi.mock('@/hooks/useOrganizations', () => ({
   useOrganizationListStatuses: vi.fn()
+}))
+
+vi.mock('@/hooks/useOrganization', () => ({
+  useOrganizationTypes: vi.fn(() => ({
+    data: [
+      {
+        organizationTypeId: 1,
+        orgType: 'fuel_supplier',
+        description: 'Fuel supplier',
+        isBceidUser: true
+      },
+      {
+        organizationTypeId: 2,
+        orgType: 'aggregator',
+        description: 'Aggregator',
+        isBceidUser: true
+      }
+    ],
+    isLoading: false
+  }))
 }))
 
 vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
@@ -46,7 +67,7 @@ describe('ViewOrganization Schema', () => {
     const colDefs = organizationsColDefs(t)
 
     it('defines the correct number of columns', () => {
-      expect(colDefs).toHaveLength(6)
+      expect(colDefs).toHaveLength(7)
     })
 
     it('defines the status column as the first column', () => {
@@ -65,6 +86,32 @@ describe('ViewOrganization Schema', () => {
       expect(nameCol.field).toBe('name')
       expect(nameCol.headerName).toBe('org:orgColLabels.orgName')
       expect(nameCol.cellRenderer).toBe(LinkRenderer)
+    })
+
+    it('defines the organization type column correctly', () => {
+      const orgTypeCol = colDefs.find((col) => col.colId === 'orgType')
+      expect(orgTypeCol).toBeDefined()
+      expect(orgTypeCol.headerName).toBe('org:orgColLabels.orgType')
+      expect(orgTypeCol.cellRenderer).toBe(OrgTypeRenderer)
+      expect(orgTypeCol.filter).toBe(true)
+      expect(orgTypeCol.sortable).toBe(true)
+      expect(
+        orgTypeCol.floatingFilterComponentParams.valueKey
+      ).toBe('orgType')
+      expect(
+        orgTypeCol.floatingFilterComponentParams.labelKey
+      ).toBe('shortLabel')
+    })
+
+    it('formats organization type values to shorter labels', () => {
+      const orgTypeCol = colDefs.find((col) => col.colId === 'orgType')
+      const mockParams = {
+        data: {
+          orgType: { orgType: 'fuel_supplier', description: 'Fuel supplier' }
+        }
+      }
+      expect(orgTypeCol.valueGetter(mockParams)).toBe('Supplier')
+      expect(orgTypeCol.filterValueGetter(mockParams)).toBe('fuel_supplier')
     })
 
     it('defines the registration status column correctly', () => {
