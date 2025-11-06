@@ -2,11 +2,27 @@ import { numberFormatter } from '@/utils/formatters'
 import {
   LinkRenderer,
   OrgStatusRenderer,
+  OrgTypeRenderer,
   YesNoTextRenderer
 } from '@/utils/grid/cellRenderers'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationListStatuses } from '@/hooks/useOrganizations'
+import { useOrganizationTypes } from '@/hooks/useOrganization'
+import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
+
+const useOrganizationTypeFilterOptions = () => {
+  const result = useOrganizationTypes()
+  const labeledData = result.data?.map((type) => ({
+    ...type,
+    shortLabel: getOrgTypeDisplayLabel(type)
+  }))
+
+  return {
+    ...result,
+    data: labeledData
+  }
+}
 
 export const organizationsColDefs = (t) => [
   {
@@ -23,6 +39,25 @@ export const organizationsColDefs = (t) => [
       valueKey: 'status',
       labelKey: 'status',
       optionsQuery: useOrganizationListStatuses
+    },
+    suppressFloatingFilterButton: true
+  },
+  {
+    colId: 'orgType',
+    field: 'orgType',
+    headerName: t('org:orgColLabels.orgType'),
+    width: 220,
+    valueGetter: (params) => getOrgTypeDisplayLabel(params.data.orgType),
+    filterValueGetter: (params) => params.data?.orgType?.orgType ?? '',
+    cellRenderer: OrgTypeRenderer,
+    cellClass: 'vertical-middle',
+    filter: true,
+    sortable: true,
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'orgType',
+      labelKey: 'shortLabel',
+      optionsQuery: useOrganizationTypeFilterOptions
     },
     suppressFloatingFilterButton: true
   },
