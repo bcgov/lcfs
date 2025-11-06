@@ -100,6 +100,7 @@ vi.mock('react-i18next', () => ({
 // Mock cell renderers
 vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
   OrgStatusRenderer: () => <span>Status Renderer</span>,
+  OrgTypeRenderer: () => <span>Type Renderer</span>,
   LinkRenderer: () => <div data-test="link-renderer">Link</div>,
   YesNoTextRenderer: () => <span>Yes/No Renderer</span>
 }))
