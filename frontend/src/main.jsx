@@ -14,7 +14,7 @@ import './i18n'
 // Polyfill Buffer for dependencies that require it (e.g., uuid)
 if (!window.Buffer) window.Buffer = Buffer
 
-const queryClient = new QueryClient()
+export const queryClient = new QueryClient()
 const root = document.getElementById('root')
 
 if (root) {
