@@ -6,6 +6,7 @@
     "complianceUnits": "Compliance units",
     "inReserve": "In reserve",
     "status": "Status",
+    "orgType": "Organization type",
     "registrationStatus": "Registration Status",
     "earlyIssuance": "Early Issuance"
   },
