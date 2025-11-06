@@ -19,6 +19,13 @@ import {
 import { useGetAllChargingSites } from '@/hooks/useChargingSite'
 import ChargingSitesMap from './components/ChargingSitesMap'
 
+const EXCLUDED_ORG_TYPES = new Set([
+  'non_bceid_supplier',
+  'exempted_supplier',
+  'fuel_producer',
+  'initiative_agreement_holder'
+])
+
 export const ChargingSitesList = ({ alertRef }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -79,16 +86,42 @@ export const ChargingSitesList = ({ alertRef }) => {
     { enabled: isIDIR }
   )
 
+  const filteredOrgNames = useMemo(
+    () =>
+      (orgNames || []).filter((org) => {
+        const orgTypeKey = (org?.orgType || org?.org_type || '').toLowerCase()
+        return !EXCLUDED_ORG_TYPES.has(orgTypeKey)
+      }),
+    [orgNames]
+  )
+
+  useEffect(() => {
+    if (!selectedOrg.id) return
+    const stillAvailable = filteredOrgNames.some(
+      (org) => org.organizationId === selectedOrg.id
+    )
+    if (!stillAvailable) {
+      setSelectedOrg({ id: null, label: null })
+      sessionStorage.removeItem('selectedOrganization')
+    }
+  }, [filteredOrgNames, selectedOrg.id])
+
   const renderOrganizationOption = (props, option) => {
     const orgTypeLabel = option?.orgType || option?.org_type
+    const formattedOrgType = orgTypeLabel
+      ? orgTypeLabel
+          .split('_')
+          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+          .join(' ')
+      : null
 
     return (
       <li {...props}>
         <Box display="flex" flexDirection="column">
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
-          {/* {orgTypeLabel && (
+          {/* {formattedOrgType && (
             <BCTypography variant="caption" color="text.secondary">
-              {orgTypeLabel.replace('_', ' ')}
+              {formattedOrgType}
             </BCTypography>
           )} */}
         </Box>
@@ -108,12 +141,12 @@ export const ChargingSitesList = ({ alertRef }) => {
   const orgIdToName = useMemo(() => {
     try {
       return Object.fromEntries(
-        (orgNames || []).map((o) => [o.organizationId, o.name])
+        (filteredOrgNames || []).map((o) => [o.organizationId, o.name])
       )
     } catch (e) {
       return {}
     }
-  }, [orgNames])
+  }, [filteredOrgNames])
 
   const idirColumnDefs = useMemo(
     () => indexChargingSitesColDefs(isIDIR, orgIdToName),
@@ -181,15 +214,18 @@ export const ChargingSitesList = ({ alertRef }) => {
 
   // Find the selected organization object for the Autocomplete value
   const selectedOrgOption = useMemo(() => {
-    if (!selectedOrg.id || !orgNames.length) return null
-    return orgNames.find((org) => org.organizationId === selectedOrg.id) || null
-  }, [selectedOrg.id, orgNames])
+    if (!selectedOrg.id || !filteredOrgNames.length) return null
+    return (
+      filteredOrgNames.find((org) => org.organizationId === selectedOrg.id) ||
+      null
+    )
+  }, [selectedOrg.id, filteredOrgNames])
 
   // Apply cached filter when component mounts and org data is loaded
   useEffect(() => {
-    if (selectedOrg.id && orgNames.length > 0) {
+    if (selectedOrg.id && filteredOrgNames.length > 0) {
       // Verify the cached organization still exists
-      const orgExists = orgNames.some(
+      const orgExists = filteredOrgNames.some(
         (org) => org.organizationId === selectedOrg.id
       )
       if (orgExists) {
@@ -211,7 +247,7 @@ export const ChargingSitesList = ({ alertRef }) => {
         sessionStorage.removeItem('selectedOrganization')
       }
     }
-  }, [selectedOrg.id, orgNames])
+  }, [selectedOrg.id, filteredOrgNames])
 
   // Show nested route component when on nested route
   if (isOnNestedRoute) {
@@ -264,7 +300,7 @@ export const ChargingSitesList = ({ alertRef }) => {
                 disablePortal
                 id="idir-orgs"
                 loading={orgLoading}
-                options={orgNames}
+                options={filteredOrgNames}
                 value={selectedOrgOption}
                 getOptionLabel={(option) => option?.name || ''}
                 isOptionEqualToValue={(option, value) =>
