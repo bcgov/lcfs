@@ -157,9 +157,9 @@ class OrganizationsRepository:
             [
                 org_id,
                 name,
+                int(total_balance or 0),
+                int(reserved_balance or 0),
                 get_short_org_type_label(org_type, org_description),
-                total_balance or 0,
-                reserved_balance or 0,
                 status.value,
             ]
             for org_id, name, status, org_type, org_description, reserved_balance, total_balance in result
