@@ -17,7 +17,7 @@ import {
 } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-import { timezoneFormatter } from '@/utils/formatters'
+import { timezoneFormatter, numberFormatter } from '@/utils/formatters'
 
 export const CreditLedger = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
@@ -157,11 +157,13 @@ export const CreditLedger = ({ organizationId }) => {
     {
       field: 'availableBalance',
       headerName: t('org:ledger.availableBalance'),
+      valueFormatter: numberFormatter,
       minWidth: 170
     },
     {
       field: 'complianceUnits',
       headerName: t('org:ledger.complianceUnits'),
+      valueFormatter: numberFormatter,
       minWidth: 150
     },
     {
