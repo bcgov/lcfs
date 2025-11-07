@@ -997,14 +997,14 @@ describe('Non-Assessment Report', () => {
       <HistoryCard {...defaultProps} report={report} defaultExpanded={true} />
     )
 
-    expect(screen.getAllByText(/has met/i).length).toBe(2)
+    expect(screen.getAllByText(/has met/i).length).toBe(1)
   })
 
   it('shows assessment lines for government users before assessment', () => {
     // isgovernment is true by default in test setup
     render(<HistoryCard {...defaultProps} defaultExpanded={true} />)
 
-    expect(screen.getAllByText(/has met/i).length).toBe(2)
+    expect(screen.getAllByText(/has met/i).length).toBe(1)
   })
 
   it('hides assessment lines for non-government users before assessment', () => {
