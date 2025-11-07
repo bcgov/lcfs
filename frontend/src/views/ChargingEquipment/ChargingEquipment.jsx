@@ -50,6 +50,13 @@ const initialPaginationOptions = {
   filters: []
 }
 
+const EXCLUDED_ORG_TYPES = new Set([
+  'non_bceid_supplier',
+  'exempted_supplier',
+  'fuel_producer',
+  'initiative_agreement_holder'
+])
+
 export const ChargingEquipment = () => {
   const { t } = useTranslation(['common', 'chargingEquipment', 'chargingSite'])
   const navigate = useNavigate()
@@ -93,16 +100,42 @@ export const ChargingEquipment = () => {
     { enabled: isIDIR }
   )
 
+  const filteredOrgNames = useMemo(
+    () =>
+      (orgNames || []).filter((org) => {
+        const orgTypeKey = (org?.orgType || org?.org_type || '').toLowerCase()
+        return !EXCLUDED_ORG_TYPES.has(orgTypeKey)
+      }),
+    [orgNames]
+  )
+
+  useEffect(() => {
+    if (!selectedOrg.id) return
+    const stillAvailable = filteredOrgNames.some(
+      (org) => org.organizationId === selectedOrg.id
+    )
+    if (!stillAvailable) {
+      setSelectedOrg({ id: null, label: null })
+      sessionStorage.removeItem('fse-index-orgFilter')
+    }
+  }, [filteredOrgNames, selectedOrg.id])
+
   const renderOrganizationOption = (props, option) => {
     const orgTypeLabel = option?.orgType || option?.org_type
+    const formattedOrgType = orgTypeLabel
+      ? orgTypeLabel
+          .split('_')
+          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+          .join(' ')
+      : null
 
     return (
       <li {...props}>
         <Box display="flex" flexDirection="column">
           <BCTypography variant="body2">{option?.name || ''}</BCTypography>
-          {/* {orgTypeLabel && (
+          {/* {formattedOrgType && (
             <BCTypography variant="caption" color="text.secondary">
-              {orgTypeLabel.replace('_', ' ')}
+              {formattedOrgType}
             </BCTypography>
           )} */}
         </Box>
@@ -136,9 +169,12 @@ export const ChargingEquipment = () => {
 
   // Find the selected organization object for the Autocomplete value
   const selectedOrgOption = useMemo(() => {
-    if (!selectedOrg.id || !orgNames.length) return null
-    return orgNames.find((org) => org.organizationId === selectedOrg.id) || null
-  }, [selectedOrg.id, orgNames])
+    if (!selectedOrg.id || !filteredOrgNames.length) return null
+    return (
+      filteredOrgNames.find((org) => org.organizationId === selectedOrg.id) ||
+      null
+    )
+  }, [selectedOrg.id, filteredOrgNames])
 
   // Include organization filter in pagination options for IDIR users
   const enhancedPaginationOptions = useMemo(() => {
@@ -488,7 +524,7 @@ export const ChargingEquipment = () => {
                       disablePortal
                       id="fse-orgs"
                       loading={orgLoading}
-                      options={orgNames}
+                      options={filteredOrgNames}
                       value={selectedOrgOption}
                       getOptionLabel={(option) => option?.name || ''}
                       isOptionEqualToValue={(option, value) =>
