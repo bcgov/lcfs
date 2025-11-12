@@ -883,13 +883,43 @@ export const fuelSupplySummaryColDef = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
       field: 'isCanadaProduced',
       minWidth: 240,
-      hide: complianceYear < NEW_REGULATION_YEAR
+      hide: complianceYear < NEW_REGULATION_YEAR,
+      valueGetter: (params) => {
+        // For fuel codes with known location, show the system-determined value
+        const showCanadianProduced = canEditCanadianProduced(
+          params.data,
+          complianceYear,
+          optionsData
+        )
+        const isDefaultCI =
+          params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        if (!showCanadianProduced && params.data.isCanadaProduced) {
+          return 'Yes'
+        }
+        if (!isDefaultCI && showCanadianProduced) {
+          // Check if fuel code is Canadian
+          const isCanadian = isFuelCodeCanadian(
+            params.data.fuelType,
+            params.data.fuelCode,
+            optionsData
+          )
+          return isCanadian ? 'Yes' : 'No'
+        }
+        // When the “Fuel produced in Canada” field is not editable, then no text
+        // value should be displayed in the cell or form field.
+        return !showCanadianProduced
+          ? ''
+          : params.data.isCanadaProduced
+            ? 'Yes'
+            : 'No'
+      }
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
       minWidth: 170,
-      hide: complianceYear < NEW_REGULATION_YEAR
+      hide: complianceYear < NEW_REGULATION_YEAR,
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
@@ -1010,7 +1040,8 @@ export const defaultColDef = {
 export const changelogCommonColDefs = (
   highlight = true,
   isEarlyIssuance = false,
-  complianceYear
+  complianceYear,
+  optionsData
 ) => {
   const baseColumns = [
     {
@@ -1062,14 +1093,44 @@ export const changelogCommonColDefs = (
       minWidth: 240,
       hide: complianceYear < NEW_REGULATION_YEAR,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'isCanadaProduced')
+        highlight && changelogCellStyle(params, 'isCanadaProduced'),
+      valueGetter: (params) => {
+        // For fuel codes with known location, show the system-determined value
+        const showCanadianProduced = canEditCanadianProduced(
+          params.data,
+          complianceYear,
+          optionsData
+        )
+        const isDefaultCI =
+          params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        if (!showCanadianProduced && params.data.isCanadaProduced) {
+          return 'Yes'
+        }
+        if (!isDefaultCI && showCanadianProduced) {
+          // Check if fuel code is Canadian
+          const isCanadian = isFuelCodeCanadian(
+            params.data.fuelType,
+            params.data.fuelCode,
+            optionsData
+          )
+          return isCanadian ? 'Yes' : 'No'
+        }
+        // When the “Fuel produced in Canada” field is not editable, then no text
+        // value should be displayed in the cell or form field.
+        return !showCanadianProduced
+          ? ''
+          : params.data.isCanadaProduced
+            ? 'Yes'
+            : 'No'
+      }
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
       minWidth: 170,
       hide: complianceYear < NEW_REGULATION_YEAR,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode'),
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
@@ -1214,7 +1275,7 @@ export const changelogColDefs = (
         }
       }
     },
-    ...changelogCommonColDefs(highlight, isEarlyIssuance, complianceYear)
+    ...changelogCommonColDefs(highlight, isEarlyIssuance, complianceYear, optionsData)
   ]
   if (isEarlyIssuance) {
     return baseColumns.flatMap((item) => {
