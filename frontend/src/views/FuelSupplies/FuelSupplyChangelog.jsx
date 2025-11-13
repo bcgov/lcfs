@@ -6,6 +6,7 @@ import {
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
 import { useState } from 'react'
@@ -14,6 +15,7 @@ import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
 
 export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
+  const { data: optionsData } = useFuelSupplyOptions()
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
@@ -170,8 +172,17 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
                 gridKey={`fuel-supply-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false, isEarlyIssuance)
-                    : changelogColDefs(true, isEarlyIssuance)
+                    ? changelogCommonColDefs(
+                        false,
+                        isEarlyIssuance,
+                        parseInt(compliancePeriod)
+                      )
+                    : changelogColDefs(
+                        true,
+                        isEarlyIssuance,
+                        parseInt(compliancePeriod),
+                        optionsData
+                      )
                 }
                 queryData={queryData}
                 getRowId={getRowId}

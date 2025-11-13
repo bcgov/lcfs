@@ -205,3 +205,37 @@ class DeleteFuelSupplyResponseSchema(BaseSchema):
 class FuelSuppliesSchema(BaseSchema):
     fuel_supplies: Optional[List[FuelSupplyResponseSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}
+
+
+# Organization Fuel Supply Schemas
+class OrganizationFuelSupplySchema(BaseSchema):
+    """Schema for organization fuel supply history records"""
+    fuel_supply_id: int
+    compliance_period: str
+    report_submission_date: Optional[str] = None
+    fuel_type: str
+    fuel_category: str
+    provision_of_the_act: str
+    fuel_code: Optional[str] = None
+    fuel_quantity: int
+    units: str
+    compliance_report_id: int
+
+
+class FuelSupplyAnalyticsSchema(BaseSchema):
+    """Analytics data for fuel supply"""
+    total_volume: int
+    total_fuel_types: int
+    total_reports: int
+    most_recent_submission: Optional[str] = None
+    total_by_fuel_type: dict = {}
+    total_by_year: dict = {}
+    total_by_fuel_category: dict = {}
+    total_by_provision: dict = {}
+
+
+class OrganizationFuelSuppliesSchema(BaseSchema):
+    """Response schema for organization fuel supply with analytics"""
+    fuel_supplies: List[OrganizationFuelSupplySchema]
+    analytics: FuelSupplyAnalyticsSchema
+    pagination: PaginationResponseSchema

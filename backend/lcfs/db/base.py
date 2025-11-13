@@ -111,6 +111,11 @@ class ActionTypeEnum(enum.Enum):
     DELETE = "DELETE"
 
 
+class UserTypeEnum(enum.Enum):
+    SUPPLIER = "SUPPLIER"
+    GOVERNMENT = "GOVERNMENT"
+
+
 class Versioning(Base):
     __abstract__ = True
 

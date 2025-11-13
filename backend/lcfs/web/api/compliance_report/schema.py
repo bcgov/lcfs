@@ -54,6 +54,7 @@ class SummarySchema(BaseSchema):
     is_locked: bool
     line_11_fossil_derived_base_fuel_total: float
     line_21_non_compliance_penalty_payable: float
+    total_renewable_fuel_supplied: Optional[float] = 0
 
     class Config:
         extra = "allow"
@@ -308,6 +309,9 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     bold: Optional[bool] = False
     total_value: Optional[float] = 0
     format: Optional[str] = FORMATS.NUMBER.value
+    max_gasoline: Optional[float] = None
+    max_diesel: Optional[float] = None
+    max_jet_fuel: Optional[float] = None
 
 
 class ComplianceReportSummarySchema(BaseSchema):
@@ -352,10 +356,10 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
-    filters: Optional[List[FilterModel]] = None
-    page: Optional[int] = None
-    size: Optional[int] = None
-    sort_orders: Optional[List[SortOrder]] = None
+    filters: Optional[List[FilterModel]] = []
+    page: Optional[int] = 1
+    size: Optional[int] = 10
+    sort_orders: Optional[List[SortOrder]] = []
 
 
 class ComplianceReportUpdateSchema(BaseSchema):

@@ -9,6 +9,7 @@ import {
   TRANSACTION_STATUSES,
   TRANSFER_STATUSES
 } from '@/constants/statuses'
+import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'
 import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
@@ -208,6 +209,65 @@ export const OrgStatusRenderer = (props) => {
           />
         </BCBox>
       </BCBox>
+    </Link>
+  )
+}
+
+const ORG_TYPE_COLOR_MAP = {
+  fuel_supplier: 'info',
+  aggregator: 'warning',
+  fuel_producer: 'success',
+  exempted_supplier: 'secondary',
+  initiative_agreement_holder: 'primary'
+}
+
+export const OrgTypeRenderer = (props) => {
+  const location = useLocation()
+  const typeKey = props.data?.orgType?.orgType
+  const label =
+    props.value || getOrgTypeDisplayLabel(props.data?.orgType) || '—'
+  const badgeColor = ORG_TYPE_COLOR_MAP[typeKey] || 'dark'
+
+  const badge = (
+    <BCBox sx={{ width: '100%', height: '100%' }}>
+      <BCBox
+        mt={1}
+        sx={{
+          display: 'flex',
+          justifyContent: 'center'
+        }}
+      >
+        <BCBadge
+          badgeContent={label}
+          color={badgeColor}
+          variant="contained"
+          size="lg"
+          sx={{
+            '& .MuiBadge-badge': {
+              minWidth: '140px',
+              fontWeight: 'regular',
+              textTransform: 'capitalize',
+              fontSize: '0.85rem',
+              padding: '0.35em 0.75em',
+              whiteSpace: 'normal',
+              lineHeight: 1.2
+            }
+          }}
+        />
+      </BCBox>
+    </BCBox>
+  )
+
+  if (!props.node?.id) {
+    return badge
+  }
+
+  return (
+    <Link
+      to={`${location.pathname}/${props.node.id}`}
+      style={{ color: '#000' }}
+    >
+      {badge}
     </Link>
   )
 }
@@ -768,7 +828,11 @@ export const LastCommentRenderer = (props) => {
   )
 }
 
-export const createStatusRenderer = (colorMap, options = {}) => {
+export const createStatusRenderer = (
+  colorMap,
+  options = {},
+  value = undefined
+) => {
   const {
     statusField = 'status',
     defaultColor = 'info',
@@ -790,10 +854,20 @@ export const createStatusRenderer = (colorMap, options = {}) => {
     const location = useLocation()
 
     // Get the status value from the specified field path
-    const statusValue = statusField.includes('.')
+    let statusValue = statusField.includes('.')
       ? statusField.split('.').reduce((obj, key) => obj?.[key], data)
       : data[statusField]
-
+    if (
+      statusValue &&
+      typeof statusValue === 'object' &&
+      statusValue !== null &&
+      !Array.isArray(statusValue)
+    ) {
+      statusValue = statusValue.status || statusValue
+    }
+    if (value !== undefined) {
+      statusValue = value
+    }
     // Get the display text
     let displayText = statusValue
     if (replaceUnderscores && typeof displayText === 'string') {
@@ -809,6 +883,7 @@ export const createStatusRenderer = (colorMap, options = {}) => {
           display: 'flex',
           justifyContent: 'center'
         }}
+        component="span"
       >
         <BCBadge
           badgeContent={displayText}
@@ -850,7 +925,8 @@ export const ChargingSiteStatusRenderer = createStatusRenderer(
     Draft: 'info',
     Submitted: 'warning',
     Validated: 'success',
-    Updated: 'info'
+    Updated: 'info',
+    Decommissioned: 'error'
   },
   {
     statusField: 'status.status'

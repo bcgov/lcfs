@@ -183,86 +183,146 @@ export const renewableFuelColumns = (
   let dieselEditableCells = []
   let jetFuelEditableCells = []
 
-  // ========= Gasoline Logic ============
-  if (
-    data[SUMMARY.LINE_2].gasoline > 0 &&
-    data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
-  )
-    gasolineEditableCells = [SUMMARY.LINE_6]
-  else if (
-    data[SUMMARY.LINE_1].gasoline > 0 &&
-    data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
-  )
-    gasolineEditableCells = [SUMMARY.LINE_8]
+  const safeRound = (value = 0) => Math.round(value || 0)
 
-  // Line 8
-  if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
-    // If Line 2 is less than Line 4, ensure Line 8 is available
-    if (!gasolineEditableCells.includes(SUMMARY.LINE_8)) {
-      gasolineEditableCells.push(SUMMARY.LINE_8)
+  const toRoundedOrUndefined = (value) => {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+      return undefined
     }
-  } else {
-    // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
-    gasolineEditableCells = gasolineEditableCells.filter(
-      (line) => line !== SUMMARY.LINE_8
+    return Math.round(numericValue)
+  }
+
+  const buildLineSevenConstraint = (maxValue, currentValue) => {
+    const constraint = { min: 0 }
+    const roundedMax = toRoundedOrUndefined(maxValue)
+    const roundedCurrent = toRoundedOrUndefined(currentValue) ?? 0
+
+    if (roundedMax !== undefined && roundedMax > 0) {
+      constraint.max = Math.max(roundedMax, roundedCurrent)
+    }
+
+    return constraint
+  }
+
+  const line7Constraints = {
+    gasoline: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxGasoline,
+      data[SUMMARY.LINE_7]?.gasoline
+    ),
+    diesel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxDiesel,
+      data[SUMMARY.LINE_7]?.diesel
+    ),
+    jetFuel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_7]?.maxJetFuel,
+      data[SUMMARY.LINE_7]?.jetFuel
     )
+  }
+
+  const line9Constraints = {
+    gasoline: buildLineSevenConstraint(
+      data[SUMMARY.LINE_9]?.maxGasoline,
+      data[SUMMARY.LINE_9]?.gasoline
+    ),
+    diesel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_9]?.maxDiesel,
+      data[SUMMARY.LINE_9]?.diesel
+    ),
+    jetFuel: buildLineSevenConstraint(
+      data[SUMMARY.LINE_9]?.maxJetFuel,
+      data[SUMMARY.LINE_9]?.jetFuel
+    )
+  }
+
+  const unlockedLineSevenConstraint = (constraint) =>
+    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+
+  const unlockedLineNineConstraint = (constraint) =>
+    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+
+  // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
+  const line6Caps = {
+    gasoline: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.gasoline || 0) - (data[SUMMARY.LINE_4]?.gasoline || 0)), // excess
+        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
+      )
+    ),
+    diesel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.diesel || 0) - (data[SUMMARY.LINE_4]?.diesel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
+      )
+    ),
+    jetFuel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_2]?.jetFuel || 0) - (data[SUMMARY.LINE_4]?.jetFuel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
+      )
+    )
+  }
+
+  // Line 8 (Deferral) caps - LCFA s.10(3): Lesser of deficiency and 5% of Line 4
+  const line8Caps = {
+    gasoline: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.gasoline || 0) - (data[SUMMARY.LINE_2]?.gasoline || 0)), // deficiency
+        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
+      )
+    ),
+    diesel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.diesel || 0) - (data[SUMMARY.LINE_2]?.diesel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
+      )
+    ),
+    jetFuel: safeRound(
+      Math.min(
+        Math.max(0, (data[SUMMARY.LINE_4]?.jetFuel || 0) - (data[SUMMARY.LINE_2]?.jetFuel || 0)),
+        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
+      )
+    )
+  }
+
+  // ========= Gasoline Logic ============
+  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
+  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
+  // Only one should be editable at a time
+  if (data[SUMMARY.LINE_2].gasoline > data[SUMMARY.LINE_4].gasoline) {
+    // Surplus: Line 6 editable, Line 8 not editable
+    gasolineEditableCells = [SUMMARY.LINE_6]
+  } else if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
+    // Deficiency: Line 8 editable, Line 6 not editable
+    gasolineEditableCells = [SUMMARY.LINE_8]
   }
 
   // ============ Diesel Logic ============
-  if (
-    data[SUMMARY.LINE_2].diesel > 0 &&
-    data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
-  )
+  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
+  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
+  // Only one should be editable at a time
+  if (data[SUMMARY.LINE_2].diesel > data[SUMMARY.LINE_4].diesel) {
+    // Surplus: Line 6 editable, Line 8 not editable
     dieselEditableCells = [SUMMARY.LINE_6]
-  else if (
-    data[SUMMARY.LINE_1].diesel > 0 &&
-    data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
-  )
+  } else if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
+    // Deficiency: Line 8 editable, Line 6 not editable
     dieselEditableCells = [SUMMARY.LINE_8]
-
-  // Line 8
-  if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
-    // If Line 2 is less than Line 4, ensure Line 8 is available
-    if (!dieselEditableCells.includes(SUMMARY.LINE_8)) {
-      dieselEditableCells.push(SUMMARY.LINE_8)
-    }
-  } else {
-    // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
-    dieselEditableCells = dieselEditableCells.filter(
-      (line) => line !== SUMMARY.LINE_8
-    )
   }
 
   // ============ Jet Fuel Logic ============
-  if (
-    data[SUMMARY.LINE_2].jetFuel > 0 &&
-    data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
-  )
+  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
+  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
+  // Only one should be editable at a time
+  // Line 8 is only available for Jet Fuel from 2028 onward
+  if (data[SUMMARY.LINE_2].jetFuel > data[SUMMARY.LINE_4].jetFuel) {
+    // Surplus: Line 6 editable, Line 8 not editable
     jetFuelEditableCells = [SUMMARY.LINE_6]
-  else if (
-    data[SUMMARY.LINE_1].jetFuel > 0 &&
-    data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
-  )
+  } else if (
+    data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel &&
+    parseInt(compliancePeriodYear) >= 2028
+  ) {
+    // Deficiency: Line 8 editable (only from 2028 onward), Line 6 not editable
     jetFuelEditableCells = [SUMMARY.LINE_8]
-
-  // Line 8
-  if (parseInt(compliancePeriodYear) >= 2028) {
-    if (data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel) {
-      // If Line 2 is less than Line 4, ensure Line 8 is available
-      if (!jetFuelEditableCells.includes(SUMMARY.LINE_8)) {
-        jetFuelEditableCells.push(SUMMARY.LINE_8)
-      }
-    } else {
-      // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
-      jetFuelEditableCells = jetFuelEditableCells.filter(
-        (line) => line !== SUMMARY.LINE_8
-      )
-    }
-  } else {
-    // Before 2028, Line 8 is unavailable for Jet Fuel
-    jetFuelEditableCells = jetFuelEditableCells.filter(
-      (line) => line !== SUMMARY.LINE_8
-    )
   }
 
   if (parseInt(compliancePeriodYear) === 2024) {
@@ -320,9 +380,10 @@ export const renewableFuelColumns = (
       editable,
       editableCells: gasolineEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) }
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.gasoline },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.gasoline),
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.gasoline },
+        [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.gasoline)
       }
     },
     {
@@ -333,9 +394,10 @@ export const renewableFuelColumns = (
       editable,
       editableCells: dieselEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) }
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.diesel },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.diesel),
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.diesel },
+        [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.diesel)
       }
     },
     {
@@ -346,9 +408,10 @@ export const renewableFuelColumns = (
       editable,
       editableCells: jetFuelEditableCells,
       cellConstraints: {
-        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
-        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
-        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) }
+        [SUMMARY.LINE_6]: { min: 0, max: line6Caps.jetFuel },
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.jetFuel),
+        [SUMMARY.LINE_8]: { min: 0, max: line8Caps.jetFuel },
+        [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.jetFuel)
       }
     }
   ]

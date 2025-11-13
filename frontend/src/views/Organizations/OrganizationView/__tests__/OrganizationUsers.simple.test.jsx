@@ -93,10 +93,18 @@ vi.mock('../_schema', () => ({
 
 // Mock routes
 vi.mock('@/routes/routes', () => ({
-  buildPath: vi.fn((route) => `/mock-path/${route}`),
+  buildPath: vi.fn((route, params) => {
+    if (route === 'ORGANIZATIONS.VIEW_USER') {
+      return `/organizations/${params.orgID}/users/${params.userID}`
+    }
+    if (route === 'ORGANIZATION.VIEW_USER') {
+      return `/organization/users/${params.userID}`
+    }
+    return `/mock-path/${route}`
+  }),
   ROUTES: {
-    ORGANIZATIONS: { ADD_USER: 'org-add-user', VIEW_USER: 'org-view-user' },
-    ORGANIZATION: { ADD_USER: 'add-user', VIEW_USER: 'view-user' }
+    ORGANIZATIONS: { ADD_USER: 'org-add-user', VIEW_USER: 'ORGANIZATIONS.VIEW_USER' },
+    ORGANIZATION: { ADD_USER: 'add-user', VIEW_USER: 'ORGANIZATION.VIEW_USER' }
   }
 }))
 
@@ -114,7 +122,6 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({
       t: (key) => {
         // Return expected values for specific keys
-        if (key === 'org:usersLabel') return 'Users'
         if (key === 'org:newUsrBtn') return 'New user'
         if (key === 'org:noUsersFound') return 'No users found'
         return key
@@ -145,15 +152,6 @@ describe('OrganizationUsers', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
-  })
-
-  it('renders component', () => {
-    render(
-      <Wrapper>
-        <OrganizationUsers />
-      </Wrapper>
-    )
-    expect(screen.getByText('Users')).toBeInTheDocument()
   })
 
   it('renders grid', () => {

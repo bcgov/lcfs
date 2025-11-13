@@ -1,8 +1,10 @@
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
+from decimal import Decimal
 
 from lcfs.web.api.base import BaseSchema
+from pydantic import field_validator
 from lcfs.web.api.base import PaginationResponseSchema
 
 
@@ -146,6 +148,10 @@ class OrganizationBase(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
 
 
 class OrganizationSchema(OrganizationBase):
@@ -271,6 +277,10 @@ class OrganizationResponseSchema(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
     organization_type_id: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = []
     org_type: Optional[OrganizationTypeSchema] = []
@@ -286,6 +296,19 @@ class OrganizationSummaryResponseSchema(BaseSchema):
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
+    org_type: Optional[str] = None
+
+    @field_validator("org_type", mode="before")
+    @classmethod
+    def _normalize_org_type(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, str):
+            return value
+        extracted = getattr(value, "org_type", None)
+        if isinstance(extracted, str):
+            return extracted
+        return None
 
 
 class OrganizationCreateResponseSchema(BaseSchema):
@@ -329,6 +352,86 @@ class OrganizationCreditMarketListingSchema(BaseSchema):
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
+
+
+class OrganizationCompanyOverviewUpdateSchema(BaseSchema):
+    """Schema for updating company overview information"""
+
+    company_details: Optional[str] = None
+    company_representation_agreements: Optional[str] = None
+    company_acting_as_aggregator: Optional[str] = None
+    company_additional_notes: Optional[str] = None
+
+
+# --------------------------------------
+# Penalty Analytics
+# --------------------------------------
+
+
+class PenaltyYearlySummarySchema(BaseSchema):
+    compliance_period_id: int
+    compliance_year: Optional[Union[int, str]] = None
+    auto_renewable: float
+    auto_low_carbon: float
+    total_automatic: float
+
+
+class PenaltyTotalsSchema(BaseSchema):
+    auto_renewable: float
+    auto_low_carbon: float
+    discretionary: float
+    total_automatic: float
+    total: float
+
+
+class PenaltyLogEntrySchema(BaseSchema):
+    penalty_log_id: int
+    compliance_period_id: int
+    compliance_year: Optional[Union[int, str]] = None
+    contravention_type: str
+    offence_history: bool
+    deliberate: bool
+    efforts_to_correct: bool
+    economic_benefit_derived: bool
+    efforts_to_prevent_recurrence: bool
+    notes: Optional[str] = None
+    penalty_amount: float
+
+
+class PenaltyAnalyticsResponseSchema(BaseSchema):
+    yearly_penalties: List[PenaltyYearlySummarySchema]
+    totals: PenaltyTotalsSchema
+    penalty_logs: List[PenaltyLogEntrySchema]
+
+
+class PenaltyLogListResponseSchema(BaseSchema):
+    pagination: PaginationResponseSchema
+    penalty_logs: List[PenaltyLogEntrySchema]
+
+
+class ContraventionTypeEnum(str, Enum):
+    SINGLE = "Single contravention"
+    CONTINUOUS = "Continuous contravention"
+
+
+class PenaltyLogBaseSchema(BaseSchema):
+    compliance_period_id: int
+    contravention_type: ContraventionTypeEnum
+    offence_history: bool = False
+    deliberate: bool = False
+    efforts_to_correct: bool = False
+    economic_benefit_derived: bool = False
+    efforts_to_prevent_recurrence: bool = False
+    notes: Optional[str] = None
+    penalty_amount: Decimal
+
+
+class PenaltyLogCreateSchema(PenaltyLogBaseSchema):
+    pass
+
+
+class PenaltyLogUpdateSchema(PenaltyLogBaseSchema):
+    pass
 
 
 # --------------------------------------

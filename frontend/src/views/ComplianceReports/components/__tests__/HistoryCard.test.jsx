@@ -219,7 +219,8 @@ describe('HistoryCard', () => {
         history,
         summary: {
           line11FossilDerivedBaseFuelTotal: 0,
-          line21NonCompliancePenaltyPayable: 0
+          line21NonCompliancePenaltyPayable: 0,
+          totalRenewableFuelSupplied: 5000.0
         }
       },
       { defaultExpanded: true }
@@ -259,7 +260,8 @@ describe('HistoryCard', () => {
         history,
         summary: {
           line11FossilDerivedBaseFuelTotal: 0.0,
-          line21NonCompliancePenaltyPayable: 0.0
+          line21NonCompliancePenaltyPayable: 0.0,
+          totalRenewableFuelSupplied: 5000.0
         }
       },
       { defaultExpanded: true }
@@ -293,7 +295,8 @@ describe('HistoryCard', () => {
       history,
       summary: {
         line11FossilDerivedBaseFuelTotal: 1.0,
-        line21NonCompliancePenaltyPayable: 1.0
+        line21NonCompliancePenaltyPayable: 1.0,
+        totalRenewableFuelSupplied: 5000.0
       }
     })
 
@@ -325,7 +328,8 @@ describe('HistoryCard', () => {
       history,
       summary: {
         line11FossilDerivedBaseFuelTotal: 0,
-        line21NonCompliancePenaltyPayable: 0
+        line21NonCompliancePenaltyPayable: 0,
+        totalRenewableFuelSupplied: 5000.0
       }
     })
 
@@ -765,7 +769,6 @@ describe('Non-Assessment Report', () => {
     })
   })
 
-
   it('shows non-assessment message when report is marked as non-assessment', () => {
     const reportWithNonAssessment = {
       ...defaultProps.report,
@@ -777,20 +780,229 @@ describe('Non-Assessment Report', () => {
     expect(screen.getAllByText(/Not Subject to Assessment/i)).toHaveLength(2)
   })
 
+  describe('Non-Assessment Message in Report History', () => {
+    it('uses the history-specific translation key without instructional text', () => {
+      const reportWithNonAssessment = {
+        ...defaultProps.report,
+        isNonAssessment: true,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            createDate: '2024-10-01T10:00:00Z',
+            userProfile: { firstName: 'John', lastName: 'Doe' }
+          }
+        ]
+      }
+
+      render(
+        <HistoryCard
+          {...defaultProps}
+          report={reportWithNonAssessment}
+          defaultExpanded={true}
+        />
+      )
+
+      // Should show the heading
+      expect(screen.getAllByText(/Not Subject to Assessment/i)).toHaveLength(2)
+
+      // Should NOT contain instructional text about director statement
+      expect(
+        screen.queryByText(
+          /Please add any specific information to the supplier in the director statement above/i
+        )
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/add any specific information/i)
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/director statement above/i)
+      ).not.toBeInTheDocument()
+
+      // Should show the clean message without instructions
+      expect(
+        screen.getByText(
+          /This report is not subject to assessment under the Low Carbon Fuels Act/i
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          /No action will be taken on the contents of this report/i
+        )
+      ).toBeInTheDocument()
+    })
+
+    it('displays non-assessment message for BCeID users in Report History', () => {
+      useCurrentUser.mockReturnValue({
+        data: { isGovernmentUser: false },
+        hasRoles: () => false
+      })
+
+      const reportWithNonAssessment = {
+        ...defaultProps.report,
+        isNonAssessment: true,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            createDate: '2024-10-01T10:00:00Z',
+            userProfile: { firstName: 'Jane', lastName: 'Smith' }
+          }
+        ]
+      }
+
+      render(
+        <HistoryCard
+          {...defaultProps}
+          report={reportWithNonAssessment}
+          defaultExpanded={true}
+        />
+      )
+
+      // BCeID users should see the non-assessment message
+      expect(
+        screen.getAllByText(/Not Subject to Assessment/i).length
+      ).toBeGreaterThan(0)
+      expect(
+        screen.getByText(
+          /This report is not subject to assessment under the Low Carbon Fuels Act/i
+        )
+      ).toBeInTheDocument()
+
+      // Should not contain instructional text
+      expect(
+        screen.queryByText(/Please add any specific information/i)
+      ).not.toBeInTheDocument()
+    })
+
+    it('displays non-assessment message for IDIR users in Report History', () => {
+      useCurrentUser.mockReturnValue({
+        data: { isGovernmentUser: true },
+        hasRoles: () => true
+      })
+
+      const reportWithNonAssessment = {
+        ...defaultProps.report,
+        isNonAssessment: true,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            createDate: '2024-10-01T10:00:00Z',
+            userProfile: { firstName: 'Admin', lastName: 'User' }
+          }
+        ]
+      }
+
+      render(
+        <HistoryCard
+          {...defaultProps}
+          report={reportWithNonAssessment}
+          defaultExpanded={true}
+        />
+      )
+
+      // IDIR users should see the non-assessment message in Report History
+      expect(screen.getAllByText(/Not Subject to Assessment/i)).toHaveLength(2)
+      expect(
+        screen.getByText(
+          /This report is not subject to assessment under the Low Carbon Fuels Act/i
+        )
+      ).toBeInTheDocument()
+
+      // Report History should not contain instructional text (that's for the action interface)
+      expect(
+        screen.queryByText(/Please add any specific information/i)
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/director statement above/i)
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows non-assessment message nested under Assessed status', () => {
+      const reportWithNonAssessment = {
+        ...defaultProps.report,
+        isNonAssessment: true,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            createDate: '2024-10-01T10:00:00Z',
+            userProfile: { firstName: 'John', lastName: 'Doe' }
+          },
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            createDate: '2024-09-01T10:00:00Z',
+            userProfile: { firstName: 'Jane', lastName: 'Smith' }
+          }
+        ]
+      }
+
+      render(
+        <HistoryCard
+          {...defaultProps}
+          report={reportWithNonAssessment}
+          defaultExpanded={true}
+        />
+      )
+
+      // Should show the non-assessment message under the Assessed status
+      expect(
+        screen.getByText(/Assessed formatted-2024-10-01T10:00:00Z by John Doe/i)
+      ).toBeInTheDocument()
+      expect(screen.getAllByText(/Not Subject to Assessment/i)).toHaveLength(2)
+    })
+
+    it('does not show standard assessment lines when isNonAssessment is true', () => {
+      const reportWithNonAssessment = {
+        ...defaultProps.report,
+        isNonAssessment: true,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            createDate: '2024-10-01T10:00:00Z',
+            userProfile: { firstName: 'John', lastName: 'Doe' }
+          }
+        ]
+      }
+
+      render(
+        <HistoryCard
+          {...defaultProps}
+          report={reportWithNonAssessment}
+          defaultExpanded={true}
+        />
+      )
+
+      // Should NOT show standard assessment lines (renewable target, low carbon target)
+      expect(
+        screen.queryByText(/Renewable fuel requirement/i)
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/Low carbon fuel requirement/i)
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText(/has met/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/has not met/i)).not.toBeInTheDocument()
+    })
+  })
+
   it('shows assessment lines when report is not marked as non-assessment', () => {
     const report = {
       ...defaultProps.report,
       isNonAssessment: false
     }
 
-    render(<HistoryCard {...defaultProps} report={report} />)
+    render(
+      <HistoryCard {...defaultProps} report={report} defaultExpanded={true} />
+    )
 
     expect(screen.getAllByText(/has met/i).length).toBe(2)
   })
 
   it('shows assessment lines for government users before assessment', () => {
     // isgovernment is true by default in test setup
-    render(<HistoryCard {...defaultProps} />)
+    render(<HistoryCard {...defaultProps} defaultExpanded={true} />)
 
     expect(screen.getAllByText(/has met/i).length).toBe(2)
   })
@@ -853,7 +1065,6 @@ describe('Non-Assessment Report', () => {
     expect(screen.queryByText('*')).not.toBeInTheDocument()
   })
 })
-
 
 describe('History Processing Logic', () => {
   beforeEach(() => {

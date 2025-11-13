@@ -50,37 +50,50 @@ export const handleScheduleSave = async ({
     const isNewRow = !updatedData[idField]
     const severity = isNewRow ? 'warning' : 'error'
 
-    if (isNewRow) {
-      setWarnings({
-        [params.node.data.id]: error.response.data.errors[0].fields
+    // Handle HTTPException with detail field (e.g., duplicate name)
+    if (error.response.data.detail) {
+      alertRef.current?.triggerAlert({
+        message: error.response.data.detail,
+        severity
       })
+    } else if (error.response.data.errors && error.response.data.errors[0]) {
+      if (isNewRow) {
+        setWarnings({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
+      } else {
+        setErrors({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
+      }
+
+      if (error.code === 'ERR_BAD_REQUEST') {
+        const { fields, message } = error.response.data.errors[0]
+        const fieldLabels = fields.map((field) => t(`${labelPrefix}.${field}`))
+        const errMsg = `Unable to save row: ${
+          fieldLabels.length === 1 ? fieldLabels[0] : ''
+        } ${message}`
+
+        alertRef.current?.triggerAlert({
+          message: errMsg,
+          severity
+        })
+      } else {
+        alertRef.current?.triggerAlert({
+          message: `Unable to save row: ${error.message}`,
+          severity
+        })
+      }
     } else {
-      setErrors({
-        [params.node.data.id]: error.response.data.errors[0].fields
+      alertRef.current?.triggerAlert({
+        message: `Unable to save row: ${error.message}`,
+        severity
       })
     }
 
     updatedData = {
       ...updatedData,
       validationStatus: severity
-    }
-
-    if (error.code === 'ERR_BAD_REQUEST') {
-      const { fields, message } = error.response.data.errors[0]
-      const fieldLabels = fields.map((field) => t(`${labelPrefix}.${field}`))
-      const errMsg = `Unable to save row: ${
-        fieldLabels.length === 1 ? fieldLabels[0] : ''
-      } ${message}`
-
-      alertRef.current?.triggerAlert({
-        message: errMsg,
-        severity
-      })
-    } else {
-      alertRef.current?.triggerAlert({
-        message: `Unable to save row: ${error.message}`,
-        severity
-      })
     }
   }
   return updatedData

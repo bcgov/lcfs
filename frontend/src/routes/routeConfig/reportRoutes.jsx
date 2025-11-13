@@ -10,7 +10,11 @@ import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
 import { ReportsMenu } from '@/views/ComplianceReports/ReportsMenu'
 import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
 import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
+import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
+import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
 import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
+import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
+import { FSEProcessing } from '@/views/FSEProcessing'
 
 export const reportRoutes = [
   {
@@ -42,10 +46,19 @@ export const reportRoutes = [
       },
       {
         path: 'fse',
-        element: <>FSE index</>,
-        handle: { title: 'FSE index' },
+        element: <ChargingEquipmentList />,
+        handle: { title: 'Manage FSE' },
         children: [
-          // Add FSE management routes here as needed
+          {
+            path: 'add',
+            element: <AddEditChargingEquipment mode="bulk" />,
+            handle: { title: 'Add FSE' }
+          },
+          {
+            path: ':fseId/edit',
+            element: <AddEditChargingEquipment mode="single" />,
+            handle: { title: 'Edit FSE' }
+          }
         ]
       }
     ]
@@ -85,6 +98,14 @@ export const reportRoutes = [
     }
   },
   {
+    path: ROUTES.REPORTS.ADD.FSE_REPORTING,
+    element: <FinalSupplyEquipmentReporting />,
+    handle: {
+      title: 'FSE compliance reporting',
+      mode: 'add'
+    }
+  },
+  {
     path: ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
     element: <AddEditFinalSupplyEquipments />,
     handle: {
@@ -107,5 +128,10 @@ export const reportRoutes = [
       title: 'Export fuels',
       mode: 'add'
     }
+  },
+  {
+    path: ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING,
+    element: <FSEProcessing />,
+    handle: { title: 'FSE Processing' }
   }
 ]

@@ -37,11 +37,14 @@ const ComplianceReportSummary = ({
   currentStatus,
   canEdit,
   compliancePeriodYear,
+  isSigningAuthorityDeclared,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
   enableCompareMode,
-  alertRef
+  alertRef,
+  hasEligibleRenewableFuel,
+  setHasEligibleRenewableFuel
 }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [hasRecords, setHasRecords] = useState(false)
@@ -76,6 +79,11 @@ const ComplianceReportSummary = ({
       setSummaryData(data)
       setHasRecords(data && data.canSign)
       setPenaltyOverrideEnabled(data.penaltyOverrideEnabled || false)
+      setHasEligibleRenewableFuel(
+        data.renewableFuelTargetSummary[2].diesel > 0 ||
+          data.renewableFuelTargetSummary[2].gasoline > 0 ||
+          false
+      )
     }
     if (isError) {
       alertRef.current?.triggerAlert({
@@ -305,6 +313,7 @@ const ComplianceReportSummary = ({
               {!isGovernmentUser && (
                 <SigningAuthorityDeclaration
                   onChange={setIsSigningAuthorityDeclared}
+                  checked={isSigningAuthorityDeclared}
                   hasAuthority={hasRoles(roles.signing_authority)}
                   hasRecords={hasRecords}
                   hasValidAddress={hasValidAddress}

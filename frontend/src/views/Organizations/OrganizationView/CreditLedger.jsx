@@ -11,10 +11,13 @@ import {
   useDownloadCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
-import { useOrganizationBalance, useCurrentOrgBalance } from '@/hooks/useOrganization'
+import {
+  useOrganizationBalance,
+  useCurrentOrgBalance
+} from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-import { timezoneFormatter } from '@/utils/formatters'
+import { timezoneFormatter, numberFormatter } from '@/utils/formatters'
 
 export const CreditLedger = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
@@ -28,7 +31,8 @@ export const CreditLedger = ({ organizationId }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('')
 
   // Get years with actual ledger data for this organization
-  const { data: availableYears = [], isLoading: yearsLoading } = useCreditLedgerYears(orgID)
+  const { data: availableYears = [], isLoading: yearsLoading } =
+    useCreditLedgerYears(orgID)
 
   // Sort years in descending order
   const sortedYears = availableYears.sort((a, b) => Number(b) - Number(a))
@@ -49,10 +53,14 @@ export const CreditLedger = ({ organizationId }) => {
   })
 
   // Determine if user is viewing their own organization
-  const isViewingOwnOrg = !organizationId || organizationId === currentUser?.organization?.organizationId
+  const isViewingOwnOrg =
+    !organizationId ||
+    organizationId === currentUser?.organization?.organizationId
 
   // Use appropriate balance hook based on context
-  const { data: currentOrgBalance } = useCurrentOrgBalance()
+  const { data: currentOrgBalance } = useCurrentOrgBalance({
+    enabled: isViewingOwnOrg
+  })
   const { data: specificOrgBalance } = useOrganizationBalance(orgID)
 
   // Use current org balance if viewing own org, otherwise use specific org balance
@@ -70,33 +78,35 @@ export const CreditLedger = ({ organizationId }) => {
     }
 
     const selectedYear = Number(selectedPeriod)
-    
+
     // Get all transactions up to and including the selected year
     const transactionsUpToYear = fullLedgerRes.ledger.filter(
       (tx) => Number(tx.compliancePeriod) <= selectedYear
     )
-    
+
     // Get all negative transactions after the selected year
     const futureNegativeTransactions = fullLedgerRes.ledger.filter(
-      (tx) => Number(tx.compliancePeriod) > selectedYear && Number(tx.complianceUnits) < 0
+      (tx) =>
+        Number(tx.compliancePeriod) > selectedYear &&
+        Number(tx.complianceUnits) < 0
     )
-    
+
     // Sum all compliance units up to the selected year
     const unitsUpToYear = transactionsUpToYear.reduce(
-      (sum, tx) => sum + (Number(tx.complianceUnits) || 0), 
+      (sum, tx) => sum + (Number(tx.complianceUnits) || 0),
       0
     )
-    
+
     // Sum all future negative units (these are already negative values)
     const futureNegativeUnits = futureNegativeTransactions.reduce(
-      (sum, tx) => sum + (Number(tx.complianceUnits) || 0), 
+      (sum, tx) => sum + (Number(tx.complianceUnits) || 0),
       0
     )
-    
+
     // Available balance = units up to year + future negative units
     // (futureNegativeUnits is already negative, so this subtracts them)
     const balance = unitsUpToYear + futureNegativeUnits
-    
+
     // Ensure balance is never negative - display 0 instead
     return Math.max(balance, 0)
   }
@@ -147,11 +157,13 @@ export const CreditLedger = ({ organizationId }) => {
     {
       field: 'availableBalance',
       headerName: t('org:ledger.availableBalance'),
+      valueFormatter: numberFormatter,
       minWidth: 170
     },
     {
       field: 'complianceUnits',
       headerName: t('org:ledger.complianceUnits'),
+      valueFormatter: numberFormatter,
       minWidth: 150
     },
     {
@@ -170,13 +182,9 @@ export const CreditLedger = ({ organizationId }) => {
     `${p.data.updateDate}-${p.data.transactionType}-${p.data.complianceUnits}`
 
   return (
-    <BCBox mt={2}>
+    <BCBox mt={1}>
       <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <BCTypography variant="h5" color="primary" mb={2}>
-            {t('org:creditLedger')}
-          </BCTypography>
-
+        <Grid item xs={12} md={6} alignContent={'end'}>
           <DownloadButton
             onDownload={handleDownload}
             label={t('org:downloadExcel')}

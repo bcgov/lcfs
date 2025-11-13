@@ -12,17 +12,21 @@ import {
   Box,
   Slide,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Link
 } from '@mui/material'
 import {
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  OpenInNew as OpenInNewIcon
 } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import { fixLeafletIcons, markerIcons } from './utils'
 import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { ROUTES } from '@/routes/routes'
 import colors from '@/themes/base/colors'
 
 // Fix Leaflet icon issue
@@ -269,6 +273,8 @@ const ChargingSitesLegend = ({ sites, isFullscreen }) => {
 // Individual marker component
 const ChargingSiteMarker = ({ site, isFullscreen }) => {
   const { t } = useTranslation('chargingSite')
+  const navigate = useNavigate()
+
   // Skip invalid coordinates
   if (
     site.latitude == null ||
@@ -283,16 +289,27 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
 
   const position = [site.latitude, site.longitude]
 
+  // Handle click to navigate to site page
+  const handleOpenSiteInfo = (e) => {
+    e.preventDefault()
+    const sitePath = ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(
+      ':siteId',
+      site.chargingSiteId
+    )
+    navigate(sitePath)
+  }
+
   // Determine marker color based on status
   const getMarkerIcon = (status) => {
     switch (status?.toLowerCase()) {
       case 'validated':
         return markerIcons.green
       case 'draft':
+      case 'updated':
         return markerIcons.default
       case 'submitted':
         return markerIcons.orange
-      case 'rejected':
+      case 'decommissioned':
         return markerIcons.red
       default:
         return markerIcons.grey
@@ -303,16 +320,19 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
     switch (status?.toLowerCase()) {
       case 'validated':
         return colors.badgeColors.success.background
+      case 'updated':
       case 'draft':
         return colors.badgeColors.info.background
       case 'submitted':
         return colors.badgeColors.warning.background
-      case 'rejected':
+      case 'decommissioned':
         return '#f44336'
       default:
         return '#9e9e9e'
     }
   }
+
+  const googleMapsUrl = `https://www.google.com/maps?q=${site.latitude},${site.longitude}`
 
   const markerIcon = getMarkerIcon(site.status?.status)
 
@@ -427,6 +447,65 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
             {new Date(site.updateDate).toLocaleDateString()} by{' '}
             {site.updateUser}
           </BCTypography>
+
+          {/* Link to site info */}
+          <Box
+            sx={{
+              mt: 2,
+              pt: 2,
+              borderTop: '1px solid #e0e0e0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 1
+            }}
+          >
+            <Link
+              component="button"
+              variant="body2"
+              onClick={handleOpenSiteInfo}
+              sx={{
+                cursor: 'pointer',
+                textDecoration: 'none',
+                color: 'primary.main',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                '&:hover': {
+                  textDecoration: 'underline'
+                },
+                '&:focus': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px',
+                  borderRadius: '2px'
+                }
+              }}
+              aria-label={`Open detailed information for ${site.siteName}`}
+            >
+              View full site info →
+            </Link>
+            <Link
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ textDecoration: 'none', width: '100%' }}
+              aria-label={`Open ${site.siteName} in Google Maps`}
+            >
+              <Chip
+                label="Open in Google Maps"
+                size="small"
+                clickable
+                icon={<OpenInNewIcon sx={{ fontSize: '14px !important' }} />}
+                sx={{
+                  backgroundColor: '#f6f8fcff',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#aec7fcff'
+                  }
+                }}
+              />
+            </Link>
+          </Box>
         </div>
       </Popup>
     </Marker>

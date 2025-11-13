@@ -1,14 +1,10 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { useGetChargingSiteById } from '@/hooks/useChargingSite'
-import { constructAddress } from '@/utils/constructAddress'
-import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
 
 export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
   const { t } = useTranslation('chargingSite')
@@ -28,12 +24,22 @@ export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
       >
         {/* Left Column */}
         <BCBox display="flex" flexDirection="column" gap={1}>
-          <BCTypography variant="body4">
+          <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <BCTypography variant="label">
               {t('cardLabels.status')}:
             </BCTypography>{' '}
-            {data?.status?.status || ''}
-          </BCTypography>
+            {createStatusRenderer(
+              {
+                Draft: 'info',
+                Updated: 'info',
+                Submitted: 'warning',
+                Validated: 'success',
+                Decommissioned: 'smoky'
+              },
+              {},
+              data?.status?.status || ''
+            )({ data })}
+          </BCBox>
 
           <BCTypography variant="body4">
             <BCTypography variant="label">
@@ -57,28 +63,6 @@ export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
               {t('cardLabels.siteAddr')}:
             </BCTypography>{' '}
             {[streetAddress, city, postalCode].join(', ')}
-          </BCTypography>
-
-          <BCTypography
-            variant="body4"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: 1,
-              '& > div': {
-                margin: 0,
-                width: { xs: '200px', md: '350px' }
-              }
-            }}
-          >
-            <BCTypography variant="label">
-              {t('cardLabels.intendedUserTypes')}:
-            </BCTypography>{' '}
-            <CommonArrayRenderer
-              value={data?.intendedUsers?.map((i) => i.typeName)}
-              disableLink={true}
-            />
           </BCTypography>
 
           <BCTypography variant="body4">

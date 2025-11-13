@@ -33,11 +33,6 @@ def valid_charging_site_create_schema() -> ChargingSiteCreateSchema:
         postal_code="V1A 2B3",
         latitude=49.2827,
         longitude=-123.1207,
-        intended_users=[
-            EndUserTypeSchema(
-                end_user_type_id=1, type_name="Multi-unit residential building"
-            )
-        ],
         notes="Test charging site notes",
         deleted=False,
     )
@@ -151,6 +146,65 @@ async def test_get_charging_site_statuses_success(
         assert response.status_code == 200
         assert len(response.json()) == 1
         assert response.json()[0]["status"] == "Draft"
+
+
+@pytest.mark.anyio
+async def test_get_site_names_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test successful retrieval of site names"""
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.get_site_names_by_organization"
+    ) as mock_get_site_names:
+        mock_get_site_names.return_value = [
+            {"siteName": "Site 1", "chargingSiteId": 1},
+            {"siteName": "Site 2", "chargingSiteId": 2},
+        ]
+
+        user_details = {"organization_id": 3}
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], user_details)
+        url = fastapi_app.url_path_for("get_site_names")
+        response = await client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.json()) == 2
+        assert response.json()[0]["siteName"] == "Site 1"
+        assert response.json()[0]["chargingSiteId"] == 1
+        mock_get_site_names.assert_called_once_with(3)
+
+
+@pytest.mark.anyio
+async def test_get_site_names_with_organization_id_param(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test retrieval of site names with organization_id parameter for government user"""
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.get_site_names_by_organization"
+    ) as mock_get_site_names:
+        mock_get_site_names.return_value = [
+            {"siteName": "Gov Site", "chargingSiteId": 5},
+        ]
+
+        user_details = {"organization_id": 1, "is_government": True}
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST], user_details)
+        url = fastapi_app.url_path_for("get_site_names")
+        response = await client.get(url, params={"organization_id": 3})
+
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+        assert response.json()[0]["siteName"] == "Gov Site"
+        mock_get_site_names.assert_called_once_with(3)
+
+
+@pytest.mark.anyio
+async def test_get_site_names_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test unauthorized access to site names"""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = fastapi_app.url_path_for("get_site_names")
+    response = await client.get(url)
+    assert response.status_code == 403
 
 
 @pytest.mark.anyio
@@ -414,46 +468,6 @@ async def test_delete_charging_site_success(
 
 
 @pytest.mark.anyio
-async def test_export_charging_sites_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
-):
-    """Test successful export of charging sites"""
-    with patch(
-        "lcfs.web.api.charging_site.export.ChargingSiteExporter.export"
-    ) as mock_export:
-        mock_export.return_value = StreamingResponse(
-            iter([b"test content"]),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-        # Mock user with government role to bypass organization check
-        user_details = {"organization_id": 3, "organization_name": "Test Organization"}
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT], user_details)
-        url = fastapi_app.url_path_for("export_charging_sites", organization_id="3")
-        response = await client.post(url, json=[])
-
-        assert response.status_code == 200
-        mock_export.assert_called_once()
-
-
-@pytest.mark.anyio
-async def test_export_charging_sites_access_denied(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
-):
-    """Test export with access denied to organization"""
-    # Mock user with different organization
-    mock_user = MagicMock()
-    mock_user.organization.organization_id = 1  # Different from requested org
-
-    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING], mock_user)
-    url = fastapi_app.url_path_for("export_charging_sites", organization_id="3")
-    response = await client.post(url, json=[])
-
-    assert response.status_code == 403
-    assert "Insufficient permissions" in response.json()["detail"]
-
-
-@pytest.mark.anyio
 async def test_import_charging_sites_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
@@ -466,7 +480,7 @@ async def test_import_charging_sites_success(
         # Mock user with government role to bypass organization check
         user_details = {"organization_id": 3, "organization_name": "Test Organization"}
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT], user_details)
-        url = fastapi_app.url_path_for("import_charging_sites", organization_id="3")
+        url = fastapi_app.url_path_for("import_charging_sites")
 
         # Create a mock file
         files = {
@@ -594,3 +608,21 @@ async def test_get_all_charging_sites_exception_handling(
 
         assert response.status_code == 500
         assert "An unexpected error occurred" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_get_site_names_service_exception(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test service exception handling in get site names"""
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.get_site_names_by_organization"
+    ) as mock_get_site_names:
+        mock_get_site_names.side_effect = Exception("Service error")
+
+        user_details = {"organization_id": 3}
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], user_details)
+        url = fastapi_app.url_path_for("get_site_names")
+        response = await client.get(url)
+
+        assert response.status_code == 500

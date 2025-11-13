@@ -21,6 +21,10 @@ import {
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import {
+  calculateRenewableClaimColumnVisibility,
+  applyRenewableClaimColumnVisibility
+} from '@/utils/renewableClaimUtils'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -248,47 +252,15 @@ export const AddEditOtherUses = () => {
   const updateGridColumnsVisibility = useCallback(() => {
     if (!gridRef.current?.api) return
 
-    const api = gridRef.current.api
+    const columnVisibility = calculateRenewableClaimColumnVisibility(
+      rowData,
+      optionsData,
+      compliancePeriod,
+      PROVISION_APPROVED_FUEL_CODE
+    )
 
-    // Track if any row should show each column
-    let shouldShowIsCanadaProduced = false
-    let shouldShowIsQ1Supplied = false
-
-    api.forEachNode((node) => {
-      if (node.data) {
-        const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = !optionsData?.fuelTypes?.find(
-          (obj) => node.data.fuelType === obj.fuelType
-        )?.fossilDerived
-        const fuelCode = node.data.fuelCode
-        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-
-        // Check if this row should show the isCanadaProduced column
-        if (
-          node.data.fuelCategory === 'Diesel' &&
-          complianceYear >= NEW_REGULATION_YEAR &&
-          isRenewable &&
-          node.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
-        ) {
-          shouldShowIsCanadaProduced = true
-        }
-
-        // Check if this row should show the isQ1Supplied column
-        if (
-          node.data.fuelCategory === 'Diesel' &&
-          complianceYear === NEW_REGULATION_YEAR &&
-          isRenewable &&
-          isNonCanadian
-        ) {
-          shouldShowIsQ1Supplied = true
-        }
-      }
-    })
-
-    // Set column visibility based on whether any row met the conditions
-    api?.setColumnsVisible(['isCanadaProduced'], shouldShowIsCanadaProduced)
-    api?.setColumnsVisible(['isQ1Supplied'], shouldShowIsQ1Supplied)
-  }, [compliancePeriod, optionsData])
+    applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
+  }, [rowData, optionsData, compliancePeriod])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -469,6 +441,11 @@ export const AddEditOtherUses = () => {
         <BCTypography variant="body4" color="text" my={2} component="div">
           {t('otherUses:newOtherUsesGuide')}
         </BCTypography>
+        {parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && (
+          <BCTypography variant="body4" color="text" my={2} component="div">
+            {t('otherUses:newOtherUsesGuide2025')}
+          </BCTypography>
+        )}
       </div>
 
       <BCGridEditor

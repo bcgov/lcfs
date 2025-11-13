@@ -2,6 +2,7 @@ import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { DateTime } from 'luxon'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
+import { NEW_REGULATION_YEAR } from '@/constants/common'
 
 /**
  *

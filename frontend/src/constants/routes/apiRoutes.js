@@ -39,6 +39,9 @@ export const apiRoutes = {
   // organizations
   organizationSearch: '/organizations/search?',
   organizationExport: '/organizations/export',
+  organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
+  organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
+  organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
 
   // transactions
   transactions: '/transactions/',
@@ -110,18 +113,40 @@ export const apiRoutes = {
   downloadFinalSupplyEquipmentsTemplate:
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
+  saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
   // charging sites
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',
   intendedUsers: '/charging-sites/intended-users',
+  allocationOrganizations: '/charging-sites/allocation-organizations',
+
+  // charging-equipment (new FSE system)
+  chargingEquipment: {
+    list: '/charging-equipment/list',
+    get: '/charging-equipment/:id',
+    create: '/charging-equipment/',
+    update: '/charging-equipment/:id',
+    delete: '/charging-equipment/:id',
+    bulkSubmit: '/charging-equipment/bulk/submit',
+    bulkDecommission: '/charging-equipment/bulk/decommission',
+    statuses: '/charging-equipment/statuses/list',
+    levels: '/charging-equipment/levels/list',
+    endUseTypes: '/charging-equipment/end-use-types/list',
+    endUserTypes: '/charging-equipment/end-user-types/list',
+    chargingSites: '/charging-equipment/charging-sites/list',
+    organizations: '/charging-equipment/organizations/list',
+    hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements'
+  },
   getChargingSite: '/charging-sites/:siteId',
   getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
+  // Charging-site specific equipment endpoints
+  // Backend: POST /charging-sites/{site_id}/equipment/list-all
   getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
   bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
-  importChargingSites: '/charging-sites/import/:orgID',
+  importChargingSites: '/charging-sites/import',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
   downloadChargingSitesTemplate: '/charging-sites/template/:orgID',
 
@@ -129,6 +154,7 @@ export const apiRoutes = {
   fuelSupplyOptions: '/fuel-supply/table-options?',
   getAllFuelSupplies: '/fuel-supply/list-all',
   saveFuelSupplies: '/fuel-supply/save',
+  getOrganizationFuelSupply: '/fuel-supply/organization/:orgID',
 
   // fuel-exports
   fuelExportOptions: '/fuel-exports/table-options?',

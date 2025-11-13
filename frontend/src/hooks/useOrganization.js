@@ -40,6 +40,119 @@ export const useOrganization = (orgID, options = {}) => {
   })
 }
 
+export const useOrganizationPenaltyAnalytics = (orgID, options = {}) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-penalty-analytics', id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(
+        `/organizations/${id}/penalties/analytics`
+      )
+      return response.data
+    },
+    enabled: enabled && !!id,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useOrganizationPenaltyLogs = (
+  orgID,
+  paginationOptions,
+  options = {}
+) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const { enabled = true, ...restOptions } = options
+
+  return useQuery({
+    queryKey: ['organization-penalty-logs', id, paginationOptions],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const path = apiRoutes.organizationPenaltyLogsList.replace(
+        ':orgID',
+        id
+      )
+      const response = await client.post(path, paginationOptions)
+      return response.data
+    },
+    enabled: enabled && !!id && !!paginationOptions,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useSaveOrganizationPenaltyLog = (orgID, options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+
+      const basePath = apiRoutes.organizationPenaltyLogs.replace(
+        ':orgID',
+        orgID
+      )
+
+      if (data.deleted) {
+        if (!data.penaltyLogId) {
+          return { data: {} }
+        }
+        const deletePath = apiRoutes.organizationPenaltyLog
+          .replace(':orgID', orgID)
+          .replace(':penaltyLogId', data.penaltyLogId)
+        return await client.delete(deletePath)
+      }
+
+      if (data.penaltyLogId) {
+        const updatePath = apiRoutes.organizationPenaltyLog
+          .replace(':orgID', orgID)
+          .replace(':penaltyLogId', data.penaltyLogId)
+        return await client.put(updatePath, data)
+      }
+
+      return await client.post(basePath, data)
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization-penalty-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['organization-penalty-analytics'] })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization-penalty-logs'] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
 export const useOrganizationTypes = (options = {}) => {
   const client = useApiService()
 
@@ -312,6 +425,47 @@ export const useUpdateCurrentOrgCreditMarket = (options = {}) => {
       if (orgId) {
         queryClient.invalidateQueries(['organization', orgId])
       }
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// Mutation hook for updating company overview details
+export const useUpdateCompanyOverview = (orgID, options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/company-overview`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (clearCache) {
+        queryClient.removeQueries(['organization', orgID])
+      } else {
+        queryClient.setQueryData(['organization', orgID], data.data)
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['organization'])
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries(['organization', orgID])
       onError?.(error, variables, context)
     },
     ...restOptions

@@ -1,4 +1,8 @@
-import { AddCircleOutlineRounded, CheckBox } from '@mui/icons-material'
+import {
+  AddCircleOutlineRounded,
+  CheckBox,
+  CheckBoxOutlineBlank
+} from '@mui/icons-material'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { roles, govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -96,9 +100,14 @@ class ButtonActionFactory {
       label: allSubmittedSelected
         ? this.context.t('chargingSite:buttons.unselectAllSubmitted')
         : this.context.t('chargingSite:buttons.selectAllSubmitted'),
-      icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
+      icon: allSubmittedSelected ? (
+        <CheckBoxOutlineBlank sx={{ width: '24px', height: '24px' }} />
+      ) : (
+        <CheckBox sx={{ width: '24px', height: '24px' }} />
+      ),
       disabled: submittedEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.SUBMITTED)
+      handler: () =>
+        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.SUBMITTED)
     })
   }
 
@@ -119,9 +128,14 @@ class ButtonActionFactory {
       label: allDraftSelected
         ? this.context.t('chargingSite:buttons.unselectAllDraft')
         : this.context.t('chargingSite:buttons.selectAllDraft'),
-      icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
+      icon: allDraftSelected ? (
+        <CheckBoxOutlineBlank sx={{ width: '24px', height: '24px' }} />
+      ) : (
+        <CheckBox sx={{ width: '24px', height: '24px' }} />
+      ),
       disabled: draftEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.DRAFT)
+      handler: () =>
+        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.DRAFT)
     })
   }
 
@@ -142,9 +156,14 @@ class ButtonActionFactory {
       label: allValidatedSelected
         ? this.context.t('chargingSite:buttons.unselectAllValidated')
         : this.context.t('chargingSite:buttons.selectAllValidated'),
-      icon: <CheckBox sx={{ width: '24px', height: '24px' }} />,
+      icon: allValidatedSelected ? (
+        <CheckBoxOutlineBlank sx={{ width: '24px', height: '24px' }} />
+      ) : (
+        <CheckBox sx={{ width: '24px', height: '24px' }} />
+      ),
       disabled: validatedEquipment.length === 0,
-      handler: () => this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.VALIDATED)
+      handler: () =>
+        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.VALIDATED)
     })
   }
 
@@ -264,7 +283,9 @@ class ButtonActionFactory {
   clearFilters() {
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
-      icon: <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />,
+      icon: (
+        <FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />
+      ),
       id: 'clear-filters-btn',
       label: this.context.t('chargingSite:buttons.clearFilters'),
       handler: this.context.handleClearFilters

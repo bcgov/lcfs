@@ -66,7 +66,7 @@ vi.mock('@/components/ImportDialog', () => {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useSaveChargingSite,
-  useGetIntendedUsers
+  useGetAllocationOrganizations
 } from '@/hooks/useChargingSite'
 
 describe('AddEditChargingSite', () => {
@@ -85,8 +85,11 @@ describe('AddEditChargingSite', () => {
       hasRoles: vi.fn(),
       hasAnyRole: vi.fn()
     })
-    useGetIntendedUsers.mockReturnValue({
-      data: [{ endUserTypeId: 1, typeName: 'Public' }],
+    useGetAllocationOrganizations.mockReturnValue({
+      data: [
+        { organization_id: 1, name: 'Org 1' },
+        { organization_id: 2, name: 'Org 2' }
+      ],
       isLoading: false,
       isFetched: true
     })

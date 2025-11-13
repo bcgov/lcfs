@@ -35,19 +35,18 @@ vi.mock(
 )
 
 describe('_schema', () => {
-  const mockIntendedUsers = [
-    { endUserTypeId: 1, typeName: 'Public' },
-    { endUserTypeId: 2, typeName: 'Fleet' }
-  ]
-
   const mockErrors = {}
   const mockWarnings = {}
   const mockT = (key) => key
+  const mockAllocationOrganizations = [
+    { organization_id: 1, name: 'Org 1' },
+    { organization_id: 2, name: 'Org 2' }
+  ]
 
   describe('chargingSiteColDefs', () => {
     it('returns column definitions array', () => {
       const colDefs = chargingSiteColDefs(
-        mockIntendedUsers,
+        mockAllocationOrganizations,
         mockErrors,
         mockWarnings,
         true
@@ -59,7 +58,7 @@ describe('_schema', () => {
 
     it('includes required fields', () => {
       const colDefs = chargingSiteColDefs(
-        mockIntendedUsers,
+        mockAllocationOrganizations,
         mockErrors,
         mockWarnings,
         true
@@ -72,12 +71,11 @@ describe('_schema', () => {
       expect(fieldNames).toContain('postalCode')
       expect(fieldNames).toContain('latitude')
       expect(fieldNames).toContain('longitude')
-      expect(fieldNames).toContain('intendedUsers')
     })
 
     it('configures editable fields correctly', () => {
       const colDefs = chargingSiteColDefs(
-        mockIntendedUsers,
+        mockAllocationOrganizations,
         mockErrors,
         mockWarnings,
         true
@@ -99,13 +97,7 @@ describe('_schema', () => {
       expect(colDefs.length).toBeGreaterThan(0)
     })
 
-    it('includes checkbox selection for non-IDIR users', () => {
-      const colDefs = chargingEquipmentColDefs(mockT, false)
 
-      const selectCol = colDefs.find((col) => col.field === 'select')
-      expect(selectCol).toBeDefined()
-      expect(selectCol.checkboxSelection).toBeDefined()
-    })
 
     it('includes equipment fields', () => {
       const colDefs = chargingEquipmentColDefs(mockT, true)

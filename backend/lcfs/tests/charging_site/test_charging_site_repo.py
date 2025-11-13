@@ -155,11 +155,11 @@ class TestChargingSiteRepository:
         mock_db_session.refresh.return_value = None
         
         result = await charging_site_repo.update_charging_site(mock_site)
-        
+
         assert result == mock_site
         mock_db_session.merge.assert_called_once_with(mock_site)
         mock_db_session.flush.assert_called_once()
-        mock_db_session.refresh.assert_called_once_with(mock_site)
+        mock_db_session.refresh.assert_called_once_with(mock_site, ['allocating_organization', 'organization', 'status', 'update_date'])
 
     @pytest.mark.anyio
     async def test_delete_charging_site(self, charging_site_repo, mock_db_session):
@@ -200,9 +200,22 @@ class TestChargingSiteRepository:
         mock_result.scalars.return_value.first.return_value = mock_site
         mock_db_session.execute.return_value = mock_result
         
-        result = await charging_site_repo.get_charging_site_by_site_name("Test Site")
+        result = await charging_site_repo.get_charging_site_by_site_name("Test Site", 1)
         
         assert result == mock_site
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_charging_site_name_exists(self, charging_site_repo, mock_db_session):
+        """Test checking for existing charging site name"""
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = mock_site
+        mock_db_session.execute.return_value = mock_result
+
+        exists = await charging_site_repo.charging_site_name_exists("Test Site", 1)
+
+        assert exists is True
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
@@ -231,14 +244,42 @@ class TestChargingSiteRepository:
     async def test_get_charging_site_options(self, charging_site_repo, mock_db_session):
         """Test getting charging site options"""
         mock_statuses = [MagicMock(spec=ChargingSiteStatus)]
-        mock_users = [MagicMock(spec=EndUserType)]
-        
+
         # Mock the individual method calls
         charging_site_repo.get_charging_site_statuses = AsyncMock(return_value=mock_statuses)
-        charging_site_repo.get_intended_user_types = AsyncMock(return_value=mock_users)
-        
+
         result = await charging_site_repo.get_charging_site_options(MagicMock())
+
+        assert len(result) == 1
+        assert result[0] == mock_statuses
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization(self, charging_site_repo, mock_db_session):
+        """Test getting site names by organization"""
+        # Mock the result with site_name and charging_site_id
+        mock_result = MagicMock()
+        mock_result.all.return_value = [
+            ("Site 1", 1),
+            ("Site 2", 2),
+        ]
+        mock_db_session.execute.return_value = mock_result
+        
+        result = await charging_site_repo.get_site_names_by_organization(1)
         
         assert len(result) == 2
-        assert result[0] == mock_statuses
-        assert result[1] == mock_users
+        assert result[0] == ("Site 1", 1)
+        assert result[1] == ("Site 2", 2)
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization_empty(self, charging_site_repo, mock_db_session):
+        """Test getting site names when no sites exist for organization"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db_session.execute.return_value = mock_result
+        
+        result = await charging_site_repo.get_site_names_by_organization(999)
+        
+        assert len(result) == 0
+        assert result == []
+        mock_db_session.execute.assert_called_once()

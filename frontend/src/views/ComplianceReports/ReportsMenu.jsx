@@ -7,9 +7,10 @@ import { useTranslation } from 'react-i18next'
 import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom'
 import { Role } from '@/components/Role'
 import { roles, govRoles } from '@/constants/roles'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ComplianceReports } from './ComplianceReports'
+import { ChargingEquipment } from '@/views/ChargingEquipment'
 import { FloatingAlert } from '@/components/BCAlert'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 function a11yProps(index) {
   return {
@@ -37,18 +38,18 @@ export function ReportsMenu() {
   )
 
   const tabIndex = useMemo(() => {
-    // Map paths to the three tabs
-    if (location.pathname.includes('/charging-sites')) return 1
-    if (location.pathname.includes('/fse')) return 2
-
+    // Only select tab when on the exact index route, not on detail/nested pages
+    if (location.pathname === ROUTES.REPORTS.CHARGING_SITE.INDEX) return 1
+    if (location.pathname === ROUTES.REPORTS.MANAGE_FSE) return 2
     if (
       location.pathname === ROUTES.REPORTS.LIST ||
       location.pathname === `${ROUTES.REPORTS.LIST}/`
     )
       return 0
 
-    return 0
-  }, [isIDIR, location.pathname])
+    // Return false when on detail/nested routes to show no tab as selected
+    return false
+  }, [location.pathname])
 
   useEffect(() => {
     function handleTabsOrientation() {

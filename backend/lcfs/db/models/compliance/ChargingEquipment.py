@@ -36,6 +36,23 @@ charging_equipment_intended_use_association = Table(
     ),
 )
 
+charging_equipment_intended_user_association = Table(
+    "charging_equipment_intended_user_association",
+    BaseModel.metadata,
+    Column(
+        "charging_equipment_id",
+        Integer,
+        ForeignKey("charging_equipment.charging_equipment_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "end_user_type_id",
+        Integer,
+        ForeignKey("end_user_type.end_user_type_id"),
+        primary_key=True,
+    ),
+)
+
 
 class ChargingEquipment(BaseModel, Auditable, Versioning):
     """
@@ -73,18 +90,6 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Auto-generated 3-digit equipment number (suffix for registration)",
         index=True,
-    )
-
-    organization_name = Column(
-        Text,
-        nullable=True,
-        comment="Name of the organization associated with the equipment",
-    )
-    allocating_organization_id = Column(
-        Integer,
-        ForeignKey("organization.organization_id"),
-        nullable=True,
-        comment="Optional allocating organization",
     )
 
     serial_number = Column(
@@ -128,10 +133,6 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     # Relationships
-    allocating_organization = relationship(
-        "Organization", foreign_keys=[allocating_organization_id]
-    )
-
     charging_site = relationship("ChargingSite", back_populates="charging_equipment")
     status = relationship(
         "ChargingEquipmentStatus", back_populates="charging_equipment"
@@ -141,6 +142,10 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     intended_uses = relationship(
         "EndUseType",
         secondary=charging_equipment_intended_use_association,
+    )
+    intended_users = relationship(
+        "EndUserType",
+        secondary=charging_equipment_intended_user_association,
     )
     compliance_associations = relationship(
         "ComplianceReportChargingEquipment",

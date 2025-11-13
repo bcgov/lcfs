@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, func, select, func, and_, desc, update
+from sqlalchemy import asc, desc, func, select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
 
@@ -12,7 +12,12 @@ from lcfs.db.models.compliance import (
     ChargingEquipment,
     ChargingSiteStatus,
     ChargingEquipmentStatus,
+    ComplianceReport,
+    ComplianceReportStatus,
+    AllocationAgreement,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.organization import Organization
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.base import (
@@ -23,6 +28,36 @@ from lcfs.web.api.base import (
 
 
 logger = structlog.get_logger(__name__)
+
+
+def _organization_name_expression():
+    """
+    Build a correlated subquery that resolves the primary organization name for a charging site.
+    """
+    return (
+        select(Organization.name)
+        .where(Organization.organization_id == ChargingSite.organization_id)
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+
+
+def _allocating_organization_display_name_expression():
+    """
+    Build an expression that returns the allocating organization's display name.
+    Prioritizes the related organization name, falling back to the free-text field.
+    """
+    allocating_org_name_subquery = (
+        select(Organization.name)
+        .where(
+            Organization.organization_id == ChargingSite.allocating_organization_id
+        )
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+    return func.coalesce(
+        allocating_org_name_subquery, ChargingSite.allocating_organization_name
+    )
 
 
 class ChargingSiteRepository:
@@ -39,6 +74,63 @@ class ChargingSiteRepository:
             .scalars()
             .all()
         )
+
+    @repo_handler
+    async def get_allocation_agreement_organizations(
+        self, organization_id: int
+    ) -> Sequence[Organization]:
+        """
+        Retrieve organizations that have allocation agreements with the specified organization.
+        Includes allocation agreements from current draft, submitted, and assessed reports.
+        """
+        # Subquery to get compliance report status IDs for Draft, Submitted, and Assessed
+        # Including Submitted and in-progress statuses since those reports are actively being processed
+        status_subquery = (
+            select(ComplianceReportStatus.compliance_report_status_id)
+            .where(
+                ComplianceReportStatus.status.in_(
+                    [
+                        ComplianceReportStatusEnum.Draft,
+                        ComplianceReportStatusEnum.Submitted,
+                        ComplianceReportStatusEnum.Recommended_by_analyst,
+                        ComplianceReportStatusEnum.Recommended_by_manager,
+                        ComplianceReportStatusEnum.Assessed,
+                    ]
+                )
+            )
+            .scalar_subquery()
+        )
+
+        # Subquery to get all compliance reports for this organization
+        # that are in active statuses (Draft, Submitted, being reviewed, or Assessed)
+        compliance_reports_subquery = (
+            select(ComplianceReport.compliance_report_id)
+            .where(
+                and_(
+                    ComplianceReport.organization_id == organization_id,
+                    ComplianceReport.current_status_id.in_(status_subquery),
+                )
+            )
+            .scalar_subquery()
+        )
+
+        # Get unique organizations from allocation agreements
+        # We need to look up the organization by transaction_partner name
+        query = (
+            select(Organization)
+            .join(
+                AllocationAgreement,
+                AllocationAgreement.transaction_partner == Organization.name,
+            )
+            .where(
+                AllocationAgreement.compliance_report_id.in_(compliance_reports_subquery)
+            )
+            .distinct()
+            .order_by(Organization.name)
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().all()
 
     @repo_handler
     async def get_charging_equipment_statuses(
@@ -67,8 +159,8 @@ class ChargingSiteRepository:
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.status),
-                joinedload(ChargingSite.intended_users),
                 joinedload(ChargingSite.organization),
+                joinedload(ChargingSite.allocating_organization),
                 joinedload(ChargingSite.documents),
             )
             .where(ChargingSite.charging_site_id == charging_site_id)
@@ -79,7 +171,10 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_equipment_for_charging_site_paginated(
-        self, site_id: int, pagination: PaginationRequestSchema
+        self,
+        site_id: int,
+        pagination: PaginationRequestSchema,
+        is_government_user: bool = False,
     ):
         """
         Get charging equipment for a specific site with pagination, filtering, and sorting
@@ -87,12 +182,13 @@ class ChargingSiteRepository:
         # Conditions for the base subquery (before ranking)
         base_conditions = [ChargingEquipment.charging_site_id == site_id]
 
-        # Exclude Decommissioned FSE's in the base query
-        base_conditions.append(
-            ~ChargingEquipment.status.has(
-                ChargingEquipmentStatus.status == "Decommissioned"
+        # Exclude Decommissioned FSE's in the base query for gov users
+        if is_government_user:
+            base_conditions.append(
+                ~ChargingEquipment.status.has(
+                    ChargingEquipmentStatus.status == "Decommissioned"
+                )
             )
-        )
 
         # Apply status filters to base conditions (before ranking)
         status_conditions = []
@@ -140,13 +236,11 @@ class ChargingSiteRepository:
         query = (
             select(ranked_equipment)
             .options(
-                joinedload(ranked_equipment.charging_site).selectinload(
-                    ChargingSite.intended_users
-                ),
+                joinedload(ranked_equipment.charging_site),
                 joinedload(ranked_equipment.status),
                 joinedload(ranked_equipment.level_of_equipment),
                 selectinload(ranked_equipment.intended_uses),
-                joinedload(ranked_equipment.allocating_organization),
+                selectinload(ranked_equipment.intended_users),
             )
             .where(ranked_subquery.c.rn == 1)
         )
@@ -192,8 +286,8 @@ class ChargingSiteRepository:
                     else:
                         query = query.order_by(field.asc())
         else:
-            # Default sort by create date
-            query = query.order_by(ranked_equipment.update_date.asc())
+            # Default sort by update date descending
+            query = query.order_by(ranked_equipment.update_date.desc())
 
         # Get total count using the same base conditions
         count_query = (
@@ -248,6 +342,7 @@ class ChargingSiteRepository:
         query = select(ChargingSite).options(
             joinedload(ChargingSite.organization),
             joinedload(ChargingSite.status),
+            joinedload(ChargingSite.allocating_organization),
             selectinload(ChargingSite.documents),
             selectinload(ChargingSite.charging_equipment),
         )
@@ -269,7 +364,7 @@ class ChargingSiteRepository:
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.status),
-                selectinload(ChargingSite.intended_users),
+                joinedload(ChargingSite.allocating_organization),
             )
             .where(ChargingSite.organization_id == organization_id)
             .order_by(asc(ChargingSite.create_date))
@@ -289,7 +384,7 @@ class ChargingSiteRepository:
             .options(
                 joinedload(ChargingSite.organization),
                 joinedload(ChargingSite.status),
-                selectinload(ChargingSite.intended_users),
+                joinedload(ChargingSite.allocating_organization),
             )
             .where(ChargingSite.charging_site_id.in_(charging_site_ids))
             .order_by(asc(ChargingSite.create_date))
@@ -299,31 +394,51 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_all_charging_sites_paginated(
-        self, offset: int, limit: int, conditions: list, sort_orders: list
+        self, offset: int, limit: int, conditions: list, sort_orders: list,
+        exclude_draft: bool = False
     ) -> tuple[list[ChargingSite], int]:
         """
         Retrieve all charging sites with pagination, filtering, and sorting.
+        If exclude_draft is True, excludes sites with DRAFT status.
         """
         stmt = (
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.organization),
                 joinedload(ChargingSite.status),
+                joinedload(ChargingSite.allocating_organization),
                 selectinload(ChargingSite.documents),
-                selectinload(ChargingSite.intended_users),
             )
-            .where(and_(*conditions) if conditions else True)
         )
+
+        # Add condition to exclude draft sites if requested
+        if exclude_draft:
+            stmt = stmt.join(ChargingSite.status).where(
+                ChargingSiteStatus.status != "Draft"
+            )
+
+        # Apply other conditions
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
 
         # Apply sort orders
         for order in sort_orders or []:
             direction = asc if getattr(order, "direction", "asc") == "asc" else desc
-            field = getattr(ChargingSite, getattr(order, "field", "create_date"), None)
-            if field is not None:
-                stmt = stmt.order_by(direction(field))
+            field_name = getattr(order, "field", "update_date")
+
+            if field_name == "organization":
+                stmt = stmt.order_by(direction(_organization_name_expression()))
+            elif field_name == "allocating_organization":
+                stmt = stmt.order_by(
+                    direction(_allocating_organization_display_name_expression())
+                )
+            else:
+                field = getattr(ChargingSite, field_name, None)
+                if field is not None:
+                    stmt = stmt.order_by(direction(field))
 
         if not sort_orders:
-            stmt = stmt.order_by(ChargingSite.create_date.asc())
+            stmt = stmt.order_by(ChargingSite.update_date.desc())
 
         # Count total
         total = await self.db.scalar(select(func.count()).select_from(stmt.subquery()))
@@ -348,24 +463,45 @@ class ChargingSiteRepository:
         """
         org_condition = ChargingSite.organization_id == organization_id
         all_conditions = [org_condition] + (conditions or [])
+        # Pass False for exclude_draft since supplier users should see their own drafts
         return await self.get_all_charging_sites_paginated(
-            offset, limit, all_conditions, sort_orders
+            offset, limit, all_conditions, sort_orders, False
         )
 
     @repo_handler
-    async def get_charging_site_by_site_name(self, site_name: str) -> ChargingSite:
+    async def get_charging_site_by_site_name(
+        self, site_name: str, organization_id: int
+    ) -> Optional[ChargingSite]:
         """
-        Retrieve a charging site by its name from the database
+        Retrieve a charging site by its name within an organization.
         """
-        return (
-            (
-                await self.db.execute(
-                    select(ChargingSite).where(ChargingSite.site_name == site_name)
-                )
+        result = await self.db.execute(
+            select(ChargingSite).where(
+                ChargingSite.organization_id == organization_id,
+                func.lower(ChargingSite.site_name) == func.lower(site_name),
             )
-            .scalars()
-            .first()
         )
+        return result.scalars().first()
+
+    @repo_handler
+    async def charging_site_name_exists(
+        self,
+        site_name: str,
+        organization_id: int,
+        exclude_site_id: Optional[int] = None,
+    ) -> bool:
+        """
+        Check if a charging site name already exists within an organization.
+        """
+        query = select(ChargingSite).where(
+            ChargingSite.organization_id == organization_id,
+            func.lower(ChargingSite.site_name) == func.lower(site_name),
+        )
+        if exclude_site_id:
+            query = query.where(ChargingSite.charging_site_id != exclude_site_id)
+
+        result = await self.db.execute(query)
+        return result.scalars().first() is not None
 
     @repo_handler
     async def get_end_user_types_by_ids(self, ids: List[int]) -> List[EndUserType]:
@@ -384,6 +520,10 @@ class ChargingSiteRepository:
         """
         self.db.add(charging_site)
         await self.db.flush()
+        await self.db.refresh(
+            charging_site,
+            ["allocating_organization", "organization", "status", "update_date"]
+        )
         return charging_site
 
     @repo_handler
@@ -393,7 +533,10 @@ class ChargingSiteRepository:
         """
         merged_site = await self.db.merge(charging_site)
         await self.db.flush()
-        await self.db.refresh(merged_site)
+        await self.db.refresh(
+            merged_site,
+            ["allocating_organization", "organization", "status", "update_date"]
+        )
         return merged_site
 
     @repo_handler
@@ -405,7 +548,6 @@ class ChargingSiteRepository:
             select(ChargingSite)
             .where(ChargingSite.charging_site_id == charging_site_id)
             .options(
-                selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
             )
@@ -413,10 +555,10 @@ class ChargingSiteRepository:
         charging_site = result.scalar_one_or_none()
 
         if not charging_site:
-            raise ValueError(f"Charging site with ID {charging_site_id} not found")
+            # Raise a generic exception so it is wrapped by repo_handler into DatabaseException
+            raise Exception(f"Charging site with ID {charging_site_id} not found")
 
         # Clear many-to-many relationships
-        charging_site.intended_users.clear()
         charging_site.documents.clear()
 
         # Delete related charging equipment
@@ -448,11 +590,10 @@ class ChargingSiteRepository:
     @repo_handler
     async def get_charging_site_options(self, organization):
         """
-        Get options for charging site dropdowns (statuses and intended users)
+        Get options for charging site dropdowns (statuses only)
         """
         statuses = await self.get_charging_site_statuses()
-        intended_users = await self.get_intended_user_types()
-        return [statuses, intended_users]
+        return [statuses]
 
     @repo_handler
     async def get_charging_site_status_by_name(
@@ -483,10 +624,8 @@ class ChargingSiteRepository:
             select(ChargingSite)
             .where(ChargingSite.organization_id == organization_id)
             .options(
-                selectinload(ChargingSite.intended_users),
                 selectinload(ChargingSite.documents),
                 selectinload(ChargingSite.charging_equipment),
-                joinedload(ChargingEquipment.allocating_organization),
             )
         )
         charging_sites = result.scalars().all()
@@ -494,7 +633,6 @@ class ChargingSiteRepository:
         # Delete each charging site and its relationships
         for charging_site in charging_sites:
             # Clear many-to-many relationships
-            charging_site.intended_users.clear()
             charging_site.documents.clear()
 
             # Delete related charging equipment
@@ -505,3 +643,15 @@ class ChargingSiteRepository:
             await self.db.delete(charging_site)
 
         await self.db.flush()
+
+    @repo_handler
+    async def get_site_names_by_organization(self, organization_id: int):
+        """
+        Get site names and charging site IDs for the given organization
+        """
+        result = await self.db.execute(
+            select(ChargingSite.site_name, ChargingSite.charging_site_id)
+            .where(ChargingSite.organization_id == organization_id)
+            .order_by(ChargingSite.site_name)
+        )
+        return result.all()

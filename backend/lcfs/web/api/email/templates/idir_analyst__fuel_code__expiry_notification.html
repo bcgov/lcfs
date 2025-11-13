@@ -1,17 +1,25 @@
-{% extends 'notification_base.html' %}
+{% extends 'base.html' %}
 {% set notification_type = 'Fuel Code' %}
 {% set url_slug = 'fuel-codes' %}
 
-{% block additional_content %}
+{% block content %}
 {% if fuel_codes and fuel_codes|length > 0 %}
-<h3 style="color: #003366; margin-top: 25px;">Fuel codes expiring soon</h3>
+<p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;"><span style="font-family:BC Sans;" lang="en-US">Dear {{
+        fuel_codes[0].contact_name if fuel_codes[0].contact_name else ''}}:</span>
+</p></br>
+<p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;">
+    <span style="font-family:BC Sans;" lang="en-US">This is a reminder that the following fuel code(s) will expire
+        within the next 90 days:
+    </span>
+</p>
 <table class="fuel-codes-table">
     <thead>
         <tr>
-            <th>Fuel Code</th>
-            <th>Fuel Type</th>
+            <th>Fuel code</th>
+            <th>Fuel type</th>
+            <!-- <th>Carbon intensity</th> -->
             <th>Company</th>
-            <th>Expiration Date</th>
+            <th>Expiration date</th>
         </tr>
     </thead>
     <tbody>
@@ -19,11 +27,36 @@
         <tr>
             <td>{{ fuel_code.fuel_code }}</td>
             <td>{{ fuel_code.fuel_type.fuel_type }}</td>
+            <!-- <td>{{ fuel_code.carbon_intensity }}</td> -->
             <td>{{ fuel_code.company }}</td>
             <td>{{ fuel_code.expiration_date }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+<p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;"><b><span style="font-family:BC Sans;" lang="en-US">If
+            you have already applied to renew your fuel codes, or you are not planning to renew them, please disregard
+            this email. If not, as the Deputy
+            Director under the Low Carbon Fuels Act, I encourage you do so as soon as possible.
+        </span></b></p></br>
+<p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;"><span style="font-family:BC Sans;" lang="en-US">Under
+        the <a data-auth="NotApplicable" rel="noopener noreferrer" target="_blank"
+            href="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/22021" data-linkindex="0"
+            title="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/22021"><i>Low Carbon Fuels Act
+                (Act)</i></a>, which replaced the Greenhouse Gas Reduction <i>(Renewable and Low Carbon Fuel
+            Requirements) Act (Former Act) </i>on January 1, 2024, we are no longer able to issue fuel codes with
+        effective start dates predating the date of application.</span></p></br>
+<p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;"><span style="font-family:BC Sans;" lang="en-US">If a
+        renewal application is not received before the current fuel code expires, fuel supplied under the expired code
+        must use the default carbon intensity values prescribed in <a data-auth="NotApplicable"
+            rel="noopener noreferrer" target="_blank"
+            href="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/295_2023#section10" data-linkindex="1"
+            title="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/295_2023#section10">section 10 of the
+            Low Carbon Fuels (Technical) Regulation</a>&nbsp;for compliance reporting purposes.</span></p></br>
+<p style="font-size:12pt;font-family:Aptos,sans-serif;margin:0;"><span style="font-family:BC Sans;" lang="en-US">To
+        support your reapplication process, please refer to our website or the GHGenius website for application
+        information.</span>
+</p>
+</br>
 {% endif %}
 {% endblock %}

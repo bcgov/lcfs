@@ -5,10 +5,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { roles } from '@/constants/roles.js'
+import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
 // Mock react-router-dom hooks - SINGLE DEFINITION
 const mockNavigate = vi.fn()
-const mockUseLocation = vi.fn(() => ({ state: {} }))
+const mockUseLocation = vi.fn(() => ({
+  pathname: '/organizations/123',
+  state: {}
+}))
 const mockUseParams = vi.fn(() => ({ orgID: '123' }))
 
 vi.mock('react-router-dom', () => ({
@@ -22,9 +26,10 @@ vi.mock('react-router-dom', () => ({
 const mockCurrentUser = vi.fn(() => ({
   data: {
     organization: { organizationId: '456' },
-    roles: [{ name: roles.government }]
+    roles: [{ name: roles.analyst }]
   },
-  hasRoles: vi.fn().mockReturnValue(true)
+  hasRoles: vi.fn().mockImplementation((r) => r === roles.government),
+  hasAnyRole: vi.fn().mockImplementation((...rs) => rs.includes(roles.analyst))
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -182,20 +187,28 @@ describe('OrganizationView', () => {
     })
     global.addEventListener = vi.fn()
     global.removeEventListener = vi.fn()
+    useOrganizationPageStore.getState().resetOrganizationContext()
 
     // Reset mock returns to defaults
-    mockUseLocation.mockReturnValue({ state: {} })
+    mockUseLocation.mockReturnValue({
+      pathname: '/organizations/123',
+      state: {}
+    })
     mockUseParams.mockReturnValue({ orgID: '123' })
     mockCurrentUser.mockReturnValue({
       data: {
         organization: { organizationId: '456' },
-        roles: [{ name: roles.government }]
+        roles: [{ name: roles.analyst }]
       },
-      hasRoles: vi.fn().mockReturnValue(true)
+      hasRoles: vi.fn().mockImplementation((r) => r === roles.government),
+      hasAnyRole: vi
+        .fn()
+        .mockImplementation((...rs) => rs.includes(roles.analyst))
     })
   })
 
   afterEach(() => {
+    useOrganizationPageStore.getState().resetOrganizationContext()
     cleanup()
     vi.restoreAllMocks()
   })
@@ -213,13 +226,13 @@ describe('OrganizationView', () => {
     it('switches tab content when different tabs are clicked', () => {
       renderComponent()
 
-      // Tab switching exercises TabPanel's hidden/visible logic
+      // Initially shows dashboard content
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
       expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
 
-      fireEvent.click(screen.getByText('org:usersTab'))
-      expect(screen.queryByText('Organization Details')).not.toBeInTheDocument()
-      expect(screen.getByText('Organization Users')).toBeInTheDocument()
+      // Clicking tabs should call navigate (routing-based approach)
+      fireEvent.click(screen.getByText('Users'))
+      expect(mockNavigate).toHaveBeenCalled()
     })
   })
 
@@ -228,16 +241,31 @@ describe('OrganizationView', () => {
       renderComponent()
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('org:usersTab')).toBeInTheDocument()
-      expect(screen.getByText('org:creditLedgerTab')).toBeInTheDocument()
+      expect(screen.getByText('Users')).toBeInTheDocument()
+      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
+      expect(screen.getByText('Company overview')).toBeInTheDocument()
+      expect(screen.getByText('Penalty log')).toBeInTheDocument()
+      expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(
+        screen.getByText('Compliance tracking')
+      ).toBeInTheDocument()
     })
 
-    it('calls translation hook with correct namespace', () => {
+    it('displays organization title for government users', () => {
       renderComponent()
 
-      expect(mockT).toHaveBeenCalledWith('org:dashboardTab', 'Dashboard')
-      expect(mockT).toHaveBeenCalledWith('org:usersTab')
-      expect(mockT).toHaveBeenCalledWith('org:creditLedgerTab')
+      expect(screen.getByText('Test Org — Dashboard')).toBeInTheDocument()
+    })
+
+    it('updates organization title when navigating to users tab', () => {
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/users',
+        state: {}
+      })
+
+      renderComponent()
+
+      expect(screen.getByText('Test Org — Users')).toBeInTheDocument()
     })
   })
 
@@ -248,34 +276,46 @@ describe('OrganizationView', () => {
         data: { organization: { organizationId: '456' } },
         hasRoles: vi.fn().mockReturnValue(true)
       })
-
-      renderComponent()
-
-      // Click on credit ledger tab to see organizationId prop
-      fireEvent.click(screen.getByText('org:creditLedgerTab'))
-
-      expect(screen.getByText('Credit Ledger - Org: 123')).toBeInTheDocument()
-    })
-
-    it('uses currentUser organizationId when orgID not in params (BCeID users)', () => {
-      mockUseParams.mockReturnValue({}) // No orgID
-      mockCurrentUser.mockReturnValue({
-        data: { organization: { organizationId: '456' } },
-        hasRoles: vi.fn().mockReturnValue(false)
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/credit-ledger',
+        state: {}
       })
 
       renderComponent()
 
-      // Click on credit ledger tab to see organizationId prop
-      fireEvent.click(screen.getByText('org:creditLedgerTab'))
+      expect(screen.getByTestId('credit-ledger')).toBeInTheDocument()
+      expect(screen.getByTestId('credit-ledger')).toHaveAttribute(
+        'data-organization-id',
+        '123'
+      )
+    })
 
-      expect(screen.getByText('Credit Ledger - Org: 456')).toBeInTheDocument()
+    it('redirects BCeID users to dashboard when accessing restricted tabs', () => {
+      mockUseParams.mockReturnValue({}) // No orgID
+      mockCurrentUser.mockReturnValue({
+        data: { organization: { organizationId: '456' } },
+        hasRoles: vi.fn().mockReturnValue(false) // BCeID user (not government)
+      })
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/456/credit-ledger', // Trying to access restricted tab
+        state: {}
+      })
+
+      renderComponent()
+
+      // BCeID users should see dashboard, not credit-ledger
+      expect(screen.queryByTestId('credit-ledger')).not.toBeInTheDocument()
+      expect(screen.getByTestId('organization-details-card')).toBeInTheDocument()
+      expect(
+        screen.queryByText('Test Org — Dashboard')
+      ).not.toBeInTheDocument()
     })
   })
 
   describe('Alert State Management', () => {
     it('displays alert when location state has message', () => {
       mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
         state: {
           message: 'Test alert message',
           severity: 'success'
@@ -293,6 +333,7 @@ describe('OrganizationView', () => {
 
     it('displays alert with default severity when not specified', () => {
       mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
         state: { message: 'Test message' }
       })
 
@@ -304,7 +345,10 @@ describe('OrganizationView', () => {
     })
 
     it('does not display alert when no message in state', () => {
-      mockUseLocation.mockReturnValue({ state: {} })
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
+        state: {}
+      })
 
       renderComponent()
 
@@ -374,26 +418,33 @@ describe('OrganizationView', () => {
       // Initially on first tab (Dashboard)
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
 
-      // Click on Users tab
-      fireEvent.click(screen.getByText('org:usersTab'))
+      // Click on Users tab should call navigate
+      fireEvent.click(screen.getByText('Users'))
+      expect(mockNavigate).toHaveBeenCalled()
 
-      expect(screen.getByText('Organization Users')).toBeInTheDocument()
-
-      // Click on Credit Ledger tab
-      fireEvent.click(screen.getByText('org:creditLedgerTab'))
-
-      expect(screen.getByText(/Credit Ledger - Org:/)).toBeInTheDocument()
+      // Click on Credit Ledger tab should call navigate
+      fireEvent.click(screen.getByText('Credit ledger'))
+      expect(mockNavigate).toHaveBeenCalled()
     })
 
     it('shows correct tab content based on active tab', () => {
+      // Test dashboard content (default)
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123',
+        state: {}
+      })
       renderComponent()
-
-      // Tab 0 - Dashboard (default)
       expect(screen.getByText('Organization Details')).toBeInTheDocument()
       expect(screen.queryByText('Organization Users')).not.toBeInTheDocument()
+    })
 
-      // Click Users tab (tab 1)
-      fireEvent.click(screen.getByText('org:usersTab'))
+    it('shows users content when on users route', () => {
+      // Test users content by mocking users route
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/users',
+        state: {}
+      })
+      renderComponent()
       expect(screen.getByText('Organization Users')).toBeInTheDocument()
       expect(screen.queryByText('Organization Details')).not.toBeInTheDocument()
     })
@@ -402,10 +453,12 @@ describe('OrganizationView', () => {
   describe('Tab Content Rendering', () => {
     it('passes organizationId prop to CreditLedger component', () => {
       mockUseParams.mockReturnValue({ orgID: '789' })
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/789/credit-ledger',
+        state: {}
+      })
 
       renderComponent()
-
-      fireEvent.click(screen.getByText('org:creditLedgerTab'))
 
       const creditLedger = screen.getByTestId('credit-ledger')
       expect(creditLedger).toHaveAttribute('data-organization-id', '789')
@@ -415,11 +468,11 @@ describe('OrganizationView', () => {
       renderComponent()
 
       const tabs = screen.getAllByRole('tab')
-      expect(tabs).toHaveLength(3)
+      expect(tabs).toHaveLength(7)
 
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
-      expect(screen.getByText('org:usersTab')).toBeInTheDocument()
-      expect(screen.getByText('org:creditLedgerTab')).toBeInTheDocument()
+      expect(screen.getByText('Users')).toBeInTheDocument()
+      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
     })
   })
 
@@ -430,16 +483,40 @@ describe('OrganizationView', () => {
       expect(mockCurrentUser).toHaveBeenCalled()
     })
 
-    it('derives isIdir from hasRoles government check', () => {
-      const mockHasRoles = vi.fn().mockReturnValue(true)
-      mockCurrentUser.mockReturnValue({
-        data: { organization: { organizationId: '456' } },
-        hasRoles: mockHasRoles
+    it('renders all tab labels correctly', () => {
+      renderComponent()
+
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
+      expect(screen.getByText('Users')).toBeInTheDocument()
+      expect(screen.getByText('Credit ledger')).toBeInTheDocument()
+      expect(screen.getByText('Company overview')).toBeInTheDocument()
+      expect(screen.getByText('Penalty log')).toBeInTheDocument()
+      expect(screen.getByText('Supply history')).toBeInTheDocument()
+      expect(screen.getByText('Compliance tracking')).toBeInTheDocument()
+    })
+  })
+
+  describe('Tab Navigation', () => {
+    it('navigates between tabs correctly', () => {
+      renderComponent()
+
+      // Should have Organization Details by default (dashboard tab)
+      expect(screen.getByText('Organization Details')).toBeInTheDocument()
+
+      // Click Users tab should call navigate
+      fireEvent.click(screen.getByText('Users'))
+      expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    it('renders correct tab content based on pathname', () => {
+      // Test users path
+      mockUseLocation.mockReturnValue({
+        pathname: '/organizations/123/users',
+        state: {}
       })
 
       renderComponent()
-
-      expect(mockHasRoles).toHaveBeenCalledWith(roles.government)
+      expect(screen.getByText('Organization Users')).toBeInTheDocument()
     })
   })
 })

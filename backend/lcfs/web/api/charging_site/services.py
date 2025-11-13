@@ -1,13 +1,16 @@
 import math
-from typing import List
+from typing import List, Optional
 import structlog
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
 
 from lcfs.db.models.compliance import (
     ChargingEquipmentStatus,
     ChargingSite,
     ChargingSiteStatus,
 )
+from lcfs.db.models.organization import Organization
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -37,6 +40,58 @@ from lcfs.web.core.decorators import service_handler
 logger = structlog.get_logger(__name__)
 
 
+def _get_organization_name_expression():
+    """
+    Build a correlated subquery expression that resolves the organization name for a charging site.
+    """
+    return (
+        select(Organization.name)
+        .where(Organization.organization_id == ChargingSite.organization_id)
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+
+
+def _get_allocating_organization_display_name_expression():
+    """
+    Build an expression that resolves the allocating organization display name for a charging site.
+    Prefers the linked organization name when available, otherwise falls back to the free-text name.
+    """
+    allocating_org_name_subquery = (
+        select(Organization.name)
+        .where(
+            Organization.organization_id == ChargingSite.allocating_organization_id
+        )
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+    return func.coalesce(
+        allocating_org_name_subquery, ChargingSite.allocating_organization_name
+    )
+
+
+def _build_charging_site_filter_condition(filter_model) -> Optional:
+    """
+    Convert a filter model into a SQLAlchemy filter condition for charging site queries.
+    Handles relationship-backed fields like organization and allocating organization.
+    """
+    if filter_model.field == "status":
+        field = get_field_for_filter(ChargingSiteStatus, "status")
+    elif filter_model.field == "organization":
+        field = _get_organization_name_expression()
+    elif filter_model.field == "allocating_organization":
+        field = _get_allocating_organization_display_name_expression()
+    else:
+        field = get_field_for_filter(ChargingSite, filter_model.field)
+
+    return apply_filter_conditions(
+        field,
+        filter_model.filter,
+        filter_model.type,
+        filter_model.filter_type,
+    )
+
+
 class ChargingSiteService:
     def __init__(
         self,
@@ -57,6 +112,35 @@ class ChargingSiteService:
             return [EndUserTypeSchema.model_validate(u) for u in intended_users]
         except Exception as e:
             logger.error("Error fetching intended user types", error=str(e))
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    @service_handler
+    async def get_allocation_agreement_organizations(
+        self, organization_id: int
+    ) -> List[dict]:
+        """
+        Service method to get organizations that have allocation agreements
+        with the specified organization from current draft and assessed reports.
+        """
+        logger.info(
+            "Getting allocation agreement organizations",
+            organization_id=organization_id,
+        )
+        try:
+            organizations = (
+                await self.repo.get_allocation_agreement_organizations(organization_id)
+            )
+            return [
+                {
+                    "organizationId": org.organization_id,
+                    "name": org.name,
+                }
+                for org in organizations
+            ]
+        except Exception as e:
+            logger.error(
+                "Error fetching allocation agreement organizations", error=str(e)
+            )
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
@@ -140,7 +224,7 @@ class ChargingSiteService:
 
         equipment_records, total_count = (
             await self.repo.get_equipment_for_charging_site_paginated(
-                site_id, pagination
+                site_id, pagination, self.request.user.is_government
             )
         )
 
@@ -228,22 +312,11 @@ class ChargingSiteService:
         pagination = validate_pagination(pagination)
 
         # Apply filters
-        for f in pagination.sort_orders:
-            # normalize fields to snake_case handled by schema
-            pass
-
         if pagination.filters:
             for f in pagination.filters:
-                field = get_field_for_filter(ChargingSite, f.field)
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field,
-                        f.filter,
-                        f.type,
-                        f.filter_type,
-                    )
-                    if condition is not None:
-                        conditions.append(condition)
+                condition = _build_charging_site_filter_condition(f)
+                if condition is not None:
+                    conditions.append(condition)
 
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
@@ -264,35 +337,25 @@ class ChargingSiteService:
 
     @service_handler
     async def get_all_charging_sites_paginated(
-        self, pagination: PaginationRequestSchema
+        self, pagination: PaginationRequestSchema, exclude_draft: bool = False
     ) -> ChargingSitesSchema:
         """
         Paginated list of all charging sites.
+        If exclude_draft is True, excludes charging sites with DRAFT status.
         """
         conditions = []
         pagination = validate_pagination(pagination)
 
         if pagination.filters:
             for f in pagination.filters:
-                field = get_field_for_filter(ChargingSite, f.field)
-                if field is not None:
-                    condition = apply_filter_conditions(
-                        field,
-                        f.filter,
-                        f.type,
-                        f.filter_type,
-                    )
-                    if condition is not None:
-                        conditions.append(condition)
-        conditions.append(
-            ~ChargingSite.status.has(
-                ChargingSiteStatus.status == ChargingSiteStatusEnum.DRAFT
-            )
-        )
+                condition = _build_charging_site_filter_condition(f)
+                if condition is not None:
+                    conditions.append(condition)
+
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_all_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders
+            offset, limit, conditions, pagination.sort_orders, exclude_draft
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -339,39 +402,57 @@ class ChargingSiteService:
         Service method to create a new charging site
         """
         logger.info("Creating charging site")
+
+        site_name = (charging_site_data.site_name or "").strip()
+        if not site_name:
+            raise HTTPException(
+                status_code=400, detail="Charging site name cannot be blank."
+            )
+
+        name_exists = await self.repo.charging_site_name_exists(
+            site_name, organization_id
+        )
+        if name_exists:
+            raise HTTPException(
+                status_code=400,
+                detail="A charging site with this name already exists for the organization.",
+            )
+
         status = await self.repo.get_charging_site_status_by_name(
             ChargingSiteStatusEnum.DRAFT
         )
         try:
-            intended_users = []
-            if (
-                charging_site_data.intended_users
-                and len(charging_site_data.intended_users) > 0
-            ):
-                intended_user_ids = [
-                    i.end_user_type_id for i in charging_site_data.intended_users
-                ]
-                intended_users = await self.repo.get_end_user_types_by_ids(
-                    intended_user_ids
-                )
+            payload = charging_site_data.model_dump(
+                exclude={
+                    "site_code",
+                    "status_id",
+                    "current_status",
+                    "deleted",
+                    "intended_users",
+                }
+            )
+            payload["site_name"] = site_name
+            payload["organization_id"] = organization_id
+
             charging_site = await self.repo.create_charging_site(
                 ChargingSite(
-                    **charging_site_data.model_dump(
-                        exclude={
-                            "status_id",
-                            "current_status",
-                            "deleted",
-                            "intended_users",
-                        }
-                    ),
+                    **payload,
                     status=status,
-                    intended_users=intended_users,
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(
                 charging_site.charging_site_id
             )
             return ChargingSiteSchema.model_validate(charging_site)
+        except IntegrityError as exc:
+            logger.warning(
+                "Charging site name already exists for organization",
+                error=str(exc),
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="A charging site with this name already exists for the organization.",
+            )
         except Exception as e:
             logger.error("Error creating charging site", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -391,6 +472,28 @@ class ChargingSiteService:
             raise HTTPException(
                 status_code=400, detail="Charging site is not in draft state"
             )
+
+        new_site_name = (
+            (charging_site_data.site_name or existing_charging_site.site_name)
+            .strip()
+        )
+        if not new_site_name:
+            raise HTTPException(
+                status_code=400, detail="Charging site name cannot be blank."
+            )
+
+        if new_site_name.lower() != existing_charging_site.site_name.lower():
+            name_exists = await self.repo.charging_site_name_exists(
+                new_site_name,
+                existing_charging_site.organization_id,
+                exclude_site_id=existing_charging_site.charging_site_id,
+            )
+            if name_exists:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A charging site with this name already exists for the organization.",
+                )
+
         status = await self.repo.get_charging_site_status_by_name(
             charging_site_data.current_status
             if charging_site_data.current_status
@@ -405,10 +508,10 @@ class ChargingSiteService:
                     "status_id",
                     "status",
                     "deleted",
-                    "intended_users",
                 },
                 exclude_unset=True,
             )
+            update_data["site_name"] = new_site_name
 
             # Update each field on the existing object
             for field, value in update_data.items():
@@ -420,20 +523,6 @@ class ChargingSiteService:
                 existing_charging_site.status = status
                 existing_charging_site.status_id = status.charging_site_status_id
 
-            # Handle intended_users if provided
-            if charging_site_data.intended_users is not None:
-                if len(charging_site_data.intended_users) > 0:
-                    intended_user_ids = [
-                        i.end_user_type_id for i in charging_site_data.intended_users
-                    ]
-                    intended_users = await self.repo.get_end_user_types_by_ids(
-                        intended_user_ids
-                    )
-                    setattr(existing_charging_site, "intended_users", intended_users)
-                else:
-                    # Clear intended users if empty list is provided
-                    existing_charging_site.intended_users = []
-
             # Save the updated object
             updated_charging_site = await self.repo.update_charging_site(
                 existing_charging_site
@@ -441,6 +530,15 @@ class ChargingSiteService:
 
             return ChargingSiteSchema.model_validate(updated_charging_site)
 
+        except IntegrityError as exc:
+            logger.warning(
+                "Charging site name already exists for organization during update",
+                error=str(exc),
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="A charging site with this name already exists for the organization.",
+            )
         except Exception as e:
             logger.error("Error updating charging site", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -497,3 +595,11 @@ class ChargingSiteService:
         Get site status IDs mapped by status name
         """
         return {status.status: status.charging_site_status_id for status in statuses}
+
+    @service_handler
+    async def get_site_names_by_organization(self, organization_id: int) -> List[dict]:
+        """
+        Get site names and charging site IDs for the given organization
+        """
+        sites = await self.repo.get_site_names_by_organization(organization_id)
+        return [{"siteName": site.site_name, "chargingSiteId": site.charging_site_id} for site in sites]

@@ -62,6 +62,24 @@ async def get_intended_users(
 
 
 @router.get(
+    "/allocation-organizations",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_allocation_organizations(
+    request: Request,
+    service: ChargingSiteService = Depends(),
+) -> List[dict]:
+    """
+    Endpoint to get list of organizations with allocation agreements for the logged-in supplier.
+    Returns organizations from current draft and assessed compliance reports.
+    """
+    organization_id = request.user.organization_id
+    return await service.get_allocation_agreement_organizations(organization_id)
+
+
+@router.get(
     "/equipment/statuses",
     response_model=List[ChargingEquipmentStatusSchema],
     status_code=status.HTTP_200_OK,
@@ -89,6 +107,28 @@ async def get_charging_site_statuses(
     Get all available charging site statuses
     """
     return await service.get_charging_site_statuses()
+
+
+@router.get(
+    "/names",
+    response_model=List[dict],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
+async def get_site_names(
+    request: Request,
+    organization_id: int = None,
+    service: ChargingSiteService = Depends(),
+) -> List[dict]:
+    """
+    Get site names and IDs for organization
+    """
+    org_id = (
+        organization_id
+        if request.user.is_government and organization_id
+        else request.user.organization_id
+    )
+    return await service.get_site_names_by_organization(org_id)
 
 
 @router.get(
@@ -227,6 +267,7 @@ async def get_all_charging_sites(
 ) -> ChargingSitesSchema:
     """
     Endpoint to get paginated list of all charging sites (IDIR use).
+    Excludes DRAFT status charging sites for government users.
     """
     try:
         pagination = PaginationRequestSchema(
@@ -235,7 +276,10 @@ async def get_all_charging_sites(
             sort_orders=request_data.sort_orders,
             filters=request_data.filters,
         )
-        return await service.get_all_charging_sites_paginated(pagination)
+        # Pass a flag to indicate this is a government user request
+        return await service.get_all_charging_sites_paginated(
+            pagination, exclude_draft=True
+        )
     except HTTPException as http_ex:
         raise http_ex
     except Exception as e:
@@ -281,7 +325,9 @@ async def update_charging_site_row(
 ):
     """Endpoint to update single charging site row"""
     # Update existing charging site row
-    await validate.charging_site_delete_update_access(charging_site_id, organization_id)
+    await validate.charging_site_delete_update_access(
+        charging_site_id, organization_id, request_data
+    )
     return await cs_service.update_charging_site(request_data)
 
 
@@ -309,44 +355,7 @@ async def delete_charging_site_row(
 
 
 @router.post(
-    "/export/{organization_id}",
-    response_class=StreamingResponse,
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(
-    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
-)
-async def export_charging_sites(
-    request: Request,
-    organization_id: str,
-    site_ids: List[int] = Body(None),
-    exporter: ChargingSiteExporter = Depends(),
-):
-    """
-    Endpoint to export information of charging sites for an organization
-    """
-    try:
-        org_id = int(organization_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400, detail="Invalid organization id. Must be an integer."
-        )
-
-    # Government users can access any organization
-    if not request.user.is_government:
-        organization = request.user.organization
-        if organization.organization_id != org_id:
-            raise HTTPException(
-                status_code=403, detail="Access denied to this organization"
-            )
-    else:
-        organization = request.user.organization
-
-    return await exporter.export(org_id, request.user, organization, True, site_ids)
-
-
-@router.post(
-    "/import/{organization_id}",
+    "/import",
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -355,7 +364,6 @@ async def export_charging_sites(
 )
 async def import_charging_sites(
     request: Request,
-    organization_id: str,
     file: UploadFile = File(...),
     importer: ChargingSiteImporter = Depends(),
     overwrite: bool = Form(...),
@@ -364,33 +372,8 @@ async def import_charging_sites(
     """
     Endpoint to import Charging Site data from an uploaded Excel file.
     """
-    try:
-        org_id = int(organization_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400, detail="Invalid organization id. Must be an integer."
-        )
-
-    # Government users can access any organization
-    if not request.user.is_government:
-        organization = request.user.organization
-        if organization.organization_id != org_id:
-            raise HTTPException(
-                status_code=403, detail="Access denied to this organization"
-            )
-    else:
-        organization = request.user.organization
-
-    # Parse site_ids if provided
-    parsed_site_ids = None
-    if site_ids:
-        try:
-            import json
-            parsed_site_ids = json.loads(site_ids)
-        except (json.JSONDecodeError, TypeError):
-            raise HTTPException(
-                status_code=400, detail="Invalid site_ids format. Must be a JSON array."
-            )
+    org_id = request.user.organization_id
+    organization = request.user.organization
 
     job_id = await importer.import_data(
         org_id,
@@ -398,7 +381,6 @@ async def import_charging_sites(
         organization.organization_code,
         file,
         overwrite,
-        parsed_site_ids,
     )
     return JSONResponse(content={"jobId": job_id})
 
@@ -443,6 +425,7 @@ async def get_charging_site_template(
     "/status/{job_id}",
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
+    name="get_import_job_status",
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]

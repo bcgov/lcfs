@@ -58,8 +58,8 @@ export const OrganizationUsers = () => {
       cellRendererParams: {
         isAbsolute: true,
         url: (row) => {
-          // For BCeID: /organizations/:orgID/:userID
-          // For IDIR (supplier role): /organization/:userID
+          // For IDIR: /organizations/:orgID/users/:userID
+          // For BCeID (supplier role): /organization/users/:userID
           // But typically we do the organizations route with orgID if you have it:
           if (hasRoles(roles.supplier)) {
             return buildPath(ROUTES.ORGANIZATION.VIEW_USER, {
@@ -105,18 +105,7 @@ export const OrganizationUsers = () => {
   )
 
   return (
-    <BCBox mt={3} px={0}>
-      {/* Title + buttons */}
-      <BCBox my={2}>
-        <BCTypography
-          variant="h5"
-          color="primary"
-          data-test="active-users-heading"
-        >
-          {t('org:usersLabel')}
-        </BCTypography>{' '}
-      </BCBox>
-
+    <BCBox mt={1} px={0}>
       {/* New user button (only if user has roles) */}
       <BCBox
         my={2}

@@ -7,7 +7,10 @@ from lcfs.db.models import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportSummarySchema
+)
 from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
@@ -16,15 +19,30 @@ from lcfs.web.api.notional_transfer.schema import (
 
 
 def _assert_repo_calls(
-    mock_repo, mock_trxn_repo, start_date, end_date, organization_id
+    mock_repo, mock_trxn_repo, start_date, end_date, organization_id, transaction_start_date=None, transaction_end_date=None
 ):
-    """Verify that repository methods are called as expected."""
+    """Verify that repository methods are called as expected.
+
+    Args:
+        mock_repo: Mock summary repository
+        mock_trxn_repo: Mock transaction repository
+        start_date: Compliance period start date (for Line 14)
+        end_date: Compliance period end date (for Line 14)
+        organization_id: Organization ID
+        transaction_start_date: Transaction period start date (for Lines 12 & 13). If None, uses start_date.
+        transaction_end_date: Transaction period end date (for Lines 12 & 13). If None, uses end_date.
+    """
+    # For Lines 12 & 13 (transfers), use transaction dates
+    trans_start = transaction_start_date if transaction_start_date else start_date
+    trans_end = transaction_end_date if transaction_end_date else end_date
+
     mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
-        start_date, end_date, organization_id
+        trans_start, trans_end, organization_id
     )
     mock_repo.get_received_compliance_units.assert_called_once_with(
-        start_date, end_date, organization_id
+        trans_start, trans_end, organization_id
     )
+    # Line 14 (issued units) still uses compliance period dates
     mock_repo.get_issued_compliance_units.assert_called_once_with(
         start_date, end_date, organization_id
     )
@@ -209,12 +227,18 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     assert (quarterly_summary[2]) == quarterly_quantities[2]
     assert (quarterly_summary[3]) == quarterly_quantities[3]
 
+    # For first report (no previous assessed report), transaction period is Jan 1 - Mar 31 (following year)
+    transaction_start = datetime(2024, 1, 1, 0, 0, 0)
+    transaction_end = datetime(2025, 3, 31, 23, 59, 59)
+
     _assert_repo_calls(
         mock_summary_repo,
         mock_trxn_repo,
         compliance_period_start,
         compliance_period_end,
         organization_id,
+        transaction_start,
+        transaction_end,
     )
 
 
@@ -308,18 +332,27 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     # Line 22 = line 17 + line 20 = 1000 + 170 = 1170
     assert line_values[22] == 1170
 
+    # For supplemental report with previous assessed report, transaction period is Apr 1 - Mar 31 (following year)
+    transaction_start = datetime(2024, 4, 1, 0, 0, 0)
+    transaction_end = datetime(2025, 3, 31, 23, 59, 59)
+
     _assert_repo_calls(
         mock_summary_repo,  # This is self.repo in the service method
         mock_trxn_repo,
         compliance_period_start,
         compliance_period_end,
         organization_id,
+        transaction_start,
+        transaction_end,
     )
     # Ensure calculate_line_17_available_balance_for_period was called
     mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
         organization_id, compliance_period_start.year
     )
-    mock_repo.get_assessed_compliance_report_by_period.assert_called_once_with(organization_id, compliance_period_start.year, compliance_report.compliance_report_id)
+    # get_assessed_compliance_report_by_period is called TWICE:
+    # 1. In _calculate_transaction_period_dates to check for previous year's report (2023)
+    # 2. In calculate_low_carbon_fuel_target_summary for current year (2024)
+    assert mock_repo.get_assessed_compliance_report_by_period.call_count == 2
 
 
 @pytest.mark.anyio
@@ -527,10 +560,8 @@ async def test_calculate_renewable_fuel_target_summary_2024(
     assert result[6].gasoline == 100.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 100.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=100, diesel=100, jet_fuel=100
-    # Capped values: min(100, 1) = 1, min(100, 0) = 0, min(100, 0) = 0
-    assert result[7].gasoline == 1
+    # Line 8 - supplier is compliant (Line 2 >= Line 4), so deferment is zeroed
+    assert result[7].gasoline == 0
     assert result[7].diesel == 0
     assert result[7].jet_fuel == 0
     # Line 9
@@ -538,7 +569,8 @@ async def test_calculate_renewable_fuel_target_summary_2024(
     assert result[8].diesel == 100.0
     assert result[8].jet_fuel == 100.0
     # Line 10
-    assert result[9].gasoline == 200.0
+    # Net renewable supplied now reflects zero deferment (was 200 when Line 8 carried 1)
+    assert result[9].gasoline == 199.0
     assert result[9].diesel == 200.0
     assert result[9].jet_fuel == 200.0
     # Line 11
@@ -608,20 +640,18 @@ async def test_calculate_renewable_fuel_target_summary_2028(
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 500.0
     assert result[6].jet_fuel == 100.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Capped values: min(300, 1) = 1, min(200, 3) = 3, min(100, 1) = 1
-    assert result[7].gasoline == 1
-    assert result[7].diesel == 3
-    assert result[7].jet_fuel == 1
+    # Line 8 - supplier is compliant, deferment should be zeroed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 400.0
     assert result[8].diesel == 600.0
     assert result[8].jet_fuel == 200.0
     # Line 10
-    assert result[9].gasoline == 600.0
-    assert result[9].diesel == 400.0
-    assert result[9].jet_fuel == 800.0
+    assert result[9].gasoline == 599.0
+    assert result[9].diesel == 397.0
+    assert result[9].jet_fuel == 799.0
     # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
@@ -689,20 +719,17 @@ async def test_calculate_renewable_fuel_target_summary_2029(
     assert result[6].gasoline == 200.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 300.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=300, diesel=200, jet_fuel=100
-    # Line 4: gasoline=20 (5% = 1), diesel=40 (5% = 2), jet_fuel=6 (5% = 0)
-    # Capped values: min(300, 1) = 1, min(200, 2) = 2, min(100, 0) = 0
-    assert result[7].gasoline == 1
-    assert result[7].diesel == 2
+    # Line 8 - supplier is compliant, deferment should be zeroed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
     assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 300.0
     assert result[8].diesel == 200.0
     assert result[8].jet_fuel == 100.0
     # Line 10
-    assert result[9].gasoline == 100.0
-    assert result[9].diesel == 500.0
+    assert result[9].gasoline == 99.0
+    assert result[9].diesel == 498.0
     assert result[9].jet_fuel == 600.0
     # Line 11
     assert result[10].gasoline == 0.0
@@ -771,24 +798,62 @@ async def test_calculate_renewable_fuel_target_summary_2030(
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 200.0
-    # Line 8 - values are preserved but capped at 5% of line 4
-    # Original values: gasoline=100, diesel=100, jet_fuel=100
-    # Capped values: min(100, 1) = 1, min(100, 2) = 2, min(100, 1) = 1
-    assert result[7].gasoline == 1
-    assert result[7].diesel == 2
-    assert result[7].jet_fuel == 1
+    # Line 8 - supplier is compliant, deferment should be zeroed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 100.0
     assert result[8].diesel == 200.0
     assert result[8].jet_fuel == 300.0
     # Line 10
-    assert result[9].gasoline == 600.0
-    assert result[9].diesel == 500.0
-    assert result[9].jet_fuel == 100.0
+    assert result[9].gasoline == 599.0
+    assert result[9].diesel == 498.0
+    assert result[9].jet_fuel == 99.0
     # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
     assert result[10].jet_fuel == 0.0
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_deferment_when_short(
+    compliance_report_summary_service,
+):
+    """When a supplier is short on renewables, deferment should cap at 5% of line 4."""
+
+    fossil_quantities = {"gasoline": 1000, "diesel": 0, "jet_fuel": 0}
+    renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2025
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=0,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=10,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    _assert_renewable_common(result)
+
+    # Compliance shortfall -> deferment is capped at 5% of line 4 (50 * 5% = 2.5 -> rounds to 3)
+    assert result[7].gasoline == 3
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
 
 
 @pytest.mark.anyio
@@ -871,23 +936,26 @@ async def test_calculate_renewable_fuel_target_summary_high_renewables(
 async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     compliance_report_summary_service,
 ):
-    # Test when values are preserved but capped at 5% of line 4.
+    # Test Line 6 and Line 8 logic per LCFA s.10(2) and s.10(3) using corrected logic
+    # Line 6 and Line 8 caps are now based on Line 10 - Line 4 (not Line 2 - Line 4)
+    # With renewable = 0, Line 10 = 0, so there's a deficiency, Line 6 (retention) must be 0
+    # and Line 8 (deferral) is capped at min(deficiency (Line 4 - Line 10), 5% of Line 4)
     fossil_quantities = {"gasoline": 10000, "diesel": 20000, "jet_fuel": 30000}
     renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     compliance_period = 2030
     summary_model = ComplianceReportSummary(
-        line_6_renewable_fuel_retained_gasoline=100,
+        line_6_renewable_fuel_retained_gasoline=100,  # User input - will be capped to 0 (no excess)
         line_6_renewable_fuel_retained_diesel=200,
         line_6_renewable_fuel_retained_jet_fuel=300,
-        line_8_obligation_deferred_gasoline=50,
+        line_8_obligation_deferred_gasoline=50,  # User input - will be capped to prescribed portion
         line_8_obligation_deferred_diesel=100,
         line_8_obligation_deferred_jet_fuel=150,
     )
     # Set required renewable fuel values to match the summary model.
     expected_eligible_renewable_fuel_required = {
         "gasoline": 500.0,  # 5% of 10000
-        "diesel": 800.0,  # 4% of 20000
+        "diesel": 1600.0,  # 8% of 20000
         "jet_fuel": 900.0,  # 3% of 30000
     }
     summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
@@ -911,53 +979,239 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     )
 
     _assert_renewable_common(result)
-    # Lines 6 & 8 should be preserved but capped at 5% of line 4
-    # Line 4: gasoline=500 (5% = 25), diesel=1600 (5% = 80), jet_fuel=900 (5% = 45) - diesel is 8% for 2030
-    # Original values: gasoline=100, diesel=200, jet_fuel=300
-    # Capped values: min(100, 25) = 25, min(200, 80) = 80, min(300, 45) = 45
-    assert result[5].gasoline == 25
-    assert result[5].diesel == 80
-    assert result[5].jet_fuel == 45
-    # Line 8: gasoline=50, diesel=100, jet_fuel=150
-    # Capped values: min(50, 25) = 25, min(100, 80) = 80, min(150, 45) = 45
-    assert result[7].gasoline == 25
+    # Line 6 (retention): Line 10 (raw) = 0, Line 4 = 500/1600/900, so Line 10 - Line 4 < 0 (no excess)
+    # Per LCFA s.10(2), retention is only allowed when there's an excess (Line 10 > Line 4)
+    # Therefore, Line 6 must be 0 for all fuel types
+    assert result[5].gasoline == 0, "Line 6 should be 0 when no excess exists (deficiency scenario)"
+    assert result[5].diesel == 0
+    assert result[5].jet_fuel == 0
+
+    # Line 8 (deferral): Deficiency exists, so deferral is allowed up to min(deficiency (Line 4 - Line 10), 5% of Line 4)
+    # Line 10 (raw) = Line 2 + Line 5 + Line 7 - Line 9 = 0 + 0 + 0 - 0 = 0
+    # Deficiency (Line 4 - Line 10): gasoline=500-0=500, diesel=1600-0=1600, jet_fuel=900-0=900
+    # 5% of Line 4: gasoline=25 (5% * 500), diesel=80 (5% * 1600), jet_fuel=45 (5% * 900)
+    # User input: gasoline=50, diesel=100, jet_fuel=150
+    # Capped at min(deficiency, 5% of Line 4): min(500,25)=25, min(1600,80)=80, min(900,45)=45
+    assert result[7].gasoline == 25, "Line 8 should be capped at min(deficiency (Line 4 - Line 10), 5% of Line 4)"
     assert result[7].diesel == 80
     assert result[7].jet_fuel == 45
 
 
 @pytest.mark.anyio
+async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_trxn_repo,
+):
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.compliance_report_id = 1
+    compliance_report.organization_id = 1
+    compliance_report.compliance_report_group_uuid = "test-group"
+    compliance_report.version = 0
+    compliance_report.nickname = "Test Report"
+    compliance_report.reporting_frequency = None
+
+    compliance_period = MagicMock()
+    compliance_period.description = "2025"
+    compliance_period.effective_date = datetime(2025, 1, 1)
+    compliance_period.expiration_date = datetime(2025, 12, 31)
+    compliance_report.compliance_period = compliance_period
+
+    summary_model = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=1,
+    )
+    compliance_report.summary = summary_model
+
+    compliance_report_summary_service.cr_repo.get_compliance_report_by_id = AsyncMock(
+        return_value=compliance_report
+    )
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+
+    def _make_record(category, fuel_type_name, *, canada=False, q1=False, country=None):
+        fuel_type = MagicMock()
+        fuel_type.renewable = True
+        fuel_type.fuel_type = fuel_type_name
+        fuel_type.fossil_derived = False
+        fuel_category = MagicMock()
+        fuel_category.category = category
+        record = MagicMock()
+        record.fuel_type = fuel_type
+        record.fuel_category = fuel_category
+        record.is_canada_produced = canada
+        record.is_q1_supplied = q1
+        if country:
+            fuel_code = MagicMock()
+            fuel_code.fuel_production_facility_country = country
+            record.fuel_code = fuel_code
+        else:
+            record.fuel_code = None
+        return record
+
+    canadian_supply = _make_record("Diesel", "Biodiesel", canada=True)
+    q1_supply = _make_record(
+        "Diesel", "HDRD", q1=True, country="United States"
+    )
+    ineligible_supply = _make_record(
+        "Diesel", "Biodiesel", country="United States"
+    )
+    gasoline_other_use = _make_record("Gasoline", "Ethanol", canada=True)
+
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[canadian_supply, q1_supply, ineligible_supply])
+    )
+    compliance_report_summary_service.other_uses_repo.get_effective_other_uses = (
+        AsyncMock(return_value=[gasoline_other_use])
+    )
+    compliance_report_summary_service.notional_transfer_service.get_notional_transfers = (
+        AsyncMock(return_value=MagicMock(notional_transfers=[]))
+    )
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[])
+    )
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = (
+        AsyncMock(return_value=[])
+    )
+
+    captured_records = []
+
+    def _aggregate(records, fossil_derived):
+        if fossil_derived:
+            return {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+        captured_records.append(records)
+        return {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+
+    compliance_report_summary_service.repo.aggregate_quantities = MagicMock(
+        side_effect=_aggregate
+    )
+    compliance_report_summary_service.calculate_renewable_fuel_target_summary = MagicMock(
+        return_value=[
+            ComplianceReportSummaryRowSchema(
+                line=index,
+                description="",
+                field="",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+                value=0,
+                total_value=0,
+            )
+            for index in range(1, 12)
+        ]
+    )
+    compliance_report_summary_service.calculate_low_carbon_fuel_target_summary = AsyncMock(
+        return_value=([], 0)
+    )
+    compliance_report_summary_service.calculate_non_compliance_penalty_summary = MagicMock(
+        return_value=[]
+    )
+    compliance_report_summary_service.convert_summary_to_dict = MagicMock(
+        return_value=ComplianceReportSummarySchema(
+            summary_id=1,
+            compliance_report_id=1,
+            is_locked=False,
+            quarter=None,
+            renewable_fuel_target_summary=[],
+            low_carbon_fuel_target_summary=[],
+            non_compliance_penalty_summary=[],
+            can_sign=False,
+        )
+    )
+    compliance_report_summary_service._should_lock_lines_7_and_9 = AsyncMock(
+        return_value=False
+    )
+    compliance_report_summary_service.repo.save_compliance_report_summary = AsyncMock()
+
+    await compliance_report_summary_service.calculate_compliance_report_summary(1)
+
+    # Ensure renewable aggregation excluded ineligible supply but kept eligible ones.
+    assert captured_records, "Expected renewable aggregation records to be captured"
+    renewable_records = captured_records[-1]
+    assert canadian_supply in renewable_records
+    assert q1_supply in renewable_records
+    assert gasoline_other_use in renewable_records
+    assert ineligible_supply not in renewable_records
+
+@pytest.mark.anyio
 async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
     compliance_report_summary_service,
 ):
-    # Test when values are preserved and capped at 5% of line 4
-    fossil_quantities = {"gasoline": 100000, "diesel": 200000, "jet_fuel": 300000}
-    renewable_quantities = {"gasoline": 5000, "diesel": 15000, "jet_fuel": 5000}
-    previous_retained = {"gasoline": 2000, "diesel": 3000, "jet_fuel": 4000}
-    previous_obligation = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 3000}
-    notional_transfers_sum = {"gasoline": 500, "diesel": 1000, "jet_fuel": 1500}
+    # Test Line 6 and Line 8 with realistic excess scenario using corrected logic
+    # Line 6 and Line 8 caps are now based on Line 10 - Line 4 (not Line 2 - Line 4)
+    fossil_quantities = {"gasoline": 10000, "diesel": 20000, "jet_fuel": 30000}
+    renewable_quantities = {"gasoline": 1500, "diesel": 3000, "jet_fuel": 2000}  # Enough to create excess
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     compliance_period = 2030
     summary_model = ComplianceReportSummary(
-        line_6_renewable_fuel_retained_gasoline=1000,
-        line_6_renewable_fuel_retained_diesel=2000,
-        line_6_renewable_fuel_retained_jet_fuel=3000,
-        line_8_obligation_deferred_gasoline=500,
-        line_8_obligation_deferred_diesel=1000,
-        line_8_obligation_deferred_jet_fuel=1500,
+        line_6_renewable_fuel_retained_gasoline=100,  # User wants to retain 100
+        line_6_renewable_fuel_retained_diesel=200,  # User wants to retain 200
+        line_6_renewable_fuel_retained_jet_fuel=150,  # User wants to retain 150
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
     )
-    # Set required values that differ from the summary model.
-    expected_eligible_renewable_fuel_required = {
-        "gasoline": 10.0,
-        "diesel": 16.0,
-        "jet_fuel": 18.0,
-    }
-    summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
-        expected_eligible_renewable_fuel_required["gasoline"] + 1
+    # Don't set line_4 values - let them be calculated
+    # Line 3 (tracked) = fossil + renewable = gas:11,500, diesel:23,000, jet:32,000
+    # Line 4 (required) for 2030: gas:11,500*0.05=575, diesel:23,000*0.08=1,840, jet:32,000*0.03=960
+    # Line 10 (raw, before Line 6/8) = Line 2 + Line 5 + Line 7 - Line 9 = gas:1500, diesel:3000, jet:2000
+    # Excess (Line 10 - Line 4) = gas:1500-575=925, diesel:3000-1840=1160, jet:2000-960=1040
+    # 5% of Line 4: gas:28.75, diesel:92, jet:48
+    # Max retention = min(excess, 5% of Line 4): gas:28.75, diesel:92, jet:48
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
     )
-    summary_model.line_4_eligible_renewable_fuel_required_diesel = (
-        expected_eligible_renewable_fuel_required["diesel"] + 1
-    )
-    summary_model.line_4_eligible_renewable_fuel_required_jet_fuel = (
-        expected_eligible_renewable_fuel_required["jet_fuel"] + 1
+
+    _assert_renewable_common(result)
+    # Line 6 (retention): User input is capped at min(excess (Line 10 - Line 4), 5% of Line 4)
+    # Gasoline: excess=925, 5%=28.75, user=100 -> capped at 28.75 ≈ 29
+    # Diesel: excess=1160, 5%=92, user=200 -> capped at 92
+    # Jet fuel: excess=1040, 5%=48, user=150 -> capped at 48
+    assert result[5].gasoline == 29, "Line 6 gasoline should be capped at min(excess, 5% of Line 4) (≈29)"
+    assert result[5].diesel == 92, "Line 6 diesel should be capped at min(excess, 5% of Line 4) (92)"
+    assert result[5].jet_fuel == 48, "Line 6 jet fuel should be capped at min(excess, 5% of Line 4) (48)"
+
+    # Line 8 (deferral): Since there's an excess (not deficiency), Line 8 should be 0
+    assert result[7].gasoline == 0, "Line 8 should be 0 when supplier has excess (compliant)"
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_with_previous_retained(
+    compliance_report_summary_service,
+):
+    # Test that Line 6 caps correctly account for previously retained fuel (Line 7)
+    # This demonstrates the difference between using Line 2 vs Line 10 for excess calculation
+    fossil_quantities = {"gasoline": 10000, "diesel": 20000, "jet_fuel": 30000}
+    renewable_quantities = {"gasoline": 400, "diesel": 800, "jet_fuel": 600}  # Below requirement
+    previous_retained = {"gasoline": 200, "diesel": 1200, "jet_fuel": 500}  # From last year
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2030
+
+    # Line 3 (tracked) = fossil + renewable = gas:10,400, diesel:20,800, jet:30,600
+    # Line 4 (required) for 2030: gas:10,400*0.05=520, diesel:20,800*0.08=1,664, jet:30,600*0.03=918
+    # Line 10 (raw) = Line 2 + Line 5 + Line 7 - Line 9 = gas:400+0+200-0=600, diesel:800+0+1200-0=2000, jet:600+0+500-0=1100
+    # Using OLD logic (Line 2 - Line 4): gas:400-520=-120 (no excess), diesel:800-1664=-864 (no excess), jet:600-918=-318 (no excess)
+    # Using NEW logic (Line 10 - Line 4): gas:600-520=80 (excess!), diesel:2000-1664=336 (excess!), jet:1100-918=182 (excess!)
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=100,  # User wants to retain 100
+        line_6_renewable_fuel_retained_diesel=200,
+        line_6_renewable_fuel_retained_jet_fuel=150,
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
     )
 
     result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
@@ -971,20 +1225,185 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
     )
 
     _assert_renewable_common(result)
-    # Lines 6 & 8 are preserved but capped at 5% of calculated line 4
-    # For 2030: renewable requirements result in line 4 values that give these 5% caps:
-    # 5% caps: gasoline=263, diesel=860, jet_fuel=458 (diesel is 8% for 2030)
-    # Line 6 original values: gasoline=1000, diesel=2000, jet_fuel=3000
-    # Since original values exceed caps, they get capped down
-    # But since 1000 > 263, we get min(1000, 263) = 263 (rounds up to 263 in calculation)
-    assert result[5].gasoline == 263
-    assert result[5].diesel == 860
-    assert result[5].jet_fuel == 458
-    # Line 8 original values: gasoline=500, diesel=1000, jet_fuel=1500
-    # Capped values: min(500, 263) = 263, min(1000, 860) = 860, min(1500, 458) = 458
-    assert result[7].gasoline == 263
-    assert result[7].diesel == 860
-    assert result[7].jet_fuel == 458
+
+    # Line 6 (retention): With NEW logic, there IS excess because of previous retained fuel
+    # 5% of Line 4: gas:26, diesel:83, jet:46 (rounded)
+    # Excess: gas:80, diesel:336, jet:182
+    # Max retention = min(excess, 5% of Line 4): gas:min(80,26)=26, diesel:min(336,83)=83, jet:min(182,46)=46
+    # User input: gas:100, diesel:200, jet:150
+    # Capped: gas:26, diesel:83, jet:46
+    assert result[5].gasoline == 26, "Line 6 gasoline should allow retention due to previous retained fuel"
+    assert result[5].diesel == 83, "Line 6 diesel should allow retention due to previous retained fuel"
+    assert result[5].jet_fuel == 46, "Line 6 jet fuel should allow retention due to previous retained fuel"
+
+    # Line 8 (deferral): Since there's excess, no deferral allowed
+    assert result[7].gasoline == 0
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_with_notional_transfers(
+    compliance_report_summary_service,
+):
+    # Test that Line 6 caps correctly account for notional transfers (Line 5)
+    fossil_quantities = {"gasoline": 10000, "diesel": 20000, "jet_fuel": 30000}
+    renewable_quantities = {"gasoline": 450, "diesel": 1500, "jet_fuel": 800}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 100, "diesel": 300, "jet_fuel": 200}  # Positive transfers
+    compliance_period = 2030
+
+    # Line 3: gas:10,450, diesel:20,500, jet:30,800
+    # Line 4: gas:522.5≈523, diesel:1,640, jet:924
+    # Line 10 (raw) = Line 2 + Line 5 + Line 7 - Line 9 = gas:450+100=550, diesel:1500+300=1800, jet:800+200=1000
+    # Using OLD logic (Line 2 - Line 4): gas:450-523=-73 (no excess), diesel:1500-1640=-140 (no excess), jet:800-924=-124 (no excess)
+    # Using NEW logic (Line 10 - Line 4): gas:550-523=27 (excess!), diesel:1800-1640=160 (excess!), jet:1000-924=76 (excess!)
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=50,
+        line_6_renewable_fuel_retained_diesel=100,
+        line_6_renewable_fuel_retained_jet_fuel=80,
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    _assert_renewable_common(result)
+
+    # 5% of Line 4: gas:26, diesel:82 (rounds to 80 with ROUND_HALF_UP), jet:46
+    # Excess: gas:27, diesel:160, jet:76
+    # Max retention = min(excess, 5%): gas:min(27,26)=26, diesel:min(160,80)=80, jet:min(76,46)=46
+    # User input capped: gas:min(50,26)=26, diesel:min(100,80)=80, jet:min(80,46)=46
+    assert result[5].gasoline == 26, "Line 6 should allow retention due to notional transfers"
+    assert result[5].diesel == 80, "Line 6 should allow retention due to notional transfers"
+    assert result[5].jet_fuel == 46, "Line 6 should allow retention due to notional transfers"
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_with_previous_obligation(
+    compliance_report_summary_service,
+):
+    # Test that Line 8 caps correctly account for previous obligation (Line 9)
+    fossil_quantities = {"gasoline": 10000, "diesel": 20000, "jet_fuel": 30000}
+    renewable_quantities = {"gasoline": 500, "diesel": 1600, "jet_fuel": 900}  # Exactly at requirement
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 50, "diesel": 100, "jet_fuel": 75}  # Deferred from last year
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2030
+
+    # Line 3: gas:10,500, diesel:21,600, jet:30,900
+    # Line 4: gas:525, diesel:1,728, jet:927
+    # Line 10 (raw) = Line 2 + Line 5 + Line 7 - Line 9 = gas:500-50=450, diesel:1600-100=1500, jet:900-75=825
+    # Using OLD logic (Line 2 - Line 4): gas:500-525=-25, diesel:1600-1728=-128, jet:900-927=-27
+    # Using NEW logic (Line 10 - Line 4): gas:450-525=-75 (bigger deficiency!), diesel:1500-1728=-228, jet:825-927=-102
+    # The previous obligation creates a LARGER deficiency, allowing more deferral
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=0,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=100,  # User wants to defer
+        line_8_obligation_deferred_diesel=150,
+        line_8_obligation_deferred_jet_fuel=120,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    _assert_renewable_common(result)
+
+    # Line 6: No excess, so no retention
+    assert result[5].gasoline == 0
+    assert result[5].diesel == 0
+    assert result[5].jet_fuel == 0
+
+    # Line 8 (deferral): Deficiency exists due to previous obligation
+    # 5% of Line 4: gas:26, diesel:86, jet:46
+    # Deficiency: gas:75, diesel:228, jet:102
+    # Max deferral = min(deficiency, 5%): gas:min(75,26)=26, diesel:min(228,86)=86, jet:min(102,46)=46
+    # User input capped: gas:min(100,26)=26, diesel:min(150,86)=86, jet:min(120,46)=46
+    assert result[7].gasoline == 26, "Line 8 should allow deferral due to previous obligation increasing deficiency"
+    assert result[7].diesel == 86, "Line 8 should allow deferral due to previous obligation increasing deficiency"
+    assert result[7].jet_fuel == 46, "Line 8 should allow deferral due to previous obligation increasing deficiency"
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_complex_all_lines(
+    compliance_report_summary_service,
+):
+    # Comprehensive test with all lines having non-zero values
+    # This is the ultimate test showing why Line 10 logic is necessary
+    fossil_quantities = {"gasoline": 100000, "diesel": 200000, "jet_fuel": 150000}
+    renewable_quantities = {"gasoline": 4000, "diesel": 12000, "jet_fuel": 3500}
+    previous_retained = {"gasoline": 500, "diesel": 1000, "jet_fuel": 300}  # From last year
+    previous_obligation = {"gasoline": 200, "diesel": 500, "jet_fuel": 100}  # Deferred from last year
+    notional_transfers_sum = {"gasoline": 300, "diesel": -200, "jet_fuel": 400}  # Mixed transfers
+    compliance_period = 2030
+
+    # Line 3 (tracked): gas:104,300, diesel:212,000, jet:153,900
+    # Line 4 (required): gas:5,215, diesel:16,960, jet:4,617
+    # Line 10 (raw) = Line 2 + Line 5 + Line 7 - Line 9
+    #   gas: 4000 + 300 + 500 - 200 = 4,600
+    #   diesel: 12000 + (-200) + 1000 - 500 = 12,300
+    #   jet: 3500 + 400 + 300 - 100 = 4,100
+    #
+    # Excess/Deficiency (Line 10 - Line 4):
+    #   gas: 4600 - 5215 = -615 (deficiency)
+    #   diesel: 12300 - 16960 = -4660 (deficiency)
+    #   jet: 4100 - 4617 = -517 (deficiency)
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=300,
+        line_6_renewable_fuel_retained_diesel=500,
+        line_6_renewable_fuel_retained_jet_fuel=250,
+        line_8_obligation_deferred_gasoline=400,
+        line_8_obligation_deferred_diesel=1000,
+        line_8_obligation_deferred_jet_fuel=300,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    _assert_renewable_common(result)
+
+    # Line 6: All show deficiency, so no retention allowed
+    assert result[5].gasoline == 0, "No retention when deficiency exists"
+    assert result[5].diesel == 0, "No retention when deficiency exists"
+    assert result[5].jet_fuel == 0, "No retention when deficiency exists"
+
+    # Line 8 (deferral): Deficiency exists, capped at min(deficiency, 5% of Line 4)
+    # 5% of Line 4: gas:260.75≈260, diesel:848, jet:230.85≈230 (with ROUND_HALF_UP)
+    # Deficiency: gas:615, diesel:4660, jet:517
+    # Max deferral: gas:min(615,260)=260, diesel:min(4660,848)=848, jet:min(517,230)=230
+    # User input capped: gas:min(400,260)=260, diesel:min(1000,848)=848, jet:min(300,230)=230
+    assert result[7].gasoline == 260, "Deferral correctly capped with all lines considered"
+    assert result[7].diesel == 848, "Deferral correctly capped with all lines considered"
+    assert result[7].jet_fuel == 230, "Deferral correctly capped with all lines considered"
 
 
 @pytest.mark.anyio
@@ -2374,6 +2793,7 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 5}  # This should populate Line 7
     previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 2}  # This should populate Line 9
     notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_year_required = {"gasoline": 400, "diesel": 750, "jet_fuel": 0}
     
     # Create a proper ComplianceReportSummary mock with the actual fields
     from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
@@ -2398,6 +2818,7 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         notional_transfers_sums,
         2025,
         mock_prev_summary,
+        previous_year_required,
     )
     
     # Check that all lines are present in the result - should be 11 lines total
@@ -2412,6 +2833,9 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     assert line_7_row.gasoline == previous_retained["gasoline"]  # 10
     assert line_7_row.diesel == previous_retained["diesel"]      # 20
     assert line_7_row.jet_fuel == previous_retained["jet_fuel"]  # 5
+    assert line_7_row.max_gasoline == 20
+    assert line_7_row.max_diesel == 38
+    assert line_7_row.max_jet_fuel == 5
     
     assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
     assert line_9_row.diesel == previous_obligation["diesel"]      # 10
