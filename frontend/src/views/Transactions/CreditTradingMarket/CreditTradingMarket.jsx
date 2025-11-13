@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { Box, Stack } from '@mui/material'
 import { CreditMarketTable } from './CreditMarketTable'
 import { CreditMarketAccordion } from './CreditMarketAccordion'
@@ -14,11 +14,28 @@ import { faTimes } from '@fortawesome/free-solid-svg-icons'
 
 export const CreditTradingMarket = () => {
   const { t } = useTranslation(['creditMarket'])
-  const { hasAnyRole } = useCurrentUser()
+  const { data: currentUser, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = hasAnyRole(...govRoles)
+  const userOrgId = currentUser?.organization?.organizationId
+  const userOrgName =
+    currentUser?.organization?.name ||
+    currentUser?.organization?.organizationName ||
+    currentUser?.organization?.legalName ||
+    ''
   const [selectedListing, setSelectedListing] = useState(null)
   const gridRef = useRef(null)
   const tableRef = useRef(null)
+
+  useEffect(() => {
+    if (!isGovernmentUser && userOrgId) {
+      setSelectedListing((prev) => {
+        if (prev?.organizationId === userOrgId) {
+          return prev
+        }
+        return { organizationId: userOrgId, organizationName: userOrgName }
+      })
+    }
+  }, [isGovernmentUser, userOrgId, userOrgName])
 
   const handleRowSelect = useCallback((row) => {
     setSelectedListing(row)
@@ -36,9 +53,20 @@ export const CreditTradingMarket = () => {
   const handleClearFilters = useCallback(() => {
     gridRef.current?.clearFilters?.()
     gridRef.current?.api?.setSortModel?.([])
-    setSelectedListing(null)
+    if (isGovernmentUser) {
+      setSelectedListing(null)
+    } else if (userOrgId) {
+      setSelectedListing({
+        organizationId: userOrgId,
+        organizationName: userOrgName
+      })
+    }
     handleRefreshListings()
-  }, [handleRefreshListings])
+  }, [handleRefreshListings, isGovernmentUser, userOrgId, userOrgName])
+
+  const tableSelectedOrgId = isGovernmentUser
+    ? selectedListing?.organizationId ?? null
+    : userOrgId ?? null
 
   return (
     <Box data-testid="credit-trading-market-view">
@@ -74,12 +102,14 @@ export const CreditTradingMarket = () => {
         )}
       </Stack>
 
-      {isGovernmentUser && selectedListing && (
+      {selectedListing && (
         <Box sx={{ mb: 3 }}>
           <CreditMarketDetailsCard
-            key={selectedListing.organizationId}
+            key={`${isGovernmentUser ? 'idir' : 'bceid'}-${
+              selectedListing.organizationId
+            }`}
             organizationId={selectedListing.organizationId}
-            variant="admin"
+            variant={isGovernmentUser ? 'admin' : 'self'}
             onSaveSuccess={handleRefreshListings}
           />
         </Box>
@@ -91,7 +121,7 @@ export const CreditTradingMarket = () => {
           ref={tableRef}
           gridRef={gridRef}
           onRowSelect={isGovernmentUser ? handleRowSelect : undefined}
-          selectedOrgId={selectedListing?.organizationId ?? null}
+          selectedOrgId={tableSelectedOrgId}
         />
       </Box>
 

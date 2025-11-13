@@ -62,10 +62,17 @@ vi.mock('react-i18next', () => ({
 
 describe('CreditTradingMarket', () => {
   const mockHasAnyRole = vi.fn(() => false)
+  const mockUser = {
+    organization: {
+      organizationId: 42,
+      name: 'User Organization'
+    }
+  }
 
   beforeEach(() => {
     mockHasAnyRole.mockReset()
     vi.mocked(useCurrentUser).mockReturnValue({
+      data: mockUser,
       hasAnyRole: mockHasAnyRole
     })
   })
@@ -125,9 +132,10 @@ describe('CreditTradingMarket', () => {
     expect(accordionComponent).toBeInTheDocument()
   })
 
-  it('does not show IDIR details card for non-government users', () => {
+  it('shows details card for BCeID users with their organization', () => {
     render(<CreditTradingMarket />)
-    expect(screen.queryByTestId('credit-market-details-card')).not.toBeInTheDocument()
+    const detailsCard = screen.getByTestId('credit-market-details-card')
+    expect(detailsCard).toHaveTextContent('Details Card 42')
   })
 
   it('shows details card after government user selects a row', () => {
