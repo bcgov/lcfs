@@ -404,7 +404,7 @@ export const allocationAgreementColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           // Extract the original fuel code from the formatted display value
-          const originalFuelCode = eparams.newValue
+          const originalFuelCode = params.newValue
           params.data.fuelCode = originalFuelCode
 
           const fuelType = optionsData?.fuelTypes?.find(
