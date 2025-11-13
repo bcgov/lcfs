@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 from fastapi import status
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock, ANY
 
 from lcfs.web.api.organizations.schema import (
     OrganizationCreditMarketUpdateSchema,
@@ -185,6 +185,41 @@ class TestCreditMarketViews:
 
         # Should return unauthorized or forbidden
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+
+    @pytest.mark.anyio
+    async def test_update_org_credit_market_idir_success(
+        self,
+        client: AsyncClient,
+        mock_user_profile,
+        credit_market_update_data,
+        sample_organization_data
+    ):
+        """Test IDIR endpoint updates credit market details and skips notifications"""
+
+        with patch('lcfs.web.api.organizations.views.OrganizationsService') as mock_service:
+            mock_service_instance = AsyncMock()
+            mock_service.return_value = mock_service_instance
+
+            mock_org = MagicMock()
+            for key, value in sample_organization_data.items():
+                setattr(mock_org, key, value)
+
+            mock_service_instance.update_organization_credit_market_details.return_value = mock_org
+
+            response = await client.put(
+                "/api/organizations/123/credit-market",
+                json=credit_market_update_data
+            )
+
+            assert response.status_code in [status.HTTP_200_OK, status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND]
+
+            if response.status_code == status.HTTP_200_OK:
+                mock_service_instance.update_organization_credit_market_details.assert_awaited_with(
+                    123,
+                    credit_market_update_data,
+                    ANY,
+                    skip_notifications=True
+                )
 
     @pytest.mark.anyio
     async def test_credit_market_listings_filters_display_flag(

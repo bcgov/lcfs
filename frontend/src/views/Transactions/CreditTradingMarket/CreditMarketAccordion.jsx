@@ -20,11 +20,11 @@ export const CreditMarketAccordion = () => {
   return (
     <Accordion expanded={expanded} onChange={handleChange}>
       <AccordionSummary
-        expandIcon={<ExpandMore />}
+        expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
         aria-controls="credit-market-info-content"
         id="credit-market-info-header"
       >
-        <BCTypography variant="h5" sx={{ color: 'primary.main' }}>
+        <BCTypography variant="h6" sx={{ color: 'primary.main' }}>
           {t('creditMarket:informationBulletin')}
         </BCTypography>
       </AccordionSummary>

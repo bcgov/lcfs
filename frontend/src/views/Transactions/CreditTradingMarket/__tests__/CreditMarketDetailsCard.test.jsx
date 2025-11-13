@@ -6,7 +6,8 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
-  useUpdateCurrentOrgCreditMarket
+  useUpdateCurrentOrgCreditMarket,
+  useUpdateOrganizationCreditMarket
 } from '@/hooks/useOrganization'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -64,6 +65,12 @@ const mockCurrentUser = {
   organization: { organizationId: 1 }
 }
 
+const mockHasAnyRole = vi.fn((...roleNames) =>
+  roleNames.some((roleName) =>
+    mockCurrentUser.roles.some((userRole) => userRole.name === roleName)
+  )
+)
+
 const mockOrganizationData = {
   organizationId: 1,
   creditMarketContactName: 'Jane Smith',
@@ -86,6 +93,13 @@ const mockUpdateMutation = {
   error: null
 }
 
+const mockAdminUpdateMutation = {
+  mutate: vi.fn(),
+  isPending: false,
+  isError: false,
+  error: null
+}
+
 const mockQueryClient = {
   refetchQueries: vi.fn()
 }
@@ -93,6 +107,7 @@ const mockQueryClient = {
 describe('CreditMarketDetailsCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockHasAnyRole.mockClear()
     
     mockHandleSubmit.mockImplementation((fn) => (e) => {
       e?.preventDefault?.()
@@ -107,15 +122,21 @@ describe('CreditMarketDetailsCard', () => {
       }
       fn(formData)
     })
-    
+
     mockWatch.mockReturnValue(true)
 
-    vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUser })
+    vi.mocked(useCurrentUser).mockReturnValue({
+      data: mockCurrentUser,
+      hasAnyRole: mockHasAnyRole
+    })
     vi.mocked(useOrganization).mockReturnValue({
       data: mockOrganizationData,
       isLoading: false
     })
     vi.mocked(useUpdateCurrentOrgCreditMarket).mockReturnValue(mockUpdateMutation)
+    vi.mocked(useUpdateOrganizationCreditMarket).mockReturnValue(
+      mockAdminUpdateMutation
+    )
     vi.mocked(useQueryClient).mockReturnValue(mockQueryClient)
   })
 
@@ -141,7 +162,7 @@ describe('CreditMarketDetailsCard', () => {
       render(<CreditMarketDetailsCard />, { wrapper })
       
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
-      expect(screen.getByText('555-1234')).toBeInTheDocument()
+      expect(screen.getByText('(555) 123-4')).toBeInTheDocument()
       expect(screen.getByText('jane@example.com')).toBeInTheDocument()
       expect(screen.getByText('100')).toBeInTheDocument()
     })
@@ -150,7 +171,8 @@ describe('CreditMarketDetailsCard', () => {
   describe('Permission and Access Control', () => {
     it('hides edit button when user lacks permissions', () => {
       vi.mocked(useCurrentUser).mockReturnValue({
-        data: { ...mockCurrentUser, roles: [{ name: 'supplier' }] }
+        data: { ...mockCurrentUser, roles: [{ name: 'supplier' }] },
+        hasAnyRole: () => false
       })
 
       render(<CreditMarketDetailsCard />, { wrapper })
@@ -159,7 +181,10 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     it('hides edit button when no current user', () => {
-      vi.mocked(useCurrentUser).mockReturnValue({ data: null })
+      vi.mocked(useCurrentUser).mockReturnValue({
+        data: null,
+        hasAnyRole: () => false
+      })
 
       render(<CreditMarketDetailsCard />, { wrapper })
       
@@ -250,15 +275,45 @@ describe('CreditMarketDetailsCard', () => {
     })
   })
 
+  describe('Admin variant handling', () => {
+    it('initializes admin mutation when organizationId is provided', () => {
+      render(
+        <CreditMarketDetailsCard organizationId={5} variant="admin" />,
+        { wrapper }
+      )
+
+      expect(useUpdateOrganizationCreditMarket).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({
+          clearCache: true,
+          invalidateRelatedQueries: true
+        })
+      )
+    })
+
+    it('renders selected organization details when provided', () => {
+      render(
+        <CreditMarketDetailsCard
+          organizationId={5}
+          variant="admin"
+        />,
+        { wrapper }
+      )
+
+      expect(
+        screen.getByText(/Selected organization/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(/Clear selection/i)
+      ).not.toBeInTheDocument()
+    })
+  })
+
   describe('Data Display', () => {
     it('displays contact info with fallbacks to user data', () => {
+      const { creditMarketContactName, creditMarketContactEmail, creditMarketContactPhone, ...orgDataWithoutCreditMarketContact } = mockOrganizationData
       vi.mocked(useOrganization).mockReturnValue({
-        data: {
-          ...mockOrganizationData,
-          creditMarketContactName: null,
-          creditMarketContactEmail: null,
-          creditMarketContactPhone: null
-        },
+        data: orgDataWithoutCreditMarketContact,
         isLoading: false
       })
 
@@ -266,7 +321,7 @@ describe('CreditMarketDetailsCard', () => {
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('org@example.com')).toBeInTheDocument()
-      expect(screen.getByText('555-5678')).toBeInTheDocument()
+      expect(screen.getByText('(555) 567-8')).toBeInTheDocument()
     })
 
     it('displays "Not available" when no contact info exists', () => {
@@ -283,7 +338,8 @@ describe('CreditMarketDetailsCard', () => {
       })
 
       vi.mocked(useCurrentUser).mockReturnValue({
-        data: { ...mockCurrentUser, firstName: null, lastName: null }
+        data: { ...mockCurrentUser, firstName: null, lastName: null },
+        hasAnyRole: mockHasAnyRole
       })
 
       render(<CreditMarketDetailsCard />, { wrapper })
@@ -432,20 +488,24 @@ describe('CreditMarketDetailsCard', () => {
       expect(mockReset).toHaveBeenCalled()
     })
 
-    it('handles successful mutation with query refetch', async () => {
+    it('handles successful mutation with query refetch and callback', async () => {
       const onSuccess = vi.fn()
+      const onSaveSuccess = vi.fn()
       vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(({ onSuccess: callback }) => {
         onSuccess.mockImplementation(callback)
         return mockUpdateMutation
       })
 
-      render(<CreditMarketDetailsCard />, { wrapper })
+      render(<CreditMarketDetailsCard onSaveSuccess={onSaveSuccess} />, {
+        wrapper
+      })
 
       await act(async () => {
         onSuccess()
       })
 
       expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith(['organization', 1])
+      expect(onSaveSuccess).toHaveBeenCalled()
     })
 
     it('handles mutation error gracefully', async () => {
@@ -469,7 +529,8 @@ describe('CreditMarketDetailsCard', () => {
 
     it('handles missing user name gracefully', () => {
       vi.mocked(useCurrentUser).mockReturnValue({
-        data: { ...mockCurrentUser, firstName: '', lastName: '' }
+        data: { ...mockCurrentUser, firstName: '', lastName: '' },
+        hasAnyRole: mockHasAnyRole
       })
 
       render(<CreditMarketDetailsCard />, { wrapper })

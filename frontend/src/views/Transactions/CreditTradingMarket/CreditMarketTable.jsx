@@ -1,4 +1,12 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  forwardRef,
+  useImperativeHandle
+} from 'react'
 import { Box } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
@@ -14,22 +22,32 @@ const initialPaginationOptions = {
   filters: []
 }
 
-export const CreditMarketTable = () => {
+export const CreditMarketTable = forwardRef(
+  (
+    {
+      onRowSelect,
+      selectedOrgId = null,
+      gridRef: externalGridRef
+    } = {},
+    ref
+  ) => {
   const { t } = useTranslation(['common', 'creditMarket'])
   const { data: currentUser } = useCurrentUser()
-  const gridRef = useRef()
+  const internalGridRef = useRef()
+  const gridRef = externalGridRef ?? internalGridRef
 
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
 
   // Fetch real credit market listings
-  const {
-    data: creditMarketData,
-    isLoading,
-    isError,
-    error
-  } = useCreditMarketListings()
+    const {
+      data: creditMarketData,
+      isLoading,
+      isError,
+      refetch: refetchListings,
+      error
+    } = useCreditMarketListings()
 
   // Transform and sort data - show current user's organization at top
   const sortedData = useCallback(() => {
@@ -68,9 +86,55 @@ export const CreditMarketTable = () => {
     return `credit-market-${params.data.id}`
   }, [])
 
+  const selectionGridOptions = useMemo(
+    () =>
+      onRowSelect
+        ? {
+            rowSelection: 'single',
+            suppressRowClickSelection: false,
+            rowMultiSelectWithClick: false
+          }
+        : undefined,
+    [onRowSelect]
+  )
+
+  const handleRowClick = useCallback(
+    (params) => {
+      if (!onRowSelect) return
+      const clickedId = params?.data?.id
+      if (!clickedId) return
+
+      if (selectedOrgId === clickedId) {
+        if (params.api?.deselectAll) {
+          params.api.deselectAll()
+        }
+        onRowSelect(null)
+        return
+      }
+
+      if (params.api?.deselectAll) {
+        params.api.deselectAll()
+      }
+      if (params.node?.setSelected) {
+        params.node.setSelected(true)
+      }
+      onRowSelect({
+        organizationId: clickedId,
+        organizationName: params.data.organizationName
+      })
+    },
+    [onRowSelect, selectedOrgId]
+  )
+
+  useEffect(() => {
+    if (!selectedOrgId && gridRef.current?.api?.deselectAll) {
+      gridRef.current.api.deselectAll()
+    }
+  }, [selectedOrgId])
+
   // Build query data structure for BCGridViewer
-  const queryData = {
-    data: {
+    const queryData = {
+      data: {
       creditMarketListings: sortedData(),
       pagination: {
         page: paginationOptions.page,
@@ -84,43 +148,50 @@ export const CreditMarketTable = () => {
     error
   }
 
-  return (
-    <Box>
-      <Box
-        component="div"
-        sx={{
-          height: '100%',
-          width: '100%',
-          overflowX: 'auto',
-          minWidth: '800px' // Ensure minimum width for proper table display
-        }}
-      >
-        <BCGridViewer
-          gridRef={gridRef}
-          gridKey="credit-market-grid"
-          columnDefs={creditMarketColDefs(t)}
-          getRowId={getRowId}
-          overlayNoRowsTemplate={t(
-            'creditMarket:noListingsFound',
-            'No credit market listings found'
-          )}
-          queryData={queryData}
-          dataKey="creditMarketListings"
-          autoSizeStrategy={{
-            type: 'fitGridWidth',
-            defaultMinWidth: 50
+    useImperativeHandle(
+      ref,
+      () => ({
+        refreshListings: () => refetchListings()
+      }),
+      [refetchListings]
+    )
+
+    return (
+      <Box>
+        <Box
+          component="div"
+          sx={{
+            height: '100%',
+            width: '100%',
+            overflowX: 'auto',
+            minWidth: '800px'
           }}
-          paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }))
-          }
-          // Disable editing since this is view-only
-          readOnlyGrid={true}
-        />
+        >
+          <BCGridViewer
+            gridRef={gridRef}
+            gridKey="credit-market-grid"
+            gridOptions={selectionGridOptions}
+            columnDefs={creditMarketColDefs(t)}
+            getRowId={getRowId}
+            overlayNoRowsTemplate={t(
+              'creditMarket:noListingsFound',
+              'No credit market listings found'
+            )}
+            queryData={queryData}
+            dataKey="creditMarketListings"
+            paginationOptions={paginationOptions}
+            onPaginationChange={(newPagination) =>
+              setPaginationOptions((prev) => ({
+                ...prev,
+                ...newPagination
+              }))
+            }
+            onRowClicked={onRowSelect ? handleRowClick : undefined}
+          />
+        </Box>
       </Box>
-    </Box>
-  )
-}
+    )
+  }
+)
+
+CreditMarketTable.displayName = 'CreditMarketTable'

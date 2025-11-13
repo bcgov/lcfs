@@ -33,7 +33,6 @@ import {
 } from '@/hooks/useTransactions'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
-import { CreditMarketDetailsCard } from './CreditTradingMarket/CreditMarketDetailsCard'
 
 const initialPaginationOptions = {
   page: 1,
@@ -459,12 +458,9 @@ export const Transactions = () => {
     tabs.push({
       label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
       content: (
-        <>
-          {!hasRoles(roles.government) && <CreditMarketDetailsCard />}
-          <BCBox mt={!hasRoles(roles.government) ? 3 : 0}>
-            <CreditTradingMarket />
-          </BCBox>
-        </>
+        <BCBox mt={!hasRoles(roles.government) ? 3 : 0}>
+          <CreditTradingMarket />
+        </BCBox>
       )
     })
   }

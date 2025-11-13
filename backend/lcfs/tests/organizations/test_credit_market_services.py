@@ -658,3 +658,44 @@ class TestCreditMarketServices:
 
         # Verify notification was NOT sent because the flag is disabled
         mock_notification_service.send_notification.assert_not_called()
+
+    @pytest.mark.anyio
+    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    async def test_credit_market_notification_skipped_for_idir_updates(
+        self,
+        credit_market_service,
+        mock_repo,
+        mock_notification_service,
+        sample_organization
+    ):
+        """Test that notifications are suppressed when skip_notifications flag is set"""
+
+        sample_organization.display_in_credit_market = False
+        sample_organization.credits_to_sell = 0
+        mock_repo.get_organization.return_value = sample_organization
+
+        updated_org = Organization()
+        updated_org.organization_id = 1
+        updated_org.name = "Test Organization"
+        updated_org.display_in_credit_market = True
+        updated_org.credits_to_sell = 200
+        mock_repo.update_organization.return_value = updated_org
+
+        credit_market_service.calculate_total_balance = AsyncMock(return_value=500)
+
+        mock_user = MagicMock()
+        mock_user.user_profile_id = 456
+
+        credit_market_data = {
+            "display_in_credit_market": True,
+            "credits_to_sell": 200
+        }
+
+        await credit_market_service.update_organization_credit_market_details(
+            1,
+            credit_market_data,
+            mock_user,
+            skip_notifications=True
+        )
+
+        mock_notification_service.send_notification.assert_not_called()
