@@ -1,14 +1,40 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { CreditTradingMarket } from '../CreditTradingMarket'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+
+vi.mock('@/hooks/useCurrentUser')
 
 // Mock child components
 vi.mock('../CreditMarketTable', () => ({
-  CreditMarketTable: () => <div data-test="credit-market-table">Credit Market Table</div>
+  CreditMarketTable: (props) => (
+    <div data-test="credit-market-table">
+      Credit Market Table
+      {props.onRowSelect && (
+        <button onClick={() => props.onRowSelect({ organizationId: 1, organizationName: 'Org' })}>
+          Select Row
+        </button>
+      )}
+    </div>
+  )
 }))
 
 vi.mock('../CreditMarketAccordion', () => ({
   CreditMarketAccordion: () => <div data-test="credit-market-accordion">Credit Market Accordion</div>
+}))
+
+vi.mock('../CreditMarketDetailsCard', () => ({
+  CreditMarketDetailsCard: ({ organizationId }) => (
+    <div data-test="credit-market-details-card">Details Card {organizationId}</div>
+  )
+}))
+
+vi.mock('@/components/ClearFiltersButton', () => ({
+  ClearFiltersButton: ({ onClick }) => (
+    <button data-test="clear-filters-button" onClick={onClick}>
+      Clear Filters Button
+    </button>
+  )
 }))
 
 // Mock BCTypography component
@@ -35,6 +61,15 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('CreditTradingMarket', () => {
+  const mockHasAnyRole = vi.fn(() => false)
+
+  beforeEach(() => {
+    mockHasAnyRole.mockReset()
+    vi.mocked(useCurrentUser).mockReturnValue({
+      hasAnyRole: mockHasAnyRole
+    })
+  })
+
   it('renders without crashing', () => {
     render(<CreditTradingMarket />)
     expect(screen.getByTestId('credit-market-table')).toBeInTheDocument()
@@ -88,5 +123,35 @@ describe('CreditTradingMarket', () => {
     expect(disclaimerText).toBeInTheDocument()
     expect(tableComponent).toBeInTheDocument()
     expect(accordionComponent).toBeInTheDocument()
+  })
+
+  it('does not show IDIR details card for non-government users', () => {
+    render(<CreditTradingMarket />)
+    expect(screen.queryByTestId('credit-market-details-card')).not.toBeInTheDocument()
+  })
+
+  it('shows details card after government user selects a row', () => {
+    mockHasAnyRole.mockReturnValue(true)
+    render(<CreditTradingMarket />)
+    expect(screen.queryByTestId('credit-market-details-card')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Select Row'))
+    expect(screen.getByTestId('credit-market-details-card')).toHaveTextContent('Details Card 1')
+  })
+
+  it('renders clear filters button', () => {
+    render(<CreditTradingMarket />)
+    expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
+  })
+
+  it('clears selection via button', () => {
+    mockHasAnyRole.mockReturnValue(true)
+    render(<CreditTradingMarket />)
+    fireEvent.click(screen.getByText('Select Row'))
+    expect(screen.getByTestId('credit-market-details-card')).toBeInTheDocument()
+    const clearSelectionButton = screen.getByRole('button', {
+      name: 'translated-creditMarket:clearSelection'
+    })
+    fireEvent.click(clearSelectionButton)
+    expect(screen.queryByTestId('credit-market-details-card')).not.toBeInTheDocument()
   })
 })

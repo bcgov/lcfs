@@ -446,6 +446,38 @@ async def update_current_org_credit_market_details(
 
 
 @router.put(
+    "/{organization_id}/credit-market",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ADMINISTRATOR,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def update_org_credit_market_details(
+    request: Request,
+    organization_id: int,
+    credit_market_data: OrganizationCreditMarketUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Update credit market contact details for any organization (IDIR users only).
+    Edits performed through this route skip outbound notifications.
+    """
+    return await service.update_organization_credit_market_details(
+        organization_id,
+        credit_market_data.model_dump(exclude_unset=True),
+        request.user,
+        skip_notifications=True,
+    )
+
+
+@router.put(
     "/{organization_id}/company-overview",
     response_model=OrganizationResponseSchema,
     status_code=status.HTTP_200_OK,

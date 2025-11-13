@@ -330,7 +330,10 @@ export const useUpdateOrganization = (orgID, options = {}) => {
       if (invalidateRelatedQueries) {
         queryClient.invalidateQueries(['organization'])
         queryClient.invalidateQueries(['current-org-balance'])
+        queryClient.invalidateQueries(['credit-market-listings'])
       }
+
+      queryClient.refetchQueries(['credit-market-listings'])
 
       onSuccess?.(data, variables, context)
     },
@@ -416,6 +419,7 @@ export const useUpdateCurrentOrgCreditMarket = (options = {}) => {
       if (invalidateRelatedQueries) {
         queryClient.invalidateQueries(['organization'])
         queryClient.invalidateQueries(['current-org-balance'])
+        queryClient.invalidateQueries(['credit-market-listings'])
       }
 
       onSuccess?.(data, variables, context)
@@ -424,6 +428,54 @@ export const useUpdateCurrentOrgCreditMarket = (options = {}) => {
       const orgId = currentUser?.organization?.organizationId
       if (orgId) {
         queryClient.invalidateQueries(['organization', orgId])
+      }
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// Mutation hook for updating any organization's credit market details (IDIR users)
+export const useUpdateOrganizationCreditMarket = (orgID, options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/credit-market`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (orgID) {
+        if (clearCache) {
+          queryClient.removeQueries(['organization', orgID])
+        } else {
+          queryClient.setQueryData(['organization', orgID], data.data)
+        }
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['organization'])
+        queryClient.invalidateQueries(['credit-market-listings'])
+      }
+
+      queryClient.refetchQueries(['credit-market-listings'])
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      if (orgID) {
+        queryClient.invalidateQueries(['organization', orgID])
       }
       onError?.(error, variables, context)
     },
@@ -476,8 +528,8 @@ export const useCreditMarketListings = (options = {}) => {
   const client = useApiService()
 
   const {
-    staleTime = DEFAULT_STALE_TIME,
-    cacheTime = DEFAULT_CACHE_TIME,
+    staleTime = 1 * 60 * 1000, // 1 minute
+    cacheTime = 1 * 60 * 1000, // 1 minute
     enabled = true,
     ...restOptions
   } = options

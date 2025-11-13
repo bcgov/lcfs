@@ -110,10 +110,13 @@ const mockCreditMarketData = [
   }
 ]
 
+const mockRefetchListings = vi.fn()
+
 describe('CreditMarketTable', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockBCGridViewer.mockClear()
+    mockRefetchListings.mockReset()
     
     // Setup default mocks
     vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUser })
@@ -121,7 +124,8 @@ describe('CreditMarketTable', () => {
       data: mockCreditMarketData, 
       isLoading: false, 
       isError: false, 
-      error: null 
+      error: null,
+      refetch: mockRefetchListings
     })
   })
 
@@ -161,7 +165,8 @@ describe('CreditMarketTable', () => {
         data: null, 
         isLoading: true, 
         isError: false, 
-        error: null 
+        error: null,
+        refetch: vi.fn()
       })
 
       render(<CreditMarketTable />, { wrapper })
@@ -175,7 +180,8 @@ describe('CreditMarketTable', () => {
         data: null, 
         isLoading: false, 
         isError: true, 
-        error: testError 
+        error: testError,
+        refetch: vi.fn() 
       })
 
       render(<CreditMarketTable />, { wrapper })
@@ -188,7 +194,8 @@ describe('CreditMarketTable', () => {
         data: [], 
         isLoading: false, 
         isError: false, 
-        error: null 
+        error: null,
+        refetch: vi.fn() 
       })
 
       render(<CreditMarketTable />, { wrapper })
@@ -667,6 +674,96 @@ describe('CreditMarketTable', () => {
         
         expect(props.overlayNoRowsTemplate).toBe('No credit market listings found')
       })
+    })
+  })
+
+  describe('Row selection behaviour', () => {
+    it('passes selection props to BCGridViewer when handler provided', async () => {
+      const onRowSelect = vi.fn()
+      render(<CreditMarketTable onRowSelect={onRowSelect} />, { wrapper })
+
+      await waitFor(() => {
+        expect(mockBCGridViewer).toHaveBeenCalled()
+      })
+
+      const lastCall = mockBCGridViewer.mock.calls.at(-1)[0]
+      expect(lastCall.gridOptions).toMatchObject({
+        rowSelection: 'single'
+      })
+      expect(typeof lastCall.onRowClicked).toBe('function')
+    })
+
+    it('invokes onRowSelect with row data on click', async () => {
+      const onRowSelect = vi.fn()
+      render(<CreditMarketTable onRowSelect={onRowSelect} />, { wrapper })
+
+      await waitFor(() => {
+        expect(mockBCGridViewer).toHaveBeenCalled()
+      })
+
+      const lastCall = mockBCGridViewer.mock.calls.at(-1)[0]
+      const mockApi = { deselectAll: vi.fn() }
+      const mockNode = { setSelected: vi.fn() }
+
+      act(() =>
+        lastCall.onRowClicked({
+          data: { id: 42, organizationName: 'Example Org' },
+          api: mockApi,
+          node: mockNode
+        })
+      )
+
+      expect(mockApi.deselectAll).toHaveBeenCalled()
+      expect(mockNode.setSelected).toHaveBeenCalledWith(true)
+      expect(onRowSelect).toHaveBeenCalledWith({
+        organizationId: 42,
+        organizationName: 'Example Org'
+      })
+    })
+
+    it('clears selection when same row clicked twice', async () => {
+      const onRowSelect = vi.fn()
+      render(
+        <CreditMarketTable onRowSelect={onRowSelect} selectedOrgId={7} />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(mockBCGridViewer).toHaveBeenCalled()
+      })
+
+      const lastCall = mockBCGridViewer.mock.calls.at(-1)[0]
+      const mockApi = { deselectAll: vi.fn() }
+
+      act(() =>
+        lastCall.onRowClicked({
+          data: { id: 7, organizationName: 'Same Org' },
+          api: mockApi,
+          node: { setSelected: vi.fn() }
+        })
+      )
+
+      expect(onRowSelect).toHaveBeenCalledWith(null)
+      expect(mockApi.deselectAll).toHaveBeenCalled()
+    })
+  })
+
+  describe('Imperative API', () => {
+    it('exposes refreshListings via ref', async () => {
+      mockRefetchListings.mockResolvedValue({})
+      const tableRef = React.createRef()
+
+      render(<CreditMarketTable ref={tableRef} />, { wrapper })
+
+      await waitFor(() => {
+        expect(tableRef.current).toBeTruthy()
+      })
+
+      await act(async () => {
+        await tableRef.current.refreshListings()
+      })
+
+      expect(mockRefetchListings).toHaveBeenCalled()
     })
   })
 })
