@@ -156,6 +156,14 @@ class ComplianceReportSummary(BaseModel, Auditable):
         "UserProfile", foreign_keys=[penalty_override_user]
     )
 
+    @property
+    def total_renewable_fuel_supplied(self):
+        return (
+            self.line_2_eligible_renewable_fuel_supplied_gasoline +
+            self.line_2_eligible_renewable_fuel_supplied_diesel +
+            self.line_2_eligible_renewable_fuel_supplied_jet_fuel
+        )
+
     def __repr__(self):
         return (
             f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter})>"

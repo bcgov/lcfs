@@ -1,9 +1,10 @@
+import { useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import { REPORT_SCHEDULES } from '@/constants/common'
@@ -14,6 +15,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
     defaultInitialPagination
   )
   const gridRef = useRef()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -111,6 +113,10 @@ export const NotionalTransferSummary = ({ data, status }) => {
     [status]
   )
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api?.autoSizeAllColumns?.()
+  }, [])
+
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
@@ -118,17 +124,21 @@ export const NotionalTransferSummary = ({ data, status }) => {
           gridKey="notional-transfers"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={notionalTransferSummaryColDefs(isEarlyIssuance)}
+          columnDefs={notionalTransferSummaryColDefs(
+            isEarlyIssuance,
+            parseInt(compliancePeriod)
+          )}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="notionalTransfers"
           suppressPagination={data?.notionalTransfers?.length <= 10}
           autoSizeStrategy={{
-            type: 'fitGridWidth',
-            defaultMinWidth: 50,
-            defaultMaxWidth: 600
+            type: 'fitCellContents',
+            defaultMinWidth: 80,
+            defaultMaxWidth: 800
           }}
           enableCellTextSelection
+          onFirstDataRendered={onFirstDataRendered}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

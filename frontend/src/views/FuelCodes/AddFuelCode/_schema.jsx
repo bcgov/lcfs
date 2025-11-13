@@ -110,6 +110,10 @@ export const fuelCodeColDefs = (
           params.data.fuelCodePrefix = selectedPrefix.fuelCodePrefix
 
           params.data.fuelSuffix = selectedPrefix.nextFuelCode
+          params.data.prefix = selectedPrefix.prefix
+          if (selectedPrefix.prefix === 'C-BCLCF') {
+            params.data.fuelProductionFacilityCountry = 'Canada'
+          }
         }
       }
       return true
@@ -147,6 +151,7 @@ export const fuelCodeColDefs = (
       }
       return params.data.fuelSuffix
     },
+    minWidth: 90,
     tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
@@ -159,7 +164,8 @@ export const fuelCodeColDefs = (
       precision: 2,
       showStepperButtons: false
     },
-    type: 'leftAligned'
+    type: 'leftAligned',
+    minWidth: 260
   },
   {
     field: 'edrms',
@@ -167,7 +173,8 @@ export const fuelCodeColDefs = (
     headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellDataType: 'text'
+    cellDataType: 'text',
+    minWidth: 260
   },
   {
     field: 'company',
@@ -244,7 +251,7 @@ export const fuelCodeColDefs = (
       enabled: params.data.company !== '' && params.data.contactName !== ''
     }),
     suppressKeyboardEvent,
-    minWidth: 300,
+    minWidth: 320,
     cellRenderer: createCellRenderer('contactEmail')
   },
   {
@@ -434,7 +441,8 @@ export const fuelCodeColDefs = (
       if (!params.newValue || params.newValue === '') {
         params.data.fuelProductionFacilityCity = ''
         params.data.fuelProductionFacilityProvinceState = ''
-        params.data.fuelProductionFacilityCountry = ''
+        if (params.data.prefix !== 'C-BCLCF')
+          params.data.fuelProductionFacilityCountry = ''
       }
 
       // Split the newValue by comma and trim spaces
@@ -443,7 +451,8 @@ export const fuelCodeColDefs = (
         .map((val) => val.trim())
       params.data.fuelProductionFacilityCity = city
       params.data.fuelProductionFacilityProvinceState = province
-      params.data.fuelProductionFacilityCountry = country
+      if (params.data.prefix !== 'C-BCLCF')
+        params.data.fuelProductionFacilityCountry = country
 
       return true
     }
@@ -474,20 +483,26 @@ export const fuelCodeColDefs = (
     valueSetter: (params) => {
       if (!params.newValue || params.newValue === '') {
         params.data.fuelProductionFacilityProvinceState = ''
-        params.data.fuelProductionFacilityCountry = ''
+        if (params.data.prefix !== 'C-BCLCF')
+          params.data.fuelProductionFacilityCountry = ''
       }
       const [province = '', country = ''] = params.newValue
         .split(',')
         .map((val) => val.trim())
       params.data.fuelProductionFacilityProvinceState = province
-      params.data.fuelProductionFacilityCountry = country
+      if (params.data.prefix !== 'C-BCLCF')
+        params.data.fuelProductionFacilityCountry = country
 
       return true
     }
   },
   {
     field: 'fuelProductionFacilityCountry',
-    editable: canEdit,
+    editable: (params) => canEdit && params.data.prefix !== 'C-BCLCF',
+    tooltipValueGetter: (p) =>
+      p.data.prefix === 'C-BCLCF'
+        ? 'Cannot change country for C-BCLCF fuel codes'
+        : '',
     headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'

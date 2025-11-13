@@ -1,6 +1,6 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+// import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
 import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -77,7 +77,8 @@ export const ScheduleBSummary = ({ data, status }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
+        {/* BCDataGridServer usage commented out - deprecated code */}
+        {/* <BCDataGridServer
           className={'ag-theme-material'}
           gridRef={gridRef}
           apiEndpoint={apiRoutes.getAllFuelSupplies}
@@ -91,7 +92,7 @@ export const ScheduleBSummary = ({ data, status }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.fuelSupplies.length <= 10}
-        />
+        /> */}
       </BCBox>
     </Grid2>
   )

@@ -6,6 +6,7 @@
     "complianceUnits": "Compliance units",
     "inReserve": "In reserve",
     "status": "Status",
+    "orgType": "Organization type",
     "registrationStatus": "Registration Status",
     "earlyIssuance": "Early Issuance"
   },
@@ -56,6 +57,54 @@
   "editBtn": "Edit",
   "orgDetails": "Organization details",
   "creditLedger": "Credit ledger",
+  "tabs": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "creditLedger": "Credit ledger",
+    "companyOverview": "Company overview",
+    "penaltyLog": "Penalty log",
+    "supplyHistory": "Supply history",
+    "complianceTracking": "Compliance tracking"
+  },
+  "sections": {
+    "companyOverview": {
+      "title": "Company Overview",
+      "description": "This section will contain company overview information. Implementation pending."
+    },
+    "penaltyLog": {
+      "title": "Penalty log",
+      "description": "Overview of automatic and discretionary penalties issued to this organization.",
+      "history": "Penalty history",
+      "analyticsError": "Unable to load penalty analytics data.",
+      "noOrganizationSelected": "Select an organization to view penalty analytics.",
+      "messages": {
+        "saving": "Saving penalty log entry...",
+        "saveSuccess": "Penalty log entry saved.",
+        "penaltyAmountRequired": "Penalty amount must be greater than zero."
+      }
+    },
+    "supplyHistory": {
+      "title": "Supply History",
+      "description": "Year-by-year fuel supply summary aggregated from compliance reports."
+    },
+    "complianceTracking": {
+      "title": "Compliance Tracking",
+      "description": "This section will contain compliance tracking information. Implementation pending."
+    }
+  },
+  "companyOverviewTitle": "Company overview",
+  "companyDetailsLabel": "Company details",
+  "companyDetailsPlaceholder": "Enter company details here...",
+  "companyRepresentationAgreementsLabel": "Company representation agreements or affiliated organizations",
+  "companyRepresentationAgreementsPlaceholder": "Note the applicable year and enter company representation agreements or affiliated organizations here...",
+  "companyActingAsAggregatorLabel": "Acting as an aggregator",
+  "companyActingAsAggregatorPlaceholder": "Note the start year and end year, if applicable, and enter aggregator information here...",
+  "companyAdditionalNotesLabel": "Additional notes",
+  "companyAdditionalNotesPlaceholder": "Enter any additional notes here...",
+  "companyOverviewUpdateSuccess": "Company overview updated successfully",
+  "companyOverviewUpdateError": "Failed to update company overview",
+  "noInformationProvided": "No information provided",
+  "errorLoadingOrganization": "Error loading organization details",
   "creditLedgerTab": "Credit ledger",
   "usersTab": "Users",
   "downloadExcel": "Download Excel",
@@ -100,5 +149,69 @@
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
   },
-  "snapshotTitle": "Organization Information from Compliance Report"
+  "snapshotTitle": "Organization Information from Compliance Report",
+  "penaltyLog": {
+    "history": "Penalty history",
+    "addPenaltyBtn": "Add/Edit discretionary penalties",
+    "columns": {
+      "complianceYear": "Compliance year",
+      "contraventionType": "Continuous or single contravention",
+      "offenceHistory": "History of offences",
+      "deliberate": "Whether contravention was deliberate",
+      "effortsToCorrect": "Efforts taken to correct",
+      "economicBenefitDerived": "Economic benefit derived from contravention",
+      "effortsToPreventRecurrence": "Efforts to prevent reccurrence",
+      "notes": "Any additonal factors (notes)",
+      "penaltyAmount": "Amount of penalty ($CAD)"
+    },
+    "metrics": {
+      "totalPenalties": "Total penalties",
+      "totalAuto": "Total automatic",
+      "totalSubtitle": "Auto Renewable + Auto Low Carbon",
+      "autoPenalties": "Automatic penalties",
+      "discretionaryPenalty": "Discretionary penalty",
+      "totalPenaltiesTrend": "Total penalties trend",
+      "automaticPenaltiesTrend": "Automatic penalties trend",
+      "yearToDate": "Year to date",
+      "discretionary": "Discretionary",
+      "discretionarySubtitle": "Assessed by director",
+      "discretionaryPenaltiesTrend": "Discretionary penalties trend",
+      "autoRenewable": "Auto Renewable",
+      "autoLowCarbon": "Auto Low Carbon"
+    },
+    "manageTitle": "Confer discretionary penalty",
+    "saveReturn": "Save & return",
+    "noOrganizationSelected": "Select an organization to view penalty analytics.",
+    "analyticsError": "Unable to load penalty analytics data."
+  },
+  "supplyHistory": {
+    "title": "Supply History",
+    "filterByYear": "Filter by year",
+    "allYears": "All years",
+    "noDataFound": "No fuel supply data found",
+    "columns": {
+      "year": "Year",
+      "submissionDate": "Submission Date",
+      "fuelType": "Fuel Type",
+      "fuelCategory": "Fuel Category",
+      "provision": "Provision of the Act",
+      "fuelCode": "Fuel Code",
+      "quantity": "Quantity",
+      "units": "Units"
+    },
+    "analytics": {
+      "totalVolume": "Total Volume",
+      "totalFuelTypes": "Fuel Types",
+      "totalReports": "Total Reports",
+      "mostRecentSubmission": "Most Recent Submission",
+      "noData": "No data",
+      "chartsTitle": "Analytics & Visualizations",
+      "fuelTypeDistribution": "Fuel Type Distribution",
+      "volumeOverTime": "Volume Over Time",
+      "categoryBreakdown": "Fuel Category Breakdown",
+      "provisionDistribution": "Provision Distribution",
+      "topFuelCodes": "Top 10 Fuel Codes by Volume",
+      "quantity": "Quantity"
+    }
+  }
 }

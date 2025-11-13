@@ -3,6 +3,9 @@ import DataGridLoading from '@/components/DataGridLoading'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
+import { ModuleRegistry } from '@ag-grid-community/core'
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
+import { CsvExportModule } from '@ag-grid-community/csv-export'
 import {
   forwardRef,
   useCallback,
@@ -17,7 +20,23 @@ import { useSearchParams } from 'react-router-dom'
 const ROW_HEIGHT = 45
 
 export const BCGridBase = forwardRef(
-  ({ autoSizeStrategy, autoHeight, enableCellTextSelection, getRowId, overlayNoRowsTemplate, queryData, dataKey, paginationOptions, onPaginationChange, ...props }, forwardedRef) => {
+  (
+    {
+      autoSizeStrategy,
+      autoHeight,
+      enableCellTextSelection,
+      getRowId,
+      overlayNoRowsTemplate,
+      queryData,
+      dataKey,
+      paginationOptions,
+      onPaginationChange,
+      onRowClicked,
+      ...props
+    },
+    forwardedRef
+  ) => {
+    ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
     const ref = useRef(null)
@@ -87,6 +106,41 @@ export const BCGridBase = forwardRef(
       }
     }, [])
 
+    // Handle keyboard events for row navigation
+    const onCellKeyDown = useCallback(
+      (params) => {
+        const e = params.event
+
+        if (e.code === 'Enter' && params.node) {
+          const cellEl = e.target.closest('.ag-cell')
+          if (!cellEl) return
+
+          const link = cellEl.querySelector('a[href]')
+          if (link) {
+            e.preventDefault()
+            e.stopPropagation()
+            link.click()
+            return
+          }
+
+          const focusables = cellEl.querySelectorAll(
+            'button, [href], :not(.ag-hidden) > input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          )
+          if (focusables.length === 0 && onRowClicked) {
+            e.preventDefault()
+            e.stopPropagation()
+            onRowClicked({ ...params, event: e })
+            return
+          }
+        }
+
+        if (props.onCellKeyDown) {
+          props.onCellKeyDown(params)
+        }
+      },
+      [props.onCellKeyDown, onRowClicked]
+    )
+
     // Expose clearFilters method through ref
     useImperativeHandle(forwardedRef, () => ({
       ...ref.current,
@@ -132,7 +186,9 @@ export const BCGridBase = forwardRef(
         rowHeight={ROW_HEIGHT}
         headerHeight={40}
         {...props}
+        onCellKeyDown={onCellKeyDown}
         onGridReady={onGridReady}
+        onRowClicked={onRowClicked}
       />
     )
   }

@@ -246,7 +246,7 @@ class SpreadsheetBuilder:
 
             if any(
                 keyword in header_text
-                for keyword in ["name", "description", "address", "organization"]
+                for keyword in ["name", "description", "address", "organization", "notes"]
             ):
                 min_width = 25  # Wide columns for text content
             elif any(

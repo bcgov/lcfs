@@ -2,6 +2,7 @@
   "fuelSupplyTitle": "Supply of fuel",
   "noFuelSuppliesFound": "No fuel supplies found",
   "fuelSupplyGuide": "Report fuel volumes you supplied for the various end uses.",
+  "fuelSupplyGuide2025Later": "Report fuel volumes you supplied for the various end uses. Please note that non-Canadian renewable diesel fuel supplied after March 31st, 2025 is no longer subject to the renewable requirement and will not be added to the volumetric total on line 2 of the report summary.",
   "fuelSupplyNote": "Note: From 2025 onwards, you must indicate whether the fuel was produced in Canada for all renewable fuels.",
   "fuelSupplyDownloadBtn": "Download as Excel",
   "fuelSupplyDownloadingMsg": "Downloading supply of fuels information",

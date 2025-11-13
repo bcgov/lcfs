@@ -1,13 +1,29 @@
-export const suppressKeyboardEvent = (params) => {
+export const suppressKeyboardEvent = (params, options = {}) => {
   const e = params.event
+  const { enableKeyboardRowNavigation = false, onRowClicked } = options
+
   if (e.code === 'Enter') {
     const focusableChildrenOfParent = e.srcElement
       .closest('.ag-cell')
       .querySelectorAll(
         'button, [href], :not(.ag-hidden) > input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
-    if (focusableChildrenOfParent.length === 0) return false
-    else return true
+
+    if (focusableChildrenOfParent.length === 0) {
+      if (enableKeyboardRowNavigation && onRowClicked && params.node) {
+        const mockClickEvent = {
+          ...e,
+          target: e.srcElement,
+          currentTarget: e.srcElement
+        }
+        onRowClicked({
+          ...params,
+          event: mockClickEvent
+        })
+        return true
+      }
+      return false
+    } else return true
   }
   if (e.code === 'Tab' || e.key === 'Tab' || e.code === 'ShiftLeft') {
     // get focusable children of parent cell

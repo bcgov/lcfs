@@ -188,7 +188,7 @@ export const AddEditFuelSupplies = () => {
   }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   const updateRowDataValues = useCallback((node, updates) => {
@@ -213,7 +213,7 @@ export const AddEditFuelSupplies = () => {
       // Trigger column visibility update and auto-size
       setTimeout(() => {
         updateColumnsVisibility()
-        params.api.autoSizeAllColumns()
+        params.api?.autoSizeAllColumns?.()
       }, 0)
     },
     [optionsData, updateColumnsVisibility, updateRowDataValues]
@@ -294,13 +294,47 @@ export const AddEditFuelSupplies = () => {
         <BCTypography variant="h5" color="primary">
           {t('fuelSupply:fuelSupplyTitle')}
         </BCTypography>
-        <BCTypography variant="body4" color="text" my={2} component="div">
-          {t('fuelSupply:fuelSupplyGuide')}
-        </BCTypography>
-        {compliancePeriod >= NEW_REGULATION_YEAR && (
+        {compliancePeriod >= NEW_REGULATION_YEAR ? (
           <>
             <BCTypography variant="body4" color="text" my={2} component="div">
+              {t('fuelSupply:fuelSupplyGuide2025Later')}
+            </BCTypography>
+            <BCTypography variant="body4" color="text" my={2} component="div">
               {t('fuelSupply:fuelSupplyNote')}
+            </BCTypography>
+            <BCBox
+              my={2}
+              component="div"
+              style={{ height: '100%', width: '100%' }}
+            >
+              <BCGridEditor
+                gridRef={gridRef}
+                alertRef={alertRef}
+                columnDefs={columnDefs}
+                defaultColDef={schema.defaultColDef}
+                onGridReady={onGridReady}
+                rowData={rowData}
+                gridOptions={gridOptions}
+                loading={optionsLoading || fuelSuppliesLoading}
+                onCellValueChanged={onCellValueChanged}
+                onCellEditingStopped={onCellEditingStopped}
+                onAction={onAction}
+                onFirstDataRendered={onFirstDataRendered}
+                stopEditingWhenCellsLoseFocus
+                saveButtonProps={{
+                  enabled: true,
+                  text: t('report:saveReturn'),
+                  onSave: handleNavigateBack,
+                  confirmText: t('report:incompleteReport'),
+                  confirmLabel: t('report:returnToReport')
+                }}
+              />
+            </BCBox>
+          </>
+        ) : (
+          <>
+            <BCTypography variant="body4" color="text" my={2} component="div">
+              {t('fuelSupply:fuelSupplyGuide')}
             </BCTypography>
             <BCBox
               my={2}

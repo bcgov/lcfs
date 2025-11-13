@@ -54,6 +54,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const [modalData, setModalData] = useState(null)
   const [isDeleted, setIsDeleted] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [hasEligibleRenewableFuel, setHasEligibleRenewableFuel] =
+    useState(false)
 
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
@@ -474,13 +476,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     }
 
     const shouldShowAssessmentStatement =
-      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
+      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental && currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     const shouldShowAssessmentRecommendation =
       hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
 
     const shouldShowAssessmentSectionTitle =
-      shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
+      (shouldShowAssessmentStatement || shouldShowAssessmentRecommendation) &&
+      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     return {
       shouldShowAssessmentStatement,
@@ -528,6 +531,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       isOriginalReport: reportData?.report?.version === 0,
       isAnalystAdjustment:
         currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+      isNonAssessment: reportData?.report?.isNonAssessment || false,
 
       // Conflict detection
       hasDraftSupplemental,
@@ -541,7 +545,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       createSupplementalReport,
       createIdirSupplementalReport,
       createAnalystAdjustment,
-      amendPenalties: () => {}
+      amendPenalties: () => {},
+      hasEligibleRenewableFuel
     }
     return buttonClusterConfigFn(context)
   }, [
@@ -559,11 +564,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     isSigningAuthorityDeclared,
     hasDraftSupplemental,
     reportData?.report?.version,
+    reportData?.report?.isNonAssessment,
     isSupplemental,
     isDeleted,
     isDeleting,
     currentStatus,
-    isEarlyIssuance
+    isEarlyIssuance,
+    hasEligibleRenewableFuel
   ])
 
   useEffect(() => {
@@ -687,14 +694,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               }
             />
           </Stack>
-          <ReportDetails
-            canEdit={canEdit}
-            currentStatus={currentStatus}
-            hasRoles={hasRoles}
-            complianceReportData={reportData}
-          />
           {!location.state?.newReport && (
             <>
+              <ReportDetails
+                canEdit={canEdit}
+                currentStatus={currentStatus}
+                hasRoles={hasRoles}
+                complianceReportData={reportData}
+              />
               {!showEarlyIssuanceSummary &&
                 !reportData?.report?.isNonAssessment && (
                   <ComplianceReportSummary
@@ -703,9 +710,12 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     canEdit={canEdit}
                     currentStatus={currentStatus}
                     compliancePeriodYear={compliancePeriod}
+                    isSigningAuthorityDeclared={isSigningAuthorityDeclared}
                     setIsSigningAuthorityDeclared={
                       setIsSigningAuthorityDeclared
                     }
+                    hasEligibleRenewableFuel={hasEligibleRenewableFuel}
+                    setHasEligibleRenewableFuel={setHasEligibleRenewableFuel}
                     buttonClusterConfig={buttonClusterConfig}
                     methods={methods}
                     alertRef={alertRef}

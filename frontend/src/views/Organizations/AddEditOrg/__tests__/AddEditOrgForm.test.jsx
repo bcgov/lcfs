@@ -17,6 +17,7 @@ const mockSetValue = vi.fn()
 const mockWatch = vi.fn()
 const mockTrigger = vi.fn()
 const mockReset = vi.fn()
+const mockSetError = vi.fn()
 const mockHandleSubmit = vi.fn((fn) => (event) => {
   event?.preventDefault?.()
   fn({
@@ -79,6 +80,7 @@ vi.mock('react-hook-form', () => ({
     watch: mockWatch,
     trigger: mockTrigger,
     reset: mockReset,
+    setError: mockSetError,
     control: {}
   }),
   Controller: React.forwardRef(({ name, control, render }, ref) => (
@@ -359,6 +361,7 @@ describe('AddEditOrgForm Component', () => {
     })
 
     mockWatch.mockImplementation(() => '')
+    mockSetError.mockClear()
   })
 
   describe('Basic Rendering - Form Structure', () => {

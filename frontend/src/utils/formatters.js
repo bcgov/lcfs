@@ -43,7 +43,7 @@ export const numberFormatter = (
  * @param {Object|number|string|null} params - The input parameter which can be an object with a `value` property, a number, or a string.
  * @returns {string} - The formatted currency string, or the original value if it cannot be parsed as a number.
  */
-export const currencyFormatter = (params) => {
+export const currencyFormatter = (params, options = {}) => {
   const cellValue =
     params && Object.hasOwn(params, 'value') ? params.value : params
 
@@ -53,7 +53,8 @@ export const currencyFormatter = (params) => {
   ) {
     return Number(cellValue).toLocaleString('en-CA', {
       style: 'currency',
-      currency: 'CAD'
+      currency: 'CAD',
+      ...options
     })
   }
   return cellValue
