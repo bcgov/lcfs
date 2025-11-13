@@ -59,7 +59,6 @@ export const supplyHistoryColDefs = () => [
     sortable: true,
     filter: 'agNumberColumnFilter',
     valueFormatter: formatNumberWithCommas,
-    type: 'numericColumn'
   },
   {
     field: 'units',
