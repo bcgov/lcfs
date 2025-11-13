@@ -94,13 +94,6 @@ export const HistoryCard = ({
     assessedMessage &&
     ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser)
 
-  const shouldShowRenewableAssesessmentLine = useMemo(
-    () =>
-      (isCurrentAssessed && report?.summary?.totalRenewableFuelSupplied > 0) ||
-      !isCurrentAssessed,
-    [isCurrentAssessed, report?.summary?.totalRenewableFuelSupplied]
-  )
-
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
 
@@ -125,7 +118,7 @@ export const HistoryCard = ({
     // Default assessment lines for normal reports
     return (
       <>
-        {shouldShowRenewableAssesessmentLine && (
+        {report?.summary?.totalRenewableFuelSupplied > 0 && (
           <StyledListItem disablePadding>
             <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
               <strong>
