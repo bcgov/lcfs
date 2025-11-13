@@ -5,13 +5,16 @@ export const supplyHistoryColDefs = () => [
   {
     field: 'compliancePeriod',
     headerName: i18n.t('org:supplyHistory.columns.year'),
-    minWidth: 100,
+    minWidth: 130,
+    maxWidth: 160,
+    flex: 0.6,
     sortable: true
   },
   {
     field: 'reportSubmissionDate',
     headerName: i18n.t('org:supplyHistory.columns.submissionDate'),
-    minWidth: 150,
+    minWidth: 180,
+    flex: 0.8,
     sortable: true,
     valueFormatter: (params) => {
       if (!params.value) return ''
@@ -23,39 +26,47 @@ export const supplyHistoryColDefs = () => [
     field: 'fuelType',
     headerName: i18n.t('org:supplyHistory.columns.fuelType'),
     minWidth: 200,
+    flex: 1.1,
     sortable: true
   },
   {
     field: 'fuelCategory',
     headerName: i18n.t('org:supplyHistory.columns.fuelCategory'),
-    minWidth: 150,
+    minWidth: 180,
+    flex: 1,
     sortable: true
   },
   {
     field: 'provisionOfTheAct',
     headerName: i18n.t('org:supplyHistory.columns.provision'),
-    minWidth: 350,
+    minWidth: 260,
+    flex: 1.2,
     sortable: true
   },
   {
     field: 'fuelCode',
     headerName: i18n.t('org:supplyHistory.columns.fuelCode'),
-    minWidth: 150,
+    minWidth: 140,
+    flex: 0.8,
     sortable: true,
     valueFormatter: (params) => params.value || '-'
   },
   {
     field: 'fuelQuantity',
     headerName: i18n.t('org:supplyHistory.columns.quantity'),
-    minWidth: 120,
+    minWidth: 150,
+    flex: 0.9,
     sortable: true,
+    filter: 'agNumberColumnFilter',
     valueFormatter: formatNumberWithCommas,
     type: 'numericColumn'
   },
   {
     field: 'units',
     headerName: i18n.t('org:supplyHistory.columns.units'),
-    minWidth: 80,
+    minWidth: 100,
+    maxWidth: 140,
+    flex: 0.5,
     sortable: true
   }
 ]
@@ -63,9 +74,12 @@ export const supplyHistoryColDefs = () => [
 export const defaultColDef = {
   editable: false,
   resizable: true,
-  filter: false,
-  floatingFilter: false,
-  sortable: true
+  filter: true,
+  floatingFilter: true,
+  sortable: true,
+  suppressFloatingFilterButton: true,
+  flex: 1,
+  minWidth: 150
 }
 
 export const gridOptions = {
