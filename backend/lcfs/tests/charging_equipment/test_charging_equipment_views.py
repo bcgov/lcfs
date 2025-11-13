@@ -37,6 +37,8 @@ async def test_get_charging_equipment_list_success(
                 "serial_number": "ABC123456",
                 "manufacturer": "Tesla",
                 "model": "Supercharger V3",
+                "latitude": 49.7749,
+                "longitude": -123.4194,
                 "level_of_equipment_name": "Level 2",
                 "created_date": "2024-01-01T00:00:00Z",
                 "updated_date": "2024-01-02T00:00:00Z",

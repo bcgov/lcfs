@@ -240,6 +240,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
       levelOfEquipmentId: '',
       ports: '',
       notes: '',
+      latitude: 0,
+      longitude: 0,
       intendedUseIds: [],
       intendedUserIds: []
     }
@@ -256,6 +258,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
         levelOfEquipmentId: equipment.levelOfEquipmentId || '',
         ports: equipment.ports || '',
         notes: equipment.notes || '',
+        latitude: equipment.latitude || 0,
+        longitude: equipment.longitude || 0,
         intendedUseIds:
           equipment.intendedUses?.map((use) => use.endUseTypeId) || [],
         intendedUserIds:
@@ -327,6 +331,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
       model: '',
       levelOfEquipmentId: '',
       ports: 'Single port',
+      latitude: 0,
+      longitude: 0,
       notes: '',
       intendedUseIds: [],
       intendedUserIds: []
@@ -414,9 +420,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
               alignItems="center"
               flexWrap="wrap"
               gap={2}
-              mb={2}
+              mb={0}
             >
-              <BCTypography variant="h4">
+              <BCTypography variant="h5" color="primary">
                 {t('chargingEquipment:newFSE')}
               </BCTypography>
               <BCButton
@@ -431,7 +437,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
-              <BCTypography variant="h6" gutterBottom>
+              <BCTypography variant="h6" gutterBottom color="primary">
                 {t('chargingEquipment:bulkInputTitle')}
               </BCTypography>
               <BCTypography variant="body2" color="text.secondary" paragraph>
@@ -534,6 +540,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
                         model: '',
                         levelOfEquipmentId: '',
                         ports: 'Single port',
+                        latitude: 0,
+                        longitude: 0,
                         notes: '',
                         intendedUseIds: [],
                         intendedUserIds: []
@@ -553,6 +561,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       levelOfEquipmentId: '',
                       ports: 'Single port',
                       notes: '',
+                      latitude: 0,
+                      longitude: 0,
                       intendedUseIds: [],
                       intendedUserIds: []
                     }))
@@ -655,6 +665,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   model: equipment?.model || '',
                   levelOfEquipmentId: equipment?.levelOfEquipmentId || '',
                   ports: equipment?.ports || 'Single port',
+                  latitude: equipment?.latitude || 0,
+                  longitude: equipment?.longitude || 0,
                   notes: equipment?.notes || '',
                   intendedUseIds:
                     equipment?.intendedUses?.map((use) => use.endUseTypeId) ||

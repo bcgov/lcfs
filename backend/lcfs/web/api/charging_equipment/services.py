@@ -87,6 +87,8 @@ class ChargingEquipmentServices:
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 ports=equipment.ports.value if equipment.ports else None,
+                latitude=equipment.latitude,
+                longitude=equipment.longitude,
                 level_of_equipment_name=equipment.level_of_equipment.name,
                 intended_uses=[
                     {
@@ -156,6 +158,8 @@ class ChargingEquipmentServices:
             level_of_equipment_id=equipment.level_of_equipment_id,
             level_of_equipment_name=equipment.level_of_equipment.name,
             ports=equipment.ports.value if equipment.ports else None,
+            latitude=equipment.latitude,
+            longitude=equipment.longitude,
             notes=equipment.notes,
             intended_uses=[
                 {
@@ -490,6 +494,8 @@ class ChargingEquipmentServices:
                 "streetAddress": s.street_address,
                 "city": s.city,
                 "postalCode": s.postal_code,
+                "latitude": s.latitude,
+                "longitude": s.longitude,
             }
             for s in sites
         ]

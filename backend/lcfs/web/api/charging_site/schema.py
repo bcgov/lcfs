@@ -128,6 +128,8 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
     ports: Optional[PortsEnum] = None
     intended_use_types: List[EndUseTypeSchema] = Field(default_factory=list)
     intended_user_types: List[EndUserTypeSchema] = Field(default_factory=list)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     notes: Optional[str] = None
     charging_site: Optional[ChargingSiteCreateSchema] = None
 

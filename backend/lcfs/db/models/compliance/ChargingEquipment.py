@@ -1,6 +1,7 @@
 from lcfs.db.base import BaseModel, Auditable, Versioning
 from sqlalchemy import (
     Column,
+    Double,
     Integer,
     String,
     Text,
@@ -125,7 +126,17 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         nullable=True,
         comment="Port configuration of the equipment",
     )
+    latitude = Column(
+        Double,
+        nullable=True,
+        comment="Latitude coordinate of the charging equipment location",
+    )
 
+    longitude = Column(
+        Double,
+        nullable=True,
+        comment="Longitude coordinate of the charging equipment location",
+    )
     notes = Column(
         Text,
         nullable=True,

@@ -329,7 +329,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     enableSelection = false,
     showDateColumns = false,
     showIntendedUsers = false,
-    showLocationFields = false,
+    showLocationFields = true,
     showPorts = false,
     showFuelMeasurement = false,
     showNotes = false,
@@ -510,7 +510,25 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       cellRendererParams: { disableLink: true }
     })
   }
-
+  // Location fields (only for site view)
+  if (showLocationFields) {
+    cols.push(
+      {
+        field: 'latitude',
+        sortable: false,
+        headerName: t('chargingSite:fseColumnLabels.latitude'),
+        minWidth: 150,
+        valueGetter: (params) => params.data?.latitude || ''
+      },
+      {
+        field: 'longitude',
+        sortable: false,
+        headerName: t('chargingSite:fseColumnLabels.longitude'),
+        minWidth: 150,
+        valueGetter: (params) => params.data?.longitude || ''
+      }
+    )
+  }
   // Date columns (only for list view)
   if (showDateColumns) {
     cols.push(
@@ -527,24 +545,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
         minWidth: 150,
         type: 'dateColumn',
         valueFormatter: dateFormatter
-      }
-    )
-  }
-
-  // Location fields (only for site view)
-  if (showLocationFields) {
-    cols.push(
-      {
-        field: 'latitude',
-        sortable: false,
-        headerName: t('chargingSite:fseColumnLabels.latitude'),
-        valueGetter: (params) => params.data?.chargingSite?.latitude || ''
-      },
-      {
-        field: 'longitude',
-        sortable: false,
-        headerName: t('chargingSite:fseColumnLabels.longitude'),
-        valueGetter: (params) => params.data?.chargingSite?.longitude || ''
       }
     )
   }
