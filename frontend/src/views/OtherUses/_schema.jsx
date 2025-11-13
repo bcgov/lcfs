@@ -20,7 +20,8 @@ import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,
   isFuelCodeCanadian,
-  canEditQ1Supplied
+  canEditQ1Supplied,
+  canEditCanadianProduced
 } from '@/utils/renewableClaimUtils'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
@@ -241,21 +242,33 @@ export const otherUsesColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
-      const complianceYear = parseInt(compliancePeriod, 10)
-      const isEligible = isEligibleRenewableFuel(
-        params.data.fuelType,
-        params.data.fuelCategory,
+      // Only editable for eligible renewable fuels with Default CI
+      return canEditCanadianProduced(params.data, compliancePeriod, optionsData)
+    },
+    valueGetter: (params) => {
+      // For fuel codes with known location, show the system-determined value
+      const isEditable = canEditCanadianProduced(
+        params.data,
+        compliancePeriod,
         optionsData
       )
-
-      return parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && isEligible
+      const isDefaultCI = params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+      if (!isEditable && params.data.isCanadaProduced) {
+        return true
+      }
+      if (!isDefaultCI && isEditable) {
+        // Check if fuel code is Canadian
+        const isCanadian = isFuelCodeCanadian(
+          params.data.fuelType,
+          params.data.fuelCode,
+          optionsData
+        )
+        return isCanadian ? 'Yes' : 'No'
+      }
+      // When the “Fuel produced in Canada” field is not editable, then no text
+      // value should be displayed in the cell or form field.
+      return !isEditable ? '' : params.data.isCanadaProduced ? 'Yes' : 'No'
     },
-    valueGetter: (params) =>
-      params.data.isCanadaProduced
-        ? 'Yes'
-        : params.colDef?.editable(params)
-          ? 'No'
-          : '',
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.isCanadaProduced =
@@ -281,13 +294,25 @@ export const otherUsesColDefs = (
     hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-    editable: (params) =>
-      canEditQ1Supplied(
+    editable: (params) => {
+      const isCanadaProducedEditable = canEditCanadianProduced(
         params.data,
-        optionsData,
         compliancePeriod,
-        PROVISION_APPROVED_FUEL_CODE
-      ),
+        optionsData
+      )
+      // For fuels using Default carbon intensity that are not produced in Canada, an active selection
+      // should be available to indicate with Yes/No whether the fuel was supplied in Q1.
+      return (
+        (isCanadaProducedEditable && !params.data.isCanadaProduced) ||
+        (canEditQ1Supplied(
+          params.data,
+          optionsData,
+          compliancePeriod,
+          PROVISION_APPROVED_FUEL_CODE
+        ) &&
+          !params.data.isCanadaProduced)
+      )
+    },
     valueGetter: (params) =>
       params.data.isQ1Supplied
         ? 'Yes'
@@ -412,7 +437,7 @@ export const otherUsesColDefs = (
   }
 ]
 
-export const otherUsesSummaryColDefs = (complianceYear) => [
+export const otherUsesSummaryColDefs = (complianceYear, optionsData) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType',
@@ -445,7 +470,34 @@ export const otherUsesSummaryColDefs = (complianceYear) => [
     field: 'isCanadaProduced',
     hide: complianceYear < NEW_REGULATION_YEAR,
     floatingFilter: false,
-    valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : ''),
+    valueGetter: (params) => {
+      // For fuel codes with known location, show the system-determined value
+      const showCanadianProduced = canEditCanadianProduced(
+        params.data,
+        complianceYear,
+        optionsData
+      )
+      const isDefaultCI = params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+      if (!showCanadianProduced && params.data.isCanadaProduced) {
+        return 'Yes'
+      }
+      if (!isDefaultCI && showCanadianProduced) {
+        // Check if fuel code is Canadian
+        const isCanadian = isFuelCodeCanadian(
+          params.data.fuelType,
+          params.data.fuelCode,
+          optionsData
+        )
+        return isCanadian ? 'Yes' : 'No'
+      }
+      // When the “Fuel produced in Canada” field is not editable, then no text
+      // value should be displayed in the cell or form field.
+      return !showCanadianProduced
+        ? ''
+        : params.data.isCanadaProduced
+          ? 'Yes'
+          : 'No'
+    },
     minWidth: 240
   },
   {
@@ -498,7 +550,11 @@ export const defaultColDef = {
   singleClickEdit: true
 }
 
-export const changelogCommonColDefs = (highlight = true, complianceYear) => [
+export const changelogCommonColDefs = (
+  highlight = true,
+  complianceYear,
+  optionsData
+) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType.fuelType',
@@ -536,6 +592,34 @@ export const changelogCommonColDefs = (highlight = true, complianceYear) => [
     field: 'isCanadaProduced',
     minWidth: 240,
     hide: complianceYear < NEW_REGULATION_YEAR,
+    valueGetter: (params) => {
+      // For fuel codes with known location, show the system-determined value
+      const showCanadianProduced = canEditCanadianProduced(
+        params.data,
+        complianceYear,
+        optionsData
+      )
+      const isDefaultCI = params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+      if (!showCanadianProduced && params.data.isCanadaProduced) {
+        return 'Yes'
+      }
+      if (!isDefaultCI && showCanadianProduced) {
+        // Check if fuel code is Canadian
+        const isCanadian = isFuelCodeCanadian(
+          params.data.fuelType,
+          params.data.fuelCode,
+          optionsData
+        )
+        return isCanadian ? 'Yes' : 'No'
+      }
+      // When the “Fuel produced in Canada” field is not editable, then no text
+      // value should be displayed in the cell or form field.
+      return !showCanadianProduced
+        ? ''
+        : params.data.isCanadaProduced
+          ? 'Yes'
+          : 'No'
+    },
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'isCanadaProduced')
   },
@@ -544,6 +628,7 @@ export const changelogCommonColDefs = (highlight = true, complianceYear) => [
     field: 'isQ1Supplied',
     minWidth: 180,
     hide: complianceYear < NEW_REGULATION_YEAR,
+    valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : ''),
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'isQ1Supplied')
   },
@@ -579,7 +664,11 @@ export const changelogCommonColDefs = (highlight = true, complianceYear) => [
   }
 ]
 
-export const changelogColDefs = (highlight = true, complianceYear) => [
+export const changelogColDefs = (
+  highlight = true,
+  complianceYear,
+  optionsData
+) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -611,7 +700,7 @@ export const changelogColDefs = (highlight = true, complianceYear) => [
       }
     }
   },
-  ...changelogCommonColDefs(highlight, complianceYear)
+  ...changelogCommonColDefs(highlight, complianceYear, optionsData)
 ]
 
 export const changelogDefaultColDefs = {
