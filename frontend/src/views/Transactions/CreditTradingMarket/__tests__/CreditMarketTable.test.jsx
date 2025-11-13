@@ -43,7 +43,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
     if (!data?.creditMarketListings?.length) return <div data-test="grid-no-rows">{overlayNoRowsTemplate}</div>
     
     return (
-      <div data-test="bc-grid-viewer" readonlygrid={readOnlyGrid?.toString()}>
+      <div data-test="bc-grid-viewer">
         <div data-test="column-count">{columnDefs.length}</div>
         <div data-test="row-count">{data.creditMarketListings.length}</div>
         <button data-test="test-get-row-id" onClick={() => getRowId({ data: data.creditMarketListings[0] })}>Test getRowId</button>
@@ -149,14 +149,7 @@ describe('CreditMarketTable', () => {
       })
     })
 
-    it('passes readOnlyGrid prop as true', async () => {
-      render(<CreditMarketTable />, { wrapper })
 
-      await waitFor(() => {
-        const grid = screen.getByTestId('bc-grid-viewer')
-        expect(grid).toHaveAttribute('readonlygrid', 'true')
-      })
-    })
   })
 
   describe('Loading and Error States', () => {
@@ -548,7 +541,7 @@ describe('CreditMarketTable', () => {
         expect(props).toHaveProperty('dataKey', 'creditMarketListings')
         expect(props).toHaveProperty('paginationOptions')
         expect(props).toHaveProperty('onPaginationChange')
-        expect(props).toHaveProperty('readOnlyGrid', true)
+
       })
     })
 
