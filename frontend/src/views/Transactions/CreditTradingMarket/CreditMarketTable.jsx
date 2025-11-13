@@ -164,7 +164,7 @@ export const CreditMarketTable = forwardRef(
             height: '100%',
             width: '100%',
             overflowX: 'auto',
-            minWidth: '800px' // Ensure minimum width for proper table display
+            minWidth: '800px'
           }}
         >
           <BCGridViewer
@@ -187,8 +187,6 @@ export const CreditMarketTable = forwardRef(
               }))
             }
             onRowClicked={onRowSelect ? handleRowClick : undefined}
-            // Disable editing since this is view-only
-            readOnlyGrid={true}
           />
         </Box>
       </Box>

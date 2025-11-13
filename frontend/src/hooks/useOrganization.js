@@ -422,6 +422,8 @@ export const useUpdateCurrentOrgCreditMarket = (options = {}) => {
         queryClient.invalidateQueries(['credit-market-listings'])
       }
 
+      queryClient.refetchQueries(['credit-market-listings'])
+
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {

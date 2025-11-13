@@ -1,7 +1,16 @@
 import structlog
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, status, Request, Query, HTTPException, Response
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    status,
+    Request,
+    Query,
+    HTTPException,
+    Response,
+)
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from starlette import status
@@ -450,15 +459,7 @@ async def update_current_org_credit_market_details(
     response_model=OrganizationResponseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(
-    [
-        RoleEnum.GOVERNMENT,
-        RoleEnum.ADMINISTRATOR,
-        RoleEnum.ANALYST,
-        RoleEnum.COMPLIANCE_MANAGER,
-        RoleEnum.DIRECTOR,
-    ]
-)
+@view_handler([RoleEnum.GOVERNMENT])
 async def update_org_credit_market_details(
     request: Request,
     organization_id: int,

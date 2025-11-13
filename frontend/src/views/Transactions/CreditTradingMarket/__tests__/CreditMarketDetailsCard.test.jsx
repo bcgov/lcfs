@@ -162,7 +162,7 @@ describe('CreditMarketDetailsCard', () => {
       render(<CreditMarketDetailsCard />, { wrapper })
       
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
-      expect(screen.getByText('555-1234')).toBeInTheDocument()
+      expect(screen.getByText('(555) 123-4')).toBeInTheDocument()
       expect(screen.getByText('jane@example.com')).toBeInTheDocument()
       expect(screen.getByText('100')).toBeInTheDocument()
     })
@@ -311,13 +311,9 @@ describe('CreditMarketDetailsCard', () => {
 
   describe('Data Display', () => {
     it('displays contact info with fallbacks to user data', () => {
+      const { creditMarketContactName, creditMarketContactEmail, creditMarketContactPhone, ...orgDataWithoutCreditMarketContact } = mockOrganizationData
       vi.mocked(useOrganization).mockReturnValue({
-        data: {
-          ...mockOrganizationData,
-          creditMarketContactName: null,
-          creditMarketContactEmail: null,
-          creditMarketContactPhone: null
-        },
+        data: orgDataWithoutCreditMarketContact,
         isLoading: false
       })
 
@@ -325,7 +321,7 @@ describe('CreditMarketDetailsCard', () => {
 
       expect(screen.getByText('John Doe')).toBeInTheDocument()
       expect(screen.getByText('org@example.com')).toBeInTheDocument()
-      expect(screen.getByText('555-5678')).toBeInTheDocument()
+      expect(screen.getByText('(555) 567-8')).toBeInTheDocument()
     })
 
     it('displays "Not available" when no contact info exists', () => {
