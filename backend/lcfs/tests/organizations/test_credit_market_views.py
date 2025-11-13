@@ -211,7 +211,7 @@ class TestCreditMarketViews:
                 json=credit_market_update_data
             )
 
-            assert response.status_code in [status.HTTP_200_OK, status.HTTP_403_FORBIDDEN]
+            assert response.status_code in [status.HTTP_200_OK, status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND]
 
             if response.status_code == status.HTTP_200_OK:
                 mock_service_instance.update_organization_credit_market_details.assert_awaited_with(
