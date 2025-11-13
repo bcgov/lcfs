@@ -135,11 +135,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
       <div data-test="bc-grid-viewer">
         {items.map((row) => (
           <div
-            key={row.charging_equipment_id}
-            data-test={`equipment-row-${row.charging_equipment_id}`}
+            key={row.chargingEquipmentId}
+            data-test={`equipment-row-${row.chargingEquipmentId}`}
             onClick={() => onRowClicked?.({ data: row })}
             className={
-              highlightedRowId === row.charging_equipment_id.toString()
+              highlightedRowId === row.chargingEquipmentId.toString()
                 ? 'highlighted'
                 : ''
             }
@@ -231,8 +231,8 @@ vi.mock('../components/BulkActionModals', () => ({
 const mockEquipmentData = {
   items: [
     {
-      charging_equipment_id: 1,
-      charging_site_id: 1,
+      chargingEquipmentId: 1,
+      chargingSiteId: 1,
       status: 'Draft',
       site_name: 'Test Site 1',
       registration_number: 'TEST1-001',
@@ -246,8 +246,8 @@ const mockEquipmentData = {
       updated_date: '2024-01-02'
     },
     {
-      charging_equipment_id: 2,
-      charging_site_id: 2,
+      chargingEquipmentId: 2,
+      chargingSiteId: 2,
       status: 'Validated',
       site_name: 'Test Site 2',
       registration_number: 'TEST2-001',

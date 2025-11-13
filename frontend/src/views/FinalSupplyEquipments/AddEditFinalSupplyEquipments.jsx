@@ -112,7 +112,6 @@ export const AddEditFinalSupplyEquipments = () => {
       overlayNoRowsTemplate: t(
         'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
       ),
-      stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -497,6 +496,7 @@ export const AddEditFinalSupplyEquipments = () => {
           <BCGridEditor
             gridRef={gridRef}
             alertRef={alertRef}
+            stopEditingWhenCellsLoseFocus
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}

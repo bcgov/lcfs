@@ -32,6 +32,7 @@ from lcfs.db.models.compliance import (
 from lcfs.db.models.compliance.ChargingEquipment import (
     ChargingEquipment,
     charging_equipment_intended_use_association,
+    charging_equipment_intended_user_association,
 )
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
@@ -539,6 +540,22 @@ class FinalSupplyEquipmentRepository:
             .scalar_subquery()
         )
 
+        # Subquery for intended_users (from charging equipment)
+        intended_users_subquery = (
+            select(func.array_agg(EndUserType.type_name).label("intended_users"))
+            .select_from(charging_equipment_intended_user_association)
+            .join(
+                EndUserType,
+                charging_equipment_intended_user_association.c.end_user_type_id
+                == EndUserType.end_user_type_id,
+            )
+            .where(
+                charging_equipment_intended_user_association.c.charging_equipment_id
+                == ChargingEquipment.charging_equipment_id
+            )
+            .correlate(ChargingEquipment)
+            .scalar_subquery()
+        )
 
         common_conditions = [
             ChargingSite.organization_id == organization_id,
@@ -572,6 +589,7 @@ class FinalSupplyEquipmentRepository:
                 LevelOfEquipment.name.label("level_of_equipment"),
                 ChargingEquipment.ports,
                 intended_uses_subquery.label("intended_uses"),
+                intended_users_subquery.label("intended_users"),
                 literal(source_priority).label("source_priority"),
             )
             .select_from(ChargingEquipment)

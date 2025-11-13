@@ -182,7 +182,7 @@ export const ExcelUpload = ({
         component="label"
         startIcon={<FontAwesomeIcon icon={faUpload} />}
       >
-        {t('common:uploadExcel')}
+        {t('chargingSite:importBtn')}
         <input
           ref={fileInputRef}
           type="file"

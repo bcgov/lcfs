@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
+from pydantic import Field
 from enum import Enum
 
 
@@ -19,24 +20,24 @@ class PortsEnum(str, Enum):
     DUAL_PORT = "Dual port"
 
 
-class EndUseTypeSchema(BaseModel):
+class EndUseTypeSchema(BaseSchema):
     end_use_type_id: int
     type: str
     description: Optional[str] = None
 
 
-class EndUserTypeSchema(BaseModel):
+class EndUserTypeSchema(BaseSchema):
     end_user_type_id: int
     type_name: str
 
 
-class LevelOfEquipmentSchema(BaseModel):
+class LevelOfEquipmentSchema(BaseSchema):
     level_of_equipment_id: int
     name: str
     description: Optional[str] = None
 
 
-class ChargingEquipmentBaseSchema(BaseModel):
+class ChargingEquipmentBaseSchema(BaseSchema):
     charging_equipment_id: Optional[int] = None
     charging_site_id: int
     status: ChargingEquipmentStatusEnum
@@ -57,7 +58,7 @@ class ChargingEquipmentBaseSchema(BaseModel):
         from_attributes = True
 
 
-class ChargingEquipmentCreateSchema(BaseModel):
+class ChargingEquipmentCreateSchema(BaseSchema):
     charging_site_id: int
     serial_number: str = Field(..., min_length=1, max_length=100)
     manufacturer: str = Field(..., min_length=1, max_length=100)
@@ -69,7 +70,7 @@ class ChargingEquipmentCreateSchema(BaseModel):
     intended_user_ids: Optional[List[int]] = []
 
 
-class ChargingEquipmentUpdateSchema(BaseModel):
+class ChargingEquipmentUpdateSchema(BaseSchema):
     serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
     manufacturer: Optional[str] = Field(None, min_length=1, max_length=100)
     model: Optional[str] = Field(None, max_length=100)
@@ -80,7 +81,7 @@ class ChargingEquipmentUpdateSchema(BaseModel):
     intended_user_ids: Optional[List[int]] = None
 
 
-class ChargingEquipmentListItemSchema(BaseModel):
+class ChargingEquipmentListItemSchema(BaseSchema):
     charging_equipment_id: int
     charging_site_id: int
     status: ChargingEquipmentStatusEnum
@@ -92,6 +93,7 @@ class ChargingEquipmentListItemSchema(BaseModel):
     manufacturer: str
     model: Optional[str] = None
     level_of_equipment_name: str
+    ports: Optional[str] = None
     intended_uses: Optional[List[EndUseTypeSchema]] = []
     intended_users: Optional[List[EndUserTypeSchema]] = []
     created_date: datetime
@@ -101,15 +103,12 @@ class ChargingEquipmentListItemSchema(BaseModel):
         from_attributes = True
 
 
-class ChargingEquipmentListSchema(BaseModel):
+class ChargingEquipmentListSchema(BaseSchema):
     items: List[ChargingEquipmentListItemSchema]
-    total_count: int
-    current_page: int
-    total_pages: int
-    page_size: int
+    pagination: PaginationResponseSchema
 
 
-class ChargingEquipmentFilterSchema(BaseModel):
+class ChargingEquipmentFilterSchema(BaseSchema):
     status: Optional[List[ChargingEquipmentStatusEnum]] = None
     charging_site_id: Optional[int] = None
     manufacturer: Optional[str] = None
@@ -117,7 +116,7 @@ class ChargingEquipmentFilterSchema(BaseModel):
     organization_id: Optional[int] = None  # For government users to filter by org
 
 
-class BulkActionRequestSchema(BaseModel):
+class BulkActionRequestSchema(BaseSchema):
     charging_equipment_ids: List[int] = Field(..., min_items=1)
 
 
@@ -129,7 +128,7 @@ class BulkDecommissionRequestSchema(BulkActionRequestSchema):
     pass
 
 
-class BulkActionResponseSchema(BaseModel):
+class BulkActionResponseSchema(BaseSchema):
     success: bool
     message: str
     affected_count: int

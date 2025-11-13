@@ -150,7 +150,9 @@ async def test_update_charging_equipment_success(
         mock_db.flush.assert_called_once()
         assert mock_db.refresh.call_count == 2
         mock_db.refresh.assert_any_call(valid_charging_equipment)
-        mock_db.refresh.assert_any_call(valid_charging_equipment, attribute_names=['charging_site'])
+        mock_db.refresh.assert_any_call(
+            valid_charging_equipment, attribute_names=["charging_site"]
+        )
 
 
 @pytest.mark.anyio
@@ -295,3 +297,193 @@ async def test_get_end_use_types_success(repo, mock_db, mock_end_use_type):
     assert len(result) == 1
     assert result[0] == mock_end_use_type
     mock_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_auto_validate_submitted_fse_for_report_success(repo, mock_db):
+    """Test auto-validation of submitted FSE records for a compliance report."""
+    # Mock status query result
+    mock_submitted_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_submitted_status.status = "Submitted"
+    mock_submitted_status.charging_equipment_status_id = 3
+
+    mock_validated_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_validated_status.status = "Validated"
+    mock_validated_status.charging_equipment_status_id = 4
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalars.return_value.all.return_value = [
+        mock_submitted_status,
+        mock_validated_status,
+    ]
+
+    # Mock equipment query result (2 equipment IDs in Submitted status)
+    mock_equipment_result = MagicMock()
+    mock_equipment_result.all.return_value = [(101,), (102,)]
+
+    # Mock update result
+    mock_update_result = MagicMock()
+    mock_update_result.rowcount = 2
+
+    # Configure db.execute to return different results for different calls
+    mock_db.execute.side_effect = [
+        mock_status_result,
+        mock_equipment_result,
+        mock_update_result,
+    ]
+
+    # Call the repository method
+    result = await repo.auto_validate_submitted_fse_for_report(compliance_report_id=1)
+
+    # Verify the result
+    assert result == 2
+    assert mock_db.execute.call_count == 3
+    mock_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_auto_validate_submitted_fse_for_report_no_equipment_found(repo, mock_db):
+    """Test auto-validation when no equipment in Submitted status is found."""
+    # Mock status query result
+    mock_submitted_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_submitted_status.status = "Submitted"
+    mock_submitted_status.charging_equipment_status_id = 3
+
+    mock_validated_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_validated_status.status = "Validated"
+    mock_validated_status.charging_equipment_status_id = 4
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalars.return_value.all.return_value = [
+        mock_submitted_status,
+        mock_validated_status,
+    ]
+
+    # Mock equipment query result (no equipment found)
+    mock_equipment_result = MagicMock()
+    mock_equipment_result.all.return_value = []
+
+    # Configure db.execute to return different results for different calls
+    mock_db.execute.side_effect = [mock_status_result, mock_equipment_result]
+
+    # Call the repository method
+    result = await repo.auto_validate_submitted_fse_for_report(compliance_report_id=1)
+
+    # Verify the result
+    assert result == 0
+    assert mock_db.execute.call_count == 2
+    # flush should not be called since no updates were made
+    mock_db.flush.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_auto_submit_draft_updated_fse_for_report_success(repo, mock_db):
+    """Test auto-submission of Draft and Updated FSE records for a compliance report."""
+    # Mock status query result
+    mock_draft_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_draft_status.status = "Draft"
+    mock_draft_status.charging_equipment_status_id = 1
+
+    mock_updated_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_updated_status.status = "Updated"
+    mock_updated_status.charging_equipment_status_id = 2
+
+    mock_submitted_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_submitted_status.status = "Submitted"
+    mock_submitted_status.charging_equipment_status_id = 3
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalars.return_value.all.return_value = [
+        mock_draft_status,
+        mock_updated_status,
+        mock_submitted_status,
+    ]
+
+    # Mock equipment query result (2 equipment IDs: 1 in Draft, 1 in Updated)
+    mock_equipment_result = MagicMock()
+    mock_equipment_result.all.return_value = [(101,), (102,)]
+
+    # Mock update result
+    mock_update_result = MagicMock()
+    mock_update_result.rowcount = 2
+
+    # Configure db.execute to return different results for different calls
+    mock_db.execute.side_effect = [
+        mock_status_result,
+        mock_equipment_result,
+        mock_update_result,
+    ]
+
+    # Call the repository method
+    result = await repo.auto_submit_draft_updated_fse_for_report(compliance_report_id=1)
+
+    # Verify the result
+    assert result == 2
+    assert mock_db.execute.call_count == 3
+    mock_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_auto_submit_draft_updated_fse_for_report_no_equipment_found(
+    repo, mock_db
+):
+    """Test auto-submission when no equipment in Draft or Updated status is found."""
+    # Mock status query result
+    mock_draft_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_draft_status.status = "Draft"
+    mock_draft_status.charging_equipment_status_id = 1
+
+    mock_updated_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_updated_status.status = "Updated"
+    mock_updated_status.charging_equipment_status_id = 2
+
+    mock_submitted_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_submitted_status.status = "Submitted"
+    mock_submitted_status.charging_equipment_status_id = 3
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalars.return_value.all.return_value = [
+        mock_draft_status,
+        mock_updated_status,
+        mock_submitted_status,
+    ]
+
+    # Mock equipment query result (no equipment found)
+    mock_equipment_result = MagicMock()
+    mock_equipment_result.all.return_value = []
+
+    # Configure db.execute to return different results for different calls
+    mock_db.execute.side_effect = [mock_status_result, mock_equipment_result]
+
+    # Call the repository method
+    result = await repo.auto_submit_draft_updated_fse_for_report(compliance_report_id=1)
+
+    # Verify the result
+    assert result == 0
+    assert mock_db.execute.call_count == 2
+    # flush should not be called since no updates were made
+    mock_db.flush.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_auto_submit_draft_updated_fse_for_report_missing_status(repo, mock_db):
+    """Test auto-submission when required status is missing from database."""
+    # Mock status query result with only Draft status (missing Updated and Submitted)
+    mock_draft_status = MagicMock(spec=ChargingEquipmentStatus)
+    mock_draft_status.status = "Draft"
+    mock_draft_status.charging_equipment_status_id = 1
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalars.return_value.all.return_value = [mock_draft_status]
+
+    # Configure db.execute to return status result
+    mock_db.execute.side_effect = [mock_status_result]
+
+    # Call the repository method
+    result = await repo.auto_submit_draft_updated_fse_for_report(compliance_report_id=1)
+
+    # Verify the result - should return 0 since required statuses are missing
+    assert result == 0
+    assert mock_db.execute.call_count == 1
+    # flush should not be called since no updates were made
+    mock_db.flush.assert_not_called()

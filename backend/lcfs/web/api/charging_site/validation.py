@@ -49,7 +49,7 @@ class ChargingSiteValidation:
         if await self.cs_repo.charging_site_name_exists(site_name, organization_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Duplicate charging site name.",
+                detail="A charging site with this name already exists for your organization. Please use a unique site name.",
             )
         if organization_id != data.organization_id:
             raise HTTPException(
@@ -60,7 +60,10 @@ class ChargingSiteValidation:
         return True
 
     async def charging_site_delete_update_access(
-        self, charging_site_id: int, organization_id: int
+        self,
+        charging_site_id: int,
+        organization_id: int,
+        data: ChargingSiteCreateSchema = None,
     ):
         """
         Validates if the user has access to update/delete the charging site.
@@ -80,6 +83,21 @@ class ChargingSiteValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
+
+        # Validate duplicate site name on update
+        if data and data.site_name:
+            new_site_name = data.site_name.strip()
+            existing_site_name = charging_site.site_name.strip()
+
+            # Only check if the name is actually being changed
+            if new_site_name.lower() != existing_site_name.lower():
+                if await self.cs_repo.charging_site_name_exists(
+                    new_site_name, organization_id, exclude_site_id=charging_site_id
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="A charging site with this name already exists for your organization. Please use a unique site name.",
+                    )
 
         return True
 

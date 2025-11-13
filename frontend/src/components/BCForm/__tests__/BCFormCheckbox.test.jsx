@@ -298,6 +298,22 @@ describe('BCFormCheckbox', () => {
       expect(checkboxes[0]).toBeChecked()
     })
 
+    it('allows toggling with the Enter key', async () => {
+      const user = userEvent.setup()
+
+      renderBCFormCheckbox()
+
+      const checkboxes = screen.getAllByRole('checkbox')
+
+      await user.tab()
+      expect(checkboxes[0]).toHaveFocus()
+      expect(checkboxes[0]).not.toBeChecked()
+
+      await user.keyboard('{Enter}')
+
+      expect(checkboxes[0]).toBeChecked()
+    })
+
     it('provides proper focus management', async () => {
       const user = userEvent.setup()
       

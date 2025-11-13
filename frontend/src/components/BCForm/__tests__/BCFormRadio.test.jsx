@@ -320,6 +320,22 @@ describe('BCFormRadio', () => {
       expect(radios[1]).toBeChecked()
     })
 
+    it('allows selection with the Enter key', async () => {
+      const user = userEvent.setup()
+
+      renderBCFormRadio()
+
+      const radios = screen.getAllByRole('radio')
+
+      await user.tab()
+      expect(radios[0]).toHaveFocus()
+      expect(radios[0]).not.toBeChecked()
+
+      await user.keyboard('{Enter}')
+
+      expect(radios[0]).toBeChecked()
+    })
+
     it('provides proper focus management', async () => {
       const user = userEvent.setup()
 

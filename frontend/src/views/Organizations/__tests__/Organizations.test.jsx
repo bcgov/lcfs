@@ -71,7 +71,11 @@ vi.mock('@/hooks/useOrganizations', () => ({
     isError: false,
     error: null
   }),
-  useOrganizationStatuses: () => ({ data: [] })
+  useOrganizationStatuses: () => ({ data: [] }),
+  useOrganizationListStatuses: () => ({
+    data: [{ status: 'Registered' }, { status: 'Unregistered' }],
+    isLoading: false
+  })
 }))
 
 // Mock react-i18next
@@ -96,6 +100,7 @@ vi.mock('react-i18next', () => ({
 // Mock cell renderers
 vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
   OrgStatusRenderer: () => <span>Status Renderer</span>,
+  OrgTypeRenderer: () => <span>Type Renderer</span>,
   LinkRenderer: () => <div data-test="link-renderer">Link</div>,
   YesNoTextRenderer: () => <span>Yes/No Renderer</span>
 }))

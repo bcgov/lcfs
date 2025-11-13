@@ -42,10 +42,12 @@ async def test_get_charging_equipment_list_success(
                 "updated_date": "2024-01-02T00:00:00Z",
             }
         ],
-        "total_count": 1,
-        "current_page": 1,
-        "total_pages": 1,
-        "page_size": 10,
+        "pagination": {
+            "total": 1,
+            "page": 1,
+            "total_pages": 1,
+            "size": 10,
+        },
     }
 
     # Mock the service dependency
@@ -65,9 +67,9 @@ async def test_get_charging_equipment_list_success(
         # Verify response
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["total_count"] == 1
+        assert data["pagination"]["total"] == 1
         assert len(data["items"]) == 1
-        assert data["items"][0]["charging_equipment_id"] == 1
+        assert data["items"][0]["chargingEquipmentId"] == 1
     finally:
         # Clean up the dependency override
         fastapi_app.dependency_overrides.clear()
@@ -100,8 +102,8 @@ async def test_get_charging_equipment_by_id_success(
         # Verify response
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["charging_equipment_id"] == 1
-        assert data["serial_number"] == "ABC123456"
+        assert data["chargingEquipmentId"] == 1
+        assert data["serialNumber"] == "ABC123456"
     finally:
         # Clean up the dependency override
         fastapi_app.dependency_overrides.clear()
@@ -138,8 +140,8 @@ async def test_create_charging_equipment_success(
         # Verify response
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["charging_equipment_id"] == 1
-        assert data["serial_number"] == "ABC123456"
+        assert data["chargingEquipmentId"] == 1
+        assert data["serialNumber"] == "ABC123456"
     finally:
         # Clean up the dependency override
         fastapi_app.dependency_overrides.clear()
@@ -176,7 +178,7 @@ async def test_update_charging_equipment_success(
         # Verify response
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["charging_equipment_id"] == 1
+        assert data["chargingEquipmentId"] == 1
     finally:
         # Clean up the dependency override
         fastapi_app.dependency_overrides.clear()
@@ -241,7 +243,7 @@ async def test_bulk_submit_equipment_success(
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
-        assert data["affected_count"] == 2
+        assert data["affectedCount"] == 2
     finally:
         # Clean up the dependency override
         fastapi_app.dependency_overrides.clear()
@@ -280,7 +282,7 @@ async def test_bulk_decommission_equipment_success(
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
-        assert data["affected_count"] == 1
+        assert data["affectedCount"] == 1
     finally:
         # Clean up the dependency override
         fastapi_app.dependency_overrides.clear()

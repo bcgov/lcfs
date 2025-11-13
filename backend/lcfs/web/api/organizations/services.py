@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from decimal import Decimal
 import structlog
-from typing import List
+from typing import List, Dict
 
 from lcfs.settings import settings
 from fastapi import Depends, Request
@@ -15,6 +15,7 @@ from lcfs.db.models.organization.Organization import (
     Organization,
     generate_secure_link_key,
 )
+from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
@@ -163,7 +164,9 @@ class OrganizationsService:
                     )
                 continue
 
-            if field_name == "status":
+            if field_name == "org_type":
+                field = get_field_for_filter(OrganizationType, "org_type")
+            elif field_name == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
                 field = get_field_for_filter(Organization, field_name)
@@ -191,8 +194,9 @@ class OrganizationsService:
             columns=[
                 SpreadsheetColumn("ID", "int"),
                 SpreadsheetColumn("Organization Name", "text"),
+                SpreadsheetColumn("Organization Type", "text"),
                 SpreadsheetColumn("Compliance Units", "int"),
-                SpreadsheetColumn("In Reserve", "text"),
+                SpreadsheetColumn("In Reserve", "int"),
                 SpreadsheetColumn("Registered", "date"),
             ],
             rows=data,
@@ -491,7 +495,7 @@ class OrganizationsService:
             and new_credits_to_sell > 0
             and (not was_displayed_in_market or old_credits_to_sell == 0)
         )
-        
+
         if is_new_listing and settings.feature_credit_market_notifications:
             await self._send_credit_market_notification(updated_organization, user)
 
@@ -646,9 +650,7 @@ class OrganizationsService:
                     offence_history=bool(log.get("offence_history")),
                     deliberate=bool(log.get("deliberate")),
                     efforts_to_correct=bool(log.get("efforts_to_correct")),
-                    economic_benefit_derived=bool(
-                        log.get("economic_benefit_derived")
-                    ),
+                    economic_benefit_derived=bool(log.get("economic_benefit_derived")),
                     efforts_to_prevent_recurrence=bool(
                         log.get("efforts_to_prevent_recurrence")
                     ),
@@ -742,7 +744,9 @@ class OrganizationsService:
         return self._map_penalty_log_model(updated)
 
     @service_handler
-    async def delete_penalty_log(self, organization_id: int, penalty_log_id: int) -> None:
+    async def delete_penalty_log(
+        self, organization_id: int, penalty_log_id: int
+    ) -> None:
         existing = await self.repo.get_penalty_log_by_id(
             organization_id, penalty_log_id
         )
@@ -829,6 +833,8 @@ class OrganizationsService:
         self,
         order_by=("name", "asc"),
         statuses: List[str] = None,
+        org_type_filter: str = "fuel_supplier",
+        org_filters: Dict[str, List[str]] | None = None,
     ) -> List[OrganizationSummaryResponseSchema]:
         """
         Fetches all organization names and their detailed information, formatted as per OrganizationSummaryResponseSchema.
@@ -853,7 +859,9 @@ class OrganizationsService:
                 conditions.append(OrganizationStatus.status.in_(status_enums))
 
         # The order_by tuple directly specifies both the sort field and direction
-        organization_data = await self.repo.get_organization_names(conditions, order_by)
+        organization_data = await self.repo.get_organization_names(
+            conditions, order_by, org_type_filter, org_filters
+        )
 
         return [
             OrganizationSummaryResponseSchema(
@@ -863,6 +871,7 @@ class OrganizationsService:
                 total_balance=org["total_balance"],
                 reserved_balance=org["reserved_balance"],
                 org_status=org["status"],
+                org_type=org.get("org_type"),
             )
             for org in organization_data
         ]

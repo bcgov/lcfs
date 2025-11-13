@@ -11,7 +11,7 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentBaseSchema,
@@ -86,6 +86,7 @@ class ChargingEquipmentServices:
                 serial_number=equipment.serial_number,
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
+                ports=equipment.ports.value if equipment.ports else None,
                 level_of_equipment_name=equipment.level_of_equipment.name,
                 intended_uses=[
                     {
@@ -112,10 +113,12 @@ class ChargingEquipmentServices:
 
         return ChargingEquipmentListSchema(
             items=items,
-            total_count=total_count,
-            current_page=pagination.page,
-            total_pages=total_pages,
-            page_size=pagination.size,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=total_pages,
+            ),
         )
 
     @service_handler
@@ -427,7 +430,7 @@ class ChargingEquipmentServices:
         """Get all available equipment statuses."""
         statuses = await self.repo.get_statuses()
         return [
-            {"status_id": s.charging_equipment_status_id, "status": s.status}
+            {"statusId": s.charging_equipment_status_id, "status": s.status}
             for s in statuses
         ]
 
@@ -437,7 +440,7 @@ class ChargingEquipmentServices:
         levels = await self.repo.get_levels_of_equipment()
         return [
             {
-                "level_of_equipment_id": l.level_of_equipment_id,
+                "levelOfEquipmentId": l.level_of_equipment_id,
                 "name": l.name,
                 "description": l.description,
             }
@@ -450,9 +453,9 @@ class ChargingEquipmentServices:
         types = await self.repo.get_end_use_types()
         return [
             {
-                "end_use_type_id": t.end_use_type_id,
+                "endUseTypeId": t.end_use_type_id,
                 "type": t.type,
-                "sub_type": t.sub_type,
+                "subType": t.sub_type,
             }
             for t in types
         ]
@@ -463,8 +466,8 @@ class ChargingEquipmentServices:
         types = await self.repo.get_end_user_types()
         return [
             {
-                "end_user_type_id": t.end_user_type_id,
-                "type_name": t.type_name,
+                "endUserTypeId": t.end_user_type_id,
+                "typeName": t.type_name,
             }
             for t in types
         ]
@@ -481,12 +484,12 @@ class ChargingEquipmentServices:
         sites = await self.repo.get_charging_sites_by_organization(user.organization_id)
         return [
             {
-                "charging_site_id": s.charging_site_id,
-                "site_name": s.site_name,
-                "site_code": s.site_code,
-                "street_address": s.street_address,
+                "chargingSiteId": s.charging_site_id,
+                "siteName": s.site_name,
+                "siteCode": s.site_code,
+                "streetAddress": s.street_address,
                 "city": s.city,
-                "postal_code": s.postal_code,
+                "postalCode": s.postal_code,
             }
             for s in sites
         ]
@@ -497,7 +500,7 @@ class ChargingEquipmentServices:
         organizations = await self.repo.get_organizations()
         return [
             {
-                "organization_id": org.organization_id,
+                "organizationId": org.organization_id,
                 "name": org.name,
             }
             for org in organizations

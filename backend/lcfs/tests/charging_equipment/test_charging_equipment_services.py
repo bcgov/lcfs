@@ -2,18 +2,12 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException
 
-from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.services import ChargingEquipmentServices
-from lcfs.web.api.charging_equipment.schema import (
-    ChargingEquipmentCreateSchema,
-    ChargingEquipmentUpdateSchema,
-    ChargingEquipmentFilterSchema,
-    ChargingEquipmentStatusEnum,
-)
+from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema
 
 
 @pytest.fixture
@@ -81,7 +75,7 @@ async def test_get_charging_equipment_list_supplier_success(
     result = await service.get_charging_equipment_list(mock_user, pagination)
 
     # Verify the result
-    assert result.total_count == 1
+    assert result.pagination.total == 1
     assert len(result.items) == 1
     assert (
         result.items[0].charging_equipment_id
@@ -110,7 +104,7 @@ async def test_get_charging_equipment_list_government_with_org_filter(
     )
 
     # Verify the result
-    assert result.total_count == 1
+    assert result.pagination.total == 1
     assert len(result.items) == 1
 
     # Verify repo was called with filtered organization_id and exclude_draft=True for government users
@@ -129,12 +123,10 @@ async def test_get_charging_equipment_list_government_no_org_filter_success(
     mock_repo.get_charging_equipment_list.return_value = ([valid_charging_equipment], 1)
 
     # Call the service method
-    result = await service.get_charging_equipment_list(
-        mock_government_user, pagination
-    )
+    result = await service.get_charging_equipment_list(mock_government_user, pagination)
 
     # Verify the result
-    assert result.total_count == 1
+    assert result.pagination.total == 1
     assert len(result.items) == 1
 
     # Government users without an org filter should query all organizations (organization_id None) and exclude_draft=True
@@ -425,7 +417,7 @@ async def test_get_equipment_statuses(service, mock_repo, mock_equipment_status)
 
     # Verify the result
     assert len(result) == 1
-    assert result[0]["status_id"] == mock_equipment_status.charging_equipment_status_id
+    assert result[0]["statusId"] == mock_equipment_status.charging_equipment_status_id
     assert result[0]["status"] == mock_equipment_status.status
 
 
@@ -441,7 +433,7 @@ async def test_get_levels_of_equipment(service, mock_repo, mock_level_of_equipme
     # Verify the result
     assert len(result) == 1
     assert (
-        result[0]["level_of_equipment_id"]
+        result[0]["levelOfEquipmentId"]
         == mock_level_of_equipment.level_of_equipment_id
     )
     assert result[0]["name"] == mock_level_of_equipment.name
@@ -458,5 +450,5 @@ async def test_get_end_use_types(service, mock_repo, mock_end_use_type):
 
     # Verify the result
     assert len(result) == 1
-    assert result[0]["end_use_type_id"] == mock_end_use_type.end_use_type_id
+    assert result[0]["endUseTypeId"] == mock_end_use_type.end_use_type_id
     assert result[0]["type"] == mock_end_use_type.type
