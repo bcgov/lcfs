@@ -90,6 +90,17 @@ vi.mock('@/constants/schedules.js', () => ({
   }
 }))
 
+// Mock useOtherUsesOptions
+vi.mock('@/hooks/useOtherUses', () => ({
+  useOtherUsesOptions: vi.fn(() => ({
+    data: {
+      fuelTypes: []
+    },
+    isLoading: false,
+    isFetched: true
+  }))
+}))
+
 describe('OtherUsesSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks()

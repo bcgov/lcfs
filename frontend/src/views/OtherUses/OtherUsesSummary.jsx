@@ -7,6 +7,8 @@ import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import { useParams } from 'react-router-dom'
+import Loading from '@/components/Loading'
+import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 
 export const OtherUsesSummary = ({ data, status }) => {
   const [paginationOptions, setPaginationOptions] = useState(
@@ -14,6 +16,11 @@ export const OtherUsesSummary = ({ data, status }) => {
   )
   const gridRef = useRef()
   const { compliancePeriod } = useParams()
+  const {
+    data: optionsData,
+    isLoading: optionsLoading,
+    isFetched
+  } = useOtherUsesOptions({ compliancePeriod })
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
     if (!data?.otherUses) {
@@ -107,7 +114,9 @@ export const OtherUsesSummary = ({ data, status }) => {
   )
 
   const getRowId = (params) => params.data.otherUsesId.toString()
-
+  if (optionsLoading) {
+    return <Loading />
+  }
   return (
     <Grid2 className="other-uses-container" data-test="container" mx={-1}>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
@@ -115,7 +124,7 @@ export const OtherUsesSummary = ({ data, status }) => {
           gridKey="other-uses"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={otherUsesSummaryColDefs(parseInt(compliancePeriod))}
+          columnDefs={otherUsesSummaryColDefs(parseInt(compliancePeriod), optionsData)}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="otherUses"

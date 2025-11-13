@@ -350,7 +350,7 @@ describe('FuelSupplyChangelog', () => {
       const currentVersionCall = gridViewer.mock.calls[0]
       
       // Current version should use changelogCommonColDefs(false)
-      expect(changelogCommonColDefs).toHaveBeenCalledWith(false, false, 2024)
+      expect(changelogCommonColDefs).toHaveBeenCalledWith(false, false, 2024, { fuelTypes: [] })
       expect(currentVersionCall[0].columnDefs).toEqual([{ field: 'common', showActions: false }])
     })
 
@@ -361,7 +361,7 @@ describe('FuelSupplyChangelog', () => {
       const originalVersionCall = gridViewer.mock.calls[1]
       
       // Original version should use changelogCommonColDefs(false)
-      expect(changelogCommonColDefs).toHaveBeenCalledWith(false, false, 2024)
+      expect(changelogCommonColDefs).toHaveBeenCalledWith(false, false, 2024, { fuelTypes: [] })
       expect(originalVersionCall[0].columnDefs).toEqual([{ field: 'common', showActions: false }])
     })
 
