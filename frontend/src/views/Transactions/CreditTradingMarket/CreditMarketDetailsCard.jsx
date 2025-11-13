@@ -283,7 +283,7 @@ export const CreditMarketDetailsCard = ({
                 <form onSubmit={handleSubmit(handleSave)}>
                   <BCBox
                     display="grid"
-                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
+                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1.5fr' }}
                     columnGap={10}
                     rowGap={2}
                   >
@@ -492,7 +492,7 @@ export const CreditMarketDetailsCard = ({
                 <>
                   <BCBox
                     display="grid"
-                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
+                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1.5fr' }}
                     columnGap={10}
                     rowGap={2}
                   >
