@@ -381,6 +381,12 @@ class ComplianceReportRepository:
                 order.field = get_field_for_filter(
                     ComplianceReportListView, "report_type"
                 )
+            elif order.field in ("assigned_analyst", "assignedAnalyst"):
+                first_name_field = get_field_for_filter(
+                    ComplianceReportListView, "assigned_analyst_first_name"
+                )
+                query = query.order_by(sort_method(first_name_field))
+                continue
             else:
                 order.field = get_field_for_filter(
                     ComplianceReportListView, order.field
@@ -479,7 +485,9 @@ class ComplianceReportRepository:
     def _apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
-            logger.info(f"Processing filter: field={filter.field}, value={filter_value}")
+            logger.info(
+                f"Processing filter: field={filter.field}, value={filter_value}"
+            )
 
             # check if the date string is selected for filter
             if filter.filter is None:
@@ -529,52 +537,79 @@ class ComplianceReportRepository:
                 field = get_field_for_filter(
                     ComplianceReportListView, "organization_name"
                 )
-            elif filter.field == "compliance_period" or filter.field == "compliancePeriod":
+            elif (
+                filter.field == "compliance_period"
+                or filter.field == "compliancePeriod"
+            ):
                 field = get_field_for_filter(
                     ComplianceReportListView, "compliance_period"
                 )
             elif filter.field == "updateDate" or filter.field == "update_date":
                 field = get_field_for_filter(ComplianceReportListView, "update_date")
-            elif filter.field == "assignedAnalyst" or filter.field == "assigned_analyst":
-                logger.info(f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})")
+            elif (
+                filter.field == "assignedAnalyst" or filter.field == "assigned_analyst"
+            ):
+                logger.info(
+                    f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})"
+                )
                 # Handle empty string for unassigned (null analyst fields)
                 if filter_value == "" or filter_value is None:
                     # For unassigned reports, check if analyst_id is null/0 AND names are null/empty
-                    analyst_id_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_id")
-                    first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
-                    last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
+                    analyst_id_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_id"
+                    )
+                    first_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_first_name"
+                    )
+                    last_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_last_name"
+                    )
 
                     # Start with the simplest condition - just check if analyst_id is null
                     unassigned_condition = analyst_id_field.is_(None)
                     conditions.append(unassigned_condition)
-                    logger.info("Added condition for unassigned analyst (assigned_analyst_id IS NULL)")
+                    logger.info(
+                        "Added condition for unassigned analyst (assigned_analyst_id IS NULL)"
+                    )
                     continue  # Skip the regular filter application
                 else:
                     logger.info(f"Filtering by analyst initials: '{filter_value}'")
                     # Filter by analyst initials - need to construct initials from first/last name
-                    first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
-                    last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
+                    first_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_first_name"
+                    )
+                    last_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_last_name"
+                    )
 
                     # Create initials field by concatenating first letter of first and last name
                     initials_field = func.concat(
                         func.substring(first_name_field, 1, 1),
-                        func.substring(last_name_field, 1, 1)
+                        func.substring(last_name_field, 1, 1),
                     )
 
                     # Apply the filter condition directly
                     if filter_option == "contains":
                         conditions.append(initials_field.ilike(f"%{filter_value}%"))
-                        logger.info(f"Added CONTAINS condition for analyst initials like '%{filter_value}%'")
+                        logger.info(
+                            f"Added CONTAINS condition for analyst initials like '%{filter_value}%'"
+                        )
                     else:
                         conditions.append(initials_field == filter_value)
-                        logger.info(f"Added EQUALS condition for analyst initials = '{filter_value}'")
+                        logger.info(
+                            f"Added EQUALS condition for analyst initials = '{filter_value}'"
+                        )
                     continue  # Skip the regular filter application
             else:
-                logger.info(f"Unknown filter field: {filter.field}, trying to get field from model")
+                logger.info(
+                    f"Unknown filter field: {filter.field}, trying to get field from model"
+                )
                 try:
                     field = get_field_for_filter(ComplianceReportListView, filter.field)
                 except Exception as e:
-                    logger.error(f"Failed to get field '{filter.field}' from ComplianceReportListView: {e}")
+                    logger.error(
+                        f"Failed to get field '{filter.field}' from ComplianceReportListView: {e}"
+                    )
                     continue  # Skip this filter if field doesn't exist
 
             conditions.append(
@@ -1099,8 +1134,10 @@ class ComplianceReportRepository:
             .where(
                 and_(
                     UserProfile.is_active == True,
-                    UserProfile.organization_id.is_(None),  # IDIR users have no organization
-                    Role.name == RoleEnum.ANALYST
+                    UserProfile.organization_id.is_(
+                        None
+                    ),  # IDIR users have no organization
+                    Role.name == RoleEnum.ANALYST,
                 )
             )
             .order_by(UserProfile.first_name, UserProfile.last_name)
