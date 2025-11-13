@@ -165,7 +165,8 @@ describe('ViewLegacyComplianceReport', () => {
     // Set default mock returns first
     mockUseCurrentUser.mockReturnValue({
       data: { isGovernmentUser: false },
-      isLoading: false
+      isLoading: false,
+      hasRoles: vi.fn(() => false)
     })
     mockUseOrganization.mockReturnValue({
       data: { id: 1, name: 'Test Org' },

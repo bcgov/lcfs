@@ -359,7 +359,8 @@ export const renewableFuelColumns = (
     jetFuelEditableCells = []
   }
 
-  return [
+  // Define all potential columns
+  const allColumns = [
     {
       id: 'line',
       label: t('report:summaryLabels.line'),
@@ -415,6 +416,16 @@ export const renewableFuelColumns = (
       }
     }
   ]
+
+  // Filter out the jetFuel column if the compliance period year is less than 2024
+  const filteredColumns = allColumns.filter((col) => {
+    if (col.id === 'jetFuel' && parseInt(compliancePeriodYear) < 2024) {
+      return false // Exclude jet fuel column for years before 2024
+    }
+    return true // Include all other columns
+  })
+
+  return filteredColumns
 }
 
 export const lowCarbonColumns = (t) => [
