@@ -65,19 +65,30 @@ export const CreditTradingMarket = () => {
   }, [handleRefreshListings, isGovernmentUser, userOrgId, userOrgName])
 
   const tableSelectedOrgId = isGovernmentUser
-    ? selectedListing?.organizationId ?? null
-    : userOrgId ?? null
+    ? (selectedListing?.organizationId ?? null)
+    : (userOrgId ?? null)
 
   return (
     <Box data-testid="credit-trading-market-view">
       {/* Page heading and disclaimer */}
       <Box mb={3} mt={-2}>
-
         <BCTypography variant="body2" color="text.secondary" mb={3}>
           {t('creditMarket:marketDisclaimer')}
         </BCTypography>
       </Box>
 
+      {selectedListing && (
+        <Box sx={{ mb: 3 }}>
+          <CreditMarketDetailsCard
+            key={`${isGovernmentUser ? 'idir' : 'bceid'}-${
+              selectedListing.organizationId
+            }`}
+            organizationId={selectedListing.organizationId}
+            variant={isGovernmentUser ? 'admin' : 'self'}
+            onSaveSuccess={handleRefreshListings}
+          />
+        </Box>
+      )}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}
@@ -94,27 +105,15 @@ export const CreditTradingMarket = () => {
             size="small"
             color="primary"
             onClick={handleClearSelection}
-            startIcon={<FontAwesomeIcon icon={faTimes} />}
+            startIcon={
+              <FontAwesomeIcon icon={faTimes} className="small-icon" />
+            }
             disabled={!selectedListing}
           >
             {t('creditMarket:clearSelection', 'Clear selection')}
           </BCButton>
         )}
       </Stack>
-
-      {selectedListing && (
-        <Box sx={{ mb: 3 }}>
-          <CreditMarketDetailsCard
-            key={`${isGovernmentUser ? 'idir' : 'bceid'}-${
-              selectedListing.organizationId
-            }`}
-            organizationId={selectedListing.organizationId}
-            variant={isGovernmentUser ? 'admin' : 'self'}
-            onSaveSuccess={handleRefreshListings}
-          />
-        </Box>
-      )}
-
       {/* Market listings table */}
       <Box sx={{ mb: 3 }}>
         <CreditMarketTable

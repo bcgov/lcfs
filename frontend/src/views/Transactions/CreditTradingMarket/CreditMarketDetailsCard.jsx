@@ -24,6 +24,7 @@ import { roles, govRoles } from '@/constants/roles'
 import Loading from '@/components/Loading'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faTimes } from '@fortawesome/free-solid-svg-icons'
+import { phoneNumberFormatter } from '@/utils/formatters'
 
 export const CreditMarketDetailsCard = ({
   organizationId,
@@ -73,9 +74,7 @@ export const CreditMarketDetailsCard = ({
   )
 
   const updateCreditMarket =
-    variant === 'admin'
-      ? updateOrganizationMutation
-      : updateCurrentOrgMutation
+    variant === 'admin' ? updateOrganizationMutation : updateCurrentOrgMutation
 
   // Form setup for edit mode
   const initialFormValues = useMemo(
@@ -126,10 +125,8 @@ export const CreditMarketDetailsCard = ({
         : ''
     return {
       contactName:
-        getOrgValue(
-          'creditMarketContactName',
-          'credit_market_contact_name'
-        ) || defaultName,
+        getOrgValue('creditMarketContactName', 'credit_market_contact_name') ||
+        defaultName,
       phone:
         getOrgValue(
           'creditMarketContactPhone',
@@ -148,8 +145,7 @@ export const CreditMarketDetailsCard = ({
       isBuyer: Boolean(
         getOrgValue('creditMarketIsBuyer', 'credit_market_is_buyer')
       ),
-      creditsToSell:
-        getOrgValue('creditsToSell', 'credits_to_sell') ?? 0,
+      creditsToSell: getOrgValue('creditsToSell', 'credits_to_sell') ?? 0,
       displayInMarket: Boolean(
         getOrgValue('displayInCreditMarket', 'display_in_credit_market')
       )
@@ -168,8 +164,7 @@ export const CreditMarketDetailsCard = ({
   const isSeller = watch('isSeller')
 
   // Get the available balance for validation
-  const availableBalance =
-    getOrgValue('totalBalance', 'total_balance') ?? 0
+  const availableBalance = getOrgValue('totalBalance', 'total_balance') ?? 0
 
   const organizationDisplayName =
     getOrgValue('organizationName', 'organization_name', 'name') || ''
@@ -189,21 +184,16 @@ export const CreditMarketDetailsCard = ({
     return baseTitle
   }, [organizationDisplayName, t, variant])
 
-  const readOnlyValues = useMemo(
-    () => buildFormValues(),
-    [buildFormValues]
-  )
+  const readOnlyValues = useMemo(() => buildFormValues(), [buildFormValues])
 
   if (isLoading) {
     return <Loading />
   }
 
   const orgStatusValue =
-    organizationData?.orgStatus?.status ||
-    organizationData?.org_status?.status
+    organizationData?.orgStatus?.status || organizationData?.org_status?.status
 
-  const isRegistered =
-    orgStatusValue === ORGANIZATION_STATUSES.REGISTERED
+  const isRegistered = orgStatusValue === ORGANIZATION_STATUSES.REGISTERED
 
   // Check if user has the required roles for editing
   const hasEditPermission =
@@ -510,8 +500,9 @@ export const CreditMarketDetailsCard = ({
                         <strong>
                           {t('creditMarket:telephone', 'Telephone')}:
                         </strong>{' '}
-                        {readOnlyValues.phone ||
-                          t('common:notAvailable', 'Not available')}
+                        {phoneNumberFormatter({
+                          value: readOnlyValues.phone
+                        }) || t('common:notAvailable', 'Not available')}
                       </BCTypography>
 
                       <BCTypography variant="body4">
@@ -537,7 +528,9 @@ export const CreditMarketDetailsCard = ({
                               )
                             )
                           ) {
-                            displayRoles.push(t('creditMarket:seller', 'Seller'))
+                            displayRoles.push(
+                              t('creditMarket:seller', 'Seller')
+                            )
                           }
                           if (
                             Boolean(

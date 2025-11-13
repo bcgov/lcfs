@@ -179,10 +179,6 @@ export const CreditMarketTable = forwardRef(
             )}
             queryData={queryData}
             dataKey="creditMarketListings"
-            autoSizeStrategy={{
-              type: 'fitGridWidth',
-              defaultMinWidth: 50
-            }}
             paginationOptions={paginationOptions}
             onPaginationChange={(newPagination) =>
               setPaginationOptions((prev) => ({

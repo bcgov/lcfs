@@ -1,3 +1,4 @@
+import { numberFormatter, phoneNumberFormatter } from '@/utils/formatters'
 import { RoleRenderer } from '@/utils/grid/cellRenderers'
 
 // Column definitions for the credit trading market table
@@ -15,27 +16,28 @@ export const creditMarketColDefs = (t) => [
     headerName: t('creditMarket:creditsToSell', 'Credits to sell'),
     field: 'creditsToSell',
     flex: 1,
-    minWidth: 120,
+    minWidth: 160,
     sortable: true,
     filter: 'agNumberColumnFilter',
     floatingFilter: true,
-    cellRenderer: (params) => {
+    valueGetter: (params) => {
       // Show N/A if credits to sell is 0, null, or undefined
       if (
-        params.value === null ||
-        params.value === undefined ||
-        params.value === 0
+        params.data.creditsToSell === null ||
+        params.data.creditsToSell === undefined ||
+        params.data.creditsToSell === 0
       ) {
         return 'N/A'
       }
-      return params.value
-    }
+      return parseInt(params.data.creditsToSell)
+    },
+    valueFormatter: numberFormatter
   },
   {
     headerName: t('creditMarket:roleInMarket', 'Role in market'),
     field: 'roleInMarket',
     flex: 1.5,
-    minWidth: 100,
+    minWidth: 220,
     sortable: true,
     filter: 'agSetColumnFilter',
     floatingFilter: true,
@@ -66,6 +68,7 @@ export const creditMarketColDefs = (t) => [
     minWidth: 150,
     sortable: true,
     filter: 'agTextColumnFilter',
+    valueFormatter: phoneNumberFormatter,
     floatingFilter: true
   },
   {
