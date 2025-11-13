@@ -307,6 +307,48 @@ const NotificationSettingsForm = ({
                             notificationTypes[notificationTypeName]
                           if (!notificationTypeId) return null
 
+                          const renderNotificationCheckbox =
+                            (channel) =>
+                            ({ field }) => {
+                              const toggleSelection = (isChecked) => {
+                                field.onChange(isChecked)
+                                handleCheckboxChange(
+                                  notificationTypeKey,
+                                  channel,
+                                  isChecked
+                                )
+                              }
+
+                              const handleKeyDown = (event) => {
+                                if (
+                                  event.key !== 'Enter' ||
+                                  event.defaultPrevented
+                                ) {
+                                  return
+                                }
+
+                                event.preventDefault()
+                                event.stopPropagation()
+                                toggleSelection(!field.value)
+                              }
+
+                              return (
+                                <Checkbox
+                                  name={field.name}
+                                  inputRef={field.ref}
+                                  onBlur={field.onBlur}
+                                  checked={!!field.value}
+                                  onChange={(event) =>
+                                    toggleSelection(event.target.checked)
+                                  }
+                                  onKeyDown={handleKeyDown}
+                                  inputProps={{ onKeyDown: handleKeyDown }}
+                                  color="primary"
+                                  disabled={isFormLoading}
+                                />
+                              )
+                            }
+
                           return (
                             <TableRow key={notificationTypeName}>
                               {/* Email Checkbox */}
@@ -322,21 +364,8 @@ const NotificationSettingsForm = ({
                                   name={`${notificationTypeKey}_${notificationChannels.EMAIL}`}
                                   control={control}
                                   defaultValue={false}
-                                  render={({ field }) => (
-                                    <Checkbox
-                                      {...field}
-                                      checked={field.value}
-                                      onChange={(e) => {
-                                        field.onChange(e)
-                                        handleCheckboxChange(
-                                          notificationTypeKey,
-                                          notificationChannels.EMAIL,
-                                          e.target.checked
-                                        )
-                                      }}
-                                      color="primary"
-                                      disabled={isFormLoading} // Disable during loading
-                                    />
+                                  render={renderNotificationCheckbox(
+                                    notificationChannels.EMAIL
                                   )}
                                 />
                               </TableCell>
@@ -353,21 +382,8 @@ const NotificationSettingsForm = ({
                                   name={`${notificationTypeKey}_${notificationChannels.IN_APP}`}
                                   control={control}
                                   defaultValue={false}
-                                  render={({ field }) => (
-                                    <Checkbox
-                                      {...field}
-                                      checked={field.value}
-                                      onChange={(e) => {
-                                        field.onChange(e)
-                                        handleCheckboxChange(
-                                          notificationTypeKey,
-                                          notificationChannels.IN_APP,
-                                          e.target.checked
-                                        )
-                                      }}
-                                      color="primary"
-                                      disabled={isFormLoading} // Disable during loading
-                                    />
+                                  render={renderNotificationCheckbox(
+                                    notificationChannels.IN_APP
                                   )}
                                 />
                               </TableCell>

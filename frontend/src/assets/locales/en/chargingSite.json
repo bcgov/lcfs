@@ -121,6 +121,7 @@
     "siteName": "Site name",
     "registrationNumber": "Registration #",
     "version": "Version #",
+    "organizationName": "Organization",
     "allocatingOrg": "Allocating organization",
     "serialNumber": "Serial #",
     "manufacturer": "Manufacturer",
@@ -132,7 +133,9 @@
     "intendedUsers": "Intended users",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "notes": "FSE notes"
+    "notes": "FSE notes",
+    "created": "Created",
+    "lastUpdated": "Last updated"
   },
   "noChargingEquipmentsFnd": "No charging equipments found at the selected site",
   "confirmation": "Confirmation",
@@ -141,6 +144,6 @@
   "setSelectedAsSubmittedConfirmTxt": "This will set the selected FSE to Submitted status. No more edits will be possible. Do you want to proceed?",
   "equipmentBulkUpdateSuccess": "Status update on multiple equipment was completed successfully.",
   "equipmentBulkUpdateFailed": "Status update on multiple equipment was not completed successfully.",
-  "importBtn": "Upload Excel",
+  "importBtn": "Upload Excel template",
   "importNoRows": "No charging sites were imported."
 }

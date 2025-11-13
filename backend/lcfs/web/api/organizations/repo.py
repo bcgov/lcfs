@@ -4,7 +4,7 @@ from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
-from typing import List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import joinedload
@@ -59,6 +59,23 @@ from .schema import (
 
 logger = structlog.get_logger(__name__)
 
+ORG_TYPE_SHORT_LABELS = {
+    "fuel_supplier": "Supplier",
+    "aggregator": "Aggregator",
+    "fuel_producer": "Producer",
+    "exempted_supplier": "Exempted",
+    "initiative_agreement_holder": "IA Holder",
+}
+
+
+def get_short_org_type_label(org_type_key: str | None, description: str | None) -> str:
+    if org_type_key:
+        key = org_type_key.lower()
+        if key in ORG_TYPE_SHORT_LABELS:
+            return ORG_TYPE_SHORT_LABELS[key]
+        return org_type_key.replace("_", " ").title()
+    return description or ""
+
 
 class OrganizationsRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
@@ -86,6 +103,8 @@ class OrganizationsRepository:
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
+                OrganizationType.org_type,
+                OrganizationType.description,
                 func.abs(
                     func.sum(
                         case(
@@ -120,10 +139,17 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
+            .outerjoin(
+                OrganizationType,
+                Organization.organization_type_id
+                == OrganizationType.organization_type_id,
+            )
             .group_by(
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
+                OrganizationType.org_type,
+                OrganizationType.description,
             )
             .order_by(Organization.organization_id)
         )
@@ -131,11 +157,12 @@ class OrganizationsRepository:
             [
                 org_id,
                 name,
-                total_balance or 0,
-                reserved_balance or 0,
+                int(total_balance or 0),
+                int(reserved_balance or 0),
+                get_short_org_type_label(org_type, org_description),
                 status.value,
             ]
-            for org_id, name, status, reserved_balance, total_balance in result
+            for org_id, name, status, org_type, org_description, reserved_balance, total_balance in result
         ]
 
     @repo_handler
@@ -229,6 +256,11 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
+            .join(
+                OrganizationType,
+                Organization.organization_type_id
+                == OrganizationType.organization_type_id,
+            )
             .options(
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),
@@ -243,6 +275,11 @@ class OrganizationsRepository:
                 OrganizationStatus,
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
+            )
+            .join(
+                OrganizationType,
+                Organization.organization_type_id
+                == OrganizationType.organization_type_id,
             )
         )
 
@@ -295,6 +332,8 @@ class OrganizationsRepository:
             if field_name == "status":
                 # Sort by organization status description
                 query = query.order_by(sort_method(OrganizationStatus.status))
+            elif field_name == "org_type":
+                query = query.order_by(sort_method(OrganizationType.description))
             elif field_name == "registrationStatus":
                 # Sort by whether the organization is registered (status == "Registered")
                 registration_case = case(
@@ -370,7 +409,13 @@ class OrganizationsRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
-    async def get_organization_names(self, conditions=None, order_by=("name", "asc")):
+    async def get_organization_names(
+        self,
+        conditions=None,
+        order_by=("name", "asc"),
+        org_type_filter: str = "fuel_supplier",
+        org_filters: Dict[str, List[str]] | None = None,
+    ):
         """
         Fetches organization names and details based on provided conditions and dynamic ordering.
         Only returns organizations with type 'fuel_supplier'.
@@ -383,15 +428,33 @@ class OrganizationsRepository:
         Returns:
             List of dictionaries with organization details including ID, names, balances, and status.
         """
+        normalized_org_type = (org_type_filter or "fuel_supplier").lower()
         query = (
             select(Organization)
+            .options(joinedload(Organization.org_type))
             .join(OrganizationStatus)
-            .join(Organization.org_type)
-            .filter(OrganizationType.org_type == "fuel_supplier")
+            .join(Organization.org_type, isouter=True)
         )
+
+        if normalized_org_type != "all":
+            query = query.filter(OrganizationType.org_type == normalized_org_type)
 
         if conditions:
             query = query.filter(*conditions)
+
+        if org_filters:
+            for field, values in org_filters.items():
+                if not values:
+                    continue
+
+                column_attr = getattr(Organization, field, None)
+                if column_attr is None:
+                    continue
+
+                if isinstance(values, list) and len(values) > 1:
+                    query = query.filter(column_attr.in_(values))
+                else:
+                    query = query.filter(column_attr == values[0])
 
         # Apply dynamic ordering
         if order_by:
@@ -407,17 +470,28 @@ class OrganizationsRepository:
         result = await self.db.execute(query)
         organizations = result.scalars().all()
 
-        return [
-            {
-                "organization_id": org.organization_id,
-                "name": org.name,
-                "operating_name": org.operating_name,
-                "total_balance": org.total_balance,
-                "reserved_balance": org.reserved_balance,
-                "status": org.org_status,
-            }
-            for org in organizations
-        ]
+        organization_summaries = []
+        for org in organizations:
+            org_type_value = None
+            if org.org_type is not None:
+                try:
+                    org_type_value = org.org_type.org_type
+                except AttributeError:
+                    org_type_value = None
+
+            organization_summaries.append(
+                {
+                    "organization_id": org.organization_id,
+                    "name": org.name,
+                    "operating_name": org.operating_name,
+                    "total_balance": org.total_balance,
+                    "reserved_balance": org.reserved_balance,
+                    "status": org.org_status,
+                    "org_type": org_type_value,
+                }
+            )
+
+        return organization_summaries
 
     @repo_handler
     async def get_externally_registered_organizations(self, conditions):

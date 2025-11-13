@@ -106,17 +106,18 @@ describe('Keycloak Utils', () => {
   })
 
   describe('logout', () => {
-    it('should clear local storage when logging out', () => {
+    beforeEach(() => {
+      // Mock sessionStorage
+      vi.spyOn(Storage.prototype, 'clear').mockImplementation(() => {})
+    })
+
+    it('should clear all storage when logging out', () => {
       // Call the logout function
       logout()
 
-      // Verify that local storage item was removed
-      expect(window.localStorage.removeItem).toHaveBeenCalledWith(
-        'keycloak-logged-in'
-      )
-
-      // The logout function doesn't actually manage any timers, so we don't expect clearTimeout to be called
-      // expect(mockClearTimeout).toHaveBeenCalled()
+      // Verify that sessionStorage and localStorage were cleared
+      expect(sessionStorage.clear).toHaveBeenCalled()
+      expect(localStorage.clear).toHaveBeenCalled()
     })
 
     it('should handle missing idToken', () => {

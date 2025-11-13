@@ -30,6 +30,36 @@ from lcfs.web.api.base import (
 logger = structlog.get_logger(__name__)
 
 
+def _organization_name_expression():
+    """
+    Build a correlated subquery that resolves the primary organization name for a charging site.
+    """
+    return (
+        select(Organization.name)
+        .where(Organization.organization_id == ChargingSite.organization_id)
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+
+
+def _allocating_organization_display_name_expression():
+    """
+    Build an expression that returns the allocating organization's display name.
+    Prioritizes the related organization name, falling back to the free-text field.
+    """
+    allocating_org_name_subquery = (
+        select(Organization.name)
+        .where(
+            Organization.organization_id == ChargingSite.allocating_organization_id
+        )
+        .correlate(ChargingSite)
+        .scalar_subquery()
+    )
+    return func.coalesce(
+        allocating_org_name_subquery, ChargingSite.allocating_organization_name
+    )
+
+
 class ChargingSiteRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
@@ -394,9 +424,18 @@ class ChargingSiteRepository:
         # Apply sort orders
         for order in sort_orders or []:
             direction = asc if getattr(order, "direction", "asc") == "asc" else desc
-            field = getattr(ChargingSite, getattr(order, "field", "update_date"), None)
-            if field is not None:
-                stmt = stmt.order_by(direction(field))
+            field_name = getattr(order, "field", "update_date")
+
+            if field_name == "organization":
+                stmt = stmt.order_by(direction(_organization_name_expression()))
+            elif field_name == "allocating_organization":
+                stmt = stmt.order_by(
+                    direction(_allocating_organization_display_name_expression())
+                )
+            else:
+                field = getattr(ChargingSite, field_name, None)
+                if field is not None:
+                    stmt = stmt.order_by(direction(field))
 
         if not sort_orders:
             stmt = stmt.order_by(ChargingSite.update_date.desc())

@@ -23,7 +23,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { chargingEquipmentColDefs } from '@/views/ChargingSite/components/_schema'
 
-const defaultSortModel = [{ field: 'updated_date', direction: 'desc' }]
+const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 
 const defaultColDef = {
   editable: false,
@@ -50,8 +50,15 @@ const initialPaginationOptions = {
   filters: []
 }
 
+const EXCLUDED_ORG_TYPES = new Set([
+  'non_bceid_supplier',
+  'exempted_supplier',
+  'fuel_producer',
+  'initiative_agreement_holder'
+])
+
 export const ChargingEquipment = () => {
-  const { t } = useTranslation(['common', 'chargingEquipment'])
+  const { t } = useTranslation(['common', 'chargingEquipment', 'chargingSite'])
   const navigate = useNavigate()
   const location = useLocation()
   const gridRef = useRef()
@@ -89,8 +96,52 @@ export const ChargingEquipment = () => {
   // Get organization names for IDIR users
   const { data: orgNames = [], isLoading: orgLoading } = useOrganizationNames(
     null,
+    { orgFilter: 'all' },
     { enabled: isIDIR }
   )
+
+  const filteredOrgNames = useMemo(
+    () =>
+      (orgNames || []).filter((org) => {
+        const orgTypeKey = (org?.orgType || org?.org_type || '').toLowerCase()
+        return !EXCLUDED_ORG_TYPES.has(orgTypeKey)
+      }),
+    [orgNames]
+  )
+
+  useEffect(() => {
+    if (!selectedOrg.id) return
+    const stillAvailable = filteredOrgNames.some(
+      (org) => org.organizationId === selectedOrg.id
+    )
+    if (!stillAvailable) {
+      setSelectedOrg({ id: null, label: null })
+      sessionStorage.removeItem('fse-index-orgFilter')
+    }
+  }, [filteredOrgNames, selectedOrg.id])
+
+  const renderOrganizationOption = (props, option) => {
+    const orgTypeLabel = option?.orgType || option?.org_type
+    const formattedOrgType = orgTypeLabel
+      ? orgTypeLabel
+          .split('_')
+          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+          .join(' ')
+      : null
+
+    return (
+      <li {...props}>
+        <Box display="flex" flexDirection="column">
+          <BCTypography variant="body2">{option?.name || ''}</BCTypography>
+          {/* {formattedOrgType && (
+            <BCTypography variant="caption" color="text.secondary">
+              {formattedOrgType}
+            </BCTypography>
+          )} */}
+        </Box>
+      </li>
+    )
+  }
 
   // Enhanced organization change handler with caching
   const handleOrganizationChange = useCallback((event, option) => {
@@ -118,9 +169,12 @@ export const ChargingEquipment = () => {
 
   // Find the selected organization object for the Autocomplete value
   const selectedOrgOption = useMemo(() => {
-    if (!selectedOrg.id || !orgNames.length) return null
-    return orgNames.find((org) => org.organizationId === selectedOrg.id) || null
-  }, [selectedOrg.id, orgNames])
+    if (!selectedOrg.id || !filteredOrgNames.length) return null
+    return (
+      filteredOrgNames.find((org) => org.organizationId === selectedOrg.id) ||
+      null
+    )
+  }, [selectedOrg.id, filteredOrgNames])
 
   // Include organization filter in pagination options for IDIR users
   const enhancedPaginationOptions = useMemo(() => {
@@ -132,13 +186,14 @@ export const ChargingEquipment = () => {
     return options
   }, [paginationOptions, isIDIR, selectedOrg.id])
 
+  const equipmentQuery = useChargingEquipment(enhancedPaginationOptions)
   const {
     data: equipmentData,
     isLoading,
     isError,
     error,
     refetch
-  } = useChargingEquipment(enhancedPaginationOptions)
+  } = equipmentQuery
 
   const {
     submitEquipment,
@@ -161,7 +216,7 @@ export const ChargingEquipment = () => {
   }, [location, navigate])
 
   const getRowId = useCallback((params) => {
-    return params.data.charging_equipment_id
+    return params.data.chargingEquipmentId
   }, [])
 
   const defaultColDef = useMemo(
@@ -190,23 +245,31 @@ export const ChargingEquipment = () => {
 
     if (selectMode === 'draft-updated') {
       // Deselect all
+      isProgrammaticSelection.current = true
       gridRef.current.api.deselectAll()
       setSelectMode(null)
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 150)
     } else {
       // Select all Draft and Updated rows
       isProgrammaticSelection.current = true
-      gridRef.current.api.forEachNode((node) => {
-        if (node.data.status === 'Draft' || node.data.status === 'Updated') {
-          node.setSelected(true)
-        } else {
-          node.setSelected(false)
-        }
-      })
+      // Clear any existing selections first
+      gridRef.current.api.deselectAll()
+      // Set mode state before starting selections
       setSelectMode('draft-updated')
-      // Let ag-Grid finish emitting selection events before re-enabling handler logic
+      // Use a small delay to ensure deselectAll completes
       setTimeout(() => {
-        isProgrammaticSelection.current = false
-      }, 0)
+        gridRef.current.api.forEachNode((node) => {
+          if (node.data.status === 'Draft' || node.data.status === 'Updated') {
+            node.setSelected(true)
+          }
+        })
+        // Let ag-Grid finish emitting selection events before re-enabling handler logic
+        setTimeout(() => {
+          isProgrammaticSelection.current = false
+        }, 150)
+      }, 50)
     }
   }
 
@@ -218,22 +281,31 @@ export const ChargingEquipment = () => {
 
     if (selectMode === 'validated') {
       // Deselect all
+      isProgrammaticSelection.current = true
       gridRef.current.api.deselectAll()
       setSelectMode(null)
+      setTimeout(() => {
+        isProgrammaticSelection.current = false
+      }, 150)
     } else {
       // Select all Validated rows
       isProgrammaticSelection.current = true
-      gridRef.current.api.forEachNode((node) => {
-        if (node.data.status === 'Validated') {
-          node.setSelected(true)
-        } else {
-          node.setSelected(false)
-        }
-      })
+      // Clear any existing selections first
+      gridRef.current.api.deselectAll()
+      // Set mode state before starting selections
       setSelectMode('validated')
+      // Use a small delay to ensure deselectAll completes
       setTimeout(() => {
-        isProgrammaticSelection.current = false
-      }, 0)
+        gridRef.current.api.forEachNode((node) => {
+          if (node.data.status === 'Validated') {
+            node.setSelected(true)
+          }
+        })
+        // Let ag-Grid finish emitting selection events before re-enabling handler logic
+        setTimeout(() => {
+          isProgrammaticSelection.current = false
+        }, 150)
+      }, 50)
     }
   }
 
@@ -245,18 +317,18 @@ export const ChargingEquipment = () => {
     // Check if user is IDIR/government
     const isIDIR = hasAnyRole(...govRoles)
 
-    const { charging_equipment_id, charging_site_id } = params.data
+    const { chargingEquipmentId, chargingSiteId } = params.data
 
     if (isIDIR) {
       // For IDIR users, navigate to the charging site page for this FSE
       navigate(
-        ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', charging_site_id)
+        ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', chargingSiteId)
       )
       return
     }
 
     // For supplier users, navigate to edit route
-    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', charging_equipment_id))
+    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', chargingEquipmentId))
   }
 
   const handleSelectionChanged = (event) => {
@@ -284,7 +356,7 @@ export const ChargingEquipment = () => {
     // Only submit equipment with Draft or Updated status
     const equipmentIds = selectedRows
       .filter((row) => row.status === 'Draft' || row.status === 'Updated')
-      .map((row) => row.charging_equipment_id)
+      .map((row) => row.chargingEquipmentId)
 
     if (equipmentIds.length === 0) {
       alertRef.current?.triggerAlert({
@@ -303,7 +375,7 @@ export const ChargingEquipment = () => {
       // Optimistically update grid statuses
       gridRef.current?.api?.forEachNode((node) => {
         if (
-          equipmentIds.includes(node.data.charging_equipment_id) &&
+          equipmentIds.includes(node.data.chargingEquipmentId) &&
           (node.data.status === 'Draft' || node.data.status === 'Updated')
         ) {
           node.updateData({ ...node.data, status: 'Submitted' })
@@ -325,7 +397,7 @@ export const ChargingEquipment = () => {
     // Only decommission equipment with Validated status
     const equipmentIds = selectedRows
       .filter((row) => row.status === 'Validated')
-      .map((row) => row.charging_equipment_id)
+      .map((row) => row.chargingEquipmentId)
 
     if (equipmentIds.length === 0) {
       alertRef.current?.triggerAlert({
@@ -344,7 +416,7 @@ export const ChargingEquipment = () => {
       // Optimistically update grid statuses
       gridRef.current?.api?.forEachNode((node) => {
         if (
-          equipmentIds.includes(node.data.charging_equipment_id) &&
+          equipmentIds.includes(node.data.chargingEquipmentId) &&
           node.data.status === 'Validated'
         ) {
           node.updateData({ ...node.data, status: 'Decommissioned' })
@@ -452,13 +524,14 @@ export const ChargingEquipment = () => {
                       disablePortal
                       id="fse-orgs"
                       loading={orgLoading}
-                      options={orgNames}
+                      options={filteredOrgNames}
                       value={selectedOrgOption}
-                      getOptionLabel={(option) => option.name}
+                      getOptionLabel={(option) => option?.name || ''}
                       isOptionEqualToValue={(option, value) =>
                         option.organizationId === value.organizationId
                       }
                       onChange={handleOrganizationChange}
+                      renderOption={renderOrganizationOption}
                       sx={({ functions: { pxToRem } }) => ({
                         width: 300,
                         '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
@@ -540,7 +613,7 @@ export const ChargingEquipment = () => {
                 gridRef={gridRef}
                 alertRef={alertRef}
                 columnDefs={chargingEquipmentColDefs(t, isIDIR, {
-                  enableSelection: true,
+                  enableSelection: true && !isIDIR,
                   showDateColumns: true,
                   showIntendedUsers: true,
                   showOrganizationColumn: isIDIR
@@ -552,7 +625,7 @@ export const ChargingEquipment = () => {
                 gridKey="charging-equipment"
                 paginationOptions={paginationOptions}
                 onPaginationChange={(opts) => setPaginationOptions(opts)}
-                queryData={{ data: equipmentData, isLoading, isError, error }}
+                queryData={equipmentQuery}
                 onRowClicked={handleRowClick}
                 rowSelection="multiple"
                 onSelectionChanged={handleSelectionChanged}

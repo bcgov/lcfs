@@ -87,13 +87,16 @@ def upgrade() -> None:
     )
 
     # Step 6: Drop indexes for charging_equipment.allocating_organization_id (if exists)
-    op.execute("""
+    op.execute(
+        """
         DROP INDEX IF EXISTS ix_charging_equipment_allocating_org_id
-    """)
+    """
+    )
 
     # Step 7: Drop allocating_organization_id column from charging_equipment
     # Drop the foreign key constraint if it exists (handle different naming conventions)
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             IF EXISTS (
@@ -111,22 +114,27 @@ def upgrade() -> None:
                 ALTER TABLE charging_equipment DROP CONSTRAINT charging_equipment_allocating_organization_id_fkey;
             END IF;
         END $$;
-    """)
-    op.drop_column("charging_equipment", "allocating_organization_id")
+    """
+    )
+    op.drop_column("charging_equipment", "allocating_organization_id", if_exists=True)
 
     # Step 8: Drop organization_name column from charging_equipment (related field)
-    op.drop_column("charging_equipment", "organization_name")
+    op.drop_column("charging_equipment", "organization_name", if_exists=True)
 
     # Step 9: Drop indexes for charging_site_intended_user_association (if exist)
-    op.execute("""
+    op.execute(
+        """
         DROP INDEX IF EXISTS ix_cs_intended_user_site_id
-    """)
-    op.execute("""
+    """
+    )
+    op.execute(
+        """
         DROP INDEX IF EXISTS ix_cs_intended_user_user_type_id
-    """)
+    """
+    )
 
     # Step 10: Drop charging_site_intended_user_association table
-    op.drop_table("charging_site_intended_user_association")
+    op.drop_table("charging_site_intended_user_association", if_exists=True)
 
 
 def downgrade() -> None:
@@ -230,10 +238,10 @@ def downgrade() -> None:
     )
 
     # Step 7: Drop index for allocating_organization_id
-    op.drop_index("ix_charging_site_allocating_org_id", "charging_site")
+    op.drop_index("ix_charging_site_allocating_org_id", "charging_site", if_exists=True)
 
     # Step 8: Drop allocating_organization_name from charging_site
-    op.drop_column("charging_site", "allocating_organization_name")
+    op.drop_column("charging_site", "allocating_organization_name", if_exists=True)
 
     # Step 9: Drop allocating_organization_id from charging_site
-    op.drop_column("charging_site", "allocating_organization_id")
+    op.drop_column("charging_site", "allocating_organization_id", if_exists=True)

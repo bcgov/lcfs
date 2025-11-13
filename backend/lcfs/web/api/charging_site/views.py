@@ -123,7 +123,11 @@ async def get_site_names(
     """
     Get site names and IDs for organization
     """
-    org_id = organization_id if request.user.is_government and organization_id else request.user.organization_id
+    org_id = (
+        organization_id
+        if request.user.is_government and organization_id
+        else request.user.organization_id
+    )
     return await service.get_site_names_by_organization(org_id)
 
 
@@ -321,7 +325,9 @@ async def update_charging_site_row(
 ):
     """Endpoint to update single charging site row"""
     # Update existing charging site row
-    await validate.charging_site_delete_update_access(charging_site_id, organization_id)
+    await validate.charging_site_delete_update_access(
+        charging_site_id, organization_id, request_data
+    )
     return await cs_service.update_charging_site(request_data)
 
 
