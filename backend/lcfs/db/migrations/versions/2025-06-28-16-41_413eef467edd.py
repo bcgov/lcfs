@@ -9,6 +9,7 @@ Create Date: 2025-06-20 16:41:55.294035
 import sqlalchemy as sa
 from alembic import op
 from lcfs.db.dependencies import (
+    create_role_if_not_exists,
     execute_sql_sections,
     find_and_read_sql_file,
     parse_sql_sections,
@@ -24,6 +25,9 @@ depends_on = None
 def recreate_compliance_reports_view():
     """Recreate the v_compliance_report view from metabase.sql"""
     try:
+        # Ensure role exists before creating views
+        create_role_if_not_exists()
+        
         # Read the metabase.sql file
         content = find_and_read_sql_file(sqlFile="metabase.sql")
         sections = parse_sql_sections(content)

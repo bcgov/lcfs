@@ -145,7 +145,5 @@
   "equipmentBulkUpdateSuccess": "Status update on multiple equipment was completed successfully.",
   "equipmentBulkUpdateFailed": "Status update on multiple equipment was not completed successfully.",
   "importBtn": "Upload Excel template",
-  "importNoRows": "No charging sites were imported.",
-  "incompleteSite": "Are you sure you want to return to the index page without saving your changes?",
-  "returnToSite": "Return to site(s)"
+  "importNoRows": "No charging sites were imported."
 }

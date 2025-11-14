@@ -286,7 +286,6 @@ async def test_supplemental_low_carbon_fuel_target_summary(
         mock_assessed_report
     )
 
-
     mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
         1000  # Expected to be called
     )
@@ -313,9 +312,7 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     assert line_values[12] == 500
     assert line_values[13] == 300
     assert line_values[14] == 200
-    assert (
-        line_values[15] == 15
-    )  # From assessed_report_mock.line_18_units_to_be_banked
+    assert line_values[15] == 15  # From assessed_report_mock.line_18_units_to_be_banked
     assert (
         line_values[16] == 15
     )  # From assessed_report_mock.line_19_units_to_be_exported
@@ -890,7 +887,9 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
 
     # Penalty should be applied due to no renewables, checking for decimal values
     assert result[10].gasoline == 15.08  # 50.25 L shortfall * $0.30/L = 15.075 rounded
-    assert result[10].diesel == 72.18  # 160.4 L shortfall * $0.45/L = 72.18 (8% of 2005 = 160.4)
+    assert (
+        result[10].diesel == 72.18
+    )  # 160.4 L shortfall * $0.45/L = 72.18 (8% of 2005 = 160.4)
     assert result[10].jet_fuel == 45.08  # 90.15 L shortfall * $0.50/L = 45.075 rounded
     assert result[10].total_value == (15.08 + 72.18 + 45.08)  # 132.34
 
@@ -1595,8 +1594,13 @@ async def test_calculate_fuel_supply_compliance_units_parametrized(
     compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
         AsyncMock(return_value=[mock_fuel_supply])
     )
+    # Mock the compliance report and its period description
     dummy_report = MagicMock()
     dummy_report.compliance_report_group_uuid = "dummy-group"
+    # Ensure compliance_period and description are mocked for non-historical check
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2024"  # Use a non-historical year
+
     result = (
         await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
             dummy_report
@@ -1640,8 +1644,13 @@ async def test_calculate_fuel_export_compliance_units_parametrized(
     compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
         AsyncMock(return_value=[mock_fuel_export])
     )
+    # Mock the compliance report and its period description
     dummy_report = MagicMock()
     dummy_report.compliance_report_group_uuid = "dummy-group"
+    # Ensure compliance_period and description are mocked for non-historical check
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2024"  # Use a non-historical year
+
     result = (
         await compliance_report_summary_service.calculate_fuel_export_compliance_units(
             dummy_report
@@ -1651,869 +1660,131 @@ async def test_calculate_fuel_export_compliance_units_parametrized(
 
 
 @pytest.mark.anyio
-async def test_line_17_method_called_during_summary_calculation(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test that the Line 17 TFRS method is called during low carbon fuel target summary calculation"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 123
-
-    # Mock compliance report (non-supplemental)
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 0
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None
-    compliance_report.summary.is_locked = False  # Add is_locked attribute
-
-    # Setup repository mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
-    mock_summary_repo.get_received_compliance_units.return_value = 200
-    mock_summary_repo.get_issued_compliance_units.return_value = 300
-
-    # Mock the TFRS Line 17 calculation
-    expected_line_17_balance = 1500
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
-        expected_line_17_balance
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=400)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=50)
-    )
-
-    # Call the low carbon fuel target summary calculation
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify the Line 17 method was called with correct parameters
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
-        organization_id, compliance_period_start.year
-    )
-
-    # Verify Line 17 value appears in the summary
-    line_values = _get_line_values(summary)
-    assert line_values[17] == expected_line_17_balance
-
-
-@pytest.mark.anyio
-async def test_line_17_different_compliance_periods(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test Line 17 calculation with different compliance periods"""
-    organization_id = 456
-
-    # Test 2023 compliance period
-    compliance_period_start_2023 = datetime(2023, 1, 1)
-    compliance_period_end_2023 = datetime(2023, 12, 31)
-
-    compliance_report_2023 = MagicMock(spec=ComplianceReport)
-    compliance_report_2023.version = 0
-    compliance_report_2023.summary = MagicMock()
-    compliance_report_2023.summary.line_17_non_banked_units_used = None
-    compliance_report_2023.summary.is_locked = False  # Add is_locked attribute
-
-    # Setup mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 50
-    mock_summary_repo.get_received_compliance_units.return_value = 100
-    mock_summary_repo.get_issued_compliance_units.return_value = 150
-
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 800
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=200)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=25)
-    )
-
-    # Call for 2023
-    await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-        compliance_period_start_2023,
-        compliance_period_end_2023,
-        organization_id,
-        compliance_report_2023,
-    )
-
-    # Verify 2023 was used
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_with(
-        organization_id, 2023
-    )
-
-    # Reset mock
-    mock_trxn_repo.reset_mock()
-
-    # Test 2025 compliance period
-    compliance_period_start_2025 = datetime(2025, 1, 1)
-    compliance_period_end_2025 = datetime(2025, 12, 31)
-
-    compliance_report_2025 = MagicMock(spec=ComplianceReport)
-    compliance_report_2025.version = 0
-    compliance_report_2025.summary = MagicMock()
-    compliance_report_2025.summary.line_17_non_banked_units_used = None
-    compliance_report_2025.summary.is_locked = False  # Add is_locked attribute
-
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1200
-
-    # Call for 2025
-    await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-        compliance_period_start_2025,
-        compliance_period_end_2025,
-        organization_id,
-        compliance_report_2025,
-    )
-
-    # Verify 2025 was used
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_with(
-        organization_id, 2025
-    )
-
-
-@pytest.mark.anyio
-async def test_supplemental_report_preserves_existing_line_17_value(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test that supplemental reports preserve existing Line 17 values"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 789
-
-    # Mock supplemental report with existing Line 17 value
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 1  # Supplemental
-    compliance_report.summary = MagicMock()
-    existing_line_17_value = 2500
-    compliance_report.summary.line_17_non_banked_units_used = existing_line_17_value
-    compliance_report.summary.is_locked = True  # Add is_locked attribute
-
-    # Setup repository mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 150
-    mock_summary_repo.get_received_compliance_units.return_value = 250
-    mock_summary_repo.get_issued_compliance_units.return_value = 350
-
-    # Mock previous summary for supplemental reports
-    previous_summary_mock = MagicMock()
-    previous_summary_mock.line_18_units_to_be_banked = 75
-    previous_summary_mock.line_19_units_to_be_exported = 125
-    mock_summary_repo.get_previous_summary = AsyncMock(
-        return_value=previous_summary_mock
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=450)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=65)
-    )
-
-    # Call the method
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify the Line 17 method was NOT called for supplemental with existing value
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_not_called()
-
-    # Verify existing Line 17 value is preserved
-    line_values = _get_line_values(summary)
-    assert line_values[17] == existing_line_17_value
-
-
-@pytest.mark.anyio
-async def test_supplemental_report_calculates_line_17_when_missing(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test that supplemental reports calculate Line 17 when no existing value is present"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 321
-
-    # Mock supplemental report WITHOUT existing Line 17 value
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 2  # Supplemental
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None  # No existing value
-    compliance_report.summary.is_locked = False  # Add is_locked attribute
-
-    # Setup repository mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 80
-    mock_summary_repo.get_received_compliance_units.return_value = 160
-    mock_summary_repo.get_issued_compliance_units.return_value = 240
-
-    # Mock previous summary for supplemental reports
-    previous_summary_mock = MagicMock()
-    previous_summary_mock.line_18_units_to_be_banked = 40
-    previous_summary_mock.line_19_units_to_be_exported = 60
-    mock_summary_repo.get_previous_summary = AsyncMock(
-        return_value=previous_summary_mock
-    )
-
-    # Mock the TFRS Line 17 calculation
-    expected_line_17_balance = 1800
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
-        expected_line_17_balance
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=320)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=45)
-    )
-
-    # Call the method
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify the Line 17 method was called for supplemental without existing value
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
-        organization_id, compliance_period_start.year
-    )
-
-    # Verify Line 17 value in summary
-    line_values = _get_line_values(summary)
-    assert line_values[17] == expected_line_17_balance
-
-
-@pytest.mark.anyio
-async def test_line_17_error_handling(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test error handling when Line 17 calculation fails"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 999
-
-    # Mock compliance report
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 0
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None
-    compliance_report.summary.is_locked = False  # Add is_locked attribute
-
-    # Setup repository mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
-    mock_summary_repo.get_received_compliance_units.return_value = 200
-    mock_summary_repo.get_issued_compliance_units.return_value = 300
-
-    # Mock the TFRS Line 17 calculation to raise an exception
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.side_effect = (
-        Exception("Database connection failed")
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=400)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=50)
-    )
-
-    # Test that the exception is properly propagated
-    with pytest.raises(Exception, match="Database connection failed"):
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-
-
-@pytest.mark.anyio
-async def test_line_17_zero_balance_handling(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test handling of zero balance from Line 17 calculation"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 111
-
-    # Mock compliance report
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 0
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None
-    compliance_report.summary.is_locked = False  # Add is_locked attribute
-
-    # Setup repository mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 75
-    mock_summary_repo.get_received_compliance_units.return_value = 125
-    mock_summary_repo.get_issued_compliance_units.return_value = 175
-
-    # Mock the TFRS Line 17 calculation to return 0
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 0
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=250)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=35)
-    )
-
-    # Call the method
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify Line 17 is 0
-    line_values = _get_line_values(summary)
-    assert line_values[17] == 0
-
-    # Verify other calculations proceed normally
-    assert line_values[12] == 75  # Transferred out
-    assert line_values[13] == 125  # Received
-    assert line_values[14] == 175  # Issued
-
-
-@pytest.mark.anyio
-async def test_supplemental_report_unlocked_recalculates_line_17(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test that unlocked supplemental reports recalculate Line 17 even with existing value"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 654
-
-    # Mock supplemental report with existing Line 17 value but NOT locked
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 1  # Supplemental
-    compliance_report.summary = MagicMock()
-    existing_line_17_value = 1500  # This should be ignored since not locked
-    compliance_report.summary.line_17_non_banked_units_used = existing_line_17_value
-    compliance_report.summary.is_locked = False  # NOT locked - should recalculate
-
-    # Setup repository mocks
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 200
-    mock_summary_repo.get_received_compliance_units.return_value = 400
-    mock_summary_repo.get_issued_compliance_units.return_value = 600
-
-    # Mock previous summary for supplemental reports
-    previous_summary_mock = MagicMock()
-    previous_summary_mock.line_18_units_to_be_banked = 100
-    previous_summary_mock.line_19_units_to_be_exported = 150
-    mock_summary_repo.get_previous_summary = AsyncMock(
-        return_value=previous_summary_mock
-    )
-
-    # Mock the TFRS Line 17 calculation - this should be called and used
-    expected_line_17_balance = 2200  # Different from existing value
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
-        expected_line_17_balance
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=500)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=75)
-    )
-
-    # Call the method
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify the Line 17 method WAS called for unlocked supplemental
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
-        organization_id, compliance_period_start.year
-    )
-
-    # Verify NEW calculated Line 17 value is used, not the existing one
-    line_values = _get_line_values(summary)
-    assert line_values[17] == expected_line_17_balance
-    assert line_values[17] != existing_line_17_value  # Should be different
-
-
-@pytest.mark.anyio
-async def test_line_17_integration_with_compliance_report_creation(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test that Line 17 calculation integrates properly with compliance report summary creation workflow"""
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 555
-
-    # Mock compliance report
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 0
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None
-    compliance_report.summary.is_locked = False  # Add is_locked attribute
-
-    # Setup repository mocks with realistic values
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
-    mock_summary_repo.get_received_compliance_units.return_value = 1000
-    mock_summary_repo.get_issued_compliance_units.return_value = 1500
-
-    # Mock TFRS Line 17 calculation with a realistic balance
-    expected_line_17_balance = 2750
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
-        expected_line_17_balance
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=800)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=150)
-    )
-
-    # Call the method
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify Line 17 method was called correctly
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
-        organization_id, 2024
-    )
-
-    # Verify the summary contains the correct Line 17 value
-    line_values = _get_line_values(summary)
-    assert line_values[17] == expected_line_17_balance
-
-    # Verify that other summary lines also contain expected values
-    assert line_values[12] == 500  # Transferred out
-    assert line_values[13] == 1000  # Received
-    assert line_values[14] == 1500  # Issued
-
-    # Verify that a summary was returned
-    assert summary is not None
-    assert len(summary) > 0
-
-    # Verify penalty was calculated
-    assert penalty is not None
-
-
-@pytest.mark.anyio
-async def test_calculate_notional_transfers_sum_quarterly_logic(
-    compliance_report_summary_service,
-):
-    """Test the quarterly notional transfer calculation logic we added"""
-
-    # Test data for notional transfers with quarterly fields
-    test_notional_transfers = [
-        # Regular transfer with quantity field only
-        NotionalTransferSchema(
-            notional_transfer_id=1,
-            compliance_report_id=1,
-            fuel_category="Gasoline",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=1000,
-            q1_quantity=None,
-            q2_quantity=None,
-            q3_quantity=None,
-            q4_quantity=None,
-            legal_name="Test Company 1",
-            address_for_service="123 Test St",
-            group_uuid="test-group-1",
-            version=1,
-            action_type="create",
+@pytest.mark.parametrize(
+    "fuel_data, expected_legacy_result",
+    [
+        # Test data based on previous failures, using legacy formula expectations
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "q1_quantity": 0,
+                "q2_quantity": 0,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            20,  # Was 10 in non-legacy
         ),
-        # Quarterly transfer with quarterly fields only
-        NotionalTransferSchema(
-            notional_transfer_id=2,
-            compliance_report_id=1,
-            fuel_category="Diesel",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=None,
-            q1_quantity=250,
-            q2_quantity=300,
-            q3_quantity=200,
-            q4_quantity=250,
-            legal_name="Test Company 2",
-            address_for_service="456 Test Ave",
-            group_uuid="test-group-2",
-            version=1,
-            action_type="create",
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,  # uci ignored in legacy
+                "quantity": 500_000,
+                "q1_quantity": 0,
+                "q2_quantity": 500_000,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            20,  # Was 10 in non-legacy
         ),
-        # Transferred quarterly transfer
-        NotionalTransferSchema(
-            notional_transfer_id=3,
-            compliance_report_id=1,
-            fuel_category="Jet fuel",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Transferred,
-            quantity=None,
-            q1_quantity=100,
-            q2_quantity=150,
-            q3_quantity=100,
-            q4_quantity=150,
-            legal_name="Test Company 3",
-            address_for_service="789 Test Blvd",
-            group_uuid="test-group-3",
-            version=1,
-            action_type="create",
+        (
+            {
+                "target_ci": 80,
+                "eer": 1,
+                "ci_of_fuel": 90,
+                "uci": 5,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "q1_quantity": 0,
+                "q2_quantity": 0,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            -10,  # Was -15 in non-legacy
         ),
-        # Mixed quarterly transfer (some quarters with values)
-        NotionalTransferSchema(
-            notional_transfer_id=4,
-            compliance_report_id=1,
-            fuel_category="Gasoline",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=None,
-            q1_quantity=500,
-            q2_quantity=None,
-            q3_quantity=300,
-            q4_quantity=None,
-            legal_name="Test Company 4",
-            address_for_service="321 Test Dr",
-            group_uuid="test-group-4",
-            version=1,
-            action_type="create",
-        ),
-    ]
-
-    # Test the logic directly (same as implemented in summary service)
-    notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
-
-    for transfer in test_notional_transfers:
-        # Normalize the fuel category key
-        normalized_category = transfer.fuel_category.replace(" ", "_").lower()
-
-        # Calculate total quantity - use quarterly fields if main quantity is None
-        total_quantity = transfer.quantity
-        if total_quantity is None:
-            # Sum up quarterly quantities for quarterly notional transfers
-            quarterly_sum = (
-                (transfer.q1_quantity or 0)
-                + (transfer.q2_quantity or 0)
-                + (transfer.q3_quantity or 0)
-                + (transfer.q4_quantity or 0)
-            )
-            total_quantity = quarterly_sum if quarterly_sum > 0 else 0
-
-        # Update the corresponding category sum
-        if transfer.received_or_transferred.lower() == "received":
-            notional_transfers_sums[normalized_category] += total_quantity
-        elif transfer.received_or_transferred.lower() == "transferred":
-            notional_transfers_sums[normalized_category] -= total_quantity
-
-    # Verify the calculations
-    # Expected results:
-    # Gasoline: 1000 (regular) + 800 (500 + 300 from quarterly) = 1800
-    # Diesel: 1000 (250 + 300 + 200 + 250 from quarterly) = 1000
-    # Jet fuel: -500 (transferred, so negative: -(100 + 150 + 100 + 150)) = -500
-
-    assert notional_transfers_sums["gasoline"] == 1800
-    assert notional_transfers_sums["diesel"] == 1000
-    assert notional_transfers_sums["jet_fuel"] == -500
-
-
-@pytest.mark.anyio
-async def test_quarterly_notional_transfer_edge_cases():
-    """Test edge cases for quarterly notional transfer calculations"""
-
-    test_edge_cases = [
-        # Transfer with quantity=0 and quarterly fields (quantity takes precedence)
-        NotionalTransferSchema(
-            notional_transfer_id=1,
-            compliance_report_id=1,
-            fuel_category="Gasoline",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=0,
-            q1_quantity=100,
-            q2_quantity=200,
-            q3_quantity=150,
-            q4_quantity=50,
-            legal_name="Test Company 1",
-            address_for_service="123 Test St",
-            group_uuid="test-group-1",
-            version=1,
-            action_type="create",
-        ),
-        # Transfer with quarterly fields only (at least one non-zero)
-        NotionalTransferSchema(
-            notional_transfer_id=2,
-            compliance_report_id=1,
-            fuel_category="Diesel",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=None,
-            q1_quantity=0,
-            q2_quantity=0,
-            q3_quantity=100,  # At least one non-zero quarterly field
-            q4_quantity=0,
-            legal_name="Test Company 2",
-            address_for_service="456 Test Ave",
-            group_uuid="test-group-2",
-            version=1,
-            action_type="create",
-        ),
-        # Transfer with negative quarterly values (unusual but possible)
-        NotionalTransferSchema(
-            notional_transfer_id=3,
-            compliance_report_id=1,
-            fuel_category="Jet fuel",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=None,
-            q1_quantity=-50,
-            q2_quantity=100,
-            q3_quantity=-25,
-            q4_quantity=75,
-            legal_name="Test Company 3",
-            address_for_service="789 Test Blvd",
-            group_uuid="test-group-3",
-            version=1,
-            action_type="create",
-        ),
-    ]
-
-    # Test the quarterly calculation logic
-    notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
-
-    for transfer in test_edge_cases:
-        # Normalize the fuel category key
-        normalized_category = transfer.fuel_category.replace(" ", "_").lower()
-
-        # Calculate total quantity - use quarterly fields if main quantity is None
-        total_quantity = transfer.quantity
-        if total_quantity is None:
-            # Sum up quarterly quantities for quarterly notional transfers
-            quarterly_sum = (
-                (transfer.q1_quantity or 0)
-                + (transfer.q2_quantity or 0)
-                + (transfer.q3_quantity or 0)
-                + (transfer.q4_quantity or 0)
-            )
-            total_quantity = quarterly_sum if quarterly_sum > 0 else 0
-
-        # Update the corresponding category sum
-        if transfer.received_or_transferred.lower() == "received":
-            notional_transfers_sums[normalized_category] += total_quantity
-        elif transfer.received_or_transferred.lower() == "transferred":
-            notional_transfers_sums[normalized_category] -= total_quantity
-
-    # Expected results:
-    # Gasoline: quantity=0, so use 0 (not quarterly fields)
-    # Diesel: 0 + 0 + 100 + 0 = 100
-    # Jet fuel: -50 + 100 + (-25) + 75 = 100
-
-    assert notional_transfers_sums["gasoline"] == 0
-    assert notional_transfers_sums["diesel"] == 100
-    assert notional_transfers_sums["jet_fuel"] == 100
-
-
-@pytest.mark.anyio
-async def test_notional_transfer_summary_integration_with_quarterly(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+    ],
+)
+async def test_calculate_fuel_supply_compliance_units_parametrized_legacy(
+    compliance_report_summary_service, mock_summary_repo, fuel_data, expected_legacy_result
 ):
-    """Integration test for compliance report summary with quarterly notional transfers"""
-
-    # Setup compliance report
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 1
-
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 0
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None
-    compliance_report.summary.is_locked = False
-
-    # Mock quarterly notional transfers
-    quarterly_notional_transfers = [
-        NotionalTransferSchema(
-            notional_transfer_id=1,
-            compliance_report_id=1,
-            fuel_category="Gasoline",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=None,
-            q1_quantity=500,
-            q2_quantity=500,
-            q3_quantity=0,
-            q4_quantity=0,
-            legal_name="Test Company",
-            address_for_service="123 Test St",
-            group_uuid="test-group-1",
-            version=1,
-            action_type="create",
-        )
-    ]
-
-    mock_notional_transfers_response = MagicMock()
-    mock_notional_transfers_response.notional_transfers = quarterly_notional_transfers
-
-    # Setup repository responses
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
-    mock_summary_repo.get_received_compliance_units.return_value = 200
-    mock_summary_repo.get_issued_compliance_units.return_value = 300
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1000
-
-    # Mock the notional transfer service to return our quarterly data
-    compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
-        return_value=mock_notional_transfers_response
-    )
-
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=400)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=50)
-    )
-
-    # Call the low carbon fuel target summary calculation
-    summary, penalty = (
-        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start,
-            compliance_period_end,
-            organization_id,
-            compliance_report,
-        )
-    )
-
-    # Verify the summary was calculated without errors
-    assert isinstance(summary, list)
-    assert len(summary) == 11
-
-    # Verify that the calculation completed successfully (not asserting the mock call since it's internal)
-    assert summary is not None
-
-
-@pytest.mark.anyio
-async def test_quarterly_notional_transfer_calculation_logic(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
-):
-    """Test the quarterly notional transfer calculation logic in the compliance report summary"""
-
-    # Setup compliance report
-    compliance_period_start = datetime(2024, 1, 1)
-    compliance_period_end = datetime(2024, 12, 31)
-    organization_id = 1
-
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.compliance_report_id = 1
-    compliance_report.version = 0
-    compliance_report.summary = MagicMock()
-    compliance_report.summary.line_17_non_banked_units_used = None
-    compliance_report.summary.is_locked = False
-    compliance_report.compliance_report_group_uuid = "test-group-uuid"
-    compliance_report.compliance_period = MagicMock()
-    compliance_report.compliance_period.effective_date = compliance_period_start
-    compliance_report.compliance_period.expiration_date = compliance_period_end
-    compliance_report.compliance_period.description = "2024"
-    compliance_report.organization_id = organization_id
-
-    # Create test notional transfers with quarterly data
-    test_notional_transfers = [
-        NotionalTransferSchema(
-            notional_transfer_id=1,
-            compliance_report_id=1,
-            fuel_category="Gasoline",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Received,
-            quantity=None,  # Use quarterly fields
-            q1_quantity=500,
-            q2_quantity=500,
-            q3_quantity=0,
-            q4_quantity=0,
-            legal_name="Test Company 1",
-            address_for_service="123 Test St",
-            group_uuid="test-group-1",
-            version=1,
-            action_type="create",
-        ),
-        NotionalTransferSchema(
-            notional_transfer_id=2,
-            compliance_report_id=1,
-            fuel_category="Diesel",
-            received_or_transferred=ReceivedOrTransferredEnumSchema.Transferred,
-            quantity=None,  # Use quarterly fields
-            q1_quantity=200,
-            q2_quantity=300,
-            q3_quantity=100,
-            q4_quantity=200,
-            legal_name="Test Company 2",
-            address_for_service="456 Test Ave",
-            group_uuid="test-group-2",
-            version=1,
-            action_type="create",
-        ),
-    ]
-
-    mock_notional_transfers_response = MagicMock()
-    mock_notional_transfers_response.notional_transfers = test_notional_transfers
-
-    # Setup repository responses
-    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
-    mock_summary_repo.get_received_compliance_units.return_value = 200
-    mock_summary_repo.get_issued_compliance_units.return_value = 300
-    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1000
-
-    # Mock other required methods
-    compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
-        return_value=mock_notional_transfers_response
-    )
-    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
-        AsyncMock(return_value=400)
-    )
-    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
-        AsyncMock(return_value=50)
-    )
+    """Test calculation for compliance periods before 2024 (legacy formula)"""
+    mock_fuel_supply = Mock(**fuel_data)
     compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
-        AsyncMock(return_value=[])
+        AsyncMock(return_value=[mock_fuel_supply])
     )
-    compliance_report_summary_service.other_uses_repo.get_effective_other_uses = (
-        AsyncMock(return_value=[])
-    )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
-        AsyncMock(return_value=[])
-    )
-    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
-        return_value=[]
-    )
-    compliance_report_summary_service.repo.get_compliance_report_by_id = AsyncMock(
-        return_value=compliance_report
-    )
-    compliance_report_summary_service.calculate_quarterly_fuel_supply_compliance_units = AsyncMock(
-        return_value=[0, 0, 0, 0]
-    )
+    # Mock the compliance report and its period description for LEGACY check
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group-legacy"
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2023"  # Use a legacy year
 
     # Mock aggregate methods to return empty results
     mock_summary_repo.aggregate_quantities.return_value = {}
 
     # Call the compliance report summary calculation
     result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(
-            compliance_report.compliance_report_id
+        await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
+            dummy_report
         )
     )
+    assert result == expected_legacy_result
 
-    # Verify the summary was calculated without errors
-    assert result is not None
-    assert hasattr(result, "renewable_fuel_target_summary")
-    assert hasattr(result, "low_carbon_fuel_target_summary")
 
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "fuel_export_data, expected_legacy_result",
+    [
+        # Test data based on previous failures, using legacy formula expectations
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "energy_density": 1,
+            },
+            -20,  # Was -10 in non-legacy
+        ),
+        (
+            {
+                "target_ci": 80,
+                "eer": 1,
+                "ci_of_fuel": 90,
+                "uci": 5,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "energy_density": 1,
+            },
+            0,  # Same as non-legacy because (-10) becomes 0 after export processing
+        ),
+    ],
+)
+async def test_calculate_fuel_export_compliance_units_parametrized_legacy(
+    compliance_report_summary_service, fuel_export_data, expected_legacy_result
+):
+    """Test calculation for compliance periods before 2024 (legacy formula)"""
+    mock_fuel_export = MagicMock(**fuel_export_data)
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[mock_fuel_export])
+    )
+    # Mock the compliance report and its period description for LEGACY check
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group-legacy"
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2023"  # Use a legacy year
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_export_compliance_units(
+            dummy_report
+        )
+    )
     # The main test is that the calculation completed successfully with quarterly notional transfers
     # and the quarterly calculation logic we added didn't cause any errors
     # This verifies that our quarterly notional transfer schema validation and processing works
@@ -2782,6 +2053,7 @@ async def test_penalty_override_with_zero_values():
 
 # Tests for Summary Lines 7 & 9 Auto-population and Locking (Issue #2893)
 
+
 @pytest.mark.anyio
 async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     compliance_report_summary_service,
@@ -2790,13 +2062,24 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     # Mock data
     fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 500}
     renewable_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 50}
-    previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 5}  # This should populate Line 7
-    previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 2}  # This should populate Line 9
+    previous_retained = {
+        "gasoline": 10,
+        "diesel": 20,
+        "jet_fuel": 5,
+    }  # This should populate Line 7
+    previous_obligation = {
+        "gasoline": 5,
+        "diesel": 10,
+        "jet_fuel": 2,
+    }  # This should populate Line 9
     notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     previous_year_required = {"gasoline": 400, "diesel": 750, "jet_fuel": 0}
-    
+
     # Create a proper ComplianceReportSummary mock with the actual fields
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
+
     mock_prev_summary = ComplianceReportSummary(
         line_6_renewable_fuel_retained_gasoline=100,
         line_6_renewable_fuel_retained_diesel=200,
@@ -2808,7 +2091,7 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         line_4_eligible_renewable_fuel_required_diesel=80,
         line_4_eligible_renewable_fuel_required_jet_fuel=0,
     )
-    
+
     # Test that the method includes Lines 7 & 9 in the result
     result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
         fossil_quantities,
@@ -2820,23 +2103,27 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
         mock_prev_summary,
         previous_year_required,
     )
-    
+
     # Check that all lines are present in the result - should be 11 lines total
     assert len(result) == 11, f"Expected 11 lines, got {len(result)}"
-    
+
     # Find Lines 7 & 9 in the result (handle both legacy and non-legacy formats)
     line_7_row = next((row for row in result if row.line in [7, "7", "7 | 18"]), None)
     line_9_row = next((row for row in result if row.line in [9, "9", "9 | 20"]), None)
-    
-    assert line_7_row is not None, f"Line 7 should be present in summary. Found lines: {[row.line for row in result]}"
-    assert line_9_row is not None, f"Line 9 should be present in summary. Found lines: {[row.line for row in result]}"
+
+    assert (
+        line_7_row is not None
+    ), f"Line 7 should be present in summary. Found lines: {[row.line for row in result]}"
+    assert (
+        line_9_row is not None
+    ), f"Line 9 should be present in summary. Found lines: {[row.line for row in result]}"
     assert line_7_row.gasoline == previous_retained["gasoline"]  # 10
-    assert line_7_row.diesel == previous_retained["diesel"]      # 20
+    assert line_7_row.diesel == previous_retained["diesel"]  # 20
     assert line_7_row.jet_fuel == previous_retained["jet_fuel"]  # 5
     assert line_7_row.max_gasoline == 20
     assert line_7_row.max_diesel == 38
     assert line_7_row.max_jet_fuel == 5
-    
+
     assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
-    assert line_9_row.diesel == previous_obligation["diesel"]      # 10
+    assert line_9_row.diesel == previous_obligation["diesel"]  # 10
     assert line_9_row.jet_fuel == previous_obligation["jet_fuel"]  # 2

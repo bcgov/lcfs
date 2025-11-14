@@ -1,10 +1,25 @@
-import { render, screen } from '@testing-library/react'
+import React from 'react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within
+} from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { AddEditOrgForm } from '../AddEditOrgForm'
+import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AddEditOrg } from '../AddEditOrg'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
+import { ROUTES } from '@/routes/routes'
+import { wrapper } from '@/tests/utils/wrapper'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { schemaValidation } from '@/views/Organizations/AddEditOrg/_schema.js'
+import { useMutation } from '@tanstack/react-query'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -16,6 +31,49 @@ vi.mock('react-router-dom', () => ({
   useParams: vi.fn(),
   useNavigate: vi.fn()
 }))
+
+// Mock AddressAutocomplete to prevent network requests
+vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
+  AddressAutocomplete: React.forwardRef(
+    (
+      {
+        name,
+        placeholder = 'Start typing address...',
+        value,
+        onChange,
+        onBlur,
+        error
+      },
+      ref
+    ) => (
+      <input
+        ref={ref}
+        id={name}
+        name={name}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={(e) => onChange && onChange(e.target.value)}
+        onBlur={onBlur}
+        data-testid={`address-autocomplete-${name}`}
+        aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
+      />
+    )
+  )
+}))
+
+// Mock the useMutation hook to properly handle onSuccess callback
+const mockMutate = vi.fn()
+vi.mock('@tanstack/react-query', async () => {
+  const actual = await vi.importActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useMutation: vi.fn(() => ({
+      mutate: mockMutate,
+      isPending: false,
+      isError: false
+    }))
+  }
+})
 
 // Mock hooks
 vi.mock('@/hooks/useOrganization')
@@ -77,6 +135,85 @@ describe('AddEditOrg', () => {
     useApiService.mockReturnValue({
       post: vi.fn(),
       put: vi.fn()
+    })
+
+    mockNavigate = vi.fn()
+    useNavigate.mockReturnValue(mockNavigate)
+    useParams.mockReturnValue({ orgID: undefined })
+
+    useOrganization.mockReturnValue({
+      data: null,
+      isFetched: true
+    })
+
+    apiSpy = {
+      post: vi.fn().mockResolvedValue({}),
+      put: vi.fn().mockResolvedValue({})
+    }
+    useApiService.mockReturnValue(apiSpy)
+  })
+
+  it('renders correctly with provided organization data and maps all address fields correctly', () => {
+    useOrganization.mockReturnValue({
+      data: mockedOrg,
+      isFetched: true
+    })
+    useParams.mockReturnValue({ orgID: '123' })
+
+    render(
+      <MockFormProvider>
+        <AddEditOrgForm />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    expect(screen.getByLabelText(/org:legalNameLabel/i)).toHaveValue('Test Org')
+    expect(screen.getByLabelText(/org:operatingNameLabel/i)).toHaveValue(
+      'Test Operating Org'
+    )
+    expect(screen.getByLabelText(/org:emailAddrLabel/i)).toHaveValue(
+      'test@example.com'
+    )
+    expect(screen.getByLabelText(/org:phoneNbrLabel/i)).toHaveValue(
+      '123-456-7890'
+    )
+    expect(screen.getAllByLabelText(/org:streetAddrLabel/i)[0]).toHaveValue(
+      '123 Test St'
+    )
+    expect(screen.getAllByLabelText(/org:cityLabel/i)[0]).toHaveValue(
+      'Test City'
+    )
+    // Also check attorney address if there are multiple address fields
+    const streetAddressFields = screen.getAllByLabelText(/org:streetAddrLabel/i)
+    if (streetAddressFields.length > 1) {
+      expect(streetAddressFields[1]).toHaveValue('456 Attorney Rd')
+    }
+  })
+
+  it('renders required errors in the form correctly', async () => {
+    render(
+      <MockFormProvider>
+        <AddEditOrgForm />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('saveOrganization'))
+
+    await waitFor(async () => {
+      const errorMessages = await screen.findAllByText(/required/i)
+      expect(errorMessages.length).toBeGreaterThan(0)
+
+      expect(
+        screen.getByText(/Legal Name of Organization is required./i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Operating Name of Organization is required./i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Email Address is required./i)
+      ).toBeInTheDocument()
+      expect(screen.getByText(/Phone Number is required./i)).toBeInTheDocument()
     })
   })
 
