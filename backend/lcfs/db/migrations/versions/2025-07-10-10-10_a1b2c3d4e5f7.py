@@ -34,82 +34,87 @@ def upgrade() -> None:
         """
         )
 
-    # Create organization_early_issuance_by_year table
-    op.create_table(
-        "organization_early_issuance_by_year",
-        sa.Column(
-            "early_issuance_by_year_id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the early issuance by year record",
-        ),
-        sa.Column(
-            "organization_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the organization",
-        ),
-        sa.Column(
-            "compliance_period_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the compliance period",
-        ),
-        sa.Column(
-            "has_early_issuance",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("FALSE"),
-            comment="True if the organization can create early issuance reports for this compliance year",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.PrimaryKeyConstraint("early_issuance_by_year_id"),
-        sa.ForeignKeyConstraint(
-            ["organization_id"],
-            ["organization.organization_id"],
-            name="fk_organization_early_issuance_by_year_organization_id",
-        ),
-        sa.ForeignKeyConstraint(
-            ["compliance_period_id"],
-            ["compliance_period.compliance_period_id"],
-            name="fk_organization_early_issuance_by_year_compliance_period_id",
-        ),
-        sa.UniqueConstraint(
-            "organization_id",
-            "compliance_period_id",
-            name="uq_organization_early_issuance_by_year",
-        ),
-        comment="Tracks early issuance reporting eligibility by organization and compliance year",
-    )
+    # Create organization_early_issuance_by_year table (check if exists first)
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+
+    if not inspector.has_table("organization_early_issuance_by_year"):
+        op.create_table(
+            "organization_early_issuance_by_year",
+            sa.Column(
+                "early_issuance_by_year_id",
+                sa.Integer(),
+                autoincrement=True,
+                nullable=False,
+                comment="Unique identifier for the early issuance by year record",
+            ),
+            sa.Column(
+                "organization_id",
+                sa.Integer(),
+                nullable=False,
+                comment="Foreign key to the organization",
+            ),
+            sa.Column(
+                "compliance_period_id",
+                sa.Integer(),
+                nullable=False,
+                comment="Foreign key to the compliance period",
+            ),
+            sa.Column(
+                "has_early_issuance",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("FALSE"),
+                comment="True if the organization can create early issuance reports for this compliance year",
+            ),
+            sa.Column(
+                "create_date",
+                sa.TIMESTAMP(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=True,
+                comment="Date and time (UTC) when the physical record was created in the database.",
+            ),
+            sa.Column(
+                "update_date",
+                sa.TIMESTAMP(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=True,
+                comment="Date and time (UTC) when the physical record was updated in the database.",
+            ),
+            sa.Column(
+                "create_user",
+                sa.String(),
+                nullable=True,
+                comment="The user who created this record in the database.",
+            ),
+            sa.Column(
+                "update_user",
+                sa.String(),
+                nullable=True,
+                comment="The user who last updated this record in the database.",
+            ),
+            sa.PrimaryKeyConstraint("early_issuance_by_year_id"),
+            sa.ForeignKeyConstraint(
+                ["organization_id"],
+                ["organization.organization_id"],
+                name="fk_organization_early_issuance_by_year_organization_id",
+            ),
+            sa.ForeignKeyConstraint(
+                ["compliance_period_id"],
+                ["compliance_period.compliance_period_id"],
+                name="fk_organization_early_issuance_by_year_compliance_period_id",
+            ),
+            sa.UniqueConstraint(
+                "organization_id",
+                "compliance_period_id",
+                name="uq_organization_early_issuance_by_year",
+            ),
+            comment="Tracks early issuance reporting eligibility by organization and compliance year",
+        )
 
     # Copy all has_early_issuance values from organization table
     # to organization_early_issuance_by_year table for the current year (2025)
+    # Use ON CONFLICT to handle case where data already exists
     op.execute(
         """
         INSERT INTO organization_early_issuance_by_year (
@@ -148,4 +153,9 @@ def downgrade() -> None:
         """
     )
 
-    op.drop_table("organization_early_issuance_by_year")
+    # Only drop table if it exists
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+
+    if inspector.has_table("organization_early_issuance_by_year"):
+        op.drop_table("organization_early_issuance_by_year")

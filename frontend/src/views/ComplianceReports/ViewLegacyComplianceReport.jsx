@@ -10,11 +10,9 @@ import colors from '@/themes/base/colors.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
-import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
-import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
-import LegacyReportSummary from './legacy/LegacyReportSummary'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
+import { AssessmentCard } from '@/views/ComplianceReports/components/AssessmentCard.jsx'
 
 const iconStyle = {
   width: '2rem',
@@ -32,6 +30,8 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
 
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
+  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
+    useState(false)
 
   const { compliancePeriod, complianceReportId } = useParams()
   const scrollToTopOrBottom = () => {
@@ -91,6 +91,11 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
     return <Loading />
   }
 
+  const dummyButtonClusterConfig = {}
+  const dummyMethods = {
+    handleSubmit: () => () => {}
+  }
+
   if (isError) {
     return (
       <>
@@ -129,25 +134,15 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
           </BCTypography>
         </BCBox>
         <Stack direction="column" mt={2}>
-          <LegacyAssessmentCard
+          <AssessmentCard
+            report={reportData.report}
             orgData={orgData}
-            history={reportData?.report.history}
             isGovernmentUser={isGovernmentUser}
-            currentStatus={currentStatus}
-            legacyReportId={reportData?.report.legacyId}
-            hasSupplemental={reportData?.report.hasSupplemental}
             chain={reportData.chain}
+            complianceReportId={complianceReportId}
+            compliancePeriod={compliancePeriod}
           />
         </Stack>
-        {isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS) && (
-          <>
-            <LegacyReportDetails currentStatus={currentStatus} />
-            <LegacyReportSummary
-              reportID={complianceReportId}
-              alertRef={alertRef}
-            />
-          </>
-        )}
 
         <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
           {t('report:questions')}

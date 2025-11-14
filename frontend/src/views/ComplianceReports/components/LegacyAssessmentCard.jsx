@@ -90,20 +90,22 @@ export const LegacyAssessmentCard = ({
             >
               {t('report:supplementalWarning')}
             </BCTypography>
-            <Box>
-              <BCButton
-                data-test="view-legacy"
-                size="small"
-                className="svg-icon-button"
-                variant="contained"
-                color="primary"
-                startIcon={<Assignment />}
-                sx={{ mt: 2 }}
-                onClick={viewLegacyReport}
-              >
-                {t('report:viewLegacyBtn')}
-              </BCButton>
-            </Box>
+            {legacyReportId && (
+              <Box>
+                <BCButton
+                  data-test="view-legacy"
+                  size="small"
+                  className="svg-icon-button"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Assignment />}
+                  sx={{ mt: 2 }}
+                  onClick={viewLegacyReport}
+                >
+                  {t('report:viewLegacyBtn')}
+                </BCButton>
+              </Box>
+            )}
           </Stack>
         </>
       }

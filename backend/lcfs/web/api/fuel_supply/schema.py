@@ -182,9 +182,10 @@ class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
     action_type: str
     fuel_type: str
     fuel_category: str
-    end_use_type: str
-    provision_of_the_act: str = None
-    compliance_units: int = None
+    end_use_id: Optional[int] = None
+    end_use_type: Optional[str] = None
+    provision_of_the_act: Optional[str] = None
+    compliance_units: Optional[int] = None
 
     fuel_code: Optional[str]
     uci: Optional[float] = None
