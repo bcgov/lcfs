@@ -38,11 +38,13 @@ Map<Integer, String> recordUuidMap = [:]
       scr.expected_use_id,
       scr.rationale,
       cr.id AS compliance_report_id,
-      uom.name AS unit_of_measure
+      uom.name AS unit_of_measure,
+      dci.density AS default_ci_of_fuel
     FROM compliance_report_schedule_c_record scr
     JOIN compliance_report_schedule_c sc ON sc.id = scr.schedule_id
     JOIN compliance_report cr ON cr.schedule_c_id = sc.id
     LEFT JOIN approved_fuel_type aft ON aft.id = scr.fuel_type_id
+    LEFT JOIN default_carbon_intensity dci ON dci.category_id = aft.default_carbon_intensity_category_id
     LEFT JOIN unit_of_measure uom ON uom.id = aft.unit_of_measure_id
     WHERE cr.id = ?
 """
@@ -74,11 +76,10 @@ Map<Integer, String> recordUuidMap = [:]
         rationale,
         group_uuid,
         version,
-        user_type,
         action_type,
         create_user,
         update_user
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUPPLIER', ?::actiontypeenum, 'ETL', 'ETL')
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::actiontypeenum, 'ETL', 'ETL')
 """;
 
 def sourceDbcpService = context.controllerServiceLookup.getControllerService("3245b078-0192-1000-ffff-ffffba20c1eb")
@@ -174,6 +175,7 @@ def insertVersionRow(Connection destConn, Integer lcfsCRid, Map rowData, String 
     def quantity = rowData.quantity?: 0
     def rationale= rowData.rationale?: ""
     def units = rowData.unit_of_measure?: ""
+    def ci_of_fuel = rowData.ci_of_fuel?: 0
 
 
     // Map and insert the record
@@ -182,8 +184,8 @@ def insertVersionRow(Connection destConn, Integer lcfsCRid, Map rowData, String 
         setInt(1, lcfsCRid)
         setInt(2, fuelTypeId)
         setInt(3, fuelCatId)
-        setNull(4, Types.INTEGER)  // provision_of_the_act_id
-        setNull(5, Types.NUMERIC)  // ci_of_fuel
+        setInt(4, 7)  // provision_of_the_act_id
+        setBigDecimal(5, ci_of_fuel)
         setBigDecimal(6, quantity)
         setString(7,units)
         setInt(8, expectedUseId)
@@ -279,6 +281,7 @@ try {
                     expected_use_id: scrRS.getInt("expected_use_id"),
                     rationale: scrRS.getString("rationale"),
                     unit_of_measure: scrRS.getString("unit_of_measure"),
+                    ci_of_fuel: scrRS.getBigDecimal("default_ci_of_fuel")
                 ]
             }
             scrRS.close()
