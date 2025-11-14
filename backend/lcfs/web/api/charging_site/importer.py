@@ -29,7 +29,6 @@ from lcfs.web.api.charging_site.schema import ChargingSiteCreateSchema
 from lcfs.web.api.charging_site.services import ChargingSiteService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.api.organizations.repo import OrganizationsRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -144,159 +143,164 @@ async def import_async(
     engine = create_async_engine(db_url, future=True)
     try:
         async with AsyncSession(engine) as session:
-            await set_user_context(session, user.keycloak_username)
+            async with session.begin():
+                await set_user_context(session, user.keycloak_username)
 
-            cs_repo = ChargingSiteRepository(session)
-            org_repo = OrganizationsRepository(session)
-            cs_service = ChargingSiteService(repo=cs_repo)
-            clamav_service = ClamAVService()
-            # Use a new Redis client for this async context
-            redis_client = Redis(
-                host=settings.redis_host,
-                port=settings.redis_port,
-                password=settings.redis_pass,
-                db=settings.redis_base or 0,
-                decode_responses=True,
-            )
-
-            logger.debug(f"About to update progress for job {job_id}")
-            await _update_progress(
-                redis_client, job_id, 5, "Initializing services..."
-            )
-            logger.debug(f"Progress updated for job {job_id}")
-
-            # Optional: Scan the file with ClamAV if enabled
-            if settings.clamav_enabled:
-                await _update_progress(
-                    redis_client, job_id, 15, "Scanning file with ClamAV..."
+                cs_repo = ChargingSiteRepository(session)
+                cs_service = ChargingSiteService(repo=cs_repo)
+                clamav_service = ClamAVService()
+                # Use a new Redis client for this async context
+                redis_client = Redis(
+                    host=settings.redis_host,
+                    port=settings.redis_port,
+                    password=settings.redis_pass,
+                    db=settings.redis_base or 0,
+                    decode_responses=True,
                 )
-                clamav_service.scan_file(file)
 
-            await _update_progress(
-                redis_client, job_id, 20, "Loading Excel sheet..."
-            )
+                logger.debug(f"About to update progress for job {job_id}")
+                await _update_progress(
+                    redis_client, job_id, 5, "Initializing services..."
+                )
+                logger.debug(f"Progress updated for job {job_id}")
 
-            try:
-                sheet = _load_sheet(file)
-                row_count = sheet.max_row
-
-                created = 0
-                rejected = 0
-                errors = []
+                # Optional: Scan the file with ClamAV if enabled
+                if settings.clamav_enabled:
+                    await _update_progress(
+                        redis_client, job_id, 15, "Scanning file with ClamAV..."
+                    )
+                    clamav_service.scan_file(file)
 
                 await _update_progress(
-                    redis_client,
-                    job_id,
-                    20,
-                    "Beginning data import...",
-                    created=created,
-                    rejected=rejected,
-                    errors=errors,
+                    redis_client, job_id, 20, "Loading Excel sheet..."
                 )
 
-                # Get valid organizations for allocating_organization field
-                valid_allocating_orgs = await cs_repo.get_allocation_agreement_organizations(
-                    organization_id
-                )
-                valid_org_names = {org.name for org in valid_allocating_orgs}
-                # Create map from organization name to ID for efficient lookup
-                allocating_org_map = {org.name: org.organization_id for org in valid_allocating_orgs}
+                try:
+                    sheet = _load_sheet(file)
+                    row_count = sheet.max_row
 
-                # Iterate through all data rows, skipping the header
-                for row_idx, row in enumerate(
-                    sheet.iter_rows(min_row=2, values_only=True), start=2
-                ):
-                    # Only update progress in Redis every 10 rows for efficiency
-                    if (row_idx + 1) % 10 == 0:
-                        current_progress = 20 + ((row_idx / row_count) * 80)
-                        status_msg = (
-                            f"Importing row {row_idx - 1} of {row_count - 1}..."
+                    created = 0
+                    rejected = 0
+                    errors = []
+
+                    await _update_progress(
+                        redis_client,
+                        job_id,
+                        20,
+                        "Beginning data import...",
+                        created=created,
+                        rejected=rejected,
+                        errors=errors,
+                    )
+
+                    # Get valid organizations for allocating_organization field
+                    valid_allocating_orgs = (
+                        await cs_repo.get_allocation_agreement_organizations(
+                            organization_id
                         )
-                        await _update_progress(
-                            redis_client,
-                            job_id,
-                            current_progress,
-                            status_msg,
-                            created=created,
-                            rejected=rejected,
-                            errors=errors,
-                        )
+                    )
+                    valid_org_names = {org.name for org in valid_allocating_orgs}
+                    # Create map from organization name to ID for efficient lookup
+                    allocating_org_map = {
+                        org.name: org.organization_id for org in valid_allocating_orgs
+                    }
 
-                    # Check if all columns are None
-                    if all(col is None for col in row):
-                        break  # End of data
+                    # Iterate through all data rows, skipping the header
+                    for row_idx, row in enumerate(
+                        sheet.iter_rows(min_row=2, values_only=True), start=2
+                    ):
+                        # Only update progress in Redis every 10 rows for efficiency
+                        if (row_idx + 1) % 10 == 0:
+                            current_progress = 20 + ((row_idx / row_count) * 80)
+                            status_msg = (
+                                f"Importing row {row_idx - 1} of {row_count - 1}..."
+                            )
+                            await _update_progress(
+                                redis_client,
+                                job_id,
+                                current_progress,
+                                status_msg,
+                                created=created,
+                                rejected=rejected,
+                                errors=errors,
+                            )
 
-                    row = list(row)
-                    # row[8] is now allocating_organization_name (optional string)
+                        # Check if all columns are None
+                        if all(col is None for col in row):
+                            break  # End of data
 
-                    # Validate row
-                    error = _validate_row(row, row_idx, valid_org_names)
-                    if error:
-                        errors.append(error)
-                        rejected += 1
-                        continue
+                        row = list(row)
+                        # row[8] is now allocating_organization_name (optional string)
 
-                    # Parse row data and insert into DB
-                    try:
-                        cs_data = _parse_row(row, organization_id, allocating_org_map)
-                        async with session.begin():
+                        # Validate row
+                        error = _validate_row(row, row_idx, valid_org_names)
+                        if error:
+                            errors.append(error)
+                            rejected += 1
+                            continue
+
+                        # Parse row data and insert into DB
+                        try:
+                            cs_data = _parse_row(
+                                row, organization_id, allocating_org_map
+                            )
                             await cs_service.create_charging_site(
                                 cs_data, organization_id
                             )
-                        created += 1
-                    except HTTPException as http_ex:
-                        logger.warning(
-                            "Charging site import validation failed",
-                            error=str(http_ex.detail),
-                        )
-                        errors.append(f"Row {row_idx}: {http_ex.detail}")
-                        rejected += 1
-                    except Exception as ex:
-                        logger.error(str(ex))
-                        errors.append(f"Row {row_idx}: {ex}")
-                        rejected += 1
+                            created += 1
+                        except HTTPException as http_ex:
+                            logger.warning(
+                                "Charging site import validation failed",
+                                error=str(http_ex.detail),
+                            )
+                            errors.append(f"Row {row_idx}: {http_ex.detail}")
+                            rejected += 1
+                        except Exception as ex:
+                            logger.error(str(ex))
+                            errors.append(f"Row {row_idx}: {ex}")
+                            rejected += 1
 
-                # Final update at 100%
-                await _update_progress(
-                    redis_client,
-                    job_id,
-                    100,
-                    "Import process completed.",
-                    created=created,
-                    rejected=rejected,
-                    errors=errors,
-                )
-                logger.debug(
-                    f"Completed importing charging site data, {created} rows created"
-                )
+                    # Final update at 100%
+                    await _update_progress(
+                        redis_client,
+                        job_id,
+                        100,
+                        "Import process completed.",
+                        created=created,
+                        rejected=rejected,
+                        errors=errors,
+                    )
+                    logger.debug(
+                        f"Completed importing charging site data, {created} rows created"
+                    )
 
-                return {
-                    "success": True,
-                    "created": created,
-                    "errors": errors,
-                    "rejected": rejected,
-                }
-            except DataNotFoundException as dnfe:
-                await _update_progress(
-                    redis_client, job_id, 100, "Data not found error.", 0, 0
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail=str(dnfe)
-                )
-            except Exception as e:
-                await _update_progress(
-                    redis_client, job_id, 100, "Import process failed.", 0, 0
-                )
-                # Don't raise from background task; record failure and return
-                logger.error(f"Charging site import failed: {e}")
-                return {
-                    "success": False,
-                    "created": 0,
-                    "errors": [str(e)],
-                    "rejected": 0,
-                }
-            finally:
-                await redis_client.close()
+                    return {
+                        "success": True,
+                        "created": created,
+                        "errors": errors,
+                        "rejected": rejected,
+                    }
+                except DataNotFoundException as dnfe:
+                    await _update_progress(
+                        redis_client, job_id, 100, "Data not found error.", 0, 0
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND, detail=str(dnfe)
+                    )
+                except Exception as e:
+                    await _update_progress(
+                        redis_client, job_id, 100, "Import process failed.", 0, 0
+                    )
+                    # Don't raise from background task; record failure and return
+                    logger.error(f"Charging site import failed: {e}")
+                    return {
+                        "success": False,
+                        "created": 0,
+                        "errors": [str(e)],
+                        "rejected": 0,
+                    }
+                finally:
+                    await redis_client.close()
     finally:
         await engine.dispose()
 
@@ -320,10 +324,18 @@ def _validate_row(
     """
     Validates a single row of data and returns an error string if invalid.
     Returns None if the row is valid.
+
+    Template has 8 columns:
+    1. Site Name
+    2. Street Address
+    3. City
+    4. Postal Code
+    5. Latitude
+    6. Longitude
+    7. Allocating Organization
+    8. Notes
     """
     (
-        org_name,
-        site_code,
         site_name,
         street_address,
         city,
@@ -331,7 +343,6 @@ def _validate_row(
         latitude,
         longitude,
         allocating_org_name,
-        status,
         notes,
     ) = row
 
@@ -364,13 +375,23 @@ def _validate_row(
     return None
 
 
-def _parse_row(row: tuple, organization_id: int, allocating_org_map: dict) -> ChargingSiteCreateSchema:
+def _parse_row(
+    row: tuple, organization_id: int, allocating_org_map: dict
+) -> ChargingSiteCreateSchema:
     """
     Parses a valid row into a ChargingSiteCreateSchema object.
+
+    Template has 8 columns:
+    1. Site Name
+    2. Street Address
+    3. City
+    4. Postal Code
+    5. Latitude
+    6. Longitude
+    7. Allocating Organization
+    8. Notes
     """
     (
-        org_name,
-        site_code,
         site_name,
         street_address,
         city,
@@ -378,7 +399,6 @@ def _parse_row(row: tuple, organization_id: int, allocating_org_map: dict) -> Ch
         latitude,
         longitude,
         allocating_org_name,
-        status,
         notes,
     ) = row
 
@@ -393,14 +413,13 @@ def _parse_row(row: tuple, organization_id: int, allocating_org_map: dict) -> Ch
     return ChargingSiteCreateSchema(
         organization_id=organization_id,
         allocating_organization_id=allocating_organization_id,
-        site_code=str(site_code) or "",
         site_name=str(site_name) or "",
         street_address=str(street_address) or "",
         city=str(city) or "",
         postal_code=postal_code or "",
         latitude=latitude,
         longitude=longitude,
-        current_status=status or "Draft",
+        current_status="Draft",  # Always Draft for new imports
         notes=notes or "",
     )
 

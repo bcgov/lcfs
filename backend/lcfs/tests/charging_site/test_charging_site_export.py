@@ -43,7 +43,7 @@ def mock_charging_sites():
     site1.longitude = -123.1207
     site1.status.status = "Draft"
     site1.notes = "Test notes"
-    
+
     return [site1]
 
 
@@ -53,37 +53,58 @@ def exporter(mock_repo):
 
 
 class TestChargingSiteExporter:
-    
+
     @pytest.mark.anyio
-    async def test_export_with_data_success(self, exporter, mock_user, mock_organization, mock_charging_sites):
+    async def test_export_with_data_success(
+        self, exporter, mock_user, mock_organization, mock_charging_sites
+    ):
         """Test successful export with data"""
         # Mock repository methods
-        exporter.repo.get_all_charging_sites_by_organization_id.return_value = mock_charging_sites
-        
-        with patch('lcfs.web.api.charging_site.export.SpreadsheetBuilder') as mock_builder:
+        exporter.repo.get_all_charging_sites_by_organization_id.return_value = (
+            mock_charging_sites
+        )
+
+        with patch(
+            "lcfs.web.api.charging_site.export.SpreadsheetBuilder"
+        ) as mock_builder:
             mock_builder_instance = MagicMock()
             mock_builder.return_value = mock_builder_instance
-            mock_builder_instance.build_spreadsheet.return_value = b'test_content'
-            
-            result = await exporter.export(1, mock_user, mock_organization, include_data=True, charging_site_ids=[1])
-            
+            mock_builder_instance.build_spreadsheet.return_value = b"test_content"
+
+            result = await exporter.export(
+                1,
+                mock_user,
+                mock_organization,
+                include_data=True,
+                charging_site_ids=[1],
+            )
+
             assert isinstance(result, StreamingResponse)
-            assert result.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            
+            assert (
+                result.media_type
+                == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
             # Verify repo methods were called
             exporter.repo.get_charging_sites_by_ids.assert_called_once_with([1])
 
     @pytest.mark.anyio
-    async def test_export_template_without_data(self, exporter, mock_user, mock_organization):
+    async def test_export_template_without_data(
+        self, exporter, mock_user, mock_organization
+    ):
         """Test export template without data"""
-        
-        with patch('lcfs.web.api.charging_site.export.SpreadsheetBuilder') as mock_builder:
+
+        with patch(
+            "lcfs.web.api.charging_site.export.SpreadsheetBuilder"
+        ) as mock_builder:
             mock_builder_instance = MagicMock()
             mock_builder.return_value = mock_builder_instance
-            mock_builder_instance.build_spreadsheet.return_value = b'template_content'
-            
-            result = await exporter.export(1, mock_user, mock_organization, include_data=False)
-            
+            mock_builder_instance.build_spreadsheet.return_value = b"template_content"
+
+            result = await exporter.export(
+                1, mock_user, mock_organization, include_data=False
+            )
+
             assert isinstance(result, StreamingResponse)
             # Should not call get_charging_sites_by_ids when include_data=False
             exporter.repo.get_charging_sites_by_ids.assert_not_called()
@@ -93,36 +114,46 @@ class TestChargingSiteExporter:
         """Test validator creation"""
         # Mock options
         status_options = [MagicMock(status="Draft"), MagicMock(status="Submitted")]
-        with patch('lcfs.web.api.charging_site.export.SpreadsheetBuilder') as mock_builder:
+        with patch(
+            "lcfs.web.api.charging_site.export.SpreadsheetBuilder"
+        ) as mock_builder:
             mock_builder_instance = MagicMock()
             mock_builder.return_value = mock_builder_instance
-            
-            validators = await exporter._create_validators(mock_organization, mock_builder_instance)
-            
+
+            validators = await exporter._create_validators(
+                mock_organization, mock_builder_instance
+            )
+
             assert len(validators) >= 4  # Should have multiple validators
 
     @pytest.mark.anyio
     async def test_load_charging_site_data(self, exporter, mock_charging_sites):
         """Test loading charging site data"""
         exporter.repo.get_charging_sites_by_ids.return_value = mock_charging_sites
-        
+
         data = await exporter.load_charging_site_data([1])
 
         assert len(data) == 1
-        assert len(data[0]) == 11  # Should have 11 columns (added Allocating Organization)
+        assert (
+            len(data[0]) == 8
+        )  # Should have 8 columns (Site Name, Address, City, Postal, Lat, Lng, Allocating Org, Notes)
         exporter.repo.get_charging_sites_by_ids.assert_called_once_with([1])
 
     @pytest.mark.anyio
     async def test_export_filename_format(self, exporter, mock_user, mock_organization):
         """Test that export filename includes organization name"""
-        
-        with patch('lcfs.web.api.charging_site.export.SpreadsheetBuilder') as mock_builder:
+
+        with patch(
+            "lcfs.web.api.charging_site.export.SpreadsheetBuilder"
+        ) as mock_builder:
             mock_builder_instance = MagicMock()
             mock_builder.return_value = mock_builder_instance
-            mock_builder_instance.build_spreadsheet.return_value = b'test_content'
-            
-            result = await exporter.export(1, mock_user, mock_organization, include_data=False)
-            
+            mock_builder_instance.build_spreadsheet.return_value = b"test_content"
+
+            result = await exporter.export(
+                1, mock_user, mock_organization, include_data=False
+            )
+
             # Check headers contain organization name
             headers = result.headers
             assert "Content-Disposition" in headers
