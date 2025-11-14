@@ -4,8 +4,7 @@ import BCTypography from '@/components/BCTypography'
 import {
   DEFAULT_CI_FUEL,
   NEW_REGULATION_YEAR,
-  REPORT_SCHEDULES,
-  isLegacyCompliancePeriod
+  REPORT_SCHEDULES
 } from '@/constants/common'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -33,8 +32,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import * as schema from './_schema'
-import * as legacySchema from './_legacySchema'
-// import { defaultColDef, fuelSupplyColDefs } from './_schema'
+// Legacy schema removed - all fuel supplies (including TFRS-migrated) use standard schema
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import Loading from '@/components/Loading'
@@ -170,13 +168,9 @@ export const AddEditFuelSupplies = () => {
     }, 100)
   }, [])
 
-  const getSchema = (compliancePeriod) => {
-    return isLegacyCompliancePeriod(compliancePeriod) ? legacySchema : schema
-  }
-
+  // All fuel supplies (including TFRS-migrated historical data) use the standard schema
   useEffect(() => {
-    const currentSchema = getSchema(compliancePeriod)
-    const updatedColumnDefs = currentSchema.fuelSupplyColDefs(
+    const updatedColumnDefs = schema.fuelSupplyColDefs(
       optionsData,
       errors,
       warnings,

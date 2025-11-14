@@ -5,7 +5,6 @@ import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector.js
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
-import { isFeatureEnabled } from '@/constants/config.js'
 
 // Create mock functions at the top level
 const mockUseParams = vi.fn()
@@ -20,12 +19,7 @@ vi.mock('react-router-dom', () => ({
   useLocation: () => mockUseLocation()
 }))
 
-vi.mock('@/constants/config.js', () => ({
-  FEATURE_FLAGS: {
-    LEGACY_REPORT_DETAILS: 'fullLegacyReports'
-  },
-  isFeatureEnabled: vi.fn()
-}))
+// Config mocking removed - no longer using feature flags for legacy views
 
 vi.mock('@/components/Loading', () => ({
   default: () => <div>Loading...</div>
@@ -47,13 +41,7 @@ vi.mock('@/components/Loading.jsx', () => ({
   default: () => <div data-test="loading">Loading...</div>
 }))
 
-vi.mock('@/views/ComplianceReports/ViewLegacyComplianceReport.jsx', () => ({
-  ViewLegacyComplianceReport: ({ reportData, error, isError }) => (
-    <div data-test="legacy-report">
-      ViewLegacyComplianceReport - {JSON.stringify({ reportData, error, isError })}
-    </div>
-  )
-}))
+// Legacy view mock removed - all reports now use EditViewComplianceReport
 
 vi.mock('@/views/ComplianceReports/EditViewComplianceReport.jsx', () => ({
   EditViewComplianceReport: ({ reportData, error, isError }) => (
@@ -223,25 +211,22 @@ describe('ComplianceReportViewSelector', () => {
   })
 
   describe('Report type rendering', () => {
-    it('renders ViewLegacyComplianceReport for pre-2024 reports when feature flag is disabled', () => {
-      // Feature flag disabled (default)
-      isFeatureEnabled.mockReturnValue(false)
-      
-      const pre2024Report = {
+    it('renders EditViewComplianceReport for all reports including historical TFRS-migrated reports', () => {
+      // TFRS data is migrated into existing LCFS tables, so all reports use the same view
+      const historicalReport = {
         ...defaultReportData,
         data: {
           report: {
             ...defaultReportData.data.report,
-            compliancePeriod: { description: '2023' }
+            compliancePeriod: { description: '2015' } // Historical TFRS report
           }
         }
       }
-      mockUseGetComplianceReport.mockReturnValue(pre2024Report)
+      mockUseGetComplianceReport.mockReturnValue(historicalReport)
 
       render(<ComplianceReportViewSelector />, { wrapper })
-      
-      expect(screen.getByTestId('legacy-report')).toBeInTheDocument()
-      expect(screen.queryByTestId('edit-report')).not.toBeInTheDocument()
+
+      expect(screen.getByTestId('edit-report')).toBeInTheDocument()
     })
 
     it('renders EditViewComplianceReport for 2024+ reports', () => {
@@ -257,57 +242,8 @@ describe('ComplianceReportViewSelector', () => {
       mockUseGetComplianceReport.mockReturnValue(report2024Plus)
 
       render(<ComplianceReportViewSelector />, { wrapper })
-      
+
       expect(screen.getByTestId('edit-report')).toBeInTheDocument()
-      expect(screen.queryByTestId('legacy-report')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('Feature flag behavior', () => {
-    it('renders EditViewComplianceReport when feature flag is enabled for pre-2024 reports', async () => {
-      // Mock feature flag as enabled
-      isFeatureEnabled.mockReturnValue(true)
-      
-      setupMocks({
-        reportData: {
-          data: {
-            report: {
-              compliancePeriod: { description: '2015' },
-              currentStatus: { status: 'DRAFT' }
-            }
-          }
-        }
-      })
-
-      render(<ComplianceReportViewSelector />, { wrapper })
-
-      await waitFor(() => {
-        expect(screen.getByTestId('edit-report')).toBeInTheDocument()
-        expect(screen.queryByTestId('legacy-report')).not.toBeInTheDocument()
-      })
-    })
-
-    it('renders ViewLegacyComplianceReport when feature flag is disabled for pre-2024 reports', async () => {
-      // Mock feature flag as disabled
-      isFeatureEnabled.mockReturnValue(false)
-      
-      setupMocks({
-        reportData: {
-          data: {
-            report: {
-              compliancePeriod: { description: '2023' },
-              currentStatus: { status: 'DRAFT' }
-            }
-          }
-        }
-      })
-
-      render(<ComplianceReportViewSelector />, { wrapper })
-
-      await waitFor(() => {
-        expect(screen.getByTestId('legacy-report')).toBeInTheDocument()
-        expect(screen.queryByTestId('edit-report')).not.toBeInTheDocument()
-      })
     })
   })
 

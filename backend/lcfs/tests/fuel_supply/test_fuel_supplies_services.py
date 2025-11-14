@@ -23,7 +23,6 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelCategoryResponseSchema,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
-from lcfs.web.api.fuel_supply.legacy_repo import LegacyFuelSupplyRepository
 
 # Fixture to set up the FuelSupplyServices with mocked dependencies
 # Mock common fuel type and fuel category for reuse

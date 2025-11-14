@@ -2,12 +2,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports.js'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import Loading from '@/components/Loading.jsx'
-import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
 import { useLocation, useParams } from 'react-router-dom'
 import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 import { useEffect } from 'react'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
-import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 
 export const ComplianceReportViewSelector = () => {
   const { complianceReportId } = useParams()
@@ -46,23 +44,9 @@ export const ComplianceReportViewSelector = () => {
     return <Loading />
   }
 
-  // Determine which view to show:
-  // - 2024+ reports: always show full view
-  // - Pre-2024 reports: use feature flag to control view
-  const reportYear =
-    reportData?.report?.compliancePeriod?.description &&
-    parseInt(reportData.report.compliancePeriod.description)
-
-  const showLegacyView =
-    reportYear < 2024 && !isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS)
-
-  return showLegacyView ? (
-    <ViewLegacyComplianceReport
-      reportData={reportData}
-      error={error}
-      isError={isError}
-    />
-  ) : (
+  // All reports (including historical TFRS-migrated reports) use the standard LCFS view
+  // TFRS data is migrated into existing LCFS tables and displays normally
+  return (
     <EditViewComplianceReport
       reportData={reportData}
       error={error}
