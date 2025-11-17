@@ -198,7 +198,7 @@ jobs:
         shell: bash {0}
         run: |
           cd lcfs/charts/lcfs-postgres-pr
-          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 15.5.17
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 16.7.16 --set image.tag=17.0.0
           cd ../lcfs-redis-pr
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1
           cd ../lcfs-minio-pr

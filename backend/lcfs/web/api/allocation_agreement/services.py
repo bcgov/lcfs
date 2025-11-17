@@ -2,7 +2,7 @@ import math
 import structlog
 import uuid
 from fastapi import Depends, HTTPException, status
-from typing import Optional
+from typing import Optional, List
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
@@ -16,6 +16,8 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementAllSchema,
     AllocationTransactionTypeSchema,
     DeleteAllocationAgreementResponseSchema,
+    AllocationAgreementResponseSchema,
+    ProvisionOfTheActSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -145,31 +147,93 @@ class AllocationAgreementServices:
 
     @service_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int, changelog: bool = False
-    ) -> AllocationAgreementListSchema:
-        """
-        Gets the list of allocation agreements for a specific compliance report.
-        """
-        allocation_agreements = await self.repo.get_allocation_agreements(
-            compliance_report_id, changelog=changelog
+        self,
+        compliance_report_id: int,
+        changelog: bool = False,
+    ) -> AllocationAgreementAllSchema:
+        """Get all Allocation agreements for a compliance report"""
+        # Expect raw models from repo
+        allocation_agreements_models: List[AllocationAgreement] = (
+            await self.repo.get_allocation_agreements(
+                compliance_report_id=compliance_report_id, changelog=changelog
+            )
         )
-
+        allocation_agreements_response = []
+        # Map directly from ORM models
+        for aa in allocation_agreements_models:
+            aa_response = AllocationAgreementResponseSchema(
+                allocation_agreement_id=aa.allocation_agreement_id,
+                compliance_report_id=aa.compliance_report_id,
+                allocation_transaction_type=aa.allocation_transaction_type.type,
+                transaction_partner=aa.transaction_partner,
+                postal_address=aa.postal_address,
+                transaction_partner_email=aa.transaction_partner_email,
+                transaction_partner_phone=aa.transaction_partner_phone,
+                fuel_type=aa.fuel_type.fuel_type,
+                fuel_category_id=aa.fuel_category_id,
+                fuel_category=(aa.fuel_category.category if aa.fuel_category else None),
+                fuel_type_other=aa.fuel_type_other,
+                ci_of_fuel=aa.ci_of_fuel,
+                provision_of_the_act=(
+                    ProvisionOfTheActSchema(
+                        provision_of_the_act_id=aa.provision_of_the_act.provision_of_the_act_id,
+                        name=aa.provision_of_the_act.name
+                    ) if aa.provision_of_the_act else None
+                ),
+                quantity=aa.quantity,
+                units=aa.units,
+                fuel_code=(aa.fuel_code.fuel_code if aa.fuel_code else None),
+                group_uuid=aa.group_uuid,
+                version=aa.version,
+                action_type=aa.action_type,
+                updated=None,  # Assuming this is not mapped
+            )
+            allocation_agreements_response.append(aa_response)
         return AllocationAgreementAllSchema(
-            allocation_agreements=[
-                AllocationAgreementSchema.model_validate(aa)
-                for aa in allocation_agreements
-            ]
+            allocation_agreements=allocation_agreements_response
         )
 
     @service_handler
     async def get_allocation_agreements_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> AllocationAgreementListSchema:
-        allocation_agreements, total_count = (
+        # Repo returns raw models and count
+        allocation_agreements_models, total_count = (
             await self.repo.get_allocation_agreements_paginated(
                 pagination, compliance_report_id
             )
         )
+        allocation_agreements_response = []
+        for aa in allocation_agreements_models:
+            # Construct the ResponseSchema using strings from ORM model attributes
+            aa_response = AllocationAgreementResponseSchema(
+                allocation_agreement_id=aa.allocation_agreement_id,
+                compliance_report_id=aa.compliance_report_id,
+                allocation_transaction_type=aa.allocation_transaction_type.type,
+                transaction_partner=aa.transaction_partner,
+                postal_address=aa.postal_address,
+                transaction_partner_email=aa.transaction_partner_email,
+                transaction_partner_phone=aa.transaction_partner_phone,
+                fuel_type=aa.fuel_type.fuel_type,
+                fuel_category_id=aa.fuel_category_id,
+                fuel_category=(aa.fuel_category.category if aa.fuel_category else None),
+                fuel_type_other=aa.fuel_type_other,
+                ci_of_fuel=aa.ci_of_fuel,
+                provision_of_the_act=(
+                    ProvisionOfTheActSchema(
+                        provision_of_the_act_id=aa.provision_of_the_act.provision_of_the_act_id,
+                        name=aa.provision_of_the_act.name
+                    ) if aa.provision_of_the_act else None
+                ),
+                quantity=aa.quantity,
+                units=aa.units,
+                fuel_code=(aa.fuel_code.fuel_code if aa.fuel_code else None),
+                group_uuid=aa.group_uuid,
+                version=aa.version,
+                action_type=aa.action_type,
+                updated=None,
+            )
+            allocation_agreements_response.append(aa_response)
         return AllocationAgreementListSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
@@ -191,10 +255,26 @@ class AllocationAgreementServices:
                     q3_quantity=allocation_agreement.q3_quantity,
                     q4_quantity=allocation_agreement.q4_quantity,
                     units=allocation_agreement.units,
-                    allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
-                    fuel_type=allocation_agreement.fuel_type.fuel_type,
-                    fuel_category=allocation_agreement.fuel_category.category,
-                    provision_of_the_act=allocation_agreement.provision_of_the_act.name,
+                    allocation_transaction_type=(
+                        allocation_agreement.allocation_transaction_type.type
+                        if allocation_agreement.allocation_transaction_type
+                        else None
+                    ),
+                    fuel_type=(
+                        allocation_agreement.fuel_type.fuel_type
+                        if allocation_agreement.fuel_type
+                        else None
+                    ),
+                    fuel_category=(
+                        allocation_agreement.fuel_category.category
+                        if allocation_agreement.fuel_category
+                        else None
+                    ),
+                    provision_of_the_act=(
+                        allocation_agreement.provision_of_the_act.name
+                        if allocation_agreement.provision_of_the_act
+                        else None
+                    ),
                     # Set fuel_code only if it exists
                     fuel_code=(
                         allocation_agreement.fuel_code.fuel_code
@@ -203,7 +283,7 @@ class AllocationAgreementServices:
                     ),
                     compliance_report_id=allocation_agreement.compliance_report_id,
                 )
-                for allocation_agreement in allocation_agreements
+                for allocation_agreement in allocation_agreements_response
             ],
         )
 
@@ -294,7 +374,11 @@ class AllocationAgreementServices:
             recalculated_ci = await self.calculate_ci_of_fuel(
                 fuel_type=existing_allocation_agreement.fuel_type,
                 fuel_category=existing_allocation_agreement.fuel_category,
-                provision_of_the_act=existing_allocation_agreement.provision_of_the_act.name,
+                provision_of_the_act=(
+                    existing_allocation_agreement.provision_of_the_act.name
+                    if existing_allocation_agreement.provision_of_the_act
+                    else None
+                ),
                 fuel_code=existing_allocation_agreement.fuel_code,
             )
             existing_allocation_agreement.ci_of_fuel = recalculated_ci
@@ -348,8 +432,16 @@ class AllocationAgreementServices:
                 allocation_transaction_type=updated_allocation_agreement.allocation_transaction_type.type,
                 fuel_type=updated_allocation_agreement.fuel_type.fuel_type,
                 fuel_type_other=updated_allocation_agreement.fuel_type_other,
-                fuel_category=updated_allocation_agreement.fuel_category.category,
-                provision_of_the_act=updated_allocation_agreement.provision_of_the_act.name,
+                fuel_category=(
+                    updated_allocation_agreement.fuel_category.category
+                    if updated_allocation_agreement.fuel_category
+                    else None
+                ),
+                provision_of_the_act=(
+                    updated_allocation_agreement.provision_of_the_act.name
+                    if updated_allocation_agreement.provision_of_the_act
+                    else None
+                ),
                 fuel_code=(
                     updated_allocation_agreement.fuel_code.fuel_code
                     if updated_allocation_agreement.fuel_code
@@ -427,8 +519,16 @@ class AllocationAgreementServices:
             allocation_transaction_type=allocation_transaction_type_value,
             fuel_type=fuel_type_value,
             fuel_type_other=created_allocation_agreement.fuel_type_other,
-            fuel_category=fuel_category_value,
-            provision_of_the_act=provision_of_the_act_value,
+            fuel_category=(
+                created_allocation_agreement.fuel_category.category
+                if created_allocation_agreement.fuel_category
+                else None
+            ),
+            provision_of_the_act=(
+                created_allocation_agreement.provision_of_the_act.name
+                if created_allocation_agreement.provision_of_the_act
+                else None
+            ),
             fuel_code=fuel_code_value,
             group_uuid=created_allocation_agreement.group_uuid,
             version=created_allocation_agreement.version,

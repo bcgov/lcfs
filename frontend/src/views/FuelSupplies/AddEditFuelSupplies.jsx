@@ -1,7 +1,13 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common'
+import {
+  DEFAULT_CI_FUEL,
+  NEW_REGULATION_YEAR,
+  REPORT_SCHEDULES
+} from '@/constants/common'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
@@ -24,7 +30,9 @@ import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { v4 as uuid } from 'uuid'
+import * as schema from './_schema'
+// Legacy schema removed - all fuel supplies (including TFRS-migrated) use standard schema
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import Loading from '@/components/Loading'
@@ -160,6 +168,19 @@ export const AddEditFuelSupplies = () => {
     }, 100)
   }, [])
 
+  // All fuel supplies (including TFRS-migrated historical data) use the standard schema
+  useEffect(() => {
+    const updatedColumnDefs = schema.fuelSupplyColDefs(
+      optionsData,
+      errors,
+      warnings,
+      compliancePeriod,
+      isSupplemental,
+      isEarlyIssuance
+    )
+    setColumnDefs(updatedColumnDefs)
+  }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
+
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
   }, [])
@@ -275,37 +296,71 @@ export const AddEditFuelSupplies = () => {
             <BCTypography variant="body4" color="text" my={2} component="div">
               {t('fuelSupply:fuelSupplyNote')}
             </BCTypography>
+            <BCBox
+              my={2}
+              component="div"
+              style={{ height: '100%', width: '100%' }}
+            >
+              <BCGridEditor
+                gridRef={gridRef}
+                alertRef={alertRef}
+                columnDefs={columnDefs}
+                defaultColDef={schema.defaultColDef}
+                onGridReady={onGridReady}
+                rowData={rowData}
+                gridOptions={gridOptions}
+                loading={optionsLoading || fuelSuppliesLoading}
+                onCellValueChanged={onCellValueChanged}
+                onCellEditingStopped={onCellEditingStopped}
+                onAction={onAction}
+                onFirstDataRendered={onFirstDataRendered}
+                stopEditingWhenCellsLoseFocus
+                saveButtonProps={{
+                  enabled: true,
+                  text: t('report:saveReturn'),
+                  onSave: handleNavigateBack,
+                  confirmText: t('report:incompleteReport'),
+                  confirmLabel: t('report:returnToReport')
+                }}
+              />
+            </BCBox>
           </>
         ) : (
-          <BCTypography variant="body4" color="text" my={2} component="div">
-            {t('fuelSupply:fuelSupplyGuide')}
-          </BCTypography>
+          <>
+            <BCTypography variant="body4" color="text" my={2} component="div">
+              {t('fuelSupply:fuelSupplyGuide')}
+            </BCTypography>
+            <BCBox
+              my={2}
+              component="div"
+              style={{ height: '100%', width: '100%' }}
+            >
+              <BCGridEditor
+                gridRef={gridRef}
+                alertRef={alertRef}
+                columnDefs={columnDefs}
+                defaultColDef={schema.defaultColDef}
+                onGridReady={onGridReady}
+                rowData={rowData}
+                gridOptions={gridOptions}
+                loading={optionsLoading || fuelSuppliesLoading}
+                onCellValueChanged={onCellValueChanged}
+                onCellEditingStopped={onCellEditingStopped}
+                onAction={onAction}
+                onFirstDataRendered={onFirstDataRendered}
+                stopEditingWhenCellsLoseFocus
+                saveButtonProps={{
+                  enabled: true,
+                  text: t('report:saveReturn'),
+                  onSave: handleNavigateBack,
+                  confirmText: t('report:incompleteReport'),
+                  confirmLabel: t('report:returnToReport')
+                }}
+              />
+            </BCBox>
+          </>
         )}
       </div>
-      <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-        <BCGridEditor
-          gridRef={gridRef}
-          alertRef={alertRef}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          onGridReady={onGridReady}
-          rowData={rowData}
-          gridOptions={gridOptions}
-          loading={optionsLoading || fuelSuppliesLoading}
-          onCellValueChanged={onCellValueChanged}
-          onCellEditingStopped={onCellEditingStopped}
-          onAction={onAction}
-          onFirstDataRendered={onFirstDataRendered}
-          stopEditingWhenCellsLoseFocus
-          saveButtonProps={{
-            enabled: true,
-            text: t('report:saveReturn'),
-            onSave: handleNavigateBack,
-            confirmText: t('report:incompleteReport'),
-            confirmLabel: t('report:returnToReport')
-          }}
-        />
-      </BCBox>
     </Grid2>
   )
 }
