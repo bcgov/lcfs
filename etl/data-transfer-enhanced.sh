@@ -133,19 +133,22 @@ echo
 get_leader_pod() {
     local project=$1
     local app_label=$2
-    
+
     # Get all pods with the given app label
-    pods=$(oc get pods -n $project_name -o name | grep "$app_label")
-    
+    pods=$(oc get pods -n $project -o name | grep "$app_label")
+
     # Loop through pods to find the leader (using remote_db_user)
     for pod in $pods; do
-        is_leader=$(oc exec -n $project $pod -- bash -c "psql -U $remote_db_user -tAc \"SELECT pg_is_in_recovery()\"")
+        # Strip 'pod/' prefix for oc exec
+        pod_clean="${pod#pod/}"
+        print_status "Checking if $pod_clean is the leader..."
+        is_leader=$(oc exec -n $project $pod_clean -- bash -c "psql -U $remote_db_user -d $db_name -tAc 'SELECT pg_is_in_recovery();'" 2>/dev/null || echo "error")
         if [ "$is_leader" = "f" ]; then
             echo $pod
             return
         fi
     done
-    
+
     echo "No leader pod found"
     exit 1
 }

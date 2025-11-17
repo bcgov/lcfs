@@ -174,8 +174,8 @@ class AllocationAgreementMigrator:
             LEFT JOIN compliance_report_exclusion_agreement_record crear_latest
                 ON crea_latest.id = crear_latest.exclusion_agreement_id
             -- Coalesce the results to use direct first, then latest
-            CROSS JOIN (
-                SELECT 
+            LEFT JOIN LATERAL (
+                SELECT
                     COALESCE(crear_direct.id, crear_latest.id) AS id,
                     COALESCE(crear_direct.transaction_partner, crear_latest.transaction_partner) AS transaction_partner,
                     COALESCE(crear_direct.postal_address, crear_latest.postal_address) AS postal_address,
@@ -183,7 +183,7 @@ class AllocationAgreementMigrator:
                     COALESCE(crear_direct.quantity_not_sold, crear_latest.quantity_not_sold) AS quantity_not_sold,
                     COALESCE(crear_direct.transaction_type_id, crear_latest.transaction_type_id) AS transaction_type_id,
                     COALESCE(crear_direct.fuel_type_id, crear_latest.fuel_type_id) AS fuel_type_id
-            ) crear
+            ) crear ON true
             -- Standard joins for details
             INNER JOIN transaction_type tt
                 ON crear.transaction_type_id = tt.id

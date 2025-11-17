@@ -60,7 +60,7 @@ setup-prod:
 	@echo "📋 Checking OpenShift login..."
 	@oc whoami || (echo "❌ Please login to OpenShift first: oc login" && exit 1)
 	@echo "🐳 Starting Docker containers and importing PRODUCTION data..."
-	python setup/migration_orchestrator.py auto-setup --env prod
+	python3 setup/migration_orchestrator.py auto-setup --env prod
 
 # Setup databases with dev data
 setup-dev:
@@ -68,25 +68,25 @@ setup-dev:
 	@echo "📋 Checking OpenShift login..."
 	@oc whoami || (echo "❌ Please login to OpenShift first: oc login" && exit 1)
 	@echo "🐳 Starting Docker containers and importing DEV data..."
-	python setup/migration_orchestrator.py auto-setup --env dev
+	python3 setup/migration_orchestrator.py auto-setup --env dev
 
-# Setup databases with test data  
+# Setup databases with test data
 setup-test:
 	@echo "🧪 Setting up databases with TEST data"
 	@echo "📋 Checking OpenShift login..."
 	@oc whoami || (echo "❌ Please login to OpenShift first: oc login" && exit 1)
 	@echo "🐳 Starting Docker containers and importing TEST data..."
-	python setup/migration_orchestrator.py auto-setup --env test
+	python3 setup/migration_orchestrator.py auto-setup --env test
 
 # Start Docker containers without data import
 docker-start:
 	@echo "🐳 Starting Docker containers..."
 	@docker compose up -d tfrs
 	@echo "🔄 Starting LCFS environment..."
-	@if [ -f "../../../docker-compose.yml" ]; then \
-		cd ../../../ && docker compose up -d; \
+	@if [ -f "../../docker-compose.yml" ]; then \
+		cd ../../ && docker compose up -d; \
 	else \
-		echo "⚠️  LCFS docker-compose.yml not found at ../../../docker-compose.yml"; \
+		echo "⚠️  LCFS docker-compose.yml not found at ../../docker-compose.yml"; \
 		echo "Please start LCFS environment manually"; \
 	fi
 	@echo "✅ Docker containers started"
@@ -102,19 +102,19 @@ docker-stop:
 migrate:
 	@echo "🚀 Running data migrations..."
 	@echo "📋 Checking migration readiness..."
-	python setup/migration_orchestrator.py check || (echo "❌ Databases not ready for migration" && exit 1)
+	python3 setup/migration_orchestrator.py check || (echo "❌ Databases not ready for migration" && exit 1)
 	@echo "▶️  Running all migration scripts..."
-	python setup/migration_orchestrator.py migrate
+	python3 setup/migration_orchestrator.py migrate
 
-# Run validation only (assumes migration complete)  
+# Run validation only (assumes migration complete)
 validate:
 	@echo "🔎 Running migration validation..."
-	python setup/migration_orchestrator.py validate
+	python3 setup/migration_orchestrator.py validate
 
 # Check if databases are ready for migration
 check:
 	@echo "🔍 Checking migration readiness..."
-	python setup/migration_orchestrator.py check
+	python3 setup/migration_orchestrator.py check
 
 # Show status of containers and databases
 status:
@@ -124,19 +124,19 @@ status:
 	@echo ""
 	@echo "💾 Database Status:"
 	@echo "=================="
-	@python setup/database_manager.py verify-tfrs 2>/dev/null || echo "TFRS: Not accessible"
-	@python setup/database_manager.py verify-lcfs 2>/dev/null || echo "LCFS: Not accessible"
+	@python3 setup/database_manager.py verify-tfrs 2>/dev/null || echo "TFRS: Not accessible"
+	@python3 setup/database_manager.py verify-lcfs 2>/dev/null || echo "LCFS: Not accessible"
 	@echo ""
 	@echo "📊 Migration Readiness:"
 	@echo "======================"
-	@python setup/migration_orchestrator.py check 2>/dev/null && echo "✅ Ready for migration" || echo "❌ Not ready for migration"
+	@python3 setup/migration_orchestrator.py check 2>/dev/null && echo "✅ Ready for migration" || echo "❌ Not ready for migration"
 
 # Stop all containers
 stop:
 	@echo "🛑 Stopping all migration containers..."
 	@docker compose down
 	@echo "ℹ️  Note: LCFS environment containers are left running"
-	@echo "   To stop LCFS: cd ../../../ && docker compose down"
+	@echo "   To stop LCFS: cd ../../ && docker compose down"
 
 # Clean up everything
 clean: stop
@@ -152,7 +152,7 @@ install:
 
 lint:
 	@echo "🔍 Running Python linting..."
-	@python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || echo "⚠️  Linting issues found (not blocking)"
+	@python3 -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || echo "⚠️  Linting issues found (not blocking)"
 
 test-docker:
 	@echo "🐳 Testing Docker setup..."
@@ -180,7 +180,7 @@ import-prod:
 info:
 	@echo "🔧 Environment Information:"
 	@echo "=========================="
-	@echo "Python: $$(python --version 2>&1)"
+	@echo "Python: $$(python3 --version 2>&1)"
 	@echo "Docker: $$(docker --version)"
 	@echo "Docker Compose: $$(docker compose version --short 2>/dev/null || docker-compose --version)"
 	@echo "OpenShift CLI: $$(oc version --client --short 2>/dev/null || echo 'Not installed')"
@@ -211,23 +211,23 @@ start-tfrs:
 
 start-lcfs:
 	@echo "🐳 Starting LCFS environment..."
-	@if [ -f "../../../docker-compose.yml" ]; then \
-		cd ../../../ && docker compose up -d; \
+	@if [ -f "../../docker-compose.yml" ]; then \
+		cd ../../ && docker compose up -d; \
 		echo "✅ LCFS environment started"; \
 	else \
-		echo "❌ LCFS docker-compose.yml not found at ../../../docker-compose.yml"; \
+		echo "❌ LCFS docker-compose.yml not found at ../../docker-compose.yml"; \
 	fi
 
 # Database operations
 reset-tfrs:
 	@echo "🔄 Resetting TFRS database from existing .tar file..."
-	@python setup/database_manager.py reset tfrs tfrs_migration
+	@python3 setup/database_manager.py reset tfrs tfrs_migration
 
 reset-lcfs:
 	@echo "🔄 Resetting LCFS database from existing .tar file..."
-	@python setup/database_manager.py reset lcfs db
+	@python3 setup/database_manager.py reset lcfs db
 	@echo "🔧 Running Alembic database migrations..."
-	@cd ../../backend && poetry run alembic upgrade head
+	@cd ../../backend && $$(command -v poetry || echo /opt/homebrew/bin/poetry) run alembic upgrade head
 	@echo "✅ Database schema updated to latest version"
 
 reset: reset-lcfs
