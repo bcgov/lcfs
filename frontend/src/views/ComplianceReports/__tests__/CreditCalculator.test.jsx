@@ -44,6 +44,8 @@ const mockT = vi.fn((key, options) => {
   return options?.returnObjects ? translations[key] : translations[key] || key
 })
 
+const DEFAULT_QUANTITY = 100000
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: mockT })
 }))
@@ -99,7 +101,7 @@ const TestWrapper = ({ children, formProps = {} }) => {
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
-      quantity: 0,
+      quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
       endUseType: ''
     },
@@ -564,7 +566,7 @@ describe('CreditCalculator', () => {
             fuelType: '',
             fuelCode: '',
             provisionOfTheAct: '',
-            quantity: 0,
+            quantity: DEFAULT_QUANTITY,
             endUseType: ''
           }
         }}>
@@ -599,7 +601,7 @@ describe('CreditCalculator', () => {
             fuelType: '',
             fuelCode: '',
             provisionOfTheAct: '',
-            quantity: 0,
+            quantity: DEFAULT_QUANTITY,
             endUseType: ''
           }
         }}>
@@ -634,7 +636,7 @@ describe('CreditCalculator', () => {
             fuelType: '',
             fuelCode: '',
             provisionOfTheAct: '',
-            quantity: 0,
+            quantity: DEFAULT_QUANTITY,
             endUseType: ''
           }
         }}>
@@ -669,7 +671,7 @@ describe('CreditCalculator', () => {
             fuelType: 'Gasoline', // Set fuel type to show end uses
             fuelCode: '',
             provisionOfTheAct: '',
-            quantity: 0,
+            quantity: DEFAULT_QUANTITY,
             endUseType: ''
           }
         }}>
@@ -704,7 +706,7 @@ describe('CreditCalculator', () => {
             fuelType: 'Gasoline', // Set fuel type to show end uses
             fuelCode: '',
             provisionOfTheAct: '',
-            quantity: 0,
+            quantity: DEFAULT_QUANTITY,
             endUseType: ''
           }
         }}>

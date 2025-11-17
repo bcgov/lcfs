@@ -46,6 +46,8 @@ export const CreditCalculator = () => {
     [t]
   )
 
+  const DEFAULT_QUANTITY = 100000
+
   const { data: currentUser } = useCurrentUser()
 
   // Only fetch organization balance if user has an organization
@@ -100,7 +102,7 @@ export const CreditCalculator = () => {
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
-      quantity: 0,
+      quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
       endUseType: ''
     }
@@ -210,7 +212,7 @@ export const CreditCalculator = () => {
       setValue('endUseType', '')
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
-      setValue('quantity', 0)
+      setValue('quantity', DEFAULT_QUANTITY)
       setSelectedEndUse(undefined)
     }
   }, [selectedFuelType, setValue, fuelCategory])
@@ -220,7 +222,7 @@ export const CreditCalculator = () => {
       setValue('endUseType', selectedEndUse)
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
-      setValue('quantity', 0)
+      setValue('quantity', DEFAULT_QUANTITY)
     }
   }, [selectedEndUse, setValue])
 
@@ -263,7 +265,7 @@ export const CreditCalculator = () => {
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
-      quantity: 0,
+      quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
       endUseType: ''
     })
