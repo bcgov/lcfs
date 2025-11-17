@@ -12,7 +12,19 @@ export const getKeycloak = () => {
 }
 
 export const logout = () => {
-  localStorage.removeItem('keycloak-logged-in')
+  // Clear all browser storage (filters, cached data, etc.)
+  sessionStorage.clear()
+  localStorage.clear()
+
+  // Clear React Query cache
+  // Import the queryClient dynamically to avoid circular dependencies
+  import('@/main')
+    .then(({ queryClient }) => {
+      queryClient.clear()
+    })
+    .catch((error) => {
+      console.error('Failed to clear query cache:', error)
+    })
 
   const idToken = keycloak.idToken || keycloak.tokenParsed?.idToken
 

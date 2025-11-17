@@ -12,6 +12,7 @@ from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.base import (
     PaginationRequestSchema,
+    SortOrder,
 )
 from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
 from lcfs.web.api.compliance_report.schema import (
@@ -207,6 +208,28 @@ async def test_get_reports_paginated_success(
         page=1,
         size=10,
         sort_orders=[],
+        filters=[],
+    )
+
+    reports, total_count = await compliance_report_repo.get_reports_paginated(
+        pagination, UserProfile()
+    )
+
+    assert isinstance(reports, list)
+    assert len(reports) > 0
+    assert isinstance(reports[0], ComplianceReportViewSchema)
+    assert total_count >= len(reports)
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_sort_by_assigned_analyst(
+    compliance_report_repo,
+    compliance_reports,
+):
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        sort_orders=[SortOrder(field="assignedAnalyst", direction="asc")],
         filters=[],
     )
 

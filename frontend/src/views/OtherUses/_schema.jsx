@@ -15,7 +15,6 @@ import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { formatFuelCodeOptions } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,
@@ -164,10 +163,9 @@ export const otherUsesColDefs = (
       )
 
       return {
-        options: formatFuelCodeOptions(
-          fuelType?.fuelCodes || [],
-          compliancePeriod
-        ),
+        options:
+          fuelType?.fuelCodes.map((item) => item.fuelCode || item.fuel_code) ||
+          [],
         multiple: false,
         disableCloseOnSelect: false,
         freeSolo: false,

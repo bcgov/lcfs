@@ -457,9 +457,9 @@ export const AddEditChargingSite = ({
           saveButtonProps={{
             enabled: true,
             text: t('common:saveReturnBtn'),
-            onSave: handleNavigateBack
-            // confirmText: t('report:incompleteReport'),
-            // confirmLabel: t('report:returnToReport')
+            onSave: handleNavigateBack,
+            confirmText: t('chargingSite:incompleteSite'),
+            confirmLabel: t('chargingSite:returnToSite')
           }}
         />
       </BCBox>

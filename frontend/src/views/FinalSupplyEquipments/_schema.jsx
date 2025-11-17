@@ -488,13 +488,6 @@ export const finalSupplyEquipmentColDefs = (
 export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
   {
     headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
-    ),
-    minWidth: 300,
-    field: 'organizationName'
-  },
-  {
-    headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
     ),
     minWidth: 210,
@@ -514,6 +507,13 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     minWidth: 135,
     field: 'kwhUsage',
     valueFormatter: numberFormatter
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
+    ),
+    minWidth: 300,
+    field: 'complianceNotes'
   },
   {
     headerName: t(
@@ -571,7 +571,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUserTypes'
     ),
     field: 'intendedUsers',
-    minWidth: 200,
+    minWidth: 400,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
       status === COMPLIANCE_REPORT_STATUSES.DRAFT
@@ -610,13 +610,6 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     ),
     minWidth: 150,
     field: 'longitude'
-  },
-  {
-    headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
-    ),
-    minWidth: 300,
-    field: 'complianceNotes'
   },
   {
     headerName: t(
@@ -673,7 +666,8 @@ export const getFSEReportingColDefs = (
       maxDate,
       autoOpenLastRow: false
     },
-    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+    editable: (params) =>
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     valueGetter: (params) => {
       return params.data.supplyFromDate || minDate
     },
@@ -705,7 +699,8 @@ export const getFSEReportingColDefs = (
       maxDate,
       autoOpenLastRow: false
     },
-    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+    editable: (params) =>
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     valueGetter: (params) => {
       return params.data.supplyToDate || maxDate
     },
@@ -729,7 +724,8 @@ export const getFSEReportingColDefs = (
       min: 0,
       showStepperButtons: false
     },
-    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+    editable: (params) =>
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     filter: false,
     sortable: false,
     cellStyle: (params) =>
@@ -742,7 +738,8 @@ export const getFSEReportingColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
-    editable: (params) => params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+    editable: (params) =>
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',

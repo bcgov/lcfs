@@ -2,6 +2,7 @@ import { Card, CardContent, Grid, Stack } from '@mui/material'
 import { BCResponsiveEChart } from './BCResponsiveEchart'
 import BCTypography from '../BCTypography'
 import { useTheme } from '@mui/material/styles'
+import { faSackDollar } from '@fortawesome/free-solid-svg-icons'
 
 export const BCMetricCard = ({
   title,
@@ -40,7 +41,7 @@ export const BCMetricCard = ({
       /> */}
       <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
         <Grid container spacing={1}>
-          <Grid item xs={12} sm={5}>
+          <Grid item xs={12} sm={option ? 5 : 12}>
             <Stack direction="row" spacing={2} alignItems="center">
               {/* <Box
                 sx={{
@@ -59,7 +60,7 @@ export const BCMetricCard = ({
                 <FontAwesomeIcon icon={resolvedIcon} size="lg" />
               </Box> */}
               <Stack spacing={0.5}>
-                <BCTypography variant="h6" fontWeight="bold">
+                <BCTypography variant="h5" fontWeight="bold" color="primary">
                   {value}
                 </BCTypography>
                 <BCTypography variant="subtitle2" color="text.secondary">

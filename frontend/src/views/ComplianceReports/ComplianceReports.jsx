@@ -117,8 +117,22 @@ export const ComplianceReports = () => {
   const handleClearFilters = () => {
     setPaginationOptions(initialPaginationOptions)
     sessionStorage.removeItem('compliance-reports-grid-filter')
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
+    sessionStorage.removeItem('compliance-reports-grid-column')
+
+    if (gridRef?.current) {
+      gridRef.current.clearFilters?.()
+
+      const defaultSortState =
+        initialPaginationOptions.sortOrders?.map((order, index) => ({
+          colId: order.field,
+          sort: order.direction,
+          sortIndex: index
+        })) || []
+
+      gridRef.current.api?.applyColumnState({
+        state: defaultSortState,
+        defaultState: { sort: null }
+      })
     }
   }
 

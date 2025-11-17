@@ -82,9 +82,9 @@ vi.mock('@/utils/schedules', () => ({
   handleScheduleDelete: vi.fn().mockResolvedValue(),
   handleScheduleSave: vi.fn().mockImplementation(({ updatedData, params }) => {
     const data = params?.node?.data || updatedData
-    return Promise.resolve({ 
-      ...data, 
-      id: 'saved-id', 
+    return Promise.resolve({
+      ...data,
+      id: 'saved-id',
       ciOfFuel: data?.ciOfFuel || 85.5,
       quantity: data?.quantity || 100,
       complianceReportId: data?.complianceReportId || 'testReportId',
@@ -169,118 +169,151 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
           ))}
         </div>
         {/* Enhanced simulation buttons for comprehensive coverage */}
-        <button 
+        <button
           data-test="simulate-cell-value-changed-fueltype"
-          onClick={() => onCellValueChanged && onCellValueChanged({
-            colDef: { field: 'fuelType' },
-            data: { fuelType: 'Gasoline' },
-            node: { 
-              setDataValue: vi.fn(),
-              data: { fuelType: 'Gasoline' }
-            }
-          })}
+          onClick={() =>
+            onCellValueChanged &&
+            onCellValueChanged({
+              colDef: { field: 'fuelType' },
+              data: { fuelType: 'Gasoline' },
+              node: {
+                setDataValue: vi.fn(),
+                data: { fuelType: 'Gasoline' }
+              }
+            })
+          }
         >
           Simulate Fuel Type Changed
         </button>
-        <button 
+        <button
           data-test="simulate-cell-value-changed-provision"
-          onClick={() => onCellValueChanged && onCellValueChanged({
-            colDef: { field: 'provisionOfTheAct' },
-            data: { provisionOfTheAct: 'Section 6(d)(i)(A)' },
-            node: { 
-              setDataValue: vi.fn(),
-              data: { provisionOfTheAct: 'Section 6(d)(i)(A)' }
-            }
-          })}
+          onClick={() =>
+            onCellValueChanged &&
+            onCellValueChanged({
+              colDef: { field: 'provisionOfTheAct' },
+              data: { provisionOfTheAct: 'Section 6(d)(i)(A)' },
+              node: {
+                setDataValue: vi.fn(),
+                data: { provisionOfTheAct: 'Section 6(d)(i)(A)' }
+              }
+            })
+          }
         >
           Simulate Provision Changed
         </button>
-        <button 
+        <button
           data-test="simulate-cell-value-changed-fuelcategory"
-          onClick={() => onCellValueChanged && onCellValueChanged({
-            colDef: { field: 'fuelCategory' },
-            data: { fuelCategory: 'Invalid Category', fuelType: 'Gasoline' },
-            node: { 
-              setDataValue: vi.fn(),
-              data: { fuelCategory: 'Invalid Category', fuelType: 'Gasoline' }
-            }
-          })}
+          onClick={() =>
+            onCellValueChanged &&
+            onCellValueChanged({
+              colDef: { field: 'fuelCategory' },
+              data: { fuelCategory: 'Invalid Category', fuelType: 'Gasoline' },
+              node: {
+                setDataValue: vi.fn(),
+                data: { fuelCategory: 'Invalid Category', fuelType: 'Gasoline' }
+              }
+            })
+          }
         >
           Simulate Fuel Category Changed
         </button>
-        <button 
+        <button
           data-test="simulate-cell-editing-stopped-same-value"
-          onClick={() => onCellEditingStopped && onCellEditingStopped({
-            colDef: { field: 'quantity' },
-            oldValue: 100,
-            newValue: 100,
-            node: { 
-              setDataValue: vi.fn(),
-              updateData: vi.fn(),
-              data: { quantity: 100, id: 'test-id' }
-            }
-          })}
+          onClick={() =>
+            onCellEditingStopped &&
+            onCellEditingStopped({
+              colDef: { field: 'quantity' },
+              oldValue: 100,
+              newValue: 100,
+              node: {
+                setDataValue: vi.fn(),
+                updateData: vi.fn(),
+                data: { quantity: 100, id: 'test-id' }
+              }
+            })
+          }
         >
           Simulate Same Value Edit
         </button>
-        <button 
+        <button
           data-test="simulate-cell-editing-stopped-transaction-partner"
-          onClick={() => onCellEditingStopped && onCellEditingStopped({
-            colDef: { field: 'transactionPartner' },
-            oldValue: '',
-            newValue: 'Test Org',
-            node: { 
-              setDataValue: vi.fn(),
-              updateData: vi.fn(),
-              data: { transactionPartner: 'Test Org', id: 'test-id' }
-            }
-          })}
+          onClick={() =>
+            onCellEditingStopped &&
+            onCellEditingStopped({
+              colDef: { field: 'transactionPartner' },
+              oldValue: '',
+              newValue: 'Test Org',
+              node: {
+                setDataValue: vi.fn(),
+                updateData: vi.fn(),
+                data: { transactionPartner: 'Test Org', id: 'test-id' }
+              }
+            })
+          }
         >
           Simulate Transaction Partner Edit
         </button>
-        <button 
+        <button
           data-test="simulate-cell-editing-stopped-invalid-quantity"
-          onClick={() => onCellEditingStopped && onCellEditingStopped({
-            colDef: { field: 'quantity' },
-            oldValue: null,
-            newValue: -5,
-            node: { 
-              setDataValue: vi.fn(),
-              updateData: vi.fn(),
-              data: { quantity: -5, id: 'test-id' }
-            }
-          })}
+          onClick={() =>
+            onCellEditingStopped &&
+            onCellEditingStopped({
+              colDef: { field: 'quantity' },
+              oldValue: null,
+              newValue: -5,
+              node: {
+                setDataValue: vi.fn(),
+                updateData: vi.fn(),
+                data: { quantity: -5, id: 'test-id' }
+              }
+            })
+          }
         >
           Simulate Invalid Quantity
         </button>
-        <button 
+        <button
           data-test="simulate-cell-editing-stopped-fuel-other"
-          onClick={() => onCellEditingStopped && onCellEditingStopped({
-            colDef: { field: 'fuelType' },
-            oldValue: null,
-            newValue: 'Other',
-            node: { 
-              setDataValue: vi.fn(),
-              updateData: vi.fn(),
-              data: { fuelType: 'Other', fuelCategory: 'gasoline', quantity: 100, id: 'test-id', ciOfFuel: 85.5 }
-            }
-          })}
+          onClick={() =>
+            onCellEditingStopped &&
+            onCellEditingStopped({
+              colDef: { field: 'fuelType' },
+              oldValue: null,
+              newValue: 'Other',
+              node: {
+                setDataValue: vi.fn(),
+                updateData: vi.fn(),
+                data: {
+                  fuelType: 'Other',
+                  fuelCategory: 'gasoline',
+                  quantity: 100,
+                  id: 'test-id',
+                  ciOfFuel: 85.5
+                }
+              }
+            })
+          }
         >
           Simulate Fuel Type Other
         </button>
-        <button 
+        <button
           data-test="simulate-action-delete"
-          onClick={() => onAction && onAction('delete', {
-            node: { data: { allocationAgreementId: 'test-id' } }
-          })}
+          onClick={() =>
+            onAction &&
+            onAction('delete', {
+              node: { data: { allocationAgreementId: 'test-id' } }
+            })
+          }
         >
           Simulate Delete Action
         </button>
-        <button 
+        <button
           data-test="simulate-action-undo"
-          onClick={() => onAction && onAction('undo', {
-            node: { data: { allocationAgreementId: 'test-id' } }
-          })}
+          onClick={() =>
+            onAction &&
+            onAction('undo', {
+              node: { data: { allocationAgreementId: 'test-id' } }
+            })
+          }
         >
           Simulate Undo Action
         </button>
@@ -355,7 +388,7 @@ describe('AddEditAllocationAgreements', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    
+
     mockAlertRef = {
       current: {
         triggerAlert: vi.fn()
@@ -386,13 +419,15 @@ describe('AddEditAllocationAgreements', () => {
     vi.mocked(
       useAllocationAgreementHook.useAllocationAgreementOptions
     ).mockReturnValue({
-      data: { 
+      data: {
         fuelTypes: [
           {
             fuelType: 'Gasoline',
             defaultCarbonIntensity: 85.5,
             fuelCategories: [{ fuelCategory: 'Petroleum-based' }],
-            provisions: [{ name: 'Section 6(d)(i)(A)', provisionOfTheActId: 1 }],
+            provisions: [
+              { name: 'Section 6(d)(i)(A)', provisionOfTheActId: 1 }
+            ],
             fuelCodes: []
           }
         ]
@@ -520,7 +555,8 @@ describe('AddEditAllocationAgreements', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('shows import/export buttons when feature flag is enabled', () => {
+    // TODO: Re-enable when import/export feature is re-enabled in the component
+    it.skip('shows import/export buttons when feature flag is enabled', () => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
 
       render(<AddEditAllocationAgreements />, { wrapper })
@@ -557,7 +593,8 @@ describe('AddEditAllocationAgreements', () => {
     })
   })
 
-  describe('Import/Export Functionality', () => {
+  // TODO: Re-enable when import/export feature is re-enabled in the component
+  describe.skip('Import/Export Functionality', () => {
     beforeEach(() => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
     })
@@ -593,7 +630,9 @@ describe('AddEditAllocationAgreements', () => {
 
       // The menu should be visible and contain only append option
       expect(
-        screen.queryByText('common:importExport.import.dialog.buttons.overwrite')
+        screen.queryByText(
+          'common:importExport.import.dialog.buttons.overwrite'
+        )
       ).not.toBeInTheDocument()
       expect(
         screen.getByText('common:importExport.import.dialog.buttons.append')
@@ -629,18 +668,25 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
-      fireEvent.click(screen.getByText('common:importExport.import.dialog.buttons.append'))
+      fireEvent.click(
+        screen.getByText('common:importExport.import.dialog.buttons.append')
+      )
 
-      expect(screen.getByTestId('import-dialog')).toHaveAttribute('aria-hidden', 'false')
+      expect(screen.getByTestId('import-dialog')).toHaveAttribute(
+        'aria-hidden',
+        'false'
+      )
     })
 
     it('handles download with data', async () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       fireEvent.click(screen.getByText('common:importExport.export.btn'))
-      
+
       await act(async () => {
-        fireEvent.click(screen.getByText('common:importExport.export.withDataBtn'))
+        fireEvent.click(
+          screen.getByText('common:importExport.export.withDataBtn')
+        )
       })
 
       // The download should be handled by the mocked useApiService hook
@@ -652,9 +698,11 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       fireEvent.click(screen.getByText('common:importExport.export.btn'))
-      
+
       await act(async () => {
-        fireEvent.click(screen.getByText('common:importExport.export.withoutDataBtn'))
+        fireEvent.click(
+          screen.getByText('common:importExport.export.withoutDataBtn')
+        )
       })
 
       // The download should be handled by the mocked useApiService hook
@@ -668,7 +716,9 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('simulate-cell-value-changed-fueltype'))
+        fireEvent.click(
+          screen.getByTestId('simulate-cell-value-changed-fueltype')
+        )
       })
 
       // The event should be handled without errors
@@ -679,7 +729,9 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('simulate-cell-value-changed-provision'))
+        fireEvent.click(
+          screen.getByTestId('simulate-cell-value-changed-provision')
+        )
       })
 
       // This should trigger the fuelCode reset branch
@@ -690,7 +742,9 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('simulate-cell-value-changed-fuelcategory'))
+        fireEvent.click(
+          screen.getByTestId('simulate-cell-value-changed-fuelcategory')
+        )
       })
 
       // This should trigger the fuelCategory validation branch
@@ -701,7 +755,9 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('simulate-cell-editing-stopped-same-value'))
+        fireEvent.click(
+          screen.getByTestId('simulate-cell-editing-stopped-same-value')
+        )
       })
 
       // This should trigger the early return branch (oldValue === newValue)
@@ -712,7 +768,11 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('simulate-cell-editing-stopped-transaction-partner'))
+        fireEvent.click(
+          screen.getByTestId(
+            'simulate-cell-editing-stopped-transaction-partner'
+          )
+        )
       })
 
       // This should trigger the transaction partner validation branch
@@ -723,7 +783,9 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       await act(async () => {
-        fireEvent.click(screen.getByTestId('simulate-cell-editing-stopped-invalid-quantity'))
+        fireEvent.click(
+          screen.getByTestId('simulate-cell-editing-stopped-invalid-quantity')
+        )
       })
 
       // This should trigger the validation failure branch
@@ -772,9 +834,11 @@ describe('AddEditAllocationAgreements', () => {
 
       render(<AddEditAllocationAgreements />, { wrapper })
 
-      // We can't easily test the internal alertRef trigger, 
+      // We can't easily test the internal alertRef trigger,
       // but we can verify the component renders without errors when location state has a message
-      expect(screen.getByText('allocationAgreement:allocationAgreementTitle')).toBeInTheDocument()
+      expect(
+        screen.getByText('allocationAgreement:allocationAgreementTitle')
+      ).toBeInTheDocument()
     })
   })
 
@@ -794,13 +858,14 @@ describe('AddEditAllocationAgreements', () => {
         node: { data: { quantity: 100 } },
         colDef: { field: 'quantity' }
       }
-      const validationFn = (value) => value !== null && !isNaN(value) && value > 0
+      const validationFn = (value) =>
+        value !== null && !isNaN(value) && value > 0
       const mockAlertRef = { current: { triggerAlert: vi.fn() } }
 
       // We can't test the validate function directly since it's internal,
       // but we can test the validation through the onCellEditingStopped event
       render(<AddEditAllocationAgreements />, { wrapper })
-      
+
       // The validation is tested indirectly through the cell editing events
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
@@ -837,16 +902,17 @@ describe('AddEditAllocationAgreements', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles close menu functions with actual state changes', () => {
+    // TODO: Re-enable when import/export feature is re-enabled in the component
+    it.skip('handles close menu functions with actual state changes', () => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
-      
+
       render(<AddEditAllocationAgreements />, { wrapper })
 
       // Test opening and closing export menu
       fireEvent.click(screen.getByText('common:importExport.export.btn'))
       expect(screen.getByTestId('menu')).toBeInTheDocument()
       fireEvent.click(screen.getByTestId('menu')) // This closes the menu
-      
+
       // Test opening and closing import menu
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
       expect(screen.getByTestId('menu')).toBeInTheDocument()
@@ -872,13 +938,13 @@ describe('AddEditAllocationAgreements', () => {
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
       ).mockReturnValue({
-        data: { 
+        data: {
           fuelTypes: [
             {
               fuelType: 'Gasoline',
               defaultCarbonIntensity: 85.5,
               fuelCategories: [
-                { fuelCategory: 'Petroleum-based' }, 
+                { fuelCategory: 'Petroleum-based' },
                 { fuelCategory: 'Renewable' }
               ],
               provisions: [
@@ -904,13 +970,15 @@ describe('AddEditAllocationAgreements', () => {
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
       ).mockReturnValue({
-        data: { 
+        data: {
           fuelTypes: [
             {
               fuelType: 'Gasoline',
               defaultCarbonIntensity: 85.5,
               fuelCategories: [{ fuelCategory: 'Petroleum-based' }],
-              provisions: [{ name: 'APPROVED_FUEL_CODE', provisionOfTheActId: 1 }],
+              provisions: [
+                { name: 'APPROVED_FUEL_CODE', provisionOfTheActId: 1 }
+              ],
               fuelCodes: [
                 { fuelCode: 'BCLCF101.1', fuelCodeCarbonIntensity: 45.2 }
               ]
@@ -922,25 +990,31 @@ describe('AddEditAllocationAgreements', () => {
       })
 
       render(<AddEditAllocationAgreements />, { wrapper })
-      
+
       // This should exercise the approved fuel code branch
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
-    it('handles import dialog overwrite option correctly', () => {
+    // TODO: Re-enable when import/export feature is re-enabled in the component
+    it.skip('handles import dialog overwrite option correctly', () => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
-      
+
       render(<AddEditAllocationAgreements />, { wrapper })
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
-      fireEvent.click(screen.getByText('common:importExport.import.dialog.buttons.overwrite'))
+      fireEvent.click(
+        screen.getByText('common:importExport.import.dialog.buttons.overwrite')
+      )
 
-      expect(screen.getByTestId('import-dialog')).toHaveAttribute('aria-hidden', 'false')
+      expect(screen.getByTestId('import-dialog')).toHaveAttribute(
+        'aria-hidden',
+        'false'
+      )
     })
-
   })
 
-  describe('Menu State Management Coverage', () => {
+  // TODO: Re-enable when import/export feature is re-enabled in the component
+  describe.skip('Menu State Management Coverage', () => {
     beforeEach(() => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
     })
@@ -952,7 +1026,7 @@ describe('AddEditAllocationAgreements', () => {
       const exportButton = screen.getByText('common:importExport.export.btn')
       fireEvent.click(exportButton)
       expect(screen.getByTestId('menu')).toBeInTheDocument()
-      
+
       // Test handleCloseDownloadMenu
       fireEvent.click(screen.getByTestId('menu'))
       expect(screen.queryByTestId('menu')).not.toBeInTheDocument()
@@ -965,7 +1039,7 @@ describe('AddEditAllocationAgreements', () => {
       const importButton = screen.getByText('common:importExport.import.btn')
       fireEvent.click(importButton)
       expect(screen.getByTestId('menu')).toBeInTheDocument()
-      
+
       // Test handleCloseImportMenu
       fireEvent.click(screen.getByTestId('menu'))
       expect(screen.queryByTestId('menu')).not.toBeInTheDocument()
@@ -975,17 +1049,27 @@ describe('AddEditAllocationAgreements', () => {
       render(<AddEditAllocationAgreements />, { wrapper })
 
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
-      
+
       // Test openFileImportDialog with overwrite=true
-      fireEvent.click(screen.getByText('common:importExport.import.dialog.buttons.overwrite'))
-      expect(screen.getByTestId('import-dialog')).toHaveAttribute('aria-hidden', 'false')
-      
+      fireEvent.click(
+        screen.getByText('common:importExport.import.dialog.buttons.overwrite')
+      )
+      expect(screen.getByTestId('import-dialog')).toHaveAttribute(
+        'aria-hidden',
+        'false'
+      )
+
       // Close dialog and test with overwrite=false
       fireEvent.click(screen.getByTestId('close-dialog'))
-      
+
       fireEvent.click(screen.getByText('common:importExport.import.btn'))
-      fireEvent.click(screen.getByText('common:importExport.import.dialog.buttons.append'))
-      expect(screen.getByTestId('import-dialog')).toHaveAttribute('aria-hidden', 'false')
+      fireEvent.click(
+        screen.getByText('common:importExport.import.dialog.buttons.append')
+      )
+      expect(screen.getByTestId('import-dialog')).toHaveAttribute(
+        'aria-hidden',
+        'false'
+      )
     })
   })
 
@@ -1000,7 +1084,7 @@ describe('AddEditAllocationAgreements', () => {
       })
 
       render(<AddEditAllocationAgreements />, { wrapper })
-      
+
       // This should not render due to isFetched being false
       expect(
         screen.queryByText('allocationAgreement:allocationAgreementTitle')
@@ -1012,13 +1096,15 @@ describe('AddEditAllocationAgreements', () => {
       vi.mocked(
         useAllocationAgreementHook.useAllocationAgreementOptions
       ).mockReturnValue({
-        data: { 
+        data: {
           fuelTypes: [
             {
               fuelType: 'Gasoline',
               defaultCarbonIntensity: 85.5,
               fuelCategories: [{ fuelCategory: 'Petroleum-based' }],
-              provisions: [{ name: 'APPROVED_FUEL_CODE', provisionOfTheActId: 1 }],
+              provisions: [
+                { name: 'APPROVED_FUEL_CODE', provisionOfTheActId: 1 }
+              ],
               fuelCodes: [
                 { fuelCode: 'BCLCF101.1', fuelCodeCarbonIntensity: 45.2 }
               ]
@@ -1030,7 +1116,7 @@ describe('AddEditAllocationAgreements', () => {
       })
 
       render(<AddEditAllocationAgreements />, { wrapper })
-      
+
       // This should exercise more complex fuel code logic branches
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
@@ -1043,7 +1129,7 @@ describe('AddEditAllocationAgreements', () => {
         colDef: { field: 'transactionPartner' },
         oldValue: '',
         newValue: { name: 'Test Org' },
-        node: { 
+        node: {
           setDataValue: vi.fn(),
           updateData: vi.fn(),
           data: { transactionPartner: { name: 'Test Org' }, id: 'test-id' }
@@ -1053,7 +1139,5 @@ describe('AddEditAllocationAgreements', () => {
       // This tests the typeof params.newValue === 'object' branch
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
-
-
   })
 })
