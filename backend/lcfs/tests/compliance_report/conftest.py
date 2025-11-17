@@ -158,7 +158,9 @@ def mock_fuel_export_repo():
 
 @pytest.fixture
 def mock_fse_services():
-    return AsyncMock(spec=FinalSupplyEquipmentServices)
+    service = AsyncMock(spec=FinalSupplyEquipmentServices)
+    service.copy_fse_to_new_report = AsyncMock()
+    return service
 
 
 @pytest.fixture
@@ -297,16 +299,17 @@ def compliance_report_service(
     mock_internal_comment_service,
     mock_trxn_repo,
 ):
-    service = ComplianceReportServices()
-    service.repo = mock_repo
-    service.org_repo = mock_org_repo
+    service = ComplianceReportServices(
+        repo=mock_repo,
+        org_repo=mock_org_repo,
+        snapshot_services=mock_snapshot_service,
+        fse_service=mock_fse_services,
+        document_service=mock_document_service,
+        transaction_repo=mock_trxn_repo,
+        internal_comment_service=mock_internal_comment_service,
+    )
     service.request = MagicMock()
     service.request.user = mock_user_profile
-    service.snapshot_services = mock_snapshot_service
-    service.final_supply_equipment_service = mock_fse_services
-    service.document_service = mock_document_service
-    service.internal_comment_service = mock_internal_comment_service
-    service.transaction_repo = mock_trxn_repo
     return service
 
 
