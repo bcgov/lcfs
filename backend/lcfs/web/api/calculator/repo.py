@@ -165,6 +165,7 @@ class CalculatorRepository:
                 FuelInstance.fuel_category_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
+                FuelType.renewable,
                 DefaultCarbonIntensity.default_carbon_intensity,
                 CategoryCarbonIntensity.category_carbon_intensity,
                 FuelCategory.category,
