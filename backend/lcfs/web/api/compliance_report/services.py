@@ -207,7 +207,7 @@ class ComplianceReportServices:
             "Government adjustment"
             if current_report.current_status.status
             == ComplianceReportStatusEnum.Submitted
-            else "Government re-assessment"
+            else "Reassessment"
         )
         # Fetch the latest version number for the given group_uuid
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
@@ -257,23 +257,6 @@ class ComplianceReportServices:
 
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
-
-        # Copy over FSE
-        await self.final_supply_equipment_service.copy_to_report(
-            existing_report_id,
-            new_report.compliance_report_id,
-            current_report.organization_id,
-        )
-
-        # Copy documents from the original report
-        await self.document_service.copy_documents(
-            existing_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            existing_report_id, new_report.compliance_report_id
-        )
 
         # Release the transaction from the current report being superseded
         await self._release_superseded_transaction(current_report)
@@ -389,23 +372,6 @@ class ComplianceReportServices:
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
 
-        # Copy over FSE
-        await self.final_supply_equipment_service.copy_to_report(
-            original_report_id,
-            new_report.compliance_report_id,
-            current_report.organization_id,
-        )
-
-        # Copy documents from the original report
-        await self.document_service.copy_documents(
-            original_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            original_report_id, new_report.compliance_report_id
-        )
-
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -460,7 +426,38 @@ class ComplianceReportServices:
             )
         new_version = latest_report.version + 1
 
-        # 5. Create the new supplemental report object
+        # 5. Copy summary data from the current submitted report, focusing on user-input lines 6-9
+        if current_report.summary:
+            # Handle both SQLAlchemy model and schema objects
+            if hasattr(current_report.summary, '__table__'):
+                # SQLAlchemy model - use table columns
+                summary_data = {
+                    column: getattr(current_report.summary, column)
+                    for column in current_report.summary.__table__.columns.keys()
+                    if any(column.startswith(f"line_{i}") for i in range(6, 10))
+                }
+            else:
+                # Pydantic schema or other object - copy specific line fields manually
+                summary_data = {}
+                for line_num in range(6, 10):
+                    for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
+                        if line_num == 6:
+                            field_name = f"line_{line_num}_renewable_fuel_retained_{fuel_type}"
+                        elif line_num == 7:
+                            field_name = f"line_{line_num}_previously_retained_{fuel_type}"
+                        elif line_num == 8:
+                            field_name = f"line_{line_num}_obligation_deferred_{fuel_type}"
+                        elif line_num == 9:
+                            field_name = f"line_{line_num}_obligation_added_{fuel_type}"
+
+                        if hasattr(current_report.summary, field_name):
+                            summary_data[field_name] = getattr(current_report.summary, field_name)
+
+            new_summary = ComplianceReportSummary(**summary_data)
+        else:
+            new_summary = ComplianceReportSummary()  # Fallback to empty if no summary exists
+
+        # Create the new supplemental report object
         new_report = ComplianceReport(
             compliance_period_id=current_report.compliance_period_id,
             organization_id=current_report.organization_id,
@@ -474,7 +471,7 @@ class ComplianceReportServices:
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
                 else f"Early issuance - Supplemental report {new_version}"
             ),  # Automatic nickname
-            summary=ComplianceReportSummary(),  # Start with an empty summary
+            summary=new_summary,  # Copy summary data from current report
             create_user=user.keycloak_username,  # Log who created it
             update_user=user.keycloak_username,
         )
@@ -493,23 +490,6 @@ class ComplianceReportServices:
         # The user here is the government analyst who initiated the creation
         await self.repo.add_compliance_report_history(new_report, user)
 
-        # 9. Copy over Final Supply Equipment (FSE) from the current report
-        await self.final_supply_equipment_service.copy_to_report(
-            existing_report_id,
-            new_report.compliance_report_id,
-            current_report.organization_id,
-        )
-
-        # Copy documents from the original report
-        await self.document_service.copy_documents(
-            existing_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            existing_report_id, new_report.compliance_report_id
-        )
-
         # Release the transaction from the current report being superseded
         await self._release_superseded_transaction(current_report)
 
@@ -522,7 +502,7 @@ class ComplianceReportServices:
         Deletes a compliance report.
         - The report_id can be any report in the series (original or supplemental).
         - Supplemental reports are only allowed if the status of the current report is 'Draft'.
-        - Compliance/Supplemental report that is in 'Analyst_adjustment / In Re-assessment
+        - Compliance/Supplemental report that is in 'Analyst_adjustment / In Reassessment
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id

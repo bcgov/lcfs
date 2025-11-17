@@ -2,8 +2,9 @@ import io
 import math
 import json
 from datetime import datetime
+from decimal import Decimal
 import structlog
-from typing import List
+from typing import List, Dict
 
 from lcfs.settings import settings
 from fastapi import Depends, Request
@@ -14,6 +15,7 @@ from lcfs.db.models.organization.Organization import (
     Organization,
     generate_secure_link_key,
 )
+from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
@@ -54,6 +56,13 @@ from .schema import (
     OrganizationSummaryResponseSchema,
     OrganizationDetailsSchema,
     OrganizationUpdateSchema,
+    PenaltyAnalyticsResponseSchema,
+    PenaltyTotalsSchema,
+    PenaltyYearlySummarySchema,
+    PenaltyLogEntrySchema,
+    PenaltyLogListResponseSchema,
+    PenaltyLogCreateSchema,
+    PenaltyLogUpdateSchema,
 )
 
 
@@ -74,6 +83,32 @@ class OrganizationsService:
         self.transaction_repo = transaction_repo
         self.redis_balance_service = redis_balance_service
         self.notification_service = notification_service
+
+    def _map_penalty_log_model(self, penalty_log) -> PenaltyLogEntrySchema:
+        compliance_year = None
+        if penalty_log and getattr(penalty_log, "compliance_period", None):
+            compliance_year = penalty_log.compliance_period.description
+
+        return PenaltyLogEntrySchema(
+            penalty_log_id=penalty_log.penalty_log_id,
+            compliance_period_id=penalty_log.compliance_period_id,
+            compliance_year=compliance_year,
+            contravention_type=penalty_log.contravention_type,
+            offence_history=bool(penalty_log.offence_history),
+            deliberate=bool(penalty_log.deliberate),
+            efforts_to_correct=bool(penalty_log.efforts_to_correct),
+            economic_benefit_derived=bool(penalty_log.economic_benefit_derived),
+            efforts_to_prevent_recurrence=bool(
+                penalty_log.efforts_to_prevent_recurrence
+            ),
+            notes=penalty_log.notes,
+            penalty_amount=float(penalty_log.penalty_amount or 0),
+        )
+
+    async def _requires_bceid(self, organization_type_id: int) -> bool:
+        """Check if organization type requires BCeID."""
+        org_type = await self.repo.get_organization_type(organization_type_id)
+        return org_type.is_bceid_user if org_type else True
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -129,7 +164,9 @@ class OrganizationsService:
                     )
                 continue
 
-            if field_name == "status":
+            if field_name == "org_type":
+                field = get_field_for_filter(OrganizationType, "org_type")
+            elif field_name == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
                 field = get_field_for_filter(Organization, field_name)
@@ -157,8 +194,9 @@ class OrganizationsService:
             columns=[
                 SpreadsheetColumn("ID", "int"),
                 SpreadsheetColumn("Organization Name", "text"),
+                SpreadsheetColumn("Organization Type", "text"),
                 SpreadsheetColumn("Compliance Units", "int"),
-                SpreadsheetColumn("In Reserve", "text"),
+                SpreadsheetColumn("In Reserve", "int"),
                 SpreadsheetColumn("Registered", "date"),
             ],
             rows=data,
@@ -184,10 +222,49 @@ class OrganizationsService:
         self, organization_data: OrganizationCreateSchema, user=None
     ):
         """handles creating an organization"""
-        org_address = OrganizationAddress(**organization_data.address.dict())
-        org_attorney_address = OrganizationAttorneyAddress(
-            **organization_data.attorney_address.dict()
+        # Check if the organization type requires BCeID
+        requires_bceid = await self._requires_bceid(
+            organization_data.organization_type_id
         )
+
+        # Handle address creation based on organization type
+        org_address = None
+        org_attorney_address = None
+
+        if requires_bceid:
+            # For BCeID organizations, address is required
+            if not organization_data.address:
+                raise ValueError("Address is required for BCeID organization types")
+            org_address = OrganizationAddress(**organization_data.address.dict())
+
+            if not organization_data.attorney_address:
+                raise ValueError(
+                    "Attorney address is required for BCeID organization types"
+                )
+            org_attorney_address = OrganizationAttorneyAddress(
+                **organization_data.attorney_address.dict()
+            )
+        else:
+            # For non-BCeID organizations, address is optional
+            if (
+                organization_data.address
+                and hasattr(organization_data.address, "street_address")
+                and organization_data.address.street_address
+            ):
+                org_address = OrganizationAddress(**organization_data.address.dict())
+
+            if (
+                organization_data.attorney_address
+                and hasattr(organization_data.attorney_address, "street_address")
+                and organization_data.attorney_address.street_address
+            ):
+                org_attorney_address = OrganizationAttorneyAddress(
+                    **organization_data.attorney_address.dict()
+                )
+
+            # For non-BCeID types, email is required
+            if not organization_data.email:
+                raise ValueError("Email is required for all organization types")
 
         # Create and add organization model to the database
         org_model = Organization(
@@ -238,6 +315,11 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
+        # Check if the organization type requires BCeID
+        requires_bceid = await self._requires_bceid(
+            organization_data.organization_type_id
+        )
+
         # If early issuance setting is being updated, validate against existing reports for current year
         if (
             hasattr(organization_data, "has_early_issuance")
@@ -268,42 +350,81 @@ class OrganizationsService:
             if hasattr(organization, key):
                 setattr(organization, key, value)
 
-        if organization_data.address:
-            if organization.organization_address_id:
-                org_address = await self.repo.get_organization_address(
-                    organization.organization_address_id
-                )
-            else:
-                org_address = OrganizationAddress(
-                    organization=organization,
-                )
-                organization.organization_address = org_address
-                self.repo.add(org_address)
+        # For non-BCeID types, validate email is present if being updated
+        if (
+            not requires_bceid
+            and organization_data.email is not None
+            and not organization_data.email
+        ):
+            raise ValueError("Email is required for all organization types")
 
-            for key, value in organization_data.address.dict().items():
-                if hasattr(org_address, key):
-                    setattr(org_address, key, value)
+        # Handle address updates based on organization type requirements
+        if organization_data.address:
+            # Check if switching to BCeID type requires addresses
+            if requires_bceid and not hasattr(
+                organization_data.address, "street_address"
+            ):
+                raise ValueError("Address is required for BCeID organization types")
+
+            # Only update if there's meaningful address data
+            has_address_data = (
+                hasattr(organization_data.address, "street_address")
+                and organization_data.address.street_address
+            )
+
+            if has_address_data or requires_bceid:
+                if organization.organization_address_id:
+                    org_address = await self.repo.get_organization_address(
+                        organization.organization_address_id
+                    )
+                else:
+                    org_address = OrganizationAddress(
+                        organization=organization,
+                    )
+                    organization.organization_address = org_address
+                    self.repo.add(org_address)
+
+                for key, value in organization_data.address.dict().items():
+                    if hasattr(org_address, key):
+                        setattr(org_address, key, value)
 
         if organization_data.attorney_address:
-            if organization.organization_attorney_address_id:
-                org_attorney_address = (
-                    await self.repo.get_organization_attorney_address(
-                        organization.organization_attorney_address_id
+            # Check if switching to BCeID type requires attorney addresses
+            if requires_bceid and not hasattr(
+                organization_data.attorney_address, "street_address"
+            ):
+                raise ValueError(
+                    "Attorney address is required for BCeID organization types"
+                )
+
+            # Only update if there's meaningful attorney address data
+            has_attorney_address_data = (
+                hasattr(organization_data.attorney_address, "street_address")
+                and organization_data.attorney_address.street_address
+            )
+
+            if has_attorney_address_data or requires_bceid:
+                if organization.organization_attorney_address_id:
+                    org_attorney_address = (
+                        await self.repo.get_organization_attorney_address(
+                            organization.organization_attorney_address_id
+                        )
                     )
-                )
-            else:
-                org_attorney_address = OrganizationAttorneyAddress(
-                    organization=organization,
-                )
-                organization.organization_attorney_address = org_attorney_address
-                self.repo.add(org_attorney_address)
+                else:
+                    org_attorney_address = OrganizationAttorneyAddress(
+                        organization=organization,
+                    )
+                    organization.organization_attorney_address = org_attorney_address
+                    self.repo.add(org_attorney_address)
 
-            if not org_attorney_address:
-                raise DataNotFoundException("Organization attorney address not found")
+                if not org_attorney_address:
+                    raise DataNotFoundException(
+                        "Organization attorney address not found"
+                    )
 
-            for key, value in organization_data.attorney_address.dict().items():
-                if hasattr(org_attorney_address, key):
-                    setattr(org_attorney_address, key, value)
+                for key, value in organization_data.attorney_address.dict().items():
+                    if hasattr(org_attorney_address, key):
+                        setattr(org_attorney_address, key, value)
 
         updated_organization = await self.repo.update_organization(organization)
         return updated_organization
@@ -361,23 +482,57 @@ class OrganizationsService:
             organization.update_user = user.keycloak_username
 
         updated_organization = await self.repo.update_organization(organization)
-        
+
         # Check if this is a new credit listing that should trigger notifications
         # A new listing is when:
         # 1. The organization is now displayed in the credit market AND has credits to sell
         # 2. AND either wasn't displayed before OR didn't have credits to sell before
         is_now_displayed = updated_organization.display_in_credit_market or False
         new_credits_to_sell = updated_organization.credits_to_sell or 0
-        
+
         is_new_listing = (
-            is_now_displayed and 
-            new_credits_to_sell > 0 and
-            (not was_displayed_in_market or old_credits_to_sell == 0)
+            is_now_displayed
+            and new_credits_to_sell > 0
+            and (not was_displayed_in_market or old_credits_to_sell == 0)
         )
-        
+
         if is_new_listing and settings.feature_credit_market_notifications:
             await self._send_credit_market_notification(updated_organization, user)
-        
+
+        return updated_organization
+
+    @service_handler
+    async def update_organization_company_overview(
+        self,
+        organization_id: int,
+        company_overview_data: dict,
+        user=None,
+    ):
+        """
+        Update only the company overview fields for an organization.
+        This method only updates the specific company overview fields without affecting other organization data.
+        """
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Update only the company overview fields
+        allowed_fields = {
+            "company_details",
+            "company_representation_agreements",
+            "company_acting_as_aggregator",
+            "company_additional_notes",
+        }
+
+        for key, value in company_overview_data.items():
+            if key in allowed_fields and hasattr(organization, key):
+                setattr(organization, key, value)
+
+        # Set the update user
+        if user:
+            organization.update_user = user.keycloak_username
+
+        updated_organization = await self.repo.update_organization(organization)
         return updated_organization
 
     @service_handler
@@ -400,6 +555,208 @@ class OrganizationsService:
         )
 
         return organization
+
+    @service_handler
+    async def get_penalty_analytics(
+        self, organization_id: int
+    ) -> PenaltyAnalyticsResponseSchema:
+        """
+        Assemble penalty analytics data for the organization, combining automatic
+        penalties from compliance reports with discretionary penalties from the
+        penalty log.
+        """
+
+        def _to_float(value) -> float:
+            if value is None:
+                return 0.0
+            if isinstance(value, Decimal):
+                return float(value)
+            return float(value)
+
+        summaries, penalty_logs = await self.repo.get_penalty_analytics_data(
+            organization_id
+        )
+
+        yearly_penalties: List[PenaltyYearlySummarySchema] = []
+        total_auto_renewable = 0.0
+        total_auto_low_carbon = 0.0
+
+        for row in summaries:
+            penalty_override_enabled = bool(row.get("penalty_override_enabled"))
+
+            renewable_penalty = (
+                _to_float(row.get("renewable_penalty_override"))
+                if penalty_override_enabled
+                and row.get("renewable_penalty_override") is not None
+                else _to_float(row.get("line_11_penalty_gasoline"))
+                + _to_float(row.get("line_11_penalty_diesel"))
+                + _to_float(row.get("line_11_penalty_jet_fuel"))
+            )
+
+            low_carbon_penalty = (
+                _to_float(row.get("low_carbon_penalty_override"))
+                if penalty_override_enabled
+                and row.get("low_carbon_penalty_override") is not None
+                else _to_float(row.get("line_21_penalty_payable"))
+            )
+
+            compliance_year_value = row.get("compliance_year")
+            try:
+                compliance_year = (
+                    int(compliance_year_value)
+                    if compliance_year_value is not None
+                    else None
+                )
+            except (TypeError, ValueError):
+                compliance_year = compliance_year_value
+
+            total_automatic = renewable_penalty + low_carbon_penalty
+            total_auto_renewable += renewable_penalty
+            total_auto_low_carbon += low_carbon_penalty
+
+            yearly_penalties.append(
+                PenaltyYearlySummarySchema(
+                    compliance_period_id=row.get("compliance_period_id"),
+                    compliance_year=compliance_year,
+                    auto_renewable=renewable_penalty,
+                    auto_low_carbon=low_carbon_penalty,
+                    total_automatic=total_automatic,
+                )
+            )
+
+        penalty_log_entries: List[PenaltyLogEntrySchema] = []
+        discretionary_total = 0.0
+
+        for log in penalty_logs:
+            penalty_amount = _to_float(log.get("penalty_amount"))
+            discretionary_total += penalty_amount
+
+            compliance_year_value = log.get("compliance_year")
+            try:
+                compliance_year = (
+                    int(compliance_year_value)
+                    if compliance_year_value is not None
+                    else None
+                )
+            except (TypeError, ValueError):
+                compliance_year = compliance_year_value
+
+            penalty_log_entries.append(
+                PenaltyLogEntrySchema(
+                    penalty_log_id=log.get("penalty_log_id"),
+                    compliance_period_id=log.get("compliance_period_id"),
+                    compliance_year=compliance_year,
+                    contravention_type=log.get("contravention_type"),
+                    offence_history=bool(log.get("offence_history")),
+                    deliberate=bool(log.get("deliberate")),
+                    efforts_to_correct=bool(log.get("efforts_to_correct")),
+                    economic_benefit_derived=bool(log.get("economic_benefit_derived")),
+                    efforts_to_prevent_recurrence=bool(
+                        log.get("efforts_to_prevent_recurrence")
+                    ),
+                    notes=log.get("notes"),
+                    penalty_amount=penalty_amount,
+                )
+            )
+
+        total_automatic = total_auto_renewable + total_auto_low_carbon
+
+        totals = PenaltyTotalsSchema(
+            auto_renewable=total_auto_renewable,
+            auto_low_carbon=total_auto_low_carbon,
+            discretionary=discretionary_total,
+            total_automatic=total_automatic,
+            total=total_automatic + discretionary_total,
+        )
+
+        return PenaltyAnalyticsResponseSchema(
+            yearly_penalties=yearly_penalties,
+            totals=totals,
+            penalty_logs=penalty_log_entries,
+        )
+
+    @service_handler
+    async def get_penalty_logs_paginated(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ) -> PenaltyLogListResponseSchema:
+        pagination = validate_pagination(pagination)
+
+        records, total = await self.repo.get_penalty_logs_paginated(
+            organization_id, pagination
+        )
+
+        penalty_logs = [
+            PenaltyLogEntrySchema(
+                penalty_log_id=row["penalty_log_id"],
+                compliance_period_id=row["compliance_period_id"],
+                compliance_year=row["compliance_year"],
+                contravention_type=row["contravention_type"],
+                offence_history=bool(row["offence_history"]),
+                deliberate=bool(row["deliberate"]),
+                efforts_to_correct=bool(row["efforts_to_correct"]),
+                economic_benefit_derived=bool(row["economic_benefit_derived"]),
+                efforts_to_prevent_recurrence=bool(
+                    row["efforts_to_prevent_recurrence"]
+                ),
+                notes=row["notes"],
+                penalty_amount=float(row["penalty_amount"] or 0),
+            )
+            for row in records
+        ]
+
+        total_pages = (
+            math.ceil(total / pagination.size) if pagination.size else 1
+        ) or 1
+
+        return PenaltyLogListResponseSchema(
+            pagination=PaginationResponseSchema(
+                total=total,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=total_pages,
+            ),
+            penalty_logs=penalty_logs,
+        )
+
+    @service_handler
+    async def create_penalty_log(
+        self,
+        organization_id: int,
+        payload: PenaltyLogCreateSchema,
+    ) -> PenaltyLogEntrySchema:
+        penalty_log = await self.repo.create_penalty_log(organization_id, payload)
+        return self._map_penalty_log_model(penalty_log)
+
+    @service_handler
+    async def update_penalty_log(
+        self,
+        organization_id: int,
+        penalty_log_id: int,
+        payload: PenaltyLogUpdateSchema,
+    ) -> PenaltyLogEntrySchema:
+        existing = await self.repo.get_penalty_log_by_id(
+            organization_id, penalty_log_id
+        )
+        if not existing:
+            raise DataNotFoundException("Penalty log not found")
+
+        updated = await self.repo.update_penalty_log(existing, payload)
+        return self._map_penalty_log_model(updated)
+
+    @service_handler
+    async def delete_penalty_log(
+        self, organization_id: int, penalty_log_id: int
+    ) -> None:
+        existing = await self.repo.get_penalty_log_by_id(
+            organization_id, penalty_log_id
+        )
+        if not existing:
+            raise DataNotFoundException("Penalty log not found")
+
+        deleted = await self.repo.delete_penalty_log(organization_id, penalty_log_id)
+        if not deleted:
+            raise DataNotFoundException("Penalty log not found")
+        return None
 
     @service_handler
     async def get_organizations(
@@ -476,6 +833,8 @@ class OrganizationsService:
         self,
         order_by=("name", "asc"),
         statuses: List[str] = None,
+        org_type_filter: str = "fuel_supplier",
+        org_filters: Dict[str, List[str]] | None = None,
     ) -> List[OrganizationSummaryResponseSchema]:
         """
         Fetches all organization names and their detailed information, formatted as per OrganizationSummaryResponseSchema.
@@ -500,7 +859,9 @@ class OrganizationsService:
                 conditions.append(OrganizationStatus.status.in_(status_enums))
 
         # The order_by tuple directly specifies both the sort field and direction
-        organization_data = await self.repo.get_organization_names(conditions, order_by)
+        organization_data = await self.repo.get_organization_names(
+            conditions, order_by, org_type_filter, org_filters
+        )
 
         return [
             OrganizationSummaryResponseSchema(
@@ -510,6 +871,7 @@ class OrganizationsService:
                 total_balance=org["total_balance"],
                 reserved_balance=org["reserved_balance"],
                 org_status=org["status"],
+                org_type=org.get("org_type"),
             )
             for org in organization_data
         ]
@@ -877,7 +1239,9 @@ class OrganizationsService:
             is_valid=True,
         )
 
-    async def _send_credit_market_notification(self, organization: Organization, user=None):
+    async def _send_credit_market_notification(
+        self, organization: Organization, user=None
+    ):
         """
         Send notification to subscribed BCeID users when new credits are listed for sale.
         """
@@ -887,9 +1251,9 @@ class OrganizationsService:
                 "organizationName": organization.name,
                 "creditsToSell": organization.credits_to_sell,
                 "service": "CreditMarket",
-                "action": "CreditsListedForSale"
+                "action": "CreditsListedForSale",
             }
-            
+
             # Create notification data
             notification_data = NotificationMessageSchema(
                 type="Credit market - credits listed for sale",
@@ -898,20 +1262,24 @@ class OrganizationsService:
                 related_organization_id=organization.organization_id,
                 origin_user_profile_id=user.user_profile_id if user else None,
             )
-            
+
             # Send notification to all subscribed BCeID users
             await self.notification_service.send_notification(
                 NotificationRequestSchema(
-                    notification_types=[NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE],
+                    notification_types=[
+                        NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE
+                    ],
                     notification_context={
                         "subject": f"LCFS Credit Market - New Credits Available from {organization.name}"
                     },
                     notification_data=notification_data,
                 )
             )
-            
-            logger.info(f"Credit market notification sent for organization {organization.organization_id}")
-            
+
+            logger.info(
+                f"Credit market notification sent for organization {organization.organization_id}"
+            )
+
         except Exception as e:
             logger.error(f"Failed to send credit market notification: {str(e)}")
             # Don't raise the exception - notification failure shouldn't break the main operation

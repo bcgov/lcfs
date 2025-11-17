@@ -101,12 +101,16 @@ describe('ActivityLinksList', () => {
         />,
         { wrapper }
       )
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === 'report:activityLinksList:'
-      })).toBeInTheDocument()
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === 'report:activitySecondList:'
-      })).toBeInTheDocument()
+      expect(
+        screen.getByText((content, element) => {
+          return element?.textContent === 'report:activityLinksList:'
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText((content, element) => {
+          return element?.textContent === 'report:activitySecondList:'
+        })
+      ).toBeInTheDocument()
       expect(screen.getByTestId('download-report')).toBeInTheDocument()
     })
 
@@ -259,40 +263,6 @@ describe('ActivityLinksList', () => {
     })
   })
 
-  describe('Quarterly Report Activities (Q4)', () => {
-    it('renders all activity links for Q4', () => {
-      render(
-        <ActivityLinksList
-          currentStatus="Draft"
-          isQuarterlyReport={true}
-          reportQuarter={4}
-        />,
-        { wrapper }
-      )
-      expect(
-        screen.getByText('report:activityLists.supplyOfFuel')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.notionalTransfers')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.fuelsOtherUse')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.exportFuels')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.finalSupplyEquipment')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.allocationAgreements')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.uploadDocuments')
-      ).toBeInTheDocument()
-    })
-  })
-
   describe('Navigation Functionality', () => {
     it('navigates to supply of fuel when clicked', async () => {
       const user = userEvent.setup()
@@ -306,7 +276,9 @@ describe('ActivityLinksList', () => {
     it('navigates to notional transfers when clicked', async () => {
       const user = userEvent.setup()
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      await user.click(screen.getByText('report:activityLists.notionalTransfers'))
+      await user.click(
+        screen.getByText('report:activityLists.notionalTransfers')
+      )
       expect(mockNavigate).toHaveBeenCalledWith(
         '/compliance-reporting/2025/123/notional-transfers'
       )
@@ -333,16 +305,20 @@ describe('ActivityLinksList', () => {
     it('navigates to final supply equipment when clicked', async () => {
       const user = userEvent.setup()
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      await user.click(screen.getByText('report:activityLists.finalSupplyEquipment'))
+      await user.click(
+        screen.getByText('report:activityLists.finalSupplyEquipment')
+      )
       expect(mockNavigate).toHaveBeenCalledWith(
-        '/compliance-reporting/2025/123/final-supply-equipments'
+        '/compliance-reporting/2025/123/fse-reporting'
       )
     })
 
     it('navigates to allocation agreements when clicked', async () => {
       const user = userEvent.setup()
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      await user.click(screen.getByText('report:activityLists.allocationAgreements'))
+      await user.click(
+        screen.getByText('report:activityLists.allocationAgreements')
+      )
       expect(mockNavigate).toHaveBeenCalledWith(
         '/compliance-reporting/2025/123/allocation-agreements'
       )
@@ -370,10 +346,10 @@ describe('ActivityLinksList', () => {
       mockDownload.mockReturnValue(downloadPromise)
 
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      
+
       const downloadButton = screen.getByTestId('download-report')
       await user.click(downloadButton)
-      
+
       await waitFor(() => {
         expect(downloadButton).toBeDisabled()
       })
@@ -383,7 +359,6 @@ describe('ActivityLinksList', () => {
         expect(downloadButton).not.toBeDisabled()
       })
     })
-
 
     it('triggers download when link text is clicked', async () => {
       const user = userEvent.setup()
@@ -401,21 +376,23 @@ describe('ActivityLinksList', () => {
     it('opens document upload dialog when clicked', async () => {
       const user = userEvent.setup()
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      
+
       await user.click(screen.getByText('report:activityLists.uploadDocuments'))
-      
+
       expect(screen.getByText('Upload Dialog Open')).toBeInTheDocument()
       expect(screen.getByText('Parent ID: 123')).toBeInTheDocument()
-      expect(screen.getByText('Parent Type: compliance_report')).toBeInTheDocument()
+      expect(
+        screen.getByText('Parent Type: compliance_report')
+      ).toBeInTheDocument()
     })
 
     it('closes document upload dialog', async () => {
       const user = userEvent.setup()
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      
+
       await user.click(screen.getByText('report:activityLists.uploadDocuments'))
       expect(screen.getByText('Upload Dialog Open')).toBeInTheDocument()
-      
+
       await user.click(screen.getByText('Close'))
       expect(screen.queryByText('Upload Dialog Open')).not.toBeInTheDocument()
     })
@@ -423,10 +400,10 @@ describe('ActivityLinksList', () => {
     it('handles upload success callback', async () => {
       const user = userEvent.setup()
       render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      
+
       await user.click(screen.getByText('report:activityLists.uploadDocuments'))
       await user.click(screen.getByText('Upload Success'))
-      
+
       // Should not crash - callback is empty but valid
       expect(screen.getByText('Upload Dialog Open')).toBeInTheDocument()
     })
@@ -463,7 +440,7 @@ describe('ActivityLinksList', () => {
   describe('Edge Cases', () => {
     it('handles missing currentUser gracefully', () => {
       useCurrentUser.mockReturnValue({ data: null })
-      
+
       render(
         <ActivityLinksList
           currentStatus="Draft"
@@ -472,9 +449,11 @@ describe('ActivityLinksList', () => {
         />,
         { wrapper }
       )
-      
+
       // Should still render without organization name
-      expect(screen.getByText('report:activityLists.supplyOfFuel')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:activityLists.supplyOfFuel')
+      ).toBeInTheDocument()
     })
 
     it('handles undefined reportQuarter for quarterly reports', () => {
@@ -486,17 +465,21 @@ describe('ActivityLinksList', () => {
         />,
         { wrapper }
       )
-      
+
       // Should show all activities when reportQuarter is undefined
-      expect(screen.getByText('report:activityLists.supplyOfFuel')).toBeInTheDocument()
-      expect(screen.getByText('report:activityLists.fuelsOtherUse')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:activityLists.supplyOfFuel')
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('report:activityLists.fuelsOtherUse')
+      ).not.toBeInTheDocument()
     })
 
     it('handles missing currentUser organization', () => {
       useCurrentUser.mockReturnValue({
         data: { organization: null }
       })
-      
+
       render(
         <ActivityLinksList
           currentStatus="Draft"
@@ -505,8 +488,10 @@ describe('ActivityLinksList', () => {
         />,
         { wrapper }
       )
-      
-      expect(screen.getByText('report:activityLists.supplyOfFuel')).toBeInTheDocument()
+
+      expect(
+        screen.getByText('report:activityLists.supplyOfFuel')
+      ).toBeInTheDocument()
     })
   })
 })

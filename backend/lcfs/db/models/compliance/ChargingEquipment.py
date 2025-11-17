@@ -36,6 +36,23 @@ charging_equipment_intended_use_association = Table(
     ),
 )
 
+charging_equipment_intended_user_association = Table(
+    "charging_equipment_intended_user_association",
+    BaseModel.metadata,
+    Column(
+        "charging_equipment_id",
+        Integer,
+        ForeignKey("charging_equipment.charging_equipment_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "end_user_type_id",
+        Integer,
+        ForeignKey("end_user_type.end_user_type_id"),
+        primary_key=True,
+    ),
+)
+
 
 class ChargingEquipment(BaseModel, Auditable, Versioning):
     """
@@ -69,33 +86,26 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     equipment_number = Column(
-        String(3),
+        String(5),
         nullable=False,
         comment="Auto-generated 3-digit equipment number (suffix for registration)",
         index=True,
     )
 
-    allocating_organization_id = Column(
-        Integer,
-        ForeignKey("organization.organization_id"),
-        nullable=True,
-        comment="Optional allocating organization",
-    )
-
     serial_number = Column(
-        String(100),
+        String(500),
         nullable=False,
         comment="Serial number of the equipment",
     )
 
     manufacturer = Column(
-        String(100),
+        String(500),
         nullable=False,
         comment="Manufacturer of the equipment",
     )
 
     model = Column(
-        String(100),
+        String(500),
         nullable=True,
         comment="Model of the equipment",
     )
@@ -109,7 +119,9 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     ports = Column(
-        Enum(PortsEnum, name="ports_enum"),
+        Enum(
+            PortsEnum, name="ports_enum", values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=True,
         comment="Port configuration of the equipment",
     )
@@ -121,10 +133,6 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     # Relationships
-    allocating_organization = relationship(
-        "Organization", foreign_keys=[allocating_organization_id]
-    )
-
     charging_site = relationship("ChargingSite", back_populates="charging_equipment")
     status = relationship(
         "ChargingEquipmentStatus", back_populates="charging_equipment"
@@ -134,6 +142,10 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     intended_uses = relationship(
         "EndUseType",
         secondary=charging_equipment_intended_use_association,
+    )
+    intended_users = relationship(
+        "EndUserType",
+        secondary=charging_equipment_intended_user_association,
     )
     compliance_associations = relationship(
         "ComplianceReportChargingEquipment",
@@ -187,9 +199,9 @@ def generate_equipment_number(mapper, connection, target):
             # First equipment for this site
             next_seq = 1
 
-        if next_seq > 999:
+        if next_seq > 99999:
             raise ValueError(
-                "Exceeded maximum equipment numbers (999) for this charging site"
+                "Exceeded maximum equipment numbers (99,999) for this charging site"
             )
 
         target.equipment_number = f"{next_seq:03d}"

@@ -1,12 +1,18 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import unittest
+from decimal import Decimal
+from types import SimpleNamespace
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.organizations.schema import (
     OrganizationSummaryResponseSchema,
     OrganizationCreateSchema,
     OrganizationUpdateSchema,
     OrganizationAddressSchema,
+    PenaltyAnalyticsResponseSchema,
+    PenaltyLogCreateSchema,
+    PenaltyLogUpdateSchema,
+    ContraventionTypeEnum,
 )
 from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
@@ -188,12 +194,261 @@ async def test_get_organization_names_invalid_statuses(
     result = await organizations_service.get_organization_names(
         order_by=("name", "asc"), statuses=statuses
     )
-
-    # Should still call the repo (invalid statuses are filtered out in the service)
     mock_repo.get_organization_names.assert_called_once()
-
-    # Result should be valid even with invalid statuses passed
     assert isinstance(result, list)
+
+
+@pytest.mark.anyio
+async def test_get_organization_names_passes_org_filters(
+    organizations_service, mock_repo
+):
+    """Ensure org-level filters are forwarded to the repository."""
+
+    mock_org_data = [
+        {
+            "organization_id": 3,
+            "name": "Filtered Org",
+            "operating_name": "Filtered Operating",
+            "total_balance": 1500,
+            "reserved_balance": 300,
+            "status": create_mock_org_status(OrgStatusEnum.Registered),
+        }
+    ]
+
+    mock_repo.get_organization_names = AsyncMock(return_value=mock_org_data)
+
+    org_filters = {"name": ["Filtered Org"], "registration_number": ["12345"]}
+    await organizations_service.get_organization_names(
+        order_by=("name", "asc"),
+        statuses=None,
+        org_filters=org_filters,
+    )
+
+    _, _, _, forwarded_filters = mock_repo.get_organization_names.call_args[0]
+    assert forwarded_filters == org_filters
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_aggregates_values(
+    organizations_service, mock_repo
+):
+    """Ensure penalty analytics aggregates automatic and discretionary penalties correctly."""
+
+    summaries = [
+        {
+            "compliance_period_id": 1,
+            "compliance_year": "2023",
+            "line_11_penalty_gasoline": 100.0,
+            "line_11_penalty_diesel": 50.0,
+            "line_11_penalty_jet_fuel": None,
+            "line_21_penalty_payable": 200.0,
+            "penalty_override_enabled": False,
+            "renewable_penalty_override": None,
+            "low_carbon_penalty_override": None,
+        },
+        {
+            "compliance_period_id": 2,
+            "compliance_year": "2024",
+            "line_11_penalty_gasoline": 10.0,
+            "line_11_penalty_diesel": 20.0,
+            "line_11_penalty_jet_fuel": 30.0,
+            "line_21_penalty_payable": 40.0,
+            "penalty_override_enabled": True,
+            "renewable_penalty_override": 500.0,
+            "low_carbon_penalty_override": 700.0,
+        },
+    ]
+
+    penalty_logs = [
+        {
+            "penalty_log_id": 11,
+            "compliance_period_id": 1,
+            "compliance_year": "2023",
+            "contravention_type": "Single contravention",
+            "offence_history": True,
+            "deliberate": False,
+            "efforts_to_correct": False,
+            "economic_benefit_derived": True,
+            "efforts_to_prevent_recurrence": False,
+            "notes": "Test note",
+            "penalty_amount": Decimal("1000.50"),
+        },
+        {
+            "penalty_log_id": 12,
+            "compliance_period_id": 2,
+            "compliance_year": "2024",
+            "contravention_type": "Continuous contravention",
+            "offence_history": False,
+            "deliberate": True,
+            "efforts_to_correct": True,
+            "economic_benefit_derived": False,
+            "efforts_to_prevent_recurrence": True,
+            "notes": None,
+            "penalty_amount": Decimal("200.00"),
+        },
+    ]
+
+    mock_repo.get_penalty_analytics_data = AsyncMock(
+        return_value=(summaries, penalty_logs)
+    )
+
+    result = await organizations_service.get_penalty_analytics(organization_id=123)
+
+    assert isinstance(result, PenaltyAnalyticsResponseSchema)
+    assert len(result.yearly_penalties) == 2
+    assert result.yearly_penalties[0].compliance_year == 2023
+    assert result.yearly_penalties[0].auto_renewable == pytest.approx(150.0)
+    assert result.yearly_penalties[1].auto_low_carbon == pytest.approx(700.0)
+
+    assert result.totals.auto_renewable == pytest.approx(650.0)
+    assert result.totals.auto_low_carbon == pytest.approx(900.0)
+    assert result.totals.total_automatic == pytest.approx(1550.0)
+    assert result.totals.discretionary == pytest.approx(1200.5)
+    assert result.totals.total == pytest.approx(2750.5)
+
+    assert len(result.penalty_logs) == 2
+    assert result.penalty_logs[0].penalty_amount == pytest.approx(1000.5)
+    assert result.penalty_logs[1].contravention_type == "Continuous contravention"
+
+
+@pytest.mark.anyio
+async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
+    pagination = PaginationRequestSchema(page=2, size=5, filters=[], sort_orders=[])
+
+    mock_repo.get_penalty_logs_paginated = AsyncMock(
+        return_value=
+        (
+            [
+                {
+                    "penalty_log_id": 12,
+                    "compliance_period_id": 7,
+                    "compliance_year": "2024",
+                    "contravention_type": "Single contravention",
+                    "offence_history": True,
+                    "deliberate": False,
+                    "efforts_to_correct": True,
+                    "economic_benefit_derived": False,
+                    "efforts_to_prevent_recurrence": True,
+                    "notes": "Sample",
+                    "penalty_amount": Decimal("250.00"),
+                }
+            ],
+            1,
+        )
+    )
+
+    result = await organizations_service.get_penalty_logs_paginated(
+        organization_id=99, pagination=pagination
+    )
+
+    assert result.pagination.page == 2
+    assert result.pagination.size == 5
+    assert result.pagination.total == 1
+    assert result.penalty_logs[0].penalty_log_id == 12
+    assert result.penalty_logs[0].penalty_amount == pytest.approx(250.0)
+
+
+@pytest.mark.anyio
+async def test_create_penalty_log(organizations_service, mock_repo):
+    payload = PenaltyLogCreateSchema(
+        compliance_period_id=10,
+        contravention_type=ContraventionTypeEnum.SINGLE,
+        offence_history=True,
+        deliberate=False,
+        efforts_to_correct=True,
+        economic_benefit_derived=False,
+        efforts_to_prevent_recurrence=False,
+        notes="Test",
+        penalty_amount=Decimal("123.45"),
+    )
+
+    penalty_model = SimpleNamespace(
+        penalty_log_id=1,
+        compliance_period_id=10,
+        compliance_period=SimpleNamespace(description="2024"),
+        contravention_type=ContraventionTypeEnum.SINGLE.value,
+        offence_history=True,
+        deliberate=False,
+        efforts_to_correct=True,
+        economic_benefit_derived=False,
+        efforts_to_prevent_recurrence=False,
+        notes="Test",
+        penalty_amount=Decimal("123.45"),
+    )
+
+    mock_repo.create_penalty_log = AsyncMock(return_value=penalty_model)
+
+    result = await organizations_service.create_penalty_log(1, payload)
+
+    assert result.penalty_log_id == 1
+    assert result.compliance_year == "2024"
+    mock_repo.create_penalty_log.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_update_penalty_log(organizations_service, mock_repo):
+    payload = PenaltyLogUpdateSchema(
+        compliance_period_id=11,
+        contravention_type=ContraventionTypeEnum.CONTINUOUS,
+        offence_history=False,
+        deliberate=True,
+        efforts_to_correct=False,
+        economic_benefit_derived=True,
+        efforts_to_prevent_recurrence=True,
+        notes="Updated",
+        penalty_amount=Decimal("500.00"),
+    )
+
+    existing = SimpleNamespace(
+        penalty_log_id=2,
+        compliance_period_id=10,
+        compliance_period=SimpleNamespace(description="2023"),
+        contravention_type=ContraventionTypeEnum.SINGLE.value,
+        offence_history=True,
+        deliberate=False,
+        efforts_to_correct=True,
+        economic_benefit_derived=False,
+        efforts_to_prevent_recurrence=False,
+        notes="Old",
+        penalty_amount=Decimal("120.00"),
+    )
+
+    updated = SimpleNamespace(
+        penalty_log_id=2,
+        compliance_period_id=11,
+        compliance_period=SimpleNamespace(description="2024"),
+        contravention_type=ContraventionTypeEnum.CONTINUOUS.value,
+        offence_history=False,
+        deliberate=True,
+        efforts_to_correct=False,
+        economic_benefit_derived=True,
+        efforts_to_prevent_recurrence=True,
+        notes="Updated",
+        penalty_amount=Decimal("500.00"),
+    )
+
+    mock_repo.get_penalty_log_by_id = AsyncMock(return_value=existing)
+    mock_repo.update_penalty_log = AsyncMock(return_value=updated)
+
+    result = await organizations_service.update_penalty_log(1, 2, payload)
+
+    assert result.penalty_log_id == 2
+    assert result.contravention_type == ContraventionTypeEnum.CONTINUOUS.value
+    assert result.penalty_amount == pytest.approx(500.0)
+    mock_repo.get_penalty_log_by_id.assert_awaited_once()
+    mock_repo.update_penalty_log.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_delete_penalty_log(organizations_service, mock_repo):
+    existing = SimpleNamespace(penalty_log_id=3)
+    mock_repo.get_penalty_log_by_id = AsyncMock(return_value=existing)
+    mock_repo.delete_penalty_log = AsyncMock(return_value=True)
+
+    result = await organizations_service.delete_penalty_log(1, 3)
+
+    assert result is None
+    mock_repo.delete_penalty_log.assert_awaited_once_with(1, 3)
 
 
 @pytest.mark.anyio
@@ -230,6 +485,9 @@ async def test_create_organization_with_early_issuance(
 
     mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=1))
     mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.get_organization_type = AsyncMock(
+        return_value=MagicMock(is_bceid_user=True)
+    )
 
     with patch(
         "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
@@ -281,6 +539,9 @@ async def test_update_organization_with_early_issuance_change(
     mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
     mock_repo.update_early_issuance_by_year = AsyncMock()
     mock_repo.update_organization = AsyncMock()
+    mock_repo.get_organization_type = AsyncMock(
+        return_value=MagicMock(is_bceid_user=True)
+    )
 
     with patch(
         "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
@@ -828,3 +1089,199 @@ async def test_validate_link_key_invalid(organizations_service):
     organizations_service.repo.get_link_key_by_key.assert_called_once_with(
         link_key_value
     )
+
+
+# Company Overview Service Tests
+@pytest.mark.anyio
+async def test_update_organization_company_overview_success(organizations_service):
+    """Test successful company overview update"""
+    organization_id = 1
+    company_overview_data = {
+        "company_details": "Updated company details",
+        "company_representation_agreements": "Updated agreements",
+        "company_acting_as_aggregator": "Updated aggregator info",
+        "company_additional_notes": "Updated notes",
+    }
+    user = MagicMock()
+    user.keycloak_username = "test_user"
+
+    mock_organization = MagicMock()
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+    mock_organization.company_representation_agreements = "Old agreements"
+    mock_organization.company_acting_as_aggregator = "Old aggregator"
+    mock_organization.company_additional_notes = "Old notes"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify organization was fetched
+    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
+
+    # Verify fields were updated
+    assert mock_organization.company_details == "Updated company details"
+    assert (
+        mock_organization.company_representation_agreements == "Updated agreements"
+    )
+    assert mock_organization.company_acting_as_aggregator == "Updated aggregator info"
+    assert mock_organization.company_additional_notes == "Updated notes"
+    assert mock_organization.update_user == "test_user"
+
+    # Verify organization was saved
+    organizations_service.repo.update_organization.assert_called_once_with(
+        mock_organization
+    )
+
+    # Verify result is returned
+    assert result == mock_organization
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_organization_not_found(
+    organizations_service,
+):
+    """Test company overview update when organization doesn't exist"""
+    from lcfs.web.exception.exceptions import DataNotFoundException
+
+    organization_id = 999
+    company_overview_data = {"company_details": "Test"}
+
+    organizations_service.repo.get_organization = AsyncMock(return_value=None)
+
+    # Test the method - should raise DataNotFoundException
+    with pytest.raises(DataNotFoundException, match="Organization not found"):
+        await organizations_service.update_organization_company_overview(
+            organization_id, company_overview_data
+        )
+
+    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
+    organizations_service.repo.update_organization.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_partial_update(
+    organizations_service,
+):
+    """Test updating only some company overview fields"""
+    organization_id = 1
+    # Only update company_details and company_additional_notes
+    company_overview_data = {
+        "company_details": "New details",
+        "company_additional_notes": "New notes",
+    }
+    user = MagicMock()
+    user.keycloak_username = "test_user"
+
+    mock_organization = MagicMock()
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+    mock_organization.company_representation_agreements = "Old agreements"
+    mock_organization.company_acting_as_aggregator = "Old aggregator"
+    mock_organization.company_additional_notes = "Old notes"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify only specified fields were updated
+    assert mock_organization.company_details == "New details"
+    assert mock_organization.company_additional_notes == "New notes"
+    # These should remain unchanged
+    assert mock_organization.company_representation_agreements == "Old agreements"
+    assert mock_organization.company_acting_as_aggregator == "Old aggregator"
+
+    organizations_service.repo.update_organization.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_with_none_values(
+    organizations_service,
+):
+    """Test updating company overview with None values (clearing fields)"""
+    organization_id = 1
+    company_overview_data = {
+        "company_details": None,
+        "company_representation_agreements": None,
+    }
+    user = MagicMock()
+    user.keycloak_username = "test_user"
+
+    mock_organization = MagicMock()
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+    mock_organization.company_representation_agreements = "Old agreements"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify fields were set to None
+    assert mock_organization.company_details is None
+    assert mock_organization.company_representation_agreements is None
+
+    organizations_service.repo.update_organization.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_organization_company_overview_ignores_invalid_fields(
+    organizations_service,
+):
+    """Test that invalid fields are ignored during company overview update"""
+    organization_id = 1
+    company_overview_data = {
+        "company_details": "New details",
+        "invalid_field": "Should be ignored",
+        "another_invalid": "Also ignored",
+    }
+    user = MagicMock()
+
+    # Create a spec'd mock that only allows company overview fields
+    mock_organization = MagicMock(spec=['organization_id', 'company_details', 'company_representation_agreements', 'company_acting_as_aggregator', 'company_additional_notes', 'update_user'])
+    mock_organization.organization_id = organization_id
+    mock_organization.company_details = "Old details"
+
+    organizations_service.repo.get_organization = AsyncMock(
+        return_value=mock_organization
+    )
+    organizations_service.repo.update_organization = AsyncMock(
+        return_value=mock_organization
+    )
+
+    # Test the method
+    result = await organizations_service.update_organization_company_overview(
+        organization_id, company_overview_data, user
+    )
+
+    # Verify valid field was updated
+    assert mock_organization.company_details == "New details"
+
+    # Verify invalid fields were not set (would raise AttributeError if attempted)
+    assert not hasattr(mock_organization, "invalid_field")
+    assert not hasattr(mock_organization, "another_invalid")
+
+    organizations_service.repo.update_organization.assert_called_once()

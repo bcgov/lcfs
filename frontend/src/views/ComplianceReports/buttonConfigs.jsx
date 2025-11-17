@@ -2,6 +2,7 @@ import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { DateTime } from 'luxon'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
+import { NEW_REGULATION_YEAR } from '@/constants/common'
 
 /**
  *
@@ -347,10 +348,16 @@ class ButtonActionFactory {
 
   // IDIR Director Actions
   issueAssessment() {
+    // Use contextual label based on whether the report is marked as non-assessment
+    const isNonAssessment = this.context.isNonAssessment || false
+    const buttonLabel = isNonAssessment
+      ? this.context.t('report:actionBtns.issueNonAssessmentBtn')
+      : this.context.t('report:actionBtns.assessReportBtn')
+
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'issue-assessment-btn',
-      label: this.context.t('report:actionBtns.assessReportBtn'),
+      label: buttonLabel,
       handler: (formData) => {
         // Check if the report is marked as non-assessment
         if (formData.isNonAssessment) {

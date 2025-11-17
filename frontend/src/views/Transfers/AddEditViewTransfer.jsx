@@ -469,8 +469,8 @@ export const AddEditViewTransfer = () => {
             <Stack
               component="div"
               direction={{ md: 'coloumn', lg: 'row' }}
-              justifyContent="flex-end"
-              mt={2}
+              justifyContent="flex-start"
+              mt={4}
               gap={2}
               spacing={2}
             >

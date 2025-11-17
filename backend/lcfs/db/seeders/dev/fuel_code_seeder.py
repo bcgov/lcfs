@@ -9,7 +9,6 @@ logger = structlog.get_logger(__name__)
 # Base template for the common fields
 base_fuel_data = {
     "fuel_status_id": 2,
-    "prefix_id": 1,
     "contact_name": "John Doe",
     "contact_email": "john.doe@lcfs.com",
     "edrms": "edrms",
@@ -35,10 +34,16 @@ def create_fuel_entry(
     expiration_date,
     fuel_type_id,
     fuel_status_id=2,
+    prefix_id=1,
 ):
+    # Set prefix_id to 3 if fuel_production_facility_country is "Canada"
+    if base_fuel_data.get("fuel_production_facility_country") == "Canada":
+        prefix_id = 3
+    
     return {
         **base_fuel_data,  # Extend with the base fields
         "fuel_status_id": fuel_status_id,
+        "prefix_id": prefix_id,
         "fuel_suffix": fuel_suffix,
         "company": company,
         "carbon_intensity": carbon_intensity,
@@ -165,7 +170,7 @@ async def seed_fuel_codes(session):
             company="Superior Propane",
             carbon_intensity=71.21,
             effective_date=(2024, 3, 9),
-            expiration_date=(2025, 3, 8),
+            expiration_date=(2026, 3, 8),
             fuel_type_id=13,
         ),
         create_fuel_entry(
@@ -215,6 +220,15 @@ async def seed_fuel_codes(session):
             effective_date=(2024, 1, 1),
             expiration_date=(2025, 6, 30),
             fuel_type_id=3,
+        ),
+        create_fuel_entry(
+            fuel_suffix="100.1",
+            company="LCFS Test Provider",
+            carbon_intensity=75.00,
+            effective_date=(2025, 1, 1),
+            expiration_date=(2030, 12, 31),
+            fuel_type_id=13,  # Propane
+            prefix_id=2,  # PROXY prefix
         ),
     ]
 

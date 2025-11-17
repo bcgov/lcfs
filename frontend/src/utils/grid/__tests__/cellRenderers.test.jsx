@@ -12,6 +12,7 @@ import {
   ConditionalLinkRenderer,
   LoginStatusRenderer,
   OrgStatusRenderer,
+  OrgTypeRenderer,
   FuelCodeStatusRenderer,
   FuelCodePrefixRenderer,
   TransactionStatusRenderer,
@@ -106,6 +107,25 @@ describe('StatusRenderer', () => {
       </MemoryRouter>
     )
     expect(screen.getByText(/Inactive/i)).toBeInTheDocument()
+  })
+})
+
+describe('OrgTypeRenderer', () => {
+  it('renders a badge with the organization type label', () => {
+    render(
+      <MemoryRouter initialEntries={['/organizations']}>
+        <OrgTypeRenderer
+          value="Supplier"
+          data={{ orgType: { orgType: 'fuel_supplier' } }}
+          node={{ id: '99' }}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByText(/Supplier/i)).toBeInTheDocument()
+    expect(screen.getByRole('link')).toHaveAttribute(
+      'href',
+      '/organizations/99'
+    )
   })
 })
 

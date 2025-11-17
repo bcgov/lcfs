@@ -97,7 +97,6 @@ export const HistoryCard = ({
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
 
-
   /**
    * Helper: build the two assessment list items.
    * We use it twice – once top‑level for gov users (pre‑assessment)
@@ -110,7 +109,7 @@ export const HistoryCard = ({
         <StyledListItem disablePadding>
           <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
             <strong>{t('report:notSubjectToAssessment')}:&nbsp;</strong>
-            {t('report:notSubjectToAssessmentDescription')}
+            {t('report:notSubjectToAssessmentHistoryMessage')}
           </ListItemText>
         </StyledListItem>
       )
@@ -119,20 +118,22 @@ export const HistoryCard = ({
     // Default assessment lines for normal reports
     return (
       <>
-        <StyledListItem disablePadding>
-          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
-            <strong>
-              {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
-            </strong>
-            {t('report:assessmentLn1', {
-              name: report.organization.name,
-              hasMet:
-                report.summary.line11FossilDerivedBaseFuelTotal <= 0
-                  ? 'has met'
-                  : 'has not met'
-            })}
-          </ListItemText>
-        </StyledListItem>
+        {report?.summary?.totalRenewableFuelSupplied > 0 && (
+          <StyledListItem disablePadding>
+            <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+              <strong>
+                {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+              </strong>
+              {t('report:assessmentLn1', {
+                name: report.organization.name,
+                hasMet:
+                  report.summary.line11FossilDerivedBaseFuelTotal <= 0
+                    ? 'has met'
+                    : 'has not met'
+              })}
+            </ListItemText>
+          </StyledListItem>
+        )}
         <StyledListItem disablePadding>
           <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
             <strong>

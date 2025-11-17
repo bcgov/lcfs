@@ -68,6 +68,15 @@ vi.mock('react-i18next', () => ({
   useTranslation: vi.fn()
 }))
 
+vi.mock('@/hooks/useFuelSupply', () => ({
+  useFuelSupplyOptions: vi.fn(() => ({
+    data: {
+      fuelTypes: []
+    },
+    isLoading: false
+  }))
+}))
+
 vi.mock('../_schema', () => ({
   changelogColDefs: vi.fn(() => [{ field: 'actionType' }]),
   changelogCommonColDefs: vi.fn((showActions) => [{ field: 'common', showActions }])
@@ -341,7 +350,7 @@ describe('FuelSupplyChangelog', () => {
       const currentVersionCall = gridViewer.mock.calls[0]
       
       // Current version should use changelogCommonColDefs(false)
-      expect(changelogCommonColDefs).toHaveBeenCalledWith(false)
+      expect(changelogCommonColDefs).toHaveBeenCalledWith(false, false, 2024)
       expect(currentVersionCall[0].columnDefs).toEqual([{ field: 'common', showActions: false }])
     })
 
@@ -352,7 +361,7 @@ describe('FuelSupplyChangelog', () => {
       const originalVersionCall = gridViewer.mock.calls[1]
       
       // Original version should use changelogCommonColDefs(false)
-      expect(changelogCommonColDefs).toHaveBeenCalledWith(false)
+      expect(changelogCommonColDefs).toHaveBeenCalledWith(false, false, 2024)
       expect(originalVersionCall[0].columnDefs).toEqual([{ field: 'common', showActions: false }])
     })
 

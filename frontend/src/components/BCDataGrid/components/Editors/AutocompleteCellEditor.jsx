@@ -3,7 +3,8 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useImperativeHandle
+  useImperativeHandle,
+  useMemo
 } from 'react'
 import PropTypes from 'prop-types'
 import {
@@ -34,53 +35,96 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onValueChange,
     onKeyDownCapture,
     onBlur,
-    onPaste
+    onPaste,
+    returnObject = false // NEW: when false, emit IDs; when true, emit option objects
   } = props
 
-  // Fix initial value parsing
-  const parseInitialValue = (initialValue) => {
-    if (!initialValue) return multiple ? [] : null
-    if (Array.isArray(initialValue)) return initialValue
-    if (typeof initialValue === 'string') {
-      const values = initialValue.split(',').map((v) => v.trim())
-      return multiple ? values : values[0]
+  // Helpers to map between raw values (ids/strings) and option objects
+  const getRawValue = (optionOrValue) => {
+    if (optionOrValue == null) return null
+    if (typeof optionOrValue === 'object') {
+      // Expect shape { value, label }
+      return Object.prototype.hasOwnProperty.call(optionOrValue, 'value')
+        ? optionOrValue.value
+        : optionOrValue
     }
-    return multiple ? [initialValue] : initialValue
+    return optionOrValue
   }
 
-  const [selectedValues, setSelectedValues] = useState(() =>
-    parseInitialValue(value)
-  )
+  const findOptionByRaw = (raw) => {
+    if (raw == null) return null
+    return options.find((opt) =>
+      typeof opt === 'object' ? opt?.value === raw : opt === raw
+    )
+  }
+
+  const initSelected = () => {
+    if (multiple) {
+      if (Array.isArray(value)) {
+        // `value` could be an array of objects or ids/strings
+        return value
+          .map((v) => (typeof v === 'object' ? v : findOptionByRaw(v)))
+          .filter(Boolean)
+      }
+      if (value == null || value === '') return []
+      if (typeof value === 'string') {
+        return value
+          .split(',')
+          .map((v) => v.trim())
+          .map((rv) => findOptionByRaw(rv))
+          .filter(Boolean)
+      }
+      // single primitive
+      return [findOptionByRaw(value)].filter(Boolean)
+    }
+    // single mode
+    if (value == null || value === '') return null
+    if (typeof value === 'object') return value
+    if (typeof value === 'string') {
+      const first = value.split(',')[0]?.trim()
+      return findOptionByRaw(first)
+    }
+    return findOptionByRaw(value)
+  }
+  const [selected, setSelected] = useState(initSelected)
   const [isOpen, setIsOpen] = useState(false)
-  const inputRef = useRef()
+  const inputRef = useRef(null)
 
   useImperativeHandle(ref, () => ({
     getValue: () => {
       if (multiple) {
-        return Array.isArray(selectedValues) ? selectedValues : []
+        if (returnObject) return Array.isArray(selected) ? selected : []
+        return Array.isArray(selected)
+          ? selected.map((opt) => getRawValue(opt))
+          : []
       }
-      return selectedValues || ''
+      if (returnObject) return selected || null
+      return selected ? getRawValue(selected) : ''
     },
     isCancelBeforeStart: () => false,
     isCancelAfterEnd: () => false,
-    afterGuiAttached: () => {
-      if (inputRef.current) {
-        inputRef.current.focus()
-      }
-    }
+    afterGuiAttached: () => inputRef.current?.focus()
   }))
 
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus()
-    }
+    inputRef.current?.focus()
   }, [])
 
   const handleChange = (event, newValue) => {
-    const processedValue = multiple ? newValue : newValue || ''
-    setSelectedValues(processedValue)
+    // newValue is an option object (single) or array of option objects (multiple)
+    setSelected(newValue)
     if (onValueChange) {
-      onValueChange(processedValue)
+      if (multiple) {
+        onValueChange(
+          returnObject
+            ? newValue
+            : Array.isArray(newValue)
+              ? newValue.map((o) => getRawValue(o))
+              : []
+        )
+      } else {
+        onValueChange(returnObject ? newValue : getRawValue(newValue))
+      }
     }
   }
 
@@ -95,58 +139,62 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   }
 
   const handleKeyDown = (event) => {
-    if (onKeyDownCapture) {
-      onKeyDownCapture(event)
-    }
-
+    onKeyDownCapture?.(event)
     if (event.key === 'Enter') {
       event.preventDefault()
-      setIsOpen(!isOpen)
+      setIsOpen((o) => !o)
       return
     }
-
     if (event.key === 'Tab') {
       event.preventDefault()
-      onValueChange(selectedValues)
+      onValueChange?.(
+        multiple
+          ? returnObject
+            ? selected || []
+            : (selected || []).map((o) => getRawValue(o))
+          : returnObject
+            ? selected
+            : selected
+              ? getRawValue(selected)
+              : ''
+      )
       api.stopEditing()
-
       if (event.shiftKey) {
         api.tabToPreviousCell()
-        setTimeout(navigateToNextCell, 0)
+        setTimeout(() => {
+          const focusedCell = api.getFocusedCell()
+          if (focusedCell) {
+            api.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: focusedCell.column.getId()
+            })
+          }
+        }, 0)
       } else {
         api.tabToNextCell()
-        setTimeout(navigateToNextCell, 0)
+        setTimeout(() => {
+          const focusedCell = api.getFocusedCell()
+          if (focusedCell) {
+            api.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: focusedCell.column.getId()
+            })
+          }
+        }, 0)
       }
     }
   }
 
   const handleBlur = (event) => {
-    if (onBlur) {
-      onBlur(event)
-    }
+    onBlur?.(event)
     api.stopEditing()
   }
 
   const isOptionEqualToValue = (option, value) => {
-    if (!option || !value) return false
-
-    if (typeof option === 'string' && typeof value === 'string') {
-      return option === value
-    }
-
-    if (typeof option === 'object' && typeof value === 'object') {
-      return option.label === value.label
-    }
-
-    if (typeof option === 'object' && typeof value === 'string') {
-      return option.label === value
-    }
-
-    if (typeof option === 'string' && typeof value === 'object') {
-      return option === value.label
-    }
-
-    return false
+    // Compare by underlying id/value
+    const optRaw = getRawValue(option)
+    const valRaw = getRawValue(value)
+    return optRaw === valRaw
   }
 
   return (
@@ -170,8 +218,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
         onOpen={() => setIsOpen(true)}
         onClose={() => setIsOpen(false)}
         openOnFocus={openOnFocus}
-        value={selectedValues}
-        onInputChange={freeSolo ? handleChange : null}
+        value={selected}
         onChange={handleChange}
         multiple={multiple}
         disableCloseOnSelect={disableCloseOnSelect}
@@ -188,42 +235,36 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
           return typeof option === 'string' ? option : option.label || ''
         }}
         renderOption={(props, option, { selected }) => {
-          const isOptionSelected = multiple
-            ? Array.isArray(selectedValues) &&
-              selectedValues.some((val) => isOptionEqualToValue(val, option))
-            : isOptionEqualToValue(selectedValues, option)
-
+          const isSelected = multiple
+            ? Array.isArray(selected) && selected.some(Boolean)
+            : selected
           return (
             <React.Fragment
-              key={typeof option === 'string' ? option : option.label}
+              key={
+                typeof option === 'string'
+                  ? option
+                  : (option.value ?? option.label)
+              }
             >
               <Box
                 component="li"
-                className={`${
-                  selected || isOptionSelected ? 'selected' : ''
-                } ag-custom-component-popup`}
+                className={`${selected || isSelected ? 'selected' : ''} ag-custom-component-popup`}
                 role="option"
                 sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
-                aria-label={`select ${
-                  typeof option === 'string' ? option : option.label
-                }`}
-                data-testid={`select-${
-                  typeof option === 'string' ? option : option.label
-                }`}
+                aria-label={`select ${typeof option === 'string' ? option : option.label}`}
+                data-testid={`select-${typeof option === 'string' ? option : option.label}`}
                 {...props}
                 tabIndex={0}
               >
                 {multiple && (
                   <Checkbox
                     color="primary"
-                    role="presentation"
-                    sx={{ border: '2px solid primary' }}
                     icon={icon}
                     checkedIcon={checkedIcon}
                     style={{ marginRight: 8 }}
-                    checked={selected || isOptionSelected}
-                    inputProps={{ 'aria-label': 'controlled' }}
+                    checked={selected || isSelected}
                     tabIndex={-1}
+                    inputProps={{ 'aria-label': 'controlled' }}
                   />
                 )}
                 {typeof option === 'string' ? option : option.label}
@@ -244,10 +285,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
             size="medium"
             inputRef={inputRef}
             onBlur={handleBlur}
-            inputProps={{
-              ...params.inputProps,
-              autoComplete: 'off'
-            }}
+            inputProps={{ ...params.inputProps, autoComplete: 'off' }}
           />
         )}
         renderTags={(value, getTagProps) => (
@@ -255,7 +293,11 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
             {value.slice(0, limitTags).map((option, index) => (
               <Chip
                 {...getTagProps({ index })}
-                key={typeof option === 'string' ? option : option.label}
+                key={
+                  typeof option === 'string'
+                    ? option
+                    : (option.value ?? option.label)
+                }
                 label={typeof option === 'string' ? option : option.label}
               />
             ))}

@@ -479,7 +479,7 @@ describe('BCGridBase Component', () => {
   })
 
   describe('Props Integration', () => {
-    it('merges autoSizeStrategy with default fitCellContents', () => {
+    it('merges autoSizeStrategy with default fitGridWidth', () => {
       const customAutoSizeStrategy = { skipHeader: true }
 
       render(
@@ -490,7 +490,8 @@ describe('BCGridBase Component', () => {
 
       const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
       expect(agGridProps.autoSizeStrategy).toEqual({
-        type: 'fitCellContents',
+        defaultMinWidth: 100,
+        type: 'fitGridWidth',
         skipHeader: true
       })
     })

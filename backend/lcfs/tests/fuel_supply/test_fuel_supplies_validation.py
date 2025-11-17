@@ -33,6 +33,8 @@ async def test_check_duplicate(fuel_supply_validation):
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     mock_fs_repo.check_duplicate = AsyncMock(return_value=True)
@@ -59,6 +61,8 @@ async def test_validate_other_recognized_type(fuel_supply_validation):
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Should not raise any error as fuel_type_other is not needed for recognized type
@@ -84,6 +88,8 @@ async def test_validate_other_unrecognized_type_with_other(fuel_supply_validatio
         units="L",
         fuel_type_other="Some other fuel",
         energy_density=38.5,  # Required for "Other" fuel type
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Should not raise an error since fuel_type_other is provided
@@ -107,6 +113,8 @@ async def test_validate_other_unrecognized_type_missing_other(fuel_supply_valida
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Should raise RequestValidationError since fuel_type_other is required
@@ -139,6 +147,8 @@ async def test_validate_other_unrecognized_type_missing_energy_density(fuel_supp
         units="L",
         fuel_type_other="Some other fuel",
         # energy_density is None by default
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Should raise RequestValidationError since energy_density is required for Other fuel type
@@ -171,6 +181,8 @@ async def test_validate_other_unrecognized_type_zero_energy_density(fuel_supply_
         units="L",
         fuel_type_other="Some other fuel",
         energy_density=0,  # Invalid: should be > 0
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Should raise RequestValidationError since energy_density must be > 0 for Other fuel type

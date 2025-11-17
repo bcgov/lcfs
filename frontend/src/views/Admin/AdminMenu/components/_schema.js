@@ -25,7 +25,7 @@ export const usersColumnDefs = (t) => [
   {
     colId: 'firstName',
     field: 'firstName',
-    minWidth: 250,
+    minWidth: 200,
     headerName: t('admin:userColLabels.userName'),
     valueGetter: (params) => params.data.firstName + ' ' + params.data.lastName
   },
@@ -60,6 +60,7 @@ export const usersColumnDefs = (t) => [
       valueKey: 'name',
       labelKey: 'name'
     },
+    minWidth: 300,
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle'
   },

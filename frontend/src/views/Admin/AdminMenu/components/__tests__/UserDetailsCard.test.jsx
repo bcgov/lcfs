@@ -87,9 +87,13 @@ vi.mock('@/components/Role', () => ({
   Role: ({ children, roles }) => <>{children}</>
 }))
 
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: (props) => (
-    <div data-test="data-grid" data-api-endpoint={props.apiEndpoint}>
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: (props) => (
+    <div
+      data-test="bc-grid-container"
+      data-grid-key={props.gridKey}
+      className="ag-theme-material"
+    >
       Mocked DataGrid
     </div>
   )
@@ -565,7 +569,7 @@ describe('UserDetailsCard Component', () => {
 
       render(<UserDetailsCard />, { wrapper })
 
-      expect(getByDataTest('data-grid')).toBeInTheDocument()
+      expect(getByDataTest('bc-grid-container')).toBeInTheDocument()
       expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
     })
 
@@ -577,7 +581,7 @@ describe('UserDetailsCard Component', () => {
 
       render(<UserDetailsCard addMode={true} />, { wrapper })
 
-      expect(queryByDataTest('data-grid')).not.toBeInTheDocument()
+      expect(queryByDataTest('bc-grid-container')).not.toBeInTheDocument()
     })
   })
 
@@ -597,11 +601,10 @@ describe('UserDetailsCard Component', () => {
 
       render(<UserDetailsCard />, { wrapper })
 
-      const dataGrid = getByDataTest('data-grid')
-      expect(dataGrid).toHaveAttribute(
-        'data-api-endpoint',
-        '/api/users/1/activities'
-      )
+      const dataGrid = getByDataTest('bc-grid-container')
+      expect(dataGrid).toBeInTheDocument()
+
+      expect(dataGrid).toHaveClass('ag-theme-material')
     })
   })
 

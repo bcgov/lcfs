@@ -25,6 +25,8 @@ async def test_validate_compliance_report_id_success(other_uses_validation):
             units="L",
             rationale="Test rationale",
             provision_of_the_act="Provision A",
+            is_canada_produced=True,
+            is_q1_supplied=False,
         )
     ]
 
@@ -44,6 +46,8 @@ async def test_validate_compliance_report_id_failure(other_uses_validation):
             units="L",
             rationale="Test rationale",
             provision_of_the_act="Provision A",
+            is_canada_produced=True,
+            is_q1_supplied=False,
         )
     ]
 

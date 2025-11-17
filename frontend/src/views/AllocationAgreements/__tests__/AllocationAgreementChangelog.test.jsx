@@ -490,9 +490,9 @@ describe('AllocationAgreementChangelog', () => {
 
     // Check column definitions - current and original should have different columns than middle
     const columnDefElements = screen.getAllByTestId('column-defs-length')
-    expect(columnDefElements[0]).toHaveTextContent('17') // current version uses changelogCommonColDefs (17 columns)
-    expect(columnDefElements[1]).toHaveTextContent('21') // middle version uses changelogColDefs (21 columns)  
-    expect(columnDefElements[2]).toHaveTextContent('17') // original version uses changelogCommonColDefs (17 columns)
+    expect(columnDefElements[0]).toHaveTextContent('13') // current version uses changelogCommonColDefs (13 columns)
+    expect(columnDefElements[1]).toHaveTextContent('17') // middle version uses changelogColDefs (21 columns)  
+    expect(columnDefElements[2]).toHaveTextContent('13') // original version uses changelogCommonColDefs (17 columns)
   })
 
   // Grid styling tests
