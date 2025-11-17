@@ -28,7 +28,7 @@ const mockT = vi.fn((key, options) => {
       ed: 'Energy density'
     },
     'report:fuelRequirementOptions': ['All fuel requirements', 'Low carbon fuel requirement only'],
-    'report:calcTitle': 'Credit Calculator',
+    'report:calcTitle': 'Compliance unit calculator',
     'report:complianceYear': 'Compliance Year',
     'report:selectFuelType': 'Select Fuel Type',
     'report:endUse': 'End Use',
@@ -196,7 +196,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
     it('displays loading state when compliance periods are loading', () => {
@@ -331,7 +331,7 @@ describe('CreditCalculator', () => {
       )
       
       // Test that component renders without crashing when no data
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
     it('handles compliance periods data correctly', () => {
@@ -355,7 +355,7 @@ describe('CreditCalculator', () => {
       )
       
       // Test that periods data is handled
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
     it('handles fallback values when no calculated data', () => {
@@ -368,7 +368,7 @@ describe('CreditCalculator', () => {
       )
       
       // Test that component renders without crashing when no calculated data
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
     it('formats calculated data correctly', () => {
@@ -495,7 +495,7 @@ describe('CreditCalculator', () => {
       render(<TestWrapperWithYear />)
       
       // Should render the component
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
     it('disables fuel code dropdown based on provision selection', () => {
@@ -519,7 +519,7 @@ describe('CreditCalculator', () => {
       
       render(<TestWrapperWithProvision />)
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
     it('enables fuel code dropdown for fuel code provisions', () => {
@@ -543,7 +543,7 @@ describe('CreditCalculator', () => {
       
       render(<TestWrapperWithFuelCode />)
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
   })
   
@@ -765,7 +765,7 @@ describe('CreditCalculator', () => {
       
       render(<TestWrapper2024 />)
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
     it('displays different formula for compliance years before 2024', () => {
@@ -797,7 +797,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
       expect(screen.getByText('Compliance Year')).toBeInTheDocument()
     })
   })
@@ -814,7 +814,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
       
       vi.restoreAllMocks()
     })
@@ -828,7 +828,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
     it('handles different data states', () => {
@@ -839,7 +839,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('Credit Calculator')).toBeInTheDocument()
+      expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
     it('displays copy success state temporarily', async () => {
