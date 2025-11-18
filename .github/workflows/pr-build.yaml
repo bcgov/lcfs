@@ -31,7 +31,7 @@ jobs:
         id: cache
         uses: actions/cache@v4.2.0
         with:
-          path: /usr/local/bin/oc  # Path where the `oc` binary will be installed
+          path: /usr/local/bin/oc # Path where the `oc` binary will be installed
           key: oc-cli-${{ runner.os }}
 
       - name: Install OpenShift CLI (if not cached)
@@ -57,7 +57,6 @@ jobs:
       output1: ${{ steps.get-version.outputs.VERSION }}
 
     steps:
-
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0
         with:
@@ -168,7 +167,7 @@ jobs:
         with:
           path: /usr/local/bin/oc
           key: oc-cli-${{ runner.os }}
-          
+
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
         with:
@@ -198,7 +197,7 @@ jobs:
         shell: bash {0}
         run: |
           cd lcfs/charts/lcfs-postgres-pr
-          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 15.5.17
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 16.2.0
           cd ../lcfs-redis-pr
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1
           cd ../lcfs-minio-pr
