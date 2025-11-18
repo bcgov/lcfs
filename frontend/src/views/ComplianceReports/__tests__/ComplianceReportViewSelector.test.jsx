@@ -87,9 +87,6 @@ describe('ComplianceReportViewSelector', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Default to feature flag disabled
-    isFeatureEnabled.mockReturnValue(false)
-    
     // Default mock implementations
     mockUseParams.mockReturnValue({ complianceReportId: 'test-report-id' })
     mockUseLocation.mockReturnValue({ state: null })

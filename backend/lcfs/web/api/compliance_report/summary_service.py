@@ -1332,14 +1332,6 @@ class ComplianceReportSummaryService:
             )
         )
 
-        # Calculate correct transaction period dates for Line 12 and Line 13
-        # First report: Jan 1 - Mar 31 (next year)
-        # Subsequent reports: Apr 1 - Mar 31 (next year) to avoid overlap
-        compliance_year = compliance_period_start.year
-        transaction_start_date, transaction_end_date = await self._calculate_transaction_period_dates(
-            compliance_year, organization_id, compliance_report.compliance_report_id
-        )
-
         compliance_units_transferred_out = int(
             await self.repo.get_transferred_out_compliance_units(
                 transaction_start_date, transaction_end_date, organization_id

@@ -437,9 +437,8 @@ class ComplianceSummaryUpdater:
         """Update summary record with enhanced field mapping"""
         update_sql = """
             UPDATE public.compliance_report_summary
-            SET 
+            SET
                 update_user = %s,
-                update_date = NOW(),
                 line_1_fossil_derived_base_fuel_gasoline = %s,
                 line_2_eligible_renewable_fuel_supplied_gasoline = %s,
                 line_3_total_tracked_fuel_supplied_gasoline = %s,

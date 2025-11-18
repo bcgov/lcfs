@@ -246,6 +246,9 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
 async def test_supplemental_low_carbon_fuel_target_summary(
     compliance_report_summary_service, mock_trxn_repo, mock_summary_repo, mock_repo
 ):
+    # Reset mock to ensure clean state (previous parametrized tests may have left call counts)
+    mock_repo.get_assessed_compliance_report_by_period.reset_mock()
+
     # Input setup: supplemental version (version = 2)
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)

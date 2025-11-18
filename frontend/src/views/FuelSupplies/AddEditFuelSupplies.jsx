@@ -86,7 +86,7 @@ export const AddEditFuelSupplies = () => {
 
   const columnDefs = useMemo(
     () =>
-      fuelSupplyColDefs(
+      schema.fuelSupplyColDefs(
         optionsData,
         errors,
         warnings,
@@ -167,19 +167,6 @@ export const AddEditFuelSupplies = () => {
       }
     }, 100)
   }, [])
-
-  // All fuel supplies (including TFRS-migrated historical data) use the standard schema
-  useEffect(() => {
-    const updatedColumnDefs = schema.fuelSupplyColDefs(
-      optionsData,
-      errors,
-      warnings,
-      compliancePeriod,
-      isSupplemental,
-      isEarlyIssuance
-    )
-    setColumnDefs(updatedColumnDefs)
-  }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
