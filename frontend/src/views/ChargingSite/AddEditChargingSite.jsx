@@ -432,7 +432,7 @@ export const AddEditChargingSite = ({
             variant="outlined"
             startIcon={<FontAwesomeIcon icon={faUpload} />}
             onClick={() => {
-              openFileImportDialog(true)
+              openFileImportDialog(false)
             }}
           >
             {t('chargingSite:importBtn')}
