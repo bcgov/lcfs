@@ -595,16 +595,9 @@ Credits generated: ${resultData.credits.toLocaleString()}`
               </Grid>
 
               {/* Bottom Section */}
-              <Grid
-                size={{ sm: 12, md: 6 }}
-                sx={{
-                  m: 0,
-                  pt: 2,
-                  backgroundColor: 'rgba(218, 218, 218, 0.6)'
-                }}
-              >
+              <Grid container flexDirection="row">
                 {/* Copy button */}
-                <Stack
+                {/* <Stack
                   direction="row"
                   justifyContent="flex-end"
                   sx={{ p: 2, pb: 1 }}
@@ -667,156 +660,216 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   >
                     {copySuccess ? 'Copied!' : 'Copy'}
                   </BCButton>
-                </Stack>
+                </Stack> */}
+                <Stack
+                  size={6}
+                  flex={1}
+                  px={4}
+                  py={8}
+                  gap={4}
+                  justifyContent={'center'}
+                  sx={{
+                    backgroundColor: colors.secondary.nav,
+                    color: colors.white.main,
+                    textAlign: 'center'
+                  }}
+                >
+                  {/* Quantity supplied section */}
+                  <Stack gap={1}>
+                    <BCTypography variant="span" fontWeight="bold">
+                      {t('report:qtySuppliedLabel')}
+                    </BCTypography>
+                    <Controller
+                      name="quantity"
+                      control={control}
+                      render={({
+                        field: { onChange, onBlur, value, name, ref }
+                      }) => (
+                        <NumericFormat
+                          id="quantity"
+                          customInput={TextField}
+                          thousandSeparator
+                          decimalScale={2}
+                          fixedDecimalScale={false}
+                          prefix=""
+                          value={value}
+                          onValueChange={(vals) => onChange(vals.floatValue)}
+                          onBlur={onBlur}
+                          name={name}
+                          inputRef={ref}
+                          placeholder={t('report:qtySuppliedLabel')}
+                          size="small"
+                          error={!!errors.quantity}
+                          helperText={errors.quantity?.message}
+                          sx={{
+                            width: '200px',
+                            alignSelf: 'center',
+                            '& .MuiInputBase-input': {
+                              fontSize: '1.5rem',
+                              fontWeight: 'bold',
+                              textAlign: 'center'
+                            }
+                          }}
+                          slotProps={{
+                            input: {
+                              endAdornment: unit ? (
+                                <InputAdornment position="end">
+                                  <BCTypography variant="h5">
+                                    {unit}
+                                  </BCTypography>
+                                </InputAdornment>
+                              ) : null,
+                              style: { textAlign: 'left' },
+                              maxLength: 13,
+                              'data-test': 'quantity'
+                            }
+                          }}
+                        />
+                      )}
+                    />
+                  </Stack>
+                  {/* compliance units section */}
 
-                {/* Quantity supplied section */}
-                <BCBox sx={{ textAlign: 'center', py: 2 }}>
-                  <BCTypography variant="h4" fontWeight="bold" sx={{ mb: 2 }}>
-                    {t('report:qtySuppliedLabel')}
+                  <Stack gap={1}>
+                    <BCTypography variant="span" fontWeight="bold">
+                      {t('report:quantitySupplied')}
+                    </BCTypography>
+                    <Controller
+                      name="quantity"
+                      control={control}
+                      render={({
+                        field: { onChange, onBlur, value, name, ref }
+                      }) => (
+                        <NumericFormat
+                          id="quantity"
+                          customInput={TextField}
+                          thousandSeparator
+                          decimalScale={2}
+                          fixedDecimalScale={false}
+                          prefix=""
+                          value={value}
+                          onValueChange={(vals) => onChange(vals.floatValue)}
+                          onBlur={onBlur}
+                          name={name}
+                          inputRef={ref}
+                          placeholder={t('report:qtySuppliedLabel')}
+                          size="small"
+                          error={!!errors.quantity}
+                          helperText={errors.quantity?.message}
+                          sx={{
+                            width: '200px',
+                            alignSelf: 'center',
+                            '& .MuiInputBase-input': {
+                              fontSize: '1.5rem',
+                              fontWeight: 'bold',
+                              textAlign: 'center'
+                            }
+                          }}
+                          slotProps={{
+                            input: {
+                              endAdornment: unit ? (
+                                <InputAdornment position="end">
+                                  <BCTypography variant="h5">
+                                    {unit}
+                                  </BCTypography>
+                                </InputAdornment>
+                              ) : null,
+                              style: { textAlign: 'left' },
+                              maxLength: 13,
+                              'data-test': 'quantity'
+                            }
+                          }}
+                        />
+                      )}
+                    />
+                  </Stack>
+                  {/* Formula calculation display */}
+                  <BCTypography
+                    variant="body2"
+                    sx={{
+                      textAlign: 'center'
+                    }}
+                  >
+                    {resultData.formulaDisplay}
                   </BCTypography>
-                  <Controller
-                    name="quantity"
-                    control={control}
-                    render={({
-                      field: { onChange, onBlur, value, name, ref }
-                    }) => (
-                      <NumericFormat
-                        id="quantity"
-                        customInput={TextField}
-                        thousandSeparator
-                        decimalScale={2}
-                        fixedDecimalScale={false}
-                        prefix=""
-                        value={value}
-                        onValueChange={(vals) => onChange(vals.floatValue)}
-                        onBlur={onBlur}
-                        name={name}
-                        inputRef={ref}
-                        placeholder={t('report:qtySuppliedLabel')}
-                        size="small"
-                        error={!!errors.quantity}
-                        helperText={errors.quantity?.message}
-                        sx={{
-                          '& .MuiInputBase-input': {
-                            fontSize: '1.5rem',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            width: '200px'
-                          }
-                        }}
-                        slotProps={{
-                          input: {
-                            endAdornment: unit ? (
-                              <InputAdornment position="end">
-                                <BCTypography variant="h5">{unit}</BCTypography>
-                              </InputAdornment>
-                            ) : null,
-                            style: { textAlign: 'left' },
-                            maxLength: 13,
-                            'data-test': 'quantity'
-                          }
-                        }}
-                      />
-                    )}
-                  />
-                </BCBox>
+                </Stack>
+                {/* Formula values table */}
 
-                {/* Compliance units formula */}
-                <BCBox sx={{ textAlign: 'center', mb: 2 }}>
+                <Stack
+                  size={6}
+                  flex={1}
+                  px={4}
+                  py={8}
+                  gap={2}
+                  sx={{
+                    backgroundColor: 'rgba(218, 218, 218, 0.6)'
+                  }}
+                >
+                  <BCBox>
+                    <BCBox
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'max-content auto',
+                        columnGap: 4,
+                        rowGap: 1,
+                        width: 'fit-content',
+                        justifySelf: 'center'
+                      }}
+                    >
+                      {Object.entries(ciParameterLabels).map(
+                        ([key, label], index) => (
+                          <React.Fragment key={key}>
+                            {/* Left column - Label */}
+                            <BCTypography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 'bold',
+                                gridColumn: 1
+                              }}
+                            >
+                              {`${key.toUpperCase()} - ${label}`}:
+                            </BCTypography>
+
+                            {/* Right column - Value */}
+                            <BCTypography
+                              variant="body2"
+                              sx={{
+                                gridColumn: 2
+                              }}
+                            >
+                              {Object.values(resultData.formulaValues)[index]}
+                            </BCTypography>
+                          </React.Fragment>
+                        )
+                      )}
+                    </BCBox>
+                  </BCBox>
+                  {/* Compliance units formula */}
+
                   {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR ? (
-                    <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    <BCTypography variant="body2" sx={{ textAlign: 'center' }}>
                       {t('report:formulaBefore2024')}
                     </BCTypography>
                   ) : (
-                    <BCBox sx={{ display: 'inline-block', textAlign: 'left' }}>
-                      <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    <>
+                      <BCTypography
+                        variant="body2"
+                        sx={{ textAlign: 'center' }}
+                      >
                         {t('report:formulaAfter2024')}
                       </BCTypography>
-                      <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      <BCTypography
+                        variant="body2"
+                        sx={{ textAlign: 'center' }}
+                      >
                         {t('report:formulaECDefinition')}
                       </BCTypography>
-                    </BCBox>
+                    </>
                   )}
-                </BCBox>
-
-                {/* Formula values table */}
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    mx: 3,
-                    backgroundColor: '#f2f2f2',
-                    borderRadius: '15px',
-                    p: 2,
-                    mb: 2
-                  }}
-                >
-                  <BCBox
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 2px 1fr', // Left column, divider, right column
-                      gap: 0,
-                      position: 'relative'
-                    }}
-                  >
-                    {/* Continuous vertical divider */}
-                    <BCBox
-                      sx={{
-                        gridColumn: 2,
-                        gridRow: `1 / span ${Object.keys(ciParameterLabels).length}`,
-                        backgroundColor: '#8c8c8c',
-                        width: '2px'
-                      }}
-                    />
-
-                    {Object.entries(ciParameterLabels).map(
-                      ([key, label], index) => (
-                        <React.Fragment key={key}>
-                          {/* Left column - Label */}
-                          <BCTypography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 'bold',
-                              py: 0.5,
-                              pr: 3,
-                              gridColumn: 1
-                            }}
-                          >
-                            {`${key.toUpperCase()} - ${label}`}
-                          </BCTypography>
-
-                          {/* Right column - Value */}
-                          <BCTypography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 'bold',
-                              textAlign: 'right',
-                              py: 0.5,
-                              pl: 3,
-                              gridColumn: 3
-                            }}
-                          >
-                            {Object.values(resultData.formulaValues)[index]}
-                          </BCTypography>
-                        </React.Fragment>
-                      )
-                    )}
-                  </BCBox>
-                </Paper>
-
-                {/* Formula calculation display */}
-                <BCTypography
-                  variant="body2"
-                  sx={{
-                    textAlign: 'center',
-                    mb: 3,
-                    px: 2
-                  }}
-                >
-                  {resultData.formulaDisplay}
-                </BCTypography>
+                </Stack>
 
                 {/* Credits generated section */}
-                <BCBox
+                {/* <BCBox
                   sx={{
                     backgroundColor: '#38598a',
                     color: colors.white.main,
@@ -845,34 +898,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                       {resultData.credits.toLocaleString()}
                     </BCTypography>
                   </BCBox>
-                </BCBox>
-
-                {/* Organization balance section */}
-                {orgBalance && (
-                  <Stack
-                    component="div"
-                    sx={{
-                      backgroundColor: colors.primary.light,
-                      width: '100%',
-                      height: '8rem',
-                      p: 3,
-                      borderBottomRightRadius: '10px',
-                      borderTop: '1px solid rgba(255,255,255,0.5)'
-                    }}
-                    color={colors.white.main}
-                    spacing={1}
-                  >
-                    <BCTypography align="center" variant="h6" fontWeight="bold">
-                      {t('report:changeInUnits')}
-                    </BCTypography>
-                    <BCTypography align="center" variant="h3">
-                      {resultData.previousUnits.toLocaleString()}{' '}
-                      {resultData.credits > 0 ? '+' : '-'}{' '}
-                      {Math.abs(resultData.credits).toLocaleString()} ={' '}
-                      {resultData.availableUnits.toLocaleString()}
-                    </BCTypography>
-                  </Stack>
-                )}
+                </BCBox> */}
               </Grid>
             </Grid>
           }
