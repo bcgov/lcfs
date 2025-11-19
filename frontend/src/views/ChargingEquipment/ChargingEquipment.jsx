@@ -473,7 +473,7 @@ export const ChargingEquipment = () => {
     <Grid container spacing={1}>
       {!isOnNestedRoute && (
         <Grid item xs={12}>
-          <BCTypography variant="h5" gutterBottom>
+          <BCTypography variant="h5" gutterBottom color="primary">
             {isIDIR ? 'FSE index' : t('chargingEquipment:manageFSE')}
           </BCTypography>
           <BCTypography variant="body2" color="text.secondary" paragraph>

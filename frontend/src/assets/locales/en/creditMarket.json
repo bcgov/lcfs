@@ -9,6 +9,8 @@
   "listingDescription": "Organizations registered for credit transfers who have indicated interest in credit trading.",
   "noListingsFound": "No credit market listings found",
   "manageListing": "Manage Your Credit Market Listing",
+  "selectedOrganization": "Selected organization",
+  "clearSelection": "Clear selection",
   "addListing": "Add Listing",
   "noListingMessage": "Your organization is not currently listed in the credit trading market. Add a listing to let other organizations know you are interested in credit trading.",
   "aboutCreditTrading": "About Credit trading market",
