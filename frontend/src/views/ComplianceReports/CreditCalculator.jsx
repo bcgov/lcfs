@@ -712,13 +712,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                           }}
                           slotProps={{
                             input: {
-                              endAdornment: unit ? (
-                                <InputAdornment position="end">
-                                  <BCTypography variant="h5">
-                                    {unit}
-                                  </BCTypography>
-                                </InputAdornment>
-                              ) : null,
                               style: { textAlign: 'left' },
                               maxLength: 13,
                               'data-test': 'quantity'
@@ -744,7 +737,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                           id="quantity"
                           customInput={TextField}
                           thousandSeparator
-                          decimalScale={2}
                           fixedDecimalScale={false}
                           prefix=""
                           value={value}
@@ -767,13 +759,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                           }}
                           slotProps={{
                             input: {
-                              endAdornment: unit ? (
-                                <InputAdornment position="end">
-                                  <BCTypography variant="h5">
-                                    {unit}
-                                  </BCTypography>
-                                </InputAdornment>
-                              ) : null,
                               style: { textAlign: 'left' },
                               maxLength: 13,
                               'data-test': 'quantity'
