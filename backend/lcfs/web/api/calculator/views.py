@@ -3,7 +3,11 @@ from fastapi import APIRouter, Request, status
 from lcfs.utils.constants import FUEL_CATEGORIES
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from fastapi import Depends
-from lcfs.web.api.calculator.schema import CalculatorQueryParams, CreditsResultSchema
+from lcfs.web.api.calculator.schema import (
+    CalculatorQueryParams,
+    CalculatorQuantityQueryParams,
+    CreditsResultSchema,
+)
 from lcfs.web.api.calculator.services import CalculatorService
 
 router = APIRouter()
@@ -86,4 +90,27 @@ async def get_calculated_data(
         query.end_use_id,
         query.fuel_code_id,
         query.quantity,
+    )
+
+
+@router.get(
+    "/{compliance_period}/calculate/quantity/",
+    tags=["public"],
+    status_code=status.HTTP_200_OK,
+)
+async def get_quantity_from_compliance_units(
+    request: Request,
+    compliance_period: str,
+    query: CalculatorQuantityQueryParams = Depends(),
+    service: CalculatorService = Depends(),
+) -> CreditsResultSchema:
+    """Get derived fuel quantity for a given number of compliance units."""
+
+    return await service.get_quantity_from_compliance_units(
+        compliance_period,
+        query.fuel_type_id,
+        query.fuel_category_id,
+        query.end_use_id,
+        query.fuel_code_id,
+        query.compliance_units,
     )

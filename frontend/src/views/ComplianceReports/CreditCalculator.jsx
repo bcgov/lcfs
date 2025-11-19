@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState, useRef } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
@@ -23,7 +23,8 @@ import {
   useCalculateComplianceUnits,
   useGetCompliancePeriodList,
   useGetFuelTypeList,
-  useGetFuelTypeOptions
+  useGetFuelTypeOptions,
+  useCalculateQuantityFromComplianceUnits
 } from '@/hooks/useCalculator'
 import Loading from '@/components/Loading'
 import {
@@ -100,7 +101,8 @@ export const CreditCalculator = () => {
       provisionOfTheAct: '',
       quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
-      endUseType: ''
+      endUseType: '',
+      complianceUnits: ''
     }
   })
 
@@ -121,11 +123,16 @@ export const CreditCalculator = () => {
     provisionOfTheAct,
     quantity,
     fuelCode,
-    fuelType
+    fuelType,
+    complianceUnits
   } = watchedValues
 
   // State for selected items from lists
   const [calculatedResults, setCalculatedResults] = useState(null)
+  const [activeCalculatorMode, setActiveCalculatorMode] = useState('quantity')
+  const [syncingField, setSyncingField] = useState(null)
+  const syncingFieldRef = useRef(null)
+  console.log(calculatedResults)
   const [copySuccess, setCopySuccess] = useState(false)
 
   const { data: fuelTypeListData, isLoading: isFuelTypeListLoading } =
@@ -212,6 +219,7 @@ export const CreditCalculator = () => {
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
       setValue('quantity', DEFAULT_QUANTITY)
+      setActiveCalculatorMode('quantity')
     }
   }, [fuelType, setValue, fuelCategory])
 
@@ -220,6 +228,7 @@ export const CreditCalculator = () => {
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
       setValue('quantity', DEFAULT_QUANTITY)
+      setActiveCalculatorMode('quantity')
     }
   }, [endUseType, setValue])
 
@@ -248,24 +257,126 @@ export const CreditCalculator = () => {
     (e) => e.endUseType?.type === endUseType
   )?.endUseType?.endUseTypeId
 
-  const { data: calculatedData } = useCalculateComplianceUnits({
+  const { data: calculatedData, refetch: refetchCalculatedData } =
+    useCalculateComplianceUnits({
+      compliancePeriod: complianceYear,
+      fuelCategoryId,
+      fuelTypeId,
+      endUseId,
+      quantity: Number(quantity),
+      fuelCodeId: fuelTypeOptions?.data?.fuelCodes?.find(
+        (f) => f.fuelCode === fuelCode
+      )?.fuelCodeId,
+      enabled: false
+    })
+
+  const {
+    data: calculatedQuantityData,
+    refetch: refetchCalculatedQuantityData
+  } = useCalculateQuantityFromComplianceUnits({
     compliancePeriod: complianceYear,
     fuelCategoryId,
     fuelTypeId,
     endUseId,
-    quantity: Number(quantity),
+    complianceUnits: Number(complianceUnits),
     fuelCodeId: fuelTypeOptions?.data?.fuelCodes?.find(
       (f) => f.fuelCode === fuelCode
     )?.fuelCodeId,
-    enabled:
+    enabled: false
+  })
+
+  useEffect(() => {
+    const hasBaseCriteria =
       Boolean(complianceYear) &&
       Boolean(fuelCategoryId) &&
       Boolean(fuelTypeId) &&
       Boolean(endUseId) &&
-      Boolean(quantity) &&
       (provisionOfTheAct !== 'Fuel code - section 19 (b) (i)' ||
         Boolean(fuelCode))
-  })
+
+    const hasQuantityValue = quantity === 0 || Boolean(quantity)
+    const hasComplianceUnitsValue =
+      complianceUnits === 0 || Boolean(complianceUnits)
+
+    if (!hasBaseCriteria) return
+
+    if (
+      activeCalculatorMode === 'quantity' &&
+      syncingField !== 'quantity' &&
+      hasQuantityValue
+    ) {
+      refetchCalculatedData()
+    }
+
+    if (
+      activeCalculatorMode === 'complianceUnits' &&
+      syncingField !== 'complianceUnits' &&
+      hasComplianceUnitsValue
+    ) {
+      refetchCalculatedQuantityData()
+    }
+  }, [
+    activeCalculatorMode,
+    syncingField,
+    complianceYear,
+    fuelCategoryId,
+    fuelTypeId,
+    endUseId,
+    quantity,
+    complianceUnits,
+    provisionOfTheAct,
+    fuelCode,
+    refetchCalculatedData,
+    refetchCalculatedQuantityData
+  ])
+
+  useEffect(() => {
+    const latestResults =
+      activeCalculatorMode === 'complianceUnits'
+        ? calculatedQuantityData?.data
+        : calculatedData?.data
+    setCalculatedResults(latestResults ?? null)
+  }, [activeCalculatorMode, calculatedData, calculatedQuantityData])
+
+  // Keep form fields in sync with whichever calculator response is active
+  useEffect(() => {
+    if (!calculatedResults) return
+
+    if (
+      activeCalculatorMode === 'quantity' &&
+      calculatedResults.complianceUnits !== undefined
+    ) {
+      syncingFieldRef.current = 'complianceUnits'
+      setSyncingField('complianceUnits')
+      setValue('complianceUnits', calculatedResults.complianceUnits, {
+        shouldDirty: false,
+        shouldTouch: false
+      })
+    }
+
+    if (
+      activeCalculatorMode === 'complianceUnits' &&
+      calculatedResults.quantity !== undefined
+    ) {
+      syncingFieldRef.current = 'quantity'
+      setSyncingField('quantity')
+      setValue('quantity', calculatedResults.quantity, {
+        shouldDirty: false,
+        shouldTouch: false
+      })
+    }
+  }, [activeCalculatorMode, calculatedResults, setValue])
+
+  useEffect(() => {
+    if (!syncingField) return
+
+    const frame = requestAnimationFrame(() => {
+      syncingFieldRef.current = null
+      setSyncingField(null)
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [syncingField])
 
   // Handle form reset
   const handleClear = () => {
@@ -276,9 +387,11 @@ export const CreditCalculator = () => {
       provisionOfTheAct: '',
       quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
-      endUseType: ''
+      endUseType: '',
+      complianceUnits: ''
     })
     setCalculatedResults(null)
+    setActiveCalculatorMode('quantity')
   }
 
   const handleCopy = async () => {
@@ -365,9 +478,9 @@ Credits generated: ${resultData.credits.toLocaleString()}`
       formulaDisplay: '0 = (0 * 0 - (0 + N/A)) * 0 / 1,000,000'
     }
 
-    if (!calculatedData?.data) return fallback
+    if (!calculatedResults) return fallback
 
-    const data = calculatedData.data
+    const data = calculatedResults
     const totalBalance = orgBalance?.totalBalance || 0
 
     return {
@@ -384,7 +497,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
       },
       formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
     }
-  }, [calculatedData, fuelTypeOptions, orgBalance])
+  }, [calculatedResults, fuelTypeOptions, orgBalance])
 
   const carbonIntensityDisplayValue = useMemo(() => {
     if (!provisionOfTheAct) return ''
@@ -693,8 +806,18 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                           fixedDecimalScale={false}
                           prefix=""
                           value={value}
-                          onValueChange={(vals) => onChange(vals.floatValue)}
+                          onValueChange={(vals) => {
+                            if (syncingFieldRef.current !== 'quantity') {
+                              setActiveCalculatorMode('quantity')
+                            }
+                            onChange(vals.floatValue)
+                          }}
                           onBlur={onBlur}
+                          onFocus={() => {
+                            if (syncingFieldRef.current !== 'quantity') {
+                              setActiveCalculatorMode('quantity')
+                            }
+                          }}
                           name={name}
                           inputRef={ref}
                           placeholder={t('report:qtySuppliedLabel')}
@@ -725,29 +848,39 @@ Credits generated: ${resultData.credits.toLocaleString()}`
 
                   <Stack gap={1}>
                     <BCTypography variant="span" fontWeight="bold">
-                      {t('report:quantitySupplied')}
+                      {t('report:quantitySuppliedcu')}
                     </BCTypography>
                     <Controller
-                      name="quantity"
+                      name="complianceUnits"
                       control={control}
                       render={({
                         field: { onChange, onBlur, value, name, ref }
                       }) => (
                         <NumericFormat
-                          id="quantity"
+                          id="complianceUnits"
                           customInput={TextField}
                           thousandSeparator
                           fixedDecimalScale={false}
                           prefix=""
                           value={value}
-                          onValueChange={(vals) => onChange(vals.floatValue)}
+                          onValueChange={(vals) => {
+                            if (syncingFieldRef.current !== 'complianceUnits') {
+                              setActiveCalculatorMode('complianceUnits')
+                            }
+                            onChange(vals.floatValue)
+                          }}
                           onBlur={onBlur}
+                          onFocus={() => {
+                            if (syncingFieldRef.current !== 'complianceUnits') {
+                              setActiveCalculatorMode('complianceUnits')
+                            }
+                          }}
                           name={name}
                           inputRef={ref}
-                          placeholder={t('report:qtySuppliedLabel')}
+                          placeholder={t('report:quantitySuppliedcu')}
                           size="small"
-                          error={!!errors.quantity}
-                          helperText={errors.quantity?.message}
+                          error={!!errors.complianceUnits}
+                          helperText={errors.complianceUnits?.message}
                           sx={{
                             width: '200px',
                             alignSelf: 'center',
@@ -761,7 +894,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                             input: {
                               style: { textAlign: 'left' },
                               maxLength: 13,
-                              'data-test': 'quantity'
+                              'data-test': 'complianceUnits'
                             }
                           }}
                         />

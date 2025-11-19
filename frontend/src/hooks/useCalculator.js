@@ -108,3 +108,52 @@ export const useCalculateComplianceUnits = ({
       !!quantity
   })
 }
+
+export const useCalculateQuantityFromComplianceUnits = ({
+  compliancePeriod,
+  fuelCategoryId,
+  fuelTypeId,
+  endUseId,
+  complianceUnits,
+  fuelCodeId,
+  enabled = true
+}) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: [
+      'calculatedQuantity',
+      compliancePeriod,
+      fuelCategoryId,
+      fuelTypeId,
+      endUseId,
+      complianceUnits,
+      fuelCodeId
+    ],
+    queryFn: () =>
+      client.get(
+        apiRoutes.getCalculatorQuantityFromComplianceUnits.replace(
+          ':complianceYear',
+          compliancePeriod
+        ),
+        {
+          params: {
+            fuelCategoryId,
+            fuelTypeId,
+            endUseId,
+            complianceUnits,
+            fuelCodeId
+          }
+        }
+      ),
+    staleTime: 5 * 60 * 1000,
+    enabled:
+      enabled &&
+      !!compliancePeriod &&
+      !!fuelCategoryId &&
+      !!fuelTypeId &&
+      !!(
+        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+      ) &&
+      !!complianceUnits
+  })
+}

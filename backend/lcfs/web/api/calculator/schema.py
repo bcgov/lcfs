@@ -18,7 +18,15 @@ class CalculatorQueryParams(BaseSchema):
     fuel_category_id: int = Field(..., alias="fuelCategoryId")
     fuel_type_id: int = Field(..., alias="fuelTypeId")
     end_use_id: Optional[int] = Field(None, alias="endUseId")
-    quantity: int
+    quantity: float
+    fuel_code_id: Optional[int] = Field(None, alias="fuelCodeId")
+
+
+class CalculatorQuantityQueryParams(BaseSchema):
+    fuel_category_id: int = Field(..., alias="fuelCategoryId")
+    fuel_type_id: int = Field(..., alias="fuelTypeId")
+    end_use_id: Optional[int] = Field(None, alias="endUseId")
+    compliance_units: float = Field(..., alias="complianceUnits")
     fuel_code_id: Optional[int] = Field(None, alias="fuelCodeId")
 
 
@@ -28,6 +36,6 @@ class CreditsResultSchema(BaseSchema):
     eer: float
     energy_density: float | None
     uci: float | None
-    quantity: int
+    quantity: float
     energy_content: float
     compliance_units: int

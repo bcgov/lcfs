@@ -10,6 +10,8 @@ from lcfs.web.api.calculator.schema import CreditsResultSchema
 from lcfs.web.utils.calculations import (
     calculate_compliance_units,
     calculate_legacy_compliance_units,
+    calculate_legacy_quantity_from_compliance_units,
+    calculate_quantity_from_compliance_units,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.calculator.repo import CalculatorRepository
@@ -97,7 +99,7 @@ class CalculatorService:
         fuel_category_id: int,
         end_use_id: int,
         fuel_code_id: int,
-        quantity: int,
+        quantity: float,
     ):
         # Fetch standardized fuel data
         fuel_data = await self.fuel_repo.get_standardized_fuel_data(
@@ -107,6 +109,8 @@ class CalculatorService:
             compliance_period=compliance_period,
             fuel_code_id=fuel_code_id,
         )
+        energy_density_value = float(fuel_data.energy_density or 0)
+
         if int(compliance_period) < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
             compliance_units = calculate_legacy_compliance_units(
                 TCI=fuel_data.target_ci or 0,
@@ -130,9 +134,57 @@ class CalculatorService:
             rci=round(fuel_data.effective_carbon_intensity, 2),
             tci=round(fuel_data.target_ci, 5),
             eer=round(fuel_data.eer, 2),
-            energy_density=round(fuel_data.energy_density or 0, 2),
+            energy_density=round(energy_density_value, 2),
             uci=fuel_data.uci,
             quantity=quantity,
-            energy_content=(quantity * (fuel_data.energy_density or 0)),
+            energy_content=(float(quantity) * energy_density_value),
+            compliance_units=round(compliance_units),
+        )
+
+    @service_handler
+    async def get_quantity_from_compliance_units(
+        self,
+        compliance_period: str,
+        fuel_type_id: int,
+        fuel_category_id: int,
+        end_use_id: int,
+        fuel_code_id: int,
+        compliance_units: float,
+    ):
+        fuel_data = await self.fuel_repo.get_standardized_fuel_data(
+            fuel_type_id=fuel_type_id,
+            fuel_category_id=fuel_category_id,
+            end_use_id=end_use_id,
+            compliance_period=compliance_period,
+            fuel_code_id=fuel_code_id,
+        )
+        energy_density_value = float(fuel_data.energy_density or 0)
+
+        if int(compliance_period) < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
+            quantity = calculate_legacy_quantity_from_compliance_units(
+                TCI=fuel_data.target_ci or 0,
+                EER=fuel_data.eer or 1,
+                RCI=fuel_data.effective_carbon_intensity or 0,
+                compliance_units=compliance_units,
+                ED=fuel_data.energy_density or 0,
+            )
+        else:
+            quantity = calculate_quantity_from_compliance_units(
+                TCI=fuel_data.target_ci or 0,
+                EER=fuel_data.eer or 1,
+                RCI=fuel_data.effective_carbon_intensity or 0,
+                UCI=fuel_data.uci or 0,
+                compliance_units=compliance_units,
+                ED=fuel_data.energy_density or 0,
+            )
+
+        return CreditsResultSchema(
+            rci=round(fuel_data.effective_carbon_intensity, 2),
+            tci=round(fuel_data.target_ci, 5),
+            eer=round(fuel_data.eer, 2),
+            energy_density=round(energy_density_value, 2),
+            uci=fuel_data.uci,
+            quantity=quantity,
+            energy_content=(float(quantity) * energy_density_value),
             compliance_units=round(compliance_units),
         )

@@ -15,6 +15,7 @@ def mock_calculator_service():
     service.get_fuel_types = AsyncMock()
     service.get_fuel_type_options = AsyncMock()
     service.get_calculated_data = AsyncMock()
+    service.get_quantity_from_compliance_units = AsyncMock()
     return service
 
 
@@ -362,3 +363,130 @@ async def test_get_calculated_data_missing_required_params(
 
     # Verify the service method was not called
     mock_calculator_service.get_calculated_data.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_quantity_from_compliance_units(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_calculator_service,
+):
+    mock_quantity_data = {
+        "complianceUnits": 150,
+        "tci": 80,
+        "eer": 1.0,
+        "rci": 75,
+        "uci": 5,
+        "energyContent": 7500,
+        "energyDensity": 38.5,
+        "quantity": 194.81,
+    }
+    mock_calculator_service.get_quantity_from_compliance_units.return_value = (
+        mock_quantity_data
+    )
+
+    fastapi_app.dependency_overrides[CalculatorService] = (
+        lambda: mock_calculator_service
+    )
+
+    compliance_period = "2024"
+    params = {
+        "fuelTypeId": 1,
+        "fuelCategoryId": 1,
+        "endUseId": 1,
+        "fuelCodeId": 2,
+        "complianceUnits": 150,
+    }
+
+    url = fastapi_app.url_path_for(
+        "get_quantity_from_compliance_units", compliance_period=compliance_period
+    )
+    response = await client.get(url, params=params)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["quantity"] == pytest.approx(194.81)
+    assert data["complianceUnits"] == 150
+
+    mock_calculator_service.get_quantity_from_compliance_units.assert_called_once_with(
+        compliance_period,
+        params["fuelTypeId"],
+        params["fuelCategoryId"],
+        params["endUseId"],
+        params["fuelCodeId"],
+        params["complianceUnits"],
+    )
+
+
+@pytest.mark.anyio
+async def test_get_quantity_from_compliance_units_without_optional_params(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_calculator_service,
+):
+    mock_quantity_data = {
+        "complianceUnits": 90,
+        "tci": 80,
+        "eer": 1.0,
+        "rci": 75,
+        "uci": None,
+        "energyContent": 4500,
+        "energyDensity": 38.5,
+        "quantity": 116.88,
+    }
+    mock_calculator_service.get_quantity_from_compliance_units.return_value = (
+        mock_quantity_data
+    )
+
+    fastapi_app.dependency_overrides[CalculatorService] = (
+        lambda: mock_calculator_service
+    )
+
+    compliance_period = "2024"
+    params = {
+        "fuelTypeId": 1,
+        "fuelCategoryId": 1,
+        "complianceUnits": 90,
+    }
+
+    url = fastapi_app.url_path_for(
+        "get_quantity_from_compliance_units", compliance_period=compliance_period
+    )
+    response = await client.get(url, params=params)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["quantity"] == pytest.approx(116.88)
+
+    mock_calculator_service.get_quantity_from_compliance_units.assert_called_once_with(
+        compliance_period,
+        params["fuelTypeId"],
+        params["fuelCategoryId"],
+        None,
+        None,
+        params["complianceUnits"],
+    )
+
+
+@pytest.mark.anyio
+async def test_get_quantity_from_compliance_units_missing_required_params(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_calculator_service,
+):
+    fastapi_app.dependency_overrides[CalculatorService] = (
+        lambda: mock_calculator_service
+    )
+
+    compliance_period = "2024"
+    params = {
+        "complianceUnits": 50
+    }
+
+    url = fastapi_app.url_path_for(
+        "get_quantity_from_compliance_units", compliance_period=compliance_period
+    )
+    response = await client.get(url, params=params)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    mock_calculator_service.get_quantity_from_compliance_units.assert_not_called()
