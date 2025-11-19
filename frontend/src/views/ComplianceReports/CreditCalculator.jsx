@@ -684,96 +684,10 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                     />
                   </FormControl>
                 </Stack>
-
-                {/* <Stack
-                  direction="row"
-                  spacing={2}
-                  mt={2}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    position: 'absolute',
-                    bottom: 30,
-                    left: 30,
-                    alignItems: 'center'
-                  }}
-                >
-                  <BCButton
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleClear}
-                  >
-                    Clear
-                  </BCButton>
-                </Stack> */}
               </Grid>
 
               {/* Bottom Section */}
               <Grid container flexDirection="row">
-                {/* Copy button */}
-                {/* <Stack
-                  direction="row"
-                  justifyContent="flex-end"
-                  sx={{ p: 2, pb: 1 }}
-                >
-                  <BCButton
-                    variant={copySuccess ? 'contained' : 'outlined'}
-                    color={copySuccess ? 'success' : 'primary'}
-                    size="small"
-                    onClick={handleCopy}
-                    sx={{
-                      minWidth: '80px',
-                      px: 2,
-                      py: 1,
-                      fontWeight: 'bold',
-                      borderWidth: '2px',
-                      '&:hover': {
-                        borderWidth: '2px',
-                        backgroundColor: copySuccess
-                          ? undefined
-                          : 'primary.light',
-                        color: copySuccess ? undefined : 'white'
-                      },
-                      '& .MuiButton-startIcon': { mr: 1 },
-                      boxShadow: copySuccess ? 2 : 1,
-                      transition: 'all 0.3s ease'
-                    }}
-                    startIcon={
-                      copySuccess ? (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <polyline points="20,6 9,17 4,12"></polyline>
-                        </svg>
-                      ) : (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <rect
-                            x="9"
-                            y="9"
-                            width="13"
-                            height="13"
-                            rx="2"
-                            ry="2"
-                          ></rect>
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                      )
-                    }
-                  >
-                    {copySuccess ? 'Copied!' : 'Copy'}
-                  </BCButton>
-                </Stack> */}
                 <Stack
                   size={6}
                   flex={1}
@@ -984,6 +898,57 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                       </BCTypography>
                     </>
                   )}
+                  <Stack direction="row" justifyContent="flex-end" spacing={2}>
+                    <BCButton
+                      variant="outlined"
+                      color="dark"
+                      size="small"
+                      onClick={handleClear}
+                    >
+                      Clear
+                    </BCButton>
+                    <BCButton
+                      variant={copySuccess ? 'contained' : 'outlined'}
+                      color={copySuccess ? 'success' : 'dark'}
+                      size="small"
+                      onClick={handleCopy}
+                      startIcon={
+                        copySuccess ? (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <polyline points="20,6 9,17 4,12"></polyline>
+                          </svg>
+                        ) : (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect
+                              x="9"
+                              y="9"
+                              width="13"
+                              height="13"
+                              rx="2"
+                              ry="2"
+                            ></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        )
+                      }
+                    >
+                      {copySuccess ? 'Copied!' : 'Copy'}
+                    </BCButton>
+                  </Stack>
                 </Stack>
 
                 {/* Credits generated section */}
