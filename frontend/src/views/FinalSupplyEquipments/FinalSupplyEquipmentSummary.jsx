@@ -29,7 +29,7 @@ export const FinalSupplyEquipmentSummary = ({
     paginationOptions,
     {},
     organizationId,
-    undefined
+    'summary'
   )
   const { data: fseData, isLoading, isError, refetch } = queryData
 
