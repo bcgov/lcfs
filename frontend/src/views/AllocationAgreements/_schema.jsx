@@ -23,7 +23,6 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
-import { formatFuelCodeOptions } from '@/utils/fuelCodeCountryPrefix'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -350,14 +349,14 @@ export const allocationAgreementColDefs = (
       ),
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: (params) => {
-        const fuelType = optionsData?.fuelTypes?.find(
+        const fuelTypes = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
         return {
-          options: formatFuelCodeOptions(
-            fuelType?.fuelCodes || [],
-            compliancePeriod
-          ),
+          options:
+            fuelTypes?.fuelCodes?.map(
+              (item) => item.fuelCode || item.fuel_code
+            ) || [],
           multiple: false,
           disableCloseOnSelect: false,
           freeSolo: false,

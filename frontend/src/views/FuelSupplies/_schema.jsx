@@ -22,7 +22,6 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
-import { formatFuelCodeOptions } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,
@@ -378,10 +377,10 @@ export const fuelSupplyColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         return {
-          options: formatFuelCodeOptions(
-            fuelType?.fuelCodes || [],
-            compliancePeriod
-          ),
+          options:
+            fuelType?.fuelCodes.map(
+              (item) => item.fuelCode || item.fuel_code
+            ) || [],
           multiple: false,
           disableCloseOnSelect: false,
           freeSolo: false,
