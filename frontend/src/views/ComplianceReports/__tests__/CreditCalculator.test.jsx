@@ -1,18 +1,22 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
-import { FormProvider, useForm } from 'react-hook-form'
+import {
+  Controller,
+  FormProvider,
+  useForm,
+  useFormContext
+} from 'react-hook-form'
 import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 import theme from '@/themes'
 import { CreditCalculator } from '../CreditCalculator'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { 
   useCalculateComplianceUnits,
   useGetCompliancePeriodList,
   useGetFuelTypeList,
-  useGetFuelTypeOptions
+  useGetFuelTypeOptions,
+  useCalculateQuantityFromComplianceUnits
 } from '@/hooks/useCalculator'
 import { copyToClipboard } from '@/utils/clipboard'
 
@@ -51,20 +55,79 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: mockT })
 }))
 
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn()
-}))
-
-vi.mock('@/hooks/useOrganization', () => ({
-  useCurrentOrgBalance: vi.fn()
-}))
-
 vi.mock('@/hooks/useCalculator', () => ({
   useCalculateComplianceUnits: vi.fn(),
   useGetCompliancePeriodList: vi.fn(),
   useGetFuelTypeList: vi.fn(),
-  useGetFuelTypeOptions: vi.fn()
+  useGetFuelTypeOptions: vi.fn(),
+  useCalculateQuantityFromComplianceUnits: vi.fn()
 }))
+
+vi.mock('@/components/BCForm', async () => {
+  const actual = await vi.importActual('@/components/BCForm')
+  const MockRadio = ({ name, label, options = [], disabled }) => {
+    const { control, getValues } = useFormContext()
+
+    const getTestId = (option, index) => {
+      const baseValue = option.value || option
+      if (name === 'fuelType' || name === 'endUseType') {
+        return option.dataTestId || baseValue
+      }
+      return option.dataTestId || `${name}${index + 1}`
+    }
+
+    const handleSelect = (optionValue, onChange) => {
+      onChange(optionValue)
+    }
+
+    return (
+      <Controller
+        name={name}
+        control={control}
+        defaultValue={getValues(name) ?? ''}
+        render={({ field: { value, onChange } }) => (
+          <div data-test={`${name}-radio-group`}>
+            {label && (
+              <span data-test={`${name}-label`} data-testid={`${name}-label`}>
+                {label}
+              </span>
+            )}
+            {options.map((option, index) => {
+              const optionValue = option.value || option
+              const testId = getTestId(option, index)
+              const isSelected = value === optionValue
+              return (
+                <div
+                  key={`${name}-${testId}`}
+                  data-test={testId}
+                  data-testid={testId}
+                  className={isSelected ? 'selected' : ''}
+                  tabIndex={0}
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => handleSelect(optionValue, onChange)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      handleSelect(optionValue, onChange)
+                    }
+                  }}
+                >
+                  {option.label || optionValue}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      />
+    )
+  }
+
+  return {
+    ...actual,
+    BCFormRadio: MockRadio
+  }
+})
 
 vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: vi.fn()
@@ -160,8 +223,6 @@ describe('CreditCalculator', () => {
     vi.clearAllMocks()
     
     // Default mock implementations
-    vi.mocked(useCurrentUser).mockReturnValue({ data: { organization: { organizationId: 1 } } })
-    vi.mocked(useCurrentOrgBalance).mockReturnValue({ data: { totalBalance: 1000 } })
     vi.mocked(useGetCompliancePeriodList).mockReturnValue({ 
       data: mockCompliancePeriods, 
       isLoading: false 
@@ -185,7 +246,16 @@ describe('CreditCalculator', () => {
           energyContent: 1000000, 
           energyDensity: 35.5 
         } 
-      } 
+      },
+      refetch: vi.fn()
+    })
+    vi.mocked(useCalculateQuantityFromComplianceUnits).mockReturnValue({
+      data: {
+        data: {
+          quantity: DEFAULT_QUANTITY
+        }
+      },
+      refetch: vi.fn()
     })
     
     vi.mocked(copyToClipboard).mockResolvedValue(true)
@@ -374,7 +444,7 @@ describe('CreditCalculator', () => {
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
 
-    it('formats calculated data correctly', () => {
+    it('formats calculated data correctly', async () => {
       const mockCalculatedData = {
         data: {
           complianceUnits: 1500,
@@ -397,42 +467,22 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('1,500')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            '1,500 = (85 * 1.2 - (75 + 10)) * 2,000,000 / 1,000,000'
+          )
+        ).toBeInTheDocument()
+      })
     })
   })
 
   describe('Conditional Rendering', () => {
-    it('shows organization balance section when available', () => {
-      vi.mocked(useCurrentOrgBalance).mockReturnValue({ 
-        data: { totalBalance: 1500 } 
-      })
-      
-      render(
-        <TestWrapper>
-          <CreditCalculator />
-        </TestWrapper>
-      )
-      
-      expect(screen.getByText('Change in Units')).toBeInTheDocument()
-    })
-
-    it('hides organization balance section when not available', () => {
-      vi.mocked(useCurrentOrgBalance).mockReturnValue({ data: null })
-      
-      render(
-        <TestWrapper>
-          <CreditCalculator />
-        </TestWrapper>
-      )
-      
-      expect(screen.queryByText('Change in Units')).not.toBeInTheDocument()
-    })
-
     it('displays loading state for fuel types', () => {
-      vi.mocked(useGetFuelTypeList).mockReturnValue({ 
-        data: null, 
-        isLoading: true 
-      })
+    vi.mocked(useGetFuelTypeList).mockReturnValue({ 
+      data: null, 
+      isLoading: true 
+    })
       
       render(
         <TestWrapper>
@@ -440,9 +490,8 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      const fuelTypeSection = screen.getByText('Select Fuel Type').parentElement
-      expect(fuelTypeSection.querySelector('[data-test="loading"]')).toBeInTheDocument()
-    })
+    expect(screen.getByTestId('loading')).toBeInTheDocument()
+  })
 
     it('displays quantity input with correct unit', () => {
       render(
@@ -451,7 +500,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
       
-      expect(screen.getByText('L')).toBeInTheDocument()
+      expect(screen.getByTestId('quantity-unit')).toHaveTextContent('L')
     })
   })
 
@@ -583,7 +632,7 @@ describe('CreditCalculator', () => {
       const gasolineOption = screen.getByTestId('Gasoline')
       fireEvent.click(gasolineOption)
       
-      expect(gasolineOption).toHaveClass('selected')
+      expect(gasolineOption).toHaveAttribute('aria-checked', 'true')
     })
     
     it('handles fuel type selection keyboard events (Enter)', async () => {
@@ -618,7 +667,7 @@ describe('CreditCalculator', () => {
       const gasolineOption = screen.getByTestId('Gasoline')
       fireEvent.keyDown(gasolineOption, { key: 'Enter' })
       
-      expect(gasolineOption).toHaveClass('selected')
+      expect(gasolineOption).toHaveAttribute('aria-checked', 'true')
     })
     
     it('handles fuel type selection keyboard events (Space)', async () => {
@@ -653,7 +702,7 @@ describe('CreditCalculator', () => {
       const gasolineOption = screen.getByTestId('Gasoline')
       fireEvent.keyDown(gasolineOption, { key: ' ' })
       
-      expect(gasolineOption).toHaveClass('selected')
+      expect(gasolineOption).toHaveAttribute('aria-checked', 'true')
     })
     
     it('handles end use selection click', async () => {
@@ -688,7 +737,9 @@ describe('CreditCalculator', () => {
       const transportationOption = screen.getByTestId('Transportation')
       fireEvent.click(transportationOption)
       
-      expect(transportationOption).toHaveClass('selected')
+      await waitFor(() => {
+        expect(transportationOption).toHaveAttribute('aria-checked', 'true')
+      })
     })
     
     it('handles end use selection keyboard events', async () => {
@@ -723,7 +774,9 @@ describe('CreditCalculator', () => {
       const transportationOption = screen.getByTestId('Transportation')
       fireEvent.keyDown(transportationOption, { key: 'Enter' })
       
-      expect(transportationOption).toHaveClass('selected')
+      await waitFor(() => {
+        expect(transportationOption).toHaveAttribute('aria-checked', 'true')
+      })
     })
   })
   
