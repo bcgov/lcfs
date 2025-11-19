@@ -17,6 +17,17 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+// Mock useOtherUsesOptions
+vi.mock('@/hooks/useOtherUses', () => ({
+  useOtherUsesOptions: vi.fn(() => ({
+    data: {
+      fuelTypes: []
+    },
+    isLoading: false,
+    isFetched: true
+  }))
+}))
+
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
   useParams: () => ({
