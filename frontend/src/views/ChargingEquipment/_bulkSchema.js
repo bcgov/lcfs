@@ -66,6 +66,13 @@ export const bulkChargingEquipmentColDefs = (
           incoming && typeof incoming === 'object' ? incoming.value : incoming
         const next = raw === '' || raw == null ? '' : Number(raw)
         params.data.chargingSiteId = next
+        const site = chargingSites.find(
+          (s) => s.chargingSiteId === next
+        )
+        if (site) {
+          params.data.latitude = site.latitude
+          params.data.longitude = site.longitude
+        }
         params.newValue = next
         return true
       },
@@ -260,6 +267,40 @@ export const bulkChargingEquipmentColDefs = (
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 200,
       editable: isEditableByStatus
+    },
+    {
+      field: 'latitude',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('chargingEquipment:latitude'),
+      cellEditor: 'agNumberCellEditor',
+      cellEditorParams: {
+        precision: 6,
+        max: 90,
+        min: -90,
+        showStepperButtons: false
+      },
+      cellDataType: 'number',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 150,
+      editable: true
+    },
+    {
+      field: 'longitude',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('chargingEquipment:longitude'),
+      cellEditor: 'agNumberCellEditor',
+      cellEditorParams: {
+        precision: 6,
+        max: 180,
+        min: -180,
+        showStepperButtons: false
+      },
+      cellDataType: 'number',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 150,
+      editable: true
     },
     {
       field: 'notes',

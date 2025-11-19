@@ -126,10 +126,12 @@ export const canEditQ1Supplied = (
   if (!row) {
     return false
   }
+  // if not in the first year of the new regulation, cannot edit Q1 supplied
   const complianceYear = parseInt(compliancePeriod, 10)
   if (Number.isNaN(complianceYear) || complianceYear !== NEW_REGULATION_YEAR) {
     return false
   }
+  // if provision is required, check that first
   const hasProvision = typeof row.provisionOfTheAct === 'string'
   if (
     requireApprovedProvision &&
@@ -177,11 +179,27 @@ export const applyRenewableClaimColumnVisibility = (gridRef, columnVisibility) =
     api.setColumnsVisible?.(['isQ1Supplied'], shouldShowIsQ1Supplied)
   }
 }
+
+export const canEditCanadianProduced = (row, compliancePeriod, optionsData) => {
+  const isEligible = isEligibleRenewableFuel(
+    row.fuelType,
+    row.fuelCategory,
+    optionsData
+  )
+  const isDefaultCI = row.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+  return (
+    parseInt(compliancePeriod, 10) === NEW_REGULATION_YEAR &&
+    isEligible &&
+    isDefaultCI
+  )
+}
+
 export default {
   isEligibleRenewableFuel,
   isFuelCodeCanadian,
   getFuelCodeDetails,
   calculateRenewableClaimColumnVisibility,
   canEditQ1Supplied,
-  applyRenewableClaimColumnVisibility
+  applyRenewableClaimColumnVisibility,
+  canEditCanadianProduced,
 }

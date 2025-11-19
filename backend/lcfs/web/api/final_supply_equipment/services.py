@@ -1,11 +1,14 @@
+from datetime import date
 from typing import List, Sequence
 
-import structlog
 import math
 import re
+import structlog
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.exc import ProgrammingError
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
@@ -382,6 +385,57 @@ class FinalSupplyEquipmentServices:
             )
 
             await self.create_final_supply_equipment(new_fse, organization_id)
+
+    @service_handler
+    async def copy_fse_to_new_report(self, report: ComplianceReport) -> dict:
+        """
+        Copy active charging equipment into a new compliance report with default dates.
+
+        For each charging equipment belonging to the organization, use the latest
+        non-decommissioned version and create compliance reporting records using the
+        compliance period year as the default supply date range.
+        """
+        compliance_year = int(report.compliance_period.description)
+        supply_from_date = date(compliance_year, 1, 1)
+        supply_to_date = date(compliance_year, 12, 31)
+
+        latest_equipments = await self.repo.get_latest_active_equipments(
+            report.organization_id
+        )
+        if not latest_equipments:
+            return {"created": 0}
+
+        reporting_payload: List[FSEReportingBaseSchema] = []
+        for equipment in latest_equipments:
+            reporting_payload.append(
+                FSEReportingBaseSchema(
+                    supply_from_date=supply_from_date,
+                    supply_to_date=supply_to_date,
+                    kwh_usage=0,
+                    compliance_notes=None,
+                    charging_equipment_id=equipment.charging_equipment_id,
+                    charging_equipment_version=equipment.charging_equipment_version,
+                    organization_id=report.organization_id,
+                    compliance_report_id=report.compliance_report_id,
+                    compliance_report_group_uuid=report.compliance_report_group_uuid,
+                )
+            )
+
+        if not reporting_payload:
+            return {"created": 0}
+
+        try:
+            await self.create_fse_reporting_batch(reporting_payload)
+            return {"created": len(reporting_payload)}
+        except Exception as exc:
+            # error should not block report creation; log and continue
+            logger.warning(
+                "Skipping FSE copy due to unexpected error",
+                error=str(exc),
+                organization_id=report.organization_id,
+                compliance_report_id=report.compliance_report_id,
+            )
+            raise exc
 
     @service_handler
     async def get_fse_reporting_list_paginated(
