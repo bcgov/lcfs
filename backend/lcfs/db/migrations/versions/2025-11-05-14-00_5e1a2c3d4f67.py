@@ -1,7 +1,7 @@
 """Add charging equipment version to compliance report association
 
 Revision ID: 5e1a2c3d4f67
-Revises: 1909a3e5fafd
+Revises: 9e083b743595
 Create Date: 2025-11-05 09:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "5e1a2c3d4f67"
-down_revision = "1909a3e5fafd"
+down_revision = "9e083b743595"
 branch_labels = None
 depends_on = None
 
