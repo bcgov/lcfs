@@ -262,7 +262,9 @@ class ComplianceReportUpdateService:
         )
 
         credit_change = report.summary.line_20_surplus_deficit_units
-        await self._create_or_update_reserve_transaction(credit_change, report)
+        reserve_units = await self._create_or_update_reserve_transaction(
+            credit_change, report
+        )
         await self.repo.update_compliance_report(report)
 
         return report.summary
@@ -358,15 +360,22 @@ class ComplianceReportUpdateService:
             credit_change = report.summary.line_20_surplus_deficit_units
 
             if report.transaction:
-                # Update the transaction to assessed
+                existing_units = report.transaction.compliance_units
                 report.transaction.transaction_action = TransactionActionEnum.Adjustment
                 report.transaction.update_user = user.keycloak_username
-                report.transaction.compliance_units = credit_change
+                report.transaction.compliance_units = existing_units
             else:
-                # Create a new transaction if none exists (fixes Government adjustment issue)
-                await self._create_or_update_reserve_transaction(credit_change, report)
-                if report.transaction:
-                    # Update the newly created transaction to Adjustment status
+                capped_units = await self._create_or_update_reserve_transaction(
+                    credit_change, report
+                )
+
+                if capped_units != 0:
+                    # Ensure a transaction exists before converting to Adjustment
+                    report.transaction = await self.org_service.adjust_balance(
+                        transaction_action=TransactionActionEnum.Reserved,
+                        compliance_units=capped_units,
+                        organization_id=report.organization_id,
+                    )
                     report.transaction.transaction_action = (
                         TransactionActionEnum.Adjustment
                     )
@@ -386,20 +395,52 @@ class ComplianceReportUpdateService:
         available_balance = await self.org_service.calculate_available_balance(
             report.organization_id
         )
+        pre_deadline_balance = None
+        if credit_change < 0:
+            pre_deadline_balance = await self._calculate_pre_deadline_balance(report)
+
+        effective_available_balance = available_balance
+        if pre_deadline_balance is not None:
+            effective_available_balance = min(available_balance, pre_deadline_balance)
+
         units_to_reserve = credit_change
-        # If not enough credits, reserve what is left
-        if credit_change < 0 and abs(credit_change) > available_balance:
-            units_to_reserve = available_balance * -1
+        if credit_change < 0:
+            eligible_units = min(
+                abs(credit_change),
+                max(effective_available_balance, 0),
+            )
+            units_to_reserve = -eligible_units
+
         if report.transaction is not None:
             # update existing transaction
             report.transaction.compliance_units = units_to_reserve
-        # Only need a Transaction if they have credits or if it's a positive credit_change
-        elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
+        elif credit_change != 0 and (
+            effective_available_balance > 0 or credit_change > 0
+        ):
+            # Only need a Transaction if they have credits or it's a gain
             report.transaction = await self.org_service.adjust_balance(
                 transaction_action=TransactionActionEnum.Reserved,
                 compliance_units=units_to_reserve,
                 organization_id=report.organization_id,
             )
+
+        return units_to_reserve
+
+    async def _calculate_pre_deadline_balance(self, report: ComplianceReport) -> int:
+        compliance_period = getattr(report, "compliance_period", None)
+        period_description = getattr(compliance_period, "description", None)
+
+        try:
+            compliance_year = int(period_description)
+        except (TypeError, ValueError):
+            return await self.org_service.calculate_available_balance(
+                report.organization_id
+            )
+
+        pre_deadline_balance = await self.org_service.calculate_available_balance_for_period(
+            report.organization_id, compliance_year
+        )
+        return pre_deadline_balance
 
     async def _calculate_and_lock_summary(
         self, report, user, skip_can_sign_check=False

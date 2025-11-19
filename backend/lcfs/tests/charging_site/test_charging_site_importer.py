@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi import UploadFile
 from io import BytesIO
 import json
 
@@ -13,7 +12,6 @@ from lcfs.web.api.charging_site.importer import (
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.api.charging_site.services import ChargingSiteService
 from lcfs.web.api.charging_site.schema import ChargingSiteCreateSchema
-from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.services.clamav.client import ClamAVService
 
@@ -180,8 +178,6 @@ class TestValidateRow:
     def test_validate_row_success(self):
         """Test successful row validation"""
         valid_row = (
-            "Test Org",  # org_name
-            "SITE001",  # site_code
             "Test Site",  # site_name
             "123 Main St",  # street_address
             "Vancouver",  # city
@@ -189,7 +185,6 @@ class TestValidateRow:
             49.2827,  # latitude
             -123.1207,  # longitude
             "Org 1",  # allocating_org_name
-            "Draft",  # status
             "Notes",  # notes
         )
         valid_org_names = {"Org 1", "Org 2"}
@@ -201,8 +196,6 @@ class TestValidateRow:
     def test_validate_row_missing_required_fields(self):
         """Test validation with missing required fields"""
         invalid_row = (
-            "Test Org",  # org_name
-            "SITE001",  # site_code
             None,  # site_name - MISSING
             None,  # street_address - MISSING
             "Vancouver",  # city
@@ -210,7 +203,6 @@ class TestValidateRow:
             49.2827,  # latitude
             -123.1207,  # longitude
             None,  # allocating_org_name
-            "Draft",  # status
             "Notes",  # notes
         )
         valid_org_names = {"Org 1", "Org 2"}
@@ -225,8 +217,6 @@ class TestValidateRow:
     def test_validate_row_invalid_postal_code(self):
         """Test validation with invalid postal code"""
         invalid_row = (
-            "Test Org",  # org_name
-            "SITE001",  # site_code
             "Test Site",  # site_name
             "123 Main St",  # street_address
             "Vancouver",  # city
@@ -234,7 +224,6 @@ class TestValidateRow:
             49.2827,  # latitude
             -123.1207,  # longitude
             None,  # allocating_org_name
-            "Draft",  # status
             "Notes",  # notes
         )
         valid_org_names = {"Org 1", "Org 2"}
@@ -245,15 +234,11 @@ class TestValidateRow:
         assert "Invalid postal code" in result
 
 
-
 class TestParseRow:
 
     def test_parse_row_success(self):
         """Test successful row parsing"""
-        intended_users = [EndUserTypeSchema(end_user_type_id=1, type_name="Public")]
         valid_row = (
-            "Test Org",  # org_name
-            "SITE001",  # site_code
             "Test Site",  # site_name
             "123 Main St",  # street_address
             "Vancouver",  # city
@@ -261,7 +246,6 @@ class TestParseRow:
             49.2827,  # latitude
             -123.1207,  # longitude
             "Org 1",  # allocating_org_name
-            "Draft",  # status
             "Notes",  # notes
         )
         allocating_org_map = {"Org 1": 10, "Org 2": 20}
@@ -271,7 +255,6 @@ class TestParseRow:
         assert isinstance(result, ChargingSiteCreateSchema)
         assert result.organization_id == 1
         assert result.allocating_organization_id == 10
-        assert result.site_code == "SITE001"
         assert result.site_name == "Test Site"
         assert result.street_address == "123 Main St"
         assert result.city == "Vancouver"
@@ -284,8 +267,6 @@ class TestParseRow:
     def test_parse_row_with_none_values(self):
         """Test parsing row with None values"""
         row_with_nones = (
-            None,  # org_name
-            None,  # site_code
             "Test Site",  # site_name
             "123 Main St",  # street_address
             "Vancouver",  # city
@@ -293,7 +274,6 @@ class TestParseRow:
             None,  # latitude
             None,  # longitude
             None,  # allocating_org_name
-            None,  # status
             None,  # notes
         )
         allocating_org_map = {"Org 1": 10}
@@ -301,8 +281,6 @@ class TestParseRow:
         result = _parse_row(row_with_nones, 1, allocating_org_map)
 
         assert isinstance(result, ChargingSiteCreateSchema)
-        # The actual parsing logic converts None to string "None", not empty string
-        assert result.site_code == "None"  # str(None) = "None"
         assert result.allocating_organization_id is None
         assert result.latitude == 0.0
         assert result.longitude == 0.0

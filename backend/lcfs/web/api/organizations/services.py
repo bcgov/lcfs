@@ -435,10 +435,18 @@ class OrganizationsService:
         organization_id: int,
         credit_market_data: dict,
         user=None,
+        skip_notifications: bool = False,
     ):
         """
         Update only the credit market contact details for an organization.
         This method only updates the specific credit market fields without affecting other organization data.
+
+        Args:
+            organization_id: Target organization identifier.
+            credit_market_data: Credit market fields to update.
+            user: Requesting user profile (used for auditing).
+            skip_notifications: When True, suppresses outbound credit market notifications
+                even if the update would normally trigger them. Intended for IDIR/government edits.
         """
         organization = await self.repo.get_organization(organization_id)
         if not organization:
@@ -496,7 +504,11 @@ class OrganizationsService:
             and (not was_displayed_in_market or old_credits_to_sell == 0)
         )
 
-        if is_new_listing and settings.feature_credit_market_notifications:
+        if (
+            is_new_listing
+            and settings.feature_credit_market_notifications
+            and not skip_notifications
+        ):
             await self._send_credit_market_notification(updated_organization, user)
 
         return updated_organization
@@ -955,6 +967,24 @@ class OrganizationsService:
             organization_id
         )
         return available_balance
+
+    @service_handler
+    async def calculate_available_balance_for_period(
+        self, organization_id: int, compliance_period: int
+    ) -> int:
+        """
+        Calculates the available balance for a given organization that existed on or before the March 31 compliance deadline for a reporting year.
+
+        Args:
+            organization_id (int): The ID of the organization.
+            compliance_period (int): The compliance period year (e.g., 2024).
+
+        Returns:
+            int: The available balance at the compliance deadline.
+        """
+        return await self.transaction_repo.calculate_available_balance_for_period(
+            organization_id, compliance_period
+        )
 
     @service_handler
     async def adjust_balance(
