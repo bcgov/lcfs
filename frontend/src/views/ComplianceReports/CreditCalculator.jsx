@@ -193,6 +193,13 @@ export const CreditCalculator = () => {
     )
   }, [fuelTypeOptions])
 
+  const selectedProvision = useMemo(() => {
+    if (!provisionOfTheAct) return null
+    return fuelTypeOptions?.data?.provisions?.find(
+      (provision) => provision.name === provisionOfTheAct
+    )
+  }, [fuelTypeOptions, provisionOfTheAct])
+
   // Get unit based on selected fuel
   const unit = useMemo(() => {
     return fuelTypeOptions?.data?.unit || ''
@@ -379,6 +386,18 @@ Credits generated: ${resultData.credits.toLocaleString()}`
     }
   }, [calculatedData, fuelTypeOptions, orgBalance])
 
+  const carbonIntensityDisplayValue = useMemo(() => {
+    if (!provisionOfTheAct) return ''
+
+    const shouldShowCarbonIntensity =
+      provisionOfTheAct.includes('Fuel code') ||
+      provisionOfTheAct.includes('Default carbon intensity')
+
+    if (!shouldShowCarbonIntensity) return ''
+
+    return resultData.formulaValues.carbonIntensity || ''
+  }, [provisionOfTheAct, resultData])
+
   if (isLoadingPeriods) {
     return <Loading />
   }
@@ -476,9 +495,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                     control={control}
                     options={endUses}
                     disabled={
-                      isLoadingFuelOptions ||
-                      !endUses.length ||
-                      !fuelType
+                      isLoadingFuelOptions || !endUses.length || !fuelType
                     }
                   />
                 </Grid>
@@ -497,8 +514,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                         parseInt(complianceYear) >=
                           LEGISLATION_TRANSITION_YEAR) ||
                       (!fuelType &&
-                        parseInt(complianceYear) <
-                          LEGISLATION_TRANSITION_YEAR)
+                        parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR)
                     }
                   />
                   {renderError('provisionOfTheAct')}
@@ -540,6 +556,19 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                       )}
                     />
                     {renderError('fuelCode')}
+                  </FormControl>
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      Carbon intensity
+                    </BCTypography>
+                    <TextField
+                      id="carbon-intensity-display"
+                      value={carbonIntensityDisplayValue}
+                      placeholder="N/A"
+                      size="small"
+                      sx={{ mt: 1 }}
+                      disabled
+                    />
                   </FormControl>
                 </Stack>
 
