@@ -5,11 +5,7 @@ import {
   Grid2 as Grid,
   Paper,
   Divider,
-  List,
-  ListItemButton,
   Stack,
-  ListItem,
-  InputLabel,
   TextField,
   InputAdornment,
   Select,
@@ -124,12 +120,11 @@ export const CreditCalculator = () => {
     endUseType,
     provisionOfTheAct,
     quantity,
-    fuelCode
+    fuelCode,
+    fuelType
   } = watchedValues
 
   // State for selected items from lists
-  const [selectedFuelType, setSelectedFuelType] = useState()
-  const [selectedEndUse, setSelectedEndUse] = useState()
   const [calculatedResults, setCalculatedResults] = useState(null)
   const [copySuccess, setCopySuccess] = useState(false)
 
@@ -144,18 +139,10 @@ export const CreditCalculator = () => {
     )
 
   // Get the selected fuel based on user selection
-  const selectedFuel = useMemo(() => {
-    return fuelTypeListData?.data?.find(
-      (ft) => ft.fuelType === watchedValues.fuelType
-    )
-  }, [fuelTypeListData, watchedValues.fuelType])
-
   // Memoized selector options to prevent unnecessary re-renders
   const selectedFuelObj = useMemo(() => {
-    return fuelTypeListData?.data?.find(
-      (ft) => ft.fuelType === selectedFuelType
-    )
-  }, [fuelTypeListData, selectedFuelType])
+    return fuelTypeListData?.data?.find((ft) => ft.fuelType === fuelType)
+  }, [fuelTypeListData, fuelType])
 
   const fuelTypes = useMemo(() => {
     return (
@@ -176,9 +163,7 @@ export const CreditCalculator = () => {
         lcfsOnly: false
       },
       {
-        enabled: Boolean(
-          selectedFuelObj && selectedFuelType && fuelCategory && selectedFuel
-        )
+        enabled: Boolean(selectedFuelObj && fuelType && fuelCategory)
       }
     )
 
@@ -199,6 +184,15 @@ export const CreditCalculator = () => {
     return Array.from(uniqueEndUses.values())
   }, [fuelTypeOptions])
 
+  const provisionOptions = useMemo(() => {
+    return (
+      fuelTypeOptions?.data?.provisions?.map((provision) => ({
+        label: provision.name,
+        value: provision.name
+      })) || []
+    )
+  }, [fuelTypeOptions])
+
   // Get unit based on selected fuel
   const unit = useMemo(() => {
     return fuelTypeOptions?.data?.unit || ''
@@ -206,31 +200,39 @@ export const CreditCalculator = () => {
 
   // Apply fuel type and end use selection to form
   useEffect(() => {
-    if (selectedFuelType) {
-      setValue('fuelType', selectedFuelType)
-      // Clear dependent fields
+    if (fuelType) {
       setValue('endUseType', '')
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
       setValue('quantity', DEFAULT_QUANTITY)
-      setSelectedEndUse(undefined)
     }
-  }, [selectedFuelType, setValue, fuelCategory])
+  }, [fuelType, setValue, fuelCategory])
 
   useEffect(() => {
-    if (selectedEndUse) {
-      setValue('endUseType', selectedEndUse)
+    if (endUseType) {
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
       setValue('quantity', DEFAULT_QUANTITY)
     }
-  }, [selectedEndUse, setValue])
+  }, [endUseType, setValue])
+
+  useEffect(() => {
+    if (endUses.length === 1 && !endUseType) {
+      setValue('endUseType', endUses[0].value)
+    }
+  }, [endUses, endUseType, setValue])
 
   useEffect(() => {
     if (provisionOfTheAct) {
       setValue('fuelCode', '')
     }
   }, [provisionOfTheAct, setValue])
+
+  useEffect(() => {
+    if (provisionOptions.length === 1 && !provisionOfTheAct) {
+      setValue('provisionOfTheAct', provisionOptions[0].value)
+    }
+  }, [provisionOptions, provisionOfTheAct, setValue])
 
   // Calculate credits when form values change
   const fuelTypeId = selectedFuelObj?.fuelTypeId
@@ -269,16 +271,14 @@ export const CreditCalculator = () => {
       fuelCategory: '',
       endUseType: ''
     })
-    setSelectedFuelType(undefined)
-    setSelectedEndUse(undefined)
     setCalculatedResults(null)
   }
 
   const handleCopy = async () => {
     try {
       const copyText = `Compliance Year: ${complianceYear}
-Selected fuel type: ${selectedFuelType || 'N/A'}
-End use: ${selectedEndUse || 'N/A'}
+Selected fuel type: ${fuelType || 'N/A'}
+End use: ${endUseType || 'N/A'}
 Determining carbon intensity: ${provisionOfTheAct || 'N/A'}
 Fuel code: ${fuelCode || 'N/A'}
 
@@ -458,195 +458,50 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                 </Stack>
                 {/* <Grid container flexDirection={'row'} rowSpacing={1} mt={4}> */}
                 <Grid size={3} flex={1}>
-                  <BCTypography variant="label">
-                    {t('report:selectFuelType')}
-                  </BCTypography>
-                  {/* Fuel type */}
-                  <List
-                    component="nav"
-                    sx={{
-                      maxWidth: '100%',
-                      pl: 2
-                    }}
-                  >
-                    {isFuelTypeListLoading && <Loading />}
-                    {fuelTypes.length > 0 &&
-                      fuelTypes.map(({ label, value }) => (
-                        <ListItemButton
-                          component="span"
-                          key={value}
-                          sx={{
-                            display: 'list-item',
-                            listStyleType: 'disc',
-                            p: 0.4,
-                            color: colors.primary.main,
-                            '&::marker': {
-                              fontSize: '0.7em'
-                            }
-                          }}
-                        >
-                          <BCBox
-                            sx={{
-                              cursor: 'pointer',
-                              '&.selected': {
-                                '& .list-text': {
-                                  color: 'text.primary',
-                                  textDecoration: 'none',
-                                  fontWeight: 'bold'
-                                }
-                              }
-                            }}
-                            component="a"
-                            tabIndex={0}
-                            className={
-                              selectedFuelType === value ? 'selected' : ''
-                            }
-                            alignItems="flex-start"
-                            onClick={() => setSelectedFuelType(value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                setSelectedFuelType(value)
-                              }
-                            }}
-                            data-test={value}
-                          >
-                            <BCTypography
-                              variant="subtitle2"
-                              color="link"
-                              className="list-text"
-                              sx={{
-                                textDecoration: 'underline',
-                                '&:hover': { color: 'info.main' }
-                              }}
-                            >
-                              {value}
-                            </BCTypography>
-                          </BCBox>
-                        </ListItemButton>
-                      ))}
-                  </List>
+                  {isFuelTypeListLoading && <Loading />}
+                  <BCFormRadio
+                    label={t('report:selectFuelType')}
+                    name="fuelType"
+                    control={control}
+                    options={fuelTypes}
+                    disabled={isFuelTypeListLoading || fuelTypes.length === 0}
+                  />
                 </Grid>
 
                 <Grid size={3} flex={1}>
-                  <BCTypography variant="label">
-                    {t('report:endUse')}
-                  </BCTypography>
-                  {/* End Use Type */}
-                  <List
-                    component="nav"
-                    sx={{
-                      pl: 2
-                    }}
-                  >
-                    {isLoadingFuelOptions && <Loading />}
-                    {endUses.length > 0 &&
-                      endUses.map(({ label, value }) => (
-                        <ListItemButton
-                          component="span"
-                          key={value}
-                          sx={{
-                            display: 'list-item',
-                            listStyleType: 'disc',
-                            p: 0.4,
-                            color: colors.primary.main,
-                            '&::marker': {
-                              fontSize: '0.7em'
-                            }
-                          }}
-                        >
-                          <BCBox
-                            sx={{
-                              cursor: 'pointer',
-                              '&.selected': {
-                                '& .list-text': {
-                                  color: 'text.primary',
-                                  textDecoration: 'none',
-                                  fontWeight: 'bold'
-                                }
-                              }
-                            }}
-                            component="a"
-                            tabIndex={0}
-                            className={
-                              selectedEndUse === value ? 'selected' : ''
-                            }
-                            alignItems="flex-start"
-                            onClick={() => setSelectedEndUse(value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                setSelectedEndUse(value)
-                              }
-                            }}
-                            data-test={value}
-                          >
-                            <BCTypography
-                              variant="subtitle2"
-                              color="link"
-                              className="list-text"
-                              sx={{
-                                textDecoration: 'underline',
-                                '&:hover': { color: 'info.main' }
-                              }}
-                            >
-                              {value}
-                            </BCTypography>
-                          </BCBox>
-                        </ListItemButton>
-                      ))}
-                  </List>
+                  {isLoadingFuelOptions && <Loading />}
+                  <BCFormRadio
+                    label={t('report:endUse')}
+                    name="endUseType"
+                    control={control}
+                    options={endUses}
+                    disabled={
+                      isLoadingFuelOptions ||
+                      !endUses.length ||
+                      !fuelType
+                    }
+                  />
                 </Grid>
                 {/* </Grid> */}
 
                 <Stack direction="column" spacing={2} size={3} flex={1}>
-                  {/* Provision of the act */}
-                  <FormControl>
-                    <BCTypography variant="label" component="span">
-                      {t('report:ciLabel')}
-                    </BCTypography>
-                    <Controller
-                      name="provisionOfTheAct"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          id="provision-of-the-act"
-                          labelId="provision-of-the-act-select-label"
-                          {...field}
-                          error={!!errors.provisionOfTheAct}
-                          disabled={
-                            (!endUseType &&
-                              parseInt(complianceYear) >=
-                                LEGISLATION_TRANSITION_YEAR) ||
-                            (!selectedFuelType &&
-                              parseInt(complianceYear) <
-                                LEGISLATION_TRANSITION_YEAR)
-                          }
-                          displayEmpty
-                          MenuProps={{
-                            sx: {
-                              marginTop: '0 !important'
-                            }
-                          }}
-                          sx={{
-                            height: '40px'
-                          }}
-                        >
-                          {fuelTypeOptions?.data?.provisions?.map(
-                            (provision) => (
-                              <MenuItem
-                                key={provision.provisionOfTheActId}
-                                value={provision.name}
-                              >
-                                {provision.name}
-                              </MenuItem>
-                            )
-                          )}
-                        </Select>
-                      )}
-                    />
-                    {renderError('provisionOfTheAct')}
-                  </FormControl>
+                  <BCFormRadio
+                    label={t('report:ciLabel')}
+                    name="provisionOfTheAct"
+                    control={control}
+                    options={provisionOptions}
+                    disabled={
+                      isLoadingFuelOptions ||
+                      !provisionOptions.length ||
+                      (!endUseType &&
+                        parseInt(complianceYear) >=
+                          LEGISLATION_TRANSITION_YEAR) ||
+                      (!fuelType &&
+                        parseInt(complianceYear) <
+                          LEGISLATION_TRANSITION_YEAR)
+                    }
+                  />
+                  {renderError('provisionOfTheAct')}
                   {/* Fuel Code */}
                   <FormControl>
                     <BCTypography variant="label" component="span">
