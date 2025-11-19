@@ -22,7 +22,9 @@ export const BCFormRadio = ({
   const generateRadioOptions = () => {
     return options.map((singleOption, index) => (
       <FormControlLabel
-        key={singleOption.value || singleOption.label || `radio-option-${index}`}
+        key={
+          singleOption.value || singleOption.label || `radio-option-${index}`
+        }
         value={singleOption.value}
         label={
           singleOption.header ? (
@@ -41,11 +43,10 @@ export const BCFormRadio = ({
 
   return (
     <FormControl component="fieldset" sx={{ ...sx }}>
-      <FormLabel component="legend">
-        <BCTypography variant="label" component="span">
-          {label}
-        </BCTypography>
-      </FormLabel>
+      <BCTypography variant="label" component="span">
+        {label}
+      </BCTypography>
+
       <Controller
         name={name}
         control={control}

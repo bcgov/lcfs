@@ -397,35 +397,16 @@ Credits generated: ${resultData.credits.toLocaleString()}`
           component="div"
           title={t('report:calcTitle')}
           content={
-            <Grid container flexDirection={'row'} rowSpacing={1}>
-              {/* Left Section */}
-              <Grid size={{ sm: 12, md: 6 }} px={4} py={8}>
-                <Stack direction={'row'} spacing={4}>
+            <Grid container flexDirection={'column'} rowSpacing={1}>
+              {/* Top Section */}
+              <Grid px={4} py={8} flexDirection={'row'} container spacing={4}>
+                <Stack direction={'column'} size={3} flex={1} gap={4}>
                   {/* Compliance Year */}
-                  <FormControl
-                    sx={{
-                      width: '140px',
-                      height: '40px',
-                      '.MuiOutlinedInput-root': {
-                        height: '100%'
-                      },
-                      '& .Mui-error': {
-                        height: '100%'
-                      },
-                      bottom: '0.2rem',
-                      marginInline: '0.2rem'
-                    }}
-                  >
-                    <InputLabel
-                      htmlFor="compliance-year"
-                      component="label"
-                      className="form-label"
-                      shrink
-                    >
-                      <BCTypography variant="label" component="span">
-                        {t('report:complianceYear')}
-                      </BCTypography>
-                    </InputLabel>
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      {t('report:complianceYear')}
+                    </BCTypography>
+
                     <Controller
                       name="complianceYear"
                       control={control}
@@ -443,12 +424,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                             }
                           }}
                           sx={{
-                            height: '100% !important',
-                            '.MuiSelect-select': {
-                              height: '100% !important',
-                              paddingTop: '0px',
-                              paddingBottom: '0px'
-                            }
+                            height: '40px'
                           }}
                         >
                           {formattedCompliancePeriods.map((period) => (
@@ -463,6 +439,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   </FormControl>
                   {/* Fuel Category */}
                   <BCFormRadio
+                    label={t('report:fuelCategory')}
                     name="fuelCategory"
                     control={control}
                     options={FUEL_CATEGORIES.filter(
@@ -475,186 +452,159 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                       value: type,
                       label: type
                     }))}
-                    orientation="horizontal"
-                    sx={{
-                      backgroundColor: 'transparent',
-                      padding: 0,
-                      pb: 1,
-                      transform: 'translate(0px, -5px) scale(1)',
-                      borderTop: '1px solid rgba(0,0,0,0.9)',
-                      borderBottom: '1px solid rgba(0,0,0,0.9)'
-                    }}
+                    orientation="vertical"
+                    sx={{ mt: '0 !important' }}
                   />
                 </Stack>
-                <Grid container flexDirection={'row'} rowSpacing={1} mt={4}>
-                  <Grid size={4}>
-                    <BCTypography variant="h6" color="primary">
-                      {t('report:selectFuelType')}
-                    </BCTypography>
-                    {/* Fuel type */}
-                    <List
-                      component="nav"
-                      sx={{
-                        maxWidth: '100%',
-                        pl: 2
-                      }}
-                    >
-                      {isFuelTypeListLoading && <Loading />}
-                      {fuelTypes.length > 0 &&
-                        fuelTypes.map(({ label, value }) => (
-                          <ListItemButton
-                            component="span"
-                            key={value}
-                            sx={{
-                              display: 'list-item',
-                              listStyleType: 'disc',
-                              p: 0.4,
-                              color: colors.primary.main,
-                              '&::marker': {
-                                fontSize: '0.7em'
-                              }
-                            }}
-                          >
-                            <BCBox
-                              sx={{
-                                cursor: 'pointer',
-                                '&.selected': {
-                                  '& .list-text': {
-                                    color: 'text.primary',
-                                    textDecoration: 'none',
-                                    fontWeight: 'bold'
-                                  }
-                                }
-                              }}
-                              component="a"
-                              tabIndex={0}
-                              className={
-                                selectedFuelType === value ? 'selected' : ''
-                              }
-                              alignItems="flex-start"
-                              onClick={() => setSelectedFuelType(value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  setSelectedFuelType(value)
-                                }
-                              }}
-                              data-test={value}
-                            >
-                              <BCTypography
-                                variant="subtitle2"
-                                color="link"
-                                className="list-text"
-                                sx={{
-                                  textDecoration: 'underline',
-                                  '&:hover': { color: 'info.main' }
-                                }}
-                              >
-                                {value}
-                              </BCTypography>
-                            </BCBox>
-                          </ListItemButton>
-                        ))}
-                    </List>
-                  </Grid>
-
-                  <Grid size={4}>
-                    <BCTypography variant="h6" color="primary">
-                      {t('report:endUse')}
-                    </BCTypography>
-                    {/* End Use Type */}
-                    <List
-                      component="nav"
-                      sx={{
-                        pl: 2
-                      }}
-                    >
-                      {isLoadingFuelOptions && <Loading />}
-                      {endUses.length > 0 &&
-                        endUses.map(({ label, value }) => (
-                          <ListItemButton
-                            component="span"
-                            key={value}
-                            sx={{
-                              display: 'list-item',
-                              listStyleType: 'disc',
-                              p: 0.4,
-                              color: colors.primary.main,
-                              '&::marker': {
-                                fontSize: '0.7em'
-                              }
-                            }}
-                          >
-                            <BCBox
-                              sx={{
-                                cursor: 'pointer',
-                                '&.selected': {
-                                  '& .list-text': {
-                                    color: 'text.primary',
-                                    textDecoration: 'none',
-                                    fontWeight: 'bold'
-                                  }
-                                }
-                              }}
-                              component="a"
-                              tabIndex={0}
-                              className={
-                                selectedEndUse === value ? 'selected' : ''
-                              }
-                              alignItems="flex-start"
-                              onClick={() => setSelectedEndUse(value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  setSelectedEndUse(value)
-                                }
-                              }}
-                              data-test={value}
-                            >
-                              <BCTypography
-                                variant="subtitle2"
-                                color="link"
-                                className="list-text"
-                                sx={{
-                                  textDecoration: 'underline',
-                                  '&:hover': { color: 'info.main' }
-                                }}
-                              >
-                                {value}
-                              </BCTypography>
-                            </BCBox>
-                          </ListItemButton>
-                        ))}
-                    </List>
-                  </Grid>
-                </Grid>
-
-                <Stack direction="row" spacing={2} sx={{ mt: 10, mb: 2 }}>
-                  {/* Provision of the act */}
-                  <FormControl
+                {/* <Grid container flexDirection={'row'} rowSpacing={1} mt={4}> */}
+                <Grid size={3} flex={1}>
+                  <BCTypography variant="label">
+                    {t('report:selectFuelType')}
+                  </BCTypography>
+                  {/* Fuel type */}
+                  <List
+                    component="nav"
                     sx={{
-                      width: '28rem',
-                      height: '2.5rem',
-                      '.MuiOutlinedInput-root': {
-                        height: '100%'
-                      },
-                      '& .Mui-error': {
-                        height: '100%'
-                      },
-                      bottom: '0.2rem',
-                      marginInline: '0.2rem'
+                      maxWidth: '100%',
+                      pl: 2
                     }}
                   >
-                    <InputLabel
-                      htmlFor="provision-of-the-act"
-                      component="label"
-                      className="form-label"
-                      shrink
-                    >
-                      <BCTypography variant="label" component="span">
-                        {t('report:ciLabel')}
-                      </BCTypography>
-                    </InputLabel>
+                    {isFuelTypeListLoading && <Loading />}
+                    {fuelTypes.length > 0 &&
+                      fuelTypes.map(({ label, value }) => (
+                        <ListItemButton
+                          component="span"
+                          key={value}
+                          sx={{
+                            display: 'list-item',
+                            listStyleType: 'disc',
+                            p: 0.4,
+                            color: colors.primary.main,
+                            '&::marker': {
+                              fontSize: '0.7em'
+                            }
+                          }}
+                        >
+                          <BCBox
+                            sx={{
+                              cursor: 'pointer',
+                              '&.selected': {
+                                '& .list-text': {
+                                  color: 'text.primary',
+                                  textDecoration: 'none',
+                                  fontWeight: 'bold'
+                                }
+                              }
+                            }}
+                            component="a"
+                            tabIndex={0}
+                            className={
+                              selectedFuelType === value ? 'selected' : ''
+                            }
+                            alignItems="flex-start"
+                            onClick={() => setSelectedFuelType(value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedFuelType(value)
+                              }
+                            }}
+                            data-test={value}
+                          >
+                            <BCTypography
+                              variant="subtitle2"
+                              color="link"
+                              className="list-text"
+                              sx={{
+                                textDecoration: 'underline',
+                                '&:hover': { color: 'info.main' }
+                              }}
+                            >
+                              {value}
+                            </BCTypography>
+                          </BCBox>
+                        </ListItemButton>
+                      ))}
+                  </List>
+                </Grid>
+
+                <Grid size={3} flex={1}>
+                  <BCTypography variant="label">
+                    {t('report:endUse')}
+                  </BCTypography>
+                  {/* End Use Type */}
+                  <List
+                    component="nav"
+                    sx={{
+                      pl: 2
+                    }}
+                  >
+                    {isLoadingFuelOptions && <Loading />}
+                    {endUses.length > 0 &&
+                      endUses.map(({ label, value }) => (
+                        <ListItemButton
+                          component="span"
+                          key={value}
+                          sx={{
+                            display: 'list-item',
+                            listStyleType: 'disc',
+                            p: 0.4,
+                            color: colors.primary.main,
+                            '&::marker': {
+                              fontSize: '0.7em'
+                            }
+                          }}
+                        >
+                          <BCBox
+                            sx={{
+                              cursor: 'pointer',
+                              '&.selected': {
+                                '& .list-text': {
+                                  color: 'text.primary',
+                                  textDecoration: 'none',
+                                  fontWeight: 'bold'
+                                }
+                              }
+                            }}
+                            component="a"
+                            tabIndex={0}
+                            className={
+                              selectedEndUse === value ? 'selected' : ''
+                            }
+                            alignItems="flex-start"
+                            onClick={() => setSelectedEndUse(value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedEndUse(value)
+                              }
+                            }}
+                            data-test={value}
+                          >
+                            <BCTypography
+                              variant="subtitle2"
+                              color="link"
+                              className="list-text"
+                              sx={{
+                                textDecoration: 'underline',
+                                '&:hover': { color: 'info.main' }
+                              }}
+                            >
+                              {value}
+                            </BCTypography>
+                          </BCBox>
+                        </ListItemButton>
+                      ))}
+                  </List>
+                </Grid>
+                {/* </Grid> */}
+
+                <Stack direction="column" spacing={2} size={3} flex={1}>
+                  {/* Provision of the act */}
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      {t('report:ciLabel')}
+                    </BCTypography>
                     <Controller
                       name="provisionOfTheAct"
                       control={control}
@@ -679,12 +629,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                             }
                           }}
                           sx={{
-                            height: '100% !important',
-                            '.MuiSelect-select': {
-                              height: '100% !important',
-                              paddingTop: '0px',
-                              paddingBottom: '0px'
-                            }
+                            height: '40px'
                           }}
                         >
                           {fuelTypeOptions?.data?.provisions?.map(
@@ -703,30 +648,11 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                     {renderError('provisionOfTheAct')}
                   </FormControl>
                   {/* Fuel Code */}
-                  <FormControl
-                    sx={{
-                      width: '240px',
-                      height: '40px',
-                      '.MuiOutlinedInput-root': {
-                        height: '100%'
-                      },
-                      '& .Mui-error': {
-                        height: '100%'
-                      },
-                      bottom: '0.2rem',
-                      marginInline: '0.2rem'
-                    }}
-                  >
-                    <InputLabel
-                      htmlFor="fuel-code"
-                      component="label"
-                      className="form-label"
-                      shrink
-                    >
-                      <BCTypography variant="label" component="span">
-                        {t('report:fuelCodeLabel')}
-                      </BCTypography>
-                    </InputLabel>
+                  <FormControl>
+                    <BCTypography variant="label" component="span">
+                      {t('report:fuelCodeLabel')}
+                    </BCTypography>
+
                     <Controller
                       name="fuelCode"
                       control={control}
@@ -744,12 +670,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                             }
                           }}
                           sx={{
-                            height: '100% !important',
-                            '.MuiSelect-select': {
-                              height: '100% !important',
-                              paddingTop: '0px',
-                              paddingBottom: '0px'
-                            }
+                            height: '40px'
                           }}
                         >
                           {fuelTypeOptions?.data?.fuelCodes?.map((code) => (
@@ -767,7 +688,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   </FormControl>
                 </Stack>
 
-                <Stack
+                {/* <Stack
                   direction="row"
                   spacing={2}
                   mt={2}
@@ -786,10 +707,10 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   >
                     Clear
                   </BCButton>
-                </Stack>
+                </Stack> */}
               </Grid>
 
-              {/* Right Section */}
+              {/* Bottom Section */}
               <Grid
                 size={{ sm: 12, md: 6 }}
                 sx={{
@@ -962,37 +883,39 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                         width: '2px'
                       }}
                     />
-                    
-                    {Object.entries(ciParameterLabels).map(([key, label], index) => (
-                      <React.Fragment key={key}>
-                        {/* Left column - Label */}
-                        <BCTypography
-                          variant="body2"
-                          sx={{ 
-                            fontWeight: 'bold',
-                            py: 0.5,
-                            pr: 3,
-                            gridColumn: 1
-                          }}
-                        >
-                          {`${key.toUpperCase()} - ${label}`}
-                        </BCTypography>
-                        
-                        {/* Right column - Value */}
-                        <BCTypography
-                          variant="body2"
-                          sx={{ 
-                            fontWeight: 'bold',
-                            textAlign: 'right',
-                            py: 0.5,
-                            pl: 3,
-                            gridColumn: 3
-                          }}
-                        >
-                          {Object.values(resultData.formulaValues)[index]}
-                        </BCTypography>
-                      </React.Fragment>
-                    ))}
+
+                    {Object.entries(ciParameterLabels).map(
+                      ([key, label], index) => (
+                        <React.Fragment key={key}>
+                          {/* Left column - Label */}
+                          <BCTypography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 'bold',
+                              py: 0.5,
+                              pr: 3,
+                              gridColumn: 1
+                            }}
+                          >
+                            {`${key.toUpperCase()} - ${label}`}
+                          </BCTypography>
+
+                          {/* Right column - Value */}
+                          <BCTypography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 'bold',
+                              textAlign: 'right',
+                              py: 0.5,
+                              pl: 3,
+                              gridColumn: 3
+                            }}
+                          >
+                            {Object.values(resultData.formulaValues)[index]}
+                          </BCTypography>
+                        </React.Fragment>
+                      )
+                    )}
                   </BCBox>
                 </Paper>
 
