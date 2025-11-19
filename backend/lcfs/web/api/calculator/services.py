@@ -100,6 +100,8 @@ class CalculatorService:
         end_use_id: int,
         fuel_code_id: int,
         quantity: float,
+        use_custom_ci: bool = False,
+        custom_ci_value: float | None = None,
     ):
         # Fetch standardized fuel data
         fuel_data = await self.fuel_repo.get_standardized_fuel_data(
@@ -110,12 +112,17 @@ class CalculatorService:
             fuel_code_id=fuel_code_id,
         )
         energy_density_value = float(fuel_data.energy_density or 0)
+        recorded_ci = (
+            float(custom_ci_value)
+            if use_custom_ci and custom_ci_value is not None
+            else float(fuel_data.effective_carbon_intensity or 0)
+        )
 
         if int(compliance_period) < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
             compliance_units = calculate_legacy_compliance_units(
                 TCI=fuel_data.target_ci or 0,
                 EER=fuel_data.eer or 1,
-                RCI=fuel_data.effective_carbon_intensity or 0,
+                RCI=recorded_ci,
                 Q=quantity,
                 ED=fuel_data.energy_density or 0,
             )
@@ -123,7 +130,7 @@ class CalculatorService:
             compliance_units = calculate_compliance_units(
                 TCI=fuel_data.target_ci or 0,
                 EER=fuel_data.eer or 1,
-                RCI=fuel_data.effective_carbon_intensity or 0,
+                RCI=recorded_ci,
                 UCI=fuel_data.uci or 0,
                 Q=quantity,
                 ED=fuel_data.energy_density or 0,
@@ -131,7 +138,7 @@ class CalculatorService:
 
         # Return Credits result
         return CreditsResultSchema(
-            rci=round(fuel_data.effective_carbon_intensity, 2),
+            rci=round(recorded_ci, 2),
             tci=round(fuel_data.target_ci, 5),
             eer=round(fuel_data.eer, 2),
             energy_density=round(energy_density_value, 2),
@@ -150,6 +157,8 @@ class CalculatorService:
         end_use_id: int,
         fuel_code_id: int,
         compliance_units: float,
+        use_custom_ci: bool = False,
+        custom_ci_value: float | None = None,
     ):
         fuel_data = await self.fuel_repo.get_standardized_fuel_data(
             fuel_type_id=fuel_type_id,
@@ -159,12 +168,17 @@ class CalculatorService:
             fuel_code_id=fuel_code_id,
         )
         energy_density_value = float(fuel_data.energy_density or 0)
+        recorded_ci = (
+            float(custom_ci_value)
+            if use_custom_ci and custom_ci_value is not None
+            else float(fuel_data.effective_carbon_intensity or 0)
+        )
 
         if int(compliance_period) < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
             quantity = calculate_legacy_quantity_from_compliance_units(
                 TCI=fuel_data.target_ci or 0,
                 EER=fuel_data.eer or 1,
-                RCI=fuel_data.effective_carbon_intensity or 0,
+                RCI=recorded_ci,
                 compliance_units=compliance_units,
                 ED=fuel_data.energy_density or 0,
             )
@@ -172,14 +186,14 @@ class CalculatorService:
             quantity = calculate_quantity_from_compliance_units(
                 TCI=fuel_data.target_ci or 0,
                 EER=fuel_data.eer or 1,
-                RCI=fuel_data.effective_carbon_intensity or 0,
+                RCI=recorded_ci,
                 UCI=fuel_data.uci or 0,
                 compliance_units=compliance_units,
                 ED=fuel_data.energy_density or 0,
             )
 
         return CreditsResultSchema(
-            rci=round(fuel_data.effective_carbon_intensity, 2),
+            rci=round(recorded_ci, 2),
             tci=round(fuel_data.target_ci, 5),
             eer=round(fuel_data.eer, 2),
             energy_density=round(energy_density_value, 2),

@@ -249,6 +249,8 @@ async def test_get_calculated_data(
         params["endUseId"],
         params["fuelCodeId"],
         params["quantity"],
+        False,
+        None,
     )
 
 
@@ -309,6 +311,57 @@ async def test_get_calculated_data_without_optional_params(
         None,  # end_use_id is None
         None,  # fuel_code_id is None
         params["quantity"],
+        False,
+        None,
+    )
+
+
+@pytest.mark.anyio
+async def test_get_calculated_data_with_custom_ci(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_calculator_service,
+):
+    mock_calculated_data = {
+        "complianceUnits": 100,
+        "tci": 80,
+        "eer": 1.0,
+        "rci": 70,
+        "uci": 0,
+        "energyContent": 10000,
+        "energyDensity": 38.5,
+        "quantity": 1000,
+    }
+    mock_calculator_service.get_calculated_data.return_value = mock_calculated_data
+
+    fastapi_app.dependency_overrides[CalculatorService] = (
+        lambda: mock_calculator_service
+    )
+
+    compliance_period = "2024"
+    params = {
+        "fuelTypeId": 1,
+        "fuelCategoryId": 1,
+        "quantity": 1000,
+        "useCustomCi": True,
+        "customCiValue": 68.5,
+    }
+
+    url = fastapi_app.url_path_for(
+        "get_calculated_data", compliance_period=compliance_period
+    )
+    response = await client.get(url, params=params)
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_calculator_service.get_calculated_data.assert_called_once_with(
+        compliance_period,
+        params["fuelTypeId"],
+        params["fuelCategoryId"],
+        None,
+        None,
+        params["quantity"],
+        True,
+        params["customCiValue"],
     )
 
 
@@ -415,6 +468,8 @@ async def test_get_quantity_from_compliance_units(
         params["endUseId"],
         params["fuelCodeId"],
         params["complianceUnits"],
+        False,
+        None,
     )
 
 
@@ -465,6 +520,59 @@ async def test_get_quantity_from_compliance_units_without_optional_params(
         None,
         None,
         params["complianceUnits"],
+        False,
+        None,
+    )
+
+
+@pytest.mark.anyio
+async def test_get_quantity_from_compliance_units_with_custom_ci(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_calculator_service,
+):
+    mock_quantity_data = {
+        "complianceUnits": 150,
+        "tci": 80,
+        "eer": 1.0,
+        "rci": 70,
+        "uci": 5,
+        "energyContent": 7500,
+        "energyDensity": 38.5,
+        "quantity": 194.81,
+    }
+    mock_calculator_service.get_quantity_from_compliance_units.return_value = (
+        mock_quantity_data
+    )
+
+    fastapi_app.dependency_overrides[CalculatorService] = (
+        lambda: mock_calculator_service
+    )
+
+    compliance_period = "2024"
+    params = {
+        "fuelTypeId": 1,
+        "fuelCategoryId": 1,
+        "complianceUnits": 150,
+        "useCustomCi": True,
+        "customCiValue": 60.5,
+    }
+
+    url = fastapi_app.url_path_for(
+        "get_quantity_from_compliance_units", compliance_period=compliance_period
+    )
+    response = await client.get(url, params=params)
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_calculator_service.get_quantity_from_compliance_units.assert_called_once_with(
+        compliance_period,
+        params["fuelTypeId"],
+        params["fuelCategoryId"],
+        None,
+        None,
+        params["complianceUnits"],
+        True,
+        params["customCiValue"],
     )
 
 

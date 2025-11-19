@@ -90,6 +90,8 @@ async def get_calculated_data(
         query.end_use_id,
         query.fuel_code_id,
         query.quantity,
+        query.use_custom_ci,
+        query.custom_ci_value,
     )
 
 
@@ -113,4 +115,6 @@ async def get_quantity_from_compliance_units(
         query.end_use_id,
         query.fuel_code_id,
         query.compliance_units,
+        query.use_custom_ci,
+        query.custom_ci_value,
     )

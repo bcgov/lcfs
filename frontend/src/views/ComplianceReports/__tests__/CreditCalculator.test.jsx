@@ -33,6 +33,7 @@ const mockT = vi.fn((key, options) => {
     'report:selectFuelType': 'Select Fuel Type',
     'report:endUse': 'End Use',
     'report:ciLabel': 'Determining carbon intensity',
+    'report:customCiOption': 'Custom CI',
     'report:fuelCodeLabel': 'Fuel code',
     'report:qtySuppliedLabel': 'Quantity supplied',
     'report:formulaBefore2024': 'Compliance units = (TCI * EER - RCI) * EC / 1,000,000',

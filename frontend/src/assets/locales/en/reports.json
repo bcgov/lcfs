@@ -274,6 +274,7 @@
   "selectFuelType": "Select fuel type",
   "endUse": "End use",
   "ciLabel": "Determining carbon intensity",
+  "customCiOption": "Custom CI",
   "fuelCodeLabel": "Fuel code",
   "qtySuppliedLabel": "Enter quantity supplied in L",
   "quantitySuppliedcu": "or enter compliance units",

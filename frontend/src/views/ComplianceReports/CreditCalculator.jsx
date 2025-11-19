@@ -36,6 +36,8 @@ import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { copyToClipboard } from '@/utils/clipboard'
 
+const CUSTOM_CI_OPTION_VALUE = 'customCi'
+
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
   const ciParameterLabels = useMemo(
@@ -102,7 +104,8 @@ export const CreditCalculator = () => {
       quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
       endUseType: '',
-      complianceUnits: ''
+      complianceUnits: '',
+      customCi: ''
     }
   })
 
@@ -124,15 +127,19 @@ export const CreditCalculator = () => {
     quantity,
     fuelCode,
     fuelType,
-    complianceUnits
+    complianceUnits,
+    customCi
   } = watchedValues
+
+  const isCustomCiSelected = provisionOfTheAct === CUSTOM_CI_OPTION_VALUE
+  const customCiValue =
+    isCustomCiSelected && customCi !== '' ? customCi : undefined
 
   // State for selected items from lists
   const [calculatedResults, setCalculatedResults] = useState(null)
   const [activeCalculatorMode, setActiveCalculatorMode] = useState('quantity')
   const [syncingField, setSyncingField] = useState(null)
   const syncingFieldRef = useRef(null)
-  console.log(calculatedResults)
   const [copySuccess, setCopySuccess] = useState(false)
 
   const { data: fuelTypeListData, isLoading: isFuelTypeListLoading } =
@@ -190,15 +197,33 @@ export const CreditCalculator = () => {
 
     return Array.from(uniqueEndUses.values())
   }, [fuelTypeOptions])
+  const customCiOption = useMemo(
+    () => ({
+      label: t('report:customCiOption'),
+      value: CUSTOM_CI_OPTION_VALUE
+    }),
+    [t]
+  )
 
   const provisionOptions = useMemo(() => {
-    return (
+    const options =
       fuelTypeOptions?.data?.provisions?.map((provision) => ({
         label: provision.name,
         value: provision.name
       })) || []
+
+    if (!fuelType) {
+      return options
+    }
+
+    return [...options, customCiOption]
+  }, [fuelTypeOptions, customCiOption, fuelType])
+
+  const baseProvisionOptions = useMemo(() => {
+    return provisionOptions.filter(
+      (option) => option.value !== CUSTOM_CI_OPTION_VALUE
     )
-  }, [fuelTypeOptions])
+  }, [provisionOptions])
 
   const selectedProvision = useMemo(() => {
     if (!provisionOfTheAct) return null
@@ -219,6 +244,7 @@ export const CreditCalculator = () => {
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
       setValue('quantity', DEFAULT_QUANTITY)
+      setValue('customCi', '')
       setActiveCalculatorMode('quantity')
     }
   }, [fuelType, setValue, fuelCategory])
@@ -228,6 +254,7 @@ export const CreditCalculator = () => {
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
       setValue('quantity', DEFAULT_QUANTITY)
+      setValue('customCi', '')
       setActiveCalculatorMode('quantity')
     }
   }, [endUseType, setValue])
@@ -241,14 +268,15 @@ export const CreditCalculator = () => {
   useEffect(() => {
     if (provisionOfTheAct) {
       setValue('fuelCode', '')
+      setValue('customCi', '')
     }
   }, [provisionOfTheAct, setValue])
 
   useEffect(() => {
-    if (provisionOptions.length === 1 && !provisionOfTheAct) {
-      setValue('provisionOfTheAct', provisionOptions[0].value)
+    if (baseProvisionOptions.length === 1 && !provisionOfTheAct) {
+      setValue('provisionOfTheAct', baseProvisionOptions[0].value)
     }
-  }, [provisionOptions, provisionOfTheAct, setValue])
+  }, [baseProvisionOptions, provisionOfTheAct, setValue])
 
   // Calculate credits when form values change
   const fuelTypeId = selectedFuelObj?.fuelTypeId
@@ -267,6 +295,8 @@ export const CreditCalculator = () => {
       fuelCodeId: fuelTypeOptions?.data?.fuelCodes?.find(
         (f) => f.fuelCode === fuelCode
       )?.fuelCodeId,
+      useCustomCi: isCustomCiSelected,
+      customCiValue,
       enabled: false
     })
 
@@ -282,17 +312,23 @@ export const CreditCalculator = () => {
     fuelCodeId: fuelTypeOptions?.data?.fuelCodes?.find(
       (f) => f.fuelCode === fuelCode
     )?.fuelCodeId,
+    useCustomCi: isCustomCiSelected,
+    customCiValue,
     enabled: false
   })
 
   useEffect(() => {
+    const hasCustomCiValue =
+      !isCustomCiSelected || customCi === 0 || Boolean(customCi)
+
     const hasBaseCriteria =
       Boolean(complianceYear) &&
       Boolean(fuelCategoryId) &&
       Boolean(fuelTypeId) &&
       Boolean(endUseId) &&
       (provisionOfTheAct !== 'Fuel code - section 19 (b) (i)' ||
-        Boolean(fuelCode))
+        Boolean(fuelCode)) &&
+      hasCustomCiValue
 
     const hasQuantityValue = quantity === 0 || Boolean(quantity)
     const hasComplianceUnitsValue =
@@ -327,7 +363,9 @@ export const CreditCalculator = () => {
     provisionOfTheAct,
     fuelCode,
     refetchCalculatedData,
-    refetchCalculatedQuantityData
+    refetchCalculatedQuantityData,
+    customCi,
+    isCustomCiSelected
   ])
 
   useEffect(() => {
@@ -378,6 +416,14 @@ export const CreditCalculator = () => {
     return () => cancelAnimationFrame(frame)
   }, [syncingField])
 
+  const provisionDisplayLabel = useMemo(() => {
+    if (!provisionOfTheAct) return 'N/A'
+    if (provisionOfTheAct === CUSTOM_CI_OPTION_VALUE) {
+      return t('report:customCiOption')
+    }
+    return provisionOfTheAct
+  }, [provisionOfTheAct, t])
+
   // Handle form reset
   const handleClear = () => {
     reset({
@@ -388,7 +434,8 @@ export const CreditCalculator = () => {
       quantity: DEFAULT_QUANTITY,
       fuelCategory: '',
       endUseType: '',
-      complianceUnits: ''
+      complianceUnits: '',
+      customCi: ''
     })
     setCalculatedResults(null)
     setActiveCalculatorMode('quantity')
@@ -399,7 +446,7 @@ export const CreditCalculator = () => {
       const copyText = `Compliance Year: ${complianceYear}
 Selected fuel type: ${fuelType || 'N/A'}
 End use: ${endUseType || 'N/A'}
-Determining carbon intensity: ${provisionOfTheAct || 'N/A'}
+Determining carbon intensity: ${provisionDisplayLabel}
 Fuel code: ${fuelCode || 'N/A'}
 
 Quantity supplied: ${quantity?.toLocaleString() || 0} ${unit}
@@ -672,15 +719,49 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   </FormControl>
                   <FormControl>
                     <BCTypography variant="label" component="span">
-                      Carbon intensity
+                      Custom CI
                     </BCTypography>
-                    <TextField
-                      id="carbon-intensity-display"
-                      value={carbonIntensityDisplayValue}
-                      placeholder="N/A"
-                      size="small"
-                      sx={{ mt: 1 }}
-                      disabled
+                    <Controller
+                      name="customCi"
+                      control={control}
+                      render={({
+                        field: { onChange, onBlur, value, name, ref }
+                      }) =>
+                        isCustomCiSelected ? (
+                          <NumericFormat
+                            id="carbon-intensity-input"
+                            customInput={TextField}
+                            name={name}
+                            inputRef={ref}
+                            value={value ?? ''}
+                            onValueChange={(vals) => {
+                              onChange(
+                                typeof vals.floatValue === 'number'
+                                  ? Number(vals.floatValue.toFixed(2))
+                                  : ''
+                              )
+                            }}
+                            onBlur={onBlur}
+                            placeholder="0.00"
+                            size="small"
+                            sx={{ mt: 1 }}
+                            decimalScale={2}
+                            fixedDecimalScale
+                            allowNegative={false}
+                            error={!!errors.customCi}
+                            helperText={errors.customCi?.message}
+                          />
+                        ) : (
+                          <TextField
+                            id="carbon-intensity-display"
+                            value={carbonIntensityDisplayValue}
+                            placeholder="N/A"
+                            size="small"
+                            sx={{ mt: 1 }}
+                            disabled
+                          />
+                        )
+                      }
                     />
                   </FormControl>
                 </Stack>

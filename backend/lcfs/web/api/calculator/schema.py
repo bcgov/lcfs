@@ -20,6 +20,8 @@ class CalculatorQueryParams(BaseSchema):
     end_use_id: Optional[int] = Field(None, alias="endUseId")
     quantity: float
     fuel_code_id: Optional[int] = Field(None, alias="fuelCodeId")
+    use_custom_ci: bool = Field(False, alias="useCustomCi")
+    custom_ci_value: Optional[float] = Field(None, alias="customCiValue")
 
 
 class CalculatorQuantityQueryParams(BaseSchema):
@@ -28,6 +30,8 @@ class CalculatorQuantityQueryParams(BaseSchema):
     end_use_id: Optional[int] = Field(None, alias="endUseId")
     compliance_units: float = Field(..., alias="complianceUnits")
     fuel_code_id: Optional[int] = Field(None, alias="fuelCodeId")
+    use_custom_ci: bool = Field(False, alias="useCustomCi")
+    custom_ci_value: Optional[float] = Field(None, alias="customCiValue")
 
 
 class CreditsResultSchema(BaseSchema):

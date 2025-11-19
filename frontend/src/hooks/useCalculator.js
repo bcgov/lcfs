@@ -67,6 +67,8 @@ export const useCalculateComplianceUnits = ({
   endUseId,
   quantity,
   fuelCodeId,
+  useCustomCi = false,
+  customCiValue,
   enabled = true
 }) => {
   const client = useApiService()
@@ -78,7 +80,9 @@ export const useCalculateComplianceUnits = ({
       fuelTypeId,
       endUseId,
       quantity,
-      fuelCodeId
+      fuelCodeId,
+      useCustomCi,
+      customCiValue
     ],
     queryFn: () =>
       client.get(
@@ -92,7 +96,9 @@ export const useCalculateComplianceUnits = ({
             fuelTypeId,
             endUseId,
             quantity,
-            fuelCodeId
+            fuelCodeId,
+            useCustomCi,
+            ...(customCiValue !== undefined && { customCiValue })
           }
         }
       ),
@@ -116,6 +122,8 @@ export const useCalculateQuantityFromComplianceUnits = ({
   endUseId,
   complianceUnits,
   fuelCodeId,
+  useCustomCi = false,
+  customCiValue,
   enabled = true
 }) => {
   const client = useApiService()
@@ -127,7 +135,9 @@ export const useCalculateQuantityFromComplianceUnits = ({
       fuelTypeId,
       endUseId,
       complianceUnits,
-      fuelCodeId
+      fuelCodeId,
+      useCustomCi,
+      customCiValue
     ],
     queryFn: () =>
       client.get(
@@ -141,7 +151,9 @@ export const useCalculateQuantityFromComplianceUnits = ({
             fuelTypeId,
             endUseId,
             complianceUnits,
-            fuelCodeId
+            fuelCodeId,
+            useCustomCi,
+            ...(customCiValue !== undefined && { customCiValue })
           }
         }
       ),

@@ -366,6 +366,34 @@ async def test_get_calculated_data_legacy_period(calculator_service, mock_fuel_r
 
 
 @pytest.mark.anyio
+async def test_get_calculated_data_with_custom_ci(calculator_service, mock_fuel_repo):
+    with patch.object(LCFS_Constants, "LEGISLATION_TRANSITION_YEAR", "2024"):
+        mock_fuel_data = MagicMock()
+        mock_fuel_data.target_ci = 90.0
+        mock_fuel_data.eer = 1.0
+        mock_fuel_data.effective_carbon_intensity = 45.0
+        mock_fuel_data.uci = 5.0
+        mock_fuel_data.energy_density = 38.5
+        mock_fuel_repo.get_standardized_fuel_data.return_value = mock_fuel_data
+
+        with patch(
+            "lcfs.web.api.calculator.services.calculate_compliance_units",
+            return_value=120,
+        ):
+            result = await calculator_service.get_calculated_data(
+                "2024", 1, 1, 1, 1, 1000, True, 60.5
+            )
+
+            assert result.rci == 60.5
+
+            from lcfs.web.api.calculator.services import calculate_compliance_units
+
+            calculate_compliance_units.assert_called_once_with(
+                TCI=90.0, EER=1.0, RCI=60.5, UCI=5.0, Q=1000, ED=38.5
+            )
+
+
+@pytest.mark.anyio
 async def test_get_calculated_data_rounds_values_correctly(
     calculator_service, mock_fuel_repo
 ):
@@ -474,5 +502,38 @@ async def test_get_quantity_from_compliance_units_legacy(
                 EER=1.0,
                 RCI=75.0,
                 compliance_units=250,
+                ED=38.5,
+            )
+
+
+@pytest.mark.anyio
+async def test_get_quantity_from_compliance_units_with_custom_ci(
+    calculator_service, mock_fuel_repo
+):
+    with patch.object(LCFS_Constants, "LEGISLATION_TRANSITION_YEAR", "2024"):
+        mock_fuel_data = MagicMock()
+        mock_fuel_data.target_ci = 90.0
+        mock_fuel_data.eer = 1.0
+        mock_fuel_data.effective_carbon_intensity = 65.0
+        mock_fuel_data.uci = 5.0
+        mock_fuel_data.energy_density = 38.5
+        mock_fuel_repo.get_standardized_fuel_data.return_value = mock_fuel_data
+
+        with patch(
+            "lcfs.web.api.calculator.services.calculate_quantity_from_compliance_units",
+            return_value=600,
+        ) as mock_calc:
+            result = await calculator_service.get_quantity_from_compliance_units(
+                "2024", 1, 1, 1, 1, 200, True, 55.5
+            )
+
+            assert result.rci == 55.5
+
+            mock_calc.assert_called_once_with(
+                TCI=90.0,
+                EER=1.0,
+                RCI=55.5,
+                UCI=5.0,
+                compliance_units=200,
                 ED=38.5,
             )
