@@ -43,6 +43,12 @@ class ChargingPowerOutput(BaseModel, Auditable):
         nullable=False,
         comment="Associated charging level",
     )
+    display_order = Column(
+        Integer,
+        nullable=False,
+        server_default="0",
+        comment="Priority for selecting among multiple matching rows",
+    )
     charger_power_output = Column(
         Numeric(8, 2),
         nullable=False,

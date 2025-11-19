@@ -28,6 +28,7 @@ from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import (
 from lcfs.db.seeders.dev.notification_channel_subscription_seeder import (
     seed_notification_channel_subscriptions,
 )
+from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_output
 
 logger = structlog.get_logger(__name__)
 
@@ -71,6 +72,7 @@ async def seed_dev(session: AsyncSession):
     await seed_finished_fuel_transfer_modes(session)
     await seed_feedstock_fuel_transfer_modes(session)
     await seed_notification_channel_subscriptions(session)
+    await seed_charging_power_output(session)
 
     # Update sequences after all seeders have run
     await update_sequences(session)

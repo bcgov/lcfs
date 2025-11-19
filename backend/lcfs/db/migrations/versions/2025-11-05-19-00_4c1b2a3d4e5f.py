@@ -1,8 +1,8 @@
 """Add charging power output association table
 
 Revision ID: 4c1b2a3d4e5f
-Revises: 1909a3e5fafd
-Create Date: 2025-11-05 12:00:00.000000
+Revises: 5e1a2c3d4f67
+Create Date: 2025-11-19 12:00:00.000000
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "4c1b2a3d4e5f"
-down_revision = "1909a3e5fafd"
+down_revision = "5e1a2c3d4f67"
 branch_labels = None
 depends_on = None
 
@@ -43,6 +43,13 @@ def upgrade() -> None:
             sa.Integer(),
             nullable=False,
             comment="Associated charging level",
+        ),
+        sa.Column(
+            "display_order",
+            sa.Integer(),
+            nullable=False,
+            server_default="0",
+            comment="Priority for selecting among multiple matching rows",
         ),
         sa.Column(
             "charger_power_output",
