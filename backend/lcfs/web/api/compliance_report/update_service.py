@@ -1,5 +1,4 @@
 import json
-import logging
 from typing import Tuple
 
 from fastapi import Depends, HTTPException
@@ -42,9 +41,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
-
-
-logger = logging.getLogger(__name__)
 
 
 class ComplianceReportUpdateService:
@@ -266,20 +262,8 @@ class ComplianceReportUpdateService:
         )
 
         credit_change = report.summary.line_20_surplus_deficit_units
-        logger.debug(
-            "Submitting report %s (org %s): line_20_surplus_deficit_units=%s",
-            report.compliance_report_id,
-            report.organization_id,
-            credit_change,
-        )
         reserve_units = await self._create_or_update_reserve_transaction(
             credit_change, report
-        )
-        logger.debug(
-            "Post-submit reserve units for report %s (org %s): %s",
-            report.compliance_report_id,
-            report.organization_id,
-            reserve_units,
         )
         await self.repo.update_compliance_report(report)
 
@@ -374,33 +358,15 @@ class ComplianceReportUpdateService:
                 )
 
             credit_change = report.summary.line_20_surplus_deficit_units
-            logger.debug(
-                "Assessing report %s (org %s): credit_change=%s",
-                report.compliance_report_id,
-                report.organization_id,
-                credit_change,
-            )
 
             if report.transaction:
                 existing_units = report.transaction.compliance_units
-                logger.debug(
-                    "Using existing reserved units for report %s (org %s): %s",
-                    report.compliance_report_id,
-                    report.organization_id,
-                    existing_units,
-                )
                 report.transaction.transaction_action = TransactionActionEnum.Adjustment
                 report.transaction.update_user = user.keycloak_username
                 report.transaction.compliance_units = existing_units
             else:
                 capped_units = await self._create_or_update_reserve_transaction(
                     credit_change, report
-                )
-                logger.debug(
-                    "Assessment reserve units for report %s (org %s): %s",
-                    report.compliance_report_id,
-                    report.organization_id,
-                    capped_units,
                 )
 
                 if capped_units != 0:
@@ -445,20 +411,6 @@ class ComplianceReportUpdateService:
             )
             units_to_reserve = -eligible_units
 
-        logger.debug(
-            (
-                "Reserve calc for report %s (org %s): credit_change=%s, available_balance=%s, "
-                "pre_deadline_balance=%s, effective_available=%s, units_to_reserve=%s"
-            ),
-            report.compliance_report_id,
-            report.organization_id,
-            credit_change,
-            available_balance,
-            pre_deadline_balance,
-            effective_available_balance,
-            units_to_reserve,
-        )
-
         if report.transaction is not None:
             # update existing transaction
             report.transaction.compliance_units = units_to_reserve
@@ -466,12 +418,6 @@ class ComplianceReportUpdateService:
             effective_available_balance > 0 or credit_change > 0
         ):
             # Only need a Transaction if they have credits or it's a gain
-            logger.debug(
-                "Creating reserve transaction for report %s (org %s) with units %s",
-                report.compliance_report_id,
-                report.organization_id,
-                units_to_reserve,
-            )
             report.transaction = await self.org_service.adjust_balance(
                 transaction_action=TransactionActionEnum.Reserved,
                 compliance_units=units_to_reserve,
@@ -487,25 +433,12 @@ class ComplianceReportUpdateService:
         try:
             compliance_year = int(period_description)
         except (TypeError, ValueError):
-            logger.debug(
-                "Pre-deadline balance fallback for report %s (org %s) period=%s",
-                report.compliance_report_id,
-                report.organization_id,
-                period_description,
-            )
             return await self.org_service.calculate_available_balance(
                 report.organization_id
             )
 
         pre_deadline_balance = await self.org_service.calculate_available_balance_for_period(
             report.organization_id, compliance_year
-        )
-        logger.debug(
-            "Pre-deadline balance for report %s (org %s) year %s: %s",
-            report.compliance_report_id,
-            report.organization_id,
-            compliance_year,
-            pre_deadline_balance,
         )
         return pre_deadline_balance
 
