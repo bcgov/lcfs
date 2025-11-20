@@ -330,7 +330,9 @@ export const BCGridEditor = ({
 
   const onSaveExit = useCallback(async () => {
     const api = ref.current?.api
-    api?.stopEditing()
+    if (typeof api?.stopEditing === 'function') {
+      api.stopEditing()
+    }
 
     const pendingSaveSucceeded = await waitForPendingSave()
     if (!pendingSaveSucceeded) {
