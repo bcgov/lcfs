@@ -473,7 +473,7 @@ class FinalSupplyEquipmentServices:
         # Process data to set fields to None if compliance_report_id doesn't match
         processed_data = []
         for item in data:
-            row_dict = dict(item._mapping)
+            row_dict = dict(item._mapping) if hasattr(item, '_mapping') else dict(item)
             power_value = await self.repo.get_charging_power_output(
                 row_dict.get("level_of_equipment_id"),
                 row_dict.get("intended_uses") or [],

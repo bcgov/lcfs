@@ -26,11 +26,13 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   }
 }))
 
+const mockFinalSupplyEquipmentSummaryColDefs = vi.fn(() => [
+  { field: 'organizationName', headerName: 'Organization' },
+  { field: 'serialNbr', headerName: 'Serial Number' }
+])
+
 vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
-  finalSupplyEquipmentSummaryColDefs: vi.fn(() => [
-    { field: 'organizationName', headerName: 'Organization' },
-    { field: 'serialNbr', headerName: 'Serial Number' }
-  ])
+  finalSupplyEquipmentSummaryColDefs: mockFinalSupplyEquipmentSummaryColDefs
 }))
 
 const mockUseCurrentUser = vi.fn()
@@ -176,7 +178,7 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(screen.getByTestId('form-control-label')).toBeInTheDocument()
       expect(screen.getByText('Show Map')).toBeInTheDocument()
       expect(
-        finalSupplyEquipmentSummaryColDefs
+        mockFinalSupplyEquipmentSummaryColDefs
       ).toHaveBeenCalledWith(expect.any(Function), COMPLIANCE_REPORT_STATUSES.DRAFT, false)
     })
 
@@ -191,7 +193,7 @@ describe('FinalSupplyEquipmentSummary', () => {
       hasAnyRole: () => true
     })
     renderComponent()
-    expect(finalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
+    expect(mockFinalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
       expect.any(Function),
       COMPLIANCE_REPORT_STATUSES.DRAFT,
       true
