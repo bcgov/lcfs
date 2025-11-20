@@ -26,10 +26,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   }
 }))
 
-const mockFinalSupplyEquipmentSummaryColDefs = vi.fn(() => [
-  { field: 'organizationName', headerName: 'Organization' },
-  { field: 'serialNbr', headerName: 'Serial Number' }
-])
+const mockFinalSupplyEquipmentSummaryColDefs = vi.hoisted(() =>
+  vi.fn(() => [
+    { field: 'organizationName', headerName: 'Organization' },
+    { field: 'serialNbr', headerName: 'Serial Number' }
+  ])
+)
 
 vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
   finalSupplyEquipmentSummaryColDefs: mockFinalSupplyEquipmentSummaryColDefs

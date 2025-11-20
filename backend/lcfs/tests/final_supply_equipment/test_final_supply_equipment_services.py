@@ -401,7 +401,7 @@ async def test_get_fse_reporting_list_paginated_success(
             "latitude": 49.2827,
             "longitude": -123.1207,
             "level_of_equipment": "Level 2",
-            "level_of_equipment_internal_id": 22,
+            "level_of_equipment_id": 22,
             "intended_uses": ["LDV"],
             "intended_users": ["Residential"],
         }
@@ -463,14 +463,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
         "deleted": None,
     }
     mock_repo.get_fse_reporting_list_paginated.return_value = ([mock_row], 1)
-    mock_repo.get_charging_power_outputs.return_value = [
-        MagicMock(
-            level_of_equipment_id=303,
-            end_use_type_id=101,
-            end_user_type_id=202,
-            charger_power_output=50,
-        )
-    ]
+    mock_repo.get_charging_power_output.return_value = 50
     mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
         compliance_report_group_uuid="uuid-1234"
     )

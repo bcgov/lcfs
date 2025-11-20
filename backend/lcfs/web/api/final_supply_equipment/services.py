@@ -474,8 +474,11 @@ class FinalSupplyEquipmentServices:
         processed_data = []
         for item in data:
             row_dict = dict(item._mapping) if hasattr(item, '_mapping') else dict(item)
+            level_id = row_dict.get("level_of_equipment_id") or row_dict.get(
+                "level_of_equipment_internal_id"
+            )
             power_value = await self.repo.get_charging_power_output(
-                row_dict.get("level_of_equipment_id"),
+                level_id,
                 row_dict.get("intended_uses") or [],
                 row_dict.get("intended_users") or [],
             )
