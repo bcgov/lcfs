@@ -20,7 +20,7 @@ class AllocationAgreementValidator(BaseValidator):
         # 1. Compare record counts
         results["record_counts"] = self.compare_record_counts(
             source_query="SELECT COUNT(*) FROM compliance_report_exclusion_agreement_record",
-            dest_query="SELECT COUNT(*) FROM allocation_agreement WHERE user_type = 'SUPPLIER'",
+            dest_query="SELECT COUNT(*) FROM allocation_agreement WHERE create_user = 'ETL'",
         )
 
         # 2. Sample validation
@@ -39,13 +39,13 @@ class AllocationAgreementValidator(BaseValidator):
                 "quantity",
                 "quantity_not_sold",
             ],
-            where_clause="WHERE user_type = 'SUPPLIER'",
+            where_clause="WHERE create_user = 'ETL'",
         )
 
         # 5. Version chain validation
         results["version_chains"] = self.validate_version_chains(
             table_name="allocation_agreement",
-            where_clause="WHERE user_type = 'SUPPLIER'",
+            where_clause="WHERE create_user = 'ETL'",
         )
 
         # 6. Action type distribution
@@ -128,7 +128,7 @@ class AllocationAgreementValidator(BaseValidator):
             SELECT att.type, COUNT(*) AS count
             FROM allocation_agreement aa
             JOIN allocation_transaction_type att ON att.allocation_transaction_type_id = aa.allocation_transaction_type_id
-            WHERE aa.user_type = 'SUPPLIER'
+            WHERE aa.create_user = 'ETL'
             GROUP BY att.type
             ORDER BY count DESC
         """
@@ -151,7 +151,7 @@ class AllocationAgreementValidator(BaseValidator):
         query = """
             SELECT action_type, COUNT(*) as count
             FROM allocation_agreement
-            WHERE user_type = 'SUPPLIER'
+            WHERE create_user = 'ETL'
             GROUP BY action_type
         """
 
@@ -174,11 +174,11 @@ class AllocationAgreementValidator(BaseValidator):
             SELECT COUNT(*) as count
             FROM allocation_agreement aa
             JOIN compliance_report cr ON cr.compliance_report_id = aa.compliance_report_id
-            WHERE aa.user_type != 'SUPPLIER'
+            WHERE aa.create_user != 'ETL'
             AND EXISTS (
-                SELECT 1 FROM allocation_agreement aa2 
-                WHERE aa2.group_uuid = aa.group_uuid 
-                AND aa2.user_type = 'SUPPLIER'
+                SELECT 1 FROM allocation_agreement aa2
+                WHERE aa2.group_uuid = aa.group_uuid
+                AND aa2.create_user = 'ETL'
             )
         """
 

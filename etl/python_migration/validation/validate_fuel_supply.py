@@ -51,6 +51,7 @@ class FuelSupplyValidator(BaseValidator):
         results["new_period_impact"] = self.check_new_period_impact(
             table_name="fuel_supply fs JOIN compliance_report cr ON cr.compliance_report_id = fs.compliance_report_id",
             user_filter="",
+            table_prefix="fs.",
         )
 
         return results
@@ -308,6 +309,64 @@ class FuelSupplyValidator(BaseValidator):
         self.logger.info(f"\nDuplicate records check: {status}")
 
         return duplicate_count
+
+    def log_validation_results(self, results: Dict[str, Any]):
+        """Override to handle nested record_counts structure."""
+        validation_name = self.get_validation_name()
+        self.logger.info(f"**** BEGIN {validation_name.upper()} VALIDATION ****")
+
+        # Handle nested record counts structure (standard + ghgenius)
+        if "record_counts" in results:
+            counts = results["record_counts"]
+            if "standard" in counts:
+                std = counts["standard"]
+                self.logger.info(f"Source record count: {std['source_count']}")
+                self.logger.info(f"Destination record count: {std['dest_count']}")
+                self.logger.info(f"Difference: {std['difference']}")
+            else:
+                # Fallback to flat structure
+                self.logger.info(f"Source record count: {counts['source_count']}")
+                self.logger.info(f"Destination record count: {counts['dest_count']}")
+                self.logger.info(f"Difference: {counts['difference']}")
+
+        # Sample validation
+        if "sample_validation" in results:
+            sample = results["sample_validation"]
+            self.logger.info(
+                f"Found {sample['matches']}/{sample['total']} matching records"
+            )
+
+        # NULL value checks
+        if "null_checks" in results:
+            self.logger.info("\nData anomalies check:")
+            for field, count in results["null_checks"].items():
+                self.logger.info(f"Records with {field}: {count}")
+
+        # Version chains
+        if "version_chains" in results:
+            chains = results["version_chains"]
+            self.logger.info(f"\nVersion chain validation:")
+            if chains:
+                for chain in chains:
+                    self.logger.info(
+                        f"Group {chain['group_uuid']}: {chain['version_count']} versions "
+                        f"({chain['min_version']} to {chain['max_version']})"
+                    )
+            else:
+                self.logger.info("No version chains found")
+
+        # New period impact
+        if "new_period_impact" in results:
+            impact = results["new_period_impact"]
+            self.logger.info(f"\nNew period records impacted: {impact}")
+            if impact > 0:
+                self.logger.error(
+                    f"WARNING: {impact} records from the latest reporting period were modified by ETL process"
+                )
+            else:
+                self.logger.info("✓ No latest reporting period records were modified")
+
+        self.logger.info(f"**** END {validation_name.upper()} VALIDATION ****")
 
 
 if __name__ == "__main__":

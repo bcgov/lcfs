@@ -63,6 +63,7 @@ class OtherUsesValidator(BaseValidator):
         results["new_period_impact"] = self.check_new_period_impact(
             table_name="other_uses ou JOIN compliance_report cr ON cr.compliance_report_id = ou.compliance_report_id",
             user_filter="",
+            table_prefix="ou.",
         )
 
         return results

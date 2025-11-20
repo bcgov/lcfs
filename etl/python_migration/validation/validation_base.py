@@ -138,13 +138,13 @@ class BaseValidator(ABC):
 
         return version_chains
 
-    def check_new_period_impact(self, table_name: str, user_filter: str) -> int:
+    def check_new_period_impact(self, table_name: str, user_filter: str, table_prefix: str = "") -> int:
         """Check if any new-period records were impacted by ETL."""
         query = f"""
             SELECT COUNT(*) as count
             FROM {table_name}
-            WHERE create_user != 'ETL'
-            AND update_user = 'ETL'
+            WHERE {table_prefix}create_user != 'ETL'
+            AND {table_prefix}update_user = 'ETL'
             {user_filter}
         """
 

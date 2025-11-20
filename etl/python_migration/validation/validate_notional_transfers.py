@@ -20,7 +20,7 @@ class NotionalTransferValidator(BaseValidator):
         # 1. Compare record counts
         results["record_counts"] = self.compare_record_counts(
             source_query="SELECT COUNT(*) FROM compliance_report_schedule_a_record",
-            dest_query="SELECT COUNT(*) FROM notional_transfer WHERE user_type::text = 'SUPPLIER'",
+            dest_query="SELECT COUNT(*) FROM notional_transfer WHERE create_user = 'ETL'",
         )
 
         # 2. Sample validation
@@ -35,7 +35,7 @@ class NotionalTransferValidator(BaseValidator):
                 "received_or_transferred",
                 "quantity",
             ],
-            where_clause="WHERE user_type::text = 'SUPPLIER'",
+            where_clause="WHERE create_user = 'ETL'",
         )
 
         # 4. Transfer type mapping validation
@@ -44,7 +44,7 @@ class NotionalTransferValidator(BaseValidator):
         # 5. Version chain validation
         results["version_chains"] = self.validate_version_chains(
             table_name="notional_transfer",
-            where_clause="WHERE user_type::text = 'SUPPLIER'",
+            where_clause="WHERE create_user = 'ETL'",
         )
 
         # 6. Duplicate record check
@@ -133,7 +133,7 @@ class NotionalTransferValidator(BaseValidator):
         query = """
             SELECT received_or_transferred::text, COUNT(*) as count
             FROM notional_transfer
-            WHERE user_type::text = 'SUPPLIER'
+            WHERE create_user = 'ETL'
             GROUP BY received_or_transferred
         """
 
@@ -155,10 +155,10 @@ class NotionalTransferValidator(BaseValidator):
     def check_duplicate_records(self) -> int:
         """Check for duplicate records within same compliance report."""
         query = """
-            SELECT compliance_report_id, legal_name, quantity, received_or_transferred::text, 
+            SELECT compliance_report_id, legal_name, quantity, received_or_transferred::text,
                    COUNT(*) as count
             FROM notional_transfer
-            WHERE version = 0 AND user_type::text = 'SUPPLIER'
+            WHERE version = 0 AND create_user = 'ETL'
             GROUP BY compliance_report_id, legal_name, quantity, received_or_transferred
             HAVING COUNT(*) > 1
             LIMIT 10
@@ -193,11 +193,11 @@ class NotionalTransferValidator(BaseValidator):
             SELECT COUNT(*) as count
             FROM notional_transfer nt
             JOIN compliance_report cr ON cr.compliance_report_id = nt.compliance_report_id
-            WHERE nt.user_type::text != 'SUPPLIER'
+            WHERE nt.create_user != 'ETL'
             AND EXISTS (
-                SELECT 1 FROM notional_transfer nt2 
-                WHERE nt2.group_uuid = nt.group_uuid 
-                AND nt2.user_type::text = 'SUPPLIER'
+                SELECT 1 FROM notional_transfer nt2
+                WHERE nt2.group_uuid = nt.group_uuid
+                AND nt2.create_user = 'ETL'
             )
         """
 

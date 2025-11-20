@@ -12,8 +12,9 @@ set -e
 #
 # Example commands:
 # . data-transfer-enhanced.sh lcfs dev export 398cd4661173 compliance_report_history
-# . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-2983-postgresql-0 export 398cd4661173
+# . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-3509-postgresql-0 export 7392074e64b7
 # . data-transfer-enhanced.sh tfrs prod import 398cd4661173
+# ./data-transfer-enhanced.sh lcfs prod import 78eb96b8fc7f
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Passed $# parameters. Expected 4 or 5."
@@ -166,17 +167,26 @@ if [ -n "$custom_pod_name" ]; then
     
     # Auto-detect database credentials for custom pods
     print_status "Auto-detecting database credentials..."
-    pod_env=$(oc exec $pod_name -- env 2>/dev/null | grep -E "POSTGRES_USER|POSTGRES_PASSWORD|POSTGRES_DATABASE" || true)
-    
-    if echo "$pod_env" | grep -q "POSTGRES_PASSWORD="; then
+    pod_env=$(oc exec $pod_name -- env 2>/dev/null | grep -E "POSTGRES_USER|POSTGRES_PASSWORD|POSTGRES_DATABASE|POSTGRES_POSTGRES_PASSWORD" || true)
+
+    # Check for postgres superuser password first (POSTGRES_POSTGRES_PASSWORD)
+    if echo "$pod_env" | grep -q "POSTGRES_POSTGRES_PASSWORD="; then
+        detected_password=$(echo "$pod_env" | grep "POSTGRES_POSTGRES_PASSWORD=" | cut -d'=' -f2 || echo "")
+        detected_database=$(echo "$pod_env" | grep "POSTGRES_DATABASE=" | cut -d'=' -f2 || echo "$db_name")
+
+        if [ -n "$detected_password" ]; then
+            remote_db_user="postgres"
+            remote_db_password="$detected_password"
+            db_name="$detected_database"
+            print_status "Detected credentials - User: $remote_db_user, Database: $db_name, Password: [HIDDEN]"
+        fi
+    elif echo "$pod_env" | grep -q "POSTGRES_PASSWORD="; then
+        # Fallback to regular POSTGRES_PASSWORD if postgres-specific one not found
         detected_password=$(echo "$pod_env" | grep "POSTGRES_PASSWORD=" | cut -d'=' -f2 || echo "")
         detected_database=$(echo "$pod_env" | grep "POSTGRES_DATABASE=" | cut -d'=' -f2 || echo "$db_name")
-        
-        # For custom pods, use 'postgres' as the default superuser with detected password
+
         if [ -n "$detected_password" ]; then
-            detected_user=$(echo "$pod_env" | grep "POSTGRES_USER=" | cut -d'=' -f2 || echo "postgres")
-            remote_db_user="$detected_user"  # Use the detected user instead of hardcoded "postgres"
-            # remote_db_user="postgres"
+            remote_db_user="postgres"
             remote_db_password="$detected_password"
             db_name="$detected_database"
             print_status "Detected credentials - User: $remote_db_user, Database: $db_name, Password: [HIDDEN]"

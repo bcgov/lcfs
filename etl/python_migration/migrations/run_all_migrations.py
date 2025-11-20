@@ -28,6 +28,7 @@ from .migrate_other_uses import OtherUsesMigrator
 from .migrate_notional_transfers import NotionalTransferMigrator
 from .migrate_fuel_supply import FuelSupplyMigrator
 from .migrate_orphaned_allocation_agreements import OrphanedAllocationAgreementMigrator
+from .migrate_restore_timestamps import TimestampRestoreMigrator
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,10 @@ class MigrationRunner:
             (
                 OrphanedAllocationAgreementMigrator,
                 "Orphaned Allocation Agreement Migration",
+            ),
+            (
+                TimestampRestoreMigrator,
+                "Timestamp Restoration (Post-migration)",
             ),
         ]
 

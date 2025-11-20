@@ -189,7 +189,7 @@ jobs:
             yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-            yq -i eval '(.env[] | select(.name == "LCFS_S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_S3_ENDPOINT") | .value) = "http://lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local:9000"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_S3_SECRET_KEY") | .valueFrom.secretKeyRef.name) = "lcfs-minio-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_RABBITMQ_TRANSACTION_QUEUE") | .value) = "transaction_queue_${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
 
