@@ -87,6 +87,7 @@ class FinalSupplyEquipmentsSchema(BaseSchema):
 class FSEReportingSchema(BaseSchema):
     charging_equipment_compliance_id: Optional[int] = None
     charging_equipment_id: int
+    charging_equipment_version: Optional[int] = None
     charging_site_id: int
     serial_number: str
     manufacturer: str
@@ -120,6 +121,7 @@ class FSEReportingBaseSchema(BaseSchema):
     kwh_usage: Optional[float] = 0
     compliance_notes: Optional[str] = None
     charging_equipment_id: int
+    charging_equipment_version: Optional[int] = None
     organization_id: int
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str] = None

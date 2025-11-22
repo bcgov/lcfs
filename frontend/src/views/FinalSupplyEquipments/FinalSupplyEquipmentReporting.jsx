@@ -190,7 +190,9 @@ export const FinalSupplyEquipmentReporting = () => {
           !currentSelection.has(node.data.chargingEquipmentId) &&
           node.data.chargingEquipmentComplianceId
         ) {
-          newlyUnselected.push(parseInt(node.data.chargingEquipmentComplianceId))
+          newlyUnselected.push(
+            parseInt(node.data.chargingEquipmentComplianceId)
+          )
           newlyUnselectedEquipmentIds.push(node.data.chargingEquipmentId)
         }
       })
@@ -204,9 +206,11 @@ export const FinalSupplyEquipmentReporting = () => {
             kwhUsage: node.data.kwhUsage,
             complianceNotes: null,
             chargingEquipmentId: node.data.chargingEquipmentId,
+            chargingEquipmentVersion: node.data.chargingEquipmentVersion,
             organizationId: reportData?.report?.organizationId,
             complianceReportId,
-            complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid
+            complianceReportGroupUuid:
+              reportData?.report?.complianceReportGroupUuid
           }))
 
           const response = await saveRow(newRows)
@@ -223,7 +227,8 @@ export const FinalSupplyEquipmentReporting = () => {
               supplyFromDate: defaultFromDate,
               supplyToDate: defaultToDate,
               complianceReportId: parseInt(complianceReportId),
-              complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
+              complianceReportGroupUuid:
+                reportData?.report?.complianceReportGroupUuid,
               complianceNotes: null
             })
           })
@@ -244,6 +249,7 @@ export const FinalSupplyEquipmentReporting = () => {
               kwhUsage: node.data.kwhUsage,
               complianceNotes: null,
               chargingEquipmentId: node.data.chargingEquipmentId,
+              chargingEquipmentVersion: node.data.chargingEquipmentVersion,
               organizationId: reportData?.report?.organizationId,
               complianceReportId: null
             })
@@ -299,7 +305,10 @@ export const FinalSupplyEquipmentReporting = () => {
         pinned: 'left'
       },
       onSelectionChanged: (event) => handleSelectionChanged(event.api),
-      getRowId: (params) => params.data.chargingEquipmentId,
+      getRowId: (params) =>
+        params.data.chargingEquipmentId +
+        '-' +
+        params.data.chargingEquipmentVersion,
       stopEditingWhenCellsLoseFocus: false
     }),
     [handleSelectionChanged]
@@ -342,10 +351,13 @@ export const FinalSupplyEquipmentReporting = () => {
         supplyToDate: params.data.supplyToDate,
         kwhUsage: params.data.kwhUsage,
         complianceNotes: params.data.complianceNotes,
-        chargingEquipmentComplianceId: params.data.chargingEquipmentComplianceId,
+        chargingEquipmentComplianceId:
+          params.data.chargingEquipmentComplianceId,
         chargingEquipmentId: params.data.chargingEquipmentId,
+        chargingEquipmentVersion: params.data.chargingEquipmentVersion,
         complianceReportId: parseInt(complianceReportId),
-        complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
+        complianceReportGroupUuid:
+          reportData?.report?.complianceReportGroupUuid,
         organizationId: reportData?.report?.organizationId
       }
 
@@ -424,7 +436,8 @@ export const FinalSupplyEquipmentReporting = () => {
         supplyToDate: defaultToDate,
         equipmentIds,
         complianceReportId: parseInt(complianceReportId),
-        complianceReportGroupUuid: reportData?.report?.complianceReportGroupUuid,
+        complianceReportGroupUuid:
+          reportData?.report?.complianceReportGroupUuid,
         organizationId: reportData?.report?.organizationId
       })
       fseGridAlertRef.current?.triggerAlert({
@@ -621,7 +634,7 @@ export const FinalSupplyEquipmentReporting = () => {
         gridOptions={gridOptions}
         queryData={queryData}
         dataKey="finalSupplyEquipments"
-        getRowId={(params) => String(params.data.chargingEquipmentId)}
+        getRowId={(params) => String(params.data.chargingEquipmentId + '-' + params.data.chargingEquipmentVersion)}
         onGridReady={handleGridReady}
         onCellEditingStopped={handleCellEditingStopped}
         paginationOptions={paginationOptions}
