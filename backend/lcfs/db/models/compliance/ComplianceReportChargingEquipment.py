@@ -26,6 +26,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
     __table_args__ = (
         UniqueConstraint(
             "charging_equipment_id",
+            "charging_equipment_version",
             "supply_from_date",
             "supply_to_date",
             name="uix_compliance_reporting_equipment_dates",
@@ -33,6 +34,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
         UniqueConstraint(
             "compliance_report_group_uuid",
             "charging_equipment_id",
+            "charging_equipment_version",
             "organization_id",
             name="uix_compliance_reporting_period_by_org",
         ),
@@ -59,6 +61,11 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
         nullable=False,
         comment="Reference to charging equipment",
         index=True,
+    )
+    charging_equipment_version = Column(
+        Integer,
+        nullable=False,
+        comment="Version of the referenced charging equipment when this record was created",
     )
 
     compliance_report_id = Column(
@@ -125,6 +132,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
             f"<ComplianceReportChargingEquipment("
             f"id={self.charging_equipment_compliance_id}, "
             f"charging_equipment_id={self.charging_equipment_id}, "
+            f"charging_equipment_version={self.charging_equipment_version}, "
             f"compliance_report_id={self.compliance_report_id}, "
             f"organization_id={self.organization_id}, "
             f"supply_period={self.supply_from_date} to {self.supply_to_date}"

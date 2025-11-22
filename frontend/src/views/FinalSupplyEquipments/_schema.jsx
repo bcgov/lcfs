@@ -558,7 +558,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
     ),
-    minWidth: 250,
+    minWidth: 300,
     field: 'intendedUses',
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:

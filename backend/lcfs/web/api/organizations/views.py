@@ -1,7 +1,16 @@
 import structlog
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, status, Request, Query, HTTPException, Response
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    status,
+    Request,
+    Query,
+    HTTPException,
+    Response,
+)
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from starlette import status
@@ -442,6 +451,30 @@ async def update_current_org_credit_market_details(
     # Use the dedicated method to update only credit market fields
     return await service.update_organization_credit_market_details(
         organization_id, credit_market_data.model_dump(exclude_unset=True), request.user
+    )
+
+
+@router.put(
+    "/{organization_id}/credit-market",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def update_org_credit_market_details(
+    request: Request,
+    organization_id: int,
+    credit_market_data: OrganizationCreditMarketUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Update credit market contact details for any organization (IDIR users only).
+    Edits performed through this route skip outbound notifications.
+    """
+    return await service.update_organization_credit_market_details(
+        organization_id,
+        credit_market_data.model_dump(exclude_unset=True),
+        request.user,
+        skip_notifications=True,
     )
 
 

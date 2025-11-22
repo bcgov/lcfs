@@ -62,12 +62,12 @@ class ComplianceReportServices:
         repo: ComplianceReportRepository = Depends(),
         org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
-        final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
+        fse_service: FinalSupplyEquipmentServices = Depends(),
         document_service: DocumentService = Depends(),
         transaction_repo: TransactionRepository = Depends(),
         internal_comment_service: InternalCommentService = Depends(),
     ) -> None:
-        self.final_supply_equipment_service = final_supply_equipment_service
+        self.fse_service = fse_service
         self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
@@ -170,6 +170,8 @@ class ComplianceReportServices:
 
         # Create the history record
         await self.repo.add_compliance_report_history(report, user)
+        # Copy over all Charging equipments that were reported from previous years and those which are in Draft too.
+        await self.fse_service.copy_fse_to_new_report(report)
 
         return ComplianceReportBaseSchema.model_validate(report)
 
@@ -692,7 +694,7 @@ class ComplianceReportServices:
             == ComplianceReportStatusEnum.Analyst_adjustment.value
             for chained_report in compliance_report_chain
         )
-        
+
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
