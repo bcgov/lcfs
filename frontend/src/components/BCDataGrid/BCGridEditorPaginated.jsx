@@ -22,6 +22,12 @@ import {
   AccessibleHeader,
   BCPagination
 } from '@/components/BCDataGrid/components'
+import {
+  runOnNextFrame,
+  getGridScrollInfo as getGridScrollInfoUtil,
+  syncGridScrollPositions as syncGridScrollPositionsUtil,
+  syncCustomScrollbarToGrid as syncCustomScrollbarToGridUtil
+} from '@/components/BCDataGrid/floatingScrollbarUtils'
 
 // Styles for floating pagination
 const floatingPaginationStyles = {
@@ -134,9 +140,13 @@ export const BCGridEditorPaginated = ({
   // Pagination visibility refs and state
   const paginationRef = useRef(null)
   const gridContainerRef = useRef(null)
+  const customScrollbarRef = useRef(null)
   const [isPaginationVisible, setIsPaginationVisible] = useState(true)
   const [isGridVisible, setIsGridVisible] = useState(true)
   const [showScrollbar, setShowScrollbar] = useState(false)
+  const syncingFromGridRef = useRef(false)
+  const syncingFromCustomRef = useRef(false)
+  const [scrollContentWidth, setScrollContentWidth] = useState(null)
 
   const hasInitializedFromCache = useRef(false)
   const previousGridKey = useRef(gridKey)
@@ -176,6 +186,43 @@ export const BCGridEditorPaginated = ({
     }
   }, [props.columnDefs, showRequiredIndicator])
 
+  const getGridScrollInfo = useCallback(
+    () => getGridScrollInfoUtil(gridContainerRef),
+    [gridContainerRef]
+  )
+
+  const syncGridScrollPositions = useCallback(
+    (scrollLeft) =>
+      syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
+    [gridContainerRef]
+  )
+
+  const syncCustomScrollbarToGrid = useCallback(
+    (infoOverride) => {
+      if (!showScrollbar || !customScrollbarRef.current) return
+      syncingFromGridRef.current = true
+      syncCustomScrollbarToGridUtil({
+        gridContainerRef,
+        customScrollbarRef,
+        showScrollbar,
+        infoOverride
+      })
+      runOnNextFrame(() => {
+        syncingFromGridRef.current = false
+      })
+    },
+    [gridContainerRef, customScrollbarRef, showScrollbar]
+  )
+
+  const updateScrollMetrics = useCallback(() => {
+    const info = getGridScrollInfo()
+    if (!info) return
+
+    setScrollContentWidth((prev) =>
+      prev === info.contentWidth ? prev : info.contentWidth
+    )
+  }, [getGridScrollInfo])
+
   // Detect scrollbar need
   useEffect(() => {
     const container = gridContainerRef?.current?.querySelector(
@@ -187,8 +234,98 @@ export const BCGridEditorPaginated = ({
 
     if (container && content) {
       setShowScrollbar(content.scrollWidth > container.clientWidth)
+      if (content.scrollWidth > container.clientWidth) {
+        updateScrollMetrics()
+      }
     }
-  }, [data])
+  }, [data, updateScrollMetrics])
+
+  useEffect(() => {
+    if (!showScrollbar) return
+    updateScrollMetrics()
+
+    const handleResize = () => updateScrollMetrics()
+    window.addEventListener('resize', handleResize)
+
+    let resizeObserver
+    if (
+      typeof ResizeObserver !== 'undefined' &&
+      gridContainerRef.current
+    ) {
+      const target =
+        gridContainerRef.current.querySelector('.ag-body-horizontal-scroll') ||
+        gridContainerRef.current.querySelector('.ag-center-cols-container')
+      if (target) {
+        resizeObserver = new ResizeObserver(() => updateScrollMetrics())
+        resizeObserver.observe(target)
+      }
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      resizeObserver?.disconnect()
+    }
+  }, [showScrollbar, updateScrollMetrics])
+
+  useEffect(() => {
+    if (!showScrollbar) return
+
+    let rafId = null
+    let listeners = []
+    let handleGridScroll = null
+
+    const tryAttach = () => {
+      if (!gridContainerRef.current || !customScrollbarRef.current) {
+        rafId = requestAnimationFrame(tryAttach)
+        return
+      }
+
+      const info = getGridScrollInfo()
+      if (!info) {
+        rafId = requestAnimationFrame(tryAttach)
+        return
+      }
+
+        const { centerViewport, horizontalViewport, headerViewport } = info
+
+        handleGridScroll = () => {
+          if (syncingFromCustomRef.current) return
+
+          const latestInfo = getGridScrollInfo()
+          syncCustomScrollbarToGrid(latestInfo ?? info)
+        }
+
+      listeners = [centerViewport, horizontalViewport, headerViewport]
+        .filter(Boolean)
+        .map((element) => {
+          element.addEventListener('scroll', handleGridScroll, {
+            passive: true
+          })
+          return element
+        })
+
+        handleGridScroll()
+        updateScrollMetrics()
+      }
+
+    tryAttach()
+
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+      listeners.forEach((element) => {
+        if (handleGridScroll) {
+          element.removeEventListener('scroll', handleGridScroll)
+        }
+      })
+    }
+  }, [showScrollbar, updateScrollMetrics, getGridScrollInfo, syncCustomScrollbarToGrid])
+
+  useEffect(() => {
+    if (!showScrollbar) return
+    syncCustomScrollbarToGrid()
+  }, [showScrollbar, isPaginationFloating, data, syncCustomScrollbarToGrid])
 
   // Initialize with cached pagination options if available
   useEffect(() => {
@@ -741,29 +878,38 @@ export const BCGridEditorPaginated = ({
                 {showScrollbar && (
                   <div
                     className="custom-horizontal-scroll"
+                    ref={customScrollbarRef}
                     style={{ ...floatingScrollStyles }}
                     onScroll={(e) => {
-                      const scrollLeft = e.target.scrollLeft
-                      const centerViewport =
-                        gridContainerRef?.current?.querySelector(
-                          '.ag-center-cols-viewport'
-                        )
-                      if (centerViewport) {
-                        centerViewport.scrollLeft = scrollLeft
-                      }
+                      if (syncingFromGridRef.current) return
+                      if (!customScrollbarRef.current) return
+
+                      const customMax = Math.max(
+                        customScrollbarRef.current.scrollWidth -
+                          customScrollbarRef.current.clientWidth,
+                        0
+                      )
+                      const ratio =
+                        customMax > 0
+                          ? customScrollbarRef.current.scrollLeft / customMax
+                          : 0
+
+                      const gridInfo = getGridScrollInfo()
+                      const gridMax = gridInfo?.maxScrollLeft ?? 0
+
+                      syncingFromCustomRef.current = true
+                      syncGridScrollPositions(ratio * gridMax)
+                      runOnNextFrame(() => {
+                        syncingFromCustomRef.current = false
+                      })
                     }}
                   >
                     <div
                       style={{
-                        width: ref.current?.api
-                          ? gridContainerRef?.current?.querySelector(
-                              '.ag-body-horizontal-scroll-viewport'
-                            )?.scrollWidth ||
-                            gridContainerRef?.current?.querySelector(
-                              '.ag-header-viewport'
-                            )?.scrollWidth ||
-                            '100%'
-                          : '100%',
+                        width:
+                          scrollContentWidth ??
+                          gridContainerRef?.current?.clientWidth ??
+                          '100%',
                         height: '1px'
                       }}
                     />
