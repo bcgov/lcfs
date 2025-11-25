@@ -67,6 +67,8 @@ class ChargingEquipmentCreateSchema(BaseSchema):
     model: Optional[str] = Field(None, max_length=100)
     level_of_equipment_id: int
     ports: Optional[PortsEnum] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     notes: Optional[str] = None
     intended_use_ids: Optional[List[int]] = []
     intended_user_ids: Optional[List[int]] = []
