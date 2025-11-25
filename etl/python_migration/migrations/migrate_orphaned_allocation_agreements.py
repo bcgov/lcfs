@@ -49,9 +49,16 @@ class OrphanedAllocationAgreementMigrator:
             /*
              * Find exclusion reports that are truly standalone (orphaned):
              * 1. Has exclusion_agreement_id (is an exclusion report)
-             * 2. Does NOT have a main compliance report in the same organization/period
+             * 2. Does NOT have ANY main compliance report in the same organization/period
+             *    (regardless of root_report_id, since the allocation_agreement migration
+             *    uses a fallback that finds exclusion data by org/period without root_report_id)
              * 3. Excludes reports that are part of combo compliance+exclusion reports
              * If multiple exclusion supplementals exist in a chain, pick the latest one.
+             *
+             * IMPORTANT: The migrate_allocation_agreements.py script uses a fallback mechanism
+             * that copies exclusion agreement data from ANY exclusion report in the same
+             * org/period to main compliance reports. So we only create standalone reports
+             * for exclusion reports where NO main compliance report exists in the same org/period.
              */
             WITH exclusion_candidates AS (
                 SELECT
@@ -65,13 +72,14 @@ class OrphanedAllocationAgreementMigrator:
                 FROM compliance_report cr_excl
                 JOIN compliance_report_workflow_state ws ON cr_excl.status_id = ws.id
                 WHERE cr_excl.exclusion_agreement_id IS NOT NULL
-                -- Check if this is truly a standalone exclusion report
+                -- Check if this is truly a standalone exclusion report:
+                -- No main compliance report exists in the same org/period at all
+                -- (not just the same root_report_id chain)
                 AND NOT EXISTS (
                     SELECT 1
                     FROM compliance_report cr_other
                     WHERE cr_other.organization_id = cr_excl.organization_id
                       AND cr_other.compliance_period_id = cr_excl.compliance_period_id
-                      AND cr_other.root_report_id = cr_excl.root_report_id
                       AND cr_other.exclusion_agreement_id IS NULL  -- Has main compliance data
                 )
             ), latest_exclusion_per_chain AS (

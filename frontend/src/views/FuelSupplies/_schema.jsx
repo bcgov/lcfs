@@ -235,7 +235,7 @@ export const fuelSupplyColDefs = (
                 (item) =>
                   item.fuelCategory.fuelCategory === params.data.fuelCategory
               )
-              ?.map((item) => item.endUseType.type)
+              ?.map((item) => item.endUseType?.type)
               .sort()
           )
         ].filter((item) => item != null),
@@ -262,10 +262,10 @@ export const fuelSupplyColDefs = (
               (item) =>
                 item.fuelCategory.fuelCategory === params.data.fuelCategory
             )
-            .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
+            .find((eerRatio) => eerRatio.endUseType?.type === params.newValue)
 
-          params.data.endUseType = eerRatio.endUseType.type
-          params.data.endUseId = eerRatio.endUseType.endUseTypeId
+          params.data.endUseType = eerRatio?.endUseType?.type
+          params.data.endUseId = eerRatio?.endUseType?.endUseTypeId
         }
         return true
       },

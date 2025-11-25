@@ -58,7 +58,19 @@ class ComplianceReportHistoryMigrator:
         manager_status: str,
         director_status: str,
     ) -> Optional[int]:
-        """Map workflow statuses to a final status ID"""
+        """
+        Map workflow statuses to a final status ID.
+
+        TFRS to LCFS status mapping:
+        - Submitted → Submitted
+        - Reviewed and recommended acceptance (analyst) → Recommended by analyst
+        - Reviewed and recommended acceptance (manager) → Recommended by manager
+        - Reviewed and recommended rejection (analyst) → Not recommended by analyst
+        - Reviewed and recommended rejection (manager) → Not recommended by manager
+        - Accepted → Assessed
+        - Supplemental requested → Supplemental requested
+        - Rejected → Rejected
+        """
 
         # Normalize all statuses to lower-case
         fuel_status = fuel_status.lower() if fuel_status else ""
@@ -66,7 +78,7 @@ class ComplianceReportHistoryMigrator:
         manager_status = manager_status.lower() if manager_status else ""
         director_status = director_status.lower() if director_status else ""
 
-        # Exclude records if any field contains "requested supplemental"
+        # Handle "Requested Supplemental" - map to supplemental_requested instead of skipping
         if (
             "requested supplemental" in fuel_status
             or "requested supplemental" in analyst_status
@@ -74,44 +86,51 @@ class ComplianceReportHistoryMigrator:
             or "requested supplemental" in director_status
         ):
             logger.debug(
-                "Record marked as 'Requested Supplemental'; skipping history record."
+                "Record marked as 'Requested Supplemental'; mapping to supplemental_requested."
             )
-            return None
+            return self.status_mapping.get("supplemental_requested")
 
         # Exclude records with a draft status
         if fuel_status == "draft":
             logger.debug("Record marked as 'Draft'; skipping history record.")
             return None
 
-        # Compute the stage for this history record
-        # The intended order is:
-        # Stage 1: Submitted
-        # Stage 2: Recommended by Analyst
-        # Stage 3: Recommended by Manager
-        # Stage 4: Accepted by Director (Assessed)
-        computed_stage = 1  # default to Submitted
+        # Handle director rejection
+        if director_status == "rejected":
+            return self.status_mapping.get("rejected")
 
-        if analyst_status == "recommended":
-            computed_stage = max(computed_stage, 2)
-        if manager_status == "recommended":
-            computed_stage = max(computed_stage, 3)
+        # Handle director acceptance (highest priority)
         if director_status == "accepted":
-            computed_stage = max(computed_stage, 4)
+            return self.status_mapping.get("assessed")
 
-        # Map the computed stage to a status name
-        status_name_map = {
-            1: "submitted",
-            2: "recommended_by_analyst",
-            3: "recommended_by_manager",
-            4: "assessed",
-        }
+        # Handle manager recommendation/rejection
+        # Check for "recommended" or variations like "reviewed and recommended acceptance"
+        if "recommended" in manager_status:
+            if "rejection" in manager_status or "not recommended" in manager_status:
+                return self.status_mapping.get("not_recommended_by_manager")
+            else:
+                return self.status_mapping.get("recommended_by_manager")
 
-        status_name = status_name_map.get(computed_stage)
-        if not status_name:
-            return None
+        # Handle analyst recommendation/rejection
+        if "recommended" in analyst_status:
+            if "rejection" in analyst_status or "not recommended" in analyst_status:
+                return self.status_mapping.get("not_recommended_by_analyst")
+            else:
+                return self.status_mapping.get("recommended_by_analyst")
 
-        # Return the corresponding status ID from the reference data
-        return self.status_mapping.get(status_name)
+        # Default to submitted for fuel supplier submitted status
+        if fuel_status == "submitted":
+            return self.status_mapping.get("submitted")
+
+        # If none of the above matched but we have some status, default to submitted
+        if fuel_status or analyst_status or manager_status or director_status:
+            logger.debug(
+                f"Unhandled status combination: fuel={fuel_status}, analyst={analyst_status}, "
+                f"manager={manager_status}, director={director_status}; defaulting to submitted."
+            )
+            return self.status_mapping.get("submitted")
+
+        return None
 
     def truncate_destination_table(self, lcfs_cursor):
         """Truncate the destination compliance_report_history table for clean reload"""

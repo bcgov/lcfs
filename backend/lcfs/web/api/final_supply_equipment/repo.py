@@ -666,11 +666,16 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def get_latest_active_equipments(
-        self, organization_id: int
+        self, organization_id: int, compliance_year: int = None
     ) -> list:
         """
         Get the latest non-decommissioned version for each charging equipment
         belonging to the given organization.
+
+        If compliance_year is provided, only returns equipment that was created
+        on or before January 1st of the following year (i.e., equipment that existed
+        during the compliance period). This prevents copying equipment backwards
+        to reports created before the equipment was registered.
         """
         stmt = (
             select(
@@ -693,8 +698,16 @@ class FinalSupplyEquipmentRepository:
                 ChargingSite.organization_id == organization_id,
                 ChargingEquipmentStatus.status != "Decommissioned",
             )
-            .group_by(ChargingEquipment.charging_equipment_id)
         )
+
+        # Filter to only include equipment created during or before the compliance year
+        if compliance_year is not None:
+            # Equipment must have been created before the end of the compliance year
+            # (i.e., create_date < Jan 1 of the following year)
+            cutoff_date = date(compliance_year + 1, 1, 1)
+            stmt = stmt.where(ChargingEquipment.create_date < cutoff_date)
+
+        stmt = stmt.group_by(ChargingEquipment.charging_equipment_id)
         result = await self.db.execute(stmt)
         return result.all()
 
