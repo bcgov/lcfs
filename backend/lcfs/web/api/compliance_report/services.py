@@ -1085,12 +1085,29 @@ class ComplianceReportServices:
                         diff = []
                         for key, value in data_copy.__dict__.items():
                             prev_value = getattr(prev, key, None)
-                            if prev_value != value:
+                            # Handle object comparisons, especially relations
+                            def get_comparable_value(val):
+                                if val is None:
+                                    return None
+                                if isinstance(val, (str, int, float, bool)):
+                                    return val
+                                # For relations, try to get the ID
+                                if hasattr(val, 'id'):
+                                    return val.id
+                                # Try foreign key pattern (e.g., fuel_type_id)
+                                if hasattr(val, f'{key}_id'):
+                                    return getattr(val, f'{key}_id')
+                                return str(val)
+                            
+                            if get_comparable_value(prev_value) != get_comparable_value(value):
                                 camel_case_key = key.split("_")[0] + "".join(
                                     x.capitalize() for x in key.split("_")[1:]
                                 )
                                 diff.append(camel_case_key)
-
+                        # if the diff contains q1Quantity, q2Quantity, q3Quantity, or q4Quantity, ensure totalQuantity is also included
+                        quantity_fields = {"q1Quantity", "q2Quantity", "q3Quantity", "q4Quantity"}
+                        if any(field in diff for field in quantity_fields):
+                            diff.append("totalQuantity")
                         prev.diff = diff
                         prev.updated = True
                         prev.action_type = ActionTypeEnum.UPDATE
