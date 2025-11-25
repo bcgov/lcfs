@@ -1607,7 +1607,7 @@ class ComplianceReportSummaryService:
 
             # Apply the compliance units formula
             compliance_units_sum_q1 += calculate_compliance_units(
-                TCI, EER, RCI, UCI, fuel_supply.q1_quantity, ED
+                TCI, EER, RCI, UCI, fuel_supply.q1_quantity or 0, ED
             )
             compliance_units_sum_q2 += calculate_compliance_units(
                 TCI, EER, RCI, UCI, fuel_supply.q2_quantity or 0, ED
