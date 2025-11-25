@@ -14,7 +14,26 @@ export const testServer = setupServer(...handlers)
 
 beforeAll(async () => {
   vi.stubGlobal('lcfs_config', config)
-  testServer.listen({ onUnhandledRequest: 'bypass' })
+
+  // Suppress unhandled AbortSignal errors from MSW/undici compatibility issues
+  // These occur when React Router creates requests that MSW intercepts
+  const originalUnhandledRejection = process.listeners('unhandledRejection')
+  process.removeAllListeners('unhandledRejection')
+  process.on('unhandledRejection', (reason) => {
+    // Suppress specific AbortSignal instanceof errors from undici
+    if (reason?.message?.includes('Expected signal') && reason?.message?.includes('AbortSignal')) {
+      // Silently ignore this specific MSW/undici compatibility issue
+      return
+    }
+    // Re-throw other unhandled rejections
+    originalUnhandledRejection.forEach(listener => listener(reason))
+  })
+
+  // Start MSW server with onUnhandledRequest set to 'bypass' to avoid AbortSignal issues
+  // The 'warn' option causes AbortSignal compatibility issues with undici
+  testServer.listen({
+    onUnhandledRequest: 'bypass'
+  })
   vi.mock('react-snowfall')
   
   // Mock AG Grid enterprise to prevent import errors

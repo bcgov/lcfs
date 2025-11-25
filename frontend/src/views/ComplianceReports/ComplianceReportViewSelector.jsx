@@ -2,7 +2,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports.js'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import Loading from '@/components/Loading.jsx'
-import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
 import { useLocation, useParams } from 'react-router-dom'
 import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 import { useEffect } from 'react'
@@ -45,13 +44,9 @@ export const ComplianceReportViewSelector = () => {
     return <Loading />
   }
 
-  return reportData?.report?.legacyId ? (
-    <ViewLegacyComplianceReport
-      reportData={reportData}
-      error={error}
-      isError={isError}
-    />
-  ) : (
+  // All reports (including historical TFRS-migrated reports) use the standard LCFS view
+  // TFRS data is migrated into existing LCFS tables and displays normally
+  return (
     <EditViewComplianceReport
       reportData={reportData}
       error={error}

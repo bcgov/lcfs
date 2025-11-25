@@ -346,7 +346,7 @@ async def delete_charging_site_row(
     validate: ChargingSiteValidation = Depends(),
 ):
     """Endpoint to delete single charging site row"""
-    await validate.charging_site_delete_update_access(charging_site_id, organization_id, delete=True)
+    await validate.charging_site_delete_update_access(charging_site_id, organization_id)
     # Delete existing charging site row
     await cs_service.delete_charging_site(charging_site_id)
     return DeleteChargingSiteResponseSchema(

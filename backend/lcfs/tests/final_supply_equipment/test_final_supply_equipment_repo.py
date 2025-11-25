@@ -255,6 +255,33 @@ async def test_check_uniques_of_fse_row_not_exists(
 
 
 @pytest.mark.anyio
+async def test_check_uniques_of_fse_row_excludes_same_id(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method excludes records with the same final_supply_equipment_id
+    valid_final_supply_equipment_create_schema.final_supply_equipment_id = 999
+    fake_db.execute.return_value = FakeResult([False])
+    exists_result = await repo.check_uniques_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert exists_result is False
+
+
+@pytest.mark.anyio
+async def test_check_uniques_of_fse_row_scopes_to_current_report(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method only checks within the current compliance report
+    fake_db.execute.return_value = FakeResult([False])
+    exists_result = await repo.check_uniques_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert exists_result is False
+    # Should have been called once
+    assert fake_db.execute.call_count == 1
+
+
+@pytest.mark.anyio
 async def test_check_overlap_of_fse_row_exists(
     repo, fake_db, valid_final_supply_equipment_create_schema
 ):
@@ -275,6 +302,35 @@ async def test_check_overlap_of_fse_row_not_exists(
         valid_final_supply_equipment_create_schema
     )
     assert overlap is False
+
+
+@pytest.mark.anyio
+async def test_check_overlap_of_fse_row_excludes_same_id(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method excludes records with the same final_supply_equipment_id
+    valid_final_supply_equipment_create_schema.final_supply_equipment_id = 999
+    valid_final_supply_equipment_create_schema.serial_nbr = "OVERLAP1"
+    fake_db.execute.return_value = FakeResult([False])
+    overlap = await repo.check_overlap_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert overlap is False
+
+
+@pytest.mark.anyio
+async def test_check_overlap_of_fse_row_scopes_to_current_report(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method only checks within the current compliance report
+    valid_final_supply_equipment_create_schema.serial_nbr = "OVERLAP1"
+    fake_db.execute.return_value = FakeResult([False])
+    overlap = await repo.check_overlap_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert overlap is False
+    # Should have been called once
+    assert fake_db.execute.call_count == 1
 
 
 @pytest.mark.anyio

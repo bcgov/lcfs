@@ -231,8 +231,19 @@ class FuelSupplyRepository:
 
         include_legacy = current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
         if not include_legacy:
+            # For 2024+, exclude legacy fuel types and provisions
             query = query.where(
                 and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+            )
+        else:
+            # For pre-2024:
+            # - Exclude Jet fuel category (didn't exist before 2024)
+            # - Exclude Fossil-derived fuel types (new in 2024, is_legacy=False but fossil_derived=True)
+            query = query.where(
+                and_(
+                    FuelCategory.category != "Jet fuel",
+                    ~and_(FuelType.is_legacy == False, FuelType.fossil_derived == True),
+                )
             )
 
         fuel_type_results = (await self.db.execute(query)).all()

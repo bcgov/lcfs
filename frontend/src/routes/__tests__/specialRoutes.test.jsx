@@ -87,6 +87,9 @@ vi.mock('@/utils/keycloak', () => ({
   logout: vi.fn()
 }))
 
+// Import the mocked logout to verify calls
+import { logout as mockLogout } from '@/utils/keycloak'
+
 // Mock authentication
 vi.mock('@react-keycloak/web')
 vi.mock('@/hooks/useCurrentUser')
@@ -214,35 +217,39 @@ describe('Special Routes', () => {
   })
 
   describe('Logout Route', () => {
-    it('should call logout function when accessing /log-out route', async () => {
-      const { logout } = await import('@/utils/keycloak')
+    it('should call logout function when loader is executed', async () => {
+      const logoutRoute = router.routes.find(
+        (route) => route.path === '/log-out'
+      )
 
-      const testRouter = createTestRouter(['/log-out'])
-      renderRouterWithProviders(testRouter)
+      // Execute the loader directly
+      await logoutRoute.loader()
 
-      await waitFor(() => {
-        expect(logout).toHaveBeenCalled()
-      })
+      expect(mockLogout).toHaveBeenCalled()
     })
 
-    it('should have loader that returns null', () => {
+    it('should have loader that returns null', async () => {
       const logoutRoute = router.routes.find(
         (route) => route.path === '/log-out'
       )
       expect(logoutRoute).toBeDefined()
       expect(logoutRoute.loader).toBeInstanceOf(Function)
+
+      const result = await logoutRoute.loader()
+      expect(result).toBeNull()
     })
 
-    it('should call logout even when not authenticated', async () => {
-      const { logout } = await import('@/utils/keycloak')
+    it('should call logout regardless of authentication state', async () => {
       mockKeycloak.authenticated = false
 
-      const testRouter = createTestRouter(['/log-out'])
-      renderRouterWithProviders(testRouter)
+      const logoutRoute = router.routes.find(
+        (route) => route.path === '/log-out'
+      )
 
-      await waitFor(() => {
-        expect(logout).toHaveBeenCalled()
-      })
+      // Execute the loader directly
+      await logoutRoute.loader()
+
+      expect(mockLogout).toHaveBeenCalled()
     })
 
     it('should not render any component for logout route', async () => {

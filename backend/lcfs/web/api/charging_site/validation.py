@@ -64,7 +64,6 @@ class ChargingSiteValidation:
         charging_site_id: int,
         organization_id: int,
         data: ChargingSiteCreateSchema = None,
-        delete: bool = False,
     ):
         """
         Validates if the user has access to update/delete the charging site.
@@ -84,11 +83,7 @@ class ChargingSiteValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
-        if delete and charging_site.status.status != "Draft":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only charging sites with 'Draft' status can be deleted.",
-            )
+
         # Validate duplicate site name on update
         if data and data.site_name:
             new_site_name = data.site_name.strip()
