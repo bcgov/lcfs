@@ -27,6 +27,9 @@
   "dualPort": "Dual port",
   "intendedUses": "Intended uses",
   "intendedUsers": "Intended users",
+  "latitude": "Latitude",
+  "longitude": "Longitude",
+  "notes": "Notes",
   "complianceNotes": "Notes",
   "registrationNumber": "Registration Number",
   
