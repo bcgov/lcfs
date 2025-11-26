@@ -28,3 +28,6 @@ class EndUserType(BaseModel):
         secondary="final_supply_intended_user_association",
         back_populates="intended_user_types",
     )
+    charging_power_outputs = relationship(
+        "ChargingPowerOutput", back_populates="end_user_type"
+    )

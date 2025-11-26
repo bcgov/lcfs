@@ -230,6 +230,32 @@ describe('FinalSupplyEquipments utils.js', () => {
       expect(result[0].id).toBe('1_SN1')
       expect(result[1].id).toBe('2_SN2')
     })
+
+    it('normalizes numeric values for kwhUsage and powerOutput', () => {
+      const input = {
+        finalSupplyEquipments: [
+          {
+            chargingEquipmentId: 1,
+            serialNumber: 'SN1',
+            kwhUsage: '123.45',
+            powerOutput: '50'
+          },
+          {
+            chargingEquipmentId: 2,
+            serialNumber: 'SN2',
+            kwhUsage: null,
+            powerOutput: undefined
+          }
+        ]
+      }
+
+      const result = transformApiData(input)
+
+      expect(result[0].kwhUsage).toBeCloseTo(123.45)
+      expect(result[0].powerOutput).toBe(50)
+      expect(result[1].kwhUsage).toBeNull()
+      expect(result[1].powerOutput).toBeNull()
+    })
   })
 
   describe('groupLocationsByCoordinates', () => {
