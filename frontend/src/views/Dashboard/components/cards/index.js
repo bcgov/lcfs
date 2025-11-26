@@ -1,3 +1,6 @@
+// Shared Cards (Both IDIR and BCeID)
+export { default as GovernmentNotificationsCard } from './GovernmentNotificationsCard'
+
 // IDIR Cards
 export { default as AdminLinksCard } from './idir/AdminLinksCard'
 export { default as DirectorReviewCard } from './idir/DirectorReviewCard'

@@ -3,6 +3,9 @@ import { Grid, Box } from '@mui/material'
 import { Role } from '@/components/Role'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 import {
+  // Shared Cards
+  GovernmentNotificationsCard,
+
   // IDIR Cards
   AdminLinksCard,
   DirectorReviewCard,
@@ -69,6 +72,9 @@ export const Dashboard = () => {
           <Box
             sx={{ mx: { lg: 2 }, mt: { lg: 5 }, mb: { lg: 3 }, px: { lg: 1 } }}
           >
+            {/* Government Notifications - Visible to all authenticated users */}
+            <GovernmentNotificationsCard />
+
             <Role roles={govRoles}>
               <Role roles={[roles.analyst, roles.compliance_manager]}>
                 <TransactionsCard />
