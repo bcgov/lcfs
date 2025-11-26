@@ -10,13 +10,17 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import {
+  formatNumberWithCommas,
+  formatNumberWithCommas as valueFormatter
+} from '@/utils/formatters'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
 import { NEW_REGULATION_YEAR } from '@/constants/common'
+import { isNotionalTransferRenewableClaimEditable } from '@/utils/renewableClaimUtils'
 
 export const notionalTransferColDefs = (
   optionsData,
@@ -135,6 +139,16 @@ export const notionalTransferColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       cellRenderer: SelectRenderer,
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.fuelCategory = params.newValue
+          if (params.data.fuelCategory != 'Diesel') {
+            params.data.isCanadaProduced = false
+            params.data.isQ1Supplied = false
+          }
+        }
+        return true
+      },
       minWidth: 160
     },
     {
@@ -152,8 +166,16 @@ export const notionalTransferColDefs = (
         freeSolo: false,
         openOnFocus: true
       },
-      editable: (params) => params.data?.fuelCategory === 'Diesel',
-      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      editable: (params) =>
+        isNotionalTransferRenewableClaimEditable(params.data, compliancePeriod),
+      valueGetter: (params) =>
+        !isNotionalTransferRenewableClaimEditable(params.data, compliancePeriod)
+          ? ''
+          : params.data.isCanadaProduced
+            ? 'Yes'
+            : 'No',
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.isCanadaProduced = params.newValue === 'Yes'
@@ -177,8 +199,16 @@ export const notionalTransferColDefs = (
         freeSolo: false,
         openOnFocus: true
       },
-      editable: (params) => params.data?.fuelCategory === 'Diesel',
-      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      editable: (params) =>
+        isNotionalTransferRenewableClaimEditable(params.data, compliancePeriod),
+      valueGetter: (params) =>
+        !isNotionalTransferRenewableClaimEditable(params.data, compliancePeriod)
+          ? ''
+          : params.data.isQ1Supplied
+            ? 'Yes'
+            : 'No',
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.isQ1Supplied = params.newValue === 'Yes'
@@ -365,7 +395,10 @@ export const notionalTransferColDefs = (
   return baseColumns
 }
 
-export const notionalTransferSummaryColDefs = (isEarlyIssuance = false, complianceYear) => {
+export const notionalTransferSummaryColDefs = (
+  isEarlyIssuance = false,
+  complianceYear
+) => {
   const baseColumns = [
     {
       headerName: i18n.t(
@@ -498,69 +531,156 @@ export const defaultColDef = {
   autoHeaderHeight: true
 }
 
-export const changelogCommonColDefs = (highlight = true, complianceYear) => [
-  {
-    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
-    field: 'legalName',
-    flex: 1,
-    minWidth: 200,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'legalName')
-  },
-  {
-    headerName: i18n.t(
-      'notionalTransfer:notionalTransferColLabels.addressForService'
-    ),
-    field: 'addressForService',
-    flex: 1,
-    minWidth: 200,
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'addressForService')
-  },
-  {
-    headerName: i18n.t(
-      'notionalTransfer:notionalTransferColLabels.fuelCategory'
-    ),
-    field: 'fuelCategory.category',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategory')
-  },
-  {
-    headerName: i18n.t(
-      'notionalTransfer:notionalTransferColLabels.isCanadaProduced'
-    ),
-    field: 'isCanadaProduced',
-    minWidth: 240,
-    hide: complianceYear < NEW_REGULATION_YEAR,
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'isCanadaProduced')
-  },
-  {
-    headerName: i18n.t(
-      'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
-    ),
-    field: 'isQ1Supplied',
-    hide: complianceYear < NEW_REGULATION_YEAR,
-    minWidth: 240,
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'isQ1Supplied')
-  },
-  {
-    headerName: i18n.t(
-      'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
-    ),
-    field: 'receivedOrTransferred',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'receivedOrTransferred')
-  },
-  {
-    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
-    field: 'quantity',
-    valueFormatter,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
-  }
-]
+export const changelogCommonColDefs = (
+  highlight = true,
+  complianceYear,
+  isEarlyIssuance
+) => {
+  const baseColumns = [
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.legalName'
+      ),
+      field: 'legalName',
+      flex: 1,
+      minWidth: 280,
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'legalName')
+    },
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.addressForService'
+      ),
+      field: 'addressForService',
+      flex: 1,
+      minWidth: 360,
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'addressForService')
+    },
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.fuelCategory'
+      ),
+      field: 'fuelCategory.category',
+      minWidth: 150,
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'fuelCategory')
+    },
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.isCanadaProduced'
+      ),
+      field: 'isCanadaProduced',
+      minWidth: 240,
+      hide: complianceYear < NEW_REGULATION_YEAR,
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'isCanadaProduced')
+    },
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
+      ),
+      field: 'isQ1Supplied',
+      hide: complianceYear < NEW_REGULATION_YEAR,
+      minWidth: 165,
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'isQ1Supplied')
+    },
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
+      ),
+      field: 'receivedOrTransferred',
+      minWidth: 240,
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'receivedOrTransferred')
+    },
+    {
+      headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
+      field: 'quantity',
+      valueFormatter,
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+    }
+  ]
+  if (isEarlyIssuance) {
+    return baseColumns.flatMap((item) => {
+      if (item.field === 'quantity') {
+        return [
+          {
+            field: 'q1Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'notionalTransfer:notionalTransferColLabels.q1Quantity'
+            ),
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q1Quantity')
+          },
+          {
+            field: 'q2Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'notionalTransfer:notionalTransferColLabels.q2Quantity'
+            ),
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q2Quantity')
+          },
+          {
+            field: 'q3Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'notionalTransfer:notionalTransferColLabels.q3Quantity'
+            ),
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q3Quantity')
+          },
+          {
+            field: 'q4Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'notionalTransfer:notionalTransferColLabels.q4Quantity'
+            ),
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q4Quantity')
+          },
+          {
+            field: 'totalQuantity',
+            minWidth: 160,
+            headerName: i18n.t(
+              'notionalTransfer:notionalTransferColLabels.totalQuantity'
+            ),
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'totalQuantity'),
+            valueGetter: (params) => {
+              const data = params.data
+              return (
+                data.q1Quantity +
+                data.q2Quantity +
+                data.q3Quantity +
+                data.q4Quantity
+              )
+            }
+          }
+        ]
+      }
 
-export const changelogColDefs = (highlight = true, complianceYear) => [
+      return [item]
+    })
+  }
+  return baseColumns
+}
+
+export const changelogColDefs = (
+  highlight = true,
+  complianceYear,
+  isEarlyIssuance
+) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -571,6 +691,7 @@ export const changelogColDefs = (highlight = true, complianceYear) => [
   { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
   {
     field: 'actionType',
+    minWidth: 140,
     valueGetter: (params) => {
       if (params.data.actionType === 'UPDATE') {
         if (params.data.updated) {
@@ -592,7 +713,7 @@ export const changelogColDefs = (highlight = true, complianceYear) => [
       }
     }
   },
-  ...changelogCommonColDefs(highlight, complianceYear)
+  ...changelogCommonColDefs(highlight, complianceYear, isEarlyIssuance)
 ]
 
 export const changelogDefaultColDefs = {

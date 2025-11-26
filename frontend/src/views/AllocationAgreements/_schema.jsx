@@ -913,7 +913,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q1Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q1Quantity')
           },
           {
             field: 'q2Quantity',
@@ -921,7 +923,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q2Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q2Quantity')
           },
           {
             field: 'q3Quantity',
@@ -929,7 +933,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q3Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q3Quantity')
           },
           {
             field: 'q4Quantity',
@@ -937,7 +943,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q4Quantity'
             ),
-            valueFormatter
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q4Quantity')
           },
           {
             field: 'totalQuantity',
@@ -946,6 +954,8 @@ export const changelogCommonColDefs = (
               'allocationAgreement:allocationAgreementColLabels.totalQuantity'
             ),
             valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'totalQuantity'),
             valueGetter: (params) => {
               const data = params.data
               return (
