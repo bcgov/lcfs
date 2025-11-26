@@ -51,6 +51,14 @@ const NOTIFICATION_PILL_TEXT_COLORS = {
   General: '#6fbf73' // medium green
 }
 
+// Safely extract text content from HTML using DOMParser
+// This avoids regex-based sanitization vulnerabilities (CodeQL: incomplete multi-character sanitization)
+const getTextContent = (html) => {
+  if (!html) return ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
+}
+
 const GovernmentNotificationsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { enqueueSnackbar } = useSnackbar()
@@ -140,9 +148,7 @@ const GovernmentNotificationsCard = () => {
   // Check if notification text is empty (ReactQuill returns HTML tags even when empty)
   const isNotificationTextEmpty = useMemo(() => {
     if (!formData.notification_text) return true
-    const stripped = formData.notification_text
-      .replace(/<[^>]*>/g, '')
-      .trim()
+    const stripped = getTextContent(formData.notification_text).trim()
     return stripped === ''
   }, [formData.notification_text])
 
@@ -170,8 +176,7 @@ const GovernmentNotificationsCard = () => {
   // Check if text needs truncation (1,000 characters)
   const needsTruncation = useMemo(() => {
     if (!notification?.notificationText) return false
-    const textLength = notification.notificationText.replace(/<[^>]*>/g, '')
-      .length
+    const textLength = getTextContent(notification.notificationText).length
     return textLength > 1000
   }, [notification?.notificationText])
 
