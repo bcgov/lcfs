@@ -12,6 +12,8 @@ import GeoMapping from './GeoMapping'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { govRoles } from '@/constants/roles'
 
 export const FinalSupplyEquipmentSummary = ({
   data,
@@ -20,6 +22,8 @@ export const FinalSupplyEquipmentSummary = ({
 }) => {
   const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
+  const { hasAnyRole } = useCurrentUser()
+  const isIDIR = hasAnyRole(...govRoles)
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
@@ -66,8 +70,8 @@ export const FinalSupplyEquipmentSummary = ({
   )
 
   const columns = useMemo(() => {
-    return finalSupplyEquipmentSummaryColDefs(t, status)
-  }, [t, status])
+    return finalSupplyEquipmentSummaryColDefs(t, status, isIDIR)
+  }, [t, status, isIDIR])
 
   const getRowId = (params) => {
     return String(params.data.chargingEquipmentId)
