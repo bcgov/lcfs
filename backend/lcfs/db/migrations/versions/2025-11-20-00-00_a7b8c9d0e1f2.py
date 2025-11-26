@@ -1,7 +1,7 @@
 """Add government notification table
 
 Revision ID: a7b8c9d0e1f2
-Revises: 5e1a2c3d4f67
+Revises: 4c1b2a3d4e5f
 Create Date: 2025-11-20 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "a7b8c9d0e1f2"
-down_revision = "5e1a2c3d4f67"
+down_revision = "4c1b2a3d4e5f"
 branch_labels = None
 depends_on = None
 
