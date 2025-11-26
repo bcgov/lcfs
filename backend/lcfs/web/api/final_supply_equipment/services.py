@@ -1,8 +1,7 @@
-from datetime import date
-from typing import List, Sequence
-
 import math
 import re
+from datetime import date, datetime
+from typing import List, Sequence
 import structlog
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.exc import ProgrammingError
@@ -34,6 +33,8 @@ logger = structlog.get_logger(__name__)
 
 
 class FinalSupplyEquipmentServices:
+    DEFAULT_OPERATIONAL_HOURS = 24
+
     def __init__(
         self,
         repo: FinalSupplyEquipmentRepository = Depends(FinalSupplyEquipmentRepository),
@@ -472,7 +473,20 @@ class FinalSupplyEquipmentServices:
         # Process data to set fields to None if compliance_report_id doesn't match
         processed_data = []
         for item in data:
-            schemaData = FSEReportingSchema.model_validate(item)
+            row_dict = dict(item._mapping) if hasattr(item, '_mapping') else dict(item)
+            level_id = row_dict.get("level_of_equipment_id") or row_dict.get(
+                "level_of_equipment_internal_id"
+            )
+            power_value = await self.repo.get_charging_power_output(
+                level_id,
+                row_dict.get("intended_uses") or [],
+                row_dict.get("intended_users") or [],
+            )
+            row_dict["power_output"] = power_value
+            row_dict["capacity_utilization_percent"] = self._calculate_capacity_utilization(
+                row_dict, power_value
+            )
+            schemaData = FSEReportingSchema.model_validate(row_dict)
             if (
                 report.compliance_report_group_uuid
                 and schemaData.compliance_report_group_uuid != report.compliance_report_group_uuid
@@ -494,6 +508,54 @@ class FinalSupplyEquipmentServices:
                 total_pages=math.ceil(total / pagination.size),
             ),
         }
+
+    def _calculate_capacity_utilization(self, row: dict, power_value: float | None) -> float | None:
+        """
+        Calculate the electricity reasonableness percentage for a row based on
+        reported kWh usage and the configured charger power output reference data.
+        """
+        kwh_usage = row.get("kwh_usage")
+        if not kwh_usage:
+            return None
+
+        supply_from = row.get("supply_from_date")
+        supply_to = row.get("supply_to_date")
+        if not supply_from or not supply_to:
+            return None
+
+        def _to_date(value):
+            if isinstance(value, datetime):
+                return value.date()
+            if isinstance(value, date):
+                return value
+            return None
+
+        from_date = _to_date(supply_from)
+        to_date = _to_date(supply_to)
+        if not from_date or not to_date:
+            return None
+
+        operational_days = (to_date - from_date).days + 1
+        if operational_days <= 0 or power_value is None:
+            return None
+
+        try:
+            kwh_value = float(kwh_usage)
+            power_value_number = float(power_value)
+        except (TypeError, ValueError):
+            return None
+
+        if power_value_number <= 0:
+            return None
+
+        reasonable_max = (
+            power_value_number * self.DEFAULT_OPERATIONAL_HOURS * operational_days
+        )
+        if reasonable_max <= 0:
+            return None
+
+        utilization = (kwh_value / reasonable_max) * 100
+        return round(utilization, 2)
 
     @service_handler
     async def create_fse_reporting_batch(

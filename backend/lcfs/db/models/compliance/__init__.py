@@ -18,6 +18,7 @@ from .ChargingEquipment import ChargingEquipment
 from .ChargingEquipmentStatus import ChargingEquipmentStatus
 from .ComplianceReportChargingEquipment import ComplianceReportChargingEquipment
 from .LevelOfEquipment import LevelOfEquipment
+from .ChargingPowerOutput import ChargingPowerOutput
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
 
@@ -41,6 +42,7 @@ __all__ = [
     "ChargingEquipmentStatus",
     "ComplianceReportChargingEquipment",
     "LevelOfEquipment",
+    "ChargingPowerOutput",
     "NotionalTransfer",
     "OtherUses",
     "EndUserType",
