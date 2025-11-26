@@ -47,6 +47,9 @@ from lcfs.db.seeders.staging.test_final_supply_equipment_seeder import (
 from lcfs.db.seeders.staging.test_document_seeder import (
     seed_test_documents,
 )
+from lcfs.db.seeders.staging.test_government_notification_seeder import (
+    seed_test_government_notification,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -77,6 +80,7 @@ async def update_sequences(session: AsyncSession):
         "allocation_agreement": "allocation_agreement_id",
         "final_supply_equipment": "final_supply_equipment_id",
         "document": "document_id",
+        "government_notification": "government_notification_id",
         # Add other tables and their primary key columns as needed
     }
 
@@ -140,6 +144,9 @@ async def seed_staging(session: AsyncSession):
     # Seed history records after main entities
     await seed_test_compliance_report_history(session)
     await seed_test_transfer_history(session)
+
+    # Seed government notification (standalone table)
+    await seed_test_government_notification(session)
 
     # Update sequences after all seeders have run
     await update_sequences(session)

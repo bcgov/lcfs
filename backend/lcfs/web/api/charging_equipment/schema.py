@@ -52,6 +52,8 @@ class ChargingEquipmentBaseSchema(BaseSchema):
     notes: Optional[str] = None
     intended_uses: Optional[List[EndUseTypeSchema]] = []
     intended_users: Optional[List[EndUserTypeSchema]] = []
+    latitude: float
+    longitude: float
     version: Optional[int] = 1
 
     class Config:
@@ -65,6 +67,8 @@ class ChargingEquipmentCreateSchema(BaseSchema):
     model: Optional[str] = Field(None, max_length=100)
     level_of_equipment_id: int
     ports: Optional[PortsEnum] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     notes: Optional[str] = None
     intended_use_ids: Optional[List[int]] = []
     intended_user_ids: Optional[List[int]] = []
@@ -79,6 +83,8 @@ class ChargingEquipmentUpdateSchema(BaseSchema):
     notes: Optional[str] = None
     intended_use_ids: Optional[List[int]] = None
     intended_user_ids: Optional[List[int]] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class ChargingEquipmentListItemSchema(BaseSchema):
@@ -96,6 +102,8 @@ class ChargingEquipmentListItemSchema(BaseSchema):
     ports: Optional[str] = None
     intended_uses: Optional[List[EndUseTypeSchema]] = []
     intended_users: Optional[List[EndUserTypeSchema]] = []
+    latitude: float
+    longitude: float
     created_date: datetime
     updated_date: Optional[datetime] = None
 

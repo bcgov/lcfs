@@ -1,11 +1,13 @@
-from typing import List, Sequence
-
-import structlog
 import math
 import re
+from datetime import date, datetime
+from typing import List, Sequence
+import structlog
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.exc import ProgrammingError
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
@@ -31,6 +33,8 @@ logger = structlog.get_logger(__name__)
 
 
 class FinalSupplyEquipmentServices:
+    DEFAULT_OPERATIONAL_HOURS = 24
+
     def __init__(
         self,
         repo: FinalSupplyEquipmentRepository = Depends(FinalSupplyEquipmentRepository),
@@ -384,6 +388,57 @@ class FinalSupplyEquipmentServices:
             await self.create_final_supply_equipment(new_fse, organization_id)
 
     @service_handler
+    async def copy_fse_to_new_report(self, report: ComplianceReport) -> dict:
+        """
+        Copy active charging equipment into a new compliance report with default dates.
+
+        For each charging equipment belonging to the organization, use the latest
+        non-decommissioned version and create compliance reporting records using the
+        compliance period year as the default supply date range.
+        """
+        compliance_year = int(report.compliance_period.description)
+        supply_from_date = date(compliance_year, 1, 1)
+        supply_to_date = date(compliance_year, 12, 31)
+
+        latest_equipments = await self.repo.get_latest_active_equipments(
+            report.organization_id
+        )
+        if not latest_equipments:
+            return {"created": 0}
+
+        reporting_payload: List[FSEReportingBaseSchema] = []
+        for equipment in latest_equipments:
+            reporting_payload.append(
+                FSEReportingBaseSchema(
+                    supply_from_date=supply_from_date,
+                    supply_to_date=supply_to_date,
+                    kwh_usage=0,
+                    compliance_notes=None,
+                    charging_equipment_id=equipment.charging_equipment_id,
+                    charging_equipment_version=equipment.charging_equipment_version,
+                    organization_id=report.organization_id,
+                    compliance_report_id=report.compliance_report_id,
+                    compliance_report_group_uuid=report.compliance_report_group_uuid,
+                )
+            )
+
+        if not reporting_payload:
+            return {"created": 0}
+
+        try:
+            await self.create_fse_reporting_batch(reporting_payload)
+            return {"created": len(reporting_payload)}
+        except Exception as exc:
+            # error should not block report creation; log and continue
+            logger.warning(
+                "Skipping FSE copy due to unexpected error",
+                error=str(exc),
+                organization_id=report.organization_id,
+                compliance_report_id=report.compliance_report_id,
+            )
+            raise exc
+
+    @service_handler
     async def get_fse_reporting_list_paginated(
         self,
         organization_id: int,
@@ -418,7 +473,20 @@ class FinalSupplyEquipmentServices:
         # Process data to set fields to None if compliance_report_id doesn't match
         processed_data = []
         for item in data:
-            schemaData = FSEReportingSchema.model_validate(item)
+            row_dict = dict(item._mapping) if hasattr(item, '_mapping') else dict(item)
+            level_id = row_dict.get("level_of_equipment_id") or row_dict.get(
+                "level_of_equipment_internal_id"
+            )
+            power_value = await self.repo.get_charging_power_output(
+                level_id,
+                row_dict.get("intended_uses") or [],
+                row_dict.get("intended_users") or [],
+            )
+            row_dict["power_output"] = power_value
+            row_dict["capacity_utilization_percent"] = self._calculate_capacity_utilization(
+                row_dict, power_value
+            )
+            schemaData = FSEReportingSchema.model_validate(row_dict)
             if (
                 report.compliance_report_group_uuid
                 and schemaData.compliance_report_group_uuid != report.compliance_report_group_uuid
@@ -440,6 +508,54 @@ class FinalSupplyEquipmentServices:
                 total_pages=math.ceil(total / pagination.size),
             ),
         }
+
+    def _calculate_capacity_utilization(self, row: dict, power_value: float | None) -> float | None:
+        """
+        Calculate the electricity reasonableness percentage for a row based on
+        reported kWh usage and the configured charger power output reference data.
+        """
+        kwh_usage = row.get("kwh_usage")
+        if not kwh_usage:
+            return None
+
+        supply_from = row.get("supply_from_date")
+        supply_to = row.get("supply_to_date")
+        if not supply_from or not supply_to:
+            return None
+
+        def _to_date(value):
+            if isinstance(value, datetime):
+                return value.date()
+            if isinstance(value, date):
+                return value
+            return None
+
+        from_date = _to_date(supply_from)
+        to_date = _to_date(supply_to)
+        if not from_date or not to_date:
+            return None
+
+        operational_days = (to_date - from_date).days + 1
+        if operational_days <= 0 or power_value is None:
+            return None
+
+        try:
+            kwh_value = float(kwh_usage)
+            power_value_number = float(power_value)
+        except (TypeError, ValueError):
+            return None
+
+        if power_value_number <= 0:
+            return None
+
+        reasonable_max = (
+            power_value_number * self.DEFAULT_OPERATIONAL_HOURS * operational_days
+        )
+        if reasonable_max <= 0:
+            return None
+
+        utilization = (kwh_value / reasonable_max) * 100
+        return round(utilization, 2)
 
     @service_handler
     async def create_fse_reporting_batch(

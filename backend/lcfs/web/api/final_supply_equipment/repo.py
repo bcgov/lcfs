@@ -16,6 +16,7 @@ from sqlalchemy import (
     literal,
     union_all,
 )
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
 
@@ -28,6 +29,7 @@ from lcfs.db.models.compliance import (
     FinalSupplyEquipment,
     ChargingEquipmentStatus,
     ComplianceReportChargingEquipment,
+    ChargingPowerOutput,
 )
 from lcfs.db.models.compliance.ChargingEquipment import (
     ChargingEquipment,
@@ -581,12 +583,17 @@ class FinalSupplyEquipmentRepository:
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id,
                 ComplianceReportChargingEquipment.compliance_report_id,
                 ComplianceReportChargingEquipment.compliance_report_group_uuid,
+                func.coalesce(
+                    ComplianceReportChargingEquipment.charging_equipment_version,
+                    ChargingEquipment.version,
+                ).label("charging_equipment_version"),
                 ChargingSite.street_address,
                 ChargingSite.city,
                 ChargingSite.postal_code,
                 ChargingSite.latitude,
                 ChargingSite.longitude,
                 LevelOfEquipment.name.label("level_of_equipment"),
+                ChargingEquipment.level_of_equipment_id,
                 ChargingEquipment.ports,
                 intended_uses_subquery.label("intended_uses"),
                 intended_users_subquery.label("intended_users"),
@@ -609,8 +616,12 @@ class FinalSupplyEquipmentRepository:
             )
             .outerjoin(
                 ComplianceReportChargingEquipment,
-                ChargingEquipment.charging_equipment_id
-                == ComplianceReportChargingEquipment.charging_equipment_id,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == ComplianceReportChargingEquipment.charging_equipment_id,
+                    ChargingEquipment.version
+                    == ComplianceReportChargingEquipment.charging_equipment_version,
+                ),
             )
             .where(*common_conditions, *filter_conditions)
         )
@@ -656,6 +667,56 @@ class FinalSupplyEquipmentRepository:
                     filter_conditions.append(condition)
 
     @repo_handler
+    async def get_latest_active_equipments(self, organization_id: int) -> list:
+        """
+        Get the latest non-decommissioned version for each charging equipment
+        belonging to the given organization.
+        """
+        stmt = (
+            select(
+                ChargingEquipment.charging_equipment_id,
+                func.max(ChargingEquipment.version).label("charging_equipment_version"),
+            )
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipmentStatus.status != "Decommissioned",
+            )
+            .group_by(ChargingEquipment.charging_equipment_id)
+        )
+        result = await self.db.execute(stmt)
+        return result.all()
+
+    @repo_handler
+    async def get_reporting_equipment_versions_for_group(
+        self, compliance_report_group_uuid: str
+    ) -> set[tuple[int, int]]:
+        """
+        Return the set of charging equipment/version pairs already recorded
+        for the given compliance report group.
+        """
+        stmt = select(
+            ComplianceReportChargingEquipment.charging_equipment_id,
+            ComplianceReportChargingEquipment.charging_equipment_version,
+        ).where(
+            ComplianceReportChargingEquipment.compliance_report_group_uuid
+            == compliance_report_group_uuid
+        )
+        result = await self.db.execute(stmt)
+        return {
+            (row.charging_equipment_id, row.charging_equipment_version)
+            for row in result.all()
+        }
+
+    @repo_handler
     async def get_fse_reporting_list_paginated(
         self,
         organization_id: int,
@@ -680,10 +741,10 @@ class FinalSupplyEquipmentRepository:
                     == compliance_report_group_uuid
                 )
             )
-
-        union_queries.append(
-            self._build_base_select(1, organization_id, filter_conditions)
-        )
+        else:
+            union_queries.append(
+                self._build_base_select(1, organization_id, filter_conditions)
+            )
 
         if len(union_queries) == 1:
             combined_query = union_queries[0]
@@ -695,7 +756,10 @@ class FinalSupplyEquipmentRepository:
         row_number_column = (
             func.row_number()
             .over(
-                partition_by=combined_subquery.c.charging_equipment_id,
+                partition_by=(
+                    combined_subquery.c.charging_equipment_id,
+                    combined_subquery.c.charging_equipment_version,
+                ),
                 order_by=[
                     combined_subquery.c.source_priority,
                     desc(
@@ -741,7 +805,10 @@ class FinalSupplyEquipmentRepository:
                 else:
                     final_query = final_query.order_by(asc(field))
         else:
-            final_query = final_query.order_by(dedup_subquery.c.charging_equipment_id)
+            final_query = final_query.order_by(
+                dedup_subquery.c.charging_equipment_id,
+                dedup_subquery.c.charging_equipment_version,
+            )
 
         # Count total
         count_query = (
@@ -759,6 +826,48 @@ class FinalSupplyEquipmentRepository:
         data = result.fetchall()
 
         return data, total or 0
+
+    @repo_handler
+    async def get_charging_power_output(
+        self,
+        level_of_equipment_id: int | None,
+        intended_use_names: list[str] | None,
+        intended_user_names: list[str] | None,
+    ) -> float | None:
+        """
+        Retrieve the prioritized charging power output for the supplied identifiers.
+        """
+        if (
+            not level_of_equipment_id
+            or not intended_user_names
+            or len(intended_user_names) == 0
+        ):
+            return None
+
+        stmt = (
+            select(ChargingPowerOutput.charger_power_output)
+            .join(
+                EndUserType,
+                ChargingPowerOutput.end_user_type_id == EndUserType.end_user_type_id,
+            )
+            .outerjoin(
+                EndUseType,
+                and_(
+                    ChargingPowerOutput.end_use_type_id == EndUseType.end_use_type_id,
+                    EndUseType.type.in_(intended_use_names or []),
+                ),
+            )
+            .where(
+                and_(
+                    ChargingPowerOutput.level_of_equipment_id == level_of_equipment_id,
+                    EndUserType.type_name.in_(intended_user_names or []),
+                )
+            )
+            .order_by(asc(ChargingPowerOutput.display_order))
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none() or 1
 
     @repo_handler
     async def create_fse_reporting_batch(self, data) -> dict:

@@ -24,6 +24,9 @@ class EndUseType(BaseModel, Auditable, DisplayOrder):
     additional_carbon_intensity = relationship(
         "AdditionalCarbonIntensity", back_populates="end_use_type"
     )
+    charging_power_outputs = relationship(
+        "ChargingPowerOutput", back_populates="end_use_type"
+    )
     final_supply_equipments = relationship(
         "FinalSupplyEquipment",
         secondary=final_supply_intended_use_association,

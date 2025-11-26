@@ -31,6 +31,15 @@ export const markerIcons = {
   grey: createMarkerIcon('grey')
 }
 
+const normalizeNumber = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
 // Check if date ranges overlap between two locations
 export const datesOverlap = (start1, end1, start2, end2) => {
   const s1 = new Date(start1)
@@ -50,6 +59,8 @@ export const transformApiData = (data) => {
     const chargingEquipmentId = row.chargingEquipmentId || 'unknown'
     const serialNumber = row.serialNumber || 'unknown'
     const combinedId = `${chargingEquipmentId}_${serialNumber}`
+    const kwhUsage = normalizeNumber(row.kwhUsage)
+    const powerOutput = normalizeNumber(row.powerOutput)
 
     return {
       id: combinedId,
@@ -64,7 +75,9 @@ export const transformApiData = (data) => {
       lng: parseFloat(row.longitude) || 0,
       supplyFromDate:
         row.supplyFromDate || new Date().toISOString().split('T')[0],
-      supplyToDate: row.supplyToDate || new Date().toISOString().split('T')[0]
+      supplyToDate: row.supplyToDate || new Date().toISOString().split('T')[0],
+      kwhUsage,
+      powerOutput
     }
   })
 }

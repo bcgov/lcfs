@@ -18,6 +18,9 @@ vi.mock('@/components/Role', () => ({
 
 // Mock nested components
 vi.mock('../components/cards', () => ({
+  GovernmentNotificationsCard: () => (
+    <div data-test="government-notifications-card">Government Notifications Card</div>
+  ),
   AdminLinksCard: () => (
     <div data-test="admin-links-card">Admin Links Card</div>
   ),

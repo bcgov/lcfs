@@ -54,7 +54,8 @@
     "notes": "Notes",
     "complianceNotes": "Compliance notes",
     "siteName": "Site name",
-    "equipmentNotes": "Equipment notes"
+    "equipmentNotes": "Equipment notes",
+    "capacityUtilization": "Capacity utilization (%)"
   },
   "postalCodeError": "Please enter a valid postal code.",
   "validateMsg": {

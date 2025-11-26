@@ -80,6 +80,8 @@ def valid_charging_equipment(
         model="Supercharger V3",
         level_of_equipment_id=1,
         ports=PortsEnum.DUAL_PORT,
+        latitude=49.7749,
+        longitude=-123.4194,
         notes="Test equipment",
         version=1,
     )
@@ -144,6 +146,8 @@ def valid_charging_equipment_base_schema():
         level_of_equipment_id=1,
         level_of_equipment_name="Level 2",
         ports=PortsEnum.DUAL_PORT,
+        latitude=49.7749,
+        longitude=-123.4194,
         notes="Test equipment",
         intended_uses=[
             {"end_use_type_id": 1, "type": "Commercial", "description": "Fleet"}

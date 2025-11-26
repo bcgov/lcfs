@@ -199,6 +199,11 @@ export const apiRoutes = {
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
+
+  // government notifications
+  currentGovernmentNotification: '/government-notifications/current',
+  updateGovernmentNotification: '/government-notifications/',
+
   // calculator endpoints
   getCalculatorCompliancePeriods: '/calculator/compliance-periods',
   getCalculatorFuelTypes: '/calculator/:complianceYear/',

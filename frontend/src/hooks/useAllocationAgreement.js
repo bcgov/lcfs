@@ -218,6 +218,8 @@ export const useSaveAllocationAgreement = (params, options = {}) => {
           'compliance-report',
           params.complianceReportId
         ])
+        // Invalidate allocation organizations cache so charging site field updates
+        queryClient.invalidateQueries(['allocationOrganizations'])
       }
 
       onSuccess?.(data, variables, context)
@@ -300,6 +302,8 @@ export const useUpdateAllocationAgreement = (params, options = {}) => {
           'compliance-report',
           params.complianceReportId
         ])
+        // Invalidate allocation organizations cache so charging site field updates
+        queryClient.invalidateQueries(['allocationOrganizations'])
       }
 
       onSuccess?.(data, variables, context)
@@ -364,6 +368,8 @@ export const useDeleteAllocationAgreement = (params, options = {}) => {
           'compliance-report',
           params.complianceReportId
         ])
+        // Invalidate allocation organizations cache so charging site field updates
+        queryClient.invalidateQueries(['allocationOrganizations'])
       }
 
       onSuccess?.(data, variables, context)
@@ -441,6 +447,8 @@ export const useImportAllocationAgreement = (
           complianceReportId
         ])
         queryClient.invalidateQueries(['compliance-report', complianceReportId])
+        // Invalidate allocation organizations cache so charging site field updates
+        queryClient.invalidateQueries(['allocationOrganizations'])
       }
 
       onSuccess?.(data, variables, context)

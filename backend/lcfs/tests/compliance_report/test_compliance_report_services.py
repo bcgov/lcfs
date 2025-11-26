@@ -803,7 +803,7 @@ async def test_create_supplemental_report_uses_current_balance(
     compliance_report_service.snapshot_services.create_organization_snapshot = (
         AsyncMock()
     )
-    compliance_report_service.final_supply_equipment_service.copy_to_report = (
+    compliance_report_service.fse_service.copy_to_report = (
         AsyncMock()
     )
     compliance_report_service.document_service.copy_documents = AsyncMock()
@@ -1031,7 +1031,7 @@ async def test_create_supplemental_report_line_17_zero_balance(
     compliance_report_service.snapshot_services.create_organization_snapshot = (
         AsyncMock()
     )
-    compliance_report_service.final_supply_equipment_service.copy_to_report = (
+    compliance_report_service.fse_service.copy_to_report = (
         AsyncMock()
     )
     compliance_report_service.document_service.copy_documents = AsyncMock()
@@ -1948,7 +1948,7 @@ class TestMaskReportStatusForHistory:
             repo=MagicMock(),
             org_repo=MagicMock(),
             snapshot_services=MagicMock(),
-            final_supply_equipment_service=MagicMock(),
+            fse_service=MagicMock(),
             document_service=MagicMock(),
             transaction_repo=MagicMock(),
         )
@@ -2385,7 +2385,7 @@ class TestIsSupplementalRequestedByGovUser:
             repo=MagicMock(),
             org_repo=MagicMock(),
             snapshot_services=MagicMock(),
-            final_supply_equipment_service=MagicMock(),
+            fse_service=MagicMock(),
             document_service=MagicMock(),
             transaction_repo=MagicMock(),
             internal_comment_service=MagicMock(),

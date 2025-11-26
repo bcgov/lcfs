@@ -16,3 +16,6 @@ class LevelOfEquipment(BaseModel, Auditable, DisplayOrder):
 
     # relationship
     final_supply_equipment = relationship("FinalSupplyEquipment")
+    charging_power_outputs = relationship(
+        "ChargingPowerOutput", back_populates="level_of_equipment"
+    )

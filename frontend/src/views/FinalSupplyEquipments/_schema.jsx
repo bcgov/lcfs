@@ -485,7 +485,7 @@ export const finalSupplyEquipmentColDefs = (
   ]
 }
 
-export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
+export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) => [
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
@@ -508,6 +508,29 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     field: 'kwhUsage',
     valueFormatter: numberFormatter
   },
+  ...(isIDIR
+    ? [
+        {
+          headerName: t(
+            'finalSupplyEquipment:finalSupplyEquipmentColLabels.capacityUtilization'
+          ),
+          minWidth: 230,
+          field: 'capacityUtilizationPercent',
+          filter: false,
+          sortable: false,
+          suppressNavigable: true,
+          valueGetter: (params) => {
+            const hasUsage = params.data?.kwhUsage 
+            const value = params.data?.capacityUtilizationPercent
+            if (!hasUsage || value === null || value === undefined) {
+              return null
+            }
+            return Number(value)
+          },
+          valueFormatter: numberFormatter,
+        }
+      ]
+    : []),
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
@@ -558,7 +581,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
     ),
-    minWidth: 250,
+    minWidth: 300,
     field: 'intendedUses',
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:

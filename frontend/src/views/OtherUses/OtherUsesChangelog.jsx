@@ -12,10 +12,16 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
+import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 
 export const OtherUsesChangelog = () => {
   const { t } = useTranslation(['common', 'otherUses', 'report'])
   const { complianceReportId, compliancePeriod } = useParams()
+  const {
+    data: optionsData,
+    isLoading: optionsLoading,
+    isFetched
+  } = useOtherUsesOptions({ compliancePeriod })
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
 
@@ -137,7 +143,7 @@ export const OtherUsesChangelog = () => {
     }))
   }
 
-  if (changelogDataLoading || currentReportLoading) {
+  if (changelogDataLoading || currentReportLoading || optionsLoading) {
     return <Loading />
   }
 
@@ -165,8 +171,8 @@ export const OtherUsesChangelog = () => {
                 gridKey={`other-uses-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false, parseInt(compliancePeriod))
-                    : changelogColDefs(true, parseInt(compliancePeriod))
+                    ? changelogCommonColDefs(false, parseInt(compliancePeriod), optionsData)
+                    : changelogColDefs(true, parseInt(compliancePeriod), optionsData)
                 }
                 queryData={queryData}
                 getRowId={getRowId}
