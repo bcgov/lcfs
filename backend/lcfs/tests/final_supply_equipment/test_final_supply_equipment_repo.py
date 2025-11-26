@@ -421,6 +421,7 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
     data_result.fetchall.return_value = [
         {
             "charging_equipment_id": 1,
+            "charging_equipment_version": 0,
             "serial_number": "SER123",
             "manufacturer": "TestMfg",
             "supply_from_date": "2024-01-01",
@@ -428,6 +429,7 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
         },
         {
             "charging_equipment_id": 2,
+            "charging_equipment_version": 0,
             "serial_number": "SER456",
             "manufacturer": "TestMfg2",
             "supply_from_date": "2024-01-01",
@@ -454,6 +456,7 @@ async def test_create_fse_reporting_batch(repo, fake_db):
     data = [
         {
             "charging_equipment_id": 1,
+            "charging_equipment_version": 0,
             "compliance_report_id": 10,
             "supply_from_date": "2024-01-01",
             "supply_to_date": "2024-12-31",

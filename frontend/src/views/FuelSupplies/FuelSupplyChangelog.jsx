@@ -15,10 +15,10 @@ import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
 
 export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
-  const { data: optionsData } = useFuelSupplyOptions()
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
+  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions({ compliancePeriod })
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
 
   // State for pagination - one per changelog item
@@ -144,7 +144,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
     }))
   }
 
-  if (changelogDataLoading || currentReportLoading) {
+  if (changelogDataLoading || currentReportLoading || optionsLoading) {
     return <Loading />
   }
 
@@ -175,7 +175,8 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
                     ? changelogCommonColDefs(
                         false,
                         isEarlyIssuance,
-                        parseInt(compliancePeriod)
+                        parseInt(compliancePeriod),
+                        optionsData
                       )
                     : changelogColDefs(
                         true,

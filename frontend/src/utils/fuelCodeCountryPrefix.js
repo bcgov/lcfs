@@ -33,16 +33,7 @@ export const formatFuelCodeWithCountryPrefix = (
   country,
   compliancePeriod
 ) => {
-  if (!fuelCode) return fuelCode
-
-  // Only apply to 2025 reports and forward
-  const periodYear = parseInt(compliancePeriod, 10)
-  if (isNaN(periodYear) || periodYear < 2025) {
-    return fuelCode
-  }
-
-  const prefix = getCountryPrefix(country)
-  return prefix ? `${prefix}${fuelCode}` : fuelCode
+  return fuelCode
 }
 
 /**

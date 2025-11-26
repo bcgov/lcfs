@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditor } from '../BCGridEditor'
@@ -221,7 +221,9 @@ describe('BCGridEditor - Simplified Coverage Test Suite', () => {
     />)
     
     const saveButton = screen.getByTestId('save-btn')
-    await fireEvent.click(saveButton)
+    await act(async () => {
+      await fireEvent.click(saveButton)
+    })
     
     expect(screen.getByTestId('bc-modal')).toBeInTheDocument()
   })

@@ -66,10 +66,10 @@ jobs:
 
       - name: Teardown the pull request
         run: |
-          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-frontend-dev-${{ env.PR_NUMBER }}
-          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-backend-dev-${{ env.PR_NUMBER }}
-          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-redis-dev-${{ env.PR_NUMBER }}
-          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-postgres-dev-${{ env.PR_NUMBER }}
-          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-minio-dev-${{ env.PR_NUMBER }}
-          oc -n ${{ env.DEV_NAMESPACE }} delete pvc -l app.kubernetes.io/instance=lcfs-postgres-dev-${{ env.PR_NUMBER }}
-          oc -n ${{ env.DEV_NAMESPACE }} delete pvc -l app.kubernetes.io/instance=lcfs-redis-dev-${{ env.PR_NUMBER }}
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-frontend-dev-${{ env.PR_NUMBER }} || true
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-backend-dev-${{ env.PR_NUMBER }} || true
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-redis-dev-${{ env.PR_NUMBER }} || true
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-postgres-dev-${{ env.PR_NUMBER }} || true
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-minio-dev-${{ env.PR_NUMBER }} || true
+          oc -n ${{ env.DEV_NAMESPACE }} delete pvc -l app.kubernetes.io/instance=lcfs-postgres-dev-${{ env.PR_NUMBER }} || true
+          oc -n ${{ env.DEV_NAMESPACE }} delete pvc -l app.kubernetes.io/instance=lcfs-redis-dev-${{ env.PR_NUMBER }} || true
