@@ -1559,10 +1559,13 @@ WITH
       ) AS version_rank
     FROM
       compliance_report cr
-      JOIN compliance_period cp ON cp.compliance_period_id = cr.compliance_period_id
-      JOIN organization org ON org.organization_id = cr.organization_id
-      join compliance_report_status crs on crs.compliance_report_status_id = cr.current_status_id
-      and crs.status <> 'Draft'
+      JOIN compliance_period cp
+        ON cp.compliance_period_id = cr.compliance_period_id
+      JOIN organization org
+        ON org.organization_id = cr.organization_id
+      JOIN compliance_report_status crs
+        ON crs.compliance_report_status_id = cr.current_status_id
+       AND crs.status <> 'Draft'
   ),
   fuel_volumes AS (
     SELECT
@@ -1573,13 +1576,18 @@ WITH
       SUM(
         CASE
           WHEN fs.quantity > 0 THEN fs.quantity
-          ELSE COALESCE(fs.q1_quantity, 0) + COALESCE(fs.q2_quantity, 0) + COALESCE(fs.q3_quantity, 0) + COALESCE(fs.q4_quantity, 0)
+          ELSE COALESCE(fs.q1_quantity, 0)
+             + COALESCE(fs.q2_quantity, 0)
+             + COALESCE(fs.q3_quantity, 0)
+             + COALESCE(fs.q4_quantity, 0)
         END
       ) AS total_volume
     FROM
       fuel_supply fs
-      JOIN fuel_type ft ON ft.fuel_type_id = fs.fuel_type_id
-      JOIN fuel_category fc ON fc.fuel_category_id = fs.fuel_category_id
+      JOIN fuel_type ft
+        ON ft.fuel_type_id = fs.fuel_type_id
+      JOIN fuel_category fc
+        ON fc.fuel_category_id = fs.fuel_category_id
     GROUP BY
       fs.compliance_report_id,
       ft.fuel_type,
@@ -1605,7 +1613,7 @@ WITH
       orp.nickname,
       orp.version_rank,
       fv.total_volume,
-      LAG (fv.total_volume) OVER (
+      LAG(fv.total_volume) OVER (
         PARTITION BY
           orp.compliance_report_group_uuid,
           fv.fuel_type,
@@ -1616,7 +1624,8 @@ WITH
       ) AS previous_volume
     FROM
       ordered_reports orp
-      JOIN fuel_volumes fv ON fv.compliance_report_id = orp.compliance_report_id
+      JOIN fuel_volumes fv
+        ON fv.compliance_report_id = orp.compliance_report_id
   )
 SELECT
   vf.compliance_report_group_uuid,
@@ -1625,43 +1634,27 @@ SELECT
   vf.fuel_type,
   vf.fuel_category,
   vf.quantity_units,
-  jsonb_agg (
-    jsonb_build_object (
-      'report_id',
-      vf.compliance_report_id,
-      'nickname',
-      vf.nickname,
-      'report_version',
-      vf.version,
-      'volume',
-      vf.total_volume,
-      'volume_delta_from_previous',
-      CASE
-        WHEN vf.previous_volume IS NULL THEN NULL
-        ELSE vf.total_volume - vf.previous_volume
-      END,
-      'compliance_units_issued',
-      sm.line_20_surplus_deficit_units
-    )
-    ORDER BY
-      vf.version_rank
-  ) AS report_versions
+  vf.compliance_report_id             AS report_id,
+  vf.nickname,
+  vf.version                          AS report_version,
+  vf.version_rank,
+  vf.total_volume                     AS volume,
+  CASE
+    WHEN vf.previous_volume IS NULL THEN NULL
+    ELSE vf.total_volume - vf.previous_volume
+  END                                 AS volume_delta_from_previous,
+  sm.line_20_surplus_deficit_units    AS compliance_units_issued
 FROM
   versioned_fuel vf
-  LEFT JOIN summary_metrics sm ON sm.compliance_report_id = vf.compliance_report_id
-GROUP BY
-  vf.compliance_report_group_uuid,
-  vf.organization_name,
-  vf.compliance_period,
-  vf.fuel_type,
-  vf.fuel_category,
-  vf.quantity_units
+  LEFT JOIN summary_metrics sm
+    ON sm.compliance_report_id = vf.compliance_report_id
 ORDER BY
   vf.organization_name,
   vf.compliance_period,
   vf.compliance_report_group_uuid,
   vf.fuel_type,
-  vf.fuel_category;
+  vf.fuel_category,
+  vf.version_rank;
 
 GRANT SELECT ON vw_compliance_report_fuel_volume_history TO basic_lcfs_reporting_role;
 -- ==========================================
