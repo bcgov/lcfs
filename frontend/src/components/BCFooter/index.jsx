@@ -4,6 +4,8 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { GitHub } from '@mui/icons-material'
 import typography from '@/themes/base/typography'
+import ChatWidget from '@/components/LCFSAssistant'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 function Footer({
   repoDetails = {
@@ -22,6 +24,11 @@ function Footer({
   ]
 }) {
   const { size } = typography
+  const { data: currentUser } = useCurrentUser()
+
+  // Only show chat assistant to BCeID users (non-government users)
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const showChatAssistant = currentUser && !isGovernmentUser
 
   const renderLinks = () =>
     links.map((link) => (
@@ -56,76 +63,79 @@ function Footer({
     ))
 
   return (
-    <BCBox
-      className="bcgov-footer"
-      component="footer"
-      width="100%"
-      px={1.5}
-      sx={({
-        functions: { pxToRem },
-        palette: { primary, secondary, white }
-      }) => ({
-        display: 'flex',
-        flexDirection: { xs: 'column', lg: 'row' },
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: primary.nav,
-        borderTop: `2px solid ${secondary.main}`,
-        color: white.main,
-        minHeight: pxToRem(46),
-        position: 'relative'
-      })}
-    >
+    <>
+      {showChatAssistant && <ChatWidget />}
       <BCBox
-        component="ul"
-        sx={({ breakpoints }) => ({
+        className="bcgov-footer"
+        component="footer"
+        width="100%"
+        px={1.5}
+        sx={({
+          functions: { pxToRem },
+          palette: { primary, secondary, white }
+        }) => ({
           display: 'flex',
-          flexWrap: 'wrap',
+          flexDirection: { xs: 'column', lg: 'row' },
+          justifyContent: 'space-between',
           alignItems: 'center',
-          justifyContent: 'center',
-          listStyle: 'none',
-          flexDirection: 'row',
-          mt: 3,
-          mb: 0,
-          p: 0,
-
-          [breakpoints.up('lg')]: {
-            mt: 0
-          }
+          backgroundColor: primary.nav,
+          borderTop: `2px solid ${secondary.main}`,
+          color: white.main,
+          minHeight: pxToRem(46),
+          position: 'relative'
         })}
       >
-        {renderLinks()}
-      </BCBox>
-      <BCBox
-        color="white"
-        fontSize={size.sm}
-        px={1.5}
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexWrap: 'wrap'
-        }}
-      >
-        <Link
-          href={repoDetails.href}
-          target="_blank"
-          aria-label={repoDetails.label}
-          id={repoDetails.id}
-          data-test={repoDetails.id}
+        <BCBox
+          component="ul"
+          sx={({ breakpoints }) => ({
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'center',
+            listStyle: 'none',
+            flexDirection: 'row',
+            mt: 3,
+            mb: 0,
+            p: 0,
+
+            [breakpoints.up('lg')]: {
+              mt: 0
+            }
+          })}
         >
-          <GitHub fontSize="small" />
-          <BCTypography
-            ml={1}
-            variant="button"
-            fontWeight="medium"
-            sx={{ textDecoration: 'underline' }}
+          {renderLinks()}
+        </BCBox>
+        <BCBox
+          color="white"
+          fontSize={size.sm}
+          px={1.5}
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexWrap: 'wrap'
+          }}
+        >
+          <Link
+            href={repoDetails.href}
+            target="_blank"
+            aria-label={repoDetails.label}
+            id={repoDetails.id}
+            data-test={repoDetails.id}
           >
-            {repoDetails.name}
-          </BCTypography>
-        </Link>
+            <GitHub fontSize="small" />
+            <BCTypography
+              ml={1}
+              variant="button"
+              fontWeight="medium"
+              sx={{ textDecoration: 'underline' }}
+            >
+              {repoDetails.name}
+            </BCTypography>
+          </Link>
+        </BCBox>
       </BCBox>
-    </BCBox>
+    </>
   )
 }
 

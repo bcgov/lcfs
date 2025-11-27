@@ -1,11 +1,11 @@
 """Simplified chat service that forwards requests to RAG pipeline."""
 
-import asyncio
 import json
 import uuid
 from typing import AsyncGenerator
+import asyncio
 import httpx
-from fastapi import HTTPException
+import structlog
 
 from lcfs.web.api.chat.schemas import (
     ChatCompletionRequest,
@@ -16,13 +16,14 @@ from lcfs.web.api.chat.schemas import (
 from lcfs.db.models.user import UserProfile
 from lcfs.settings import settings
 
+logger = structlog.get_logger(__name__)
+
 
 class ChatService:
     """Simplified service that forwards chat requests to RAG pipeline."""
 
     def __init__(self):
-        self.rag_service_url = settings.RAG_SERVICE_URL
-
+        self.rag_service_url = settings.rag_service_url
 
     async def stream_completion(
         self, request: ChatCompletionRequest, user: UserProfile
@@ -34,8 +35,7 @@ class ChatService:
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{self.rag_service_url}/lcfs_rag/run",
-                    json={"messages": messages}
+                    f"{self.rag_service_url}/lcfs_rag/run", json={"messages": messages}
                 )
                 response.raise_for_status()
                 rag_result = response.json()
@@ -44,7 +44,11 @@ class ChatService:
             completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
             # RAG service wraps response in "result" field
             result_data = rag_result.get("result", {})
-            answer = result_data.get("choices", [{}])[0].get("message", {}).get("content", "No response")
+            answer = (
+                result_data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "No response")
+            )
 
             # Send initial chunk with role
             initial_chunk = ChatCompletionChunk(
@@ -54,9 +58,9 @@ class ChatService:
                     ChatCompletionChunkChoice(
                         index=0,
                         delta=ChatCompletionChunkDelta(role="assistant"),
-                        finish_reason=None
+                        finish_reason=None,
                     )
-                ]
+                ],
             )
             yield f"data: {json.dumps(initial_chunk.dict())}\n\n"
 
@@ -72,9 +76,9 @@ class ChatService:
                         ChatCompletionChunkChoice(
                             index=0,
                             delta=ChatCompletionChunkDelta(content=content),
-                            finish_reason=None
+                            finish_reason=None,
                         )
-                    ]
+                    ],
                 )
                 yield f"data: {json.dumps(content_chunk.dict())}\n\n"
 
@@ -86,16 +90,15 @@ class ChatService:
                 model=request.model,
                 choices=[
                     ChatCompletionChunkChoice(
-                        index=0,
-                        delta=ChatCompletionChunkDelta(),
-                        finish_reason="stop"
+                        index=0, delta=ChatCompletionChunkDelta(), finish_reason="stop"
                     )
-                ]
+                ],
             )
             yield f"data: {json.dumps(final_chunk.dict())}\n\n"
 
             yield "data: [DONE]\n\n"
         except Exception as e:
+            logger.error("streaming_error", error=str(e), error_type=type(e).__name__)
             # Send error in streaming format
             error_chunk = ChatCompletionChunk(
                 id=f"chatcmpl-{uuid.uuid4().hex[:12]}",
@@ -104,10 +107,9 @@ class ChatService:
                     ChatCompletionChunkChoice(
                         index=0,
                         delta=ChatCompletionChunkDelta(content=f"Error: {str(e)}"),
-                        finish_reason="stop"
+                        finish_reason="stop",
                     )
-                ]
+                ],
             )
             yield f"data: {json.dumps(error_chunk.dict())}\n\n"
             yield "data: [DONE]\n\n"
-

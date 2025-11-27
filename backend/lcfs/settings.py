@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     ches_sender_email: str = "noreply@gov.bc.ca"
     ches_sender_name: str = "LCFS Notification System"
 
+    # Variable for LCFS Assistant Chat
+    rag_service_url: str = "http://localhost:1416"
+
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present
         app_env = os.getenv("APP_ENVIRONMENT")

@@ -20,7 +20,7 @@ services:
     image: redis:7.4.2
     command: redis-server --requirepass development_only
     ports:
-      - '6379:6379'
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -37,7 +37,7 @@ services:
       - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
     ports:
       - "15672:15672" # Management UI
-      - "5672:5672"   # RabbitMQ Port
+      - "5672:5672" # RabbitMQ Port
     networks:
       - shared_network
 
@@ -89,7 +89,7 @@ services:
     restart: "no"
     build:
       context: ./backend
-      dockerfile: 'Dockerfile'
+      dockerfile: "Dockerfile"
       target: dev
     volumes:
       - type: bind
@@ -111,8 +111,8 @@ services:
       LCFS_RAG_SERVICE_URL: http://rag-llm:1416
       LCFS_CHAT_RAG_ENABLED: true
     ports:
-      - '8000:8000' # Application port
-      - '5678:5678' # Debugger port
+      - "8000:8000" # Application port
+      - "5678:5678" # Debugger port
     depends_on:
       - db
       - redis
@@ -199,8 +199,8 @@ services:
     restart: "no"
     profiles: ["rag"]
     ports:
-      - "6333:6333"  # REST API + Web Dashboard
-      - "6334:6334"  # gRPC API
+      - "6333:6333" # REST API + Web Dashboard
+      - "6334:6334" # gRPC API
     volumes:
       - qdrant_storage:/qdrant/storage
     networks:
@@ -209,10 +209,10 @@ services:
       resources:
         limits:
           memory: 1G
-          cpus: '0.5'
+          cpus: "0.5"
         reservations:
           memory: 256M
-          cpus: '0.1'
+          cpus: "0.1"
     labels:
       - "lcfs.service=qdrant"
       - "lcfs.description=Vector database for LCFS RAG system"
@@ -232,9 +232,9 @@ services:
       QDRANT_HOST: "qdrant"
       QDRANT_PORT: "6333"
       OLLAMA_URL: "http://ollama:11434"
-      OLLAMA_MODEL: "smollm2:135m"  # Use same model as Ollama
-      EMBEDDING_MODEL: "BAAI/bge-small-en-v1.5"  # Embedding model for document vectors
-      RERANKER_MODEL: "cross-encoder/ms-marco-MiniLM-L-6-v2"  # Reranker for result improvement
+      OLLAMA_MODEL: "smollm2:135m" # Use same model as Ollama
+      EMBEDDING_MODEL: "BAAI/bge-small-en-v1.5" # Embedding model for document vectors
+      RERANKER_MODEL: "cross-encoder/ms-marco-MiniLM-L-6-v2" # Reranker for result improvement
     ports:
       - "1416:1416"
     volumes:
@@ -256,10 +256,10 @@ services:
       resources:
         limits:
           memory: 5G
-          cpus: '1.0'
+          cpus: "1.0"
         reservations:
           memory: 2G
-          cpus: '0.5'
+          cpus: "0.5"
     labels:
       - "lcfs.service=rag-llm"
       - "lcfs.description=LCFS RAG System LLM API using open-source models"

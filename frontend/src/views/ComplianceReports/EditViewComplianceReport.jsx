@@ -844,7 +844,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             sx={{
               position: 'fixed',
               bottom: 75,
-              right: 24
+              right: 210
             }}
           >
             {isScrollingUp ? (

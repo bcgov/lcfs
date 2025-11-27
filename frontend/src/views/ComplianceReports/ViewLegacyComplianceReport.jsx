@@ -179,7 +179,7 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             sx={{
               position: 'fixed',
               bottom: 75,
-              right: 24
+              right: 210
             }}
           >
             {isScrollingUp ? (
