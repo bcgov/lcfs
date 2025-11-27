@@ -1540,7 +1540,7 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance Report Fuel Supply Volume Summary View
 -- ==========================================
-CREATE OR REPLACE VIEW compliance_report_fuel_volume_history AS
+CREATE OR REPLACE VIEW vw_compliance_report_fuel_volume_history AS
 WITH
   ordered_reports AS (
     SELECT
@@ -1663,7 +1663,7 @@ ORDER BY
   vf.fuel_type,
   vf.fuel_category;
 
-GRANT SELECT ON compliance_report_fuel_volume_history TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_compliance_report_fuel_volume_history TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Additional permissions for base tables
 -- ==========================================
