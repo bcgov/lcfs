@@ -210,6 +210,8 @@ export const apiRoutes = {
   getCalculatorFuelTypeOptions:
     '/calculator/:complianceYear/fuel-type-options/',
   getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
+  getCalculatorQuantityFromComplianceUnits:
+    '/calculator/:complianceYear/calculate/quantity/',
 
   // geocoder endpoints
   geocoderValidate: '/geocoder/validate',

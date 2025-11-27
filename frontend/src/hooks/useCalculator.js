@@ -67,6 +67,8 @@ export const useCalculateComplianceUnits = ({
   endUseId,
   quantity,
   fuelCodeId,
+  useCustomCi = false,
+  customCiValue,
   enabled = true
 }) => {
   const client = useApiService()
@@ -78,7 +80,9 @@ export const useCalculateComplianceUnits = ({
       fuelTypeId,
       endUseId,
       quantity,
-      fuelCodeId
+      fuelCodeId,
+      useCustomCi,
+      customCiValue
     ],
     queryFn: () =>
       client.get(
@@ -92,7 +96,9 @@ export const useCalculateComplianceUnits = ({
             fuelTypeId,
             endUseId,
             quantity,
-            fuelCodeId
+            fuelCodeId,
+            useCustomCi,
+            ...(customCiValue !== undefined && { customCiValue })
           }
         }
       ),
@@ -106,5 +112,60 @@ export const useCalculateComplianceUnits = ({
         endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!quantity
+  })
+}
+
+export const useCalculateQuantityFromComplianceUnits = ({
+  compliancePeriod,
+  fuelCategoryId,
+  fuelTypeId,
+  endUseId,
+  complianceUnits,
+  fuelCodeId,
+  useCustomCi = false,
+  customCiValue,
+  enabled = true
+}) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: [
+      'calculatedQuantity',
+      compliancePeriod,
+      fuelCategoryId,
+      fuelTypeId,
+      endUseId,
+      complianceUnits,
+      fuelCodeId,
+      useCustomCi,
+      customCiValue
+    ],
+    queryFn: () =>
+      client.get(
+        apiRoutes.getCalculatorQuantityFromComplianceUnits.replace(
+          ':complianceYear',
+          compliancePeriod
+        ),
+        {
+          params: {
+            fuelCategoryId,
+            fuelTypeId,
+            endUseId,
+            complianceUnits,
+            fuelCodeId,
+            useCustomCi,
+            ...(customCiValue !== undefined && { customCiValue })
+          }
+        }
+      ),
+    staleTime: 5 * 60 * 1000,
+    enabled:
+      enabled &&
+      !!compliancePeriod &&
+      !!fuelCategoryId &&
+      !!fuelTypeId &&
+      !!(
+        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+      ) &&
+      !!complianceUnits
   })
 }

@@ -162,7 +162,7 @@ vi.mock('@/views/ComplianceReports', () => ({
     const location = useLocation()
     return (
       <div data-test="credit-calculator">
-        Credit Calculator - {location.pathname}
+        Compliance unit calculator - {location.pathname}
       </div>
     )
   }

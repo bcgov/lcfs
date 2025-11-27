@@ -64,11 +64,6 @@ export const reportRoutes = [
     ]
   },
   {
-    path: ROUTES.REPORTS.CALCULATOR,
-    element: <CreditCalculator />,
-    handle: { title: 'Credit calculator' }
-  },
-  {
     path: ROUTES.REPORTS.VIEW,
     element: <ComplianceReportViewSelector />,
     handle: { title: '' }

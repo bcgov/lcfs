@@ -188,7 +188,7 @@ export const ComplianceReports = () => {
           variant="outlined"
           size="small"
           color="primary"
-          onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+          onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
           startIcon={<CalculateOutlined />}
         >
           {t('report:calcTitle')}
