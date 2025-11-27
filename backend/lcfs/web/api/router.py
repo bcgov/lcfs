@@ -10,6 +10,7 @@ from lcfs.web.api import (
     user,
     role,
     notification,
+    government_notification,
     organization,
     organizations,
     transfer,
@@ -54,6 +55,11 @@ api_router.include_router(role.router, prefix="/roles", tags=["roles"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
+)
+api_router.include_router(
+    government_notification.router,
+    prefix="/government-notifications",
+    tags=["government_notifications"],
 )
 api_router.include_router(
     organizations.router, prefix="/organizations", tags=["organizations"]
