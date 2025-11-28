@@ -160,7 +160,7 @@ describe('ComplianceReportCard Component', () => {
     const calculatorLink = screen.getByText('report:calcTitle')
     fireEvent.click(calculatorLink)
 
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.CALCULATOR)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
   })
 
   it('renders CountDisplay component correctly', () => {

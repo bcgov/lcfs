@@ -320,10 +320,10 @@ describe('OrgComplianceReportsCard Component', () => {
 
       render(<OrgComplianceReportsCard />, { wrapper })
 
-      const calculatorButton = screen.getByText(/Credit calculator/)
+      const calculatorButton = screen.getByText(/Compliance unit calculator/)
       fireEvent.click(calculatorButton)
 
-      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.CALCULATOR)
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
     })
 
     it('shows calculator button even when no reports require action', () => {
@@ -334,11 +334,11 @@ describe('OrgComplianceReportsCard Component', () => {
 
       render(<OrgComplianceReportsCard />, { wrapper })
 
-      const calculatorButton = screen.getByText(/Credit calculator/)
+      const calculatorButton = screen.getByText(/Compliance unit calculator/)
       expect(calculatorButton).toBeInTheDocument()
 
       fireEvent.click(calculatorButton)
-      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.CALCULATOR)
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
     })
   })
 
