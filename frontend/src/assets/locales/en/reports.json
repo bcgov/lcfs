@@ -271,6 +271,7 @@
   "assessmentStatementSaveError": "Error saving assessment statement.",
   "calcTitle": "Compliance unit calculator",
   "complianceYear": "Compliance year",
+  "fuelCategory": "Fuel category",
   "selectFuelType": "Select fuel type",
   "endUse": "End use",
   "ciLabel": "Determining carbon intensity",
