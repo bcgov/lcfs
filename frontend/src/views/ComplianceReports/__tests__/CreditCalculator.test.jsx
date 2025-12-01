@@ -653,8 +653,12 @@ describe('CreditCalculator', () => {
       const endUseOption = await screen.findByTestId('Transportation')
       await clickAndVerify(endUseOption)
 
-      const customOption = await screen.findByText('Custom CI')
-      await clickAndVerify(customOption)
+      const customOptionRadio = (
+        await screen.findAllByText('Custom CI')
+      ).find((element) => element.getAttribute('role') === 'radio')
+
+      expect(customOptionRadio).toBeDefined()
+      await clickAndVerify(customOptionRadio)
 
       const customCiInput = await screen.findByPlaceholderText('0.00')
       fireEvent.change(customCiInput, { target: { value: '-10' } })
@@ -890,10 +894,10 @@ describe('CreditCalculator', () => {
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
-    it('displays different formula for compliance years before 2024', () => {
-      const TestWrapperBefore2024 = () => {
+    it('displays the post-2024 formula when applicable', () => {
+      const TestWrapperAfter2024 = () => {
         const methods = useForm({
-          defaultValues: { complianceYear: '2023' }
+          defaultValues: { complianceYear: '2024' }
         })
         return (
           <BrowserRouter>
@@ -905,10 +909,14 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
-      render(<TestWrapperBefore2024 />)
-      
-      expect(screen.getByText('Compliance units = (TCI * EER - RCI) * EC / 1,000,000')).toBeInTheDocument()
+
+      render(<TestWrapperAfter2024 />)
+
+      expect(
+        screen.getByText(
+          'Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000'
+        )
+      ).toBeInTheDocument()
     })
     
     it('handles different compliance year scenarios', () => {
