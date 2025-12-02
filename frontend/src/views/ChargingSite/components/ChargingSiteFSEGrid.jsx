@@ -7,7 +7,7 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { chargingEquipmentColDefs, defaultColDef } from './_schema'
 
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import {

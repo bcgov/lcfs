@@ -5,11 +5,11 @@ import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { scheduleASummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 export const ScheduleASummary = ({ data, status }) => {
   const ref = useRef(null)

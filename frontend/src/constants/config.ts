@@ -1,3 +1,39 @@
+export interface FeatureFlagsConfig {
+  supplementalReporting?: boolean
+  fullLegacyReports?: boolean
+  fseImportExport?: boolean
+  allocationAgreementImportExport?: boolean
+  governmentAdjustment?: boolean
+  roleSwitcher?: boolean
+  obfuscatedLinks?: boolean
+  reporting2025Enabled?: boolean
+  manageChargingSites?: boolean
+  manageFse?: boolean
+  legacySupplementalLock?: boolean
+}
+
+export interface KeycloakConfig {
+  REALM?: string
+  CLIENT_ID?: string
+  AUTH_URL?: string
+  POST_LOGOUT_URL?: string
+  SM_LOGOUT_URL?: string
+}
+
+export interface LcfsWindowConfig {
+  api_base?: string
+  tfrs_base: string
+  environment: string
+  keycloak: KeycloakConfig
+  feature_flags: FeatureFlagsConfig
+}
+
+declare global {
+  interface Window {
+    lcfs_config: LcfsWindowConfig
+  }
+}
+
 const rawEnvironment = window.lcfs_config.environment ?? ''
 const normalizedEnvironment =
   typeof rawEnvironment === 'string' ? rawEnvironment.toLowerCase() : ''
@@ -5,38 +41,28 @@ const isProductionEnvironment = ['production', 'prod'].includes(
   normalizedEnvironment
 )
 
-export function getApiBaseUrl() {
-  // Split the hostname
+export function getApiBaseUrl(): string {
   const hostnameParts = window.location.hostname.split('.')
 
-  // Check if the environment is local development
   let baseUrl
   if (window.location.hostname === 'localhost') {
-    // In local development, use port 8000
     baseUrl = `${window.location.protocol}//localhost:8000/api`
   } else {
-    // Determine the environment part of the subdomain
     const subDomain = hostnameParts[0]
     const envPart = subDomain.split('-')[1]
 
-    // Check if the environment is 'dev' or 'test', otherwise default to production
     if (envPart === 'dev' || envPart === 'test') {
       baseUrl = `${
         window.location.protocol
       }//lcfs-backend-${envPart}.${hostnameParts.slice(1).join('.')}/api`
     } else {
-      // Production environment
       baseUrl = `${window.location.protocol}//lcfs-backend.${hostnameParts
         .slice(1)
         .join('.')}/api`
     }
   }
-  // Use getConfig to get 'api_base' from configuration or fallback to baseUrl
-  return window.lcfs_config.api_base ?? baseUrl
-}
 
-export const isFeatureEnabled = (featureFlag) => {
-  return CONFIG.feature_flags[featureFlag]
+  return window.lcfs_config.api_base ?? baseUrl
 }
 
 export const FEATURE_FLAGS = {
@@ -51,25 +77,40 @@ export const FEATURE_FLAGS = {
   MANAGE_CHARGING_SITES: 'manageChargingSites',
   MANAGE_FSE: 'manageFse',
   LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock'
+} as const
+
+export type FeatureFlagValue =
+  (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]
+
+export const isFeatureEnabled = (featureFlag: FeatureFlagValue): boolean => {
+  return CONFIG.feature_flags[featureFlag]
 }
 
-export const CONFIG = {
+export interface AppConfig {
+  API_BASE: string
+  TFRS_BASE: string
+  ENVIRONMENT: string
+  KEYCLOAK: Required<KeycloakConfig>
+  feature_flags: Record<FeatureFlagValue, boolean>
+}
+
+const getKeycloakConfig = (
+  config: KeycloakConfig
+): Required<KeycloakConfig> => ({
+  REALM: config.REALM ?? 'standard',
+  CLIENT_ID: config.CLIENT_ID ?? 'low-carbon-fuel-standard-5147',
+  AUTH_URL: config.AUTH_URL ?? 'https://dev.loginproxy.gov.bc.ca/auth',
+  POST_LOGOUT_URL: config.POST_LOGOUT_URL ?? 'http://localhost:3000/',
+  SM_LOGOUT_URL:
+    config.SM_LOGOUT_URL ??
+    'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
+})
+
+export const CONFIG: AppConfig = {
   API_BASE: getApiBaseUrl(),
   TFRS_BASE: window.lcfs_config.tfrs_base,
   ENVIRONMENT: window.lcfs_config.environment,
-  KEYCLOAK: {
-    REALM: window.lcfs_config.keycloak.REALM ?? 'standard',
-    CLIENT_ID:
-      window.lcfs_config.keycloak.CLIENT_ID ?? 'low-carbon-fuel-standard-5147',
-    AUTH_URL:
-      window.lcfs_config.keycloak.AUTH_URL ??
-      'https://dev.loginproxy.gov.bc.ca/auth',
-    POST_LOGOUT_URL:
-      window.lcfs_config.keycloak.POST_LOGOUT_URL ?? 'http://localhost:3000/',
-    SM_LOGOUT_URL:
-      window.lcfs_config.keycloak.SM_LOGOUT_URL ??
-      'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
-  },
+  KEYCLOAK: getKeycloakConfig(window.lcfs_config.keycloak),
   feature_flags: {
     supplementalReporting:
       window.lcfs_config.feature_flags.supplementalReporting ?? false,

@@ -2,10 +2,10 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import withFeatureFlag from '../withFeatureFlag.jsx' // Adjust the import path as necessary
-import { isFeatureEnabled } from '@/constants/config.js'
+import { isFeatureEnabled } from '@/constants/config'
 
 // Mock the isFeatureEnabled function
-vi.mock('@/constants/config.js', () => ({
+vi.mock('@/constants/config', () => ({
   isFeatureEnabled: vi.fn()
 }))
 
