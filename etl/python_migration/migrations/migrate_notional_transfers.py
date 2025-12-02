@@ -136,10 +136,30 @@ class NotionalTransferMigrator:
         tfrs_cursor.execute(query, (root_id,))
         return [row[0] for row in tfrs_cursor.fetchall()]
 
+    def make_content_key(self, record: Dict) -> str:
+        """Create a content-based key for comparing records across reports.
+
+        In TFRS, supplemental reports create NEW schedule_a_record IDs even when
+        the data is identical. We need to compare by content, not by record ID.
+        """
+        # Normalize values for consistent comparison
+        trading_partner = safe_str(record.get("trading_partner", "")).strip().lower()
+        postal_address = safe_str(record.get("postal_address", "")).strip().lower()
+        quantity = safe_decimal(record.get("quantity", 0))
+        fuel_class_id = safe_int(record.get("fuel_class_id", 0))
+        transfer_type_id = safe_int(record.get("transfer_type_id", 0))
+
+        return f"{trading_partner}|{postal_address}|{quantity}|{fuel_class_id}|{transfer_type_id}"
+
     def get_schedule_a_records(
         self, tfrs_cursor, tfrs_report_id: int
-    ) -> Dict[int, Dict]:
-        """Fetch current TFRS schedule_a records for a report"""
+    ) -> Dict[str, Dict]:
+        """Fetch current TFRS schedule_a records for a report.
+
+        Returns a dict keyed by content_key (not record_id) to enable proper
+        comparison across supplemental reports where record IDs change but
+        content stays the same.
+        """
         query = """
             SELECT
                 sar.id AS schedule_a_record_id,
@@ -160,7 +180,7 @@ class NotionalTransferMigrator:
 
         for row in tfrs_cursor.fetchall():
             rec_id = row[0]
-            records[rec_id] = {
+            record_data = {
                 "schedule_a_record_id": rec_id,
                 "quantity": row[1],
                 "trading_partner": row[2],
@@ -168,6 +188,9 @@ class NotionalTransferMigrator:
                 "fuel_class_id": row[4],
                 "transfer_type_id": row[5],
             }
+            # Key by content instead of record_id for proper comparison
+            content_key = self.make_content_key(record_data)
+            records[content_key] = record_data
 
         return records
 
@@ -183,17 +206,17 @@ class NotionalTransferMigrator:
         return result[0] if result else None
 
     def insert_version_row(
-        self, lcfs_cursor, lcfs_cr_id: int, row_data: Dict, action: str
+        self, lcfs_cursor, lcfs_cr_id: int, row_data: Dict, action: str, content_key: str
     ) -> bool:
         """Inserts a new row in notional_transfer with proper versioning"""
         try:
-            record_id = row_data["schedule_a_record_id"]
-
-            # Retrieve or generate the stable random group uuid for this record
-            group_uuid = self.record_uuid_map.get(record_id)
+            # Use content_key for group_uuid instead of record_id
+            # This ensures the same logical record (same content) gets the same
+            # group_uuid across supplemental reports, even if the TFRS record_id changes
+            group_uuid = self.record_uuid_map.get(content_key)
             if not group_uuid:
                 group_uuid = str(uuid.uuid4())
-                self.record_uuid_map[record_id] = group_uuid
+                self.record_uuid_map[content_key] = group_uuid
 
             # Find current highest version
             current_ver = self.get_current_version(lcfs_cursor, group_uuid)
@@ -272,6 +295,10 @@ class NotionalTransferMigrator:
                     tfrs_ids = self.get_lcfs_reports_with_legacy_ids(lcfs_cursor)
                     logger.info(f"Found {len(tfrs_ids)} reports to process")
 
+                    # Track processed chains to avoid duplicates
+                    # Each chain (identified by root_id) should only be processed once
+                    processed_chains = set()
+
                     # For each TFRS compliance_report ID, follow the chain approach
                     for tfrs_id in tfrs_ids:
                         logger.info(f"Processing TFRS compliance_report.id = {tfrs_id}")
@@ -284,6 +311,14 @@ class NotionalTransferMigrator:
                             )
                             total_skipped += 1
                             continue
+
+                        # Skip if this chain has already been processed
+                        if root_id in processed_chains:
+                            logger.debug(
+                                f"Chain with root_id={root_id} already processed; skipping TFRS #{tfrs_id}."
+                            )
+                            continue
+                        processed_chains.add(root_id)
 
                         # Gather the chain in ascending order
                         chain_ids = self.get_report_chain(tfrs_cursor, root_id)
@@ -315,19 +350,20 @@ class NotionalTransferMigrator:
                                 continue
 
                             # Compare old vs new for each record in currentRecords
-                            for rec_id, new_data in current_records.items():
-                                if rec_id not in previous_records:
+                            # Records are now keyed by content_key, not rec_id
+                            for content_key, new_data in current_records.items():
+                                if content_key not in previous_records:
                                     # Wasn't in old => CREATE
                                     if self.insert_version_row(
-                                        lcfs_cursor, lcfs_cr_id, new_data, "CREATE"
+                                        lcfs_cursor, lcfs_cr_id, new_data, "CREATE", content_key
                                     ):
                                         total_processed += 1
                                 else:
                                     # Existed => check if changed
-                                    old_data = previous_records[rec_id]
+                                    old_data = previous_records[content_key]
                                     if self.is_record_changed(old_data, new_data):
                                         if self.insert_version_row(
-                                            lcfs_cursor, lcfs_cr_id, new_data, "UPDATE"
+                                            lcfs_cursor, lcfs_cr_id, new_data, "UPDATE", content_key
                                         ):
                                             total_processed += 1
 

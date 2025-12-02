@@ -14,7 +14,7 @@ set -e
 # . data-transfer-enhanced.sh lcfs dev export 398cd4661173 compliance_report_history
 # . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-3509-postgresql-0 export 7392074e64b7
 # . data-transfer-enhanced.sh tfrs prod import 398cd4661173
-# ./data-transfer-enhanced.sh lcfs prod import 78eb96b8fc7f
+# ./data-transfer-enhanced.sh lcfs prod import 20c56d49dd44
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Passed $# parameters. Expected 4 or 5."
@@ -142,7 +142,7 @@ get_leader_pod() {
     for pod in $pods; do
         # Strip 'pod/' prefix for oc exec
         pod_clean="${pod#pod/}"
-        print_status "Checking if $pod_clean is the leader..."
+        print_status "Checking if $pod_clean is the leader..." >&2
         is_leader=$(oc exec -n $project $pod_clean -- bash -c "psql -U $remote_db_user -d $db_name -tAc 'SELECT pg_is_in_recovery();'" 2>/dev/null || echo "error")
         if [ "$is_leader" = "f" ]; then
             echo $pod

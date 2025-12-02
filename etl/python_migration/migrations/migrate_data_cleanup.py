@@ -19,6 +19,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import json
 import logging
 from typing import Dict, List, Optional, Tuple
 
@@ -160,13 +161,15 @@ class DataCleanupMigrator:
     ):
         """Log a cleanup action to the database"""
         try:
+            # Use json.dumps() to convert dict to valid JSON string for JSONB column
+            details_json = json.dumps(details) if details else None
             lcfs_cursor.execute(
                 """
-                INSERT INTO migration_cleanup_log 
+                INSERT INTO migration_cleanup_log
                 (cleanup_type, description, status, details)
                 VALUES (%s, %s, %s, %s)
             """,
-                (cleanup_type, description, status, str(details) if details else None),
+                (cleanup_type, description, status, details_json),
             )
         except Exception as e:
             logger.warning(f"⚠️ Could not log cleanup action: {e}")

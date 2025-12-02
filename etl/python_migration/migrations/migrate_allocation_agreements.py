@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class AllocationAgreementMigrator:
     def __init__(self):
-        self.record_uuid_map: Dict[int, str] = {}
+        self.record_uuid_map: Dict[str, str] = {}  # Maps content_key to group_uuid
         self.legacy_to_lcfs_mapping: Dict[int, int] = {}
         self.responsibility_to_transaction_type_cache: Dict[str, int] = {}
         self.fuel_type_name_to_id_cache: Dict[str, int] = {}
@@ -136,8 +136,74 @@ class AllocationAgreementMigrator:
         lcfs_cursor.execute(query)
         return [(row[0], row[1], row[2]) for row in lcfs_cursor.fetchall()]
 
+    def get_exclusion_agreement_id_for_report(self, tfrs_cursor, tfrs_id: int) -> Optional[int]:
+        """
+        Get the exclusion_agreement_id for a given TFRS compliance report.
+
+        Strategy:
+        1. First check if this report directly has an exclusion_agreement_id
+        2. If not, find the latest exclusion report in the same org/period
+
+        Returns the exclusion_agreement_id or None if not found.
+        """
+        # First, check if this report has its own exclusion_agreement_id
+        query_direct = """
+            SELECT exclusion_agreement_id, organization_id, compliance_period_id
+            FROM compliance_report
+            WHERE id = %s
+        """
+        tfrs_cursor.execute(query_direct, (tfrs_id,))
+        result = tfrs_cursor.fetchone()
+
+        if not result:
+            return None
+
+        direct_exclusion_id, org_id, period_id = result
+
+        if direct_exclusion_id:
+            logger.debug(f"Report {tfrs_id} has direct exclusion_agreement_id: {direct_exclusion_id}")
+            return direct_exclusion_id
+
+        # Fallback: Find the latest ACCEPTED exclusion report in the same org/period
+        # Must filter out Deleted reports and prefer Accepted ones
+        query_latest = """
+            SELECT cr.exclusion_agreement_id
+            FROM compliance_report cr
+            JOIN compliance_report_workflow_state crws ON cr.status_id = crws.id
+            WHERE cr.organization_id = %s
+              AND cr.compliance_period_id = %s
+              AND cr.exclusion_agreement_id IS NOT NULL
+              AND crws.fuel_supplier_status_id != 'Deleted'
+            ORDER BY
+              CASE WHEN crws.director_status_id = 'Accepted' THEN 0 ELSE 1 END,
+              cr.traversal DESC,
+              cr.id DESC
+            LIMIT 1
+        """
+        tfrs_cursor.execute(query_latest, (org_id, period_id))
+        result = tfrs_cursor.fetchone()
+
+        if result:
+            logger.debug(f"Report {tfrs_id} using fallback exclusion_agreement_id: {result[0]} from same org/period")
+            return result[0]
+
+        return None
+
     def get_allocation_agreement_records(self, tfrs_cursor, tfrs_id: int) -> List[Dict]:
-        """Get allocation agreement records for a given TFRS compliance report"""
+        """Get allocation agreement records for a given TFRS compliance report.
+
+        This uses a two-step approach to avoid cross-join issues:
+        1. First determine the correct exclusion_agreement_id
+        2. Then fetch all records for that specific agreement
+        """
+        # Step 1: Get the correct exclusion_agreement_id
+        exclusion_agreement_id = self.get_exclusion_agreement_id_for_report(tfrs_cursor, tfrs_id)
+
+        if not exclusion_agreement_id:
+            logger.debug(f"No exclusion_agreement_id found for TFRS report {tfrs_id}")
+            return []
+
+        # Step 2: Fetch all records for this specific exclusion agreement
         query = """
             SELECT
                 crear.id AS agreement_record_id,
@@ -150,55 +216,18 @@ class AllocationAgreementMigrator:
                 uom.name AS units,
                 crear.quantity_not_sold,
                 tt.id AS transaction_type_id
-            FROM compliance_report legacy_cr
-            -- First, try to join to the report's own exclusion agreement if it exists (combo reports)
-            LEFT JOIN compliance_report_exclusion_agreement crea_direct
-                ON legacy_cr.exclusion_agreement_id = crea_direct.id
-            LEFT JOIN compliance_report_exclusion_agreement_record crear_direct
-                ON crea_direct.id = crear_direct.exclusion_agreement_id
-            -- If not found, join to the latest exclusion report in the same organization/period
-            LEFT JOIN (
-                SELECT DISTINCT ON (exclusion_cr.organization_id, exclusion_cr.compliance_period_id)
-                    exclusion_cr.exclusion_agreement_id,
-                    exclusion_cr.organization_id,
-                    exclusion_cr.compliance_period_id
-                FROM compliance_report exclusion_cr
-                WHERE exclusion_cr.exclusion_agreement_id IS NOT NULL
-                ORDER BY exclusion_cr.organization_id, exclusion_cr.compliance_period_id, exclusion_cr.traversal DESC
-            ) latest_exclusion 
-                ON latest_exclusion.organization_id = legacy_cr.organization_id
-               AND latest_exclusion.compliance_period_id = legacy_cr.compliance_period_id
-               AND crea_direct.id IS NULL  -- Only use if direct exclusion not found
-            LEFT JOIN compliance_report_exclusion_agreement crea_latest
-                ON latest_exclusion.exclusion_agreement_id = crea_latest.id
-            LEFT JOIN compliance_report_exclusion_agreement_record crear_latest
-                ON crea_latest.id = crear_latest.exclusion_agreement_id
-            -- Coalesce the results to use direct first, then latest
-            LEFT JOIN LATERAL (
-                SELECT
-                    COALESCE(crear_direct.id, crear_latest.id) AS id,
-                    COALESCE(crear_direct.transaction_partner, crear_latest.transaction_partner) AS transaction_partner,
-                    COALESCE(crear_direct.postal_address, crear_latest.postal_address) AS postal_address,
-                    COALESCE(crear_direct.quantity, crear_latest.quantity) AS quantity,
-                    COALESCE(crear_direct.quantity_not_sold, crear_latest.quantity_not_sold) AS quantity_not_sold,
-                    COALESCE(crear_direct.transaction_type_id, crear_latest.transaction_type_id) AS transaction_type_id,
-                    COALESCE(crear_direct.fuel_type_id, crear_latest.fuel_type_id) AS fuel_type_id
-            ) crear ON true
-            -- Standard joins for details
+            FROM compliance_report_exclusion_agreement_record crear
             INNER JOIN transaction_type tt
                 ON crear.transaction_type_id = tt.id
             INNER JOIN approved_fuel_type aft
                 ON crear.fuel_type_id = aft.id
             INNER JOIN unit_of_measure uom
                 ON aft.unit_of_measure_id = uom.id
-            WHERE
-                legacy_cr.id = %s
-                AND crear.id IS NOT NULL  -- Ensure we have allocation data
-            ORDER BY
-                crear.id;
+            WHERE crear.exclusion_agreement_id = %s
+            ORDER BY crear.id
         """
 
-        tfrs_cursor.execute(query, (tfrs_id,))
+        tfrs_cursor.execute(query, (exclusion_agreement_id,))
         records = []
 
         for row in tfrs_cursor.fetchall():
@@ -235,35 +264,43 @@ class AllocationAgreementMigrator:
             )
             return None
 
-    def generate_logical_record_key(self, record_data: Dict) -> str:
-        """Generate a logical key for allocation agreement versioning based on business data"""
-        # Use key business fields that define a unique logical allocation agreement
-        # NOTE: Quantity is excluded so that quantity changes create new versions, not new records
-        transaction_partner = record_data.get("transaction_partner", "").strip()
-        responsibility = record_data.get("responsibility", "").strip()
-        fuel_type = record_data.get("fuel_type", "").strip()
+    def make_content_key(self, record_data: Dict) -> str:
+        """Create a content-based key for comparing records across reports.
 
-        # Create a logical key from the business identifiers (excluding quantity)
-        logical_key = f"{transaction_partner}|{responsibility}|{fuel_type}"
-        return logical_key
+        In TFRS, supplemental reports create NEW agreement_record IDs even when
+        the data is identical or just updated. We need to compare by content,
+        not by record ID, to maintain proper versioning across supplementals.
+
+        Key fields: transaction_partner, responsibility (Allocated from/to), fuel_type
+        Quantity is excluded so that quantity changes create new versions, not new records.
+        """
+        transaction_partner = safe_str(record_data.get("transaction_partner", "")).strip().lower()
+        responsibility = safe_str(record_data.get("responsibility", "")).strip().lower()
+        fuel_type = safe_str(record_data.get("fuel_type", "")).strip().lower()
+
+        return f"{transaction_partner}|{responsibility}|{fuel_type}"
 
     def insert_version_row(
         self, lcfs_cursor, lcfs_cr_id: int, row_data: Dict, action: str
     ) -> bool:
-        """Inserts a new row into allocation_agreement with proper versioning"""
+        """Inserts a new row into allocation_agreement with proper versioning.
+
+        Uses a content-based key (partner|responsibility|fuel_type) for group_uuid mapping.
+        This ensures the same logical allocation agreement gets the same group_uuid
+        across supplemental reports, even when TFRS creates new record IDs.
+        """
         try:
             record_id = row_data["agreement_record_id"]
 
-            # Generate logical key for this allocation agreement
-            logical_key = self.generate_logical_record_key(row_data)
-
-            # Retrieve or create a stable group_uuid based on logical key
-            group_uuid = self.record_uuid_map.get(logical_key)
+            # Use content-based key for versioning (like notional_transfers and other_uses)
+            # This handles TFRS creating new record IDs for supplemental reports
+            content_key = self.make_content_key(row_data)
+            group_uuid = self.record_uuid_map.get(content_key)
             if not group_uuid:
                 group_uuid = str(uuid.uuid4())
-                self.record_uuid_map[logical_key] = group_uuid
+                self.record_uuid_map[content_key] = group_uuid
                 logger.debug(
-                    f"Created new group_uuid {group_uuid} for logical key: {logical_key}"
+                    f"Created new group_uuid {group_uuid} for content_key: {content_key}"
                 )
 
             # Retrieve current highest version for this group_uuid
@@ -365,10 +402,11 @@ class AllocationAgreementMigrator:
                         report_groups[group_key].append(tfrs_id)
 
                     # Process each organization/period group with its own record_uuid_map
+                    # Within each org/period, multiple reports may share the same exclusion_agreement
+                    # and thus the same allocation records. Using record_id as the key ensures
+                    # proper versioning when the same record appears in multiple reports.
                     for (org_id, period_id), tfrs_ids in report_groups.items():
-                        self.record_uuid_map = (
-                            {}
-                        )  # Reset for each organization + period combination
+                        self.record_uuid_map = {}  # Reset for each organization + period combination
                         logger.info(
                             f"Processing organization {org_id}, period {period_id} with {len(tfrs_ids)} reports"
                         )

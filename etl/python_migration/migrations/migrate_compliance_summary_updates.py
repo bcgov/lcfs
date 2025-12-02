@@ -356,9 +356,9 @@ class ComplianceSummaryUpdater:
             # Convert line_17 (float) to Decimal for calculations
             line_17_decimal = Decimal(str(line_17))
             balance_chg_from_assessment = compliance_units_issued - banked_used
-            # Available compliance unit balance at the end of the compliance date for the period
-            # This should be the available balance at period end, not credits issued
-            available_balance_at_period_end = line_17_decimal  # This is the correct Line 22 value
+            # Available compliance unit balance at the end of the compliance period
+            # Line 22 = Line 17 (opening balance) + Line 20 (change from assessment)
+            available_balance_at_period_end = line_17_decimal + balance_chg_from_assessment
             total_payable = line11_gas + line11_diesel + line28_non_compliance
 
             return {

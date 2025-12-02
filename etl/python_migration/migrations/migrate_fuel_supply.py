@@ -845,6 +845,14 @@ class FuelSupplyMigrator:
                 logger.debug(
                     f"Processing record {i+1}: fuel_type={record.get('fuel_type')}, fuel_category={record.get('fuel_category')}, quantity={record.get('quantity')}"
                 )
+
+                # Skip GHGenius records - they are handled separately by migrate_ghgenius_fuel_supply.py
+                # which uses the CSV file with correct CI values
+                provision_desc = str(record.get("provision_of_the_act_description", "")).lower()
+                if "ghgenius" in provision_desc:
+                    logger.debug(f"Record {i+1} is GHGenius - skipping (handled by separate migration)")
+                    continue
+
                 normalized_record = self.normalize_tfrs_record(record)
                 if normalized_record:
                     records.append(normalized_record)

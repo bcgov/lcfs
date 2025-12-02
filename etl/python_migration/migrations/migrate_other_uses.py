@@ -125,17 +125,19 @@ class OtherUsesMigrator:
         return result[0] if result else -1
 
     def insert_version_row(
-        self, lcfs_cursor, lcfs_cr_id: int, row_data: Dict, action: str
+        self, lcfs_cursor, lcfs_cr_id: int, row_data: Dict, action: str, content_key: str
     ) -> bool:
         """Inserts a new row in other_uses with action=CREATE/UPDATE"""
         try:
             record_id = row_data["schedule_c_record_id"]
 
-            # Get/create stable group UUID for version chain
-            group_uuid = self.record_uuid_map.get(record_id)
+            # Use content_key for group_uuid instead of record_id
+            # This ensures the same logical record (same content) gets the same
+            # group_uuid across supplemental reports, even if the TFRS record_id changes
+            group_uuid = self.record_uuid_map.get(content_key)
             if not group_uuid:
                 group_uuid = str(uuid.uuid4())
-                self.record_uuid_map[record_id] = group_uuid
+                self.record_uuid_map[content_key] = group_uuid
 
             # Get current highest version
             current_ver = self.get_current_version(lcfs_cursor, group_uuid)
@@ -238,10 +240,29 @@ class OtherUsesMigrator:
         tfrs_cursor.execute(query, (root_id,))
         return [row[0] for row in tfrs_cursor.fetchall()]
 
+    def make_content_key(self, record: Dict) -> str:
+        """Create a content-based key for comparing records across reports.
+
+        In TFRS, supplemental reports create NEW schedule_c_record IDs even when
+        the data is identical. We need to compare by content, not by record ID.
+        """
+        quantity = safe_decimal(record.get("quantity", 0))
+        fuel_type_id = safe_int(record.get("fuel_type_id", 0))
+        fuel_class_id = safe_int(record.get("fuel_class_id", 0))
+        expected_use_id = safe_int(record.get("expected_use_id", 0))
+        rationale = safe_str(record.get("rationale", "")).strip().lower()
+
+        return f"{quantity}|{fuel_type_id}|{fuel_class_id}|{expected_use_id}|{rationale}"
+
     def get_schedule_c_records(
         self, tfrs_cursor, chain_tfrs_id: int
-    ) -> Dict[int, Dict]:
-        """Get current Schedule C records for a report"""
+    ) -> Dict[str, Dict]:
+        """Get current Schedule C records for a report.
+
+        Returns a dict keyed by content_key (not record_id) to enable proper
+        comparison across supplemental reports where record IDs change but
+        content stays the same.
+        """
         query = """
             SELECT
                 scr.id AS schedule_c_record_id,
@@ -266,7 +287,7 @@ class OtherUsesMigrator:
         records = {}
 
         for row in tfrs_cursor.fetchall():
-            records[row[0]] = {  # schedule_c_record_id as key
+            record_data = {
                 "schedule_c_record_id": row[0],
                 "quantity": row[1],
                 "fuel_type_id": row[2],
@@ -276,6 +297,9 @@ class OtherUsesMigrator:
                 "unit_of_measure": row[7],
                 "ci_of_fuel": row[8],
             }
+            # Key by content instead of record_id for proper comparison
+            content_key = self.make_content_key(record_data)
+            records[content_key] = record_data
 
         return records
 
@@ -311,6 +335,10 @@ class OtherUsesMigrator:
                     self.stats['tfrs_reports_found'] = len(tfrs_ids)
                     logger.info(f"Found {len(tfrs_ids)} reports to process")
 
+                    # Track processed chains to avoid duplicates
+                    # Each chain (identified by root_id) should only be processed once
+                    processed_chains = set()
+
                     # Process each TFRS compliance report
                     for tfrs_id in tfrs_ids:
                         logger.info(f"Processing TFRS compliance_report.id = {tfrs_id}")
@@ -323,6 +351,14 @@ class OtherUsesMigrator:
                             )
                             total_skipped += 1
                             continue
+
+                        # Skip if this chain has already been processed
+                        if root_id in processed_chains:
+                            logger.debug(
+                                f"Chain with root_id={root_id} already processed; skipping TFRS #{tfrs_id}."
+                            )
+                            continue
+                        processed_chains.add(root_id)
 
                         # Get full chain of reports
                         chain_ids = self.get_report_chain(tfrs_cursor, root_id)
@@ -357,18 +393,19 @@ class OtherUsesMigrator:
                                 continue
 
                             # Compare and insert records
-                            for rec_id, new_data in current_records.items():
-                                if rec_id not in previous_records:
+                            # Records are now keyed by content_key, not rec_id
+                            for content_key, new_data in current_records.items():
+                                if content_key not in previous_records:
                                     self.insert_version_row(
-                                        lcfs_cursor, lcfs_cr_id, new_data, "CREATE"
+                                        lcfs_cursor, lcfs_cr_id, new_data, "CREATE", content_key
                                     )
                                     self.stats['creates'] += 1
                                     total_processed += 1
                                 elif self.is_record_changed(
-                                    previous_records.get(rec_id), new_data
+                                    previous_records.get(content_key), new_data
                                 ):
                                     self.insert_version_row(
-                                        lcfs_cursor, lcfs_cr_id, new_data, "UPDATE"
+                                        lcfs_cursor, lcfs_cr_id, new_data, "UPDATE", content_key
                                     )
                                     self.stats['updates'] += 1
                                     total_processed += 1

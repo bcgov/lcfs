@@ -78,7 +78,8 @@ class ComplianceReportHistoryMigrator:
         manager_status = manager_status.lower() if manager_status else ""
         director_status = director_status.lower() if director_status else ""
 
-        # Handle "Requested Supplemental" - map to supplemental_requested instead of skipping
+        # Handle "Requested Supplemental" - map to supplemental_requested
+        # This ensures 1:1 mapping between TFRS and LCFS systems
         if (
             "requested supplemental" in fuel_status
             or "requested supplemental" in analyst_status
@@ -88,7 +89,11 @@ class ComplianceReportHistoryMigrator:
             logger.debug(
                 "Record marked as 'Requested Supplemental'; mapping to supplemental_requested."
             )
-            return self.status_mapping.get("supplemental_requested")
+            status_id = self.status_mapping.get("supplemental_requested")
+            if status_id is None:
+                logger.warning("supplemental_requested status not found, falling back to submitted")
+                return self.status_mapping.get("submitted")
+            return status_id
 
         # Exclude records with a draft status
         if fuel_status == "draft":
@@ -181,8 +186,12 @@ class ComplianceReportHistoryMigrator:
         logger.info(f"Fetched {len(records)} source history records")
         return records
 
-    def insert_history_record(self, lcfs_cursor, record_data: Dict) -> bool:
-        """Insert a single history record into destination"""
+    def insert_history_record(self, lcfs_cursor, record_data: Dict, lcfs_conn) -> bool:
+        """Insert a single history record into destination.
+
+        Uses savepoints to handle individual record failures without aborting
+        the entire transaction.
+        """
         insert_sql = """
             INSERT INTO compliance_report_history (
                 compliance_report_id,
@@ -193,14 +202,22 @@ class ComplianceReportHistoryMigrator:
                 update_user,
                 update_date
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (compliance_report_id, status_id) DO NOTHING
         """
 
         try:
+            # Create a savepoint before attempting insert
+            lcfs_cursor.execute("SAVEPOINT history_insert")
+
+            # Handle None create_user_id properly
+            create_user_id = record_data["create_user_id"]
+            create_user_str = str(create_user_id) if create_user_id is not None else "ETL"
+
             params = [
                 record_data["destination_report_id"],
                 record_data["final_status_id"],
-                record_data["create_user_id"],
-                str(record_data["create_user_id"]),
+                create_user_id,
+                create_user_str,
                 record_data["create_timestamp"],
                 (
                     str(record_data["update_user_id"])
@@ -211,10 +228,16 @@ class ComplianceReportHistoryMigrator:
             ]
 
             lcfs_cursor.execute(insert_sql, params)
+            # Release savepoint on success
+            lcfs_cursor.execute("RELEASE SAVEPOINT history_insert")
             return True
 
         except Exception as e:
-            logger.error(f"Failed to insert history record: {e}")
+            # Rollback to savepoint to keep transaction valid
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT history_insert")
+            logger.error(
+                f"Failed to insert history record for report {record_data.get('destination_report_id')}: {e}"
+            )
             return False
 
     def migrate(self) -> Tuple[int, int]:
@@ -278,7 +301,7 @@ class ComplianceReportHistoryMigrator:
                             "update_timestamp": record["update_timestamp"],
                         }
 
-                        if self.insert_history_record(lcfs_cursor, record_data):
+                        if self.insert_history_record(lcfs_cursor, record_data, lcfs_conn):
                             records_processed += 1
                         else:
                             records_skipped += 1
