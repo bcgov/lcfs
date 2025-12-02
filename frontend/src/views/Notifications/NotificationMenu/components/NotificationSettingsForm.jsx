@@ -10,7 +10,8 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  InputLabel
+  InputLabel,
+  Tooltip
 } from '@mui/material'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as Yup from 'yup'
@@ -29,7 +30,7 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
-import { Mail, Notifications } from '@mui/icons-material'
+import { Mail, Notifications, Info } from '@mui/icons-material'
 
 const NotificationSettingsForm = ({
   categories,
@@ -307,6 +308,12 @@ const NotificationSettingsForm = ({
                             notificationTypes[notificationTypeName]
                           if (!notificationTypeId) return null
 
+                          // Government notifications only have email (no in-app)
+                          const isGovernmentNotification =
+                            notificationTypeName.includes(
+                              'GOVERNMENT_NOTIFICATION'
+                            )
+
                           const renderNotificationCheckbox =
                             (channel) =>
                             ({ field }) => {
@@ -369,7 +376,7 @@ const NotificationSettingsForm = ({
                                   )}
                                 />
                               </TableCell>
-                              {/* In-App Checkbox */}
+                              {/* In-App Checkbox - not available for government notifications */}
                               <TableCell
                                 align="center"
                                 sx={{
@@ -378,14 +385,40 @@ const NotificationSettingsForm = ({
                                   padding: '4px'
                                 }}
                               >
-                                <Controller
-                                  name={`${notificationTypeKey}_${notificationChannels.IN_APP}`}
-                                  control={control}
-                                  defaultValue={false}
-                                  render={renderNotificationCheckbox(
-                                    notificationChannels.IN_APP
-                                  )}
-                                />
+                                {isGovernmentNotification ? (
+                                  <Tooltip
+                                    title={t('governmentNotificationNoInApp')}
+                                    arrow
+                                    placement="top"
+                                  >
+                                    <BCBox
+                                      sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginTop: '3px'
+                                      }}
+                                    >
+                                      <Info
+                                        style={{
+                                          color: '#999',
+                                          width: '24px',
+                                          height: '24px',
+                                          cursor: 'help'
+                                        }}
+                                      />
+                                    </BCBox>
+                                  </Tooltip>
+                                ) : (
+                                  <Controller
+                                    name={`${notificationTypeKey}_${notificationChannels.IN_APP}`}
+                                    control={control}
+                                    defaultValue={false}
+                                    render={renderNotificationCheckbox(
+                                      notificationChannels.IN_APP
+                                    )}
+                                  />
+                                )}
                               </TableCell>
                               {/* Label */}
                               <TableCell

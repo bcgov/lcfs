@@ -127,13 +127,12 @@ const GovernmentNotificationsCard = () => {
   }
 
   const handleSaveWithEmail = () => {
-    // TODO: Add email sending logic in future task
-    updateMutation.mutate(formData)
+    updateMutation.mutate({ ...formData, send_email: true })
     setShowConfirmDialog(false)
   }
 
   const handleSaveWithoutEmail = () => {
-    updateMutation.mutate(formData)
+    updateMutation.mutate({ ...formData, send_email: false })
     setShowConfirmDialog(false)
   }
 
@@ -153,17 +152,21 @@ const GovernmentNotificationsCard = () => {
   }, [formData.notification_text])
 
   const cardTitle = useMemo(() => {
-    const type = isEditing ? formData.notification_type : notification?.notificationType
-    return (
-      NOTIFICATION_TITLE_MAP[type] ||
-      'General notification'
-    )
+    const type = isEditing
+      ? formData.notification_type
+      : notification?.notificationType
+    return NOTIFICATION_TITLE_MAP[type] || 'General notification'
   }, [notification?.notificationType, isEditing, formData.notification_type])
 
   const headerStyles = useMemo(() => {
-    const type = isEditing ? formData.notification_type : notification?.notificationType
-    const bgColor = NOTIFICATION_PILL_COLORS[type] || NOTIFICATION_PILL_COLORS.General
-    const textColor = NOTIFICATION_PILL_TEXT_COLORS[type] || NOTIFICATION_PILL_TEXT_COLORS.General
+    const type = isEditing
+      ? formData.notification_type
+      : notification?.notificationType
+    const bgColor =
+      NOTIFICATION_PILL_COLORS[type] || NOTIFICATION_PILL_COLORS.General
+    const textColor =
+      NOTIFICATION_PILL_TEXT_COLORS[type] ||
+      NOTIFICATION_PILL_TEXT_COLORS.General
     return {
       backgroundColor: `${bgColor} !important`,
       '& h2': {
@@ -318,9 +321,7 @@ const GovernmentNotificationsCard = () => {
             </BCTypography>
             <ReactQuill
               value={formData.notification_text}
-              onChange={(value) =>
-                handleFormChange('notification_text', value)
-              }
+              onChange={(value) => handleFormChange('notification_text', value)}
               theme="snow"
               modules={{
                 toolbar: [
@@ -370,7 +371,11 @@ const GovernmentNotificationsCard = () => {
     if (!notification) {
       return (
         <Box p={2}>
-          <BCTypography variant="body2" color="text.secondary" textAlign="center">
+          <BCTypography
+            variant="body2"
+            color="text.secondary"
+            textAlign="center"
+          >
             No government notification has been created yet.
           </BCTypography>
         </Box>
@@ -382,9 +387,10 @@ const GovernmentNotificationsCard = () => {
     const notificationText = notification.notificationText || ''
     const linkUrl = notification.linkUrl || ''
 
-    const truncatedText = needsTruncation && !expanded
-      ? notificationText.substring(0, 1000) + '...'
-      : notificationText
+    const truncatedText =
+      needsTruncation && !expanded
+        ? notificationText.substring(0, 1000) + '...'
+        : notificationText
 
     return (
       <Box p={2}>
@@ -417,7 +423,11 @@ const GovernmentNotificationsCard = () => {
           sx={{
             fontSize: '1rem',
             '& p': { margin: 0, fontSize: '1rem' },
-            '& ul, & ol': { marginTop: 0.5, marginBottom: 0.5, fontSize: '1rem' }
+            '& ul, & ol': {
+              marginTop: 0.5,
+              marginBottom: 0.5,
+              fontSize: '1rem'
+            }
           }}
         />
 
@@ -472,7 +482,12 @@ const GovernmentNotificationsCard = () => {
         <DialogContent sx={{ pt: 3, pb: 2, mt: 2, ml: 4, mr: 4 }}>
           <BCTypography
             variant="body1"
-            sx={{ fontWeight: 'bold', color: '#d32f2f', mb: 2, textAlign: 'center' }}
+            sx={{
+              fontWeight: 'bold',
+              color: '#d32f2f',
+              mb: 2,
+              textAlign: 'center'
+            }}
           >
             Notification emails go out to all BCeID and IDIR users!
           </BCTypography>
@@ -481,7 +496,7 @@ const GovernmentNotificationsCard = () => {
             triggering an email notification?
           </BCTypography>
         </DialogContent>
-        <Divider/>
+        <Divider />
         <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
           <BCButton
             size="small"

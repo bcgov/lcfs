@@ -137,13 +137,27 @@ class TestFuelCodeEmailTemplates:
             assert "FUEL_CODE" in notification_type, \
                 f"Notification type {notification_type} should contain FUEL_CODE"
 
-    def test_no_duplicate_template_mappings(self):
-        """Test that there are no duplicate template mappings"""
-        template_names = list(TEMPLATE_MAPPING.values())
-        unique_template_names = set(template_names)
+    def test_no_unexpected_duplicate_template_mappings(self):
+        """Test that there are no unexpected duplicate template mappings.
         
-        assert len(template_names) == len(unique_template_names), \
-            "There should be no duplicate template mappings"
+        Some notification types intentionally share templates:
+        - Government notifications (BCEID, IDIR_ANALYST, IDIR_COMPLIANCE_MANAGER, 
+          IDIR_DIRECTOR) all use government_notification.html
+        """
+        # Templates that are intentionally reused across multiple notification types
+        allowed_shared_templates = {
+            "government_notification.html",  # Shared by all government notification types
+        }
+        
+        # Filter out intentionally shared templates
+        non_shared_templates = [
+            name for name in TEMPLATE_MAPPING.values() 
+            if name not in allowed_shared_templates
+        ]
+        unique_non_shared = set(non_shared_templates)
+        
+        assert len(non_shared_templates) == len(unique_non_shared), \
+            "There should be no unexpected duplicate template mappings"
 
     def test_fuel_code_template_files_are_minimal_and_consistent(self):
         """Test that fuel code template files are minimal and follow the pattern"""

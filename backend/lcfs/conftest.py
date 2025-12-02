@@ -65,12 +65,16 @@ async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     # Create the test database
     await create_test_database()
 
-    # Run Alembic migrations
+    # Run Alembic migrations on the test database
     try:
+        # Set the database to test database for alembic
+        test_env = os.environ.copy()
+        test_env["LCFS_DB_BASE"] = settings.db_test
         subprocess.run(
             [sys.executable, "-m", "alembic", "upgrade", "head"],
             cwd=f"{os.getcwd()}",
             check=True,
+            env=test_env,
         )
     except Exception as e:
         logger.error(

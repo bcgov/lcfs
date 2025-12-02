@@ -101,6 +101,11 @@ describe('BCeIDNotificationSettings', () => {
         title: 'bceid.categories.complianceReports.title',
         BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT:
           'bceid.categories.complianceReports.directorAssessment'
+      },
+      'bceid.categories.governmentNotifications': {
+        title: 'bceid.categories.governmentNotifications.title',
+        BCEID__GOVERNMENT_NOTIFICATION:
+          'bceid.categories.governmentNotifications.subscription'
       }
     }
 

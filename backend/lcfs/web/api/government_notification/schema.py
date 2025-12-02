@@ -40,3 +40,4 @@ class GovernmentNotificationUpdateSchema(BaseSchema):
     notification_text: str
     link_url: Optional[str] = None
     notification_type: NotificationTypeEnum
+    send_email: bool = False  # Whether to send email notifications to subscribed users
