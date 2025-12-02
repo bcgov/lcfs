@@ -12,7 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
-import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config.js'
+import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config'
 
 export const NewComplianceReportButton = forwardRef((props, ref) => {
   const { handleNewReport, isButtonLoading, setIsButtonLoading } = props

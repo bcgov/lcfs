@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
 import theme from '@/themes'
-import { roles } from '@/constants/roles.js'
+import { roles } from '@/constants/roles'
 
 // Mock react-router-dom
 const mockNavigate = vi.fn()

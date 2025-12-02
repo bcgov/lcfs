@@ -5,7 +5,7 @@ import UserSettingsCard from '../UserSettingsCard'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
-import { HELP_GUIDE_URL } from '@/constants/common.js'
+import { HELP_GUIDE_URL } from '@/constants/common'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')

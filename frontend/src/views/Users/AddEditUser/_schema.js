@@ -1,6 +1,6 @@
 import * as Yup from 'yup'
 import { govRoles, nonGovRoles, roles } from '@/constants/roles'
-import { PHONE_REGEX } from '@/constants/common.js'
+import { PHONE_REGEX } from '@/constants/common'
 
 // Schema for form validation
 export const userInfoSchema = (userType) =>

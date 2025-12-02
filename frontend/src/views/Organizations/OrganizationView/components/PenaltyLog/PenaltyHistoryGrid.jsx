@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { Role } from '@/components/Role'
