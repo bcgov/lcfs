@@ -49,7 +49,8 @@ export const FEATURE_FLAGS = {
   OBFUSCATED_LINKS: 'obfuscatedLinks',
   REPORTING_2025_ENABLED: 'reporting2025Enabled',
   MANAGE_CHARGING_SITES: 'manageChargingSites',
-  MANAGE_FSE: 'manageFse'
+  MANAGE_FSE: 'manageFse',
+  LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock'
 }
 
 export const CONFIG = {
@@ -87,6 +88,8 @@ export const CONFIG = {
       window.lcfs_config.feature_flags.manageChargingSites ??
       !isProductionEnvironment,
     manageFse:
-      window.lcfs_config.feature_flags.manageFse ?? !isProductionEnvironment
+      window.lcfs_config.feature_flags.manageFse ?? !isProductionEnvironment,
+    legacySupplementalLock:
+      window.lcfs_config.feature_flags.legacySupplementalLock ?? false
   }
 }

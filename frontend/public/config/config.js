@@ -20,7 +20,8 @@ export const config = {
     obfuscatedLinks: true,
     reporting2025Enabled: false,
     manageChargingSites: true,
-    manageFse: true
+    manageFse: true,
+    legacySupplementalLock: false
   }
 }
 
