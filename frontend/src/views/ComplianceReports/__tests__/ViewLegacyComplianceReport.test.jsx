@@ -41,7 +41,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock feature flags - completely self-contained to avoid hoisting issues
 const mockIsFeatureEnabled = vi.fn(() => true)
-vi.mock('@/constants/config.js', () => ({
+vi.mock('@/constants/config', () => ({
   FEATURE_FLAGS: {
     LEGACY_REPORT_DETAILS: 'LEGACY_REPORT_DETAILS'
   },
@@ -456,7 +456,7 @@ describe('ViewLegacyComplianceReport', () => {
   describe('Feature Flag Conditional Rendering', () => {
     it('does not render legacy report details when feature flag is disabled', async () => {
       // Import the mocked module to access the mock
-      const config = await import('@/constants/config.js')
+      const config = await import('@/constants/config')
       vi.mocked(config.isFeatureEnabled).mockReturnValue(false)
       
       renderComponent()

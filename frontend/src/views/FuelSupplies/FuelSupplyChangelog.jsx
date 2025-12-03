@@ -5,7 +5,7 @@ import {
   useComplianceReportWithCache,
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'

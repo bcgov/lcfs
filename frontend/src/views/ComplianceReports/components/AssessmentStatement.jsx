@@ -8,8 +8,8 @@ import { InputBase } from '@mui/material'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { roles } from '@/constants/roles.js'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { roles } from '@/constants/roles'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 export const AssessmentStatement = ({ methods }) => {

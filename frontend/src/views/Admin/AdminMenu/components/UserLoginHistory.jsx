@@ -9,7 +9,7 @@ import {
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserLoginHistory } from '@/hooks/useUser'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 const initialPaginationOptions = {
   page: 1,

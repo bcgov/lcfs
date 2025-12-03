@@ -9,7 +9,7 @@ import {
   act
 } from '@testing-library/react'
 import { FuelCodes } from '@/views/FuelCodes'
-import { roles } from '@/constants/roles.js'
+import { roles } from '@/constants/roles'
 import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
 

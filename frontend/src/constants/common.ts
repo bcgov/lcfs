@@ -1,4 +1,5 @@
 import { roles } from '@/constants/roles'
+import type { RoleName } from '@/constants/roles'
 
 export const KEY_LEFT = 'ArrowLeft'
 export const KEY_UP = 'ArrowUp'
@@ -12,8 +13,10 @@ export const KEY_PAGE_HOME = 'Home'
 export const KEY_PAGE_END = 'End'
 export const KEY_PERIOD = '.'
 
+type RoleBadgeSizes = Record<RoleName, number>
+
 // badge sizes for various user roles:
-export const ROLES_BADGE_SIZE = {
+export const ROLES_BADGE_SIZE: RoleBadgeSizes = {
   [roles.transfers]: 78,
   [roles.signing_authority]: 140,
   [roles.compliance_reporting]: 172,
@@ -50,9 +53,9 @@ export const SUMMARY = {
   LINE_20: 19,
   LINE_21: 20,
   LINE_22: 21
-}
+} as const
 
-export const DEFAULT_CI_FUEL = {
+export const DEFAULT_CI_FUEL: Record<string, number> = {
   Gasoline: 93.67,
   Diesel: 100.21,
   'Jet fuel': 88.83
@@ -61,9 +64,9 @@ export const DEFAULT_CI_FUEL = {
 export const REPORT_SCHEDULES = {
   ANNUAL: 'Annual',
   QUARTERLY: 'Quarterly'
-}
+} as const
 
-export const PHONE_REGEX =
+export const PHONE_REGEX: RegExp =
   /^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})?$/
 
 export const HELP_GUIDE_URL =
@@ -73,13 +76,30 @@ export const FILTER_KEYS = {
   COMPLIANCE_REPORT_GRID: 'compliance-reports-grid-filter',
   TRANSACTIONS_GRID: 'transactions-grid-filter',
   FUEL_CODES_GRID: 'fuel-codes-grid-filter'
-}
+} as const
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
 
+export interface FileTypeConfig {
+  MIME_TYPES: string[]
+  DESCRIPTION: string
+  readonly ACCEPT_STRING: string
+}
+
+const createFileTypeConfig = (
+  mimeTypes: string[],
+  description: string
+): FileTypeConfig => ({
+  MIME_TYPES: mimeTypes,
+  DESCRIPTION: description,
+  get ACCEPT_STRING() {
+    return mimeTypes.join(',')
+  }
+})
+
 // File upload constants for compliance reports
-export const COMPLIANCE_REPORT_FILE_TYPES = {
-  MIME_TYPES: [
+export const COMPLIANCE_REPORT_FILE_TYPES = createFileTypeConfig(
+  [
     'application/pdf',
     'image/png',
     'image/jpeg',
@@ -90,25 +110,16 @@ export const COMPLIANCE_REPORT_FILE_TYPES = {
     'text/csv',
     'text/plain'
   ],
-  DESCRIPTION:
-    'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT',
-  get ACCEPT_STRING() {
-    return this.MIME_TYPES.join(',')
-  }
-}
+  'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT'
+)
 
 // File upload constants for schedule imports
-export const SCHEDULE_IMPORT_FILE_TYPES = {
-  MIME_TYPES: [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  ],
-  DESCRIPTION: 'Excel files (.xlsx)',
-  get ACCEPT_STRING() {
-    return this.MIME_TYPES.join(',')
-  }
-}
+export const SCHEDULE_IMPORT_FILE_TYPES = createFileTypeConfig(
+  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  'Excel files (.xlsx)'
+)
 
-export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
+export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel'] as const
 export const LEGISLATION_TRANSITION_YEAR = 2024
 export const NEW_REGULATION_YEAR = 2025
 

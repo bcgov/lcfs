@@ -13,7 +13,7 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
 import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
 import LegacyReportSummary from './legacy/LegacyReportSummary'
-import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
 const iconStyle = {

@@ -1,12 +1,12 @@
 import BCBox from '@/components/BCBox'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 export const FuelExportSummary = ({ data, status }) => {
   const [paginationOptions, setPaginationOptions] = useState(

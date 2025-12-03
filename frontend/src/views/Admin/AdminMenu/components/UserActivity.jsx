@@ -10,7 +10,7 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserActivities } from '@/hooks/useUser'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 import ROUTES, { buildPath } from '@/routes/routes.js'
 
 const initialPaginationOptions = {

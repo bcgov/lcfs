@@ -31,7 +31,7 @@ import {
   useGetTransactionList,
   useDownloadTransactions
 } from '@/hooks/useTransactions'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
 
 const initialPaginationOptions = {

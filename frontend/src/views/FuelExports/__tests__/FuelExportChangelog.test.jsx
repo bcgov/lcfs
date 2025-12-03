@@ -10,7 +10,7 @@ import {
 } from '@/hooks/useComplianceReports'
 import { wrapper } from '@/tests/utils/wrapper'
 import colors from '@/themes/base/colors'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 // Mock all dependencies
 vi.mock('react-i18next', () => ({

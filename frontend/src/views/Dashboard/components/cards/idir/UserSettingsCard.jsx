@@ -10,7 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ROUTES } from '@/routes/routes'
-import { HELP_GUIDE_URL } from '@/constants/common.js'
+import { HELP_GUIDE_URL } from '@/constants/common'
 
 const linkStyle = {
   textDecoration: 'underline',
