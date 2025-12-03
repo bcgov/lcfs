@@ -12,6 +12,7 @@ function BCWidgetCard({
   content,
   style,
   editButton = null,
+  editButtonStyles = {},
   headerSx = {}
 }) {
   const navigate = useNavigate()
@@ -74,8 +75,10 @@ function BCWidgetCard({
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
                   color: 'rgba(0, 0, 0, 0.9)',
                   borderColor: 'rgba(0, 0, 0, 0.8)'
-                }
-              }}
+                },
+                ...editButtonStyles
+              }
+            }
             >
               {editButton.text}
             </BCButton>
@@ -109,6 +112,7 @@ BCWidgetCard.propTypes = {
   content: PropTypes.node.isRequired,
   subHeader: PropTypes.node,
   editButton: PropTypes.oneOfType([PropTypes.object, PropTypes.bool]),
+  editButtonStyles: PropTypes.object,
   headerSx: PropTypes.object
 }
 
