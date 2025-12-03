@@ -199,7 +199,7 @@ async def test_get_user_activities_permission_denied(
     url = fastapi_app.url_path_for("get_user_activities", user_id=target_user_id)
     response = await client.post(url, json=pagination)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.anyio

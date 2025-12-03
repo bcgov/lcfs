@@ -141,6 +141,26 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         server_default=text("false"),
         comment="Whether the organization should be displayed in the credit trading market",
     )
+    company_details = Column(
+        String,
+        nullable=True,
+        comment="Free-form text field for company details",
+    )
+    company_representation_agreements = Column(
+        String,
+        nullable=True,
+        comment="Free-form text field for company representation agreements or affiliated organizations",
+    )
+    company_acting_as_aggregator = Column(
+        String,
+        nullable=True,
+        comment="Free-form text field for acting as an aggregator information",
+    )
+    company_additional_notes = Column(
+        String,
+        nullable=True,
+        comment="Free-form text field for additional company notes",
+    )
 
     org_type = relationship(
         "OrganizationType", back_populates="organizations", lazy="joined"
@@ -188,7 +208,11 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         cascade="all, delete-orphan",
     )
 
-    charging_sites = relationship("ChargingSite", back_populates="organization")
+    charging_sites = relationship(
+        "ChargingSite",
+        foreign_keys="[ChargingSite.organization_id]",
+        back_populates="organization",
+    )
     charging_equipment_compliance_associations = relationship(
         "ComplianceReportChargingEquipment", back_populates="organization"
     )

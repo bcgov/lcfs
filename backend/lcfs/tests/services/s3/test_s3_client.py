@@ -7,6 +7,7 @@ from io import BytesIO
 import pytest
 from fastapi import UploadFile, HTTPException
 from starlette.responses import StreamingResponse
+from botocore.exceptions import ClientError
 
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
     admin_adjustment_document_association,
@@ -23,7 +24,7 @@ from lcfs.db.models.document import Document
 from lcfs.db.models.compliance.ComplianceReport import (
     compliance_report_document_association,
 )
-from lcfs.services.s3.client import DocumentService, MAX_FILE_SIZE_BYTES
+from lcfs.services.s3.client import DocumentService, MAX_FILE_SIZE_BYTES, BUCKET_NAME
 from lcfs.services.clamav.client import ClamAVService
 
 
@@ -47,6 +48,7 @@ def s3_client_mock():
     client.generate_presigned_url = MagicMock(return_value="https://example.com/file")
     client.delete_object = MagicMock()
     client.get_object = MagicMock(return_value={"Body": BytesIO(b"test content")})
+    client.put_object = MagicMock()
     return client
 
 
@@ -64,6 +66,7 @@ def compliance_report_repo_mock():
     ) as mock:
         mock_instance = mock.return_value
         mock_instance.get_compliance_report_by_id = AsyncMock()
+        mock_instance.get_related_compliance_report_ids = AsyncMock(return_value=[1])
         return mock_instance
 
 
@@ -121,6 +124,8 @@ def mock_file():
     file.content_type = "application/pdf"
     file.file = MagicMock()
     file.file.fileno = MagicMock(return_value=0)
+    file.file.seek = MagicMock()
+    file.file.read = MagicMock(return_value=b"file-bytes")
     return file
 
 
@@ -215,6 +220,81 @@ async def test_upload_file_compliance_report_success(
     db_mock.add.assert_called_once()
     db_mock.flush.assert_called()
     db_mock.refresh.assert_called_once()
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+@patch("uuid.uuid4")
+async def test_upload_file_closed_seek_is_ignored(
+    mock_uuid,
+    mock_fstat,
+    document_service,
+    mock_file,
+    user_supplier,
+    compliance_report_mock,
+    db_mock,
+):
+    mock_uuid.return_value = "test-uuid"
+    mock_stat = MagicMock()
+    mock_stat.st_size = 1024
+    mock_fstat.return_value = mock_stat
+
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+    db_mock.get.return_value = compliance_report_mock
+    db_mock.refresh = AsyncMock(side_effect=lambda x: x)
+
+    mock_file.file.seek.side_effect = [None, ValueError("seek of closed file")]
+
+    result = await document_service.upload_file(
+        mock_file, 1, "compliance_report", user_supplier
+    )
+
+    assert result.file_name == mock_file.filename
+    assert mock_file.file.seek.call_count == 2
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+@patch("uuid.uuid4")
+async def test_upload_file_sha256_mismatch_fallback(
+    mock_uuid,
+    mock_fstat,
+    document_service,
+    mock_file,
+    user_supplier,
+    compliance_report_mock,
+    db_mock,
+):
+    mock_uuid.return_value = "test-uuid"
+    mock_stat = MagicMock()
+    mock_stat.st_size = 1024
+    mock_fstat.return_value = mock_stat
+
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+    db_mock.get.return_value = compliance_report_mock
+    db_mock.refresh = AsyncMock(side_effect=lambda x: x)
+
+    error_response = {"Error": {"Code": "XAmzContentSHA256Mismatch", "Message": "mismatch"}}
+    document_service.s3_client.upload_fileobj.side_effect = ClientError(
+        error_response, "PutObject"
+    )
+
+    result = await document_service.upload_file(
+        mock_file, 1, "compliance_report", user_supplier
+    )
+
+    assert result.file_name == mock_file.filename
+    document_service.s3_client.put_object.assert_called_once()
+    kwargs = document_service.s3_client.put_object.call_args.kwargs
+    assert kwargs["Body"] == b"file-bytes"
+    assert kwargs["Bucket"] == BUCKET_NAME
+    assert kwargs["ContentType"] == mock_file.content_type
+    document_service.s3_client.upload_fileobj.assert_called_once()
+    assert mock_file.file.seek.call_count >= 2
 
 
 @pytest.mark.anyio

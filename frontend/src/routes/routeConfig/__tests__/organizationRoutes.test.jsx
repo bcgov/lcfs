@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { organizationRoutes } from '../organizationRoutes'
+import { organizationRoutes, orgDashboardRenderers } from '../organizationRoutes'
 import * as OrganizationsModule from '@/views/Organizations'
 import * as UsersModule from '@/views/Users'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
@@ -41,13 +41,22 @@ vi.mock('../routes', () => ({
       LIST: '/organizations',
       ADD: '/organizations/add-org',
       VIEW: '/organizations/:orgID',
+      USERS: '/organizations/:orgID/users',
+      CREDIT_LEDGER: '/organizations/:orgID/credit-ledger',
+      COMPANY_OVERVIEW: '/organizations/:orgID/company-overview',
+      PENALTY_LOG: '/organizations/:orgID/penalty-log',
+      PENALTY_LOG_MANAGE: '/organizations/:orgID/penalty-log/manage',
+      SUPPLY_HISTORY: '/organizations/:orgID/supply-history',
+      COMPLIANCE_TRACKING: '/organizations/:orgID/compliance-tracking',
       ADD_USER: '/organizations/:orgID/add-user',
-      VIEW_USER: '/organizations/:orgID/:userID'
+      VIEW_USER: '/organizations/:orgID/users/:userID'
     },
     ORGANIZATION: {
       ORG: '/organization',
+      USERS: '/organization/users',
       ADD_USER: '/organization/add-user',
-      VIEW_USER: '/organization/:userID'
+      VIEW_USER: '/organization/users/:userID',
+      CREDIT_LEDGER: '/organization/credit-ledger'
     }
   }
 }))
@@ -55,7 +64,7 @@ vi.mock('../routes', () => ({
 describe('organizationRoutes', () => {
   it('should export an array of route configurations', () => {
     expect(Array.isArray(organizationRoutes)).toBe(true)
-    expect(organizationRoutes.length).toBe(8)
+    expect(organizationRoutes.length).toBe(17)
   })
 
   it('should have all expected route paths', () => {
@@ -63,11 +72,20 @@ describe('organizationRoutes', () => {
       '/organizations',
       '/organizations/add-org',
       '/organizations/:orgID',
+      '/organizations/:orgID/users',
+      '/organizations/:orgID/credit-ledger',
+      '/organizations/:orgID/company-overview',
+      '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/penalty-log/manage',
+      '/organizations/:orgID/supply-history',
+      '/organizations/:orgID/compliance-tracking',
       '/organizations/:orgID/add-user',
-      '/organizations/:orgID/:userID',
+      '/organizations/:orgID/users/:userID',
       '/organization',
+      '/organization/users',
       '/organization/add-user',
-      '/organization/:userID'
+      '/organization/users/:userID',
+      '/organization/credit-ledger'
     ]
 
     const actualPaths = organizationRoutes.map((route) => route.path)
@@ -82,14 +100,21 @@ describe('organizationRoutes', () => {
       const idirRoutes = organizationRoutes.filter((route) =>
         route.path.startsWith('/organizations')
       )
-      expect(idirRoutes.length).toBe(5)
+      expect(idirRoutes.length).toBe(12)
 
       const expectedIdirPaths = [
         '/organizations',
         '/organizations/add-org',
         '/organizations/:orgID',
+        '/organizations/:orgID/users',
+        '/organizations/:orgID/credit-ledger',
+        '/organizations/:orgID/company-overview',
+        '/organizations/:orgID/penalty-log',
+        '/organizations/:orgID/penalty-log/manage',
+        '/organizations/:orgID/supply-history',
+        '/organizations/:orgID/compliance-tracking',
         '/organizations/:orgID/add-user',
-        '/organizations/:orgID/:userID'
+        '/organizations/:orgID/users/:userID'
       ]
 
       idirRoutes.forEach((route) => {
@@ -99,16 +124,18 @@ describe('organizationRoutes', () => {
 
     it('should have correct BCeID self-service routes', () => {
       const bceidRoutes = organizationRoutes.filter(
-        (route) =>
+      (route) =>
           route.path.startsWith('/organization') &&
           !route.path.startsWith('/organizations')
       )
-      expect(bceidRoutes.length).toBe(3)
+      expect(bceidRoutes.length).toBe(5)
 
       const expectedBceidPaths = [
         '/organization',
+        '/organization/users',
         '/organization/add-user',
-        '/organization/:userID'
+        '/organization/users/:userID',
+        '/organization/credit-ledger'
       ]
 
       bceidRoutes.forEach((route) => {
@@ -153,7 +180,7 @@ it('should have correct route structure for add user to organization', () => {
 
 it('should have correct route structure for view user in organization', () => {
   const viewUserRoute = organizationRoutes.find(
-    (route) => route.path === '/organizations/:orgID/:userID'
+    (route) => route.path === '/organizations/:orgID/users/:userID'
   )
   expect(viewUserRoute).toBeDefined()
   expect(viewUserRoute.handle.title).toBe('User profile')
@@ -180,7 +207,7 @@ it('should have correct route structure for BCeID add user', () => {
 
 it('should have correct route structure for BCeID view user', () => {
   const viewUserRoute = organizationRoutes.find(
-    (route) => route.path === '/organization/:userID'
+    (route) => route.path === '/organization/users/:userID'
   )
   expect(viewUserRoute).toBeDefined()
   expect(viewUserRoute.handle.title).toBe('User profile')
@@ -229,14 +256,14 @@ describe('Route Elements', () => {
 
   it('should use UserDetailsCard with correct props for view user routes', () => {
     const viewUserOrgRoute = organizationRoutes.find(
-      (route) => route.path === '/organizations/:orgID/:userID'
+      (route) => route.path === '/organizations/:orgID/users/:userID'
     )
     expect(viewUserOrgRoute.element.type).toBe(UserDetailsCard)
     expect(viewUserOrgRoute.element.props.userType).toBe('bceid')
     expect(viewUserOrgRoute.element.props.addMode).toBeUndefined()
 
     const viewUserBceidRoute = organizationRoutes.find(
-      (route) => route.path === '/organization/:userID'
+      (route) => route.path === '/organization/users/:userID'
     )
     expect(viewUserBceidRoute.element.type).toBe(UserDetailsCard)
     expect(viewUserBceidRoute.element.props.userType).toBe('bceid') // Updated: now has bceid
@@ -264,11 +291,13 @@ describe('Route Handle Properties', () => {
     const routesWithCrumbs = organizationRoutes.filter(
       (route) => route.handle.crumb
     )
-    expect(routesWithCrumbs.length).toBe(2) // Organizations list and organization user view routes
+    expect(routesWithCrumbs.length).toBe(4) // Organizations list and organization user view routes
 
     const expectedCrumbRoutes = [
       '/organizations',
-      '/organizations/:orgID/:userID'
+      '/organizations/:orgID/users/:userID',
+      '/organizations/:orgID/penalty-log',
+      '/organizations/:orgID/penalty-log/manage'
     ]
     routesWithCrumbs.forEach((route) => {
       expect(expectedCrumbRoutes.includes(route.path)).toBe(true)
@@ -281,7 +310,7 @@ describe('Route Handle Properties', () => {
     expect(listRoute.handle.crumb()).toBe('Organizations')
 
     const viewUserRoute = organizationRoutes.find(
-      (route) => route.path === '/organizations/:orgID/:userID'
+      (route) => route.path === '/organizations/:orgID/users/:userID'
     )
     expect(viewUserRoute.handle.crumb()).toBe('Users')
   })
@@ -305,10 +334,10 @@ describe('Route Handle Properties', () => {
   describe('User Type Configurations', () => {
     it('should set userType="bceid" for all user-related routes', () => {
       const allUserRoutes = organizationRoutes.filter((route) =>
-        route.path.includes('user')
+        route.path.includes('user') && route.element.props?.userType
       )
 
-      expect(allUserRoutes.length).toBe(4) // Should have 4 user routes
+      expect(allUserRoutes.length).toBe(4) // Should have 4 UserDetailsCard routes with userType
 
       allUserRoutes.forEach((route) => {
         expect(route.element.props.userType).toBe('bceid')
@@ -344,6 +373,163 @@ describe('Route Handle Properties', () => {
 
       viewRoutes.forEach((route) => {
         expect(route.element.props.addMode).toBeUndefined()
+      })
+    })
+  })
+
+  describe('orgDashboardRenderers', () => {
+    const mockNavigate = vi.fn()
+    const mockOrgID = '123'
+
+    it('should render SupplyHistory with organizationId prop for IDIR users', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/supply-history',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('SupplyHistory')
+      expect(result.props.organizationId).toBe(mockOrgID)
+    })
+
+    it('should render CreditLedger with organizationId prop for IDIR users', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/credit-ledger',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('CreditLedger')
+      expect(result.props.organizationId).toBe(mockOrgID)
+    })
+
+    it('should render OrganizationUsers for user path', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/users',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('OrganizationUsers')
+    })
+
+    it('should render CompanyOverview for company-overview path', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/company-overview',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('CompanyOverview')
+    })
+
+    it('should render PenaltyLog for penalty-log path', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/penalty-log',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('PenaltyLog')
+    })
+
+    it('should render PenaltyLogManage for penalty-log/manage path', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/penalty-log/manage',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('PenaltyLogManage')
+    })
+
+    it('should render ComplianceTracking for compliance-tracking path', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123/compliance-tracking',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('ComplianceTracking')
+    })
+
+    it('should render OrganizationDetailsCard as default for IDIR users', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/123',
+        mockOrgID,
+        false,
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('OrganizationDetailsCard')
+      expect(result.props.addMode).toBe(false)
+    })
+
+    it('should render OrganizationDetailsCard with addMode for add organization', () => {
+      const result = orgDashboardRenderers(
+        true, // isGovernment
+        '/organizations/add-org',
+        mockOrgID,
+        true, // addMode
+        mockNavigate
+      )
+
+      expect(result.type.name).toBe('OrganizationDetailsCard')
+      expect(result.props.addMode).toBe(true)
+    })
+
+    describe('BCeID users', () => {
+      it('should render OrganizationUsers for users path', () => {
+        const result = orgDashboardRenderers(
+          false, // isGovernment
+          '/organization/users',
+          mockOrgID,
+          false,
+          mockNavigate
+        )
+
+        expect(result.type.name).toBe('OrganizationUsers')
+      })
+
+      it('should render CreditLedger with organizationId for credit-ledger path', () => {
+        const result = orgDashboardRenderers(
+          false, // isGovernment
+          '/organization/credit-ledger',
+          mockOrgID,
+          false,
+          mockNavigate
+        )
+
+        expect(result.type.name).toBe('CreditLedger')
+        expect(result.props.organizationId).toBe(mockOrgID)
+      })
+
+      it('should render OrganizationDetailsCard as default', () => {
+        const result = orgDashboardRenderers(
+          false, // isGovernment
+          '/organization',
+          mockOrgID,
+          false,
+          mockNavigate
+        )
+
+        expect(result.type.name).toBe('OrganizationDetailsCard')
+        expect(result.props.addMode).toBe(false)
       })
     })
   })

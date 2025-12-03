@@ -1,14 +1,55 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { CreditTradingMarket } from '../CreditTradingMarket'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { wrapper } from '@/tests/utils/wrapper'
+
+vi.mock('@/hooks/useCurrentUser')
 
 // Mock child components
 vi.mock('../CreditMarketTable', () => ({
-  CreditMarketTable: () => <div data-test="credit-market-table">Credit Market Table</div>
+  CreditMarketTable: React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      refreshListings: vi.fn()
+    }))
+
+    return (
+      <div data-test="credit-market-table" ref={ref}>
+        Credit Market Table
+        {props.onRowSelect && (
+          <button
+            onClick={() =>
+              props.onRowSelect({
+                organizationId: 1,
+                organizationName: 'Org'
+              })
+            }
+          >
+            Select Row
+          </button>
+        )}
+      </div>
+    )
+  })
 }))
 
 vi.mock('../CreditMarketAccordion', () => ({
   CreditMarketAccordion: () => <div data-test="credit-market-accordion">Credit Market Accordion</div>
+}))
+
+vi.mock('../CreditMarketDetailsCard', () => ({
+  CreditMarketDetailsCard: ({ organizationId }) => (
+    <div data-test="credit-market-details-card">Details Card {organizationId}</div>
+  )
+}))
+
+vi.mock('@/components/ClearFiltersButton', () => ({
+  ClearFiltersButton: ({ onClick }) => (
+    <button data-test="clear-filters-button" onClick={onClick}>
+      Clear Filters Button
+    </button>
+  )
 }))
 
 // Mock BCTypography component
@@ -35,53 +76,62 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('CreditTradingMarket', () => {
+  const mockHasAnyRole = vi.fn(() => false)
+  const mockUser = {
+    organization: {
+      organizationId: 42,
+      name: 'User Organization'
+    }
+  }
+
+  beforeEach(() => {
+    mockHasAnyRole.mockReset()
+    vi.mocked(useCurrentUser).mockReturnValue({
+      data: mockUser,
+      hasAnyRole: mockHasAnyRole
+    })
+  })
+
+  const renderComponent = () =>
+    render(<CreditTradingMarket />, { wrapper })
+
   it('renders without crashing', () => {
-    render(<CreditTradingMarket />)
+    renderComponent()
     expect(screen.getByTestId('credit-market-table')).toBeInTheDocument()
     expect(screen.getByTestId('credit-market-accordion')).toBeInTheDocument()
   })
 
   it('calls useTranslation with creditMarket namespace', async () => {
     const { useTranslation } = await import('react-i18next')
-    render(<CreditTradingMarket />)
+    renderComponent()
     expect(vi.mocked(useTranslation)).toHaveBeenCalledWith(['creditMarket'])
   })
 
-  it('renders heading with correct translation key', () => {
-    render(<CreditTradingMarket />)
-    expect(mockT).toHaveBeenCalledWith('creditMarket:marketHeading')
-    expect(screen.getByText('translated-creditMarket:marketHeading')).toBeInTheDocument()
-  })
-
   it('renders disclaimer with correct translation key', () => {
-    render(<CreditTradingMarket />)
+    renderComponent()
     expect(mockT).toHaveBeenCalledWith('creditMarket:marketDisclaimer')
     expect(screen.getByText('translated-creditMarket:marketDisclaimer')).toBeInTheDocument()
   })
 
   it('renders CreditMarketTable component', () => {
-    render(<CreditTradingMarket />)
+    renderComponent()
     expect(screen.getByTestId('credit-market-table')).toBeInTheDocument()
     expect(screen.getByText('Credit Market Table')).toBeInTheDocument()
   })
 
   it('renders CreditMarketAccordion component', () => {
-    render(<CreditTradingMarket />)
+    renderComponent()
     expect(screen.getByTestId('credit-market-accordion')).toBeInTheDocument()
     expect(screen.getByText('Credit Market Accordion')).toBeInTheDocument()
   })
 
   it('renders with correct component structure', () => {
-    render(<CreditTradingMarket />)
+    renderComponent()
     
     // Check that heading has correct styling properties
     const headings = screen.getAllByTestId('bc-typography')
     const mainHeading = headings.find(el => el.getAttribute('data-variant') === 'h4')
     const disclaimer = headings.find(el => el.getAttribute('data-variant') === 'body2')
-    
-    expect(mainHeading).toBeInTheDocument()
-    expect(mainHeading).toHaveAttribute('data-mb', '2')
-    expect(mainHeading).toHaveAttribute('data-sx', JSON.stringify({ color: 'primary.main' }))
     
     expect(disclaimer).toBeInTheDocument()
     expect(disclaimer).toHaveAttribute('data-color', 'text.secondary')
@@ -89,16 +139,45 @@ describe('CreditTradingMarket', () => {
   })
 
   it('renders all required elements in correct order', () => {
-    render(<CreditTradingMarket />)
+    renderComponent()
     
-    const headingText = screen.getByText('translated-creditMarket:marketHeading')
     const disclaimerText = screen.getByText('translated-creditMarket:marketDisclaimer')
     const tableComponent = screen.getByTestId('credit-market-table')
     const accordionComponent = screen.getByTestId('credit-market-accordion')
     
-    expect(headingText).toBeInTheDocument()
     expect(disclaimerText).toBeInTheDocument()
     expect(tableComponent).toBeInTheDocument()
     expect(accordionComponent).toBeInTheDocument()
+  })
+
+  it('shows details card for BCeID users with their organization', () => {
+    renderComponent()
+    const detailsCard = screen.getByTestId('credit-market-details-card')
+    expect(detailsCard).toHaveTextContent('Details Card 42')
+  })
+
+  it('shows details card after government user selects a row', () => {
+    mockHasAnyRole.mockReturnValue(true)
+    renderComponent()
+    expect(screen.queryByTestId('credit-market-details-card')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Select Row'))
+    expect(screen.getByTestId('credit-market-details-card')).toHaveTextContent('Details Card 1')
+  })
+
+  it('renders clear filters button', () => {
+    renderComponent()
+    expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
+  })
+
+  it('clears selection via button', () => {
+    mockHasAnyRole.mockReturnValue(true)
+    renderComponent()
+    fireEvent.click(screen.getByText('Select Row'))
+    expect(screen.getByTestId('credit-market-details-card')).toBeInTheDocument()
+    const clearSelectionButton = screen.getByRole('button', {
+      name: 'translated-creditMarket:clearSelection'
+    })
+    fireEvent.click(clearSelectionButton)
+    expect(screen.queryByTestId('credit-market-details-card')).not.toBeInTheDocument()
   })
 })

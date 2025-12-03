@@ -23,11 +23,6 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
-import {
-  formatFuelCodeOptions,
-  extractOriginalFuelCode,
-  formatFuelCodeWithCountryPrefix
-} from '@/utils/fuelCodeCountryPrefix'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -354,14 +349,14 @@ export const allocationAgreementColDefs = (
       ),
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: (params) => {
-        const fuelType = optionsData?.fuelTypes?.find(
+        const fuelTypes = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
         return {
-          options: formatFuelCodeOptions(
-            fuelType?.fuelCodes || [],
-            compliancePeriod
-          ),
+          options:
+            fuelTypes?.fuelCodes?.map(
+              (item) => item.fuelCode || item.fuel_code
+            ) || [],
           multiple: false,
           disableCloseOnSelect: false,
           freeSolo: false,
@@ -372,7 +367,7 @@ export const allocationAgreementColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       suppressKeyboardEvent,
-      minWidth: 150,
+      minWidth: 175,
       editable: (params) =>
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
         optionsData?.fuelTypes?.find(
@@ -383,23 +378,6 @@ export const allocationAgreementColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         if (!fuelTypeObj) {
-          // If we have a fuel code, format it with country prefix for display
-          if (params.data.fuelCode) {
-            // Find the fuel code details to get the country
-            const allFuelCodes =
-              optionsData?.fuelTypes?.flatMap((ft) => ft.fuelCodes) || []
-            const fuelCodeDetails = allFuelCodes.find(
-              (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-            )
-            const country =
-              fuelCodeDetails?.fuelProductionFacilityCountry ||
-              fuelCodeDetails?.fuel_production_facility_country
-            return formatFuelCodeWithCountryPrefix(
-              params.data.fuelCode,
-              country,
-              compliancePeriod
-            )
-          }
           return params.data.fuelCode
         }
 
@@ -421,27 +399,12 @@ export const allocationAgreementColDefs = (
           }
         }
 
-        // Format the fuel code with country prefix for display
-        if (params.data.fuelCode) {
-          const fuelCodeDetails = fuelTypeObj.fuelCodes.find(
-            (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-          )
-          const country =
-            fuelCodeDetails?.fuelProductionFacilityCountry ||
-            fuelCodeDetails?.fuel_production_facility_country
-          return formatFuelCodeWithCountryPrefix(
-            params.data.fuelCode,
-            country,
-            compliancePeriod
-          )
-        }
-
         return params.data.fuelCode
       },
       valueSetter: (params) => {
         if (params.newValue) {
           // Extract the original fuel code from the formatted display value
-          const originalFuelCode = extractOriginalFuelCode(params.newValue)
+          const originalFuelCode = params.newValue
           params.data.fuelCode = originalFuelCode
 
           const fuelType = optionsData?.fuelTypes?.find(
@@ -666,66 +629,77 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
       ),
+      minWidth: 160,
       field: 'allocationTransactionType'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.transactionPartner'
       ),
+      minWidth: 320,
       field: 'transactionPartner'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.postalAddress'
       ),
+      minWidth: 400,
       field: 'postalAddress'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
       ),
+      minWidth: 200,
       field: 'transactionPartnerEmail'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
       ),
+      minWidth: 150,
       field: 'transactionPartnerPhone'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.fuelType'
       ),
+      minWidth: 200,
       field: 'fuelType'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.fuelCategory'
       ),
+      minWidth: 150,
       field: 'fuelCategory'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
       ),
+      minWidth: 370,
       field: 'provisionOfTheAct'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.fuelCode'
       ),
+      minWidth: 175,
       field: 'fuelCode'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
       ),
+      minWidth: 90,
       field: 'ciOfFuel'
     },
     {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.quantity'
       ),
+      minWidth: 185,
       field: 'quantity',
       valueFormatter
     },
@@ -733,6 +707,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
       headerName: i18n.t(
         'allocationAgreement:allocationAgreementColLabels.units'
       ),
+      minWidth: 80,
       field: 'units'
     }
   ]
@@ -743,6 +718,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
         return [
           {
             field: 'q1Quantity',
+            minWidth: 150,
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q1Quantity'
             ),
@@ -750,6 +726,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
           },
           {
             field: 'q2Quantity',
+            minWidth: 150,
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q2Quantity'
             ),
@@ -757,6 +734,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
           },
           {
             field: 'q3Quantity',
+            minWidth: 150,
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q3Quantity'
             ),
@@ -764,6 +742,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
           },
           {
             field: 'q4Quantity',
+            minWidth: 150,
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.q4Quantity'
             ),
@@ -771,6 +750,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
           },
           {
             field: 'totalQuantity',
+            minWidth: 160,
             headerName: i18n.t(
               'allocationAgreement:allocationAgreementColLabels.totalQuantity'
             ),
@@ -805,170 +785,290 @@ export const defaultColDef = {
   flex: 1
 }
 
-export const changelogCommonColDefs = (highlight = true) => [
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
-    ),
-    field: 'allocationTransactionType.type',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'allocationTransactionType')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
-    ),
-    field: 'transactionPartner',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'transactionPartner')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.postalAddress'
-    ),
-    field: 'postalAddress',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'postalAddress')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
-    ),
-    field: 'transactionPartnerEmail',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'transactionPartnerEmail')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
-    ),
-    field: 'transactionPartnerPhone',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'transactionPartnerPhone')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelType'
-    ),
-    field: 'fuelType.fuelType',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
-    ),
-    field: 'fuelTypeOther',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelTypeOther')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
-    ),
-    field: 'fuelCategory.category',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategory')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
-    ),
-    field: 'provisionOfTheAct.name',
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheAct')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelCode'
-    ),
-    field: 'fuelCode.fuel_code',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
-    ),
-    field: 'ciOfFuel',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.quantity'
-    ),
-    field: 'quantity',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.q1Quantity'
-    ),
-    field: 'q1Quantity',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'q1Quantity')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.q2Quantity'
-    ),
-    field: 'q2Quantity',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'q2Quantity')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.q3Quantity'
-    ),
-    field: 'q3Quantity',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'q3Quantity')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.q4Quantity'
-    ),
-    field: 'q4Quantity',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'q4Quantity')
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.units'
-    ),
-    field: 'units',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+export const changelogCommonColDefs = (
+  highlight = true,
+  isEarlyIssuance = false
+) => {
+  const baseColumns = [
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+      ),
+      field: 'allocationTransactionType.type',
+      minWidth: 160,
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'allocationTransactionType')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+      ),
+      minWidth: 320,
+      field: 'transactionPartner',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'transactionPartner')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.postalAddress'
+      ),
+      minWidth: 400,
+      field: 'postalAddress',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'postalAddress')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+      ),
+      minWidth: 200,
+      field: 'transactionPartnerEmail',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'transactionPartnerEmail')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+      ),
+      minWidth: 150,
+      field: 'transactionPartnerPhone',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'transactionPartnerPhone')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.fuelType'
+      ),
+      minWidth: 200,
+      field: 'fuelType.fuelType',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+      ),
+      minWidth: 250,
+      field: 'fuelTypeOther',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'fuelTypeOther')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+      ),
+      minWidth: 150,
+      field: 'fuelCategory.category',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'fuelCategory')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+      ),
+      minWidth: 370,
+      field: 'provisionOfTheAct.name',
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'provisionOfTheAct')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.fuelCode'
+      ),
+      minWidth: 175,
+      field: 'fuelCode.fuel_code',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+      ),
+      minWidth: 90,
+      field: 'ciOfFuel',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.quantity'
+      ),
+      minWidth: 185,
+      field: 'quantity',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+    },
+    {
+      headerName: i18n.t(
+        'allocationAgreement:allocationAgreementColLabels.units'
+      ),
+      minWidth: 80,
+      field: 'units',
+      cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+    }
+  ]
+  if (isEarlyIssuance) {
+    return baseColumns.flatMap((item) => {
+      if (item.field === 'quantity') {
+        return [
+          {
+            field: 'q1Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q1Quantity'
+            ),
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q1Quantity')
+          },
+          {
+            field: 'q2Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q2Quantity'
+            ),
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q2Quantity')
+          },
+          {
+            field: 'q3Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q3Quantity'
+            ),
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q3Quantity')
+          },
+          {
+            field: 'q4Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q4Quantity'
+            ),
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'q4Quantity')
+          },
+          {
+            field: 'totalQuantity',
+            minWidth: 160,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.totalQuantity'
+            ),
+            valueFormatter,
+            cellStyle: (params) =>
+              highlight && changelogCellStyle(params, 'totalQuantity'),
+            valueGetter: (params) => {
+              const data = params.data
+              return (
+                (data.q1Quantity || 0) +
+                (data.q2Quantity || 0) +
+                (data.q3Quantity || 0) +
+                (data.q4Quantity || 0)
+              )
+            }
+          }
+        ]
+      }
+      return [item]
+    })
   }
-]
+  return baseColumns
+}
 
-export const changelogColDefs = (highlight = true) => [
-  {
-    field: 'groupUuid',
-    hide: true,
-    sort: 'desc',
-    sortIndex: 3
-  },
-  { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
-  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
-  {
-    field: 'actionType',
-    valueGetter: (params) => {
-      if (params.data.actionType === 'UPDATE') {
-        if (params.data.updated) {
-          return 'Edited old'
-        } else {
-          return 'Edited new'
+export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
+  const baseColumns = [
+    {
+      field: 'groupUuid',
+      hide: true,
+      sort: 'desc',
+      sortIndex: 3
+    },
+    { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
+    { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+    {
+      field: 'actionType',
+      minWidth: 140,
+      valueGetter: (params) => {
+        if (params.data.actionType === 'UPDATE') {
+          if (params.data.updated) {
+            return 'Edited old'
+          } else {
+            return 'Edited new'
+          }
+        }
+        if (params.data.actionType === 'DELETE') {
+          return 'Deleted'
+        }
+        if (params.data.actionType === 'CREATE') {
+          return 'Added'
+        }
+      },
+      cellStyle: (params) => {
+        if (highlight && params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
         }
       }
-      if (params.data.actionType === 'DELETE') {
-        return 'Deleted'
-      }
-      if (params.data.actionType === 'CREATE') {
-        return 'Added'
-      }
     },
-    cellStyle: (params) => {
-      if (highlight && params.data.actionType === 'UPDATE') {
-        return { backgroundColor: colors.alerts.warning.background }
+    ...changelogCommonColDefs(highlight)
+  ]
+  if (isEarlyIssuance) {
+    return baseColumns.flatMap((item) => {
+      if (item.field === 'quantity') {
+        return [
+          {
+            field: 'q1Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q1Quantity'
+            ),
+            valueFormatter
+          },
+          {
+            field: 'q2Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q2Quantity'
+            ),
+            valueFormatter
+          },
+          {
+            field: 'q3Quantity',
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q3Quantity'
+            ),
+            valueFormatter
+          },
+          {
+            field: 'q4Quantity',
+            minWidth: 150,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.q4Quantity'
+            ),
+            valueFormatter
+          },
+          {
+            field: 'totalQuantity',
+            minWidth: 160,
+            headerName: i18n.t(
+              'allocationAgreement:allocationAgreementColLabels.totalQuantity'
+            ),
+            valueFormatter,
+            valueGetter: (params) => {
+              const data = params.data
+              return (
+                (data.q1Quantity || 0) +
+                (data.q2Quantity || 0) +
+                (data.q3Quantity || 0) +
+                (data.q4Quantity || 0)
+              )
+            }
+          }
+        ]
       }
-    }
-  },
-  ...changelogCommonColDefs(highlight)
-]
+      return [item]
+    })
+  }
+  return baseColumns
+}
 
 export const changelogDefaultColDefs = {
   floatingFilter: false,

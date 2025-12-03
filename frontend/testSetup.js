@@ -133,6 +133,17 @@ beforeAll(async () => {
       const { children, severity, dismissible, noFade, delay, ...domProps } = props
       return React.createElement('div', { 'data-test': 'bc-alert', ...domProps, 'data-severity': severity }, children)
     }),
+    BCAlert2: React.forwardRef((props, ref) => {
+      React.useImperativeHandle(ref, () => ({
+        triggerAlert: vi.fn(),
+        show: vi.fn(),
+        hide: vi.fn(),
+        clearAlert: vi.fn()
+      }))
+      const { children, severity, dismissible, noFade, delay, ...domProps } = props
+      const testId = domProps['data-test'] || 'bc-alert-2'
+      return React.createElement('div', { 'data-test': testId, ...domProps, 'data-severity': severity }, children)
+    }),
     FloatingAlert: React.forwardRef((props, ref) => {
       React.useImperativeHandle(ref, () => ({
         triggerAlert: vi.fn(),
@@ -186,8 +197,10 @@ beforeAll(async () => {
       })
     },
     BCFormRadio: ({ name, control, options = [], ...props }) => {
-      return React.createElement('div', { 'data-test': `${name}-radio-group` }, 
-        options.map((option, index) => 
+      return React.createElement(
+        'div',
+        { 'data-test': `${name}-radio-group` },
+        options.map((option, index) =>
           React.createElement('input', {
             key: `${name}-${index}`,
             type: 'radio',

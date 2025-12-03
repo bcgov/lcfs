@@ -8,6 +8,7 @@ import {
   act
 } from '@testing-library/react'
 import { ComplianceReports } from '../ComplianceReports'
+import { ROUTES } from '@/routes/routes'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 // Mock hooks
@@ -225,7 +226,7 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     const calculatorButton = screen.getByTestId('credit-calculator')
     fireEvent.click(calculatorButton)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/credit-calculator')
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CREDIT_CALCULATOR)
   })
 
   it('renders all main UI components', () => {

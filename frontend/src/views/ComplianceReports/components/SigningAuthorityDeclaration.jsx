@@ -7,20 +7,12 @@ import Box from '@mui/material/Box'
 
 const SigningAuthorityDeclaration = ({
   onChange,
+  checked,
   hasAuthority,
   hasRecords,
   hasValidAddress
 }) => {
   const { t } = useTranslation(['report'])
-  const [checked, setChecked] = useState(false)
-
-  const handleChange = (event) => {
-    setChecked(event.target.checked)
-  }
-
-  useEffect(() => {
-    onChange(checked)
-  }, [checked, onChange])
 
   const renderAlert = (propKey) => {
     return (
@@ -58,7 +50,7 @@ const SigningAuthorityDeclaration = ({
           <Checkbox
             disabled={!hasRecords || !hasAuthority || !hasValidAddress}
             checked={checked}
-            onChange={handleChange}
+            onChange={(event) => onChange(event.target.checked)}
             id="signing-authority-declaration"
             data-test="signing-authority-checkbox"
             color="primary"

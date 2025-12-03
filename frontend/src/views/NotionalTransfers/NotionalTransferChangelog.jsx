@@ -12,12 +12,15 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
+import { REPORT_SCHEDULES } from '@/constants/common'
 
 export const NotionalTransferChangelog = () => {
   const { t } = useTranslation(['common', 'notionalTransfer', 'report'])
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
+  const isEarlyIssuance =
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   // State for pagination - one per changelog item
   const [paginationStates, setPaginationStates] = useState({})
@@ -170,8 +173,8 @@ export const NotionalTransferChangelog = () => {
                 gridKey={`notional-transfers-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false)
-                    : changelogColDefs()
+                    ? changelogCommonColDefs(false, parseInt(compliancePeriod), isEarlyIssuance)
+                    : changelogColDefs(true, parseInt(compliancePeriod), isEarlyIssuance)
                 }
                 queryData={queryData}
                 getRowId={getRowId}

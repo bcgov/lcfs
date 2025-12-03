@@ -34,7 +34,7 @@ import { RequiredHeader } from '@/components/BCDataGrid/components'
  * @returns {JSX.Element}
  */
 export const BCGridEditor = ({
-  gridRef,
+  gridRef = useRef(null),
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -53,6 +53,7 @@ export const BCGridEditor = ({
 }) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
+  const pendingSavePromiseRef = useRef(null)
   const firstEditableColumnRef = useRef(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
@@ -183,10 +184,23 @@ export const BCGridEditor = ({
   }, [handleExcelPaste, handlePaste, ref, enablePaste])
 
   const handleOnCellEditingStopped = useCallback(
-    async (params) => {
+    (params) => {
       if (params.data.modified && !params.data.deleted) {
         if (onCellEditingStopped) {
-          onCellEditingStopped(params)
+          let trackedPromise
+          const promise = Promise.resolve(onCellEditingStopped(params))
+          trackedPromise = promise
+            .catch((error) => {
+              console.error('Error saving row:', error)
+              throw error
+            })
+            .finally(() => {
+              if (pendingSavePromiseRef.current === trackedPromise) {
+                pendingSavePromiseRef.current = null
+              }
+            })
+
+          pendingSavePromiseRef.current = trackedPromise
         }
       }
     },
@@ -211,7 +225,6 @@ export const BCGridEditor = ({
       params.event.target.dataset.action &&
       onAction
     ) {
-      alertRef.current.clearAlert()
       const action = params.event.target.dataset.action
       const transaction = await onAction(action, params)
 
@@ -251,7 +264,6 @@ export const BCGridEditor = ({
 
   const handleAddRowsInternal = useCallback(
     async (numRows) => {
-      alertRef.current.clearAlert()
       let newRows = []
 
       if (onAction) {
@@ -303,15 +315,38 @@ export const BCGridEditor = ({
   }
 
   const [showCloseModal, setShowCloseModal] = useState(false)
-  const onSaveExit = () => {
+
+  const waitForPendingSave = useCallback(async () => {
+    if (pendingSavePromiseRef.current) {
+      try {
+        await pendingSavePromiseRef.current
+      } catch (error) {
+        console.error('Error saving row before navigation:', error)
+        return false
+      }
+    }
+    return true
+  }, [])
+
+  const onSaveExit = useCallback(async () => {
+    const api = ref.current?.api
+    if (typeof api?.stopEditing === 'function') {
+      api.stopEditing()
+    }
+
+    const pendingSaveSucceeded = await waitForPendingSave()
+    if (!pendingSaveSucceeded) {
+      return
+    }
+
     const isValid = isGridValid()
     if (isValid) {
-      saveButtonProps.onSave()
+      await saveButtonProps.onSave?.()
       return
     }
 
     setShowCloseModal(true)
-  }
+  }, [isGridValid, ref, saveButtonProps.onSave, waitForPendingSave])
 
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
@@ -425,7 +460,7 @@ export const BCGridEditor = ({
 }
 
 BCGridEditor.propTypes = {
-  gridRef: PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
+  gridRef: PropTypes.shape({ current: PropTypes.any }),
   alertRef: PropTypes.shape({ current: PropTypes.any }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,

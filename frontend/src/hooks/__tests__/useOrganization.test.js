@@ -23,14 +23,16 @@ import {
   useCreditMarketListings,
   useUpdateOrganization,
   useUpdateOrganizationUser,
-  useUpdateCurrentOrgCreditMarket
+  useUpdateCurrentOrgCreditMarket,
+  useUpdateOrganizationCreditMarket
 } from '../useOrganization'
 
 vi.mock('@/services/useApiService')
 const qcMock = {
   invalidateQueries: vi.fn(),
   removeQueries: vi.fn(),
-  setQueryData: vi.fn()
+  setQueryData: vi.fn(),
+  refetchQueries: vi.fn()
 }
 
 vi.mock('@tanstack/react-query', async () => {
@@ -57,6 +59,7 @@ describe('useOrganization hooks', () => {
     qcMock.invalidateQueries.mockReset()
     qcMock.removeQueries.mockReset()
     qcMock.setQueryData.mockReset()
+    qcMock.refetchQueries.mockReset()
   })
 
   afterEach(() => {
@@ -186,7 +189,34 @@ describe('useOrganization hooks', () => {
     )
     await result.current.mutateAsync({})
     expect(qcMock.setQueryData).toHaveBeenCalled()
-    expect(qcMock.invalidateQueries).toHaveBeenCalled()
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith(['organization'])
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+      'current-org-balance'
+    ])
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+      'credit-market-listings'
+    ])
+    expect(qcMock.refetchQueries).toHaveBeenCalledWith([
+      'credit-market-listings'
+    ])
+  })
+
+  it('useUpdateOrganizationCreditMarket invalidates caches and listings', async () => {
+    mockPut.mockResolvedValue({ data: { ok: true } })
+    const { result } = renderHook(
+      () => useUpdateOrganizationCreditMarket(5, { clearCache: true }),
+      { wrapper }
+    )
+    await result.current.mutateAsync({})
+    expect(mockPut).toHaveBeenCalledWith('/organizations/5/credit-market', {})
+    expect(qcMock.removeQueries).toHaveBeenCalledWith(['organization', 5])
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith(['organization'])
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+      'credit-market-listings'
+    ])
+    expect(qcMock.refetchQueries).toHaveBeenCalledWith([
+      'credit-market-listings'
+    ])
   })
 
   it('useOrganizationBalance disabled when user not government', async () => {

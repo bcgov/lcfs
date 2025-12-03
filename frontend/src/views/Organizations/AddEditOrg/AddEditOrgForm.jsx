@@ -22,11 +22,11 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { schemaValidation } from './_schema'
+import { createValidationSchema, schemaValidation } from './_schema'
 
 // Internal Modules
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
@@ -72,7 +72,39 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
   const [sameAsServiceAddress, setSameAsServiceAddress] = useState(false)
 
-  // useForm hook setup with React Hook Form and Yup for form validation
+  // State for tracking organization type and validation requirements
+  const [selectedOrgType, setSelectedOrgType] = useState(null)
+  const [requiresBCeID, setRequiresBCeID] = useState(true)
+
+  // useForm hook setup with React Hook Form - validation handled in onSubmit
+  const methods = useForm({
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      orgLegalName: '',
+      orgOperatingName: '',
+      orgEmailAddress: '',
+      orgPhoneNumber: '',
+      orgType: '1',
+      orgRegForTransfers: '',
+      orgStreetAddress: '',
+      orgCity: '',
+      orgPostalCodeZipCode: '',
+      orgAddressOther: '',
+      orgProvince: 'BC',
+      orgCountry: 'Canada',
+      orgHeadOfficeStreetAddress: '',
+      orgHeadOfficeAddressOther: '',
+      orgHeadOfficeCity: '',
+      orgHeadOfficeProvince: '',
+      orgHeadOfficeCountry: '',
+      orgHeadOfficePostalCodeZipCode: '',
+      orgEDRMSRecord: '',
+      recordsAddress: '',
+      hasEarlyIssuance: ''
+    }
+  })
+
   const {
     register,
     handleSubmit,
@@ -82,9 +114,44 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     trigger,
     reset,
     control
-  } = useForm({
-    resolver: yupResolver(schemaValidation)
-  })
+  } = methods
+
+  // Watch the organization type field for changes
+  const watchedOrgType = watch('orgType')
+
+  // Effect to handle organization type changes and update validation requirements
+  useEffect(() => {
+    if (watchedOrgType && orgTypes && orgTypes.length > 0) {
+      const selectedType = orgTypes.find(
+        (type) => type.organizationTypeId === parseInt(watchedOrgType)
+      )
+
+      if (selectedType) {
+        setSelectedOrgType(watchedOrgType)
+        const newRequiresBCeID = selectedType.isBceidUser
+        setRequiresBCeID(newRequiresBCeID)
+
+        // Handle validation when switching organization types
+        if (!newRequiresBCeID) {
+          // For non-BCeID types, clear errors for fields that are now optional
+          methods.clearErrors([
+            'orgPhoneNumber',
+            'orgStreetAddress',
+            'orgCity',
+            'orgPostalCodeZipCode'
+          ])
+        }
+      }
+    }
+  }, [watchedOrgType, orgTypes])
+
+  // Initialize organization type for new organizations
+  useEffect(() => {
+    if (!orgID && orgTypes && orgTypes.length > 0) {
+      setSelectedOrgType('1')
+      setRequiresBCeID(true)
+    }
+  }, [orgTypes, orgID])
 
   useEffect(() => {
     if (isFetched && data) {
@@ -128,8 +195,26 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
 
       setSameAsLegalName(shouldSyncNames)
       setSameAsServiceAddress(shouldSyncAddress)
+
+      // Set initial organization type state for editing
+      const orgTypeId =
+        data.organizationTypeId?.toString() ||
+        data.orgType?.organizationTypeId?.toString() ||
+        '1'
+
+      setSelectedOrgType(orgTypeId)
+
+      // Set initial BCeID requirement based on org type
+      if (orgTypes && orgTypes.length > 0) {
+        const selectedType = orgTypes.find(
+          (type) => type.organizationTypeId === parseInt(orgTypeId)
+        )
+        if (selectedType) {
+          setRequiresBCeID(selectedType.isBceidUser)
+        }
+      }
     }
-  }, [isFetched, data, reset])
+  }, [isFetched, data, reset, orgTypes])
 
   // Watching form fields
   const orgLegalName = watch('orgLegalName')
@@ -178,8 +263,40 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     )
   }
 
+  // Custom validation helper for conditional fields
+  const validateConditionalFields = async (data) => {
+    const validationSchema = createValidationSchema(
+      orgTypes || [],
+      data.orgType
+    )
+    try {
+      await validationSchema.validate(data, { abortEarly: false })
+      return { isValid: true, errors: {} }
+    } catch (validationErrors) {
+      const formattedErrors = {}
+      validationErrors.inner.forEach((error) => {
+        formattedErrors[error.path] = error.message
+      })
+      return { isValid: false, errors: formattedErrors }
+    }
+  }
+
   // Prepare payload and call mutate function
   const onSubmit = async (data) => {
+    // Perform custom validation based on the current organization type
+    const validation = await validateConditionalFields(data)
+
+    if (!validation.isValid) {
+      // Set form errors for the failing fields
+      Object.keys(validation.errors).forEach((fieldName) => {
+        methods.setError(fieldName, {
+          type: 'manual',
+          message: validation.errors[fieldName]
+        })
+      })
+      return // Don't submit if validation fails
+    }
+
     const payload = {
       organizationId: orgID,
       name: data.orgLegalName,
@@ -363,10 +480,25 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       >
         {/* Form Fields */}
         <BCAlert2 ref={alertRef} dismissable={true} noFade={true} />
-        <Grid container spacing={3}>
+        <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
           <Grid item xs={12} md={6}>
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Box sx={{ mr: { sm: 0, md: 4 } }}>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Box
+                sx={{
+                  mr: { sm: 0, md: 4 },
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
                 {organizationSnapshot && !dismissedBoxes.organizationInfo && (
                   <ReferenceCompareBox
                     title="Organization Details"
@@ -466,10 +598,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 </Box>
                 <Box mb={2}>
                   <InputLabel htmlFor="orgPhoneNumber" sx={{ pb: 1 }}>
-                    {t('org:phoneNbrLabel')}:
+                    {t('org:phoneNbrLabel')}
+                    {requiresBCeID ? '' : ' (Optional)'}:
                   </InputLabel>
                   <TextField
-                    required
+                    required={requiresBCeID}
                     id="orgPhoneNumber"
                     data-test="orgPhoneNumber"
                     variant="outlined"
@@ -483,8 +616,16 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
             </Box>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Box>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Box mb={2}>
                   <FormControl fullWidth>
                     <Grid container>
@@ -648,7 +789,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                     </Grid>
                   </FormControl>
                 </Box>
-                <Box mb={2} sx={{ mt: { sm: 0, md: 9.5, xl: 17.5 } }}>
+                <Box mb={2} sx={{ mt: 2 }}>
                   <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
                     {t('org:edrmsLabel')}:
                   </InputLabel>
@@ -667,7 +808,15 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
             </Box>
           </Grid>
           <Grid item xs={12} md={6} data-test="service-address-section">
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
               <BCTypography
                 variant="h6"
                 sx={{
@@ -692,7 +841,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 }}
               >
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
-                  {t('org:streetAddrLabel')}:
+                  {t('org:streetAddrLabel')}
+                  {requiresBCeID ? '' : ' (Optional)'}:
                 </InputLabel>
                 <Controller
                   name="orgStreetAddress"
@@ -731,10 +881,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgCity" sx={{ pb: 1 }}>
-                  {t('org:cityLabel')}:
+                  {t('org:cityLabel')}
+                  {requiresBCeID ? '' : ' (Optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresBCeID}
                   id="orgCity"
                   data-test="orgCity"
                   variant="outlined"
@@ -774,10 +925,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgPostalCodeZipCode" sx={{ pb: 1 }}>
-                  {t('org:poLabel')}:
+                  {t('org:poLabel')}
+                  {requiresBCeID ? '' : ' (Optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresBCeID}
                   id="orgPostalCodeZipCode"
                   data-test="orgPostalCodeZipCode"
                   variant="outlined"
@@ -827,7 +979,15 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
             </Box>
           </Grid>
           <Grid item xs={12} md={6} data-test="head-office-address-section">
-            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
+            <Box
+              sx={{
+                bgcolor: 'background.grey',
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
               <BCTypography
                 variant="h6"
                 sx={{ pb: 2, color: colors.primary.main }}
@@ -967,48 +1127,45 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 />
               </Box>
             </Box>
-            {/* Action Buttons */}
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  bgcolor: 'background.white.main',
-                  p: 3,
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  mt: { md: 11, xl: 6 }
-                }}
+          </Grid>
+          {/* Action Buttons */}
+          <Grid item xs={12}>
+            <Box
+              sx={{
+                bgcolor: 'background.white.main',
+                p: 3,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                mt: 3
+              }}
+            >
+              <BCButton
+                type="submit"
+                variant="contained"
+                size="medium"
+                color="primary"
+                data-test="saveOrganization"
+                startIcon={
+                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+                }
               >
-                <BCButton
-                  type="submit"
-                  variant="contained"
-                  size="medium"
-                  color="primary"
-                  data-test="saveOrganization"
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faFloppyDisk}
-                      className="small-icon"
-                    />
-                  }
-                >
-                  <BCTypography variant="button">{t('saveBtn')}</BCTypography>
-                </BCButton>
-                <BCButton
-                  variant="outlined"
-                  size="medium"
-                  color="primary"
-                  sx={{
-                    backgroundColor: 'white.main',
-                    ml: 2
-                  }}
-                  onClick={() => handleCancelEdit()}
-                >
-                  <BCTypography variant="subtitle2" textTransform="none">
-                    {t('cancelBtn')}
-                  </BCTypography>
-                </BCButton>
-              </Box>
-            </Grid>
+                <BCTypography variant="button">{t('saveBtn')}</BCTypography>
+              </BCButton>
+              <BCButton
+                variant="outlined"
+                size="medium"
+                color="primary"
+                sx={{
+                  backgroundColor: 'white.main',
+                  ml: 2
+                }}
+                onClick={() => handleCancelEdit()}
+              >
+                <BCTypography variant="subtitle2" textTransform="none">
+                  {t('cancelBtn')}
+                </BCTypography>
+              </BCButton>
+            </Box>
           </Grid>
         </Grid>
       </Box>

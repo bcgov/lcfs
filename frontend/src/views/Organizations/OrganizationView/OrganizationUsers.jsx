@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -15,6 +15,7 @@ import { buildPath, ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes'
 import { Role } from '@/components/Role'
+import { useOrganizationUsers } from '@/hooks/useOrganizations'
 
 export const OrganizationUsers = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -28,9 +29,16 @@ export const OrganizationUsers = () => {
   } = useCurrentUser()
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
-  const [resetGridFn, setResetGridFn] = useState(null)
 
   const gridRef = useRef()
+
+  // Pagination state
+  const [paginationOptions, setPaginationOptions] = useState({
+    page: 1,
+    size: 10,
+    sortOrders: defaultSortModel,
+    filters: []
+  })
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${orgID}`)
@@ -50,8 +58,8 @@ export const OrganizationUsers = () => {
       cellRendererParams: {
         isAbsolute: true,
         url: (row) => {
-          // For BCeID: /organizations/:orgID/:userID
-          // For IDIR (supplier role): /organization/:userID
+          // For IDIR: /organizations/:orgID/users/:userID
+          // For BCeID (supplier role): /organization/users/:userID
           // But typically we do the organizations route with orgID if you have it:
           if (hasRoles(roles.supplier)) {
             return buildPath(ROUTES.ORGANIZATION.VIEW_USER, {
@@ -71,19 +79,18 @@ export const OrganizationUsers = () => {
 
   const getRowId = useCallback((params) => params.data.userProfileId, [])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
   const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+    try {
+      gridRef.current?.clearFilters?.()
+    } catch (e) {
+      // no-op
     }
-  }, [resetGridFn])
+    setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
+  }, [])
 
   const handleNewUserClick = () => {
     // If you are IDIR: navigate to /organizations/:orgID/add-user
-    // If you’re BCeID: navigate to /organization/add-user
+    // If you're BCeID: navigate to /organization/add-user
     if (!isCurrentUserLoading && hasRoles(roles.government)) {
       navigate(buildPath(ROUTES.ORGANIZATIONS.ADD_USER, { orgID }))
     } else {
@@ -91,19 +98,14 @@ export const OrganizationUsers = () => {
     }
   }
 
-  return (
-    <BCBox mt={3} px={0}>
-      {/* Title + buttons */}
-      <BCBox my={2}>
-        <BCTypography
-          variant="h5"
-          color="primary"
-          data-test="active-users-heading"
-        >
-          {t('org:usersLabel')}
-        </BCTypography>{' '}
-      </BCBox>
+  // Use the organization users hook
+  const queryData = useOrganizationUsers(
+    orgID ?? currentUser?.organization?.organizationId,
+    paginationOptions
+  )
 
+  return (
+    <BCBox mt={1} px={0}>
       {/* New user button (only if user has roles) */}
       <BCBox
         my={2}
@@ -142,22 +144,20 @@ export const OrganizationUsers = () => {
 
       {/* The users data grid */}
       <BCBox sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
+        <BCGridViewer
           gridRef={gridRef}
-          apiEndpoint={buildPath(apiRoutes.orgUsers, {
-            orgID: orgID ?? currentUser?.organization?.organizationId
-          })}
-          apiData="users"
-          columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}
+          columnDefs={getUserColumnDefs(t)}
+          queryData={queryData}
+          dataKey="users"
+          paginationOptions={paginationOptions}
+          onPaginationChange={setPaginationOptions}
           getRowId={getRowId}
           gridOptions={gridOptions}
-          defaultSortModel={defaultSortModel}
           handleGridKey={handleGridKey}
           defaultColDef={defaultColDef}
           enableCopyButton={false}
           enableResetButton={false}
-          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </BCBox>

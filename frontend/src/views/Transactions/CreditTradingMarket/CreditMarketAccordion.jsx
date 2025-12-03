@@ -20,11 +20,11 @@ export const CreditMarketAccordion = () => {
   return (
     <Accordion expanded={expanded} onChange={handleChange}>
       <AccordionSummary
-        expandIcon={<ExpandMore />}
+        expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
         aria-controls="credit-market-info-content"
         id="credit-market-info-header"
       >
-        <BCTypography variant="h5" sx={{ color: 'primary.main' }}>
+        <BCTypography variant="h6" sx={{ color: 'primary.main' }}>
           {t('creditMarket:informationBulletin')}
         </BCTypography>
       </AccordionSummary>
@@ -39,29 +39,41 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:background')}
           </BCTypography>
 
-          <BCTypography variant="body2" paragraph>
-            {t('creditMarket:backgroundText1')}
-          </BCTypography>
+          <BCTypography
+            variant="body2"
+            paragraph
+            dangerouslySetInnerHTML={{
+              __html: t('creditMarket:backgroundText1')
+            }}
+          />
 
           <BCTypography variant="body2" paragraph>
             {t('creditMarket:backgroundText2')}
           </BCTypography>
 
-          <BCTypography variant="body2" paragraph>
-            {t('creditMarket:backgroundText3')}
-          </BCTypography>
+          <BCTypography
+            variant="body2"
+            paragraph
+            dangerouslySetInnerHTML={{
+              __html: t('creditMarket:backgroundText3')
+            }}
+          />
 
           <BCTypography
             variant="h6"
             gutterBottom
             sx={{ mt: 3, mb: 2, color: 'primary.main' }}
           >
-            {t('creditMarket:complianceUnitsIssued')}
+            {t('creditMarket:creditsIssuedByDirector')}
           </BCTypography>
 
-          <BCTypography variant="body2" paragraph>
-            {t('creditMarket:complianceUnitsText')}
-          </BCTypography>
+          <BCTypography
+            variant="body2"
+            paragraph
+            dangerouslySetInnerHTML={{
+              __html: t('creditMarket:creditsIssuedText')
+            }}
+          />
 
           <BCTypography
             variant="h6"
@@ -108,16 +120,40 @@ export const CreditMarketAccordion = () => {
             gutterBottom
             sx={{ mt: 3, mb: 2, color: 'primary.main' }}
           >
+            {t('creditMarket:allocationAgreements')}
+          </BCTypography>
+
+          <BCTypography
+            variant="body2"
+            paragraph
+            dangerouslySetInnerHTML={{
+              __html: t('creditMarket:allocationAgreementsText')
+            }}
+          />
+
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 3, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:needMoreInformation')}
           </BCTypography>
 
-          <BCTypography variant="body2" paragraph>
-            {t('creditMarket:needMoreInformationText')}
-          </BCTypography>
+          <BCTypography
+            variant="body2"
+            paragraph
+            dangerouslySetInnerHTML={{
+              __html: t('creditMarket:needMoreInformationText')
+            }}
+          />
 
-          <BCTypography variant="body2" paragraph>
-            {t('creditMarket:legalDisclaimer')}
-          </BCTypography>
+          <BCTypography
+            variant="body2"
+            paragraph
+            dangerouslySetInnerHTML={{
+              __html: t('creditMarket:legalDisclaimer')
+            }}
+          />
         </Box>
       </AccordionDetails>
     </Accordion>

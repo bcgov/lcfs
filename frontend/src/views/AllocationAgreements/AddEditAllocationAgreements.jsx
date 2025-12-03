@@ -238,7 +238,7 @@ export const AddEditAllocationAgreements = () => {
   ])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api.autoSizeAllColumns()
+    params.api?.autoSizeAllColumns?.()
   }, [])
 
   const onCellValueChanged = useCallback(
@@ -407,7 +407,7 @@ export const AddEditAllocationAgreements = () => {
 
       updatedData.ciOfFuel = params.node.data.ciOfFuel
       params.node.updateData(updatedData)
-      params.api.autoSizeAllColumns()
+      params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
   )
@@ -509,7 +509,12 @@ export const AddEditAllocationAgreements = () => {
             ))}
           </BCBox>
         </div>
-        {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) &&
+        {/* 
+          Temporarily hidden
+          Excel import/export causing validation issues
+          TODO: Re-enable after validation logic is fixed
+        */}
+        {/* {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) &&
           !isEarlyIssuance && (
             <BCBox>
               <BCButton
@@ -608,7 +613,7 @@ export const AddEditAllocationAgreements = () => {
                 </MenuItem>
               </Menu>
             </BCBox>
-          )}
+          )} */}
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}

@@ -51,12 +51,12 @@ class SortOrder(BaseSchema):
 
 
 class FilterModel(BaseSchema):
-    filter_type: str = Field(Query(default="text", alias="filterType"))
-    type: str = Field(Query(default="contains", alias="type"))
+    filter_type: str = Field(default="text", alias="filterType")
+    type: str = Field(default="contains", alias="type")
     filter: Optional[Any] = None
-    field: str = Field(Query(default="", alias="field"))
-    date_from: Optional[str] = Field(Query(default="", alias="dateFrom"))
-    date_to: Optional[str] = Field(Query(default="", alias="dateTo"))
+    field: str = Field(default="", alias="field")
+    date_from: Optional[str] = Field(default="", alias="dateFrom")
+    date_to: Optional[str] = Field(default="", alias="dateTo")
 
     @classmethod
     def validate_field(cls, value):
@@ -69,10 +69,10 @@ class FilterModel(BaseSchema):
 
 
 class PaginationRequestSchema(BaseSchema):
-    page: int = Field(Query(default=0, alias="page"))
-    size: int = Field(Query(default=20, alias="size"))
-    sort_orders: List[SortOrder] = Field(Query(default=[], alias="sortOrders"))
-    filters: List[FilterModel] = Field(Query(default=[], alias="filters"))
+    page: int = Field(default=1, alias="page")
+    size: int = Field(default=10, alias="size")
+    sort_orders: List[SortOrder] = Field(default=[], alias="sortOrders")
+    filters: List[FilterModel] = Field(default=[], alias="filters")
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 

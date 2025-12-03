@@ -7,17 +7,61 @@ import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from '@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
+import { ReportsMenu } from '@/views/ComplianceReports/ReportsMenu'
+import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
+import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
+import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
+import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
+import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
+import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
+import { FSEProcessing } from '@/views/FSEProcessing'
 
 export const reportRoutes = [
   {
     path: ROUTES.REPORTS.LIST,
-    element: <ComplianceReports />,
-    handle: { title: 'Compliance reporting' }
-  },
-  {
-    path: ROUTES.REPORTS.CALCULATOR,
-    element: <CreditCalculator />,
-    handle: { title: 'Credit calculator' }
+    element: <ReportsMenu />,
+    handle: { title: 'Compliance reporting' },
+    children: [
+      {
+        path: 'charging-sites',
+        element: <ChargingSitesList />,
+        handle: { title: 'Charging sites' },
+        children: [
+          {
+            path: 'add',
+            element: <AddEditChargingSite isEditMode={false} />,
+            handle: { title: 'Add charging site' }
+          },
+          {
+            path: ':siteId/edit',
+            element: <AddEditChargingSite isEditMode={true} />,
+            handle: { title: 'Edit charging site' }
+          },
+          {
+            path: ':siteId',
+            element: <ViewChargingSite />,
+            handle: { title: 'View charging site' }
+          }
+        ]
+      },
+      {
+        path: 'fse',
+        element: <ChargingEquipmentList />,
+        handle: { title: 'Manage FSE' },
+        children: [
+          {
+            path: 'add',
+            element: <AddEditChargingEquipment mode="bulk" />,
+            handle: { title: 'Add FSE' }
+          },
+          {
+            path: ':fseId/edit',
+            element: <AddEditChargingEquipment mode="single" />,
+            handle: { title: 'Edit FSE' }
+          }
+        ]
+      }
+    ]
   },
   {
     path: ROUTES.REPORTS.VIEW,
@@ -49,6 +93,14 @@ export const reportRoutes = [
     }
   },
   {
+    path: ROUTES.REPORTS.ADD.FSE_REPORTING,
+    element: <FinalSupplyEquipmentReporting />,
+    handle: {
+      title: 'FSE compliance reporting',
+      mode: 'add'
+    }
+  },
+  {
     path: ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
     element: <AddEditFinalSupplyEquipments />,
     handle: {
@@ -71,5 +123,10 @@ export const reportRoutes = [
       title: 'Export fuels',
       mode: 'add'
     }
+  },
+  {
+    path: ROUTES.CHARGING_SITES.EQUIPMENT_PROCESSING,
+    element: <FSEProcessing />,
+    handle: { title: 'FSE Processing' }
   }
 ]

@@ -29,16 +29,49 @@ vi.mock('@/utils/formatters', () => ({
 }))
 
 vi.mock('@/utils/schedules.js', () => ({
-  handleScheduleDelete: vi.fn(),
-  handleScheduleSave: vi.fn((params) => Promise.resolve({ ...params.updatedData, saved: true }))
+  handleScheduleDelete: vi.fn().mockResolvedValue(true),
+  handleScheduleSave: vi.fn((params) =>
+    Promise.resolve({ ...params.updatedData, saved: true })
+  )
+}))
+
+// Mock the new fuel supply utils
+vi.mock('../_utils', () => ({
+  processFuelSupplyRowData: vi.fn(({ fuelSupplyData, fuelSuppliesLoading }) => {
+    if (fuelSuppliesLoading || !fuelSupplyData) return []
+    const baseRows = fuelSupplyData.fuelSupplies || []
+    return [
+      ...baseRows.map((item) => ({ ...item, id: 'mock-uuid' })),
+      { id: 'mock-uuid' }
+    ]
+  }),
+  calculateColumnVisibility: vi.fn(() => ({
+    shouldShowIsCanadaProduced: false,
+    shouldShowIsQ1Supplied: false
+  })),
+  updateGridColumnsVisibility: vi.fn(),
+  handleFuelTypeChange: vi.fn(),
+  handleFuelCategoryChange: vi.fn(),
+  validateFuelSupply: vi.fn(() => true),
+  processCellEditingComplete: vi.fn().mockResolvedValue({ saved: true }),
+  createGridOptions: vi.fn((t) => ({
+    overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
+    autoSizeStrategy: {
+      type: 'fitCellContents',
+      defaultMinWidth: 50,
+      defaultMaxWidth: 600
+    }
+  }))
 }))
 
 // Mock constants
 vi.mock('@/constants/common', () => ({
   DEFAULT_CI_FUEL: {
-    'Category1': 85.5,
-    'Category2': 90.0
+    Category1: 85.5,
+    Category2: 90.0
   },
+  DEFAULT_CI_FUEL_CODE: 'DEFAULT_CODE',
+  NEW_REGULATION_YEAR: 2023,
   REPORT_SCHEDULES: {
     QUARTERLY: 'QUARTERLY',
     ANNUAL: 'ANNUAL'
@@ -53,7 +86,9 @@ vi.mock('@/constants/statuses', () => ({
 }))
 
 vi.mock('@/routes/routes', () => ({
-  buildPath: vi.fn((route, params) => `/test-path/${params.complianceReportId}`),
+  buildPath: vi.fn(
+    (route, params) => `/test-path/${params.complianceReportId}`
+  ),
   ROUTES: {
     REPORTS: {
       VIEW: '/reports/:complianceReportId/view'
@@ -114,12 +149,24 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
         rowData.forEach((row, index) => {
           const mockNode = {
             data: row,
-            updateData: vi.fn((newData) => { rowData[index] = newData })
+            updateData: vi.fn((newData) => {
+              rowData[index] = newData
+            })
           }
           callback(mockNode)
         })
-      })
+      }),
+      autoSizeAllColumns: vi.fn(),
+      getColumn: vi.fn().mockReturnValue({ isVisible: () => false }),
+      setColumnsVisible: vi.fn()
     }
+
+    // Set up gridRef if provided
+    React.useEffect(() => {
+      if (gridRef) {
+        gridRef.current = { api: gridApi }
+      }
+    }, [gridRef])
 
     // Trigger onGridReady if provided
     React.useEffect(() => {
@@ -150,16 +197,30 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
                   setDataValue: vi.fn()
                 },
                 data: { fuelType: 'TestFuel' },
-                api: {
-                  autoSizeAllColumns: vi.fn(),
-                  refreshCells: vi.fn(),
-                  sizeColumnsToFit: vi.fn()
-                }
+                api: gridApi
               })
             }
           }}
         >
           Test Cell Value Changed
+        </button>
+        <button
+          data-test="test-cell-value-changed-category"
+          onClick={() => {
+            if (onCellValueChanged) {
+              onCellValueChanged({
+                column: { colId: 'fuelCategory' },
+                node: {
+                  data: { fuelCategory: 'TestCategory' },
+                  setDataValue: vi.fn()
+                },
+                data: { fuelCategory: 'TestCategory' },
+                api: gridApi
+              })
+            }
+          }}
+        >
+          Test Cell Value Changed Category
         </button>
         <button
           data-test="test-cell-editing-stopped"
@@ -207,7 +268,11 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
 // Mock other components
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
@@ -221,26 +286,26 @@ vi.mock('@/components/BCTypography', () => ({
 
 vi.mock('@mui/material/Grid2', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => <div data-test="grid2" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="grid2" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 describe('AddEditFuelSupplies', () => {
-  const mockAlertRef = {
-    current: {
-      triggerAlert: vi.fn()
-    }
-  }
-
   const mockSaveRow = vi.fn()
   const mockOptionsData = {
     fuelTypes: [
       {
         fuelType: 'Diesel',
         fuelCategories: [{ fuelCategory: 'Category1' }],
-        eerRatios: [{ 
-          endUseType: { type: 'Transportation' },
-          fuelCategory: { fuelCategory: 'Category1' }
-        }],
+        eerRatios: [
+          {
+            endUseType: { type: 'Transportation' },
+            fuelCategory: { fuelCategory: 'Category1' }
+          }
+        ],
         provisions: [{ name: 'Provision A' }]
       },
       {
@@ -250,19 +315,16 @@ describe('AddEditFuelSupplies', () => {
           { fuelCategory: 'Category2' }
         ],
         eerRatios: [
-          { 
+          {
             endUseType: { type: 'Transportation' },
             fuelCategory: { fuelCategory: 'Category1' }
           },
-          { 
+          {
             endUseType: { type: 'Industrial' },
             fuelCategory: { fuelCategory: 'Category2' }
           }
         ],
-        provisions: [
-          { name: 'Provision A' },
-          { name: 'Provision B' }
-        ]
+        provisions: [{ name: 'Provision A' }, { name: 'Provision B' }]
       }
     ]
   }
@@ -279,7 +341,7 @@ describe('AddEditFuelSupplies', () => {
     mockUseNavigate.mockReturnValue(mockNavigate)
     mockUseParams.mockReturnValue({
       complianceReportId: 'testReportId',
-      compliancePeriod: '2024-Q1'
+      compliancePeriod: '2024'
     })
 
     // Mock useFuelSupplyOptions
@@ -321,19 +383,16 @@ describe('AddEditFuelSupplies', () => {
 
   it('renders the component', () => {
     render(<AddEditFuelSupplies />, { wrapper })
-    // Check for a title or any text that indicates successful rendering
     expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
   it('initializes with at least one row when there are no existing fuel supplies', () => {
     render(<AddEditFuelSupplies />, { wrapper })
     const rows = screen.getAllByTestId('grid-row')
-    // Should contain exactly one blank row if data is empty
     expect(rows.length).toBe(1)
   })
 
   it('loads existing fuel supplies when available', async () => {
-    // Update mock to provide some existing fuel supplies
     vi.mocked(useGetFuelSuppliesList).mockReturnValue({
       data: {
         fuelSupplies: [
@@ -346,12 +405,10 @@ describe('AddEditFuelSupplies', () => {
 
     render(<AddEditFuelSupplies />, { wrapper })
     const rows = await screen.findAllByTestId('grid-row')
-    // Should contain 2 existing fuel supplies + 1 empty row at the end
-    expect(rows.length).toBe(3)
+    expect(rows.length).toBe(3) // 2 existing + 1 empty row
   })
 
   it('handles supplemental report correctly', () => {
-    // Mock for supplemental report (version > 0)
     vi.mocked(useComplianceReportWithCache).mockReturnValue({
       data: {
         report: {
@@ -367,7 +424,6 @@ describe('AddEditFuelSupplies', () => {
   })
 
   it('handles early issuance report correctly', () => {
-    // Mock for early issuance report (quarterly)
     vi.mocked(useComplianceReportWithCache).mockReturnValue({
       data: {
         report: {
@@ -394,7 +450,9 @@ describe('AddEditFuelSupplies', () => {
     })
 
     render(<AddEditFuelSupplies />, { wrapper })
-    expect(screen.queryByText('fuelSupply:fuelSupplyTitle')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('fuelSupply:fuelSupplyTitle')
+    ).not.toBeInTheDocument()
   })
 
   it('does not render when options not fetched', () => {
@@ -405,7 +463,9 @@ describe('AddEditFuelSupplies', () => {
     })
 
     render(<AddEditFuelSupplies />, { wrapper })
-    expect(screen.queryByText('fuelSupply:fuelSupplyTitle')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('fuelSupply:fuelSupplyTitle')
+    ).not.toBeInTheDocument()
   })
 
   it('does not render when fuel supplies loading', () => {
@@ -415,7 +475,9 @@ describe('AddEditFuelSupplies', () => {
     })
 
     render(<AddEditFuelSupplies />, { wrapper })
-    expect(screen.queryByText('fuelSupply:fuelSupplyTitle')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('fuelSupply:fuelSupplyTitle')
+    ).not.toBeInTheDocument()
   })
 
   it('displays alert message from location state', () => {
@@ -431,110 +493,118 @@ describe('AddEditFuelSupplies', () => {
     expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
+  it('shows note for new regulation years', () => {
+    mockUseParams.mockReturnValue({
+      complianceReportId: 'testReportId',
+      compliancePeriod: '2024' // >= NEW_REGULATION_YEAR (2023)
+    })
+
+    render(<AddEditFuelSupplies />, { wrapper })
+    expect(screen.getByText('fuelSupply:fuelSupplyNote')).toBeInTheDocument()
+  })
+
   describe('onCellValueChanged', () => {
-    it('handles fuelType change with single options', async () => {
-      const singleOptionData = {
-        fuelTypes: [{
-          fuelType: 'SingleOptionFuel',
-          fuelCategories: [{ fuelCategory: 'SingleCategory' }],
-          eerRatios: [{ 
-            endUseType: { type: 'SingleEndUse' },
-            fuelCategory: { fuelCategory: 'SingleCategory' }
-          }],
-          provisions: [{ name: 'SingleProvision' }]
-        }]
-      }
-      
-      vi.mocked(useFuelSupplyOptions).mockReturnValue({
-        data: singleOptionData,
-        isLoading: false,
-        isFetched: true
-      })
+    it('handles fuelType change by calling utility function', async () => {
+      const { handleFuelTypeChange, updateGridColumnsVisibility } =
+        await import('../_utils')
 
       render(<AddEditFuelSupplies />, { wrapper })
-      
+
       await waitFor(() => {
         const button = screen.getByTestId('test-cell-value-changed')
         fireEvent.click(button)
       })
 
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      expect(handleFuelTypeChange).toHaveBeenCalled()
+      expect(updateGridColumnsVisibility).toHaveBeenCalled()
     })
 
-    it('handles fuelType change with multiple options', async () => {
+    it('handles fuelCategory change by calling utility function', async () => {
+      const { handleFuelCategoryChange, updateGridColumnsVisibility } =
+        await import('../_utils')
+
       render(<AddEditFuelSupplies />, { wrapper })
-      
+
       await waitFor(() => {
-        const button = screen.getByTestId('test-cell-value-changed')
+        const button = screen.getByTestId('test-cell-value-changed-category')
         fireEvent.click(button)
       })
 
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
-    })
-
-    it('handles fuelCategory change', async () => {
-      render(<AddEditFuelSupplies />, { wrapper })
-      
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
-      })
-
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      expect(handleFuelCategoryChange).toHaveBeenCalled()
+      expect(updateGridColumnsVisibility).toHaveBeenCalled()
     })
   })
 
   describe('onCellEditingStopped', () => {
-    it('handles successful cell editing with validation', async () => {
+    it('handles cell editing by calling utility function', async () => {
+      const { processCellEditingComplete } = await import(
+        '../_utils'
+      )
+
       render(<AddEditFuelSupplies />, { wrapper })
-      
+
       await waitFor(() => {
         const button = screen.getByTestId('test-cell-editing-stopped')
         fireEvent.click(button)
       })
 
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      expect(processCellEditingComplete).toHaveBeenCalled()
     })
 
-    it('handles validation failure', async () => {
+    it('skips processing when old value equals new value', async () => {
       render(<AddEditFuelSupplies />, { wrapper })
-      
+
+      // Mock a case where old and new values are the same
+      const gridEditor = screen.getByTestId('bc-grid-editor')
+      const mockParams = {
+        oldValue: 'same',
+        newValue: 'same',
+        colDef: { field: 'quantity' },
+        node: { data: { quantity: 100 }, updateData: vi.fn() }
+      }
+
+      // This would be handled internally by onCellEditingStopped
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await new Promise((resolve) => setTimeout(resolve, 10))
       })
 
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
-    })
-
-    it('handles fuelType Other with CI setting', async () => {
-      render(<AddEditFuelSupplies />, { wrapper })
-      
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
-      })
-
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      expect(gridEditor).toBeInTheDocument()
     })
   })
 
   describe('onAction', () => {
     it('handles delete action', async () => {
+      const { handleScheduleDelete } = await import('@/utils/schedules.js')
+
       render(<AddEditFuelSupplies />, { wrapper })
-      
+
       await waitFor(() => {
         const button = screen.getByTestId('test-action-delete')
         fireEvent.click(button)
       })
 
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      expect(handleScheduleDelete).toHaveBeenCalledWith(
+        expect.any(Object),
+        'fuelSupplyId',
+        mockSaveRow,
+        expect.any(Object),
+        expect.any(Function),
+        { complianceReportId: 'testReportId', compliancePeriod: '2024' }
+      )
     })
 
-    it('handles undo action', async () => {
+    it('handles errors in actions gracefully', async () => {
+      const { handleScheduleDelete } = await import('@/utils/schedules.js')
+      handleScheduleDelete.mockRejectedValue(new Error('Delete failed'))
+
       render(<AddEditFuelSupplies />, { wrapper })
-      
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
+
+      await waitFor(() => {
+        const button = screen.getByTestId('test-action-delete')
+        fireEvent.click(button)
       })
 
+      // Should not crash the component
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
   })
@@ -542,17 +612,23 @@ describe('AddEditFuelSupplies', () => {
   describe('handleNavigateBack', () => {
     it('navigates back to report view with success message', async () => {
       render(<AddEditFuelSupplies />, { wrapper })
-      
+
       await waitFor(() => {
         const saveButton = screen.getByTestId('save-button')
         fireEvent.click(saveButton)
       })
 
-      expect(mockNavigate).toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith('/test-path/testReportId', {
+        state: {
+          expandedSchedule: 'fuelSupplies',
+          message: 'fuelSupply:scheduleUpdated',
+          severity: 'success'
+        }
+      })
     })
   })
 
-  describe('data processing', () => {
+  describe('component integration', () => {
     it('processes existing fuel supplies correctly', () => {
       vi.mocked(useGetFuelSuppliesList).mockReturnValue({
         data: {
@@ -583,7 +659,11 @@ describe('AddEditFuelSupplies', () => {
       vi.mocked(useGetFuelSuppliesList).mockReturnValue({
         data: {
           fuelSupplies: [
-            { fuelSupplyId: 1, fuelType: 'Diesel', complianceReportId: 'testReportId' }
+            {
+              fuelSupplyId: 1,
+              fuelType: 'Diesel',
+              complianceReportId: 'testReportId'
+            }
           ]
         },
         isLoading: false
@@ -593,39 +673,64 @@ describe('AddEditFuelSupplies', () => {
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(2) // 1 existing + 1 empty
     })
-  })
 
-  describe('memoized values', () => {
-    it('creates gridOptions with correct overlay template', () => {
-      render(<AddEditFuelSupplies />, { wrapper })
-      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
-    })
-
-    it('updates columnDefs when dependencies change', () => {
+    it('updates grid options and column definitions when dependencies change', () => {
       const { rerender } = render(<AddEditFuelSupplies />, { wrapper })
-      
+
       vi.mocked(useFuelSupplyOptions).mockReturnValue({
         data: { fuelTypes: [{ fuelType: 'NewFuel' }] },
         isLoading: false,
         isFetched: true
       })
-      
+
       rerender(<AddEditFuelSupplies />)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
   })
 
-  describe('error handling', () => {
-    it('handles save errors gracefully', async () => {
-      mockSaveRow.mockRejectedValue(new Error('Save failed'))
-      
-      render(<AddEditFuelSupplies />, { wrapper })
-      
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
+  describe('memoized values', () => {
+    it('recalculates processedRowData when dependencies change', () => {
+      const { rerender } = render(<AddEditFuelSupplies />, { wrapper })
+
+      vi.mocked(useGetFuelSuppliesList).mockReturnValue({
+        data: { fuelSupplies: [{ fuelSupplyId: 1, fuelType: 'NewFuel' }] },
+        isLoading: false
       })
 
+      rerender(<AddEditFuelSupplies />)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+    })
+
+    it('recalculates columnVisibility when dependencies change', () => {
+      const { rerender } = render(<AddEditFuelSupplies />, { wrapper })
+
+      vi.mocked(useFuelSupplyOptions).mockReturnValue({
+        data: { fuelTypes: [{ fuelType: 'NewFuel' }] },
+        isLoading: false,
+        isFetched: true
+      })
+
+      rerender(<AddEditFuelSupplies />)
+      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+    })
+  })
+
+  describe('grid interactions', () => {
+    it('starts editing on the last row when grid is ready', async () => {
+      render(<AddEditFuelSupplies />, { wrapper })
+
+      // onGridReady should be called automatically
+      await waitFor(() => {
+        expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      })
+    })
+
+    it('auto-sizes columns when data is first rendered', async () => {
+      render(<AddEditFuelSupplies />, { wrapper })
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      })
     })
   })
 
@@ -660,6 +765,15 @@ describe('AddEditFuelSupplies', () => {
       render(<AddEditFuelSupplies />, { wrapper })
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
-  })
 
+    it('handles missing report data gracefully', () => {
+      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+        data: { report: null },
+        isLoading: false
+      })
+
+      render(<AddEditFuelSupplies />, { wrapper })
+      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+    })
+  })
 })

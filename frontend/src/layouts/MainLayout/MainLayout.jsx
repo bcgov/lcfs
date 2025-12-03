@@ -77,7 +77,7 @@ export const MainLayout = () => {
             >
               <Outlet />
             </BCBox>
-            <BCBox px={2} size={12}>
+            <BCBox px={0} size={12}>
               <DisclaimerBanner
                 messages={[
                   t('layout.disclaimer.part1'),
