@@ -109,20 +109,20 @@ const OrgComplianceReportsCard = () => {
               </>
             )}
             {
-              <ListItemButton
-                component="a"
-                sx={{ pl: '4.2rem' }}
-                onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
-              >
-                <BCTypography
-                  variant="body2"
-                  color="link"
-                  sx={{
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'info.main' }
-                  }}
-                  onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+                <ListItemButton
+                  component="a"
+                  sx={{ pl: '4.2rem' }}
+                  onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
                 >
+                  <BCTypography
+                    variant="body2"
+                    color="link"
+                    sx={{
+                      textDecoration: 'underline',
+                      '&:hover': { color: 'info.main' }
+                    }}
+                    onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
+                  >
                   {t('report:calcTitle')}
                 </BCTypography>
               </ListItemButton>

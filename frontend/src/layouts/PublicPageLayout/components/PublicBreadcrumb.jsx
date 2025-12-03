@@ -41,7 +41,7 @@ export const PublicBreadcrumb = ({
   // Default breadcrumb mappings for public pages
   const defaultBreadcrumbs = {
     'credit-calculator': {
-      label: 'Credit calculator',
+      label: 'Compliance unit calculator',
       route: '/credit-calculator'
     },
     ...customBreadcrumbs

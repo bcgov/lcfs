@@ -7,6 +7,8 @@ from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment, Ports
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.charging_equipment.schema import (
@@ -52,6 +54,28 @@ def mock_organization():
     """Create a mock organization."""
     org = Organization(organization_id=1, name="Test Organization")
     return org
+
+
+@pytest.fixture
+def mock_compliance_period():
+    return CompliancePeriod(
+        compliance_period_id=1,
+        description="2025",
+        display_order=2025,
+    )
+
+
+@pytest.fixture
+def mock_compliance_report(mock_compliance_period):
+    report = ComplianceReport(
+        compliance_report_id=10,
+        compliance_period_id=mock_compliance_period.compliance_period_id,
+        organization_id=1,
+        compliance_report_group_uuid="test-group",
+        version=0,
+    )
+    report.compliance_period = mock_compliance_period
+    return report
 
 
 @pytest.fixture

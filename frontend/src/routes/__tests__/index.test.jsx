@@ -116,7 +116,7 @@ vi.mock('@/views/ComplianceReports', () => ({
     <div data-test="compliance-reports">Compliance Reports</div>
   ),
   CreditCalculator: () => (
-    <div data-test="credit-calculator">Credit Calculator</div>
+    <div data-test="credit-calculator">Compliance unit calculator</div>
   )
 }))
 
