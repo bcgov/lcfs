@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
+  reportData,
   orgData,
   hasSupplemental,
   isGovernmentUser,
@@ -29,7 +30,8 @@ export const AssessmentCard = ({
   alertRef,
   chain,
   setModalData,
-  hasGovernmentReassessmentInProgress
+  hasGovernmentReassessmentInProgress,
+  compliancePeriodYear
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -114,6 +116,29 @@ export const AssessmentCard = ({
           currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED))
     )
   }, [isEditing, currentStatus, hasRoles])
+
+  const derivedCompliancePeriod = useMemo(() => {
+    if (compliancePeriodYear) {
+      return compliancePeriodYear
+    }
+    return reportData?.report?.compliancePeriod?.description ?? ''
+  }, [compliancePeriodYear, reportData])
+
+  const compliancePeriodNumber = useMemo(() => {
+    if (!derivedCompliancePeriod) {
+      return NaN
+    }
+    if (typeof derivedCompliancePeriod === 'number') {
+      return derivedCompliancePeriod
+    }
+    return parseInt(derivedCompliancePeriod, 10)
+  }, [derivedCompliancePeriod])
+
+  const isLegacySupplementalRestricted =
+    !isGovernmentUser &&
+    isFeatureEnabled(FEATURE_FLAGS.LEGACY_SUPPLEMENTAL_LOCK) &&
+    !Number.isNaN(compliancePeriodNumber) &&
+    compliancePeriodNumber <= 2023
 
   return (
     <BCWidgetCard
@@ -209,7 +234,8 @@ export const AssessmentCard = ({
                 <Role roles={[roles.supplier]}>
                   {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                     currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
-                    !hasGovernmentReassessmentInProgress && (
+                    !hasGovernmentReassessmentInProgress &&
+                    !isLegacySupplementalRestricted && (
                       <Box>
                         <BCButton
                           data-test="create-supplemental"

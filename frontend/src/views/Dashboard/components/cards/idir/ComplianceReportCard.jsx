@@ -97,7 +97,7 @@ export const ComplianceReportCard = () => {
               <ListItemButton
                 component="a"
                 sx={{ ml: '4.2rem' }}
-                onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+                onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
               >
                 <BCTypography
                   variant="body2"
@@ -106,7 +106,7 @@ export const ComplianceReportCard = () => {
                     textDecoration: 'underline',
                     '&:hover': { color: 'info.main' }
                   }}
-                  onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+                  onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
                 >
                   {t('report:calcTitle')}
                 </BCTypography>

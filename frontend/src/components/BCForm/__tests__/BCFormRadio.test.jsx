@@ -272,15 +272,18 @@ describe('BCFormRadio', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper fieldset and legend structure', () => {
+    it('has proper fieldset structure and typography label', () => {
       renderBCFormRadio()
 
       const radioGroup = screen.getByRole('radiogroup')
       expect(radioGroup).toBeInTheDocument()
 
-      const label = document.querySelector('.MuiFormLabel-root')
-      expect(label).toBeInTheDocument()
-      expect(label).toHaveTextContent('Test Radio Group')
+      const typographyLabel = getByDataTest('bc-typography')
+      expect(typographyLabel).toBeInTheDocument()
+      expect(typographyLabel).toHaveTextContent('Test Radio Group')
+
+      const fieldset = document.querySelector('fieldset')
+      expect(fieldset).toBeInTheDocument()
     })
 
     it('provides proper ARIA attributes for radios', () => {
@@ -527,15 +530,12 @@ describe('BCFormRadio', () => {
       })
     })
 
-    it('uses correct FormLabel component', () => {
+    it('renders typography label without FormLabel component', () => {
       renderBCFormRadio()
 
-      const label = document.querySelector('.MuiFormLabel-root')
-      expect(label).toBeInTheDocument()
-
-      // FormLabel with component="legend" renders as a legend element
-      const legend = document.querySelector('legend')
-      expect(legend).toBeInTheDocument()
+      const typographyLabel = getByDataTest('bc-typography')
+      expect(typographyLabel).toBeInTheDocument()
+      expect(document.querySelector('.MuiFormLabel-root')).toBeNull()
     })
   })
 
