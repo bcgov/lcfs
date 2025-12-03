@@ -9,7 +9,8 @@ import {
   TextField,
   Select,
   MenuItem,
-  FormControl
+  FormControl,
+  InputAdornment
 } from '@mui/material'
 import colors from '@/themes/base/colors'
 import BCBox from '@/components/BCBox'
@@ -34,6 +35,7 @@ import { numberFormatter } from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
+const CARBON_INTENSITY_UNIT = 'gCO₂e/MJ'
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -59,7 +61,7 @@ export const CreditCalculator = () => {
       }))
       .filter((period) => {
         const year = parseInt(period.value)
-        return year >= 2019 && year <= 2030
+        return year >= LEGISLATION_TRANSITION_YEAR && year <= 2030
       })
       .sort((a, b) => parseInt(b.value) - parseInt(a.value))
   }, [compliancePeriods])
@@ -520,10 +522,10 @@ Credits generated: ${resultData.credits.toLocaleString()}`
     return {
       credits: data.complianceUnits || 0,
       formulaValues: {
-        carbonIntensity: `${data.tci || 0} gCO₂e/MJ`,
+        carbonIntensity: `${data.tci || 0} ${CARBON_INTENSITY_UNIT}`,
         eer: (data.eer || 0).toFixed(2),
-        ci: `${data.rci || 0} gCO₂e/MJ`,
-        uci: data.uci ? `${data.uci} gCO₂e/MJ` : 'N/A',
+        ci: `${data.rci || 0} ${CARBON_INTENSITY_UNIT}`,
+        uci: data.uci ? `${data.uci} ${CARBON_INTENSITY_UNIT}` : 'N/A',
         energyContent: `${numberFormatter(data.energyContent || 0)} MJ`,
         energyDensity: `${data.energyDensity || 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name || ''}`
       },
@@ -540,7 +542,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
 
     if (!shouldShowCarbonIntensity) return ''
 
-    return resultData.formulaValues.carbonIntensity || ''
+    return resultData.formulaValues.ci || ''
   }, [provisionOfTheAct, resultData])
 
   if (isLoadingPeriods) {
@@ -564,8 +566,8 @@ Credits generated: ${resultData.credits.toLocaleString()}`
             <>
               <Grid container flexDirection={'column'} rowSpacing={1}>
                 {/* Top Section */}
-                <Grid px={4} py={8} flexDirection={'row'} container spacing={4}>
-                  <Stack direction={'column'} size={3} flex={1} gap={4}>
+                <Grid px={4} py={2} flexDirection={'row'} container spacing={4}>
+                  <Stack direction={'column'} size={3} flex={0.5} gap={4}>
                     {/* Compliance Year */}
                     <FormControl>
                       <BCTypography variant="label" component="span">
@@ -634,7 +636,7 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                     />
                   </Grid>
 
-                  <Grid size={3} flex={1}>
+                  <Grid size={3} flex={2}>
                     {isLoadingFuelOptions && <Loading />}
                     <BCFormRadio
                       label={t('report:endUse')}
@@ -735,7 +737,19 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                               sx={{ mt: 1 }}
                               decimalScale={2}
                               fixedDecimalScale
-                              allowNegative={false}
+                              allowNegative
+                              InputProps={{
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    <BCTypography
+                                      variant="caption1"
+                                      component="span"
+                                    >
+                                      {CARBON_INTENSITY_UNIT}
+                                    </BCTypography>
+                                  </InputAdornment>
+                                )
+                              }}
                               error={!!errors.customCi}
                               helperText={errors.customCi?.message}
                             />
@@ -761,7 +775,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                     size={6}
                     flex={1}
                     px={4}
-                    py={8}
                     gap={4}
                     justifyContent={'center'}
                     sx={{
@@ -839,7 +852,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                               >
                                 {unit}
                               </BCTypography>
-
                             )}
                           </Stack>
                         )}

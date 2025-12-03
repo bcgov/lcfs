@@ -186,6 +186,8 @@ const TestWrapper = ({ children, formProps = {} }) => {
 describe('CreditCalculator', () => {
   const mockCompliancePeriods = {
     data: [
+      { description: '2025' },
+      { description: '2024' },
       { description: '2023' },
       { description: '2022' },
       { description: '2021' },
@@ -410,9 +412,9 @@ describe('CreditCalculator', () => {
     it('handles compliance periods data correctly', () => {
       const mockData = {
         data: [
-          { description: '2023' },
-          { description: '2021' },
-          { description: '2022' }
+          { description: '2025' },
+          { description: '2024' },
+          { description: '2023' }
         ]
       }
       
@@ -596,6 +598,74 @@ describe('CreditCalculator', () => {
       render(<TestWrapperWithFuelCode />)
       
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
+    })
+  })
+
+  describe('Custom CI behavior', () => {
+    it('displays recorded CI value when custom CI is disabled', async () => {
+      const singleProvisionFuelOptions = {
+        data: {
+          ...mockFuelOptions.data,
+          provisions: [
+            { provisionOfTheActId: 1, name: 'Fuel code - section 19 (b) (i)' }
+          ]
+        }
+      }
+
+      vi.mocked(useGetFuelTypeOptions).mockReturnValue({
+        data: singleProvisionFuelOptions,
+        isLoading: false
+      })
+
+      render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByDisplayValue('75 gCO₂e/MJ')
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('allows entering negative custom CI values', async () => {
+      render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      const clickAndVerify = async (element) => {
+        fireEvent.click(element)
+        await waitFor(() =>
+          expect(element).toHaveAttribute('aria-checked', 'true')
+        )
+      }
+
+      const fuelCategoryOption = await screen.findByTestId('fuelCategory1')
+      await clickAndVerify(fuelCategoryOption)
+
+      const fuelTypeOption = await screen.findByTestId('Gasoline')
+      await clickAndVerify(fuelTypeOption)
+
+      const endUseOption = await screen.findByTestId('Transportation')
+      await clickAndVerify(endUseOption)
+
+      const customOptionRadio = (
+        await screen.findAllByText('Custom CI')
+      ).find((element) => element.getAttribute('role') === 'radio')
+
+      expect(customOptionRadio).toBeDefined()
+      await clickAndVerify(customOptionRadio)
+
+      const customCiInput = await screen.findByPlaceholderText('0.00')
+      fireEvent.change(customCiInput, { target: { value: '-10' } })
+
+      await waitFor(() => {
+        expect(customCiInput).toHaveValue('-10.00')
+      })
     })
   })
   
@@ -824,10 +894,10 @@ describe('CreditCalculator', () => {
       expect(screen.getByText('Compliance unit calculator')).toBeInTheDocument()
     })
     
-    it('displays different formula for compliance years before 2024', () => {
-      const TestWrapperBefore2024 = () => {
+    it('displays the post-2024 formula when applicable', () => {
+      const TestWrapperAfter2024 = () => {
         const methods = useForm({
-          defaultValues: { complianceYear: '2023' }
+          defaultValues: { complianceYear: '2024' }
         })
         return (
           <BrowserRouter>
@@ -839,10 +909,14 @@ describe('CreditCalculator', () => {
           </BrowserRouter>
         )
       }
-      
-      render(<TestWrapperBefore2024 />)
-      
-      expect(screen.getByText('Compliance units = (TCI * EER - RCI) * EC / 1,000,000')).toBeInTheDocument()
+
+      render(<TestWrapperAfter2024 />)
+
+      expect(
+        screen.getByText(
+          'Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000'
+        )
+      ).toBeInTheDocument()
     })
     
     it('handles different compliance year scenarios', () => {
