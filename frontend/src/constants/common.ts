@@ -92,8 +92,8 @@ const createFileTypeConfig = (
 ): FileTypeConfig => ({
   MIME_TYPES: mimeTypes,
   DESCRIPTION: description,
-  get ACCEPT_STRING(this: FileTypeConfig) {
-    return this.MIME_TYPES.join(',')
+  get ACCEPT_STRING() {
+    return mimeTypes.join(',')
   }
 })
 
