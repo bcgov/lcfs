@@ -1,5 +1,7 @@
 """Repository for Charging Equipment database operations."""
 
+from datetime import date
+
 import structlog
 from typing import List, Optional, Dict, Any
 from fastapi import Depends
@@ -8,10 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
+    ComplianceReportChargingEquipment,
+)
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.organization.Organization import Organization
@@ -239,6 +249,7 @@ class ChargingEquipmentRepository:
         await self.db.refresh(charging_equipment)
         # ensure related charging site (for registration number) is loaded for downstream use
         await self.db.refresh(charging_equipment, attribute_names=["charging_site"])
+        await self._associate_equipment_with_draft_report(charging_equipment)
 
         return charging_equipment
 
@@ -399,6 +410,89 @@ class ChargingEquipmentRepository:
         result = await self.db.execute(query)
         rows = result.all()
         return {row[0]: row[1] for row in rows}
+
+    async def _associate_equipment_with_draft_report(
+        self, equipment: ChargingEquipment
+    ) -> None:
+        """Attach newly created equipment to the current draft compliance report."""
+
+        charging_site = getattr(equipment, "charging_site", None)
+        organization_id = getattr(charging_site, "organization_id", None)
+        if not organization_id:
+            return
+
+        draft_report = await self._get_current_draft_original_report(organization_id)
+        if not draft_report or not draft_report.compliance_period:
+            return
+
+        try:
+            compliance_year = int(draft_report.compliance_period.description)
+        except (TypeError, ValueError):
+            return
+
+        existing_stmt = (
+            select(
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id
+            )
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == draft_report.compliance_report_group_uuid,
+                    ComplianceReportChargingEquipment.charging_equipment_id
+                    == equipment.charging_equipment_id,
+                    ComplianceReportChargingEquipment.charging_equipment_version
+                    == equipment.version,
+                )
+            )
+            .limit(1)
+        )
+        exists_result = await self.db.execute(existing_stmt)
+        if exists_result.scalar_one_or_none():
+            return
+
+        association = ComplianceReportChargingEquipment(
+            charging_equipment_id=equipment.charging_equipment_id,
+            charging_equipment_version=equipment.version,
+            compliance_report_id=draft_report.compliance_report_id,
+            compliance_report_group_uuid=draft_report.compliance_report_group_uuid,
+            organization_id=organization_id,
+            supply_from_date=date(compliance_year, 1, 1),
+            supply_to_date=date(compliance_year, 12, 31),
+            kwh_usage=0,
+        )
+        self.db.add(association)
+
+    async def _get_current_draft_original_report(
+        self, organization_id: int
+    ) -> Optional[ComplianceReport]:
+        """Return the latest draft original compliance report for an organization."""
+
+        stmt = (
+            select(ComplianceReport)
+            .options(joinedload(ComplianceReport.compliance_period))
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .where(
+                ComplianceReport.organization_id == organization_id,
+                ComplianceReport.version == 0,
+                ComplianceReportStatus.status == ComplianceReportStatusEnum.Draft,
+            )
+            .order_by(
+                CompliancePeriod.display_order.desc(),
+                CompliancePeriod.description.desc(),
+            )
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
 
     @repo_handler
     async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
