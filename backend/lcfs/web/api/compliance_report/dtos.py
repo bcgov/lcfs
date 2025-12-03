@@ -45,6 +45,10 @@ class FuelSupplyDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     compliance_report_id: int
 
     quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
 
     compliance_units: Optional[float] = None
@@ -60,6 +64,8 @@ class FuelSupplyDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     fuel_code: Optional[FuelCodeDTO] = None
     fuel_type: Optional[FuelTypeDTO] = None
     provision_of_the_act: Optional[ProvisionOfTheActDTO] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     end_use_type: Optional[EndUseTypeDTO] = None
 
 
@@ -70,6 +76,10 @@ class AllocationAgreementDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBa
     transaction_partner: str
     postal_address: str
     quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
 
     transaction_partner_email: Optional[str] = None
@@ -90,6 +100,8 @@ class NotionalTransferDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseD
 
     legal_name: str
     address_for_service: str
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     received_or_transferred: ReceivedOrTransferredEnum
     quantity: Optional[int] = None
     q1_quantity: Optional[int] = None
@@ -109,7 +121,8 @@ class OtherUseDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     ci_of_fuel: float
 
     rationale: Optional[str] = None
-
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     fuel_category: Optional[FuelCategoryDTO] = None
     fuel_code: Optional[FuelCodeDTO] = None
     fuel_type: Optional[FuelTypeDTO] = None

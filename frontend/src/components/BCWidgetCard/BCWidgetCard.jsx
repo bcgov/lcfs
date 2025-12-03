@@ -11,7 +11,9 @@ function BCWidgetCard({
   title = 'Title',
   content,
   style,
-  editButton = null
+  editButton = null,
+  editButtonStyles = {},
+  headerSx = {}
 }) {
   const navigate = useNavigate()
 
@@ -47,6 +49,7 @@ function BCWidgetCard({
           width="100%"
           mx={2}
           mt={-3}
+          sx={headerSx}
         >
           <BCTypography
             variant="subtitle2"
@@ -66,12 +69,16 @@ function BCWidgetCard({
               onClick={handleButtonClick}
               startIcon={<Edit sx={{ width: '16px', height: '16px' }} />}
               sx={{
+                borderColor: 'rgba(255, 255, 255 , 1)',
+                color: 'rgba(255, 255, 255 , 1)',
                 '&:hover': {
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  color: 'rgba(0, 0, 0, 0.8)',
+                  color: 'rgba(0, 0, 0, 0.9)',
                   borderColor: 'rgba(0, 0, 0, 0.8)'
-                }
-              }}
+                },
+                ...editButtonStyles
+              }
+            }
             >
               {editButton.text}
             </BCButton>
@@ -104,7 +111,9 @@ BCWidgetCard.propTypes = {
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
   subHeader: PropTypes.node,
-  editButton: PropTypes.oneOfType([PropTypes.object, PropTypes.bool])
+  editButton: PropTypes.oneOfType([PropTypes.object, PropTypes.bool]),
+  editButtonStyles: PropTypes.object,
+  headerSx: PropTypes.object
 }
 
 export default BCWidgetCard

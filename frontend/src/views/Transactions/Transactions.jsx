@@ -33,7 +33,6 @@ import {
 } from '@/hooks/useTransactions'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
-import { CreditMarketDetailsCard } from './CreditTradingMarket/CreditMarketDetailsCard'
 
 const initialPaginationOptions = {
   page: 1,
@@ -78,9 +77,18 @@ export const Transactions = () => {
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
-  const [selectedOrg, setSelectedOrg] = useState({
-    id: null,
-    label: null
+
+  // Initialize selected organization from session storage for persistence
+  const [selectedOrg, setSelectedOrg] = useState(() => {
+    const savedOrgFilter = sessionStorage.getItem('transactions-grid-orgFilter')
+    if (savedOrgFilter) {
+      try {
+        return JSON.parse(savedOrgFilter)
+      } catch (error) {
+        console.warn('Failed to parse saved organization filter:', error)
+      }
+    }
+    return { id: null, label: null }
   })
 
   const queryData = useGetTransactionList(
@@ -271,9 +279,35 @@ export const Transactions = () => {
     setSearchParams(newSearchParams)
   }
 
+  // Function to update organization filter with session storage persistence
+  const updateOrgFilter = (orgData) => {
+    setSelectedOrg(orgData)
+
+    try {
+      if (orgData.id && orgData.label) {
+        sessionStorage.setItem(
+          'transactions-grid-orgFilter',
+          JSON.stringify(orgData)
+        )
+      } else {
+        sessionStorage.removeItem('transactions-grid-orgFilter')
+      }
+    } catch (error) {
+      console.warn(
+        'Failed to update organization filter in session storage:',
+        error
+      )
+    }
+  }
+
   const handleClearFilters = () => {
     setPaginationOptions(initialPaginationOptions)
-    setSelectedOrg({ organizationId: null, label: null })
+    updateOrgFilter({ id: null, label: null })
+    try {
+      sessionStorage.removeItem('transactions-grid-filter')
+    } catch (error) {
+      console.warn('Failed to clear grid filter from session storage:', error)
+    }
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }
@@ -387,7 +421,7 @@ export const Transactions = () => {
                 <OrganizationList
                   selectedOrg={selectedOrg}
                   onOrgChange={({ id, label }) => {
-                    setSelectedOrg({ id, label })
+                    updateOrgFilter({ id, label })
                   }}
                   onlyRegistered={false}
                 />
@@ -424,12 +458,9 @@ export const Transactions = () => {
     tabs.push({
       label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
       content: (
-        <>
-          {!hasRoles(roles.government) && <CreditMarketDetailsCard />}
-          <BCBox mt={!hasRoles(roles.government) ? 3 : 0}>
-            <CreditTradingMarket />
-          </BCBox>
-        </>
+        <BCBox mt={!hasRoles(roles.government) ? 3 : 0}>
+          <CreditTradingMarket />
+        </BCBox>
       )
     })
   }
@@ -481,8 +512,8 @@ export const Transactions = () => {
           </AppBar>
 
           <BCTypography variant="h5" mb={2} mt={2} color="primary">
-            {tabIndex === 1 
-              ? t('txn:creditTradingMarketTitle') 
+            {tabIndex === 1
+              ? t('txn:creditTradingMarketTitle')
               : t('txn:title')}
           </BCTypography>
 

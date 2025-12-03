@@ -36,6 +36,12 @@ from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
+# Import TYPE_CHECKING to avoid circular imports at runtime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
+
 
 class ComplianceReportUpdateService:
     def __init__(
@@ -53,6 +59,18 @@ class ComplianceReportUpdateService:
         self.org_service = org_service
         self.trx_service = trx_service
         self.notfn_service = notfn_service
+        self._charging_equipment_repo = None
+
+    @property
+    def charging_equipment_repo(self) -> "ChargingEquipmentRepository":
+        """Lazy-load charging equipment repository to avoid circular imports."""
+        if self._charging_equipment_repo is None:
+            from lcfs.web.api.charging_equipment.repo import (
+                ChargingEquipmentRepository,
+            )
+
+            self._charging_equipment_repo = ChargingEquipmentRepository(db=self.repo.db)
+        return self._charging_equipment_repo
 
     async def update_compliance_report(
         self,
@@ -98,19 +116,19 @@ class ComplianceReportUpdateService:
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
         report.assessment_statement = report_data.assessment_statement
-        
+
         # Handle non-assessment flag changes
         if report_data.is_non_assessment is not None:
             old_is_non_assessment = report.is_non_assessment
             report.is_non_assessment = report_data.is_non_assessment
-            
+
             # If changing TO non-assessment, lock summary
             if not old_is_non_assessment and report_data.is_non_assessment:
                 # Lock the summary since this report won't go through normal assessment workflow
                 await self._calculate_and_lock_summary(
                     report, user, skip_can_sign_check=True
                 )
-                    
+
         updated_report = await self.repo.update_compliance_report(report)
 
         # Handle status change related actions
@@ -222,6 +240,11 @@ class ComplianceReportUpdateService:
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
+        # Auto-submit all FSE records in Draft or Updated status to Submitted status
+        await self.charging_equipment_repo.auto_submit_draft_updated_fse_for_report(
+            report.compliance_report_id
+        )
+
         # Simply ensure summary exists - it will continue to refresh dynamically
         # because we're NOT locking it (unlike the old behavior)
         if not report.summary:
@@ -239,7 +262,9 @@ class ComplianceReportUpdateService:
         )
 
         credit_change = report.summary.line_20_surplus_deficit_units
-        await self._create_or_update_reserve_transaction(credit_change, report)
+        reserve_units = await self._create_or_update_reserve_transaction(
+            credit_change, report
+        )
         await self.repo.update_compliance_report(report)
 
         return report.summary
@@ -272,10 +297,13 @@ class ComplianceReportUpdateService:
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # Lock the summary when report is recommended by analyst - this is the snapshot point
-        calculated_summary = await self._calculate_and_lock_summary(
-            report, user, skip_can_sign_check=True
+        # Auto-validate all submitted FSE records associated with this report
+        await self.charging_equipment_repo.auto_validate_submitted_fse_for_report(
+            report.compliance_report_id
         )
+
+        # Lock the summary when report is recommended by analyst - this is the snapshot point
+        await self._calculate_and_lock_summary(report, user, skip_can_sign_check=True)
         await self.repo.update_compliance_report(report)
 
     async def handle_recommended_by_manager_status(
@@ -325,22 +353,29 @@ class ComplianceReportUpdateService:
             # Summary should already be locked from "Recommended by Analyst" step
             if not report.summary or not report.summary.is_locked:
                 raise HTTPException(
-                    status_code=400, 
-                    detail="Report summary must be locked before assessment. Please ensure the report was recommended by an analyst first."
+                    status_code=400,
+                    detail="Report summary must be locked before assessment. Please ensure the report was recommended by an analyst first.",
                 )
-            
+
             credit_change = report.summary.line_20_surplus_deficit_units
 
             if report.transaction:
-                # Update the transaction to assessed
+                existing_units = report.transaction.compliance_units
                 report.transaction.transaction_action = TransactionActionEnum.Adjustment
                 report.transaction.update_user = user.keycloak_username
-                report.transaction.compliance_units = credit_change
+                report.transaction.compliance_units = existing_units
             else:
-                # Create a new transaction if none exists (fixes Government adjustment issue)
-                await self._create_or_update_reserve_transaction(credit_change, report)
-                if report.transaction:
-                    # Update the newly created transaction to Adjustment status
+                capped_units = await self._create_or_update_reserve_transaction(
+                    credit_change, report
+                )
+
+                if capped_units != 0:
+                    # Ensure a transaction exists before converting to Adjustment
+                    report.transaction = await self.org_service.adjust_balance(
+                        transaction_action=TransactionActionEnum.Reserved,
+                        compliance_units=capped_units,
+                        organization_id=report.organization_id,
+                    )
                     report.transaction.transaction_action = (
                         TransactionActionEnum.Adjustment
                     )
@@ -360,20 +395,52 @@ class ComplianceReportUpdateService:
         available_balance = await self.org_service.calculate_available_balance(
             report.organization_id
         )
+        pre_deadline_balance = None
+        if credit_change < 0:
+            pre_deadline_balance = await self._calculate_pre_deadline_balance(report)
+
+        effective_available_balance = available_balance
+        if pre_deadline_balance is not None:
+            effective_available_balance = min(available_balance, pre_deadline_balance)
+
         units_to_reserve = credit_change
-        # If not enough credits, reserve what is left
-        if credit_change < 0 and abs(credit_change) > available_balance:
-            units_to_reserve = available_balance * -1
+        if credit_change < 0:
+            eligible_units = min(
+                abs(credit_change),
+                max(effective_available_balance, 0),
+            )
+            units_to_reserve = -eligible_units
+
         if report.transaction is not None:
             # update existing transaction
             report.transaction.compliance_units = units_to_reserve
-        # Only need a Transaction if they have credits or if it's a positive credit_change
-        elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
+        elif credit_change != 0 and (
+            effective_available_balance > 0 or credit_change > 0
+        ):
+            # Only need a Transaction if they have credits or it's a gain
             report.transaction = await self.org_service.adjust_balance(
                 transaction_action=TransactionActionEnum.Reserved,
                 compliance_units=units_to_reserve,
                 organization_id=report.organization_id,
             )
+
+        return units_to_reserve
+
+    async def _calculate_pre_deadline_balance(self, report: ComplianceReport) -> int:
+        compliance_period = getattr(report, "compliance_period", None)
+        period_description = getattr(compliance_period, "description", None)
+
+        try:
+            compliance_year = int(period_description)
+        except (TypeError, ValueError):
+            return await self.org_service.calculate_available_balance(
+                report.organization_id
+            )
+
+        pre_deadline_balance = await self.org_service.calculate_available_balance_for_period(
+            report.organization_id, compliance_year
+        )
+        return pre_deadline_balance
 
     async def _calculate_and_lock_summary(
         self, report, user, skip_can_sign_check=False

@@ -35,6 +35,8 @@
     "legalName": "Legal name of trading partner",
     "addressForService": "Address for service",
     "fuelCategory": "Fuel category",
+    "isCanadaProduced": "Fuel produced in Canada?",
+    "isQ1Supplied": "Supplied in Q1?",
     "receivedOrTransferred": "Received OR Transferred",
     "lastUpdated": "Last updated",
     "status": "Status",

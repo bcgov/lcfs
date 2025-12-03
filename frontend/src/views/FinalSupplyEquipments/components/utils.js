@@ -31,6 +31,15 @@ export const markerIcons = {
   grey: createMarkerIcon('grey')
 }
 
+const normalizeNumber = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
 // Check if date ranges overlap between two locations
 export const datesOverlap = (start1, end1, start2, end2) => {
   const s1 = new Date(start1)
@@ -46,16 +55,18 @@ export const transformApiData = (data) => {
   if (!data || !data.finalSupplyEquipments) return []
 
   return data.finalSupplyEquipments.map((row, index) => {
-    // Create a combined ID from finalSupplyEquipmentId and serialNbr
-    const finalSupplyEquipmentId = row.finalSupplyEquipmentId || 'unknown'
-    const serialNbr = row.serialNbr || 'unknown'
-    const combinedId = `${finalSupplyEquipmentId}_${serialNbr}`
+    // Create a combined ID from chargingEquipmentId and serialNumber
+    const chargingEquipmentId = row.chargingEquipmentId || 'unknown'
+    const serialNumber = row.serialNumber || 'unknown'
+    const combinedId = `${chargingEquipmentId}_${serialNumber}`
+    const kwhUsage = normalizeNumber(row.kwhUsage)
+    const powerOutput = normalizeNumber(row.powerOutput)
 
     return {
       id: combinedId,
       uniqueId: `${combinedId}_${index}`,
-      finalSupplyEquipmentId,
-      serialNbr,
+      chargingEquipmentId,
+      serialNumber,
       name:
         `${row.streetAddress || ''}, ${row.city || ''}, ${
           row.postalCode || ''
@@ -64,7 +75,9 @@ export const transformApiData = (data) => {
       lng: parseFloat(row.longitude) || 0,
       supplyFromDate:
         row.supplyFromDate || new Date().toISOString().split('T')[0],
-      supplyToDate: row.supplyToDate || new Date().toISOString().split('T')[0]
+      supplyToDate: row.supplyToDate || new Date().toISOString().split('T')[0],
+      kwhUsage,
+      powerOutput
     }
   })
 }
@@ -99,7 +112,7 @@ export const findOverlappingPeriods = (currentLoc, allLocations) => {
       // Only check for overlap if this is the same ID but different record
       return (
         currentLoc.uniqueId !== loc.uniqueId && // Different record
-        currentFseId !== locFseId && // Same FSE-ID number
+        currentFseId === locFseId && // Same FSE-ID number
         currentSerialNum === locSerialNum && // Same serial number
         datesOverlap(
           currentLoc.supplyFromDate,

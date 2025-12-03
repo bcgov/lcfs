@@ -197,6 +197,98 @@ async def test_handle_submitted_status_insufficient_permissions(
 
 
 @pytest.mark.anyio
+async def test_handle_submitted_status_auto_submits_fse_records(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    mock_summary_service,
+):
+    """Test that FSE records in Draft/Updated status are auto-submitted when report is submitted."""
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = 100
+
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Mock calculated summary
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=6,
+                field="renewable_fuel_retained",
+                gasoline=0,
+                diesel=0,
+                jet_fuel=0,
+            ),
+        ],
+        low_carbon_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=12, field="low_carbon_fuel_required", value=0
+            ),
+        ],
+        non_compliance_penalty_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=21, field="non_compliance_penalty_payable", value=0
+            ),
+        ],
+        can_sign=True,
+        line_20_surplus_deficit_units=100,
+    )
+
+    # Mock the returned summary
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 100
+
+    # Set up mocks
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Mock the charging equipment repo
+    mock_charging_equipment_repo = AsyncMock()
+    mock_charging_equipment_repo.auto_submit_draft_updated_fse_for_report = AsyncMock(
+        return_value=3  # 3 FSE records were auto-submitted
+    )
+    compliance_report_update_service._charging_equipment_repo = (
+        mock_charging_equipment_repo
+    )
+
+    # Inject the mocked org_service
+    compliance_report_update_service.org_service = mock_org_service
+    mock_org_service.adjust_balance.return_value = MagicMock()
+
+    # Call the method
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    # Assertions
+    mock_user_has_roles.assert_called_once_with(
+        mock.ANY,
+        [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
+    )
+
+    # Verify that auto_submit_draft_updated_fse_for_report was called
+    mock_charging_equipment_repo.auto_submit_draft_updated_fse_for_report.assert_called_once_with(
+        report_id
+    )
+
+    # Summary service should be called to recalculate
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+
+
+@pytest.mark.anyio
 async def test_handle_submitted_status_with_existing_summary(
     compliance_report_update_service,
     mock_repo,
@@ -286,11 +378,11 @@ async def test_handle_submitted_status_with_existing_summary(
         mock.ANY,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
     )
-    
+
     # With new logic, we don't call get_summary_by_report_id directly
     # The summary service handles all the logic internally
     mock_summary_repo.get_summary_by_report_id.assert_not_called()
-    
+
     # Summary service should be called at least once to recalculate
     mock_summary_service.calculate_compliance_report_summary.assert_called()
     mock_summary_service.calculate_compliance_report_summary.assert_any_call(report_id)
@@ -341,7 +433,7 @@ async def test_handle_submitted_status_without_existing_summary(
     )
 
     # Assertions
-    # With new logic, calculate_compliance_report_summary is called 
+    # With new logic, calculate_compliance_report_summary is called
     mock_summary_service.calculate_compliance_report_summary.assert_called()
     mock_summary_service.calculate_compliance_report_summary.assert_any_call(report_id)
 
@@ -592,195 +684,132 @@ async def test_handle_submitted_no_sign(
     await compliance_report_update_service.handle_submitted_status(
         mock_report, UserProfile()
     )
-    
+
     # Verify summary was calculated but not locked
     mock_summary_service.calculate_compliance_report_summary.assert_called()
 
 
 @pytest.mark.anyio
-async def test_handle_submitted_status_no_credits(
+async def test_handle_submitted_status_skips_reserve_without_pre_deadline_balance(
     compliance_report_update_service,
-    mock_repo,
     mock_user_has_roles,
     mock_org_service,
     mock_summary_service,
-    mock_summary_repo,
 ):
-    """
-    Scenario: The report requires deficit units to be reserved (-100),
-    but available_balance is 0, so no transaction is created.
-    """
-    report_id = 1
-    mock_report = MagicMock(spec=ComplianceReport)
-    mock_report.compliance_report_id = report_id
-    mock_report.organization_id = 123
-    mock_report.summary = None
-    # No existing transaction
-    mock_report.transaction = None
-
-    # Required roles are present
+    """Scenario: No eligible credits exist before the deadline, so no reserve is created."""
     mock_user_has_roles.return_value = True
-    compliance_report_update_service.request = MagicMock()
-    compliance_report_update_service.request.user = MagicMock()
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 1
+    report.organization_id = 123
+    report.compliance_period = MagicMock(description="2024")
+    report.summary = MagicMock(spec=ComplianceReportSummary)
+    report.summary.line_20_surplus_deficit_units = -150
+    report.transaction = None
 
-    # Mock the summary so we skip deeper logic
-    mock_summary_repo.get_summary_by_report_id.return_value = None
-
-    # Mock calculated summary - should be model-like object with line_20_surplus_deficit_units
-    calculated_summary = MagicMock(spec=ComplianceReportSummary)
-    calculated_summary.line_20_surplus_deficit_units = -100
-    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
-        return_value=calculated_summary
+    mock_summary_service.calculate_compliance_report_summary.return_value = (
+        report.summary
     )
-    # available_balance = 0
-    mock_org_service.calculate_available_balance.return_value = 0
-    # If adjust_balance is called, we'll see an assertion fail
-    mock_org_service.adjust_balance = AsyncMock()
+    mock_org_service.calculate_available_balance.return_value = 100000
+    mock_org_service.calculate_available_balance_for_period.return_value = 0
 
-    # Execute
     await compliance_report_update_service.handle_submitted_status(
-        mock_report, UserProfile()
+        report, UserProfile()
     )
 
-    # Assertions:
-    # 1) Summary was assigned and calculated twice (once for creation, once for recalculation)
-    assert mock_report.summary == calculated_summary
-    assert mock_summary_service.calculate_compliance_report_summary.call_count == 2
-    # 2) We did NOT call adjust_balance, because balance = 0
     mock_org_service.adjust_balance.assert_not_awaited()
-    # 3) No transaction is created
-    assert mock_report.transaction is None
+    assert report.transaction is None
+    mock_org_service.calculate_available_balance.assert_awaited_once_with(
+        report.organization_id
+    )
+    mock_org_service.calculate_available_balance_for_period.assert_awaited_once_with(
+        report.organization_id, 2024
+    )
 
 
 @pytest.mark.anyio
-async def test_handle_submitted_status_insufficient_credits(
+async def test_handle_submitted_status_caps_to_pre_deadline_balance(
     compliance_report_update_service,
-    mock_repo,
-    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
     mock_summary_service,
 ):
-    """
-    Scenario: The report requires deficit units of 100,
-    but the org only has 50 credits available. We reserve partial (-50)
-    to match the actual available balance.
-    """
-    report_id = 1
-    mock_report = MagicMock(spec=ComplianceReport)
-    mock_report.compliance_report_id = report_id
-    mock_report.organization_id = 123
-    # Need 100 credits, but only 50 are available
-    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
-    mock_report.summary.line_20_surplus_deficit_units = -100
-    mock_report.transaction = None
-
+    """Scenario: Eligible credits before the deadline cap the reserve even though the live balance is higher."""
     mock_user_has_roles.return_value = True
-    compliance_report_update_service.request = MagicMock()
-    compliance_report_update_service.request.user = MagicMock()
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 2
+    report.organization_id = 321
+    report.compliance_period = MagicMock(description="2024")
+    report.summary = MagicMock(spec=ComplianceReportSummary)
+    report.summary.line_20_surplus_deficit_units = -120000
+    report.transaction = None
 
-    # Skip deeper summary logic
-    mock_summary_repo.get_summary_by_report_id.return_value = None
-    mock_summary_repo.save_compliance_report_summary = AsyncMock(
-        return_value=mock_report.summary
+    mock_summary_service.calculate_compliance_report_summary.return_value = (
+        report.summary
     )
-    mock_summary_repo.add_compliance_report_summary = AsyncMock(
-        return_value=mock_report.summary
-    )
-    calculated_summary = ComplianceReportSummarySchema(
-        can_sign=True,
-        compliance_report_id=report_id,
-        renewable_fuel_target_summary=[],
-        low_carbon_fuel_target_summary=[],
-        non_compliance_penalty_summary=[],
-    )
-    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
-        return_value=calculated_summary
-    )
-
-    # Org only has 50
-    mock_org_service.calculate_available_balance = AsyncMock(return_value=50)
-    # Mock the result of adjust_balance
+    mock_org_service.calculate_available_balance.return_value = 120000
+    mock_org_service.calculate_available_balance_for_period.return_value = 80000
     mock_transaction = MagicMock()
     mock_org_service.adjust_balance.return_value = mock_transaction
 
-    # Execute
     await compliance_report_update_service.handle_submitted_status(
-        mock_report, UserProfile()
+        report, UserProfile()
     )
 
-    # We should have called adjust_balance with -50 units (reserving partial)
     mock_org_service.adjust_balance.assert_awaited_once_with(
         transaction_action=TransactionActionEnum.Reserved,
-        compliance_units=-50,
-        organization_id=123,
+        compliance_units=-80000,
+        organization_id=321,
     )
-    # And a transaction object is assigned back to the report
-    assert mock_report.transaction == mock_transaction
+    assert report.transaction is mock_transaction
+    mock_org_service.calculate_available_balance.assert_awaited_once_with(
+        report.organization_id
+    )
+    mock_org_service.calculate_available_balance_for_period.assert_awaited_once_with(
+        report.organization_id, 2024
+    )
 
 
 @pytest.mark.anyio
-async def test_handle_submitted_status_sufficient_credits(
+async def test_handle_submitted_status_caps_to_live_balance_when_smaller(
     compliance_report_update_service,
-    mock_repo,
-    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
     mock_summary_service,
 ):
-    """
-    Scenario: The report requires deficit units of -100,
-    and the org has 200 credits available. We reserve all -100.
-    """
-    report_id = 1
-    mock_report = MagicMock(spec=ComplianceReport)
-    mock_report.compliance_report_id = report_id
-    mock_report.organization_id = 123
-    # Need 100 credits
-    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
-    mock_report.summary.line_20_surplus_deficit_units = -100
-    mock_report.transaction = None
-
+    """Scenario: Live balance is lower than pre-deadline total, so reserve is limited by current availability."""
     mock_user_has_roles.return_value = True
-    compliance_report_update_service.request = MagicMock()
-    compliance_report_update_service.request.user = MagicMock()
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 3
+    report.organization_id = 555
+    report.compliance_period = MagicMock(description="2024")
+    report.summary = MagicMock(spec=ComplianceReportSummary)
+    report.summary.line_20_surplus_deficit_units = -120000
+    report.transaction = None
 
-    # Skip deeper summary logic
-    mock_summary_repo.get_summary_by_report_id.return_value = None
-    mock_summary_repo.save_compliance_report_summary = AsyncMock(
-        return_value=mock_report.summary
+    mock_summary_service.calculate_compliance_report_summary.return_value = (
+        report.summary
     )
-    mock_summary_repo.add_compliance_report_summary = AsyncMock(
-        return_value=mock_report.summary
-    )
-    calculated_summary = ComplianceReportSummarySchema(
-        can_sign=True,
-        compliance_report_id=report_id,
-        renewable_fuel_target_summary=[],
-        low_carbon_fuel_target_summary=[],
-        non_compliance_penalty_summary=[],
-    )
-    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
-        return_value=calculated_summary
-    )
-
-    # Org has enough
-    mock_org_service.calculate_available_balance.return_value = 200
+    mock_org_service.calculate_available_balance.return_value = 40000
+    mock_org_service.calculate_available_balance_for_period.return_value = 100000
     mock_transaction = MagicMock()
     mock_org_service.adjust_balance.return_value = mock_transaction
 
-    # Execute
     await compliance_report_update_service.handle_submitted_status(
-        mock_report, UserProfile()
+        report, UserProfile()
     )
 
-    # We should have called adjust_balance with the full -100
     mock_org_service.adjust_balance.assert_awaited_once_with(
         transaction_action=TransactionActionEnum.Reserved,
-        compliance_units=-100,
-        organization_id=123,
+        compliance_units=-40000,
+        organization_id=555,
     )
-    assert mock_report.transaction == mock_transaction
+    assert report.transaction is mock_transaction
+    mock_org_service.calculate_available_balance.assert_awaited_once_with(
+        report.organization_id
+    )
+    mock_org_service.calculate_available_balance_for_period.assert_awaited_once_with(
+        report.organization_id, 2024
+    )
 
 
 # Fixture to create a real instance of OrganizationsService with its actual adjust_balance logic.
@@ -847,6 +876,15 @@ async def test_handle_recommended_by_analyst_status_not_superseded(
 ):
     # Arrange
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    # Mock the charging equipment repo
+    mock_charging_equipment_repo = AsyncMock()
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._charging_equipment_repo = (
+        mock_charging_equipment_repo
+    )
+
     # Patch user_has_roles directly for this test
     with patch(
         "lcfs.web.api.compliance_report.update_service.user_has_roles",
@@ -860,6 +898,10 @@ async def test_handle_recommended_by_analyst_status_not_superseded(
         # Assert
         mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
             mock_compliance_report_recommended_analyst.compliance_report_group_uuid
+        )
+        # Verify that auto_validate_submitted_fse_for_report was called
+        mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
+            mock_compliance_report_recommended_analyst.compliance_report_id
         )
 
 
@@ -959,8 +1001,10 @@ async def test_handle_assessed_status_not_superseded(
     mock_report_model.version = mock_compliance_report_assessed.version
     # Set a mock transaction object on the model
     mock_report_model.transaction = MagicMock()
+    mock_report_model.transaction.compliance_units = 100
     # Set is_non_assessment to False to enter transaction logic
     mock_report_model.is_non_assessment = False
+    mock_report_model.compliance_period = MagicMock(description="2024")
     # Mock the summary that should already be locked from "Recommended by Analyst" step
     mock_summary = MagicMock()
     mock_summary.line_20_surplus_deficit_units = 100
@@ -993,8 +1037,57 @@ async def test_handle_assessed_status_not_superseded(
         == mock_user_profile_director.keycloak_username
     )
     # Verify compliance units were set to the summary value
-    assert mock_report_model.transaction.compliance_units == mock_summary.line_20_surplus_deficit_units
+    assert (
+        mock_report_model.transaction.compliance_units
+        == mock_summary.line_20_surplus_deficit_units
+    )
     mock_repo.update_compliance_report.assert_called_once_with(mock_report_model)
+
+
+@pytest.mark.anyio
+async def test_handle_assessed_status_caps_to_pre_deadline(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 999
+    mock_report.compliance_report_group_uuid = "group-999"
+    mock_report.version = 1
+    mock_report.organization_id = 321
+    mock_report.transaction = MagicMock()
+    mock_report.is_non_assessment = False
+    mock_report.compliance_period = MagicMock(description="2024")
+    mock_report.transaction.compliance_units = -200
+    mock_report.compliance_period = MagicMock(description="2024")
+
+    mock_summary = MagicMock()
+    mock_summary.line_20_surplus_deficit_units = -300
+    mock_summary.is_locked = True
+    mock_report.summary = mock_summary
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    compliance_report_update_service.org_service.calculate_available_balance.return_value = 500
+    compliance_report_update_service.org_service.calculate_available_balance_for_period.return_value = 200
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_assessed_status(
+            mock_report, mock_user_profile_director
+        )
+
+    compliance_report_update_service.org_service.calculate_available_balance.assert_not_awaited()
+    compliance_report_update_service.org_service.calculate_available_balance_for_period.assert_not_awaited()
+    assert mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    assert mock_report.transaction.compliance_units == -200
+    assert (
+        mock_report.transaction.update_user
+        == mock_user_profile_director.keycloak_username
+    )
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
 
 @pytest.mark.anyio
@@ -1021,6 +1114,7 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
     mock_report.transaction = None  # No existing transaction - the key bug case
     # Set is_non_assessment to False to enter transaction logic
     mock_report.is_non_assessment = False
+    mock_report.compliance_period = MagicMock(description="2024")
 
     # Set up supplemental initiator to indicate it's a government adjustment
     mock_report.supplemental_initiator = (
@@ -1042,7 +1136,7 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
     # This is needed to simulate the transaction being created
     def side_effect_create_transaction(credit_change, report):
         report.transaction = mock_transaction
-        return mock_transaction
+        return credit_change
 
     compliance_report_update_service._create_or_update_reserve_transaction.side_effect = (
         side_effect_create_transaction
@@ -1259,6 +1353,8 @@ async def test_handle_assessed_status_calls_calculate_with_skip_check(
     mock_report.version = 1
     mock_report.transaction = MagicMock()
     mock_report.is_non_assessment = False
+    mock_report.compliance_period = MagicMock(description="2024")
+    mock_report.transaction.compliance_units = 150
 
     # Mock the summary that should already be locked
     mock_summary = MagicMock(spec=ComplianceReportSummary)
@@ -1279,8 +1375,13 @@ async def test_handle_assessed_status_calls_calculate_with_skip_check(
         )
 
     # Assert that the transaction was updated with the summary values
-    assert mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
-    assert mock_report.transaction.update_user == mock_user_profile_director.keycloak_username
+    assert (
+        mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    )
+    assert (
+        mock_report.transaction.update_user
+        == mock_user_profile_director.keycloak_username
+    )
     assert mock_report.transaction.compliance_units == 150
 
 
@@ -1295,6 +1396,7 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     # Arrange
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_report.compliance_report_id = 123
     mock_report.version = 1
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
@@ -1303,7 +1405,16 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     mock_report.summary = None
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
-    
+
+    # Mock the charging equipment repo
+    mock_charging_equipment_repo = AsyncMock()
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._charging_equipment_repo = (
+        mock_charging_equipment_repo
+    )
+
     # Mock the _calculate_and_lock_summary method (should be called)
     mock_summary = MagicMock()
     mock_summary.line_20_surplus_deficit_units = 200
@@ -1326,6 +1437,57 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
         mock_report, mock_user_profile_analyst, skip_can_sign_check=True
     )
+    # Verify FSE auto-validation was called
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
+        123
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_analyst_auto_validates_fse(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_analyst: MagicMock,
+):
+    """Test that handle_recommended_by_analyst_status auto-validates submitted FSE records"""
+    # Arrange
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_report.compliance_report_id = 456
+    mock_report.version = 0
+    mock_report.summary = None
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Mock the charging equipment repo to return 3 updated records
+    mock_charging_equipment_repo = AsyncMock()
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+        return_value=3
+    )
+    compliance_report_update_service._charging_equipment_repo = (
+        mock_charging_equipment_repo
+    )
+
+    # Mock the _calculate_and_lock_summary method
+    mock_summary = MagicMock()
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_summary
+    )
+
+    # Patch roles check
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_report, mock_user_profile_analyst
+        )
+
+    # Assert FSE auto-validation was called with correct report ID
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
+        456
+    )
 
 
 @pytest.mark.anyio
@@ -1338,12 +1500,22 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     # Arrange
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_report.compliance_report_id = 789
     mock_report.version = 1
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )  # Not government
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Mock the charging equipment repo
+    mock_charging_equipment_repo = AsyncMock()
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._charging_equipment_repo = (
+        mock_charging_equipment_repo
+    )
 
     # Mock the _calculate_and_lock_summary method
     mock_summary = MagicMock()
@@ -1364,6 +1536,10 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     # Assert that _calculate_and_lock_summary WAS called
     compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
         mock_report, mock_user_profile_analyst, skip_can_sign_check=True
+    )
+    # Assert that FSE auto-validation was called
+    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
+        789
     )
 
 

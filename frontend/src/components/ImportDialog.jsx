@@ -62,6 +62,7 @@ const DIALOG_STATES = {
  * - isOverwrite: Boolean, whether the import mode is “overwrite.”
  * - importHook: A hook that returns the import mutation (e.g. useImportAllocationAgreement or useImportFinalSupplyEquipment).
  * - getJobStatusHook: A hook to check the import job status.
+ * - onComplete: Callback invoked when the background import job finishes successfully.
  */
 function ImportDialog({
   open,
@@ -69,7 +70,8 @@ function ImportDialog({
   complianceReportId,
   isOverwrite,
   importHook,
-  getJobStatusHook
+  getJobStatusHook,
+  onComplete
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -94,7 +96,16 @@ function ImportDialog({
 
   const { mutate: importFile } = importHook(complianceReportId, {
     onSuccess: (data) => {
-      setJobID(data.data.jobId)
+      const jobId = data?.data?.jobId ?? data?.jobId
+
+      if (jobId) {
+        setJobID(jobId)
+      } else {
+        setDialogState(DIALOG_STATES.COMPLETED)
+        setErrorMsg(
+          t(`common:importExport.import.dialog.fileError.uploadFailed`)
+        )
+      }
     },
     onError: (error) => {
       setDialogState(DIALOG_STATES.COMPLETED)
@@ -132,6 +143,9 @@ function ImportDialog({
             setCreatedCount(data.created)
             setRejectedCount(data.rejected)
             if (data.progress >= 100) {
+              if (data.status === 'Import process completed.') {
+                onComplete?.(data)
+              }
               setDialogState(DIALOG_STATES.COMPLETED)
               setErrorMsgs(data.errors)
               clearInterval(intervalId)
@@ -154,7 +168,7 @@ function ImportDialog({
         setIntervalID(null)
       }
     }
-  }, [jobID, data, refetch, open])
+  }, [jobID, data, refetch, open, onComplete])
 
   const preventBrowserDefaults = (e) => {
     e.preventDefault()

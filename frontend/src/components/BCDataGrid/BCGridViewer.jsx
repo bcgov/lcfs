@@ -7,7 +7,20 @@ import {
 } from '@/components/BCDataGrid/components'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
-import { forwardRef, useCallback, useMemo, useEffect, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useState
+} from 'react'
+import {
+  runOnNextFrame,
+  getGridScrollInfo as getGridScrollInfoUtil,
+  syncGridScrollPositions as syncGridScrollPositionsUtil,
+  syncCustomScrollbarToGrid as syncCustomScrollbarToGridUtil
+} from '@/components/BCDataGrid/floatingScrollbarUtils'
 
 // Styles for floating pagination
 const floatingPaginationStyles = {
@@ -21,7 +34,7 @@ const floatingPaginationStyles = {
   borderRadius: '8px',
   border: '1px solid #e0e0e0',
   minWidth: '400px',
-  maxWidth: '90vw',
+  maxWidth: '90vw'
 }
 
 const normalPaginationStyles = {
@@ -45,65 +58,78 @@ const isIntersectionObserverSupported = () => {
 }
 
 export const BCGridViewer = forwardRef(
-  ({
-    gridRef,
-    alertRef,
-    loading,
-    defaultColDef,
-    columnDefs,
-    gridOptions,
-    suppressPagination,
-    gridKey,
-    getRowId,
-    onRowClicked,
-    autoSizeStrategy,
+  (
+    {
+      gridRef,
+      alertRef,
+      loading,
+      defaultColDef,
+      columnDefs,
+      gridOptions,
+      suppressPagination,
+      gridKey,
+      getRowId,
+      onRowClicked,
+      autoSizeStrategy = {},
 
-    paginationOptions = {
-      page: 1,
-      size: 10,
-      sortOrders: [],
-      filters: []
+      paginationOptions = {
+        page: 1,
+        size: 10,
+        sortOrders: [],
+        filters: []
+      },
+      onPaginationChange,
+
+      queryData,
+      dataKey = 'items',
+
+      enableExportButton = false,
+      enableCopyButton = false,
+      enableResetButton = false,
+      enablePageCaching = true,
+      paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
+      exportName = 'ExportData',
+      enableFloatingPagination = true,
+      ...props
     },
-    onPaginationChange,
-
-    queryData,
-    dataKey = 'items',
-
-    enableExportButton = false,
-    enableCopyButton = false,
-    enableResetButton = false,
-    enablePageCaching = true,
-    paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
-    exportName = 'ExportData',
-    enableFloatingPagination = true,
-    ...props
-  }, ref) => {
-    const { data, error, isError, isLoading } = queryData
+    ref
+  ) => {
+    const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
     const previousGridKey = useRef(gridKey)
     const isRestoringFromCache = useRef(false)
-    
+
     // Refs and state for floating pagination
     const paginationRef = useRef(null)
     const gridContainerRef = useRef(null)
+    const customScrollbarRef = useRef(null)
     const [isPaginationVisible, setIsPaginationVisible] = useState(true)
     const [isGridVisible, setIsGridVisible] = useState(true)
     const [showScrollbar, setShowScrollbar] = useState(false)
-  
+    const syncingFromGridRef = useRef(false)
+    const syncingFromCustomRef = useRef(false)
+    const [scrollContentWidth, setScrollContentWidth] = useState(null)
+
     const isPaginationFloating = !isPaginationVisible && isGridVisible
 
     // Cache pagination options to sessionStorage
-    const cachePaginationOptions = useCallback((options) => {
-      if (enablePageCaching && gridKey) {
-        const cacheData = {
-          page: options.page,
-          size: options.size,
-          sortOrders: options.sortOrders || [],
-          filters: options.filters || []
+    const cachePaginationOptions = useCallback(
+      (options) => {
+        if (enablePageCaching && gridKey) {
+          const cacheData = {
+            page: options.page,
+            size: options.size,
+            sortOrders: options.sortOrders || [],
+            filters: options.filters || []
+          }
+          sessionStorage.setItem(
+            `${gridKey}-pagination`,
+            JSON.stringify(cacheData)
+          )
         }
-        sessionStorage.setItem(`${gridKey}-pagination`, JSON.stringify(cacheData))
-      }
-    }, [gridKey, enablePageCaching])
+      },
+      [gridKey, enablePageCaching]
+    )
 
     // Restore pagination options from sessionStorage
     const getCachedPaginationOptions = useCallback(() => {
@@ -125,15 +151,59 @@ export const BCGridViewer = forwardRef(
       return paginationOptions
     }, [gridKey, paginationOptions, enablePageCaching])
 
+    const getGridScrollInfo = useCallback(
+      () => getGridScrollInfoUtil(gridContainerRef),
+      [gridContainerRef]
+    )
+
+    const syncGridScrollPositions = useCallback(
+      (scrollLeft) =>
+        syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
+      [gridContainerRef]
+    )
+
+    const syncCustomScrollbarToGrid = useCallback(
+      (infoOverride) => {
+        if (!showScrollbar || !customScrollbarRef.current) return
+        syncingFromGridRef.current = true
+        syncCustomScrollbarToGridUtil({
+          gridContainerRef,
+          customScrollbarRef,
+          showScrollbar,
+          infoOverride
+        })
+        runOnNextFrame(() => {
+          syncingFromGridRef.current = false
+        })
+      },
+      [gridContainerRef, customScrollbarRef, showScrollbar]
+    )
+
+    const updateScrollMetrics = useCallback(() => {
+      const info = getGridScrollInfo()
+      if (!info) return
+
+      setScrollContentWidth((prev) =>
+        prev === info.contentWidth ? prev : info.contentWidth
+      )
+    }, [getGridScrollInfo])
+
     // Decicision maker to determine if the scrollbar to be shown or not.
     useEffect(() => {
-      const container = gridContainerRef?.current?.querySelector('.ag-center-cols-viewport')
-      const content = gridContainerRef?.current?.querySelector('.ag-center-cols-container')
+      const container = gridContainerRef?.current?.querySelector(
+        '.ag-center-cols-viewport'
+      )
+      const content = gridContainerRef?.current?.querySelector(
+        '.ag-center-cols-container'
+      )
 
       if (container && content) {
         setShowScrollbar(content.scrollWidth > container.clientWidth)
+        if (content.scrollWidth > container.clientWidth) {
+          updateScrollMetrics()
+        }
       }
-    }, [data])
+    }, [data, updateScrollMetrics])
 
     // Initialize with cached pagination options if available
     useEffect(() => {
@@ -164,9 +234,103 @@ export const BCGridViewer = forwardRef(
       }
     }, [gridKey])
 
+    useEffect(() => {
+      if (!showScrollbar) return
+      updateScrollMetrics()
+
+      const handleResize = () => updateScrollMetrics()
+      window.addEventListener('resize', handleResize)
+
+      let resizeObserver
+      if (
+        typeof ResizeObserver !== 'undefined' &&
+        gridContainerRef.current
+      ) {
+        const target =
+          gridContainerRef.current.querySelector('.ag-body-horizontal-scroll') ||
+          gridContainerRef.current.querySelector('.ag-center-cols-container')
+
+        if (target) {
+          resizeObserver = new ResizeObserver(() => updateScrollMetrics())
+          resizeObserver.observe(target)
+        }
+      }
+
+      return () => {
+        window.removeEventListener('resize', handleResize)
+        resizeObserver?.disconnect()
+      }
+    }, [showScrollbar, updateScrollMetrics])
+
+    useEffect(() => {
+      if (!showScrollbar) return
+
+      let rafId = null
+      let listeners = []
+      let handleGridScroll = null
+
+      const tryAttach = () => {
+        if (!gridContainerRef.current || !customScrollbarRef.current) {
+          rafId = requestAnimationFrame(tryAttach)
+          return
+        }
+
+        const info = getGridScrollInfo()
+        if (!info) {
+          rafId = requestAnimationFrame(tryAttach)
+          return
+        }
+
+        const { centerViewport, horizontalViewport, headerViewport } = info
+
+        handleGridScroll = () => {
+          if (syncingFromCustomRef.current) return
+
+          const latestInfo = getGridScrollInfo()
+          syncCustomScrollbarToGrid(latestInfo ?? info)
+        }
+
+        listeners = [centerViewport, horizontalViewport, headerViewport]
+          .filter(Boolean)
+          .map((element) => {
+            element.addEventListener('scroll', handleGridScroll, {
+              passive: true
+            })
+            return element
+          })
+
+        handleGridScroll()
+        updateScrollMetrics()
+      }
+
+      tryAttach()
+
+      return () => {
+        if (rafId) {
+          cancelAnimationFrame(rafId)
+        }
+        listeners.forEach((element) => {
+          if (handleGridScroll) {
+            element.removeEventListener('scroll', handleGridScroll)
+          }
+        })
+      }
+    }, [showScrollbar, updateScrollMetrics, getGridScrollInfo, syncCustomScrollbarToGrid])
+
+    useEffect(() => {
+      if (!showScrollbar) return
+      syncCustomScrollbarToGrid()
+    }, [showScrollbar, isPaginationFloating, data, syncCustomScrollbarToGrid])
+
     // Intersection Observer for pagination and grid visibility
     useEffect(() => {
-      if (!enableFloatingPagination || suppressPagination || !paginationRef.current || !gridContainerRef.current || !isIntersectionObserverSupported()) {
+      if (
+        !enableFloatingPagination ||
+        suppressPagination ||
+        !paginationRef.current ||
+        !gridContainerRef.current ||
+        !isIntersectionObserverSupported()
+      ) {
         return
       }
 
@@ -203,13 +367,13 @@ export const BCGridViewer = forwardRef(
         const columnState = JSON.parse(
           sessionStorage.getItem(`${gridKey}-column`)
         )
-        
+
         // Apply filters if they exist
         if (filterState) {
           // Set restoration flag to prevent filter change handler from interfering
           isRestoringFromCache.current = true
           params.api.setFilterModel(filterState)
-          
+
           // Only update pagination if we haven't initialized from cache
           // or if cache is disabled
           if (!enablePageCaching || !hasInitializedFromCache.current) {
@@ -228,13 +392,13 @@ export const BCGridViewer = forwardRef(
               cachePaginationOptions(updatedOptions)
             }
           }
-          
+
           // Reset restoration flag after a brief delay to allow filter events to complete
           setTimeout(() => {
             isRestoringFromCache.current = false
           }, 100)
         }
-        
+
         // Apply column state
         if (columnState) {
           params.api.applyColumnState({
@@ -261,7 +425,13 @@ export const BCGridViewer = forwardRef(
           })
         }
       },
-      [gridKey, enablePageCaching, paginationOptions, onPaginationChange, cachePaginationOptions]
+      [
+        gridKey,
+        enablePageCaching,
+        paginationOptions,
+        onPaginationChange,
+        cachePaginationOptions
+      ]
     )
 
     const onFirstDataRendered = useCallback((params) => {
@@ -313,7 +483,13 @@ export const BCGridViewer = forwardRef(
         }
         sessionStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
       },
-      [gridKey, onPaginationChange, paginationOptions, enablePageCaching, cachePaginationOptions]
+      [
+        gridKey,
+        onPaginationChange,
+        paginationOptions,
+        enablePageCaching,
+        cachePaginationOptions
+      ]
     )
 
     const handleSortChanged = useCallback(() => {
@@ -327,7 +503,7 @@ export const BCGridViewer = forwardRef(
             direction: col.sort
           }
         })
-      
+
       const updatedOptions = { ...paginationOptions, sortOrders: sortTemp }
       onPaginationChange(updatedOptions)
       if (enablePageCaching) {
@@ -337,7 +513,13 @@ export const BCGridViewer = forwardRef(
         `${gridKey}-column`,
         JSON.stringify(gridRef.current?.api.getColumnState())
       )
-    }, [gridKey, onPaginationChange, paginationOptions, enablePageCaching, cachePaginationOptions])
+    }, [
+      gridKey,
+      onPaginationChange,
+      paginationOptions,
+      enablePageCaching,
+      cachePaginationOptions
+    ])
 
     const defaultColDefParams = useMemo(
       () => ({
@@ -384,7 +566,16 @@ export const BCGridViewer = forwardRef(
           ref={gridRef}
           className="ag-theme-material"
           loading={isLoading || loading}
-          defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
+          defaultColDef={{
+            tooltipValueGetter: (params) => {
+              // Show the cell value on hover
+              return params.value !== null && params.value !== undefined
+                ? String(params.value)
+                : 'No data'
+            },
+            ...defaultColDefParams,
+            ...defaultColDef
+          }}
           columnDefs={columnDefs}
           gridOptions={gridOptions}
           rowData={!isLoading && ((data && data[dataKey]) || [])}
@@ -408,13 +599,16 @@ export const BCGridViewer = forwardRef(
               variant="outlined"
               sx={{
                 ...normalPaginationStyles,
-                visibility: isPaginationFloating && enableFloatingPagination ? 'hidden' : 'visible'
+                visibility:
+                  isPaginationFloating && enableFloatingPagination
+                    ? 'hidden'
+                    : 'visible'
               }}
             >
               <BCPagination
-                page={data?.pagination.page || 1}
-                size={data?.pagination.size || 10}
-                total={data?.pagination.total || 0}
+                page={data?.pagination?.page || paginationOptions.page || 1}
+                size={data?.pagination?.size || paginationOptions.size || 10}
+                total={data?.pagination?.total ?? data?.total_count ?? 0}
                 handleChangePage={handleChangePage}
                 handleChangeRowsPerPage={handleChangeRowsPerPage}
                 enableResetButton={enableResetButton}
@@ -427,61 +621,86 @@ export const BCGridViewer = forwardRef(
             </BCBox>
 
             {/* Floating pagination container */}
-            {isPaginationFloating && enableFloatingPagination && data?.pagination?.size > 10 && (
-              <BCBox
-                className="ag-grid-pagination-container-floating"
-                display="flex"
-                justifyContent="center"
-                variant="outlined"
-                sx={{
-                  ...floatingPaginationStyles,
-                  animation: 'fadeInUp 0.3s ease-out',
-                }}
-              >
-                {/* Floating horizontal scrollbar */}
-                {showScrollbar && 
-                  (<div
-                    className="custom-horizontal-scroll"
-                    style={{...floatingScrollStyles}}
-                    onScroll={(e) => {
-                      const scrollLeft = e.target.scrollLeft
-                      const centerViewport = gridContainerRef?.current?.querySelector('.ag-center-cols-viewport')
-                      if (centerViewport) {
-                        centerViewport.scrollLeft = scrollLeft
-                      }
-                    }}
-                  >
+            {isPaginationFloating &&
+              enableFloatingPagination &&
+              (data?.pagination?.size || paginationOptions.size || 10) > 10 &&
+              (data?.pagination?.total ||
+                data?.total_count ||
+                paginationOptions.total ||
+                10) > 10 && (
+                <BCBox
+                  className="ag-grid-pagination-container-floating"
+                  display="flex"
+                  justifyContent="center"
+                  variant="outlined"
+                  sx={{
+                    ...floatingPaginationStyles,
+                    animation: 'fadeInUp 0.3s ease-out'
+                  }}
+                >
+                  {/* Floating horizontal scrollbar */}
+                  {showScrollbar && (
                     <div
-                      style={{
-                        width: gridRef.current?.api ? 
-                          gridContainerRef?.current?.querySelector('.ag-body-horizontal-scroll-viewport')?.scrollWidth || 
-                          gridContainerRef?.current?.querySelector('.ag-header-viewport')?.scrollWidth || 
-                          '100%' : '100%',
-                        height: '1px'
+                      className="custom-horizontal-scroll"
+                      ref={customScrollbarRef}
+                      style={{ ...floatingScrollStyles }}
+                      onScroll={(e) => {
+                        if (syncingFromGridRef.current) return
+                        if (!customScrollbarRef.current) return
+
+                        const customMax = Math.max(
+                          customScrollbarRef.current.scrollWidth -
+                            customScrollbarRef.current.clientWidth,
+                          0
+                        )
+                        const ratio =
+                          customMax > 0
+                            ? customScrollbarRef.current.scrollLeft / customMax
+                            : 0
+
+                        const gridInfo = getGridScrollInfo()
+                        const gridMax = gridInfo?.maxScrollLeft ?? 0
+
+                        syncingFromCustomRef.current = true
+                        syncGridScrollPositions(ratio * gridMax)
+                        runOnNextFrame(() => {
+                          syncingFromCustomRef.current = false
+                        })
                       }}
-                    />
-                  </div>)
-                }
-                <BCPagination
-                  page={data?.pagination.page || 1}
-                  size={data?.pagination.size || 10}
-                  total={data?.pagination.total || 0}
-                  handleChangePage={handleChangePage}
-                  handleChangeRowsPerPage={handleChangeRowsPerPage}
-                  enableResetButton={enableResetButton}
-                  enableCopyButton={enableCopyButton}
-                  enableExportButton={enableExportButton}
-                  exportName={exportName}
-                  gridRef={gridRef}
-                  rowsPerPageOptions={paginationPageSizeSelector}
-                />
-              </BCBox>
-            )}
+                    >
+                      <div
+                        style={{
+                          width:
+                            scrollContentWidth ??
+                            gridContainerRef?.current?.clientWidth ??
+                            '100%',
+                          height: '1px'
+                        }}
+                      />
+                    </div>
+                  )}
+                  <BCPagination
+                    page={data?.pagination?.page || paginationOptions.page || 1}
+                    size={
+                      data?.pagination?.size || paginationOptions.size || 10
+                    }
+                    total={data?.pagination?.total ?? data?.total_count ?? 0}
+                    handleChangePage={handleChangePage}
+                    handleChangeRowsPerPage={handleChangeRowsPerPage}
+                    enableResetButton={enableResetButton}
+                    enableCopyButton={enableCopyButton}
+                    enableExportButton={enableExportButton}
+                    exportName={exportName}
+                    gridRef={gridRef}
+                    rowsPerPageOptions={paginationPageSizeSelector}
+                  />
+                </BCBox>
+              )}
           </>
         )}
 
         {/* CSS for animation */}
-        <style jsx>{`
+        <style>{`
           @keyframes fadeInUp {
             from {
               opacity: 0;

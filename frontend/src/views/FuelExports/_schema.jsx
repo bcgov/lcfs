@@ -23,11 +23,6 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import {
-  formatFuelCodeOptions,
-  extractOriginalFuelCode,
-  formatFuelCodeWithCountryPrefix
-} from '@/utils/fuelCodeCountryPrefix'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -334,10 +329,10 @@ export const fuelExportColDefs = (
         (obj) => params.data.fuelType === obj.fuelType
       )
       return {
-        options: formatFuelCodeOptions(
-          fuelTypeObj?.fuelCodes || [],
-          compliancePeriod
-        ),
+        options:
+          fuelTypeObj?.fuelCodes.map(
+            (item) => item.fuelCode || item.fuel_code
+          ) || [],
         multiple: false,
         disableCloseOnSelect: false,
         freeSolo: false,
@@ -364,23 +359,6 @@ export const fuelExportColDefs = (
         (obj) => params.data.fuelType === obj.fuelType
       )
       if (!fuelTypeObj) {
-        // If we have a fuel code, format it with country prefix for display
-        if (params.data.fuelCode) {
-          // Find the fuel code details to get the country
-          const allFuelCodes =
-            optionsData?.fuelTypes?.flatMap((ft) => ft.fuelCodes) || []
-          const fuelCodeDetails = allFuelCodes.find(
-            (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-          )
-          const country =
-            fuelCodeDetails?.fuelProductionFacilityCountry ||
-            fuelCodeDetails?.fuel_production_facility_country
-          return formatFuelCodeWithCountryPrefix(
-            params.data.fuelCode,
-            country,
-            compliancePeriod
-          )
-        }
         return params.data.fuelCode
       }
 
@@ -401,27 +379,12 @@ export const fuelExportColDefs = (
         }
       }
 
-      // Format the fuel code with country prefix for display
-      if (params.data.fuelCode) {
-        const fuelCodeDetails = fuelTypeObj.fuelCodes.find(
-          (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
-        )
-        const country =
-          fuelCodeDetails?.fuelProductionFacilityCountry ||
-          fuelCodeDetails?.fuel_production_facility_country
-        return formatFuelCodeWithCountryPrefix(
-          params.data.fuelCode,
-          country,
-          compliancePeriod
-        )
-      }
-
       return params.data.fuelCode
     },
     valueSetter: (params) => {
       const newCode = params.newValue
       // Extract the original fuel code from the formatted display value
-      const originalFuelCode = extractOriginalFuelCode(newCode)
+      const originalFuelCode = newCode
 
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -705,26 +668,31 @@ export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
+    minWidth: 180,
     valueFormatter
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType',
+    minWidth: 200,
     valueGetter: (params) => params.data.fuelType?.fuelType
   },
   {
     field: 'fuelTypeOther',
+    minWidth: 170,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeOther'),
     hide: !showFuelTypeOther
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
+    minWidth: 150,
     valueGetter: (params) => params.data.fuelCategory?.category
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     field: 'endUseType',
+    minWidth: 200,
     valueGetter: (params) => params.data.endUseType?.type || 'Any'
   },
   {
@@ -732,41 +700,50 @@ export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
       'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
     ),
     field: 'determiningCarbonIntensity',
+    minWidth: 370,
     valueGetter: (params) => params.data.provisionOfTheAct?.name
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode',
+    minWidth: 175,
     valueGetter: (params) => params.data.fuelCode?.fuelCode
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
-    field: 'exportDate'
+    field: 'exportDate',
+    minWidth: 160
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
+    minWidth: 185,
     valueFormatter
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
-    field: 'units'
+    field: 'units',
+    minWidth: 80
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
+    minWidth: 135,
     field: 'targetCi'
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
+    minWidth: 90,
     field: 'ciOfFuel'
   },
   {
     field: 'uci',
+    minWidth: 90,
     headerName: i18n.t('fuelExport:fuelExportColLabels.uci')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
     field: 'energyDensity',
+    minWidth: 160,
     valueGetter: (params) => {
       if (isFuelTypeOther(params)) {
         return params.data?.energyDensity
@@ -779,10 +756,15 @@ export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
       }
     }
   },
-  { headerName: i18n.t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
+    field: 'eer',
+    minWidth: 80
+  },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     field: 'energy',
+    minWidth: 170,
     valueFormatter
   }
 ]
@@ -800,6 +782,7 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
+    minWidth: 180,
     valueFormatter,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'complianceUnits')
@@ -807,17 +790,20 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType.fuelType',
+    minWidth: 200,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory.category',
+    minWidth: 150,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     field: 'endUseType.type',
+    minWidth: 200,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
   },
   {
@@ -825,60 +811,71 @@ export const changelogCommonColDefs = (highlight = true) => [
       'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
     ),
     field: 'provisionOfTheAct.name',
+    minWidth: 370,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
+    minWidth: 175,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
     field: 'exportDate',
+    minWidth: 160,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'exportDate')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
+    minWidth: 185,
     valueFormatter,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     field: 'units',
+    minWidth: 80,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     field: 'targetCi',
+    minWidth: 135,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
     field: 'ciOfFuel',
+    minWidth: 90,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.uci'),
     field: 'uci',
+    minWidth: 90,
 
     cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
     field: 'energyDensity',
+    minWidth: 160,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'energyDensity')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     field: 'eer',
+    minWidth: 80,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     field: 'energy',
+    minWidth: 170,
     valueFormatter,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
   }
@@ -895,6 +892,7 @@ export const changelogColDefs = (highlight = true) => [
   { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
   {
     field: 'actionType',
+    minWidth: 120,
     valueGetter: (params) => {
       if (params.data.actionType === 'UPDATE') {
         if (params.data.updated) {

@@ -26,15 +26,29 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   }
 }))
 
-vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
-  finalSupplyEquipmentSummaryColDefs: vi.fn(() => [
+const mockFinalSupplyEquipmentSummaryColDefs = vi.hoisted(() =>
+  vi.fn(() => [
     { field: 'organizationName', headerName: 'Organization' },
     { field: 'serialNbr', headerName: 'Serial Number' }
   ])
+)
+
+vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
+  finalSupplyEquipmentSummaryColDefs: mockFinalSupplyEquipmentSummaryColDefs
+}))
+
+const mockUseCurrentUser = vi.fn()
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => mockUseCurrentUser()
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
   LinkRenderer: () => <span data-test="link-renderer" />
+}))
+
+const mockUseGetFSEReportingList = vi.fn()
+vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
+  useGetFSEReportingList: (...args) => mockUseGetFSEReportingList(...args)
 }))
 
 vi.mock('../GeoMapping', () => ({
@@ -80,24 +94,45 @@ vi.mock('@/constants/schedules.js', () => ({
 // -------- test data -------- //
 const mockEquipmentData = [
   {
-    finalSupplyEquipmentId: 1,
+    chargingEquipmentId: 1,
     organizationName: 'Test Org 1',
     serialNbr: 'SN001',
     location: 'Vancouver'
   },
   {
-    finalSupplyEquipmentId: 2,
+    chargingEquipmentId: 2,
     organizationName: 'Test Org 2',
     serialNbr: 'SN002',
     location: 'Victoria'
   },
   {
-    finalSupplyEquipmentId: 3,
+    chargingEquipmentId: 3,
     organizationName: 'Another Company',
     serialNbr: 'SN003',
     location: 'Surrey'
   }
 ]
+
+const createQueryData = ({
+  equipments = mockEquipmentData,
+  pagination = {
+    total: equipments.length,
+    page: 1,
+    size: 10
+  },
+  ...rest
+} = {}) => ({
+  data: {
+    finalSupplyEquipments: equipments,
+    pagination
+  },
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+  ...rest
+})
+
+let hookCalls
 
 // -------- helpers -------- //
 const renderComponent = (props = {}) => {
@@ -116,10 +151,25 @@ describe('FinalSupplyEquipmentSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     gridViewerProps = undefined
+    hookCalls = []
+    mockUseCurrentUser.mockReturnValue({
+      hasAnyRole: () => false
+    })
+    mockUseGetFSEReportingList.mockImplementation((...args) => {
+      hookCalls.push(args)
+      return createQueryData()
+    })
   })
 
   describe('Basic Rendering', () => {
     it('renders without data', () => {
+      mockUseGetFSEReportingList.mockImplementation((...args) => {
+        hookCalls.push(args)
+        return createQueryData({
+          equipments: [],
+          pagination: { total: 0, page: 1, size: 10 }
+        })
+      })
       renderComponent({ data: null })
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
@@ -129,6 +179,9 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       expect(screen.getByTestId('form-control-label')).toBeInTheDocument()
       expect(screen.getByText('Show Map')).toBeInTheDocument()
+      expect(
+        mockFinalSupplyEquipmentSummaryColDefs
+      ).toHaveBeenCalledWith(expect.any(Function), COMPLIANCE_REPORT_STATUSES.DRAFT, false)
     })
 
     it('renders with different status', () => {
@@ -137,8 +190,27 @@ describe('FinalSupplyEquipmentSummary', () => {
     })
   })
 
+  it('passes IDIR flag when current user has government role', () => {
+    mockUseCurrentUser.mockReturnValue({
+      hasAnyRole: () => true
+    })
+    renderComponent()
+    expect(mockFinalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
+      expect.any(Function),
+      COMPLIANCE_REPORT_STATUSES.DRAFT,
+      true
+    )
+  })
+
   describe('PaginatedData Logic', () => {
     it('handles no data scenario', () => {
+      mockUseGetFSEReportingList.mockImplementation((...args) => {
+        hookCalls.push(args)
+        return createQueryData({
+          equipments: [],
+          pagination: { total: 0, page: 1, size: 10 }
+        })
+      })
       renderComponent({ data: null })
       const queryData = gridViewerProps.queryData
       expect(queryData.data.finalSupplyEquipments).toEqual([])
@@ -148,9 +220,19 @@ describe('FinalSupplyEquipmentSummary', () => {
     })
 
     it('handles undefined finalSupplyEquipments', () => {
+      mockUseGetFSEReportingList.mockImplementation((...args) => {
+        hookCalls.push(args)
+        return {
+          ...createQueryData({ equipments: [] }),
+          data: {
+            finalSupplyEquipments: undefined,
+            pagination: { total: 0, page: 1, size: 10 }
+          }
+        }
+      })
       renderComponent({ data: {} })
       const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments).toEqual([])
+      expect(queryData.data.finalSupplyEquipments).toBeUndefined()
     })
 
     it('processes data without filters or sorts', () => {
@@ -163,9 +245,8 @@ describe('FinalSupplyEquipmentSummary', () => {
     })
 
     it('applies contains filter correctly', async () => {
-      const user = userEvent.setup()
       renderComponent()
-      
+
       // Simulate filter application through pagination change
       await act(async () => {
         gridViewerProps.onPaginationChange({
@@ -173,13 +254,16 @@ describe('FinalSupplyEquipmentSummary', () => {
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments).toHaveLength(2)
+      expect(mockUseGetFSEReportingList).toHaveBeenCalledTimes(2)
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.filters).toEqual([
+        { field: 'organizationName', type: 'contains', filter: 'test' }
+      ])
     })
 
     it('handles multiple filters', async () => {
       renderComponent()
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({
           filters: [
@@ -189,45 +273,46 @@ describe('FinalSupplyEquipmentSummary', () => {
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments).toHaveLength(2)
+      expect(mockUseGetFSEReportingList).toHaveBeenCalledTimes(2)
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.filters).toEqual([
+        { field: 'organizationName', type: 'contains', filter: 'test' },
+        { field: 'serialNbr', type: 'contains', filter: 'sn00' }
+      ])
     })
 
     it('applies single sort order', async () => {
       renderComponent()
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({
           sortOrders: [{ field: 'organizationName', direction: 'asc' }]
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments[0].organizationName).toBe('Another Company')
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.sortOrders).toEqual([
+        { field: 'organizationName', direction: 'asc' }
+      ])
     })
 
     it('applies descending sort order', async () => {
       renderComponent()
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({
           sortOrders: [{ field: 'organizationName', direction: 'desc' }]
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments[0].organizationName).toBe('Test Org 2')
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.sortOrders).toEqual([
+        { field: 'organizationName', direction: 'desc' }
+      ])
     })
 
     it('handles pagination calculations', async () => {
-      const largeData = Array.from({ length: 25 }, (_, i) => ({
-        finalSupplyEquipmentId: i + 1,
-        organizationName: `Org ${i + 1}`,
-        serialNbr: `SN${i + 1}`,
-        location: 'Test Location'
-      }))
-      
-      renderComponent({ data: { finalSupplyEquipments: largeData } })
+      renderComponent()
       
       await act(async () => {
         gridViewerProps.onPaginationChange({
@@ -236,10 +321,9 @@ describe('FinalSupplyEquipmentSummary', () => {
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments).toHaveLength(10)
-      expect(queryData.data.pagination.page).toBe(2)
-      expect(queryData.data.pagination.total).toBe(25)
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.page).toBe(2)
+      expect(paginationOptions.size).toBe(10)
     })
   })
 
@@ -280,7 +364,7 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('getRowId function works correctly', () => {
       renderComponent()
       const getRowId = gridViewerProps.getRowId
-      const result = getRowId({ data: { finalSupplyEquipmentId: 42 } })
+      const result = getRowId({ data: { chargingEquipmentId: 42 } })
       expect(result).toBe('42')
     })
 
@@ -292,9 +376,8 @@ describe('FinalSupplyEquipmentSummary', () => {
         gridViewerProps.onPaginationChange({ page: 2, size: 5 })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.pagination.page).toBe(2)
-      expect(queryData.data.pagination.size).toBe(5)
+      expect(gridViewerProps.paginationOptions.page).toBe(2)
+      expect(gridViewerProps.paginationOptions.size).toBe(5)
     })
 
     it('toggles map visibility', async () => {
@@ -328,17 +411,32 @@ describe('FinalSupplyEquipmentSummary', () => {
       renderComponent()
       expect(gridViewerProps.suppressPagination).toBe(true)
 
-      const largeData = Array.from({ length: 15 }, (_, i) => ({
-        finalSupplyEquipmentId: i + 1,
-        organizationName: `Org ${i + 1}`,
-        serialNbr: `SN${i + 1}`
-      }))
+      mockUseGetFSEReportingList.mockImplementation((...args) => {
+        hookCalls.push(args)
+        const largeData = Array.from({ length: 15 }, (_, i) => ({
+          chargingEquipmentId: i + 1,
+          organizationName: `Org ${i + 1}`,
+          serialNbr: `SN${i + 1}`
+        }))
+        return createQueryData({
+          equipments: largeData,
+          pagination: { total: largeData.length, page: 1, size: 10 }
+        })
+      })
 
-      renderComponent({ data: { finalSupplyEquipments: largeData } })
+      renderComponent({ data: { finalSupplyEquipments: [] } })
       expect(gridViewerProps.suppressPagination).toBe(false)
     })
 
     it('handles missing data for suppression calculation', () => {
+      mockUseGetFSEReportingList.mockImplementation((...args) => {
+        hookCalls.push(args)
+        return {
+          ...createQueryData({ equipments: [] }),
+          data: null
+        }
+      })
+
       renderComponent({ data: null })
       expect(gridViewerProps.suppressPagination).toBe(true)
     })
@@ -355,9 +453,13 @@ describe('FinalSupplyEquipmentSummary', () => {
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments).toHaveLength(2)
-      expect(queryData.data.finalSupplyEquipments[0].serialNbr).toBe('SN002')
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.filters).toEqual([
+        { field: 'organizationName', type: 'contains', filter: 'test' }
+      ])
+      expect(paginationOptions.sortOrders).toEqual([
+        { field: 'serialNbr', direction: 'desc' }
+      ])
     })
 
     it('handles empty filter strings', async () => {
@@ -369,8 +471,10 @@ describe('FinalSupplyEquipmentSummary', () => {
         })
       })
 
-      const queryData = gridViewerProps.queryData
-      expect(queryData.data.finalSupplyEquipments).toHaveLength(3)
+      const [, paginationOptions] = hookCalls.at(-1)
+      expect(paginationOptions.filters).toEqual([
+        { field: 'organizationName', type: 'contains', filter: '' }
+      ])
     })
 
     it('passes all required props to BCGridViewer', () => {

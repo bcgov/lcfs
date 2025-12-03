@@ -162,7 +162,7 @@ vi.mock('@/views/ComplianceReports', () => ({
     const location = useLocation()
     return (
       <div data-test="credit-calculator">
-        Credit Calculator - {location.pathname}
+        Compliance unit calculator - {location.pathname}
       </div>
     )
   }
@@ -510,12 +510,16 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle nested user parameters in organizations', async () => {      
-      const testRouter = createTestRouter(['/organizations/org123/user456'])
+    it('should handle nested user parameters in organizations', async () => {
+      const testRouter = createTestRouter([
+        '/organizations/org123/users/user456'
+      ])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('user-details-card-view-bceid')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('user-details-card-view-bceid')
+        ).toBeInTheDocument()
         expect(screen.getByText(/userID: user456/)).toBeInTheDocument()
         expect(screen.getByText(/orgID: org123/)).toBeInTheDocument()
       })
@@ -650,18 +654,18 @@ describe('Dynamic Routes and Navigation', () => {
     })
 
     it('should build paths with multiple parameters', () => {
-      const path = buildPath('/organizations/:orgID/:userID', {
+      const path = buildPath('/organizations/:orgID/users/:userID', {
         orgID: '123',
         userID: '456'
       })
-      expect(path).toBe('/organizations/123/456')
+      expect(path).toBe('/organizations/123/users/456')
     })
 
     it('should build paths with missing parameters', () => {
-      const path = buildPath('/organizations/:orgID/:userID', {
+      const path = buildPath('/organizations/:orgID/users/:userID', {
         orgID: '123'
       })
-      expect(path).toBe('/organizations/123/:userID')
+      expect(path).toBe('/organizations/123/users/:userID')
     })
 
     it('should build paths with extra parameters', () => {

@@ -51,6 +51,19 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   })
 }))
 
+// Mock BCGridViewer
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({ gridRef, columnDefs, queryData, dataKey, className }) => (
+    <div
+      data-test="bc-grid-container"
+      className={className || 'ag-theme-material'}
+      data-grid-key={dataKey}
+    >
+      Grid Component
+    </div>
+  )
+}))
+
 // Mock React Router
 const mockNavigate = vi.fn()
 const mockLocationState = { state: null }
@@ -501,8 +514,9 @@ describe('FuelCodes Component Tests', () => {
       }
 
       render(<FuelCodes />, { wrapper })
-      const errorMessage = screen.getByText(/Failed to load fuel codes/)
-      expect(errorMessage).toBeInTheDocument()
+      // The grid container should still be rendered - error handling is done by BCGridViewer
+      const gridContainer = screen.getByTestId('bc-grid-container')
+      expect(gridContainer).toBeInTheDocument()
     })
 
     it('should handle empty fuel codes data', () => {

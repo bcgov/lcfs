@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { KeycloakProvider } from '@/components/KeycloakProvider'
 import { AuthorizationProvider } from '@/contexts/AuthorizationContext'
 import theme from '@/themes'
@@ -10,7 +11,10 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './i18n'
 
-const queryClient = new QueryClient()
+// Polyfill Buffer for dependencies that require it (e.g., uuid)
+if (!window.Buffer) window.Buffer = Buffer
+
+export const queryClient = new QueryClient()
 const root = document.getElementById('root')
 
 if (root) {

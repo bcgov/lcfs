@@ -93,7 +93,7 @@ export const ActivityLinksList = ({
       createActivity(
         'report:activityLists.finalSupplyEquipment',
         'report:activityLabels.finalSupplyEquipment',
-        ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
+        ROUTES.REPORTS.ADD.FSE_REPORTING,
         true
       ),
       createActivity(
@@ -146,14 +146,7 @@ export const ActivityLinksList = ({
         {primaryList
           .filter((activity) => {
             if (!isQuarterlyReport) return true
-
-            // For Q1-Q3: only show activities with enableForQuarterly=true
-            if (reportQuarter && [1, 2, 3].includes(reportQuarter)) {
-              return activity.enableForQuarterly
-            }
-
-            // For Q4: show all activities (same as annual)
-            return true
+            return activity.enableForQuarterly
           })
           .map((activity) => (
             <Box
@@ -194,14 +187,7 @@ export const ActivityLinksList = ({
         {secondaryList
           .filter((activity) => {
             if (!isQuarterlyReport) return true
-
-            // For Q1-Q3: only show activities with enableForQuarterly=true
-            if (reportQuarter && [1, 2, 3].includes(reportQuarter)) {
-              return activity.enableForQuarterly
-            }
-
-            // For Q4: show all activities (same as annual)
-            return true
+            return activity.enableForQuarterly
           })
           .map((activity) => (
             <Box

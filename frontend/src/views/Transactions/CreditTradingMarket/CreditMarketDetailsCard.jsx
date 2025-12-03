@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   TextField,
   Grid,
@@ -15,52 +15,81 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
-  useUpdateCurrentOrgCreditMarket
+  useUpdateCurrentOrgCreditMarket,
+  useUpdateOrganizationCreditMarket
 } from '@/hooks/useOrganization'
 import { useQueryClient } from '@tanstack/react-query'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
-import { roles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
 import Loading from '@/components/Loading'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faTimes } from '@fortawesome/free-solid-svg-icons'
+import { phoneNumberFormatter } from '@/utils/formatters'
 
-export const CreditMarketDetailsCard = () => {
+export const CreditMarketDetailsCard = ({
+  organizationId,
+  variant = 'self',
+  onSaveSuccess
+}) => {
   const { t } = useTranslation(['common', 'creditMarket', 'org'])
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasAnyRole } = useCurrentUser()
   const queryClient = useQueryClient()
   const [isEditMode, setIsEditMode] = useState(false)
 
+  const targetOrgId =
+    organizationId ?? currentUser?.organization?.organizationId
+
   // Get full organization data
-  const { data: organizationData, isLoading } = useOrganization(
-    currentUser?.organization?.organizationId,
-    {
-      enabled: !!currentUser?.organization?.organizationId,
-      staleTime: 0,
-      cacheTime: 0
-    }
-  )
-
-  // Mutation hook for updating credit market details
-  const updateCreditMarket = useUpdateCurrentOrgCreditMarket({
-    clearCache: true, // Force cache refresh to get updated data
-    invalidateRelatedQueries: true, // Invalidate to force refetch
-    onSuccess: async (data) => {
-      // Force a fresh fetch of organization data
-      const orgId = currentUser?.organization?.organizationId
-      if (orgId) {
-        await queryClient.refetchQueries(['organization', orgId])
-      }
-
-      setIsEditMode(false)
-      // Show success message if you have a toast/notification system
-    },
-    onError: (error) => {
-      console.error('Failed to update credit market details:', error)
-      // Show error message if you have a toast/notification system
-    }
+  const { data: organizationData, isLoading } = useOrganization(targetOrgId, {
+    enabled: !!targetOrgId,
+    staleTime: 0,
+    cacheTime: 0
   })
 
+  // Shared mutation options for both BCeID and IDIR flows
+  const mutationOptions = useMemo(
+    () => ({
+      clearCache: true,
+      invalidateRelatedQueries: true,
+      onSuccess: async () => {
+        if (targetOrgId) {
+          await queryClient.refetchQueries(['organization', targetOrgId])
+        }
+        setIsEditMode(false)
+        onSaveSuccess?.()
+      },
+      onError: (error) => {
+        console.error('Failed to update credit market details:', error)
+      }
+    }),
+    [onSaveSuccess, queryClient, targetOrgId]
+  )
+
+  // Instantiate both mutations so hook order stays stable
+  const updateCurrentOrgMutation =
+    useUpdateCurrentOrgCreditMarket(mutationOptions)
+  const updateOrganizationMutation = useUpdateOrganizationCreditMarket(
+    targetOrgId,
+    mutationOptions
+  )
+
+  const updateCreditMarket =
+    variant === 'admin' ? updateOrganizationMutation : updateCurrentOrgMutation
+
   // Form setup for edit mode
+  const initialFormValues = useMemo(
+    () => ({
+      contactName: '',
+      phone: '',
+      email: '',
+      isSeller: false,
+      isBuyer: false,
+      creditsToSell: 0,
+      displayInMarket: false
+    }),
+    []
+  )
+
   const {
     control,
     handleSubmit,
@@ -68,67 +97,109 @@ export const CreditMarketDetailsCard = () => {
     formState: { isDirty },
     watch
   } = useForm({
-    defaultValues: {
-      contactName:
-        organizationData?.credit_market_contact_name ||
-        `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim(),
-      phone:
-        organizationData?.credit_market_contact_phone ||
-        organizationData?.phone ||
-        '',
-      email:
-        organizationData?.credit_market_contact_email ||
-        organizationData?.email ||
-        '',
-      isSeller: organizationData?.credit_market_is_seller || false,
-      isBuyer: organizationData?.credit_market_is_buyer || false,
-      creditsToSell: organizationData?.creditsToSell || 0,
-      displayInMarket: organizationData?.display_in_credit_market || false
-    }
+    defaultValues: initialFormValues
   })
 
-  // Update form when organization data loads
-  useEffect(() => {
-    if (organizationData && currentUser) {
-      reset({
-        contactName:
-          organizationData?.creditMarketContactName ||
-          `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim(),
-        phone:
-          organizationData?.creditMarketContactPhone ||
-          organizationData?.phone ||
-          '',
-        email:
-          organizationData?.creditMarketContactEmail ||
-          organizationData?.email ||
-          '',
-        isSeller: organizationData?.creditMarketIsSeller || false,
-        isBuyer: organizationData?.creditMarketIsBuyer || false,
-        creditsToSell: organizationData?.creditsToSell || 0,
-        displayInMarket: organizationData?.displayInCreditMarket || false
-      })
+  const getOrgValue = useCallback(
+    (...keys) => {
+      if (!organizationData) return undefined
+      for (const key of keys) {
+        if (
+          Object.prototype.hasOwnProperty.call(organizationData, key) &&
+          organizationData[key] !== undefined
+        ) {
+          return organizationData[key]
+        }
+      }
+      return undefined
+    },
+    [organizationData]
+  )
+
+  const buildFormValues = useCallback(() => {
+    const defaultName =
+      variant === 'self'
+        ? `${currentUser?.firstName || ''} ${
+            currentUser?.lastName || ''
+          }`.trim()
+        : ''
+    return {
+      contactName:
+        getOrgValue('creditMarketContactName', 'credit_market_contact_name') ||
+        defaultName,
+      phone:
+        getOrgValue(
+          'creditMarketContactPhone',
+          'credit_market_contact_phone',
+          'phone'
+        ) || '',
+      email:
+        getOrgValue(
+          'creditMarketContactEmail',
+          'credit_market_contact_email',
+          'email'
+        ) || '',
+      isSeller: Boolean(
+        getOrgValue('creditMarketIsSeller', 'credit_market_is_seller')
+      ),
+      isBuyer: Boolean(
+        getOrgValue('creditMarketIsBuyer', 'credit_market_is_buyer')
+      ),
+      creditsToSell: getOrgValue('creditsToSell', 'credits_to_sell') ?? 0,
+      displayInMarket: Boolean(
+        getOrgValue('displayInCreditMarket', 'display_in_credit_market')
+      )
     }
-  }, [organizationData, currentUser, reset])
+  }, [currentUser, getOrgValue, variant])
+
+  // Update form when organization data or user context changes
+  useEffect(() => {
+    if (organizationData || (variant === 'self' && currentUser)) {
+      reset(buildFormValues())
+      setIsEditMode(false)
+    }
+  }, [organizationData, currentUser, variant, buildFormValues, reset])
 
   // Watch the seller checkbox to conditionally enable credits field
   const isSeller = watch('isSeller')
 
   // Get the available balance for validation
-  const availableBalance =
-    organizationData?.totalBalance || organizationData?.total_balance || 0
+  const availableBalance = getOrgValue('totalBalance', 'total_balance') ?? 0
+
+  const organizationDisplayName =
+    getOrgValue('organizationName', 'organization_name', 'name') || ''
+
+  if (variant === 'admin' && !organizationId) {
+    return null
+  }
+
+  const cardTitle = useMemo(() => {
+    const baseTitle = t(
+      'creditMarket:marketDetails',
+      'Credit trading market details'
+    )
+    if (variant === 'admin' && organizationDisplayName) {
+      return `${baseTitle} - ${organizationDisplayName}`
+    }
+    return baseTitle
+  }, [organizationDisplayName, t, variant])
+
+  const readOnlyValues = useMemo(() => buildFormValues(), [buildFormValues])
 
   if (isLoading) {
     return <Loading />
   }
 
-  const isRegistered =
-    organizationData?.orgStatus?.status === ORGANIZATION_STATUSES.REGISTERED
+  const orgStatusValue =
+    organizationData?.orgStatus?.status || organizationData?.org_status?.status
 
-  // Check if user has Transfer or Signing Authority roles (required for editing)
-  const hasEditPermission = currentUser?.roles?.some(
-    (role) =>
-      role.name === roles.transfers || role.name === roles.signing_authority
-  )
+  const isRegistered = orgStatusValue === ORGANIZATION_STATUSES.REGISTERED
+
+  // Check if user has the required roles for editing
+  const hasEditPermission =
+    variant === 'admin'
+      ? hasAnyRole(...govRoles)
+      : hasAnyRole(roles.transfers, roles.signing_authority)
 
   // Handlers for edit mode
   const handleEdit = () => {
@@ -169,10 +240,7 @@ export const CreditMarketDetailsCard = () => {
         }}
       >
         <BCWidgetCard
-          title={t(
-            'creditMarket:marketDetails',
-            'Credit trading market details'
-          )}
+          title={cardTitle}
           color="nav"
           editButton={
             !isEditMode && hasEditPermission
@@ -185,12 +253,27 @@ export const CreditMarketDetailsCard = () => {
           }
           content={
             <BCBox p={1}>
+              {variant === 'admin' && (
+                <BCBox mb={2}>
+                  <BCTypography variant="body4">
+                    <strong>
+                      {t(
+                        'creditMarket:selectedOrganization',
+                        'Selected organization'
+                      )}
+                      :
+                    </strong>{' '}
+                    {organizationDisplayName ||
+                      t('common:notAvailable', 'Not available')}
+                  </BCTypography>
+                </BCBox>
+              )}
               {isEditMode ? (
                 // Edit Mode Form
                 <form onSubmit={handleSubmit(handleSave)}>
                   <BCBox
                     display="grid"
-                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
+                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1.5fr' }}
                     columnGap={10}
                     rowGap={2}
                   >
@@ -399,7 +482,7 @@ export const CreditMarketDetailsCard = () => {
                 <>
                   <BCBox
                     display="grid"
-                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
+                    gridTemplateColumns={{ xs: '1fr', md: '1fr 1.5fr' }}
                     columnGap={10}
                     rowGap={2}
                   >
@@ -409,16 +492,7 @@ export const CreditMarketDetailsCard = () => {
                         <strong>
                           {t('creditMarket:contactName', 'Contact name')}:
                         </strong>{' '}
-                        {organizationData?.creditMarketContactName ||
-                          (currentUser?.firstName && currentUser?.lastName
-                            ? `${currentUser.firstName} ${currentUser.lastName}`
-                            : t('common:notAvailable', 'Not available'))}
-                      </BCTypography>
-
-                      <BCTypography variant="body4">
-                        <strong>{t('creditMarket:email', 'Email')}:</strong>{' '}
-                        {organizationData?.creditMarketContactEmail ||
-                          organizationData?.email ||
+                        {readOnlyValues.contactName ||
                           t('common:notAvailable', 'Not available')}
                       </BCTypography>
 
@@ -426,8 +500,14 @@ export const CreditMarketDetailsCard = () => {
                         <strong>
                           {t('creditMarket:telephone', 'Telephone')}:
                         </strong>{' '}
-                        {organizationData?.creditMarketContactPhone ||
-                          organizationData?.phone ||
+                        {phoneNumberFormatter({
+                          value: readOnlyValues.phone
+                        }) || t('common:notAvailable', 'Not available')}
+                      </BCTypography>
+
+                      <BCTypography variant="body4">
+                        <strong>{t('creditMarket:email', 'Email')}:</strong>{' '}
+                        {readOnlyValues.email ||
                           t('common:notAvailable', 'Not available')}
                       </BCTypography>
                     </BCBox>
@@ -439,13 +519,31 @@ export const CreditMarketDetailsCard = () => {
                           {t('creditMarket:roleInMarket', 'Role in Market')}:
                         </strong>{' '}
                         {(() => {
-                          const roles = []
-                          if (organizationData?.creditMarketIsSeller)
-                            roles.push(t('creditMarket:seller', 'Seller'))
-                          if (organizationData?.creditMarketIsBuyer)
-                            roles.push(t('creditMarket:buyer', 'Buyer'))
-                          return roles.length > 0
-                            ? roles.join(', ')
+                          const displayRoles = []
+                          if (
+                            Boolean(
+                              getOrgValue(
+                                'creditMarketIsSeller',
+                                'credit_market_is_seller'
+                              )
+                            )
+                          ) {
+                            displayRoles.push(
+                              t('creditMarket:seller', 'Seller')
+                            )
+                          }
+                          if (
+                            Boolean(
+                              getOrgValue(
+                                'creditMarketIsBuyer',
+                                'credit_market_is_buyer'
+                              )
+                            )
+                          ) {
+                            displayRoles.push(t('creditMarket:buyer', 'Buyer'))
+                          }
+                          return displayRoles.length > 0
+                            ? displayRoles.join(', ')
                             : t('common:notAvailable', 'Not available')
                         })()}
                       </BCTypography>
@@ -458,8 +556,12 @@ export const CreditMarketDetailsCard = () => {
                           )}
                           :
                         </strong>{' '}
-                        {organizationData?.displayInCreditMarket ||
-                        organizationData?.display_in_credit_market
+                        {Boolean(
+                          getOrgValue(
+                            'displayInCreditMarket',
+                            'display_in_credit_market'
+                          )
+                        )
                           ? t('common:yes')
                           : t('common:no')}
                       </BCTypography>
@@ -468,7 +570,7 @@ export const CreditMarketDetailsCard = () => {
                         <strong>
                           {t('creditMarket:creditsToSell', 'Credits to sell')}:
                         </strong>{' '}
-                        {organizationData?.creditsToSell || 0}
+                        {getOrgValue('creditsToSell', 'credits_to_sell') ?? 0}
                       </BCTypography>
                     </BCBox>
                   </BCBox>

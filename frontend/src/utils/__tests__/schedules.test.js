@@ -37,7 +37,10 @@ describe('handleScheduleSave', () => {
     expect(saveRow).toHaveBeenCalledWith(updated)
     expect(result.validationStatus).toBe('success')
     expect(result.modified).toBe(false)
-    expect(alertRef.current.triggerAlert).toHaveBeenCalledWith({ message: 'Row updated successfully.', severity: 'success' })
+    expect(alertRef.current.triggerAlert).toHaveBeenCalledWith({
+      message: 'Row updated successfully.',
+      severity: 'success'
+    })
   })
 
   it('handles warnings and errors when saveRow rejects with ERR_BAD_REQUEST', async () => {
@@ -80,6 +83,14 @@ describe('handleScheduleSave', () => {
 })
 
 describe('handleScheduleDelete', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('applies transaction and calls alert on successful delete', async () => {
     const alertRef = { current: { triggerAlert: vi.fn() } }
     const applyTransaction = vi.fn()
@@ -103,7 +114,46 @@ describe('handleScheduleDelete', () => {
 
     expect(applyTransaction).toHaveBeenCalled()
     expect(saveRow).toHaveBeenCalled()
-    expect(alertRef.current.triggerAlert).toHaveBeenCalledWith({ message: 'Row deleted successfully.', severity: 'success' })
-    expect(setRowData).toHaveBeenCalledWith([{ ...defaultRowData, id: 'mock-uuid' }])
+    expect(alertRef.current.triggerAlert).toHaveBeenCalledWith({
+      message: 'Row deleted successfully.',
+      severity: 'success'
+    })
+
+    // Fast-forward the setTimeout
+    vi.advanceTimersByTime(100)
+
+    expect(setRowData).toHaveBeenCalledWith([
+      {
+        ...defaultRowData,
+        id: 'mock-uuid'
+      }
+    ])
   })
-}) 
+
+  it('does not call setRowData when grid is not empty', async () => {
+    const alertRef = { current: { triggerAlert: vi.fn() } }
+    const applyTransaction = vi.fn()
+    const params = {
+      node: { data: { id: 5, some: 'data' } },
+      api: { applyTransaction, isRowDataEmpty: () => false }
+    }
+
+    const saveRow = vi.fn().mockResolvedValue({})
+    const setRowData = vi.fn()
+    const defaultRowData = { default: true }
+
+    await handleScheduleDelete(
+      params,
+      'id',
+      saveRow,
+      alertRef,
+      setRowData,
+      defaultRowData
+    )
+
+    // Fast-forward timers to ensure setTimeout doesn't run
+    vi.advanceTimersByTime(100)
+
+    expect(setRowData).not.toHaveBeenCalled()
+  })
+})

@@ -476,13 +476,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     }
 
     const shouldShowAssessmentStatement =
-      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
+      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental && currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     const shouldShowAssessmentRecommendation =
       hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
 
     const shouldShowAssessmentSectionTitle =
-      shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
+      (shouldShowAssessmentStatement || shouldShowAssessmentRecommendation) &&
+      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     return {
       shouldShowAssessmentStatement,
@@ -530,6 +531,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       isOriginalReport: reportData?.report?.version === 0,
       isAnalystAdjustment:
         currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+      isNonAssessment: reportData?.report?.isNonAssessment || false,
 
       // Conflict detection
       hasDraftSupplemental,
@@ -562,6 +564,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     isSigningAuthorityDeclared,
     hasDraftSupplemental,
     reportData?.report?.version,
+    reportData?.report?.isNonAssessment,
     isSupplemental,
     isDeleted,
     isDeleting,
@@ -689,16 +692,17 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               hasGovernmentReassessmentInProgress={
                 reportData?.hasGovernmentReassessmentInProgress
               }
+              compliancePeriodYear={compliancePeriod}
             />
           </Stack>
-          <ReportDetails
-            canEdit={canEdit}
-            currentStatus={currentStatus}
-            hasRoles={hasRoles}
-            complianceReportData={reportData}
-          />
           {!location.state?.newReport && (
             <>
+              <ReportDetails
+                canEdit={canEdit}
+                currentStatus={currentStatus}
+                hasRoles={hasRoles}
+                complianceReportData={reportData}
+              />
               {!showEarlyIssuanceSummary &&
                 !reportData?.report?.isNonAssessment && (
                   <ComplianceReportSummary

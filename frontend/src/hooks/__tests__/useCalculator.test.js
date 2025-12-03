@@ -326,13 +326,14 @@ describe('useCalculateComplianceUnits', () => {
 
     expect(result.current.data.data).toEqual(mockData)
     expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('2024'), {
-      params: {
+      params: expect.objectContaining({
         fuelCategoryId: '1',
         fuelTypeId: '2',
         endUseId: '3',
         quantity: 1000,
-        fuelCodeId: '4'
-      }
+        fuelCodeId: '4',
+        useCustomCi: false
+      })
     })
   })
 

@@ -24,7 +24,7 @@ import {
   useComplianceReportDocuments,
   useComplianceReportWithCache
 } from '@/hooks/useComplianceReports'
-import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
+import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
@@ -168,7 +168,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         ),
       finalSupplyEquipments: () =>
         navigate(
-          buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
+          buildPath(ROUTES.REPORTS.ADD.FSE_REPORTING, {
             compliancePeriod,
             complianceReportId
           })
@@ -251,7 +251,12 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.fuelSupplies)
               }
-              onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
+              onComponent={
+                <FuelSupplyChangelog
+                  canEdit={canEdit}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
+                />
+              }
               offComponent={
                 <FuelSupplySummary
                   status={currentStatus}
@@ -266,10 +271,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         name: t('finalSupplyEquipment:fseTitle'),
         key: 'finalSupplyEquipments',
         action: navigationHandlers.finalSupplyEquipments,
-        useFetch: useGetFinalSupplyEquipments,
+        useFetch: useGetFSEReportingList,
         component: (data) =>
           data.finalSupplyEquipments.length > 0 && (
-            <FinalSupplyEquipmentSummary status={currentStatus} data={data} />
+            <FinalSupplyEquipmentSummary
+              status={currentStatus}
+              data={data}
+              organizationId={complianceReportData?.report?.organizationId}
+            />
           )
       },
       {
@@ -285,7 +294,12 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.allocationAgreements)
               }
-              onComponent={<AllocationAgreementChangelog canEdit={canEdit} />}
+              onComponent={
+                <AllocationAgreementChangelog
+                  canEdit={canEdit}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
+                />
+              }
               offComponent={
                 <AllocationAgreementSummary
                   status={currentStatus}
@@ -382,9 +396,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
 
   // Get data for all activities to determine visibility
   const activityDataResults = activityList.map((activity) => {
-    const result = activity.useFetch(complianceReportId, {
-      changelog: reportInfo.isSupplemental
-    })
+    const result = activity.useFetch(
+      complianceReportId,
+      {
+        changelog: reportInfo.isSupplemental
+      },
+      {},
+      complianceReportData?.report?.organizationId
+    )
     return {
       activity,
       ...result

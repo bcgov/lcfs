@@ -21,6 +21,9 @@ from lcfs.web.api.fuel_supply.schema import (
     ProvisionOfTheActSchema,
     TargetCarbonIntensitySchema,
     UnitOfMeasureSchema,
+    OrganizationFuelSuppliesSchema,
+    OrganizationFuelSupplySchema,
+    FuelSupplyAnalyticsSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
@@ -205,6 +208,7 @@ class FuelSupplyServices:
                 fuel_type_id=row_data["fuel_type_id"],
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
+                renewable=row_data["renewable"],
                 default_carbon_intensity=(
                     round(default_ci or 0, 2)
                     if default_ci is not None and row_data["fuel_type"] != "Other"
@@ -282,6 +286,8 @@ class FuelSupplyServices:
             energy=fuel_supply.energy,
             deleted=False,
             is_new_supplemental_entry=False,
+            is_canada_produced=fuel_supply.is_canada_produced,
+            is_q1_supplied=fuel_supply.is_q1_supplied,
         )
 
     @service_handler
@@ -323,3 +329,55 @@ class FuelSupplyServices:
             )
 
         return compliance_report
+
+    @service_handler
+    async def get_organization_fuel_supply(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ) -> OrganizationFuelSuppliesSchema:
+        """
+        Get paginated fuel supply history for an organization.
+        Aggregates data from all compliance reports for the organization.
+        Includes analytics for charts and summary cards.
+        """
+        # Get paginated fuel supply data and total count
+        fuel_supplies, total_count = await self.repo.get_organization_fuel_supply_paginated(
+            organization_id, pagination
+        )
+
+        # Get analytics data
+        analytics = await self.repo.get_organization_fuel_supply_analytics(
+            organization_id, pagination.filters if hasattr(pagination, 'filters') else None
+        )
+
+        # Map entities to response schemas
+        fuel_supply_list = [
+            OrganizationFuelSupplySchema(
+                fuel_supply_id=fs.fuel_supply_id,
+                compliance_period=fs.compliance_report.compliance_period.description,
+                report_submission_date=fs.compliance_report.update_date.isoformat() if fs.compliance_report.update_date else None,
+                fuel_type=fs.fuel_type.fuel_type,
+                fuel_category=fs.fuel_category.category,
+                provision_of_the_act=fs.provision_of_the_act.name,
+                fuel_code=fs.fuel_code.fuel_code if fs.fuel_code else None,
+                fuel_quantity=(fs.quantity or 0) if fs.quantity is not None else (
+                    (fs.q1_quantity or 0) + (fs.q2_quantity or 0) +
+                    (fs.q3_quantity or 0) + (fs.q4_quantity or 0)
+                ),
+                units=fs.units.value,
+                compliance_report_id=fs.compliance_report_id,
+            )
+            for fs in fuel_supplies
+        ]
+
+        return OrganizationFuelSuppliesSchema(
+            fuel_supplies=fuel_supply_list,
+            analytics=FuelSupplyAnalyticsSchema(**analytics),
+            pagination=PaginationResponseSchema(
+                page=pagination.page,
+                size=pagination.size,
+                total=total_count,
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                ),
+            ),
+        )

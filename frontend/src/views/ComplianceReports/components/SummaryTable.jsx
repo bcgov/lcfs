@@ -74,32 +74,64 @@ const SummaryTable = ({
     const enteredValue = e.target.value
     const column = columns.find((col) => col.id === columnId)
     const constraints = getCellConstraints(rowIndex, columnId)
+    const row = data[rowIndex]
+
+    // All editable fields are integers
+    // If input contains non-numeric chars (like $ or letters), strip decimals immediately
+    // If input is purely numeric with decimal, preserve during typing (will be stripped on blur)
+    const cleaned = enteredValue.replace(/[^0-9.]/g, '')
+    const hasNonNumeric = enteredValue !== cleaned
 
     let value
-    if (
-      column.editable &&
-      column.editableCells &&
-      column.editableCells.includes(rowIndex)
-    ) {
-      // For currency inputs (penalty fields), store as string to preserve decimal input
-      value = enteredValue.replace(/[^0-9.]/g, '')
+    if (hasNonNumeric && cleaned.includes('.')) {
+      // Input had non-numeric chars AND decimals - strip decimals immediately
+      value = parseInt(cleaned, 10)
+      if (isNaN(value)) {
+        value = ''
+      }
     } else {
-      // Convert to integer for non-currency fields
-      value =
-        enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
+      // Input is purely numeric (with optional decimal) - preserve it
+      value = cleaned
     }
 
     // Apply constraints validation
-    if (constraints.max !== undefined && parseInt(value) > constraints.max) {
+    if (value !== '' && constraints.max !== undefined && parseInt(value) > constraints.max) {
       value = constraints.max
     }
-    if (constraints.min !== undefined && parseInt(value) < constraints.min) {
+    if (value !== '' && constraints.min !== undefined && parseInt(value) < constraints.min) {
       value = constraints.min
     }
 
     setData((prevData) => {
       const newData = [...prevData]
       newData[rowIndex] = { ...newData[rowIndex], [columnId]: value }
+
+      // Enforce mutual exclusivity between Line 7 and Line 9
+      // Only apply for fuel columns (gasoline, diesel, jetFuel)
+      const isFuelColumn = ['gasoline', 'diesel', 'jetFuel'].includes(columnId)
+      const currentRow = newData[rowIndex]
+      const lineNumber = parseInt(currentRow?.line)
+
+      if (isFuelColumn && (lineNumber === 7 || lineNumber === 9)) {
+        const numericValue = parseInt(value) || 0
+
+        // If user enters a non-zero value in Line 7, zero out Line 9 in same column
+        if (lineNumber === 7 && numericValue !== 0) {
+          const line9Index = newData.findIndex(row => parseInt(row?.line) === 9)
+          if (line9Index !== -1) {
+            newData[line9Index] = { ...newData[line9Index], [columnId]: 0 }
+          }
+        }
+
+        // If user enters a non-zero value in Line 9, zero out Line 7 in same column
+        if (lineNumber === 9 && numericValue !== 0) {
+          const line7Index = newData.findIndex(row => parseInt(row?.line) === 7)
+          if (line7Index !== -1) {
+            newData[line7Index] = { ...newData[line7Index], [columnId]: 0 }
+          }
+        }
+      }
+
       return newData
     })
     setEditingCell({ rowIndex, columnId })
@@ -123,7 +155,8 @@ const SummaryTable = ({
       const currentRow = data[rowIndex]
       const currentValue = currentRow[columnId]
 
-      // Convert string values to numbers for currency fields when saving
+      // Convert string values to numbers when saving
+      // All editable fields are integers
       if (
         column.editable &&
         column.editableCells &&
@@ -132,9 +165,9 @@ const SummaryTable = ({
         setData((prevData) => {
           const newData = [...prevData]
           const numValue =
-            currentValue === '' ? 0 : parseFloat(currentValue) || 0
-          // Round to 2 decimal places for currency
-          newData[rowIndex][columnId] = Math.round(numValue * 100) / 100
+            currentValue === '' || currentValue === 0 ? 0 : parseFloat(currentValue) || 0
+          // All editable fields are rounded to integers
+          newData[rowIndex][columnId] = Math.floor(numValue)
           return newData
         })
       }
@@ -144,7 +177,7 @@ const SummaryTable = ({
         column.editable &&
         column.editableCells &&
         column.editableCells.includes(rowIndex)
-          ? currentValue === ''
+          ? currentValue === '' || currentValue === 0
             ? 0
             : parseFloat(currentValue) || 0
           : currentValue
@@ -368,13 +401,34 @@ const SummaryTable = ({
                         display: 'block'
                       }}
                     >
-                      {row.format && colIndex !== 0
-                        ? rowFormatters[row.format](
-                            row[column.id],
-                            useParenthesis,
-                            0
-                          )
-                        : row[column.id]}
+                      {(() => {
+                        // For Lines 6 and 8 (retention/deferral lines), display "0" for non-editable cells
+                        // Line 6 is at index 5, Line 8 is at index 7
+                        const isRetentionOrDeferralLine =
+                          rowIndex === 5 || rowIndex === 7
+                        const isFuelColumn =
+                          column.id === 'gasoline' ||
+                          column.id === 'diesel' ||
+                          column.id === 'jetFuel'
+
+                        if (
+                          isRetentionOrDeferralLine &&
+                          isFuelColumn &&
+                          !isCellEditable(rowIndex, column.id)
+                        ) {
+                          return row.format && colIndex !== 0
+                            ? rowFormatters[row.format](0, useParenthesis, 0)
+                            : '0'
+                        }
+
+                        return row.format && colIndex !== 0
+                          ? rowFormatters[row.format](
+                              row[column.id],
+                              useParenthesis,
+                              0
+                            )
+                          : row[column.id]
+                      })()}
                     </span>
                   )}
                 </TableCell>

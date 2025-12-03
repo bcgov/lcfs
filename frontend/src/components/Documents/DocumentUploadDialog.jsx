@@ -5,10 +5,30 @@ import BCTypography from '@/components/BCTypography'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'
 
 function DocumentUploadDialog({ open, close, parentType, parentID }) {
-  const { t } = useTranslation(['report'])
+  const { t } = useTranslation(['report', 'chargingSite'])
   const onClose = () => {
     close()
   }
+  // Get dynamic text based on parent type
+  const getModalTexts = () => {
+    switch (parentType) {
+      case 'charging_site':
+        return {
+          title: t('chargingSite:documents.uploadTitle'),
+          documentLabel: t('chargingSite:documents.documentLabel'),
+          returnButton: t('chargingSite:documents.returnButton')
+        }
+      case 'compliance_report':
+      default:
+        return {
+          title: t('report:documents.uploadTitle'),
+          documentLabel: t('report:documentLabel'),
+          returnButton: t('report:documents.returnButton')
+        }
+    }
+  }
+
+  const modalTexts = getModalTexts()
 
   const content = (
     <Box
@@ -23,7 +43,7 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
       }}
     >
       <BCTypography variant="body2" style={{ marginTop: '10px' }}>
-        {t('report:documentLabel')}
+        {modalTexts.documentLabel}
       </BCTypography>
       <DocumentTable parentID={parentID} parentType={parentType} />
     </Box>
@@ -34,9 +54,9 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
       onClose={onClose}
       open={open}
       data={{
-        title: 'Upload supporting documents for your compliance report',
+        title: modalTexts.title,
         secondaryButtonAction: onClose,
-        secondaryButtonText: 'Return to compliance report',
+        secondaryButtonText: modalTexts.returnButton,
         content
       }}
     ></BCModal>

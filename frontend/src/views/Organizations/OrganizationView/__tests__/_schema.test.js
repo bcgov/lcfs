@@ -7,13 +7,34 @@ import {
 import {
   LinkRenderer,
   OrgStatusRenderer,
+  OrgTypeRenderer,
   YesNoTextRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter } from '@/utils/formatters'
 
 // Mock dependencies
 vi.mock('@/hooks/useOrganizations', () => ({
-  useOrganizationStatuses: vi.fn()
+  useOrganizationListStatuses: vi.fn()
+}))
+
+vi.mock('@/hooks/useOrganization', () => ({
+  useOrganizationTypes: vi.fn(() => ({
+    data: [
+      {
+        organizationTypeId: 1,
+        orgType: 'fuel_supplier',
+        description: 'Fuel supplier',
+        isBceidUser: true
+      },
+      {
+        organizationTypeId: 2,
+        orgType: 'aggregator',
+        description: 'Aggregator',
+        isBceidUser: true
+      }
+    ],
+    isLoading: false
+  }))
 }))
 
 vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
@@ -46,7 +67,7 @@ describe('ViewOrganization Schema', () => {
     const colDefs = organizationsColDefs(t)
 
     it('defines the correct number of columns', () => {
-      expect(colDefs).toHaveLength(6)
+      expect(colDefs).toHaveLength(7)
     })
 
     it('defines the status column as the first column', () => {
@@ -67,11 +88,41 @@ describe('ViewOrganization Schema', () => {
       expect(nameCol.cellRenderer).toBe(LinkRenderer)
     })
 
+    it('defines the organization type column correctly', () => {
+      const orgTypeCol = colDefs.find((col) => col.colId === 'orgType')
+      expect(orgTypeCol).toBeDefined()
+      expect(orgTypeCol.headerName).toBe('org:orgColLabels.orgType')
+      expect(orgTypeCol.cellRenderer).toBe(OrgTypeRenderer)
+      expect(orgTypeCol.filter).toBe(true)
+      expect(orgTypeCol.sortable).toBe(true)
+      expect(
+        orgTypeCol.floatingFilterComponentParams.valueKey
+      ).toBe('orgType')
+      expect(
+        orgTypeCol.floatingFilterComponentParams.labelKey
+      ).toBe('shortLabel')
+    })
+
+    it('formats organization type values to shorter labels', () => {
+      const orgTypeCol = colDefs.find((col) => col.colId === 'orgType')
+      const mockParams = {
+        data: {
+          orgType: { orgType: 'fuel_supplier', description: 'Fuel supplier' }
+        }
+      }
+      expect(orgTypeCol.valueGetter(mockParams)).toBe('Supplier')
+      expect(orgTypeCol.filterValueGetter(mockParams)).toBe('fuel_supplier')
+    })
+
     it('defines the registration status column correctly', () => {
-      const registrationCol = colDefs.find((col) => col.colId === 'registrationStatus')
+      const registrationCol = colDefs.find(
+        (col) => col.colId === 'registrationStatus'
+      )
       expect(registrationCol).toBeDefined()
       expect(registrationCol.field).toBe('registrationStatus')
-      expect(registrationCol.headerName).toBe('org:orgColLabels.registrationStatus')
+      expect(registrationCol.headerName).toBe(
+        'org:orgColLabels.registrationStatus'
+      )
       expect(registrationCol.cellRenderer).toBe(YesNoTextRenderer)
       expect(registrationCol.filter).toBe(true)
       expect(registrationCol.sortable).toBe(true)
@@ -79,21 +130,29 @@ describe('ViewOrganization Schema', () => {
     })
 
     it('calculates registration status value correctly in valueGetter', () => {
-      const registrationCol = colDefs.find((col) => col.colId === 'registrationStatus')
-      
+      const registrationCol = colDefs.find(
+        (col) => col.colId === 'registrationStatus'
+      )
+
       // Test when organization status is 'Registered'
-      const mockParamsRegistered = { data: { orgStatus: { status: 'Registered' } } }
+      const mockParamsRegistered = {
+        data: { orgStatus: { status: 'Registered' } }
+      }
       expect(registrationCol.valueGetter(mockParamsRegistered)).toBe(true)
-      
+
       // Test when organization status is not 'Registered'
-      const mockParamsNotRegistered = { data: { orgStatus: { status: 'Active' } } }
+      const mockParamsNotRegistered = {
+        data: { orgStatus: { status: 'Active' } }
+      }
       expect(registrationCol.valueGetter(mockParamsNotRegistered)).toBe(false)
     })
 
     it('defines registration status filter options correctly', () => {
-      const registrationCol = colDefs.find((col) => col.colId === 'registrationStatus')
+      const registrationCol = colDefs.find(
+        (col) => col.colId === 'registrationStatus'
+      )
       const filterParams = registrationCol.floatingFilterComponentParams
-      
+
       expect(filterParams.valueKey).toBe('value')
       expect(filterParams.labelKey).toBe('label')
 
@@ -165,6 +224,16 @@ describe('ViewOrganization Schema', () => {
       expect(statusCol.cellRenderer).toBe(OrgStatusRenderer)
       expect(statusCol.filter).toBe(true)
       expect(statusCol.suppressFloatingFilterButton).toBe(true)
+    })
+
+    it('uses useOrganizationListStatuses hook for status filter options', () => {
+      const statusCol = colDefs.find((col) => col.colId === 'status')
+      const filterParams = statusCol.floatingFilterComponentParams
+
+      expect(filterParams.valueKey).toBe('status')
+      expect(filterParams.labelKey).toBe('status')
+      expect(filterParams.optionsQuery).toBeDefined()
+      expect(typeof filterParams.optionsQuery).toBe('function')
     })
   })
 

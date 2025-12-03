@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from lcfs.web.api.base import (
     BaseSchema,
@@ -90,6 +90,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
+    renewable: bool
     default_carbon_intensity: Optional[float] = None
     unit: str
     unrecognized: bool
@@ -156,6 +157,8 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     energy: Optional[float] = None
     deleted: Optional[bool] = None
     is_new_supplemental_entry: Optional[bool] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
 
     class Config:
         use_enum_values = True
@@ -167,8 +170,10 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
 
     @model_validator(mode="before")
     @classmethod
-    def check_quantity_required(cls, values):
-        if isinstance(values, DeleteFuelSupplyResponseSchema):
+    def check_quantity_required(cls, values, info: ValidationInfo):
+        if isinstance(values, DeleteFuelSupplyResponseSchema) or (
+            info.context and info.context.get("skip_quantity_validation")
+        ):
             return values
         return fuel_quantity_required(values)
 
@@ -200,3 +205,37 @@ class DeleteFuelSupplyResponseSchema(BaseSchema):
 class FuelSuppliesSchema(BaseSchema):
     fuel_supplies: Optional[List[FuelSupplyResponseSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}
+
+
+# Organization Fuel Supply Schemas
+class OrganizationFuelSupplySchema(BaseSchema):
+    """Schema for organization fuel supply history records"""
+    fuel_supply_id: int
+    compliance_period: str
+    report_submission_date: Optional[str] = None
+    fuel_type: str
+    fuel_category: str
+    provision_of_the_act: str
+    fuel_code: Optional[str] = None
+    fuel_quantity: int
+    units: str
+    compliance_report_id: int
+
+
+class FuelSupplyAnalyticsSchema(BaseSchema):
+    """Analytics data for fuel supply"""
+    total_volume: int
+    total_fuel_types: int
+    total_reports: int
+    most_recent_submission: Optional[str] = None
+    total_by_fuel_type: dict = {}
+    total_by_year: dict = {}
+    total_by_fuel_category: dict = {}
+    total_by_provision: dict = {}
+
+
+class OrganizationFuelSuppliesSchema(BaseSchema):
+    """Response schema for organization fuel supply with analytics"""
+    fuel_supplies: List[OrganizationFuelSupplySchema]
+    analytics: FuelSupplyAnalyticsSchema
+    pagination: PaginationResponseSchema

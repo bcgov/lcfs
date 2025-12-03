@@ -51,7 +51,7 @@ vi.mock('react-i18next', () => ({
       const translations = {
         'login.loginMessage': 'Login with',
         Login: 'Login',
-        'login.publicCreditCalculator': 'Public - Credit calculator'
+        'login.publicCreditCalculator': 'Public - Compliance unit calculator'
       }
       return translations[key] || key
     }
@@ -92,7 +92,9 @@ describe('Login Component', () => {
       expect(screen.getAllByText(/Login with/)).toHaveLength(2)
       expect(screen.getByText('BCeID')).toBeInTheDocument()
       expect(screen.getByText('IDIR')).toBeInTheDocument()
-      expect(screen.getByText('Public - Credit calculator')).toBeInTheDocument()
+      expect(
+        screen.getByText('Public - Compliance unit calculator')
+      ).toBeInTheDocument()
     })
 
     it('should render seasonal effects (snowfall)', () => {

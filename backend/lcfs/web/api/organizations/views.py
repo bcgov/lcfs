@@ -1,7 +1,16 @@
 import structlog
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, status, Request, Query, HTTPException
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    status,
+    Request,
+    Query,
+    HTTPException,
+    Response,
+)
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from starlette import status
@@ -25,11 +34,17 @@ from .schema import (
     OrganizationDetailsSchema,
     OrganizationCreditMarketUpdateSchema,
     OrganizationCreditMarketListingSchema,
+    OrganizationCompanyOverviewUpdateSchema,
     OrganizationLinkKeyCreateSchema,
     OrganizationLinkKeysListSchema,
     LinkKeyOperationResponseSchema,
     LinkKeyValidationSchema,
     AvailableFormsSchema,
+    PenaltyAnalyticsResponseSchema,
+    PenaltyLogListResponseSchema,
+    PenaltyLogCreateSchema,
+    PenaltyLogUpdateSchema,
+    PenaltyLogEntrySchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -132,6 +147,85 @@ async def get_organization(
     return await service.get_organization(organization_id)
 
 
+@router.get(
+    "/{organization_id}/penalties/analytics",
+    response_model=PenaltyAnalyticsResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+async def get_penalty_analytics(
+    request: Request, organization_id: int, service: OrganizationsService = Depends()
+):
+    """
+    Retrieve penalty analytics (automatic and discretionary) for the specified organization.
+    """
+    return await service.get_penalty_analytics(organization_id)
+
+
+@router.post(
+    "/{organization_id}/penalties/logs/list",
+    response_model=PenaltyLogListResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+async def get_penalty_logs(
+    request: Request,
+    organization_id: int,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: OrganizationsService = Depends(),
+):
+    """Fetch paginated penalty log entries for an organization."""
+    return await service.get_penalty_logs_paginated(organization_id, pagination)
+
+
+@router.post(
+    "/{organization_id}/penalties/logs",
+    response_model=PenaltyLogEntrySchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def create_penalty_log(
+    request: Request,
+    organization_id: int,
+    penalty_data: PenaltyLogCreateSchema,
+    service: OrganizationsService = Depends(),
+):
+    return await service.create_penalty_log(organization_id, penalty_data)
+
+
+@router.put(
+    "/{organization_id}/penalties/logs/{penalty_log_id}",
+    response_model=PenaltyLogEntrySchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def update_penalty_log(
+    request: Request,
+    organization_id: int,
+    penalty_log_id: int,
+    penalty_data: PenaltyLogUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    return await service.update_penalty_log(
+        organization_id, penalty_log_id, penalty_data
+    )
+
+
+@router.delete(
+    "/{organization_id}/penalties/logs/{penalty_log_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def delete_penalty_log(
+    request: Request,
+    organization_id: int,
+    penalty_log_id: int,
+    service: OrganizationsService = Depends(),
+):
+    await service.delete_penalty_log(organization_id, penalty_log_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.put("/{organization_id}")
 @view_handler([RoleEnum.GOVERNMENT])
 async def update_organization(
@@ -186,6 +280,29 @@ async def get_organization_types(
     return await service.get_organization_types()
 
 
+def _extract_org_filters(request: Request) -> Dict[str, List[str]]:
+    reserved_params = {"statuses"}
+    filters: Dict[str, List[str]] = {}
+    for key, value in request.query_params.multi_items():
+        if key in reserved_params:
+            continue
+        filters.setdefault(key, []).append(value)
+    return filters
+
+
+async def _fetch_organization_names(
+    request: Request,
+    service: OrganizationsService,
+    statuses: Optional[List[str]],
+    org_filter: str,
+):
+    order_by = ("name", "asc")
+    org_filters = _extract_org_filters(request)
+    return await service.get_organization_names(
+        order_by, statuses, org_filter, org_filters or None
+    )
+
+
 @router.get(
     "/names/",
     response_model=List[OrganizationSummaryResponseSchema],
@@ -200,9 +317,29 @@ async def get_organization_names(
     statuses: Optional[List[str]] = Query(None),
     service: OrganizationsService = Depends(),
 ):
-    """Fetch all organization names."""
-    order_by = ("name", "asc")
-    return await service.get_organization_names(order_by, statuses)
+    """Fetch fuel supplier organization names by default."""
+    return await _fetch_organization_names(
+        request, service, statuses, org_filter="fuel_supplier"
+    )
+
+
+@router.get(
+    "/names/{org_filter}",
+    response_model=List[OrganizationSummaryResponseSchema],
+    status_code=status.HTTP_200_OK,
+)
+@cache(expire=1)  # Cache for 1 hour
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_organization_names_by_filter(
+    request: Request,
+    org_filter: str,
+    statuses: Optional[List[str]] = Query(None),
+    service: OrganizationsService = Depends(),
+):
+    """
+    Fetch organization names for a specified organization type. Use 'all' to include every type.
+    """
+    return await _fetch_organization_names(request, service, statuses, org_filter)
 
 
 @router.get(
@@ -314,6 +451,51 @@ async def update_current_org_credit_market_details(
     # Use the dedicated method to update only credit market fields
     return await service.update_organization_credit_market_details(
         organization_id, credit_market_data.model_dump(exclude_unset=True), request.user
+    )
+
+
+@router.put(
+    "/{organization_id}/credit-market",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def update_org_credit_market_details(
+    request: Request,
+    organization_id: int,
+    credit_market_data: OrganizationCreditMarketUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Update credit market contact details for any organization (IDIR users only).
+    Edits performed through this route skip outbound notifications.
+    """
+    return await service.update_organization_credit_market_details(
+        organization_id,
+        credit_market_data.model_dump(exclude_unset=True),
+        request.user,
+        skip_notifications=True,
+    )
+
+
+@router.put(
+    "/{organization_id}/company-overview",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+async def update_company_overview(
+    request: Request,
+    organization_id: int,
+    company_overview_data: OrganizationCompanyOverviewUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Update company overview details for an organization.
+    This endpoint allows analysts, managers, and directors to update company overview information.
+    """
+    return await service.update_organization_company_overview(
+        organization_id, company_overview_data.model_dump(exclude_unset=True), request.user
     )
 
 

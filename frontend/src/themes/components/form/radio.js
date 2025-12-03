@@ -3,7 +3,17 @@ import borders from '@/themes/base/borders'
 import { pxToRem } from '@/themes/utils'
 const { borderWidth, borderColor } = borders
 
+const handleToggleOnEnter = (event) => {
+  if (event.key !== 'Enter' || event.defaultPrevented) return
+
+  event.preventDefault()
+  event.currentTarget.click()
+}
+
 const radio = {
+  defaultProps: {
+    onKeyDown: handleToggleOnEnter
+  },
   styleOverrides: {
     root: {
       padding: 0,

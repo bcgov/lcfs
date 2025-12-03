@@ -6,6 +6,7 @@ import {
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
 import { useState } from 'react'
@@ -13,10 +14,11 @@ import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
 
-export const FuelSupplyChangelog = () => {
+export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
+  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions({ compliancePeriod })
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
 
   // State for pagination - one per changelog item
@@ -142,7 +144,7 @@ export const FuelSupplyChangelog = () => {
     }))
   }
 
-  if (changelogDataLoading || currentReportLoading) {
+  if (changelogDataLoading || currentReportLoading || optionsLoading) {
     return <Loading />
   }
 
@@ -170,8 +172,18 @@ export const FuelSupplyChangelog = () => {
                 gridKey={`fuel-supply-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false)
-                    : changelogColDefs()
+                    ? changelogCommonColDefs(
+                        false,
+                        isEarlyIssuance,
+                        parseInt(compliancePeriod),
+                        optionsData
+                      )
+                    : changelogColDefs(
+                        true,
+                        isEarlyIssuance,
+                        parseInt(compliancePeriod),
+                        optionsData
+                      )
                 }
                 queryData={queryData}
                 getRowId={getRowId}

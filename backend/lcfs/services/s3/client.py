@@ -1,23 +1,20 @@
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
+from io import UnsupportedOperation
 import os
 import uuid
 
 from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
     admin_adjustment_document_association,
-    AdminAdjustment,
 )
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     initiative_agreement_document_association,
-    InitiativeAgreement,
 )
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from fastapi import Depends
-from pydantic.v1 import ValidationError
 from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
@@ -30,8 +27,11 @@ from lcfs.db.models.document import Document
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
+from lcfs.web.api.charging_site.repo import ChargingSiteRepository
+from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
+from lcfs.web.exception.exceptions import ServiceException
+from botocore.exceptions import ClientError
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -48,6 +48,7 @@ class DocumentService:
         fuel_supply_repo: FuelSupplyRepository = Depends(),
         admin_adjustment_service: AdminAdjustmentServices = Depends(),
         initiative_agreement_service: InitiativeAgreementServices = Depends(),
+        charging_site_repo: ChargingSiteRepository = Depends(),
     ):
         self.initiative_agreement_service = initiative_agreement_service
         self.admin_adjustment_service = admin_adjustment_service
@@ -56,6 +57,7 @@ class DocumentService:
         self.s3_client = s3_client
         self.compliance_report_repo = compliance_report_repo
         self.fuel_supply_repo = fuel_supply_repo
+        self.charging_site_repo = charging_site_repo
 
     @repo_handler
     async def upload_file(self, file, parent_id: int, parent_type, user=None):
@@ -65,6 +67,8 @@ class DocumentService:
             await self._verify_administrative_adjustment_access(parent_id, user)
         elif parent_type == "initiativeAgreement":
             await self._verify_initiative_agreement_access(parent_id, user)
+        elif parent_type == "charging_site":
+            await self._verify_charging_site_access(parent_id, user)
         else:
             raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
 
@@ -91,12 +95,35 @@ class DocumentService:
             self.clamav_service.scan_file(file)
 
         # Upload file to S3
-        self.s3_client.upload_fileobj(
-            Fileobj=file.file,
-            Bucket=BUCKET_NAME,
-            Key=file_key,
-            ExtraArgs={"ContentType": file.content_type},
-        )
+        file.file.seek(0)
+        try:
+            self.s3_client.upload_fileobj(
+                Fileobj=file.file,
+                Bucket=BUCKET_NAME,
+                Key=file_key,
+                ExtraArgs={"ContentType": file.content_type},
+            )
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code")
+            if error_code != "XAmzContentSHA256Mismatch":
+                raise
+            # Some S3-compatible stores struggle with signed streaming uploads.
+            file.file.seek(0)
+            file_bytes = file.file.read()
+            self.s3_client.put_object(
+                Body=file_bytes,
+                Bucket=BUCKET_NAME,
+                Key=file_key,
+                ContentType=file.content_type,
+            )
+        except Exception as exc:
+            raise ServiceException(f"Error uploading file to S3: {exc}")
+        finally:
+            try:
+                file.file.seek(0)
+            except (ValueError, AttributeError, UnsupportedOperation):
+                # Starlette's UploadFile may close the underlying SpooledTemporaryFile once streaming ends.
+                pass
 
         document = Document(
             file_key=file_key,
@@ -150,6 +177,22 @@ class DocumentService:
             # Insert the association
             stmt = initiative_agreement_document_association.insert().values(
                 initiative_agreement_id=initiative_agreement.initiative_agreement_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)
+        elif parent_type == "charging_site":
+            charging_site = await self.charging_site_repo.get_charging_site_by_id(
+                parent_id
+            )
+            if not charging_site:
+                raise Exception("Charging Site not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            # Insert the association
+            stmt = charging_site_document_association.insert().values(
+                charging_site_id=charging_site.charging_site_id,
                 document_id=document.document_id,
             )
             await self.db.execute(stmt)
@@ -214,6 +257,24 @@ class DocumentService:
             detail="Only Government Staff can upload files to Initiative Agreements.",
         )
 
+    async def _verify_charging_site_access(self, parent_id, user):
+        charging_site = await self.charging_site_repo.get_charging_site_by_id(parent_id)
+        if not charging_site:
+            raise HTTPException(status_code=404, detail="Charging Site not found")
+
+        # Analysts can upload files to charging sites
+        if (
+            RoleEnum.ANALYST in user.role_names
+            or RoleEnum.GOVERNMENT in user.role_names
+        ):
+            return
+        if user.organization.organization_id == charging_site.organization_id:
+            return
+        raise HTTPException(
+            status_code=400,
+            detail="Only Analysts and Government Staff and related Organization users can upload files to Charging Sites.",
+        )
+
     @repo_handler
     async def generate_presigned_url(self, document_id: int):
         document = await self.db.get_one(Document, document_id)
@@ -235,16 +296,42 @@ class DocumentService:
         if not document:
             raise Exception("Document not found")
 
-        links = []
-        if parent_type == "compliance_report":
-            links = (
-                await self.db.execute(
-                    select(compliance_report_document_association).where(
-                        document_id
-                        == compliance_report_document_association.c.document_id
-                    )
+        # Mapping of parent types to their respective association tables and columns
+        type_mapping = {
+            "compliance_report": (
+                compliance_report_document_association,
+                "compliance_report_id",
+            ),
+            "administrativeAdjustment": (
+                admin_adjustment_document_association,
+                "admin_adjustment_id",
+            ),
+            "initiativeAgreement": (
+                initiative_agreement_document_association,
+                "initiative_agreement_id",
+            ),
+            "charging_site": (
+                charging_site_document_association,
+                "charging_site_id",
+            ),
+        }
+
+        # Get the association table and column based on the parent_type
+        association_info = type_mapping.get(parent_type)
+
+        if not association_info:
+            raise Exception(f"Unsupported parent_type: {parent_type}")
+
+        association_table, parent_column = association_info
+
+        # Check how many links this document has across all instances of this parent type
+        links = (
+            await self.db.execute(
+                select(association_table).where(
+                    document_id == association_table.c.document_id
                 )
-            ).all()
+            )
+        ).all()
 
         # If last link, delete the whole document
         if len(links) == 1:
@@ -256,12 +343,10 @@ class DocumentService:
             await self.db.flush()
         else:  # Delete the association
             await self.db.execute(
-                delete(compliance_report_document_association).where(
+                delete(association_table).where(
                     and_(
-                        parent_id
-                        == compliance_report_document_association.c.compliance_report_id,
-                        document_id
-                        == compliance_report_document_association.c.document_id,
+                        parent_id == getattr(association_table.c, parent_column),
+                        document_id == association_table.c.document_id,
                     )
                 )
             )
@@ -282,6 +367,10 @@ class DocumentService:
                 initiative_agreement_document_association,
                 "initiative_agreement_id",
             ),
+            "charging_site": (
+                charging_site_document_association,
+                "charging_site_id",
+            ),
         }
 
         # Retrieve the association table and column based on the parent_type
@@ -293,11 +382,20 @@ class DocumentService:
         association_table, column_name = association_info
 
         # Construct the SQL statement dynamically
-        stmt = (
-            select(Document)
-            .join(association_table)
-            .where(getattr(association_table.c, column_name) == parent_id)
-        )
+        stmt = select(Document)
+        if parent_type == "compliance_report":
+            parent_ids = (
+                await self.compliance_report_repo.get_related_compliance_report_ids(
+                    parent_id
+                )
+            )
+            stmt = stmt.join(association_table).where(
+                getattr(association_table.c, column_name).in_(parent_ids)
+            ).distinct(Document.document_id)
+        else:
+            stmt = stmt.join(association_table).where(
+                getattr(association_table.c, column_name) == parent_id
+            )
 
         # Execute the statement and fetch results
         result = await self.db.execute(stmt)
