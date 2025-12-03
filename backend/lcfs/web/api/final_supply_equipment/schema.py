@@ -113,7 +113,7 @@ class FSEReportingSchema(BaseSchema):
     intended_users: Optional[List[str]] = []
     deleted: Optional[bool] = None
     power_output: Optional[float] = 0
-    capacity_utilization_percent: Optional[float] = 0
+    capacity_utilization_percent: Optional[int] = 0
 
 
 class FSEReportingBaseSchema(BaseSchema):
