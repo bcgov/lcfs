@@ -469,6 +469,10 @@ const GovernmentNotificationsCard = () => {
               }
             : undefined
         }
+        editButtonStyles={{
+          borderColor: 'rgba(0, 0, 0 , 1)',
+          color: 'rgba(0, 0, 0 , 1)'
+        }}
       />
 
       {/* Confirmation Dialog */}
