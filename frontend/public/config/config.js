@@ -18,7 +18,10 @@ export const config = {
     governmentAdjustment: true,
     roleSwitcher: false,
     obfuscatedLinks: true,
-    reporting2025Enabled: false
+    reporting2025Enabled: false,
+    manageChargingSites: true,
+    manageFse: true,
+    legacySupplementalLock: false
   }
 }
 

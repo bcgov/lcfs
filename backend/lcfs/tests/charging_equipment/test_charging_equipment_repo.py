@@ -4,6 +4,9 @@ from sqlalchemy.exc import DatabaseError
 
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
+from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
+    ComplianceReportChargingEquipment,
+)
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.schema import (
@@ -95,19 +98,28 @@ async def test_get_charging_equipment_list_success(
 async def test_create_charging_equipment_success(
     repo, mock_db, mock_equipment_status, mock_end_use_type
 ):
-    """Test successfully creating charging equipment."""
-    # Mock the status query
+    """Test successfully creating charging equipment without draft report linkage."""
     mock_status_result = MagicMock()
     mock_status_result.scalar_one.return_value = mock_equipment_status
 
-    # Mock the end use types query
     mock_end_use_result = MagicMock()
     mock_end_use_result.scalars.return_value.all.return_value = [mock_end_use_type]
 
-    mock_db.execute.side_effect = [mock_status_result, mock_end_use_result]
-    mock_db.refresh = AsyncMock()
+    mock_report_result = MagicMock()
+    mock_report_result.scalars.return_value.first.return_value = None
 
-    # Equipment data
+    mock_db.execute.side_effect = [
+        mock_status_result,
+        mock_end_use_result,
+        mock_report_result,
+    ]
+
+    async def refresh_side_effect(instance, attribute_names=None):
+        if attribute_names == ["charging_site"]:
+            instance.charging_site = MagicMock(organization_id=1)
+
+    mock_db.refresh.side_effect = refresh_side_effect
+
     equipment_data = {
         "charging_site_id": 1,
         "serial_number": "TEST123",
@@ -117,17 +129,120 @@ async def test_create_charging_equipment_success(
         "intended_use_ids": [1],
     }
 
-    # Call the repository method
     result = await repo.create_charging_equipment(equipment_data)
 
-    # Verify the result
     assert isinstance(result, ChargingEquipment)
     assert result.serial_number == "TEST123"
     assert result.manufacturer == "Tesla"
-    mock_db.add.assert_called_once()
+    assert mock_db.add.call_count == 1
     mock_db.flush.assert_called_once()
 
 
+@pytest.mark.anyio
+async def test_create_charging_equipment_links_to_draft_report(
+    repo,
+    mock_db,
+    mock_equipment_status,
+    mock_end_use_type,
+    mock_compliance_report,
+):
+    """Ensure a new compliance association is inserted when a draft report exists."""
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalar_one.return_value = mock_equipment_status
+
+    mock_end_use_result = MagicMock()
+    mock_end_use_result.scalars.return_value.all.return_value = [mock_end_use_type]
+
+    mock_report_result = MagicMock()
+    mock_report_result.scalars.return_value.first.return_value = mock_compliance_report
+
+    mock_exists_result = MagicMock()
+    mock_exists_result.scalar_one_or_none.return_value = None
+
+    mock_db.execute.side_effect = [
+        mock_status_result,
+        mock_end_use_result,
+        mock_report_result,
+        mock_exists_result,
+    ]
+
+    async def refresh_side_effect(instance, attribute_names=None):
+        if attribute_names == ["charging_site"]:
+            instance.charging_site = MagicMock(organization_id=1)
+
+    mock_db.refresh.side_effect = refresh_side_effect
+
+    equipment_data = {
+        "charging_site_id": 1,
+        "serial_number": "TEST123",
+        "manufacturer": "Tesla",
+        "model": "Supercharger",
+        "level_of_equipment_id": 1,
+        "intended_use_ids": [1],
+    }
+
+    await repo.create_charging_equipment(equipment_data)
+
+    # First add call is for ChargingEquipment, second for compliance association
+    assert mock_db.add.call_count == 2
+    association = mock_db.add.call_args_list[1][0][0]
+    assert isinstance(association, ComplianceReportChargingEquipment)
+    assert (
+        association.compliance_report_id
+        == mock_compliance_report.compliance_report_id
+    )
+    assert association.organization_id == 1
+
+
+@pytest.mark.anyio
+async def test_create_charging_equipment_skips_existing_association(
+    repo,
+    mock_db,
+    mock_equipment_status,
+    mock_end_use_type,
+    mock_compliance_report,
+):
+    """Verify duplicate compliance associations are not created."""
+
+    mock_status_result = MagicMock()
+    mock_status_result.scalar_one.return_value = mock_equipment_status
+
+    mock_end_use_result = MagicMock()
+    mock_end_use_result.scalars.return_value.all.return_value = [mock_end_use_type]
+
+    mock_report_result = MagicMock()
+    mock_report_result.scalars.return_value.first.return_value = mock_compliance_report
+
+    mock_exists_result = MagicMock()
+    mock_exists_result.scalar_one_or_none.return_value = 999
+
+    mock_db.execute.side_effect = [
+        mock_status_result,
+        mock_end_use_result,
+        mock_report_result,
+        mock_exists_result,
+    ]
+
+    async def refresh_side_effect(instance, attribute_names=None):
+        if attribute_names == ["charging_site"]:
+            instance.charging_site = MagicMock(organization_id=1)
+
+    mock_db.refresh.side_effect = refresh_side_effect
+
+    equipment_data = {
+        "charging_site_id": 1,
+        "serial_number": "TEST123",
+        "manufacturer": "Tesla",
+        "model": "Supercharger",
+        "level_of_equipment_id": 1,
+        "intended_use_ids": [1],
+    }
+
+    await repo.create_charging_equipment(equipment_data)
+
+    # No additional add calls when association already exists
+    assert mock_db.add.call_count == 1
 @pytest.mark.anyio
 async def test_update_charging_equipment_success(
     repo, mock_db, valid_charging_equipment
