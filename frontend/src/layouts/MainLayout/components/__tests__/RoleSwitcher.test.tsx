@@ -1,18 +1,11 @@
-import React from 'react'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  vi
-} from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { RoleSwitcher } from '../RoleSwitcher'
 import { useUpdateUser } from '@/hooks/useUser'
 import { idirRoleOptions } from '@/views/Users/AddEditUser/_schema'
 import { wrapper } from '@/tests/utils/wrapper'
 import { CONFIG } from '@/constants/config'
+import type { CSSProperties, ReactNode, ElementType } from 'react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -28,9 +21,17 @@ vi.mock('@/components/BCBox', () => ({
     justifyContent,
     px,
     py,
-    sx,
     style,
     ...props
+  }: {
+    children?: ReactNode
+    display?: string
+    alignItems?: string
+    justifyContent?: string
+    px?: number
+    py?: number
+    style?: CSSProperties
+    [key: string]: unknown
   }) => (
     <div
       {...props}
@@ -51,21 +52,29 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, color, sx, component, ...props }) => {
+  default: ({
+    children,
+    component,
+    ...props
+  }: {
+    children?: ReactNode
+    component?: ElementType
+    [key: string]: unknown
+  }) => {
     const Component = component || 'span'
     return <Component {...props}>{children}</Component>
   }
 }))
 
 vi.mock('@/components/BCForm/CustomLabel', () => ({
-  CustomLabel: ({ children }) => <label>{children}</label>
+  CustomLabel: ({ children }: { children?: ReactNode }) => <label>{children}</label>
 }))
 
 vi.mock('@/hooks/useUser')
 vi.mock('@/views/Users/AddEditUser/_schema')
 
 const mutateMock = vi.fn()
-let hookOptions
+let hookOptions: any
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 
 const defaultUser = {

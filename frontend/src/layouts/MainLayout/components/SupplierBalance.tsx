@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 
 const SupplierBalance = () => {
   const { t } = useTranslation()
-  const [showBalance, setShowBalance] = useState(
+  const [showBalance, setShowBalance] = useState<boolean>(
     !!+sessionStorage.getItem('showBalance') || true
   )
 

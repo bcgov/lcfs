@@ -1,7 +1,6 @@
-import React from 'react'
 import { render, screen } from '@testing-library/react'
 import Crumb from '../Crumb'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useLocation, useMatches, useParams } from 'react-router-dom'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
@@ -17,16 +16,26 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+const mockedUseLocation = useLocation as unknown as Mock
+const mockedUseMatches = useMatches as unknown as Mock
+const mockedUseParams = useParams as unknown as Mock
+
+type RouterMockOptions = {
+  pathname?: string
+  matches?: Array<{ handle?: { title?: string } }>
+  params?: Record<string, string>
+}
+
 describe('Crumb', () => {
   // Helper to set up the router mocks
   const setupRouterMocks = ({
     pathname = '/',
     matches = [{ handle: {} }],
     params = {}
-  } = {}) => {
-    useLocation.mockReturnValue({ pathname })
-    useMatches.mockReturnValue(matches)
-    useParams.mockReturnValue(params)
+  }: RouterMockOptions = {}) => {
+    mockedUseLocation.mockReturnValue({ pathname })
+    mockedUseMatches.mockReturnValue(matches)
+    mockedUseParams.mockReturnValue(params)
   }
 
   beforeEach(() => {

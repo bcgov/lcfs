@@ -1,5 +1,10 @@
-import React, { useEffect } from 'react'
-import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import {
+  Outlet,
+  useLocation,
+  useMatches,
+  useNavigate
+} from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { Container, Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
@@ -16,6 +21,20 @@ import Loading from '@/components/Loading'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
 import { useAuth } from '@/hooks/useAuth'
 
+type RouteTitleResolver = (args: {
+  params: Record<string, string | undefined>
+  location: ReturnType<typeof useLocation>
+}) => string | undefined
+
+type RouteHandle = {
+  title?: string | RouteTitleResolver | null
+}
+
+type MatchWithHandle = ReturnType<typeof useMatches>[number] & {
+  handle?: RouteHandle
+  params?: Record<string, string | undefined>
+}
+
 export const MainLayout = () => {
   const { refreshToken } = useAuth()
   const loading = useLoadingStore((state) => state.loading)
@@ -27,12 +46,18 @@ export const MainLayout = () => {
     currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
   const matches = useMatches()
   const location = useLocation()
-  const currentMatch = matches[matches.length - 1]
+  const currentMatch = matches[matches.length - 1] as
+    | MatchWithHandle
+    | undefined
   const handleTitle = currentMatch?.handle?.title
-  const pageTitle =
+  const resolvedTitle =
     typeof handleTitle === 'function'
-      ? handleTitle({ params: currentMatch?.params || {}, location })
-      : handleTitle || 'LCFS'
+      ? handleTitle({
+          params: currentMatch?.params || {},
+          location
+        })
+      : handleTitle
+  const pageTitle = resolvedTitle || 'LCFS'
 
   useEffect(() => {
     // If "forbidden" is set, go to unauthorized page (unless we're already there)

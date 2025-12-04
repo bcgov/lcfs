@@ -1,7 +1,6 @@
-import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { HeaderComponent } from '../HeaderComponent'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
@@ -18,10 +17,12 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+const mockedUseCurrentUser = useCurrentUser as unknown as Mock
+
 describe('HeaderComponent', () => {
   beforeEach(() => {
     // Default mock setup for non-government user with organization
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         isGovernmentUser: false,
         organization: {
@@ -46,7 +47,7 @@ describe('HeaderComponent', () => {
   })
 
   it('renders government organization name for government user', () => {
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         isGovernmentUser: true,
         organization: null
@@ -62,7 +63,7 @@ describe('HeaderComponent', () => {
   })
 
   it('does not render supplier balance for users without an organization ID', () => {
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         isGovernmentUser: false,
         organization: {
@@ -79,7 +80,7 @@ describe('HeaderComponent', () => {
   })
 
   it('does not render when data is not fetched', () => {
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       isFetched: false
     })
 

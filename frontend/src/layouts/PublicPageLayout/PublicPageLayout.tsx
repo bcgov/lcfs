@@ -1,4 +1,3 @@
-import React from 'react'
 import { Outlet, useMatches } from 'react-router-dom'
 import { Container, Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
@@ -7,9 +6,16 @@ import Footer from '@/components/Footer'
 import { PublicHeader } from './components/PublicHeader'
 import { PublicBreadcrumb } from './components/PublicBreadcrumb'
 
+type RouteHandle = {
+  title?: string
+}
+
 export const PublicPageLayout = () => {
   const matches = useMatches()
-  const pageTitle = matches[matches.length - 1]?.handle?.title || 'LCFS'
+  const lastMatchHandle = matches[matches.length - 1]?.handle as
+    | RouteHandle
+    | undefined
+  const pageTitle = lastMatchHandle?.title || 'LCFS'
 
   return (
     <BCBox display="flex" flexDirection="column" minHeight="100vh">
@@ -31,7 +37,7 @@ export const PublicPageLayout = () => {
         }}
         disableGutters
       >
-        <Stack container spacing={2}>
+        <Stack spacing={2}>
           <BCBox size={12}>
             <PublicBreadcrumb />
           </BCBox>

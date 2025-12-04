@@ -1,7 +1,6 @@
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import SupplierBalance from '../SupplierBalance'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from 'vitest'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { wrapper } from '@/tests/utils/wrapper'
 
@@ -13,16 +12,22 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+const mockedUseCurrentOrgBalance = useCurrentOrgBalance as unknown as Mock
+
 describe('SupplierBalance', () => {
   // Mock sessionStorage
-  const sessionStorageMock = {
+  const sessionStorageMock: Storage = {
     getItem: vi.fn(),
-    setItem: vi.fn()
+    setItem: vi.fn(),
+    clear: vi.fn(),
+    removeItem: vi.fn(),
+    key: vi.fn(),
+    length: 0
   }
 
   beforeEach(() => {
     // Set up default mock data
-    useCurrentOrgBalance.mockReturnValue({
+    mockedUseCurrentOrgBalance.mockReturnValue({
       data: {
         totalBalance: 100,
         reservedBalance: -20
@@ -76,7 +81,7 @@ describe('SupplierBalance', () => {
   })
 
   it('handles missing balance data gracefully', () => {
-    useCurrentOrgBalance.mockReturnValue({
+    mockedUseCurrentOrgBalance.mockReturnValue({
       data: null
     })
 
@@ -87,7 +92,7 @@ describe('SupplierBalance', () => {
   })
 
   it('formats balance values correctly', () => {
-    useCurrentOrgBalance.mockReturnValue({
+    mockedUseCurrentOrgBalance.mockReturnValue({
       data: {
         totalBalance: 1234567.89,
         reservedBalance: -9876.54

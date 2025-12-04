@@ -1,4 +1,3 @@
-import React from 'react'
 import { AppBar, Box, useTheme, useMediaQuery, Divider } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import logoDark from '@/assets/images/logo-banner.svg'
@@ -12,7 +11,7 @@ export const PublicHeader = () => {
       position="static"
       color="inherit"
       elevation={0}
-      sx={({ palette: { primary, secondary } }) => ({
+      sx={({ palette: { primary } }) => ({
         backgroundColor: primary.nav,
         borderBottom: `5px solid #dadada`
       })}
@@ -34,10 +33,10 @@ export const PublicHeader = () => {
         </BCTypography>
       </Box>
       <Divider
-        sx={({ palette: { secondary } }) => ({
+        sx={{
           backgroundColor: 'secondary.main',
           height: '2px'
-        })}
+        }}
       />
       <Box
         sx={{
@@ -47,7 +46,7 @@ export const PublicHeader = () => {
           alignItems: 'center',
           px: 3
         }}
-      ></Box>
+      />
     </AppBar>
   )
 }

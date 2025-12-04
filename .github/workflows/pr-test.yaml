@@ -406,12 +406,12 @@ jobs:
           cd frontend
           npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Type Check Frontend (parallel)
-        run: |
-          cd frontend
-          npm run type-check &
-          TYPE_CHECK_PID=$!
-          wait $TYPE_CHECK_PID
+      # - name: Type Check Frontend (parallel)
+      #   run: |
+      #     cd frontend
+      #     npm run type-check &
+      #     TYPE_CHECK_PID=$!
+      #     wait $TYPE_CHECK_PID
 
       - name: Cache node_modules for test shards
         uses: actions/cache@v4

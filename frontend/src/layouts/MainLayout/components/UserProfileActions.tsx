@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { logout } from '@/utils/keycloak'
 import { useKeycloak } from '@react-keycloak/web'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +18,7 @@ import {
   Tooltip,
   Fab
 } from '@mui/material'
-import { Notifications, Logout, KeyboardArrowDown } from '@mui/icons-material'
+import { Notifications, Logout } from '@mui/icons-material'
 import { NavLink } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { RoleSwitcher } from './RoleSwitcher'
@@ -27,8 +27,8 @@ export const UserProfileActions = () => {
   const { t } = useTranslation()
   const { data: currentUser, hasRoles } = useCurrentUser()
   const { keycloak } = useKeycloak()
-  const intervalRef = useRef(null)
-  const roleSwitcherAnchorRef = useRef(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const roleSwitcherAnchorRef = useRef<HTMLDivElement | null>(null)
 
   const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState(false)
   const isGovernmentAdmin =
@@ -124,7 +124,7 @@ export const UserProfileActions = () => {
     </IconButton>
   )
 
-  const handleRoleSwitcherToggle = (event) => {
+  const handleRoleSwitcherToggle = (event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault()
     if (!canUseRoleSwitcher) {
       return

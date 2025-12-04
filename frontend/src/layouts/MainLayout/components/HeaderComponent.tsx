@@ -1,4 +1,3 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCTypography from '@/components/BCTypography'
@@ -10,6 +9,7 @@ import BCBox from '@/components/BCBox'
 export const HeaderComponent = () => {
   const { t } = useTranslation()
   const { data, isFetched } = useCurrentUser()
+  const isGovernmentUser = data?.isGovernmentUser
 
   return (
     isFetched && (
@@ -21,8 +21,8 @@ export const HeaderComponent = () => {
         }}
       >
         <BCTypography
-          component={NavLink}
-          to={!data?.isGovernmentUser && ROUTES.ORGANIZATION.ORG}
+          component={isGovernmentUser ? 'span' : NavLink}
+          to={!isGovernmentUser ? ROUTES.ORGANIZATION.ORG : undefined}
           className="organization_name"
           variant="body1"
           align="right"

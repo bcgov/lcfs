@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { UserProfileActions } from '../UserProfileActions'
 import {
@@ -7,21 +6,32 @@ import {
   it,
   expect,
   beforeEach,
-  afterEach
+  afterEach,
+  type Mock
 } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
 import { wrapper } from '@/tests/utils/wrapper'
 import { logout } from '@/utils/keycloak'
 import { CONFIG } from '@/constants/config'
+import type { ReactNode } from 'react'
+
+type RoleSwitcherMockProps = {
+  open?: boolean
+  anchorEl?: HTMLElement | null
+  [key: string]: unknown
+}
 
 const mockRefetch = vi.fn()
-const mockRoleSwitcher = vi.fn()
+const mockRoleSwitcher = vi.fn<void, [RoleSwitcherMockProps]>()
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 const initialHiddenDescriptor = Object.getOwnPropertyDescriptor(
   document,
   'hidden'
 )
+
+const getLastRoleSwitcherProps = () =>
+  mockRoleSwitcher.mock.calls.at(-1)?.[0] as RoleSwitcherMockProps | undefined
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useNotifications')
@@ -31,7 +41,15 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    NavLink: ({ children, to, ...props }) => (
+    NavLink: ({
+      children,
+      to,
+      ...props
+    }: {
+      children?: ReactNode
+      to?: string | Record<string, unknown>
+      [key: string]: unknown
+    }) => (
       <a href={typeof to === 'string' ? to : '#'} {...props}>
         {children}
       </a>
@@ -42,7 +60,7 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../RoleSwitcher', async () => {
   const { CONFIG: actualConfig } = await vi.importActual('@/constants/config')
   return {
-    RoleSwitcher: (props) => {
+    RoleSwitcher: (props: RoleSwitcherMockProps) => {
       mockRoleSwitcher(props)
       if (!actualConfig.feature_flags.roleSwitcher) {
         return null
@@ -65,12 +83,24 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCNavbar/components/DefaultNavbarLink', () => ({
-  default: ({ icon, route, ...props }) => (
+  default: ({
+    icon,
+    route,
+    ...props
+  }: {
+    icon?: ReactNode
+    route?: string
+    [key: string]: unknown
+  }) => (
     <div data-test="default-navbar-link" data-route={route} {...props}>
       {icon}
     </div>
   )
 }))
+
+const mockedUseCurrentUser = useCurrentUser as unknown as Mock
+const mockedUseNotificationsCount = useNotificationsCount as unknown as Mock
+const mockedLogout = logout as unknown as Mock
 
 describe('UserProfileActions', () => {
   beforeEach(() => {
@@ -82,7 +112,7 @@ describe('UserProfileActions', () => {
 
     const mockHasRoles = vi.fn((role) => role === 'Administrator')
 
-    vi.mocked(useCurrentUser).mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         firstName: 'John',
         lastName: 'Doe',
@@ -93,13 +123,13 @@ describe('UserProfileActions', () => {
       hasRoles: mockHasRoles
     })
 
-    vi.mocked(useNotificationsCount).mockReturnValue({
+    mockedUseNotificationsCount.mockReturnValue({
       data: { count: 5 },
       isLoading: false,
       refetch: mockRefetch
     })
 
-    vi.mocked(logout).mockImplementation(() => {})
+    mockedLogout.mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -128,7 +158,7 @@ describe('UserProfileActions', () => {
   })
 
   it('does not show a badge when notifications count is zero', () => {
-    vi.mocked(useNotificationsCount).mockReturnValue({
+    mockedUseNotificationsCount.mockReturnValue({
       data: { count: 0 },
       isLoading: false,
       refetch: mockRefetch
@@ -140,7 +170,7 @@ describe('UserProfileActions', () => {
   })
 
   it('shows a loading spinner while notifications are fetching', () => {
-    vi.mocked(useNotificationsCount).mockReturnValue({
+    mockedUseNotificationsCount.mockReturnValue({
       data: null,
       isLoading: true,
       refetch: mockRefetch
@@ -156,7 +186,7 @@ describe('UserProfileActions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'logout' }))
 
-    expect(logout).toHaveBeenCalled()
+    expect(mockedLogout).toHaveBeenCalled()
   })
 
   it('refetches notifications on the manual interval', () => {
@@ -206,18 +236,18 @@ describe('UserProfileActions', () => {
     })
 
     expect(mockRoleSwitcher).toHaveBeenCalled()
-    const initialProps = mockRoleSwitcher.mock.calls.at(-1)[0]
-    expect(initialProps.open).toBe(false)
+    const initialProps = getLastRoleSwitcherProps()
+    expect(initialProps?.open).toBe(false)
 
     fireEvent.click(toggleButton)
 
-    const updatedProps = mockRoleSwitcher.mock.calls.at(-1)[0]
-    expect(updatedProps.open).toBe(true)
-    expect(updatedProps.anchorEl).toBeInstanceOf(HTMLElement)
+    const updatedProps = getLastRoleSwitcherProps()
+    expect(updatedProps?.open).toBe(true)
+    expect(updatedProps?.anchorEl).toBeInstanceOf(HTMLElement)
   })
 
   it('does not render the RoleSwitcher toggle for non administrators', () => {
-    vi.mocked(useCurrentUser).mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         firstName: 'Jane',
         lastName: 'Smith',
@@ -237,8 +267,8 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
 
     expect(mockRoleSwitcher).toHaveBeenCalled()
-    const lastCall = mockRoleSwitcher.mock.calls.at(-1)[0]
-    expect(lastCall.open).toBe(false)
+    const lastCall = getLastRoleSwitcherProps()
+    expect(lastCall?.open).toBe(false)
   })
 
   it('does not render the RoleSwitcher toggle when the feature flag is disabled', () => {
@@ -253,8 +283,8 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
 
     expect(mockRoleSwitcher).toHaveBeenCalled()
-    const lastCall = mockRoleSwitcher.mock.calls.at(-1)[0] ?? {}
-    expect(lastCall.open).toBe(false)
+    const lastCall = getLastRoleSwitcherProps()
+    expect(lastCall?.open).toBe(false)
   })
 
   it('cleans up timers and listeners on unmount', () => {
