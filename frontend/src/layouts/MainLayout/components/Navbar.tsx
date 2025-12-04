@@ -8,6 +8,12 @@ import { HeaderComponent } from './HeaderComponent'
 import { UserProfileActions } from './UserProfileActions'
 import { useMediaQuery, useTheme } from '@mui/material'
 
+type NavItem = {
+  name: string
+  route: string
+  hide?: boolean
+}
+
 export const Navbar = () => {
   const { t } = useTranslation()
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
@@ -15,14 +21,14 @@ export const Navbar = () => {
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
   // Nav Links
-  const navMenuItems = useMemo(() => {
+  const navMenuItems = useMemo<NavItem[]>(() => {
     const isAdmin = hasRoles(roles.administrator)
     const canSeeComplianceReports = hasAnyRole(
       roles.government,
       roles.signing_authority,
       roles.compliance_reporting
     )
-    const idirRoutes = [
+    const idirRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },
       { name: t('Transactions'), route: ROUTES.TRANSACTIONS.LIST },
