@@ -7,6 +7,7 @@ import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
+const mockUseOutletContext = vi.fn()
 
 vi.mock('react-router-dom', async (orig) => {
   const actual = await orig()
@@ -14,6 +15,7 @@ vi.mock('react-router-dom', async (orig) => {
     ...actual,
     useNavigate: () => mockNavigate,
     useLocation: () => mockUseLocation(),
+    useOutletContext: () => mockUseOutletContext(),
     Outlet: () => <div data-testid="nested-route">Nested Route Content</div>
   }
 })
@@ -105,14 +107,18 @@ const mockSessionStorage = (() => {
 Object.defineProperty(window, 'sessionStorage', { value: mockSessionStorage })
 
 describe('ChargingSitesList', () => {
+  let mockAlertRef
   beforeEach(() => {
     vi.clearAllMocks()
     mockSessionStorage.clear()
 
     // Default location mock
     mockUseLocation.mockReturnValue({
-      pathname: '/compliance-reporting/charging-sites'
+      pathname: '/compliance-reporting/charging-sites',
+      state: null
     })
+    mockAlertRef = { current: { triggerAlert: vi.fn() } }
+    mockUseOutletContext.mockReturnValue({ alertRef: mockAlertRef })
 
     // Default mocks
     orgNamesData = [
@@ -173,6 +179,26 @@ describe('ChargingSitesList', () => {
 
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith(
         'selectedOrganization'
+      )
+    })
+
+    it('shows success alert when location state contains a message', async () => {
+      mockUseLocation.mockReturnValue({
+        pathname: '/compliance-reporting/charging-sites',
+        state: { message: 'Deleted', severity: 'success' }
+      })
+
+      render(<ChargingSitesList />, { wrapper })
+
+      await waitFor(() =>
+        expect(mockAlertRef.current.triggerAlert).toHaveBeenCalledWith({
+          message: 'Deleted',
+          severity: 'success'
+        })
+      )
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/compliance-reporting/charging-sites',
+        { replace: true }
       )
     })
 

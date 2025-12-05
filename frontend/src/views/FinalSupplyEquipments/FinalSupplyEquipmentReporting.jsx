@@ -332,7 +332,7 @@ export const FinalSupplyEquipmentReporting = () => {
   }, [])
 
   // Handle individual cell edits with validation and saving
-  const handleCellEditingStopped = useCallback(
+  const handleCellValueChanged = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
 
@@ -372,7 +372,6 @@ export const FinalSupplyEquipmentReporting = () => {
         t,
         updatedData
       })
-      console.log(responseData)
       params.node.updateData({
         ...params.node.data,
         validationStatus: responseData.validationStatus,
@@ -636,7 +635,7 @@ export const FinalSupplyEquipmentReporting = () => {
         dataKey="finalSupplyEquipments"
         getRowId={(params) => String(params.data.chargingEquipmentId + '-' + params.data.chargingEquipmentVersion)}
         onGridReady={handleGridReady}
-        onCellEditingStopped={handleCellEditingStopped}
+        onCellValueChanged={handleCellValueChanged}
         paginationOptions={paginationOptions}
         onPaginationChange={setPaginationOptions}
         enablePageCaching={true}

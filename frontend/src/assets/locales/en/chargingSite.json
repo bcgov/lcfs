@@ -70,7 +70,8 @@
     "siteNotFound": "Charging site not found",
     "noEquipmentFound": "No equipment records found for this charging site",
     "bulkUpdateSuccess": "Equipment status updated successfully",
-    "bulkUpdateError": "Failed to update equipment status"
+    "bulkUpdateError": "Failed to update equipment status",
+    "siteDeleted": "Charging site deleted successfully"
   },
   "documents": {
     "uploadTitle": "Upload supporting documents for charging site",

@@ -196,10 +196,13 @@ export const AddEditChargingSite = ({
     [saveRow, t]
   )
 
-  const onAction = async (action, params) => {
-    if (action === 'delete') {
-      const defaultOrgName = ''
-      await handleScheduleDelete(
+  const onAction = useCallback(
+    async (action, params) => {
+      if (action !== 'delete') {
+        return
+      }
+
+      const deletionSucceeded = await handleScheduleDelete(
         params,
         'chargingSiteId',
         saveRow,
@@ -209,8 +212,23 @@ export const AddEditChargingSite = ({
           organizationId
         }
       )
-    }
-  }
+
+      if (deletionSucceeded && isEditMode && params?.node?.data?.chargingSiteId) {
+        const successMessage = t('chargingSite:messages.siteDeleted', {
+          defaultValue: 'Charging site deleted successfully.'
+        })
+
+        navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX, {
+          replace: true,
+          state: {
+            message: successMessage,
+            severity: 'success'
+          }
+        })
+      }
+    },
+    [alertRef, isEditMode, navigate, organizationId, saveRow, setRowData, t]
+  )
 
   const handleDownload = async () => {
     if (!organizationId) {

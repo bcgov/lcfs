@@ -1,8 +1,9 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AddEditChargingSite } from '../AddEditChargingSite'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+import ROUTES from '@/routes/routes'
 
 const mockNavigate = vi.fn()
 
@@ -38,11 +39,27 @@ vi.mock('@/services/useApiService', () => ({
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useChargingSite')
+const mockHandleScheduleDelete = vi.fn()
+const mockHandleScheduleSave = vi.fn()
+vi.mock('@/utils/schedules', () => ({
+  handleScheduleDelete: (...args) => mockHandleScheduleDelete(...args),
+  handleScheduleSave: (...args) => mockHandleScheduleSave(...args)
+}))
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: React.forwardRef((props, ref) => (
     <div data-testid="bc-grid-editor">
       <button onClick={() => props.onAddRows(1)}>Add Row</button>
       <button onClick={() => props.saveButtonProps?.onSave()}>Save</button>
+      <button
+        onClick={() =>
+          props.onAction?.('delete', {
+            node: { data: { chargingSiteId: 123 } },
+            api: { isRowDataEmpty: () => false }
+          })
+        }
+      >
+        Delete
+      </button>
     </div>
   ))
 }))
@@ -96,6 +113,10 @@ describe('AddEditChargingSite', () => {
     useSaveChargingSite.mockReturnValue({
       mutateAsync: vi.fn()
     })
+    mockHandleScheduleDelete.mockResolvedValue(false)
+    mockHandleScheduleSave.mockResolvedValue({
+      validationStatus: 'success'
+    })
   })
 
   it('renders add mode with correct title', () => {
@@ -131,5 +152,42 @@ describe('AddEditChargingSite', () => {
     const saveButton = screen.getByText('Save')
     fireEvent.click(saveButton)
     expect(mockNavigate).toHaveBeenCalled()
+  })
+
+  it('does not navigate away after deleting from add page', async () => {
+    mockHandleScheduleDelete.mockResolvedValue(true)
+    render(<AddEditChargingSite {...mockProps} />, { wrapper })
+
+    const deleteButton = screen.getByText('Delete')
+    fireEvent.click(deleteButton)
+
+    await waitFor(() => expect(mockHandleScheduleDelete).toHaveBeenCalled())
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('navigates to index after deleting an existing charging site', async () => {
+    mockHandleScheduleDelete.mockResolvedValue(true)
+    render(
+      <AddEditChargingSite
+        {...mockProps}
+        isEditMode={true}
+        data={{ chargingSiteId: 123, siteName: 'To Delete' }}
+      />,
+      { wrapper }
+    )
+
+    const deleteButton = screen.getByText('Delete')
+    fireEvent.click(deleteButton)
+
+    await waitFor(() => expect(mockHandleScheduleDelete).toHaveBeenCalled())
+    expect(mockNavigate).toHaveBeenCalledWith(
+      ROUTES.REPORTS.CHARGING_SITE.INDEX,
+      expect.objectContaining({
+        replace: true,
+        state: expect.objectContaining({
+          severity: 'success'
+        })
+      })
+    )
   })
 })
