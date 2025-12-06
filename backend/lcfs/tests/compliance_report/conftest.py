@@ -213,6 +213,11 @@ def compliance_report_summary_service(
     service.fuel_export_repo = mock_fuel_export_repo
     service.other_uses_repo = mock_other_uses_repo
     service.compliance_data_service = mock_compliance_data_service
+    # Provide a default allocation agreement repo to avoid Depends placeholders in tests
+    service.allocation_agreement_repo = AsyncMock()
+    service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
+        return_value=[]
+    )
     return service
 
 

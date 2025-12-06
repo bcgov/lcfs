@@ -14,11 +14,13 @@ import {
   TableRow,
   Input,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material'
 
 const SummaryTable = ({
   title,
+  titleTooltip,
   columns,
   data: initialData,
   onCellEditStopped,
@@ -26,6 +28,7 @@ const SummaryTable = ({
   width = '100%',
   savingCellKey = null,
   tableType = '',
+  lines6And8Locked = false,
   ...props
 }) => {
   const [data, setData] = useState(initialData)
@@ -51,9 +54,14 @@ const SummaryTable = ({
   }
 
   const isCellLocked = (rowIndex, row) => {
-    // Check if this is Line 7 or 9 and Lines 7&9 are locked
     const lineNumber = parseInt(row.line)
-    return props.lines7And9Locked && (lineNumber === 7 || lineNumber === 9)
+    if (props.lines7And9Locked && (lineNumber === 7 || lineNumber === 9)) {
+      return true
+    }
+    if (lines6And8Locked && (lineNumber === 6 || lineNumber === 8)) {
+      return true
+    }
+    return false
   }
 
   const getCellConstraints = (rowIndex, columnId) => {
@@ -193,6 +201,16 @@ const SummaryTable = ({
     }
   }
 
+  const lineNumberTooltip = (lineNumber) => {
+    if (lineNumber === 6 || lineNumber === 8) {
+      return 'Locked from assessed snapshot (retained/deferred volumes)'
+    }
+    if (lineNumber === 7 || lineNumber === 9) {
+      return 'Locked from assessed snapshot (previously retained/deferred)'
+    }
+    return 'Locked from assessed snapshot'
+  }
+
   const handleBlur = (rowIndex, columnId) => {
     saveCellChanges(rowIndex, columnId)
   }
@@ -224,6 +242,7 @@ const SummaryTable = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
                 }}
+                title={index === 0 ? titleTooltip : undefined}
               >
                 {column.label}
               </TableCell>
@@ -243,6 +262,11 @@ const SummaryTable = ({
                 <TableCell
                   key={column.id}
                   align={column.align || 'left'}
+                  title={
+                    isCellLocked(rowIndex, row)
+                      ? lineNumberTooltip(parseInt(row.line))
+                      : undefined
+                  }
                   sx={{
                     borderBottom:
                       rowIndex === data.length - 1
@@ -271,7 +295,7 @@ const SummaryTable = ({
                         : 1
                   }}
                 >
-                  {isCellEditable(rowIndex, column.id) ? (
+                  {isCellEditable(rowIndex, column.id) && !isCellLocked(rowIndex, row) ? (
                     <div
                       style={{
                         position: 'relative',
