@@ -38,7 +38,7 @@ Purpose: quickly explain how compliance report versions move through statuses, h
 - **Lines 12–14**: Low-carbon transactions in period window (Jan 1→Mar 31, or Apr 1→Mar 31 if prior assessed).
 - **Lines 15/16**: From last assessed for same period (`line_18_units_to_be_banked` / `line_19_units_to_be_exported`); default 0 if none.
 - **Line 17**: Available balance end of period; locked supplementals reuse stored `line_17_non_banked_units_used`; otherwise recomputed via `TransactionRepository.calculate_line_17_available_balance_for_period`.
-- **Lines 18/19**: Current-period issued units (fuel supply/export).
+- **Lines 18/19**: Current-period issued units (fuel supply/export).  
 - **Line 20**: `18 + 19 – 15 – 16`; drives reserved/adjustment tx and penalties.
 - **Line 22**: `max(17 + 20, 0)` after assessment logic.
 
