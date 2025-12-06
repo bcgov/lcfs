@@ -62,6 +62,7 @@ describe('renewableFuelColumns line 7 behaviour', () => {
       summaryData,
       true,
       '2025',
+      false,
       false
     )
 
@@ -125,7 +126,8 @@ describe('renewableFuelColumns line 7 behaviour', () => {
       summaryData,
       true,
       '2026',
-      true
+      true,
+      false
     )
 
     const gasolineColumn = columns.find((column) => column.id === 'gasoline')
@@ -144,5 +146,21 @@ describe('renewableFuelColumns line 7 behaviour', () => {
     expect(gasolineColumn.cellConstraints[SUMMARY.LINE_8].max).toBe(0)
 
     expect(dieselColumn.cellConstraints[SUMMARY.LINE_7].max).toBe(500)
+  })
+
+  it('removes line 6 and 8 from editable cells when lines6And8Locked is true', () => {
+    const summaryData = createBaseSummaryData()
+    const columns = renewableFuelColumns(
+      t,
+      summaryData,
+      true,
+      '2025',
+      false,
+      true
+    )
+
+    const gasolineColumn = columns.find((column) => column.id === 'gasoline')
+    expect(gasolineColumn.editableCells).not.toContain(SUMMARY.LINE_6)
+    expect(gasolineColumn.editableCells).not.toContain(SUMMARY.LINE_8)
   })
 })

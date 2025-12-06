@@ -9,7 +9,6 @@ from lcfs.web.core.decorators import repo_handler
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select, or_, and_
 from typing import List
-from lcfs.db.models.user import UserProfile
 from lcfs.db.dependencies import get_async_db_session
 from fastapi import Depends
 

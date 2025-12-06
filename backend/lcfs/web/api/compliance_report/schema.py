@@ -335,6 +335,8 @@ class ComplianceReportSummarySchema(BaseSchema):
 
     # Lines 7 & 9 locking for 2025+ reports
     lines_7_and_9_locked: Optional[bool] = False
+    # Lines 6 & 8 locking when summary/report is locked
+    lines_6_and_8_locked: Optional[bool] = False
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):

@@ -16,9 +16,9 @@ async def seed_test_user_roles(session):
 
     user_roles_to_seed = [
         # Government users (1-6) with administrative roles
-        {"user_profile_id": 1, "role_id": 1},  # Alex Zorkin - GOVERNMENT
-        {"user_profile_id": 1, "role_id": 3},  # Alex Zorkin - ADMINISTRATOR
-        {"user_profile_id": 1, "role_id": 4},  # Alex Zorkin - ANALYST
+        {"user_profile_id": 1, "role_id": 1},  # System User - GOVERNMENT
+        {"user_profile_id": 1, "role_id": 3},  # System User - ADMINISTRATOR
+        {"user_profile_id": 1, "role_id": 4},  # System User - ANALYST
         {"user_profile_id": 2, "role_id": 1},  # Hamed Bayeki - GOVERNMENT
         {"user_profile_id": 2, "role_id": 3},  # Hamed Bayeki - ADMINISTRATOR
         {"user_profile_id": 3, "role_id": 1},  # Kevin Hashimoto - GOVERNMENT
@@ -161,6 +161,8 @@ async def seed_test_user_roles(session):
         {"user_profile_id": 53, "role_id": 3},  # Victoria Gagnon - ADMINISTRATOR
         {"user_profile_id": 54, "role_id": 1},  # Wesley Hawley - GOVERNMENT
         {"user_profile_id": 54, "role_id": 3},  # Wesley Hawley - ADMINISTRATOR
+        {"user_profile_id": 55, "role_id": 1},  # Alex Zorkin - GOVERNMENT
+        {"user_profile_id": 55, "role_id": 3},  # Alex Zorkin - ADMINISTRATOR
     ]
 
     try:

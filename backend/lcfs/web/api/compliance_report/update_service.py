@@ -245,21 +245,11 @@ class ComplianceReportUpdateService:
             report.compliance_report_id
         )
 
-        # Simply ensure summary exists - it will continue to refresh dynamically
-        # because we're NOT locking it (unlike the old behavior)
-        if not report.summary:
-            # Create summary if it doesn't exist
-            calculated_summary = (
-                await self.summary_service.calculate_compliance_report_summary(
-                    report.compliance_report_id
-                )
-            )
-            report.summary = calculated_summary
-
-        # Always recalculate to get latest values for transaction
-        await self.summary_service.calculate_compliance_report_summary(
+        # Ensure summary exists and snapshot user-entered lines before transaction creation
+        calculated_summary = await self.summary_service.calculate_compliance_report_summary(
             report.compliance_report_id
         )
+        report.summary = report.summary or calculated_summary
 
         credit_change = report.summary.line_20_surplus_deficit_units
         reserve_units = await self._create_or_update_reserve_transaction(

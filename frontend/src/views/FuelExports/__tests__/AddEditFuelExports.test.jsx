@@ -167,7 +167,7 @@ describe('AddEditFuelExports', () => {
       id: 1,
       fuelType: 'Gasoline',
       fuelCategories: [{ fuelCategory: 'Petroleum-based' }],
-      eerRatios: [{ 
+      eerRatios: [{
         endUseType: { type: 'Transport' },
         fuelCategory: { fuelCategory: 'Petroleum-based' }
       }],
@@ -194,10 +194,11 @@ describe('AddEditFuelExports', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    
+    vi.clearAllTimers()
+
     // Reset location state
     mockLocation.state = null
-    
+
     // Setup default mock returns
     mockUseFuelExportOptions.mockReturnValue({
       data: mockOptionsData,
@@ -222,10 +223,15 @@ describe('AddEditFuelExports', () => {
     // Setup mocked utility functions
     const arrayUtils = await import('@/utils/array.js')
     const scheduleUtils = await import('@/utils/schedules.js')
-    
+
     arrayUtils.isArrayEmpty.mockImplementation(arr => !arr || arr.length === 0)
     scheduleUtils.handleScheduleDelete.mockResolvedValue()
     scheduleUtils.handleScheduleSave.mockResolvedValue({ saved: true })
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   describe('Basic Rendering', () => {
@@ -341,16 +347,20 @@ describe('AddEditFuelExports', () => {
     })
 
     it('starts editing on last row after timeout', async () => {
+      vi.useFakeTimers()
+
       render(<AddEditFuelExports />, { wrapper })
 
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 600))
+        vi.advanceTimersByTime(600)
       })
 
       expect(mockGridApi.startEditingCell).toHaveBeenCalledWith({
         rowIndex: 0,
         colKey: 'fuelTypeId'
       })
+
+      vi.useRealTimers()
     })
   })
 

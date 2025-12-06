@@ -125,6 +125,86 @@ async def seed_test_transactions(session):
             "transaction_action": TransactionActionEnum.Reserved,
             "organization_id": 2,
         },
+        # New scenario transactions for LCFS1-10 (spread years/statuses)
+        {
+            "transaction_id": 101,
+            "compliance_units": -2000,
+            "transaction_action": TransactionActionEnum.Reserved,
+            "organization_id": 1,
+        },
+        {
+            "transaction_id": 102,
+            "compliance_units": 1500,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 2,
+        },
+        {
+            "transaction_id": 103,
+            "compliance_units": 800,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 3,
+        },
+        {
+            "transaction_id": 104,
+            "compliance_units": -500,
+            "transaction_action": TransactionActionEnum.Reserved,
+            "organization_id": 4,
+        },
+        {
+            "transaction_id": 105,
+            "compliance_units": 2200,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 5,
+        },
+        {
+            "transaction_id": 106,
+            "compliance_units": -750,
+            "transaction_action": TransactionActionEnum.Reserved,
+            "organization_id": 6,
+        },
+        {
+            "transaction_id": 107,
+            "compliance_units": 1250,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 7,
+        },
+        {
+            "transaction_id": 108,
+            "compliance_units": -900,
+            "transaction_action": TransactionActionEnum.Reserved,
+            "organization_id": 8,
+        },
+        {
+            "transaction_id": 109,
+            "compliance_units": 1750,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 9,
+        },
+        {
+            "transaction_id": 110,
+            "compliance_units": -400,
+            "transaction_action": TransactionActionEnum.Reserved,
+            "organization_id": 10,
+        },
+        # Chain example: v0 submitted, v1 assessed, v2 draft supplemental (Org 2)
+        {
+            "transaction_id": 111,
+            "compliance_units": -250,
+            "transaction_action": TransactionActionEnum.Released,
+            "organization_id": 2,
+        },
+        {
+            "transaction_id": 112,
+            "compliance_units": 500,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 2,
+        },
+        {
+            "transaction_id": 113,
+            "compliance_units": -150,
+            "transaction_action": TransactionActionEnum.Reserved,
+            "organization_id": 2,
+        },
     ]
 
     for transaction_data in transactions_to_seed:
