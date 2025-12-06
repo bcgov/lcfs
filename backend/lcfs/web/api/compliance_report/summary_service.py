@@ -2,12 +2,10 @@ import re
 import structlog
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List, Tuple, Dict, Optional, Union
+from typing import List, Tuple, Dict, Optional, Union, Any
 
 from fastapi import Depends
 from sqlalchemy import inspect
-from typing import List, Tuple, Dict, Optional, Union, Any
-
 from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,

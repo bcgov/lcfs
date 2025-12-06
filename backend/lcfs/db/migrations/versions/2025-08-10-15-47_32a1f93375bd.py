@@ -1,7 +1,7 @@
 """Remove redundant other_uses_fossil_derived column
 
 Revision ID: 32a1f93375bd
-Revises: 988aeb471e14
+Revises: 9f640abe256d
 Create Date: 2025-08-21 15:47:43.772675
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "32a1f93375bd"
-down_revision = "988aeb471e14"
+down_revision = "9f640abe256d"
 branch_labels = None
 depends_on = None
 
