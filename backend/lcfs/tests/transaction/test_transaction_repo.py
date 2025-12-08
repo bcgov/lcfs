@@ -587,8 +587,9 @@ async def test_transactions_in_have_correct_visibilities(
     assert total_count_transferee == 8
 
     # Government sees non-transfer plus eligible transfer rows (rescinded excluded)
-    assert len(transactions_gov) == 10
-    assert total_count_gov == 10
+    # Also includes standalone transactions (Adjustment type) from the transaction table
+    assert len(transactions_gov) == 10  # Limited by page size
+    assert total_count_gov == 12  # Total includes 2 standalone Adjustment transactions
 
 
 @pytest.mark.anyio
