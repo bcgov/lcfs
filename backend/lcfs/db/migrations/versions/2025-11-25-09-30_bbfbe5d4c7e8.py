@@ -174,6 +174,7 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                     AVG(fse.latitude) AS avg_latitude,
                     AVG(fse.longitude) AS avg_longitude,
                     STRING_AGG(DISTINCT fse.notes, '; ') AS combined_notes,
+                    MAX(NULLIF(TRIM(fse.organization_name), '')) AS allocating_org_name,
                     COUNT(*) AS equipment_count,
                     MIN(
                         CASE
@@ -240,14 +241,15 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                         latitude = :latitude,
                         longitude = :longitude,
                         status_id = :status_id,
+                        allocating_organization_name = COALESCE(:allocating_org_name, allocating_organization_name),
                         notes = :notes,
                         update_date = :update_date,
                         update_user = :update_user
                     WHERE charging_site_id = :charging_site_id
                         AND create_user = :system_user
-                    """
-                ),
-                {
+                """
+            ),
+            {
                     "latitude": float(location.avg_latitude)
                     if location.avg_latitude is not None
                     else None,
@@ -255,6 +257,7 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                     if location.avg_longitude is not None
                     else None,
                     "status_id": status_id,
+                    "allocating_org_name": location.allocating_org_name,
                     "notes": notes,
                     "update_date": current_time,
                     "update_user": SYSTEM_USER,
@@ -280,6 +283,7 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                     postal_code,
                     latitude,
                     longitude,
+                    allocating_organization_name,
                     notes,
                     group_uuid,
                     version,
@@ -298,6 +302,7 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                     :postal_code,
                     :latitude,
                     :longitude,
+                    :allocating_org_name,
                     :notes,
                     :group_uuid,
                     1,
@@ -324,6 +329,7 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                 if location.avg_longitude is not None
                 else None,
                 "notes": notes,
+                "allocating_org_name": location.allocating_org_name,
                 "group_uuid": str(uuid.uuid4()),
                 "create_date": current_time,
                 "update_date": current_time,
