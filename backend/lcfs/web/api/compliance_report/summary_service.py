@@ -6,7 +6,6 @@ from typing import List, Tuple, Dict, Optional, Union
 
 from fastapi import Depends
 from sqlalchemy import inspect
-from typing import List, Tuple, Dict, Optional, Union, Any
 
 from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import (
@@ -1552,8 +1551,8 @@ class ComplianceReportSummaryService:
             report.version,
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum = Decimal("0")
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
@@ -1571,16 +1570,17 @@ class ComplianceReportSummaryService:
             )
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units_sum += compliance_units
 
-        return round(compliance_units_sum)
+        # Round to integer using ROUND_HALF_UP for consistent rounding
+        return int(compliance_units_sum.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
     @service_handler
     async def calculate_quarterly_fuel_supply_compliance_units(
         self, report: ComplianceReport
-    ) -> list[float | Any]:
+    ) -> list[int]:
         """
         Calculate the total compliance units for the early issuance Summary
         """
@@ -1591,11 +1591,11 @@ class ComplianceReportSummaryService:
             report.version,
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum_q1 = 0.0
-        compliance_units_sum_q2 = 0.0
-        compliance_units_sum_q3 = 0.0
-        compliance_units_sum_q4 = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum_q1 = Decimal("0")
+        compliance_units_sum_q2 = Decimal("0")
+        compliance_units_sum_q3 = Decimal("0")
+        compliance_units_sum_q4 = Decimal("0")
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
@@ -1605,7 +1605,7 @@ class ComplianceReportSummaryService:
             UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units_sum_q1 += calculate_compliance_units(
                 TCI, EER, RCI, UCI, fuel_supply.q1_quantity or 0, ED
             )
@@ -1619,11 +1619,12 @@ class ComplianceReportSummaryService:
                 TCI, EER, RCI, UCI, fuel_supply.q4_quantity or 0, ED
             )
 
+        # Round to integer using ROUND_HALF_UP for consistent rounding
         return [
-            round(compliance_units_sum_q1),
-            round(compliance_units_sum_q2),
-            round(compliance_units_sum_q3),
-            round(compliance_units_sum_q4),
+            int(compliance_units_sum_q1.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q2.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q3.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q4.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
         ]
 
     @service_handler
@@ -1638,8 +1639,8 @@ class ComplianceReportSummaryService:
             report.compliance_report_group_uuid, report.compliance_report_id
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum = Decimal("0")
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
             TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
@@ -1649,11 +1650,12 @@ class ComplianceReportSummaryService:
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units = -compliance_units
-            compliance_units = compliance_units if compliance_units < 0 else 0
+            compliance_units = compliance_units if compliance_units < 0 else Decimal("0")
 
             compliance_units_sum += compliance_units
 
-        return round(compliance_units_sum)
+        # Round to integer using ROUND_HALF_UP for consistent rounding
+        return int(compliance_units_sum.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
