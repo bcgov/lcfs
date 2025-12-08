@@ -460,26 +460,36 @@ class ComplianceReportSummaryService:
             ("legacy" if compliance_data_service.is_legacy_year() else "description"),
             descriptions_dict[line].get("description"),
         )
-        # Use quantize with ROUND_HALF_UP for consistent rounding before formatting
-        gasoline_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
+        # Use Decimal arithmetic throughout for precise calculations
+        # Multiply the Line 4 value by 5% using Decimal to avoid floating point errors
+        gasoline_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
-        diesel_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_diesel * 0.05)
+        diesel_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_diesel or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
-        jet_fuel_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel * 0.05)
+        jet_fuel_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
         return base_desc.format(
-            "{:,.0f}".format(gasoline_cap),
-            "{:,.0f}".format(diesel_cap),
-            "{:,.0f}".format(jet_fuel_cap),
+            "{:,}".format(gasoline_cap),
+            "{:,}".format(diesel_cap),
+            "{:,}".format(jet_fuel_cap),
         )
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
