@@ -241,7 +241,7 @@ def _seed_charging_sites(session: sa.orm.Session) -> tuple[int, int]:
                         latitude = :latitude,
                         longitude = :longitude,
                         status_id = :status_id,
-                        allocating_organization_name = COALESCE(:allocating_org_name, allocating_organization_name),
+                        allocating_organization_name = :allocating_org_name,
                         notes = :notes,
                         update_date = :update_date,
                         update_user = :update_user
