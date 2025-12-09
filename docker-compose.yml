@@ -149,27 +149,27 @@ services:
   # LCFS MCP Server - Development Only
   # Model Context Protocol server for local development and testing
   # WARNING: This service only runs in development environment
-  mcp-server:
-    container_name: lcfs-mcp-server
-    restart: "no"
-    build:
-      context: ./mcp-server
-      dockerfile: Dockerfile
-    environment:
-      APP_ENVIRONMENT: dev
-      NODE_ENV: development
-    volumes:
-      - type: bind
-        source: ./mcp-server/src
-        target: /app/src
-        consistency: cached
-    networks:
-      - shared_network
-    # No ports exposed - uses stdio transport
-    labels:
-      - "lcfs.service=mcp-server"
-      - "lcfs.environment=development-only"
-      - "lcfs.description=Model Context Protocol server for local development"
+  # mcp-server:
+  #   container_name: lcfs-mcp-server
+  #   restart: "no"
+  #   build:
+  #     context: ./mcp-server
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     APP_ENVIRONMENT: dev
+  #     NODE_ENV: development
+  #   volumes:
+  #     - type: bind
+  #       source: ./mcp-server/src
+  #       target: /app/src
+  #       consistency: cached
+  #   networks:
+  #     - shared_network
+  #   # No ports exposed - uses stdio transport
+  #   labels:
+  #     - "lcfs.service=mcp-server"
+  #     - "lcfs.environment=development-only"
+  #     - "lcfs.description=Model Context Protocol server for local development"
 
 volumes:
   postgres_data:
