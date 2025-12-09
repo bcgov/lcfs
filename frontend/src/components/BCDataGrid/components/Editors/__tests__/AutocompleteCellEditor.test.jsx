@@ -62,14 +62,15 @@ vi.mock('@mui/material', () => ({
           {renderInput && renderInput({ inputProps: {} })}
           {renderOption && renderOption({}, 'option', { selected: false })}
           {renderTags && renderTags(['tag1', 'tag2'], () => ({ index: 0 }))}
-          <button
-            data-testid="autocomplete-input-change"
-            onClick={(event) => {
-              const customValue =
-                event.currentTarget.getAttribute('data-value') || 'typed input'
-              if (onInputChange) {
-                onInputChange({}, customValue, 'input')
-              }
+        <button
+          data-test="autocomplete-input-change"
+          onClick={(event) => {
+            event.stopPropagation()
+            const customValue =
+              event.currentTarget.getAttribute('data-value') || 'typed input'
+            if (onInputChange) {
+              onInputChange({}, customValue, 'input')
+            }
             }}
           >
             change input
