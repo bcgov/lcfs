@@ -472,7 +472,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
     result = await service.get_fse_reporting_list_paginated(1, pagination, 10, "summary")
 
     equipment = result["finalSupplyEquipments"][0]
-    assert equipment.capacity_utilization_percent == 80.0
+    assert equipment.capacity_utilization_percent == 80
     mock_repo.get_charging_power_output.assert_awaited_once_with(
         303,
         ["Light duty motor vehicles"],

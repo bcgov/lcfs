@@ -167,10 +167,11 @@ const GovernmentNotificationsCard = () => {
     const textColor =
       NOTIFICATION_PILL_TEXT_COLORS[type] ||
       NOTIFICATION_PILL_TEXT_COLORS.General
+
     return {
       backgroundColor: `${bgColor} !important`,
       '& h2': {
-        color: `${textColor} !important`,
+        color: '#000 !important',
         fontWeight: 'bold'
       }
     }
@@ -402,11 +403,14 @@ const GovernmentNotificationsCard = () => {
             rel="noopener noreferrer"
             underline="always"
             sx={{
-              fontWeight: 'bold',
-              fontSize: '1.25rem',
-              display: 'block',
+              fontWeight: 500,
+              fontSize: '1rem',
+              display: 'inline-block',
               mb: 1,
-              color: 'primary.main'
+              color: 'primary.main',
+              '&:link': {
+                textDecoration: 'underline !important'
+              }
             }}
           >
             {notificationTitle}
@@ -427,6 +431,13 @@ const GovernmentNotificationsCard = () => {
               marginTop: 0.5,
               marginBottom: 0.5,
               fontSize: '1rem'
+            },
+            '& a': {
+              color: 'primary.main',
+              textDecoration: 'underline !important',
+              '&:hover': {
+                cursor: 'pointer'
+              }
             }
           }}
         />
@@ -461,6 +472,10 @@ const GovernmentNotificationsCard = () => {
               }
             : undefined
         }
+        editButtonStyles={{
+          borderColor: 'rgba(0, 0, 0 , 1)',
+          color: 'rgba(0, 0, 0 , 1)'
+        }}
       />
 
       {/* Confirmation Dialog */}

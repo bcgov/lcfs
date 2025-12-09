@@ -692,6 +692,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               hasGovernmentReassessmentInProgress={
                 reportData?.hasGovernmentReassessmentInProgress
               }
+              compliancePeriodYear={compliancePeriod}
             />
           </Stack>
           {!location.state?.newReport && (
