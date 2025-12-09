@@ -205,17 +205,12 @@ def generate_equipment_number(mapper, connection, target):
         ).scalar_one_or_none()
 
         if max_equipment_number:
-            # Convert to int and increment
+            # Increment from existing base36 string
             next_seq = next_base36(max_equipment_number, width=3)
         else:
             # First equipment for this site
             next_seq = next_base36(0, width=3)
 
-        if next_seq > 999:
-            raise ValueError(
-                "Exceeded maximum equipment numbers (999) for this charging site"
-            )
-
-        target.equipment_number = f"{next_seq:03d}"
+        target.equipment_number = next_seq
     finally:
         session.close()
