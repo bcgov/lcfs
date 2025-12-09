@@ -527,7 +527,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) =>
             }
             return Number(value)
           },
-          valueFormatter: numberFormatter,
+          valueFormatter: (params) => numberFormatter(params, false, 0),
         }
       ]
     : []),
