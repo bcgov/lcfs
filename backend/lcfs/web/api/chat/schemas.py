@@ -61,6 +61,7 @@ class ChatCompletionChunkDelta(BaseModel):
 
     role: Optional[Literal["assistant"]] = None
     content: Optional[str] = None
+    metadata: Optional[dict] = None
 
 
 class ChatCompletionChunkChoice(BaseModel):
@@ -94,3 +95,34 @@ class ErrorResponse(BaseModel):
     """OpenAI-compatible error response."""
 
     error: ErrorDetail
+
+
+class EscalationRequest(BaseModel):
+    """Support escalation request from the chat assistant."""
+
+    issue_type: str = Field(
+        ...,
+        description="Type of issue: question, issue, feedback",
+    )
+    description: str = Field(..., description="User's description of their issue")
+    user_email: str = Field(..., description="User's email for response")
+    user_name: str = Field(..., description="User's name")
+    organization_name: Optional[str] = Field(
+        None, description="User's organization name"
+    )
+    organization_id: Optional[int] = Field(None, description="User's organization ID")
+    conversation_history: Optional[str] = Field(
+        None, description="Full conversation history with the assistant"
+    )
+    is_low_confidence: bool = Field(
+        False, description="Whether this escalation was triggered by low AI confidence"
+    )
+    submitted_at: str = Field(..., description="Timestamp of submission")
+
+
+class EscalationResponse(BaseModel):
+    """Response after submitting an escalation request."""
+
+    status: str
+    message: str
+    ticket_id: Optional[str] = None

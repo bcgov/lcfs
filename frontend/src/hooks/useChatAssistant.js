@@ -2,11 +2,48 @@ import { useState, useCallback } from 'react'
 import { useKeycloak } from '@react-keycloak/web'
 import { CONFIG } from '@/constants/config'
 
+const createAssistantMessage = (responseData) => {
+  const content =
+    responseData?.choices?.[0]?.message?.content?.trim() ||
+    'I was unable to generate a response. Please try again.'
+
+  return {
+    role: 'assistant',
+    content,
+    metadata: responseData?.lcfs_metadata,
+    id: Date.now() + Math.random()
+  }
+}
+
 export const useChatAssistant = () => {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const { keycloak } = useKeycloak()
+
+  const fetchCompletion = useCallback(
+    async (conversationMessages) => {
+      const response = await fetch(`${CONFIG.API_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${keycloak.token}`
+        },
+        body: JSON.stringify({
+          messages: conversationMessages,
+          model: 'lcfs-rag',
+          stream: false
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`)
+      }
+
+      return response.json()
+    },
+    [keycloak.token]
+  )
 
   /**
    * Send a message to the chat assistant
@@ -15,11 +52,10 @@ export const useChatAssistant = () => {
     async (content) => {
       if (!content.trim()) return
 
-      // Add user message to local state with unique ID
       const userMessage = {
         role: 'user',
         content: content.trim(),
-        id: Date.now() + Math.random() // Simple unique ID
+        id: Date.now() + Math.random()
       }
 
       setMessages((prev) => [...prev, userMessage])
@@ -27,90 +63,19 @@ export const useChatAssistant = () => {
       setError(null)
 
       try {
-        // Send full conversation history to backend
         const conversationMessages = [...messages, userMessage]
+        const completion = await fetchCompletion(conversationMessages)
+        const assistantMessage = createAssistantMessage(completion)
 
-        // Use streaming endpoint
-        const response = await fetch(`${CONFIG.API_BASE}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${keycloak.token}`
-          },
-          body: JSON.stringify({
-            messages: conversationMessages,
-            model: 'lcfs-rag',
-            stream: true
-          })
-        })
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`)
-        }
-
-        // Handle streaming response
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let assistantMessage = {
-          role: 'assistant',
-          content: '',
-          id: Date.now() + Math.random() // Unique ID for assistant message
-        }
-
-        // Add empty assistant message that we'll update
         setMessages((prev) => [...prev, assistantMessage])
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') break
-
-              try {
-                const parsed = JSON.parse(data)
-                const content = parsed.choices[0]?.delta?.content
-
-                if (content) {
-                  assistantMessage.content += content
-                  // Update the last message
-                  setMessages((prev) => {
-                    const newMessages = [...prev]
-                    newMessages[newMessages.length - 1] = {
-                      ...assistantMessage
-                    }
-                    return newMessages
-                  })
-                }
-              } catch (e) {
-                // Skip invalid JSON
-                console.debug('Failed to parse chunk:', e)
-              }
-            }
-          }
-        }
       } catch (err) {
         console.error('Chat error:', err)
         setError(err.message || 'Failed to send message. Please try again.')
-
-        // Remove the failed assistant message if it exists
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1]
-          if (lastMsg?.role === 'assistant' && !lastMsg.content) {
-            return prev.slice(0, -1)
-          }
-          return prev
-        })
       } finally {
         setIsLoading(false)
       }
     },
-    [messages, keycloak.token]
+    [messages, fetchCompletion]
   )
 
   /**
@@ -120,11 +85,9 @@ export const useChatAssistant = () => {
     async (messageId, newContent) => {
       if (!newContent.trim()) return
 
-      // Find the message index
       const messageIndex = messages.findIndex((m) => m.id === messageId)
       if (messageIndex === -1) return
 
-      // Update the message and remove all messages after it
       const updatedMessages = messages.slice(0, messageIndex + 1)
       updatedMessages[messageIndex] = {
         ...updatedMessages[messageIndex],
@@ -136,85 +99,17 @@ export const useChatAssistant = () => {
       setError(null)
 
       try {
-        // Resend to get new assistant response
-        const response = await fetch(`${CONFIG.API_BASE}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${keycloak.token}`
-          },
-          body: JSON.stringify({
-            messages: updatedMessages,
-            model: 'lcfs-rag',
-            stream: true
-          })
-        })
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`)
-        }
-
-        // Handle streaming response
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let assistantMessage = {
-          role: 'assistant',
-          content: '',
-          id: Date.now() + Math.random() // Unique ID for assistant message
-        }
-
-        // Add empty assistant message
+        const completion = await fetchCompletion(updatedMessages)
+        const assistantMessage = createAssistantMessage(completion)
         setMessages((prev) => [...prev, assistantMessage])
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') break
-
-              try {
-                const parsed = JSON.parse(data)
-                const content = parsed.choices[0]?.delta?.content
-
-                if (content) {
-                  assistantMessage.content += content
-                  setMessages((prev) => {
-                    const newMessages = [...prev]
-                    newMessages[newMessages.length - 1] = {
-                      ...assistantMessage
-                    }
-                    return newMessages
-                  })
-                }
-              } catch (e) {
-                console.debug('Failed to parse chunk:', e)
-              }
-            }
-          }
-        }
       } catch (err) {
         console.error('Edit message error:', err)
         setError(err.message || 'Failed to resend message. Please try again.')
-
-        // Remove the failed assistant message if it exists
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1]
-          if (lastMsg?.role === 'assistant' && !lastMsg.content) {
-            return prev.slice(0, -1)
-          }
-          return prev
-        })
       } finally {
         setIsLoading(false)
       }
     },
-    [messages, keycloak.token]
+    [messages, fetchCompletion]
   )
 
   /**
@@ -222,96 +117,28 @@ export const useChatAssistant = () => {
    */
   const regenerateResponse = useCallback(
     async (assistantMessageId) => {
-      // Find the assistant message
       const messageIndex = messages.findIndex(
         (m) => m.id === assistantMessageId
       )
       if (messageIndex === -1) return
 
-      // Remove this assistant message and everything after it
       const messagesBeforeAssistant = messages.slice(0, messageIndex)
       setMessages(messagesBeforeAssistant)
       setIsLoading(true)
       setError(null)
 
       try {
-        // Resend with the conversation up to the user's question
-        const response = await fetch(`${CONFIG.API_BASE}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${keycloak.token}`
-          },
-          body: JSON.stringify({
-            messages: messagesBeforeAssistant,
-            model: 'lcfs-rag',
-            stream: true
-          })
-        })
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`)
-        }
-
-        // Handle streaming response
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let assistantMessage = {
-          role: 'assistant',
-          content: '',
-          id: Date.now() + Math.random() // Unique ID for regenerated message
-        }
-
+        const completion = await fetchCompletion(messagesBeforeAssistant)
+        const assistantMessage = createAssistantMessage(completion)
         setMessages((prev) => [...prev, assistantMessage])
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') break
-
-              try {
-                const parsed = JSON.parse(data)
-                const content = parsed.choices[0]?.delta?.content
-
-                if (content) {
-                  assistantMessage.content += content
-                  setMessages((prev) => {
-                    const newMessages = [...prev]
-                    newMessages[newMessages.length - 1] = {
-                      ...assistantMessage
-                    }
-                    return newMessages
-                  })
-                }
-              } catch (e) {
-                console.debug('Failed to parse chunk:', e)
-              }
-            }
-          }
-        }
       } catch (err) {
         console.error('Regenerate error:', err)
         setError(err.message || 'Failed to regenerate response.')
-
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1]
-          if (lastMsg?.role === 'assistant' && !lastMsg.content) {
-            return prev.slice(0, -1)
-          }
-          return prev
-        })
       } finally {
         setIsLoading(false)
       }
     },
-    [messages, keycloak.token]
+    [messages, fetchCompletion]
   )
 
   /**
@@ -320,6 +147,7 @@ export const useChatAssistant = () => {
   const clearMessages = useCallback(() => {
     setMessages([])
     setError(null)
+    setIsLoading(false)
   }, [])
 
   return {

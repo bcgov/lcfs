@@ -6,6 +6,7 @@ import { GitHub } from '@mui/icons-material'
 import typography from '@/themes/base/typography'
 import ChatWidget from '@/components/LCFSAssistant'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config'
 
 function Footer({
   repoDetails = {
@@ -26,9 +27,11 @@ function Footer({
   const { size } = typography
   const { data: currentUser } = useCurrentUser()
 
-  // Only show chat assistant to BCeID users (non-government users)
+  // Only show chat assistant if feature flag is enabled and user is BCeID (non-government)
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const showChatAssistant = currentUser && !isGovernmentUser
+  const isAssistantEnabled = isFeatureEnabled(FEATURE_FLAGS.LCFS_ASSISTANT)
+  const showChatAssistant =
+    isAssistantEnabled && currentUser && !isGovernmentUser
 
   const renderLinks = () =>
     links.map((link) => (

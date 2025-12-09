@@ -68,7 +68,7 @@ export const ChatMessages = ({
         flexGrow: 1,
         overflow: 'auto',
         height: '100%',
-        bgcolor: 'background.default',
+        bgcolor: '#f9fafb',
         '&::-webkit-scrollbar': {
           width: '8px'
         },

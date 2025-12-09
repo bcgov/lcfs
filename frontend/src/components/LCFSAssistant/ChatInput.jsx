@@ -94,7 +94,7 @@ const ChatInput = ({ onSend, disabled }) => {
             py: 1,
             mb: 1,
             bgcolor: 'rgba(211, 47, 47, 0.08)',
-            borderRadius: '12px',
+            borderRadius: '8px',
             border: '1px solid rgba(211, 47, 47, 0.2)'
           }}
         >
@@ -137,9 +137,11 @@ const ChatInput = ({ onSend, disabled }) => {
           minRows={3}
           maxRows={4}
           placeholder={
-            voice.isListening
-              ? 'Speak now...'
-              : 'Ask a question or click the microphone'
+            disabled
+              ? 'Generating response...'
+              : voice.isListening
+                ? 'Speak now...'
+                : 'Ask a question or click the microphone'
           }
           value={input}
           onChange={handleChange}
@@ -148,20 +150,20 @@ const ChatInput = ({ onSend, disabled }) => {
           aria-label="Chat message input"
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: '16px',
+              borderRadius: '8px',
               bgcolor: voice.isListening ? 'rgba(211, 47, 47, 0.02)' : 'white',
-              fontSize: '0.9rem',
+              fontSize: '0.875rem',
               paddingBottom: '32px',
               transition: 'all 0.3s ease',
               '& fieldset': {
-                borderColor: voice.isListening ? '#d32f2f' : '#666',
+                borderColor: voice.isListening ? '#d32f2f' : '#d1d5db',
                 transition: 'border-color 0.3s ease'
               },
               '&:hover fieldset': {
-                borderColor: voice.isListening ? '#d32f2f' : '#666'
+                borderColor: voice.isListening ? '#d32f2f' : '#9ca3af'
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#999'
+                borderColor: '#6b7280'
               }
             }
           }}
@@ -181,7 +183,7 @@ const ChatInput = ({ onSend, disabled }) => {
             variant="caption"
             sx={{
               fontSize: '0.75rem',
-              color: '#999'
+              color: '#6b7280'
             }}
           >
             {input.length} / {maxLength}
@@ -207,21 +209,20 @@ const ChatInput = ({ onSend, disabled }) => {
                       bgcolor: voice.isListening
                         ? 'rgba(211, 47, 47, 0.1)'
                         : 'transparent',
-                      color: voice.isListening ? '#d32f2f' : '#666',
+                      color: voice.isListening ? '#d32f2f' : '#4b5563',
                       border: voice.isListening
                         ? '1px solid rgba(211, 47, 47, 0.3)'
                         : '1px solid transparent',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       transition: 'all 0.2s ease',
                       '&:hover': {
                         bgcolor: voice.isListening
                           ? 'rgba(211, 47, 47, 0.15)'
                           : 'rgba(0, 0, 0, 0.04)',
-                        color: voice.isListening ? '#c62828' : '#333',
-                        transform: 'scale(1.05)'
+                        color: voice.isListening ? '#c62828' : '#1f2937'
                       },
                       '&:disabled': {
-                        color: '#ccc',
+                        color: '#9ca3af',
                         bgcolor: 'transparent',
                         border: '1px solid transparent'
                       }
@@ -244,14 +245,17 @@ const ChatInput = ({ onSend, disabled }) => {
                   disabled={!input.trim() || disabled}
                   aria-label="Send message"
                   sx={{
-                    p: 0.5,
-                    color: input.trim() && !disabled ? '#666' : '#ccc',
+                    p: 0.75,
+                    bgcolor: input.trim() && !disabled ? '#003366' : '#e5e7eb',
+                    color: input.trim() && !disabled ? '#fff' : '#9ca3af',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: 'transparent',
-                      color: input.trim() && !disabled ? '#333' : '#ccc'
+                      bgcolor: input.trim() && !disabled ? '#002244' : '#e5e7eb'
                     },
                     '&:disabled': {
-                      color: '#ccc'
+                      bgcolor: '#e5e7eb',
+                      color: '#9ca3af'
                     }
                   }}
                   size="small"

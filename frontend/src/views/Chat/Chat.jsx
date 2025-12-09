@@ -42,7 +42,10 @@ export const Chat = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Container
+      maxWidth="lg"
+      sx={{ py: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}
+    >
       <Paper
         elevation={2}
         sx={{
@@ -61,7 +64,11 @@ export const Chat = () => {
             minHeight: '64px !important'
           }}
         >
-          <BCTypography variant="h6" component="h1" sx={{ flexGrow: 1, color: 'inherit' }}>
+          <BCTypography
+            variant="h6"
+            component="h1"
+            sx={{ flexGrow: 1, color: 'inherit' }}
+          >
             LCFS Assistant
           </BCTypography>
 
@@ -112,8 +119,8 @@ export const Chat = () => {
       {/* Footer */}
       <Box sx={{ mt: 2, textAlign: 'center' }}>
         <BCTypography variant="caption" color="textSecondary">
-          LCFS Assistant can help with accounting, compliance, and regulatory questions.
-          Information may not always be accurate.
+          LCFS Assistant can help with accounting, compliance, and regulatory
+          questions. Information may not always be accurate.
         </BCTypography>
       </Box>
     </Container>

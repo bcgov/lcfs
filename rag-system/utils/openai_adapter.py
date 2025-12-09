@@ -2,7 +2,10 @@
 
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from pathlib import Path
+from typing import Dict, Any, List, Optional, Tuple, Set
+from urllib.parse import urljoin
+
 try:
     from .progress_logging import log_progress
 except ImportError:
@@ -17,7 +20,10 @@ def run_openai_chat(
     relevance_threshold: float = 0.8,
     fallback_message: str = "I don't have information about that topic.",
     model_name: str = "rag-pipeline",
-    debug_logging: bool = True
+    debug_logging: bool = True,
+    doc_base_url: Optional[str] = None,
+    max_citations: int = 5,
+    append_sources_to_answer: bool = True,
 ) -> Dict[str, Any]:
     """
     Process OpenAI-format chat messages through a Haystack RAG pipeline.
@@ -31,6 +37,9 @@ def run_openai_chat(
         fallback_message: Message to return when no relevant docs found
         model_name: Model name for response metadata
         debug_logging: Whether to log debug information
+        doc_base_url: Optional base URL to build citation links
+        max_citations: Maximum number of citations to return
+        append_sources_to_answer: Whether to append a human-readable "Sources" section
 
     Returns:
         OpenAI-compatible chat completion response
@@ -54,7 +63,7 @@ def run_openai_chat(
             },
             include_outputs_from={
                 "reranker",  # Get the final documents after reranking
-            }
+            },
         )
 
         # Check if any relevant documents were found
@@ -65,23 +74,40 @@ def run_openai_chat(
             log_progress(f"Query: {query}")
             log_progress(f"Found {len(final_docs)} documents")
             for i, doc in enumerate(final_docs):
-                score = getattr(doc, 'score', 'no_score')
-                log_progress(f"Doc {i}: score={score}, content_preview={doc.content[:100]}...")
+                score = getattr(doc, "score", "no_score")
+                log_progress(
+                    f"Doc {i}: score={score}, content_preview={doc.content[:100]}..."
+                )
 
         # Filter by relevance threshold
-        relevant_docs = [doc for doc in final_docs if getattr(doc, 'score', 0) > relevance_threshold]
+        relevant_docs = [
+            doc for doc in final_docs if getattr(doc, "score", 0) > relevance_threshold
+        ]
 
         if debug_logging:
-            log_progress(f"Docs with score > {relevance_threshold}: {len(relevant_docs)}")
+            log_progress(
+                f"Docs with score > {relevance_threshold}: {len(relevant_docs)}"
+            )
 
         if not relevant_docs:
             return _create_fallback_response(fallback_message, messages, model_name)
 
         # Extract the answer
-        answer = result.get("generator", {}).get("replies", ["No response generated"])[0]
+        answer = result.get("generator", {}).get("replies", ["No response generated"])[
+            0
+        ]
+
+        citations = _build_citation_entries(relevant_docs, doc_base_url, max_citations)
+        processed_answer = (
+            _append_citations_to_answer(answer, citations)
+            if append_sources_to_answer
+            else answer
+        )
 
         # Format as OpenAI response
-        return _create_success_response(answer, messages, model_name)
+        return _create_success_response(
+            processed_answer, messages, model_name, citations
+        )
 
     except Exception as e:
         # Return error in OpenAI format
@@ -95,9 +121,7 @@ def run_openai_chat(
 
 
 def _create_fallback_response(
-    fallback_message: str,
-    messages: List[Dict[str, str]],
-    model_name: str
+    fallback_message: str, messages: List[Dict[str, str]], model_name: str
 ) -> Dict[str, Any]:
     """Create a fallback response when no relevant documents are found."""
     completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
@@ -110,16 +134,15 @@ def _create_fallback_response(
         "choices": [
             {
                 "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": fallback_message
-                },
+                "message": {"role": "assistant", "content": fallback_message},
                 "finish_reason": "stop",
             }
         ],
         "usage": {
             "prompt_tokens": estimate_tokens(messages),
-            "completion_tokens": estimate_tokens([{"role": "assistant", "content": fallback_message}]),
+            "completion_tokens": estimate_tokens(
+                [{"role": "assistant", "content": fallback_message}]
+            ),
             "total_tokens": 0,
         },
     }
@@ -128,12 +151,13 @@ def _create_fallback_response(
 def _create_success_response(
     answer: str,
     messages: List[Dict[str, str]],
-    model_name: str
+    model_name: str,
+    citations: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Create a successful response with the generated answer."""
     completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
 
-    return {
+    response = {
         "id": completion_id,
         "object": "chat.completion",
         "created": int(time.time()),
@@ -147,10 +171,17 @@ def _create_success_response(
         ],
         "usage": {
             "prompt_tokens": estimate_tokens(messages),
-            "completion_tokens": estimate_tokens([{"role": "assistant", "content": answer}]),
+            "completion_tokens": estimate_tokens(
+                [{"role": "assistant", "content": answer}]
+            ),
             "total_tokens": 0,  # Will be calculated if needed
         },
     }
+
+    if citations:
+        response["lcfs_metadata"] = {"citations": citations}
+
+    return response
 
 
 def estimate_tokens(messages: List[Dict[str, str]]) -> int:
@@ -246,3 +277,118 @@ def create_assistant_message(content: str) -> Dict[str, str]:
         Formatted assistant message
     """
     return {"role": "assistant", "content": content}
+
+
+def _build_citation_entries(
+    documents: List[Any], base_url: Optional[str], max_items: int
+) -> List[Dict[str, Any]]:
+    """
+    Build a list of citation metadata from retrieved documents.
+    """
+    citations: List[Dict[str, Any]] = []
+    seen: Set[Tuple[str, Optional[str]]] = set()
+
+    for doc in documents:
+        if len(citations) >= max_items:
+            break
+
+        meta = getattr(doc, "meta", {}) or {}
+        title = _derive_citation_title(meta)
+        url = _derive_citation_url(meta, base_url)
+        origin = _extract_origin(meta)
+
+        key = (title, url or origin)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        entry: Dict[str, Any] = {
+            "title": title,
+            "url": url,
+            "origin": origin,
+        }
+
+        score = getattr(doc, "score", None)
+        if isinstance(score, (int, float)):
+            entry["score"] = round(float(score), 4)
+        elif score is not None:
+            entry["score"] = score
+
+        citations.append(entry)
+
+    return citations
+
+
+def _derive_citation_title(meta: Dict[str, Any]) -> str:
+    """Choose the most helpful title for a citation."""
+    title_keys = [
+        "title",
+        "document_title",
+        "filename",
+        "file_name",
+        "display_name",
+    ]
+
+    for key in title_keys:
+        value = meta.get(key)
+        if value:
+            return str(value)
+
+    origin = _extract_origin(meta)
+    if origin:
+        return Path(str(origin)).name
+
+    return "LCFS Reference Document"
+
+
+def _derive_citation_url(
+    meta: Dict[str, Any], base_url: Optional[str]
+) -> Optional[str]:
+    """Resolve the best available URL for a citation."""
+    for key in ("source_url", "document_url", "url"):
+        value = meta.get(key)
+        if value:
+            return str(value)
+
+    origin = _extract_origin(meta)
+    if origin and str(origin).startswith(("http://", "https://")):
+        return str(origin)
+
+    filename = None
+    if meta.get("filename"):
+        filename = meta["filename"]
+    elif meta.get("file_name"):
+        filename = meta["file_name"]
+    elif origin:
+        filename = Path(str(origin)).name
+
+    if base_url and filename:
+        return urljoin(base_url.rstrip("/") + "/", str(filename))
+
+    return None
+
+
+def _extract_origin(meta: Dict[str, Any]) -> Optional[str]:
+    """Extract the raw origin/path for a document."""
+    for key in ("source", "file_path", "path", "document_id"):
+        value = meta.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def _append_citations_to_answer(answer: str, citations: List[Dict[str, Any]]) -> str:
+    """Append a formatted Sources section to the answer."""
+    if not citations:
+        return answer
+
+    lines = ["", "", "Sources:"]
+    for idx, citation in enumerate(citations, 1):
+        label = citation.get("title", "LCFS Reference")
+        url = citation.get("url") or citation.get("origin")
+        if url:
+            lines.append(f"{idx}. {label} — {url}")
+        else:
+            lines.append(f"{idx}. {label}")
+
+    return answer.rstrip() + "\n".join(lines)

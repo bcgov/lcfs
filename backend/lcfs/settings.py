@@ -93,6 +93,7 @@ class Settings(BaseSettings):
     ches_client_secret: str = ""
     ches_sender_email: str = "noreply@gov.bc.ca"
     ches_sender_name: str = "LCFS Notification System"
+    ches_support_email: str = "lcfs@gov.bc.ca"
 
     # Variable for LCFS Assistant Chat
     rag_service_url: str = "http://localhost:1416"

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
-import { Fab, Paper, Fade, Box, useTheme, useMediaQuery } from '@mui/material'
+import { Fab, Paper, Fade, Box, useMediaQuery } from '@mui/material'
 import { Chat as ChatIcon, Close as CloseIcon } from '@mui/icons-material'
 import ChatWindow from './ChatWindow'
 import { useChatAssistant } from '@/hooks/useChatAssistant'
@@ -8,17 +8,18 @@ import { useChatAssistant } from '@/hooks/useChatAssistant'
 const ChatWidget = () => {
   const [open, setOpen] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const [chatKey, setChatKey] = useState(0) // Key to force remount
+  const isMobile = useMediaQuery('(max-width: 650px)')
   const chat = useChatAssistant()
 
   const handleToggle = () => {
-    setOpen(!open)
     if (!open) {
-      // Reset chat when opening
+      // Reset chat when opening - increment key to force remount
       chat.clearMessages()
-      setIsMaximized(false) // Reset to normal size when closing
+      setChatKey((prev) => prev + 1)
+      setIsMaximized(false)
     }
+    setOpen(!open)
   }
 
   return (
@@ -28,19 +29,40 @@ const ChatWidget = () => {
         <Box
           sx={{
             position: 'fixed',
-            bottom: isMobile ? 0 : 150,
-            right: isMobile ? 0 : 24,
-            width: isMobile ? '100%' : isMaximized ? 550 : 400,
-            height: isMobile ? '100vh' : isMaximized ? '85vh' : 600,
-            maxHeight: isMobile
+            // When maximized: center the box in viewport
+            // When normal: bottom-right corner
+            ...(isMaximized && !isMobile
+              ? {
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  bottom: 'auto',
+                  right: 'auto'
+                }
+              : {
+                  bottom: isMobile ? 0 : 137,
+                  right: isMobile ? 0 : 24
+                }),
+            width: isMobile
+              ? '100%'
+              : isMaximized
+                ? 'min(900px, calc(100vw - 80px))'
+                : 430,
+            height: isMobile
               ? '100vh'
               : isMaximized
-                ? '90vh'
-                : 'calc(100vh - 190px)',
+                ? 'min(800px, calc(100vh - 80px))'
+                : 'min(700px, calc(100vh - 180px))',
+            maxHeight: '100vh',
+            maxWidth: '100vw',
             display: open ? 'flex' : 'none',
             zIndex: 1300,
-            borderRadius: isMobile ? 0 : '12px',
-            transition: 'width 0.3s ease, height 0.3s ease'
+            borderRadius: isMobile ? 0 : '8px',
+            transition:
+              'width 0.3s ease, height 0.3s ease, transform 0.3s ease, top 0.3s ease, left 0.3s ease, bottom 0.3s ease, right 0.3s ease',
+            boxShadow: isMaximized
+              ? '0 8px 40px rgba(0, 0, 0, 0.2)'
+              : '0 4px 24px rgba(0, 0, 0, 0.15)'
           }}
         >
           <Paper
@@ -50,13 +72,15 @@ const ChatWidget = () => {
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              borderRadius: isMobile ? 0 : '10.5px',
+              borderRadius: isMobile ? 0 : '8px',
               overflow: 'hidden',
-              boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
+              boxShadow: 'none',
+              border: isMobile ? 'none' : '1px solid #9ca3af',
               bgcolor: 'background.paper'
             }}
           >
             <ChatWindow
+              key={chatKey}
               onClose={handleToggle}
               chat={chat}
               isMaximized={isMaximized}
@@ -66,7 +90,7 @@ const ChatWidget = () => {
         </Box>
       </Fade>
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button - hidden on mobile when chat is open */}
       <Fab
         variant="extended"
         aria-label={open ? 'Close LCFS Assistant' : 'Open LCFS Assistant'}
@@ -76,15 +100,17 @@ const ChatWidget = () => {
           right: 24,
           zIndex: 1400,
           bgcolor: open ? '#003366' : '#fcba19',
-          color: open ? '#fff' : '#000',
-          fontWeight: 'bold',
-          borderRadius: '12px',
+          color: open ? '#fff' : '#1f2937',
+          fontWeight: 500,
+          borderRadius: '8px',
           '&:hover': {
             bgcolor: open ? '#002244' : '#e6a817'
           },
           textTransform: 'none',
-          boxShadow: 3,
-          '@media (max-width: 600px)': {
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          display: open && isMaximized ? 'none' : 'flex',
+          '@media (max-width: 650px)': {
+            display: open ? 'none' : 'flex',
             bottom: 70
           }
         }}

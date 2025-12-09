@@ -1,34 +1,41 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import {
   Box,
   Typography,
-  IconButton,
   Divider,
   Alert,
   AlertTitle,
   Button,
   Link,
-  Tooltip
+  useMediaQuery
 } from '@mui/material'
 import {
-  Close as CloseIcon,
   Chat as ChatIcon,
-  Download as DownloadIcon,
-  DeleteOutline as DeleteIcon,
-  OpenInFull as MaximizeIcon,
-  CloseFullscreen as MinimizeIcon
+  FileDownload as DownloadIcon,
+  RestartAlt as ClearIcon,
+  Headset as SupportIcon,
+  HelpOutline as HelpIcon
 } from '@mui/icons-material'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ChatMessage from './ChatMessage'
 import ChatInput from './ChatInput'
+import EscalationForm from './EscalationForm'
+import {
+  ChatHeader,
+  HeaderIconButton,
+  HeaderDivider
+} from './components/ChatHeader'
 
 const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
+  const isMobile = useMediaQuery('(max-width: 650px)')
   const { data: currentUser } = useCurrentUser()
   const messagesContainerRef = useRef(null)
   const scrollTargetRef = useRef(null)
   const lastUserMessageIdRef = useRef(null)
   const wasLoadingRef = useRef(false)
+  const [showEscalationForm, setShowEscalationForm] = useState(false)
+  const [isLowConfidence, setIsLowConfidence] = useState(false)
 
   const quickQuestions = [
     'How do I download an Excel file?',
@@ -104,6 +111,48 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
     await chat.sendMessage(content)
   }
 
+  const handleOpenEscalation = (lowConfidence = false) => {
+    setIsLowConfidence(lowConfidence)
+    setShowEscalationForm(true)
+  }
+
+  const handleCloseEscalation = () => {
+    setShowEscalationForm(false)
+    setIsLowConfidence(false)
+  }
+
+  // Reset escalation form when messages are cleared (widget reopened)
+  useEffect(() => {
+    if (chat.messages.length === 0) {
+      setShowEscalationForm(false)
+      setIsLowConfidence(false)
+    }
+  }, [chat.messages.length])
+
+  // Show escalation form instead of chat
+  if (showEscalationForm) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          bgcolor: '#f9fafb'
+        }}
+      >
+        <EscalationForm
+          onClose={handleCloseEscalation}
+          onCloseWidget={onClose}
+          conversationHistory={chat.messages}
+          isLowConfidence={isLowConfidence}
+          isMaximized={isMaximized}
+          onToggleMaximize={onToggleMaximize}
+          isMobile={isMobile}
+        />
+      </Box>
+    )
+  }
+
   return (
     <Box
       sx={{
@@ -113,161 +162,36 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          py: 0.5,
-          px: 1.5,
-          bgcolor: '#fcba19',
-          color: '#000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography
-            variant="h6"
-            component="h1"
-            sx={{
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <ChatIcon style={{ minWidth: 22, minHeight: 22 }} />
-            </span>
-            LCFS Assistant
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {/* Conversation actions */}
-          <Tooltip
-            title="Download conversation"
-            placement="bottom"
-            arrow
-            disableInteractive
-            leaveDelay={0}
-          >
-            <span>
-              <IconButton
-                size="small"
+      <ChatHeader
+        title="LCFS Assistant"
+        icon={ChatIcon}
+        bgcolor="#fcba19"
+        isMaximized={isMaximized}
+        isMobile={isMobile}
+        onToggleMaximize={onToggleMaximize}
+        onClose={onClose}
+        rightActions={
+          chat.messages.length > 0 && (
+            <>
+              <HeaderIconButton
+                icon={DownloadIcon}
                 onClick={handleDownloadConversation}
-                disabled={chat.messages.length === 0}
-                sx={{
-                  color: '#000',
-                  opacity: chat.messages.length === 0 ? 0.3 : 1,
-                  transition: 'background-color 0.2s, opacity 0.2s',
-                  '&:hover': {
-                    bgcolor: 'rgba(0, 0, 0, 0.08)'
-                  },
-                  '&:disabled': {
-                    opacity: 0.3
-                  }
-                }}
-                aria-label="Download conversation"
-              >
-                <DownloadIcon style={{ fontSize: 20 }} />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip
-            title="Clear conversation"
-            placement="bottom"
-            arrow
-            disableInteractive
-            leaveDelay={0}
-          >
-            <span>
-              <IconButton
-                size="small"
+                tooltip="Download conversation"
+                ariaLabel="Download conversation"
+              />
+              <HeaderIconButton
+                icon={ClearIcon}
                 onClick={handleClearConversation}
-                disabled={chat.messages.length === 0}
-                sx={{
-                  color: '#000',
-                  opacity: chat.messages.length === 0 ? 0.3 : 1,
-                  transition: 'background-color 0.2s, opacity 0.2s',
-                  '&:hover': {
-                    bgcolor: 'rgba(0, 0, 0, 0.08)'
-                  },
-                  '&:disabled': {
-                    opacity: 0.3
-                  }
-                }}
-                aria-label="Clear conversation"
-              >
-                <DeleteIcon style={{ fontSize: 20 }} />
-              </IconButton>
-            </span>
-          </Tooltip>
+                tooltip="Clear conversation"
+                ariaLabel="Clear conversation"
+              />
+              <HeaderDivider />
+            </>
+          )
+        }
+      />
 
-          {/* Divider */}
-          <Box
-            sx={{
-              width: '1px',
-              height: '20px',
-              bgcolor: 'rgba(0, 0, 0, 0.2)',
-              mx: 0.5
-            }}
-          />
-
-          {/* Window controls */}
-          <Tooltip
-            title={isMaximized ? 'Minimize window' : 'Maximize window'}
-            placement="bottom"
-            arrow
-            disableInteractive
-            leaveDelay={0}
-          >
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.currentTarget.blur() // Remove focus to hide tooltip
-                onToggleMaximize()
-              }}
-              sx={{
-                color: '#000',
-                transition: 'background-color 0.2s',
-                '&:hover': {
-                  bgcolor: 'rgba(0, 0, 0, 0.08)'
-                }
-              }}
-              aria-label={isMaximized ? 'Minimize window' : 'Maximize window'}
-            >
-              {isMaximized ? (
-                <MinimizeIcon style={{ fontSize: 20 }} />
-              ) : (
-                <MaximizeIcon style={{ fontSize: 20 }} />
-              )}
-            </IconButton>
-          </Tooltip>
-          <Tooltip
-            title="Close assistant"
-            placement="bottom"
-            arrow
-            disableInteractive
-            leaveDelay={0}
-          >
-            <IconButton
-              size="small"
-              onClick={onClose}
-              sx={{
-                color: '#000',
-                transition: 'background-color 0.2s',
-                '&:hover': {
-                  bgcolor: 'rgba(0, 0, 0, 0.08)'
-                }
-              }}
-              aria-label="Close chat"
-            >
-              <CloseIcon style={{ fontSize: 24 }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-
-      <Divider />
+      <Divider sx={{ borderColor: '#e5e7eb' }} />
 
       {/* Messages Area */}
       <Box
@@ -275,30 +199,45 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
         sx={{
           flex: 1,
           overflowY: 'auto',
+          scrollBehavior: 'smooth',
           p: 3,
-          bgcolor: '#fafafa'
+          bgcolor: '#f9fafb'
         }}
       >
         {chat.messages.length === 0 && !chat.isLoading && (
-          <Box>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              height: '100%',
+              minHeight: '100%'
+            }}
+          >
             {/* Combined Welcome Box */}
             <Box
               sx={{
                 p: 2.5,
                 mb: 2,
-                border: '1px solid #e0e0e0',
-                borderRadius: '12px',
-                bgcolor: 'white'
+                borderRadius: '8px',
+                bgcolor: '#ffffff',
+                border: '1px solid #d1d5db'
               }}
             >
               {/* Greeting */}
-              <Typography variant="body1" sx={{ fontSize: '0.95rem', mb: 2 }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: '0.95rem',
+                  mb: 1.5,
+                  color: '#1f2937'
+                }}
+              >
                 Hello{' '}
                 <strong>
                   {currentUser?.organization?.name ||
                     `${currentUser?.first_name || 'User'}`}
                 </strong>
-                ,
               </Typography>
 
               {/* Assistant Message with Icon */}
@@ -313,24 +252,31 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
               >
                 <Typography
                   variant="body2"
-                  sx={{ lineHeight: 1.6, flex: 1, fontSize: '0.9rem' }}
+                  sx={{
+                    lineHeight: 1.6,
+                    flex: 1,
+                    fontSize: '0.875rem',
+                    color: '#4b5563'
+                  }}
                 >
-                  I can help you with questions about LCFS compliance,
+                  I can assist you with questions about LCFS compliance,
                   reporting, fuel codes, allocation agreements, and navigating
-                  the portal. Feel free to ask me anything!
+                  the portal.
                 </Typography>
                 <Box
                   sx={{
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     borderRadius: '50%',
-                    border: '1.5px solid #000',
+                    bgcolor: '#003366',
+                    color: '#fff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold'
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold',
+                    mt: -3
                   }}
                 >
                   ?
@@ -341,10 +287,10 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
               <Box
                 sx={{
                   display: 'flex',
-                  gap: 1,
+                  gap: 1.5,
                   justifyContent: 'flex-start',
                   pt: 1.5,
-                  borderTop: '1px solid #e0e0e0'
+                  borderTop: '1px solid #e5e7eb'
                 }}
               >
                 <Link
@@ -362,38 +308,61 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
                   |
                 </Typography>
                 <Link
-                  href="https://www2.gov.bc.ca/gov/content/home/get-help-with-government-services"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  component="button"
                   variant="body2"
                   color="primary"
-                  underline="hover"
-                  sx={{ fontSize: '0.875rem' }}
+                  underline="none"
+                  onClick={() => handleOpenEscalation(false)}
+                  sx={{
+                    fontSize: '0.875rem',
+                    cursor: 'pointer'
+                  }}
                 >
                   Support
                 </Link>
               </Box>
             </Box>
 
-            {/* Quick Action Buttons */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* Quick Action Buttons - Stuck to bottom */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75,
+                mt: 'auto'
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  color: '#6b7280',
+                  mb: 0.5,
+                  fontSize: '0.75rem',
+                  fontWeight: 500
+                }}
+              >
+                Suggested questions
+              </Typography>
               {quickQuestions.map((question, index) => (
                 <Button
                   key={index}
-                  variant="outlined"
+                  variant="text"
                   sx={{
                     textTransform: 'none',
-                    borderRadius: '12px',
+                    borderRadius: '6px',
                     py: 1,
-                    px: 2,
-                    border: '1px solid #e0e0e0',
-                    color: 'text.primary',
-                    fontSize: '0.875rem',
+                    px: 1.5,
+                    border: '1px solid #d1d5db',
+                    color: '#1f2937',
+                    fontSize: '0.8125rem',
                     justifyContent: 'flex-start',
-                    bgcolor: 'white',
+                    bgcolor: '#ffffff',
+                    fontWeight: 400,
+                    lineHeight: 1.4,
+                    textAlign: 'left',
                     '&:hover': {
-                      bgcolor: '#f5f5f5',
-                      borderColor: '#d0d0d0'
+                      bgcolor: '#f9fafb',
+                      borderColor: '#9ca3af'
                     }
                   }}
                   onClick={() => handleSendMessage(question)}
@@ -413,6 +382,8 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
             const userMessages = array.filter((m) => m.role === 'user')
             const lastUserMessage = userMessages[userMessages.length - 1]
             const isScrollTarget = message === lastUserMessage
+            const isLastAssistantMessage =
+              message.role === 'assistant' && index === array.length - 1
 
             return (
               <Box
@@ -427,9 +398,205 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
                   onEdit={chat.editMessage}
                   onRegenerate={chat.regenerateResponse}
                 />
+                {/* Show "Not helpful?" option after the last assistant message */}
+                {isLastAssistantMessage && !chat.isLoading && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'flex-start',
+                      mt: 1.5,
+                      mb: 2
+                    }}
+                  >
+                    <Button
+                      variant="text"
+                      startIcon={<SupportIcon style={{ fontSize: 18 }} />}
+                      onClick={() => handleOpenEscalation(true)}
+                      sx={{
+                        textTransform: 'none',
+                        borderRadius: '6px',
+                        py: 1,
+                        px: 1.5,
+                        border: '1px solid #d1d5db',
+                        color: '#1f2937',
+                        fontSize: '0.8125rem',
+                        bgcolor: '#ffffff',
+                        fontWeight: 400,
+                        '& .MuiButton-startIcon': {
+                          mr: 0.5
+                        },
+                        '&:hover': {
+                          bgcolor: '#f9fafb',
+                          borderColor: '#9ca3af'
+                        }
+                      }}
+                    >
+                      Not helpful? Contact support
+                    </Button>
+                  </Box>
+                )}
               </Box>
             )
           })}
+
+        {/* Loading indicator while AI is generating response */}
+        {chat.isLoading && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.5,
+              mb: 2
+            }}
+          >
+            {/* Role label */}
+            <Box sx={{ px: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: '#606060',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Assistant
+              </Typography>
+            </Box>
+
+            {/* Loading box */}
+            <Box
+              sx={{
+                px: 2.5,
+                py: 2,
+                borderRadius: '4px',
+                borderLeft: '4px solid #003366',
+                background: '#ffffff',
+                border: '1px solid #e8e8e8',
+                maxWidth: '85%'
+              }}
+            >
+              {/* Typing indicator */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 0.5,
+                    alignItems: 'center'
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <Box
+                      key={i}
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: '#003366',
+                        animation: `loadingBounce 1.4s ease-in-out ${i * 0.16}s infinite`,
+                        '@keyframes loadingBounce': {
+                          '0%, 80%, 100%': {
+                            transform: 'scale(0.6)',
+                            opacity: 0.4
+                          },
+                          '40%': {
+                            transform: 'scale(1)',
+                            opacity: 1
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#606060',
+                    fontSize: '0.875rem',
+                    ml: 0.5
+                  }}
+                >
+                  Generating response...
+                </Typography>
+              </Box>
+
+              {/* Skeleton lines for content preview */}
+              <Box
+                sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}
+              >
+                {[100, 85, 70].map((width, i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      height: 12,
+                      width: `${width}%`,
+                      borderRadius: '4px',
+                      background:
+                        'linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)',
+                      backgroundSize: '200% 100%',
+                      animation: `shimmer 1.5s ease-in-out ${i * 0.1}s infinite`,
+                      '@keyframes shimmer': {
+                        '0%': { backgroundPosition: '200% 0' },
+                        '100%': { backgroundPosition: '-200% 0' }
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+
+              {/* Skeleton for references */}
+              <Box
+                sx={{
+                  mt: 2.5,
+                  pt: 2,
+                  borderTop: '1px solid #e8e8e8'
+                }}
+              >
+                <Box
+                  sx={{
+                    height: 10,
+                    width: 80,
+                    borderRadius: '4px',
+                    bgcolor: '#e8e8e8',
+                    mb: 1.5
+                  }}
+                />
+                {[1, 2].map((i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 0.75,
+                      pl: 1.25,
+                      borderLeft: '2px solid #e0e0e0'
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        height: 10,
+                        width: `${65 - i * 10}%`,
+                        borderRadius: '4px',
+                        background:
+                          'linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)',
+                        backgroundSize: '200% 100%',
+                        animation: `shimmer 1.5s ease-in-out ${0.3 + i * 0.1}s infinite`
+                      }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        )}
 
         {chat.error && (
           <Alert severity="error" sx={{ mt: 2 }}>
@@ -439,84 +606,36 @@ const ChatWindow = ({ onClose, chat, isMaximized, onToggleMaximize }) => {
         )}
       </Box>
 
-      {/* Loading indicator above input */}
-      {chat.isLoading && (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-start',
-            alignItems: 'center',
-            py: 2,
-            px: 3,
-            bgcolor: '#fafafa',
-            borderTop: '1px solid rgba(0, 0, 0, 0.06)'
-          }}
-        >
-          {/* Simple loading indicator */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.25,
-              px: 2,
-              py: 1,
-              bgcolor: 'rgba(0, 0, 0, 0.02)',
-              borderRadius: '12px',
-              border: '1px solid rgba(0, 0, 0, 0.08)'
-            }}
-          >
-            {/* Animated dots */}
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                '@keyframes dotBounce': {
-                  '0%, 60%, 100%': {
-                    transform: 'translateY(0)',
-                    opacity: 0.4
-                  },
-                  '30%': {
-                    transform: 'translateY(-8px)',
-                    opacity: 1
-                  }
-                }
-              }}
-            >
-              {[0, 1, 2].map((i) => (
-                <Box
-                  key={i}
-                  sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    bgcolor: '#667eea',
-                    animation: 'dotBounce 1.4s ease-in-out infinite',
-                    animationDelay: `${i * 0.16}s`,
-                    willChange: 'transform, opacity'
-                  }}
-                />
-              ))}
-            </Box>
-
-            {/* Simple text */}
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: '0.8125rem',
-                color: 'text.secondary',
-                fontWeight: 500
-              }}
-            >
-              Assistant is thinking...
-            </Typography>
-          </Box>
-        </Box>
-      )}
-
-      <Divider />
+      <Divider sx={{ borderColor: '#e5e7eb' }} />
 
       {/* Input Area */}
       <ChatInput onSend={handleSendMessage} disabled={chat.isLoading} />
+
+      {/* Footer with disclaimer */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          py: 1,
+          px: 2,
+          bgcolor: '#f9fafb',
+          borderTop: '1px solid #e5e7eb'
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            color: '#6b7280',
+            fontSize: '0.6rem',
+            textAlign: 'center',
+            fontWeight: 600
+          }}
+        >
+          AI-generated responses may be inaccurate. Please verify important
+          information.
+        </Typography>
+      </Box>
     </Box>
   )
 }
