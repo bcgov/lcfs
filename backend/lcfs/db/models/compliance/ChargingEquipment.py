@@ -1,5 +1,4 @@
 from lcfs.db.base import BaseModel, Auditable, Versioning
-from lcfs.utils.unique_key_generators import next_base36
 from sqlalchemy import (
     Column,
     Double,
@@ -205,12 +204,17 @@ def generate_equipment_number(mapper, connection, target):
         ).scalar_one_or_none()
 
         if max_equipment_number:
-            # Increment from existing base36 string
-            next_seq = next_base36(max_equipment_number, width=3)
+            # Convert to int and increment
+            next_seq = int(max_equipment_number) + 1
         else:
             # First equipment for this site
-            next_seq = next_base36(0, width=3)
+            next_seq = 1
 
-        target.equipment_number = next_seq
+        if next_seq > 999:
+            raise ValueError(
+                "Exceeded maximum equipment numbers (999) for this charging site"
+            )
+
+        target.equipment_number = f"{next_seq:03d}"
     finally:
         session.close()
