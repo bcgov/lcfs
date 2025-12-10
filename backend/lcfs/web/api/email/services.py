@@ -84,7 +84,10 @@ class CHESEmailService:
 
         # Build email payload
         email_payload = self._build_email_payload(
-            recipient_emails, notification_context, email_body
+            recipient_emails,
+            notification_context,
+            email_body,
+            extra_bcc=["lcfs@gov.bc.ca"],
         )
 
         # Send email
@@ -194,7 +197,11 @@ class CHESEmailService:
             raise ValueError(f"Failed to render email template for {template_name}")
 
     def _build_email_payload(
-        self, recipients: List[str], context: Dict[str, Any], body: str
+        self,
+        recipients: List[str],
+        context: Dict[str, Any],
+        body: str,
+        extra_bcc: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         payload = {
             "to": ["donotreply@gov.bc.ca"],
@@ -212,7 +219,10 @@ class CHESEmailService:
         valid_recipients = [email for email in recipients if email]
 
         if valid_recipients:
-            payload["bcc"] = valid_recipients
+            extra = [email for email in (extra_bcc or []) if email]
+            bcc_recipients = valid_recipients + extra
+            # Preserve order while deduplicating
+            payload["bcc"] = list(dict.fromkeys(bcc_recipients))
         else:
             logger.warning("Attempted to send email with no valid BCC recipients.")
 
