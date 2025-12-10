@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
+from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_output
 
 
 async def seed_charging_equipment_statuses(session: AsyncSession):
@@ -111,6 +112,7 @@ async def seed_all_charging_equipment_data(session: AsyncSession):
     await seed_charging_equipment_statuses(session)
     await seed_charging_site_statuses(session)
     await seed_levels_of_equipment(session)
+    await seed_charging_power_output(session)
     print("\n✅ All charging equipment reference data seeded successfully!")
 
 

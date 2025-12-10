@@ -32,6 +32,122 @@ import { useLocationService } from '@/services/locationService'
 // Fix Leaflet icon issue
 fixLeafletIcons()
 
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24
+const DEFAULT_OPERATIONAL_HOURS = 24
+
+const normalizeNumber = (value) => {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+const calculateInclusiveDays = (from, to) => {
+  if (!from || !to) {
+    return null
+  }
+
+  const start = new Date(from)
+  const end = new Date(to)
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null
+  }
+
+  const days = Math.floor((end.getTime() - start.getTime()) / MILLISECONDS_PER_DAY) + 1
+  return days > 0 ? days : null
+}
+
+const calculateLocationMetrics = (locGroup = []) => {
+  const equipmentIds = new Set()
+  const equipmentPower = new Map()
+  let sumOperationalDays = 0
+  let operationalDaySamples = 0
+  let sumKwhUsage = 0
+  let hasUsageData = false
+
+  locGroup.forEach((loc) => {
+    equipmentIds.add(loc.id)
+
+    const operationalDays = calculateInclusiveDays(
+      loc.supplyFromDate,
+      loc.supplyToDate
+    )
+    if (operationalDays !== null) {
+      sumOperationalDays += operationalDays
+      operationalDaySamples += 1
+    }
+
+    const powerOutput = normalizeNumber(loc.powerOutput)
+    if (powerOutput !== null && powerOutput > 0) {
+      equipmentPower.set(loc.id, powerOutput)
+    }
+
+    const kwhUsage = normalizeNumber(loc.kwhUsage)
+    if (kwhUsage !== null) {
+      sumKwhUsage += kwhUsage
+      hasUsageData = true
+    }
+  })
+
+  const equipmentCount = equipmentIds.size
+  const averageOperationalDays =
+    operationalDaySamples > 0
+      ? sumOperationalDays / operationalDaySamples
+      : null
+
+  const averagePowerOutput =
+    equipmentPower.size > 0
+      ? Array.from(equipmentPower.values()).reduce(
+          (sum, value) => sum + value,
+          0
+        ) / equipmentPower.size
+      : null
+
+  const maxCapacity =
+    equipmentCount > 0 &&
+    averageOperationalDays !== null &&
+    averagePowerOutput !== null
+      ? equipmentCount *
+        averagePowerOutput *
+        DEFAULT_OPERATIONAL_HOURS *
+        averageOperationalDays
+      : null
+
+  const reportedKwhUsage = hasUsageData ? sumKwhUsage : null
+
+  const utilization =
+    maxCapacity &&
+    maxCapacity > 0 &&
+    reportedKwhUsage !== null
+      ? (reportedKwhUsage / maxCapacity) * 100
+      : null
+
+  return {
+    equipmentCount,
+    averageOperationalDays,
+    operationalHours: DEFAULT_OPERATIONAL_HOURS,
+    averagePowerOutput,
+    maxCapacity,
+    reportedKwhUsage,
+    utilization
+  }
+}
+
+const formatNumber = (value, options = {}) => {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  return new Intl.NumberFormat('en-CA', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    ...options
+  }).format(value)
+}
+
 const GeoMapping = ({ complianceReportId, data }) => {
   const [locations, setLocations] = useState([])
   const [groupedLocations, setGroupedLocations] = useState({})
@@ -170,6 +286,26 @@ const GeoMapping = ({ complianceReportId, data }) => {
       })
     })
 
+    const locationMetrics = calculateLocationMetrics(locGroup)
+    const equipmentCount =
+      locationMetrics.equipmentCount ??
+      Object.keys(uniqueSupplyUnits).length
+    const formattedAverageOperationalDays = formatNumber(
+      locationMetrics.averageOperationalDays,
+      { maximumFractionDigits: 2 }
+    )
+    const formattedAveragePower = formatNumber(
+      locationMetrics.averagePowerOutput
+    )
+    const formattedMaxCapacity = formatNumber(locationMetrics.maxCapacity)
+    const formattedReportedUsage = formatNumber(
+      locationMetrics.reportedKwhUsage
+    )
+    const formattedUtilization = formatNumber(locationMetrics.utilization, {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0
+    })
+
     return (
       <div style={{ maxWidth: 600 }}>
         <BCTypography
@@ -178,13 +314,50 @@ const GeoMapping = ({ complianceReportId, data }) => {
           gutterBottom
           component="div"
         >
-          {firstLoc.name}
+            {firstLoc.name}
         </BCTypography>
 
         <BCTypography variant="body" component="div" gutterBottom>
-          <strong>Total Supply Units:</strong>{' '}
-          {Object.keys(uniqueSupplyUnits).length}
+          <strong>Number of Equipments (FSE):</strong> {equipmentCount}
         </BCTypography>
+
+        <BCTypography variant="body" mt={1} fontWeight="bold" component="div">
+          Map Location Details
+        </BCTypography>
+        <div style={{ lineHeight: 1.6 }}>
+          <BCTypography variant="body" component="div">
+            <strong>Average operational days:</strong>{' '}
+            {formattedAverageOperationalDays ?? 'N/A'}
+          </BCTypography>
+          <BCTypography variant="body" component="div">
+            <strong>Operational hours (per day):</strong>{' '}
+            {locationMetrics.operationalHours} hrs
+          </BCTypography>
+          <BCTypography variant="body" component="div">
+            <strong>Average power output:</strong>{' '}
+            {formattedAveragePower !== null
+              ? `${formattedAveragePower} kW`
+              : 'N/A'}
+          </BCTypography>
+          <BCTypography variant="body" component="div">
+            <strong>Max value (FSE × power × hours × avg days):</strong>{' '}
+            {formattedMaxCapacity !== null
+              ? `${formattedMaxCapacity} kWh`
+              : 'N/A'}
+          </BCTypography>
+          <BCTypography variant="body" component="div">
+            <strong>Reported kWh usage:</strong>{' '}
+            {formattedReportedUsage !== null
+              ? `${formattedReportedUsage} kWh`
+              : 'N/A'}
+          </BCTypography>
+          <BCTypography variant="body" component="div">
+            <strong>Utilization:</strong>{' '}
+            {formattedUtilization !== null
+              ? `${formattedUtilization}%`
+              : 'N/A'}
+          </BCTypography>
+        </div>
 
         {!isInBC && (
           <BCTypography variant="body" sx={{ color: 'red' }} component="p">

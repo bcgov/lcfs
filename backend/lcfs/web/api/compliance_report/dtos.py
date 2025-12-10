@@ -45,6 +45,10 @@ class FuelSupplyDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     compliance_report_id: int
 
     quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
 
     compliance_units: Optional[float] = None
@@ -72,6 +76,10 @@ class AllocationAgreementDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBa
     transaction_partner: str
     postal_address: str
     quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
 
     transaction_partner_email: Optional[str] = None

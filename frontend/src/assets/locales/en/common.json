@@ -35,7 +35,7 @@
   "login": {
     "loginMessage": "Login with",
     "troubleMessage": "Trouble logging in?",
-    "publicCreditCalculator": "Public - Credit calculator"
+    "publicCreditCalculator": "Public - Compliance unit calculator"
   },
   "layout": {
     "breadCrumbHome": "Home",

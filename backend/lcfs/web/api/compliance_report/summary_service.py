@@ -565,6 +565,7 @@ class ComplianceReportSummaryService:
             )
             # If the summary is locked, Lines 7 and 9 are also locked
             locked_summary.lines_7_and_9_locked = True
+
             return locked_summary
 
         compliance_period_start = compliance_report.compliance_period.effective_date
@@ -1579,7 +1580,7 @@ class ComplianceReportSummaryService:
 
             # Apply the compliance units formula
             compliance_units_sum_q1 += calculate_compliance_units(
-                TCI, EER, RCI, UCI, fuel_supply.q1_quantity, ED
+                TCI, EER, RCI, UCI, fuel_supply.q1_quantity or 0, ED
             )
             compliance_units_sum_q2 += calculate_compliance_units(
                 TCI, EER, RCI, UCI, fuel_supply.q2_quantity or 0, ED

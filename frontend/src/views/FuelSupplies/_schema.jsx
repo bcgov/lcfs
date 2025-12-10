@@ -1191,31 +1191,36 @@ export const changelogCommonColDefs = (
             field: 'q1Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) => highlight && changelogCellStyle(params, 'q1Quantity')
           },
           {
             field: 'q2Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) => highlight && changelogCellStyle(params, 'q2Quantity')
           },
           {
             field: 'q3Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) => highlight && changelogCellStyle(params, 'q3Quantity')
           },
           {
             field: 'q4Quantity',
             minWidth: 150,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
-            valueFormatter: formatNumberWithCommas
+            valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) => highlight && changelogCellStyle(params, 'q4Quantity')
           },
           {
             field: 'totalQuantity',
             minWidth: 160,
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
             valueFormatter: formatNumberWithCommas,
+            cellStyle: (params) => highlight && changelogCellStyle(params, 'totalQuantity'),
             valueGetter: (params) => {
               const data = params.data
               return (

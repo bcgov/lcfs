@@ -4,11 +4,11 @@ import FormView from '@/views/Forms/FormView'
 
 export const publicPageRoutes = [
   {
-    name: 'Credit Calculator',
+    name: 'Compliance unit calculator',
     key: 'credit-calculator',
     path: ROUTES.CREDIT_CALCULATOR,
     element: <CreditCalculator />,
-    handle: { title: 'Credit Calculator' }
+    handle: { title: 'Compliance unit calculator' }
   },
   {
     name: 'Form View',

@@ -216,8 +216,10 @@ beforeAll(async () => {
       })
     },
     BCFormRadio: ({ name, control, options = [], ...props }) => {
-      return React.createElement('div', { 'data-test': `${name}-radio-group` }, 
-        options.map((option, index) => 
+      return React.createElement(
+        'div',
+        { 'data-test': `${name}-radio-group` },
+        options.map((option, index) =>
           React.createElement('input', {
             key: `${name}-${index}`,
             type: 'radio',

@@ -26,11 +26,20 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   }
 }))
 
-vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
-  finalSupplyEquipmentSummaryColDefs: vi.fn(() => [
+const mockFinalSupplyEquipmentSummaryColDefs = vi.hoisted(() =>
+  vi.fn(() => [
     { field: 'organizationName', headerName: 'Organization' },
     { field: 'serialNbr', headerName: 'Serial Number' }
   ])
+)
+
+vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
+  finalSupplyEquipmentSummaryColDefs: mockFinalSupplyEquipmentSummaryColDefs
+}))
+
+const mockUseCurrentUser = vi.fn()
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => mockUseCurrentUser()
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
@@ -143,6 +152,9 @@ describe('FinalSupplyEquipmentSummary', () => {
     vi.clearAllMocks()
     gridViewerProps = undefined
     hookCalls = []
+    mockUseCurrentUser.mockReturnValue({
+      hasAnyRole: () => false
+    })
     mockUseGetFSEReportingList.mockImplementation((...args) => {
       hookCalls.push(args)
       return createQueryData()
@@ -167,12 +179,27 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       expect(screen.getByTestId('form-control-label')).toBeInTheDocument()
       expect(screen.getByText('Show Map')).toBeInTheDocument()
+      expect(
+        mockFinalSupplyEquipmentSummaryColDefs
+      ).toHaveBeenCalledWith(expect.any(Function), COMPLIANCE_REPORT_STATUSES.DRAFT, false)
     })
 
     it('renders with different status', () => {
       renderComponent({ status: COMPLIANCE_REPORT_STATUSES.SUBMITTED })
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
+  })
+
+  it('passes IDIR flag when current user has government role', () => {
+    mockUseCurrentUser.mockReturnValue({
+      hasAnyRole: () => true
+    })
+    renderComponent()
+    expect(mockFinalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
+      expect.any(Function),
+      COMPLIANCE_REPORT_STATUSES.DRAFT,
+      true
+    )
   })
 
   describe('PaginatedData Logic', () => {

@@ -29,6 +29,7 @@ from lcfs.db.models.compliance import (
     FinalSupplyEquipment,
     ChargingEquipmentStatus,
     ComplianceReportChargingEquipment,
+    ChargingPowerOutput,
 )
 from lcfs.db.models.compliance.ChargingEquipment import (
     ChargingEquipment,
@@ -592,6 +593,7 @@ class FinalSupplyEquipmentRepository:
                 ChargingSite.latitude,
                 ChargingSite.longitude,
                 LevelOfEquipment.name.label("level_of_equipment"),
+                ChargingEquipment.level_of_equipment_id,
                 ChargingEquipment.ports,
                 intended_uses_subquery.label("intended_uses"),
                 intended_users_subquery.label("intended_users"),
@@ -680,14 +682,11 @@ class FinalSupplyEquipmentRepository:
         stmt = (
             select(
                 ChargingEquipment.charging_equipment_id,
-                func.max(ChargingEquipment.version).label(
-                    "charging_equipment_version"
-                ),
+                func.max(ChargingEquipment.version).label("charging_equipment_version"),
             )
             .join(
                 ChargingSite,
-                ChargingEquipment.charging_site_id
-                == ChargingSite.charging_site_id,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
             )
             .join(
                 ChargingEquipmentStatus,
@@ -842,6 +841,48 @@ class FinalSupplyEquipmentRepository:
         data = result.fetchall()
 
         return data, total or 0
+
+    @repo_handler
+    async def get_charging_power_output(
+        self,
+        level_of_equipment_id: int | None,
+        intended_use_names: list[str] | None,
+        intended_user_names: list[str] | None,
+    ) -> float | None:
+        """
+        Retrieve the prioritized charging power output for the supplied identifiers.
+        """
+        if (
+            not level_of_equipment_id
+            or not intended_user_names
+            or len(intended_user_names) == 0
+        ):
+            return None
+
+        stmt = (
+            select(ChargingPowerOutput.charger_power_output)
+            .join(
+                EndUserType,
+                ChargingPowerOutput.end_user_type_id == EndUserType.end_user_type_id,
+            )
+            .outerjoin(
+                EndUseType,
+                and_(
+                    ChargingPowerOutput.end_use_type_id == EndUseType.end_use_type_id,
+                    EndUseType.type.in_(intended_use_names or []),
+                ),
+            )
+            .where(
+                and_(
+                    ChargingPowerOutput.level_of_equipment_id == level_of_equipment_id,
+                    EndUserType.type_name.in_(intended_user_names or []),
+                )
+            )
+            .order_by(asc(ChargingPowerOutput.display_order))
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none() or 1
 
     @repo_handler
     async def create_fse_reporting_batch(self, data) -> dict:

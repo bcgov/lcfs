@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from unittest.mock import MagicMock, AsyncMock
 
@@ -36,7 +36,9 @@ def mock_repo():
     """
     Return an AsyncMock for the FinalSupplyEquipmentRepository.
     """
-    return AsyncMock()
+    repo = AsyncMock()
+    repo.get_charging_power_output.return_value = None
+    return repo
 
 
 @pytest.fixture
@@ -399,6 +401,9 @@ async def test_get_fse_reporting_list_paginated_success(
             "latitude": 49.2827,
             "longitude": -123.1207,
             "level_of_equipment": "Level 2",
+            "level_of_equipment_id": 22,
+            "intended_uses": ["LDV"],
+            "intended_users": ["Residential"],
         }
     ]
     mock_repo.get_fse_reporting_list_paginated.return_value = (mock_data, 1)
@@ -413,6 +418,66 @@ async def test_get_fse_reporting_list_paginated_success(
     assert "pagination" in result
     assert result["pagination"].total == 1
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(1, pagination, "uuid-1234", "current")
+    mock_repo.get_charging_power_output.assert_awaited_once_with(
+        22,
+        ["LDV"],
+        ["Residential"],
+    )
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_list_paginated_calculates_capacity(
+    service, mock_repo, mock_comp_report_repo
+):
+    mock_row = MagicMock()
+    mock_row._mapping = {
+        "charging_equipment_id": 1,
+        "charging_equipment_version": 1,
+        "charging_equipment_compliance_id": 10,
+        "charging_site_id": 1,
+        "serial_number": "SER123",
+        "manufacturer": "TestMfg",
+        "model": "Model X",
+        "site_name": "Test Site",
+        "street_address": "123 Test St",
+        "city": "Test City",
+        "postal_code": "V1A 1A1",
+        "latitude": 49.2827,
+        "longitude": -123.1207,
+        "level_of_equipment": "Level 2",
+        "ports": None,
+        "supply_from_date": datetime(2024, 1, 1),
+        "supply_to_date": datetime(2024, 1, 5),
+        "kwh_usage": 4800,
+        "compliance_notes": None,
+        "equipment_notes": None,
+        "compliance_report_id": 10,
+        "compliance_report_group_uuid": "uuid-1234",
+        "organization_name": "Org Name",
+        "registration_number": "REG-001",
+        "intended_uses": ["Light duty motor vehicles"],
+        "intended_users": ["Residential"],
+        "intended_uses": ["Light duty motor vehicles"],
+        "intended_users": ["Residential"],
+        "level_of_equipment_internal_id": 303,
+        "deleted": None,
+    }
+    mock_repo.get_fse_reporting_list_paginated.return_value = ([mock_row], 1)
+    mock_repo.get_charging_power_output.return_value = 50
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        compliance_report_group_uuid="uuid-1234"
+    )
+
+    pagination = MagicMock(page=1, size=10, filters=[])
+    result = await service.get_fse_reporting_list_paginated(1, pagination, 10, "summary")
+
+    equipment = result["finalSupplyEquipments"][0]
+    assert equipment.capacity_utilization_percent == 80.0
+    mock_repo.get_charging_power_output.assert_awaited_once_with(
+        303,
+        ["Light duty motor vehicles"],
+        ["Residential"],
+    )
 
 
 @pytest.mark.anyio

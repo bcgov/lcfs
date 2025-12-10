@@ -276,9 +276,9 @@ describe('SummaryTable', () => {
 
       const inputs = screen.getAllByTestId('input')
 
-      // Test currency processing (preserves decimals)
+      // Test currency processing (all editable fields are integers - strips decimals when $ is present)
       fireEvent.change(inputs[0], { target: { value: '$123.45' } })
-      expect(inputs[0].value).toBe('123.45') // Should strip $ but keep decimal
+      expect(inputs[0].value).toBe('123') // Should strip $ and decimals (non-numeric + decimal)
     })
 
     it('processes integer field input correctly', () => {
@@ -300,9 +300,9 @@ describe('SummaryTable', () => {
 
       const input = screen.getByTestId('input')
 
-      // Test input processing - component strips invalid characters
+      // Test input processing - component strips non-numeric characters AND decimals
       fireEvent.change(input, { target: { value: '123.45abc' } })
-      expect(input.value).toBe('123.45') // Component strips non-numeric characters
+      expect(input.value).toBe('123') // Component strips non-numeric characters and decimals
     })
 
     it('handles empty string input', () => {
@@ -339,13 +339,13 @@ describe('SummaryTable', () => {
 
       const input = screen.getAllByTestId('input')[0]
 
-      // Enter decimal value
+      // Enter decimal value (preserved during typing if purely numeric)
       fireEvent.change(input, { target: { value: '123.456' } })
       expect(input.value).toBe('123.456')
 
-      // Blur should round to 2 decimal places
+      // Blur should convert to integer (all editable fields are integers)
       fireEvent.blur(input)
-      expect(input.value).toBe('123.46')
+      expect(input.value).toBe('123')
     })
 
     it('calls onCellEditStopped callback on blur', () => {

@@ -1,6 +1,13 @@
 import { useUserStore } from '@/stores/useUserStore'
 import { roles } from '@/constants/roles'
 
+const rawEnvironment = window.lcfs_config.environment ?? ''
+const normalizedEnvironment =
+  typeof rawEnvironment === 'string' ? rawEnvironment.toLowerCase() : ''
+const isProductionEnvironment = ['production', 'prod'].includes(
+  normalizedEnvironment
+)
+
 export function getApiBaseUrl() {
   // Split the hostname
   const hostnameParts = window.location.hostname.split('.')
@@ -50,7 +57,10 @@ export const FEATURE_FLAGS = {
   GOVERNMENT_ADJUSTMENT: 'governmentAdjustment',
   ROLE_SWITCHER: 'roleSwitcher',
   OBFUSCATED_LINKS: 'obfuscatedLinks',
-  REPORTING_2025_ENABLED: 'reporting2025Enabled'
+  REPORTING_2025_ENABLED: 'reporting2025Enabled',
+  MANAGE_CHARGING_SITES: 'manageChargingSites',
+  MANAGE_FSE: 'manageFse',
+  LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock'
 }
 
 export const CONFIG = {
@@ -82,6 +92,14 @@ export const CONFIG = {
       window.lcfs_config.feature_flags.governmentAdjustment ?? false,
     roleSwitcher: window.lcfs_config.feature_flags.roleSwitcher ?? false,
     obfuscatedLinks: window.lcfs_config.feature_flags.obfuscatedLinks ?? false,
-    reporting2025Enabled: window.lcfs_config.feature_flags.reporting2025Enabled ?? false
+    reporting2025Enabled:
+      window.lcfs_config.feature_flags.reporting2025Enabled ?? false,
+    manageChargingSites:
+      window.lcfs_config.feature_flags.manageChargingSites ??
+      !isProductionEnvironment,
+    manageFse:
+      window.lcfs_config.feature_flags.manageFse ?? !isProductionEnvironment,
+    legacySupplementalLock:
+      window.lcfs_config.feature_flags.legacySupplementalLock ?? false
   }
 }
