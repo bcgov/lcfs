@@ -127,13 +127,12 @@ const GovernmentNotificationsCard = () => {
   }
 
   const handleSaveWithEmail = () => {
-    // TODO: Add email sending logic in future task
-    updateMutation.mutate(formData)
+    updateMutation.mutate({ ...formData, send_email: true })
     setShowConfirmDialog(false)
   }
 
   const handleSaveWithoutEmail = () => {
-    updateMutation.mutate(formData)
+    updateMutation.mutate({ ...formData, send_email: false })
     setShowConfirmDialog(false)
   }
 
@@ -165,6 +164,10 @@ const GovernmentNotificationsCard = () => {
       : notification?.notificationType
     const bgColor =
       NOTIFICATION_PILL_COLORS[type] || NOTIFICATION_PILL_COLORS.General
+    const textColor =
+      NOTIFICATION_PILL_TEXT_COLORS[type] ||
+      NOTIFICATION_PILL_TEXT_COLORS.General
+
     return {
       backgroundColor: `${bgColor} !important`,
       '& h2': {

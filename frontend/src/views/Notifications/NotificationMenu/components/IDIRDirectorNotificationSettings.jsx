@@ -3,6 +3,11 @@ import NotificationSettingsForm from './NotificationSettingsForm'
 const IDIRDirectorNotificationSettings = () => {
   // Categories for IDIR Director
   const categories = {
+    'idirDirector.categories.governmentNotifications': {
+      title: 'idirDirector.categories.governmentNotifications.title',
+      IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION:
+        'idirDirector.categories.governmentNotifications.subscription'
+    },
     'idirDirector.categories.transfers': {
       title: 'idirDirector.categories.transfers.title',
       IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION:
