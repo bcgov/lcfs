@@ -6,6 +6,28 @@ import Chip from '@mui/material/Chip'
 import { isNumeric } from '@/utils/formatters'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
+type RouteTitleResolver = (args: {
+  params: Record<string, string | undefined>
+  location: ReturnType<typeof useLocation>
+}) => string | undefined
+
+type RouteHandle = {
+  title?: string | RouteTitleResolver | null
+}
+
+type MatchWithHandle = ReturnType<typeof useMatches>[number] & {
+  handle?: RouteHandle
+  params?: Record<string, string | undefined>
+}
+
+type BreadcrumbDefinition = Record<
+  string,
+  {
+    label: string
+    route: string
+  }
+>
+
 const StyledBreadcrumb = styled(Chip)(({ theme }) => {
   const backgroundColor =
     theme.palette.mode === 'light'
@@ -44,7 +66,12 @@ const Crumb = () => {
   const location = useLocation()
   const matches = useMatches()
   const reportPathRegex = /^\d{4}-Compliance-report$/
-  const { userID, orgID, complianceReportId, compliancePeriod } = useParams()
+  const { userID, orgID, complianceReportId, compliancePeriod } = useParams<{
+    userID?: string
+    orgID?: string
+    complianceReportId?: string
+    compliancePeriod?: string
+  }>()
   const organizationName = useOrganizationPageStore(
     (state) => state.organizationName
   )
@@ -56,7 +83,9 @@ const Crumb = () => {
     `/compliance-reporting/${compliancePeriod}-Compliance-report`
   )
   const pathnames = path.split('/').filter((x) => x)
-  const currentMatch = matches[matches.length - 1]
+  const currentMatch = matches[matches.length - 1] as
+    | MatchWithHandle
+    | undefined
   const handleTitle = currentMatch?.handle?.title
   const title =
     typeof handleTitle === 'function'
@@ -72,7 +101,7 @@ const Crumb = () => {
     : null
 
   // Mapping for custom breadcrumb labels and routes
-  const customBreadcrumbs = {
+  const customBreadcrumbs: BreadcrumbDefinition = {
     admin: { label: 'Administration', route: '/admin' },
     transfers: { label: 'Transactions', route: '/transactions' },
     'compliance-reporting': {
