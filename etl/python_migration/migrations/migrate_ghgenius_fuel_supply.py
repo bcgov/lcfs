@@ -275,7 +275,7 @@ class GHGeniusMigrator:
             # Generate a stable group_uuid based on the TFRS ID
             group_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"ghgenius-{tfrs_id}"))
 
-            # Insert the record
+            # Insert the record (includes action_type for proper versioning)
             insert_query = """
                 INSERT INTO fuel_supply (
                     compliance_report_id,
@@ -299,12 +299,14 @@ class GHGeniusMigrator:
                     create_user,
                     update_user,
                     group_uuid,
-                    version
+                    version,
+                    action_type
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::actiontypeenum
                 )
             """
 
+            # Use Decimal values directly to preserve precision (PostgreSQL Numeric works with Python Decimal)
             params = (
                 compliance_report_id,
                 fuel_category_id,
@@ -313,21 +315,22 @@ class GHGeniusMigrator:
                 None,  # fuel_code_id - not applicable for GHGenius
                 None,  # end_use_id
                 None,  # fuel_type_other
-                float(quantity),
+                quantity,  # Keep as Decimal for precision
                 unit_full_form,
-                float(ci_fuel),  # THE KEY: Use CI Fuel from CSV as effective CI
-                float(energy_density) if energy_density else None,
-                float(eer) if eer else 1.0,
+                ci_fuel,  # THE KEY: Use CI Fuel from CSV as effective CI (keep as Decimal)
+                energy_density,  # Keep as Decimal
+                eer if eer else Decimal("1.0"),
                 None,  # uci
-                float(energy_content) if energy_content else None,
-                float(compliance_units) if compliance_units else None,
-                float(ci_limit) if ci_limit else None,  # target_ci
+                energy_content,  # Keep as Decimal
+                compliance_units,  # Keep as Decimal for precision (important for credit calculations)
+                ci_limit,  # target_ci - keep as Decimal
                 None,  # create_date
                 None,  # update_date
                 "ETL_GHGENIUS",  # create_user - mark as GHGenius ETL
                 "ETL_GHGENIUS",  # update_user
                 group_uuid,
                 1,  # version
+                "CREATE",  # action_type
             )
 
             lcfs_cursor.execute(insert_query, params)

@@ -266,7 +266,7 @@ class NotionalTransferMigrator:
 
             lcfs_cursor.execute(insert_sql, params)
             logger.info(
-                f"Inserted notional_transfer row: recordId={record_id}, action={action}, groupUuid={group_uuid}, version={next_ver}"
+                f"Inserted notional_transfer row: content_key={content_key}, action={action}, groupUuid={group_uuid}, version={next_ver}"
             )
             return True
 
@@ -366,6 +366,17 @@ class NotionalTransferMigrator:
                                             lcfs_cursor, lcfs_cr_id, new_data, "UPDATE", content_key
                                         ):
                                             total_processed += 1
+
+                            # CRITICAL: Handle records that were DELETED in this supplemental
+                            # Find records that existed in the previous report but are NOT in this report
+                            deleted_keys = set(previous_records.keys()) - set(current_records.keys())
+                            for deleted_key in deleted_keys:
+                                old_data = previous_records[deleted_key]
+                                logger.info(f"Record removed in supplemental, inserting DELETE: {deleted_key}")
+                                if self.insert_version_row(
+                                    lcfs_cursor, lcfs_cr_id, old_data, "DELETE", deleted_key
+                                ):
+                                    total_processed += 1
 
                             # Update previousRecords for the next version
                             previous_records = current_records

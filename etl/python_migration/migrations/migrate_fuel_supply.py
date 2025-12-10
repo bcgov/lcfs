@@ -769,22 +769,25 @@ class FuelSupplyMigrator:
                 )
                 return False
 
-            # Insert into fuel_supply table
+            # Insert into fuel_supply table (includes action_type for proper versioning)
             insert_query = """
                 INSERT INTO fuel_supply (
                     compliance_report_id, fuel_category_id, fuel_type_id, provision_of_the_act_id,
                     fuel_code_id, end_use_id, fuel_type_other,
                     quantity, units, ci_of_fuel, energy_density,
                     eer, uci, energy, compliance_units, target_ci, create_date, update_date,
-                    create_user, update_user, group_uuid, version
+                    create_user, update_user, group_uuid, version, action_type
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::actiontypeenum
                 )
             """
 
             # Extract "other" fields - only use fuel_type_other since that's the only one that exists
             fuel_type_other = record.get("fuel_type_other")
-            
+
+            # Determine action_type based on version
+            action_type = "CREATE" if version == 1 else "UPDATE"
+
             lcfs_cursor.execute(
                 insert_query,
                 (
@@ -810,6 +813,7 @@ class FuelSupplyMigrator:
                     "ETL",  # update_user
                     group_uuid,
                     version,
+                    action_type,
                 ),
             )
 
@@ -971,8 +975,10 @@ class FuelSupplyMigrator:
             # Process each organization/period group with its own logical_records dictionary
             for (org_id, period_id), group_reports in report_groups.items():
                 logical_records = {}  # Reset for each organization + period combination
+                previous_report_keys = set()  # Track keys from previous report for DELETE detection
+                total_records_deleted = 0  # Track deleted records
                 logger.info(f"Processing organization {org_id}, period {period_id} with {len(group_reports)} reports")
-                
+
                 for report_data in group_reports:
                     compliance_report_id, legacy_id, org_id, period_id, version = report_data
                     total_reports_processed += 1
@@ -983,8 +989,8 @@ class FuelSupplyMigrator:
 
                     try:
                         # Process this compliance report
-                        report_stats = self._process_single_compliance_report(
-                            compliance_report_id, legacy_id, logical_records
+                        report_stats, current_report_keys = self._process_single_compliance_report(
+                            compliance_report_id, legacy_id, logical_records, previous_report_keys
                         )
 
                         # Update counters
@@ -993,10 +999,16 @@ class FuelSupplyMigrator:
                         processed_count += report_stats["records_processed"]
                         total_records_processed += report_stats["records_processed"]
                         total_records_skipped += report_stats["records_skipped"]
+                        total_records_deleted += report_stats.get("records_deleted", 0)
                         total_errors += report_stats["errors"]
 
                         if report_stats["records_found"] == 0:
                             reports_with_no_records += 1
+
+                        # Update previous_report_keys for next iteration
+                        # This is the set of records that should exist in the next report
+                        # (excludes already deleted records)
+                        previous_report_keys = current_report_keys
 
                     except Exception as e:
                         total_errors += 1
@@ -1004,6 +1016,9 @@ class FuelSupplyMigrator:
                             f"Error processing compliance report {compliance_report_id}: {e}"
                         )
                         continue
+
+                if total_records_deleted > 0:
+                    logger.info(f"Org {org_id}, Period {period_id}: Deleted {total_records_deleted} records removed in supplementals")
 
             # Enhanced summary logging
             logger.info("=== MIGRATION SUMMARY ===")
@@ -1054,15 +1069,27 @@ class FuelSupplyMigrator:
                 lcfs_cursor.close()
 
     def _process_single_compliance_report(
-        self, compliance_report_id, legacy_id, logical_records
+        self, compliance_report_id, legacy_id, logical_records, previous_report_keys
     ):
-        """Process a single compliance report and return statistics"""
+        """Process a single compliance report and return statistics.
+
+        Args:
+            compliance_report_id: LCFS compliance report ID
+            legacy_id: TFRS legacy ID
+            logical_records: Dict tracking all logical records across versions
+            previous_report_keys: Set of record keys that were active in the previous report
+
+        Returns:
+            Tuple of (stats dict, current_report_keys set)
+        """
         stats = {
             "records_found": 0,
             "records_processed": 0,
             "records_skipped": 0,
+            "records_deleted": 0,
             "errors": 0,
         }
+        current_report_keys = set()
 
         # Use separate connections for TFRS and LCFS
         with get_source_connection() as tfrs_conn, get_destination_connection() as lcfs_conn:
@@ -1079,9 +1106,13 @@ class FuelSupplyMigrator:
                     f"Successfully fetched {len(report_records)} records for legacy_id {legacy_id}"
                 )
 
-                # Process each fuel supply record
+                # Process each fuel supply record and track which keys are present
                 for record in report_records:
                     try:
+                        # Generate the record key for tracking
+                        record_key = self.generate_logical_record_key(record)
+                        current_report_keys.add(record_key)
+
                         # Process individual record
                         if self._process_individual_record(
                             record, compliance_report_id, logical_records, lcfs_cursor
@@ -1093,6 +1124,29 @@ class FuelSupplyMigrator:
                         stats["errors"] += 1
                         logger.error(f"Error processing individual record: {e}")
                         continue
+
+                # CRITICAL: Handle records that were DELETED in this supplemental
+                # Find records that existed in the previous report but are NOT in this report
+                if previous_report_keys:
+                    deleted_keys = previous_report_keys - current_report_keys
+                    for deleted_key in deleted_keys:
+                        if deleted_key in logical_records:
+                            logical_record = logical_records[deleted_key]
+                            # Only insert DELETE if not already deleted
+                            if logical_record.get("is_deleted", False):
+                                logger.debug(f"Record already deleted: {deleted_key}")
+                                continue
+
+                            logger.info(f"Record removed in supplemental, inserting DELETE: {deleted_key}")
+                            if self.insert_delete_record(
+                                lcfs_cursor, compliance_report_id, logical_record
+                            ):
+                                # Update tracking to mark as deleted and increment version
+                                logical_record["current_version"] += 1
+                                logical_record["is_deleted"] = True
+                                stats["records_deleted"] += 1
+                            else:
+                                stats["errors"] += 1
 
                 # Commit the transaction for this compliance report
                 lcfs_conn.commit()
@@ -1106,7 +1160,7 @@ class FuelSupplyMigrator:
                 tfrs_cursor.close()
                 lcfs_cursor.close()
 
-        return stats
+        return stats, current_report_keys
 
     def _process_individual_record(
         self, record, compliance_report_id, logical_records, lcfs_cursor
@@ -1222,7 +1276,7 @@ class FuelSupplyMigrator:
         # Extract full records for comparison
         new_full = new_data.get("_full_record", new_data)
         old_full = old_data.get("_full_record", old_data)
-        
+
         # Compare the meaningful data fields (excluding metadata)
         data_fields = [
             "quantity",
@@ -1244,6 +1298,92 @@ class FuelSupplyMigrator:
                 return True
 
         return False
+
+    def insert_delete_record(
+        self,
+        lcfs_cursor,
+        compliance_report_id: int,
+        logical_record: Dict,
+    ) -> bool:
+        """Insert a DELETE action record for a fuel supply that was removed in a supplemental report.
+
+        This is critical for proper handling of supplemental reports where lines are removed.
+        The LCFS app uses action_type=DELETE to filter out removed records.
+        """
+        try:
+            group_uuid = logical_record["group_uuid"]
+            new_version = logical_record["current_version"] + 1
+            last_data = logical_record["last_data"]
+            full_record = last_data.get("_full_record", last_data)
+
+            # Insert a DELETE record with minimal required fields
+            # We copy the key identifying fields from the last version
+            insert_query = """
+                INSERT INTO fuel_supply (
+                    compliance_report_id, fuel_category_id, fuel_type_id, provision_of_the_act_id,
+                    fuel_code_id, end_use_id, fuel_type_other,
+                    quantity, units, ci_of_fuel, energy_density,
+                    eer, uci, energy, compliance_units, target_ci, create_date, update_date,
+                    create_user, update_user, group_uuid, version, action_type
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::actiontypeenum
+                )
+            """
+
+            # We need to look up the IDs again from the last data
+            # Get fuel category
+            fuel_category_lookup = full_record.get("fuel_class") or full_record.get("fuel_category", "")
+            fuel_category_id = self.lookup_fuel_category_id(lcfs_cursor, fuel_category_lookup) if fuel_category_lookup else None
+
+            # Get fuel type
+            fuel_type_lookup = full_record.get("fuel_type", "")
+            fuel_type_id = self.lookup_fuel_type_id(lcfs_cursor, fuel_type_lookup) if fuel_type_lookup else None
+
+            # Get provision
+            provision_lookup = full_record.get("provision_of_the_act_description") or full_record.get("provision_act", "")
+            provision_id = self.lookup_provision_id(lcfs_cursor, provision_lookup) if provision_lookup else None
+
+            # Get unit of measure
+            unit_of_measure = full_record.get("unit_of_measure") or full_record.get("units", "")
+            unit_full_form = self.unit_mapping.get(unit_of_measure, unit_of_measure) if unit_of_measure else None
+
+            lcfs_cursor.execute(
+                insert_query,
+                (
+                    compliance_report_id,
+                    fuel_category_id,
+                    fuel_type_id,
+                    provision_id,
+                    None,  # fuel_code_id
+                    None,  # end_use_id
+                    full_record.get("fuel_type_other"),
+                    0,  # quantity (0 for deleted record)
+                    unit_full_form,
+                    None,  # ci_of_fuel
+                    None,  # energy_density
+                    None,  # eer
+                    None,  # uci
+                    None,  # energy
+                    None,  # compliance_units
+                    None,  # target_ci
+                    None,  # create_date
+                    None,  # update_date
+                    "ETL",  # create_user
+                    "ETL",  # update_user
+                    group_uuid,
+                    new_version,
+                    "DELETE",  # action_type
+                ),
+            )
+
+            logger.info(
+                f"Inserted DELETE record for group_uuid={group_uuid}, version={new_version}"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to insert DELETE record: {e}")
+            return False
 
 
 def main():

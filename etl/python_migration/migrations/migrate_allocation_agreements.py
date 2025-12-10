@@ -407,6 +407,7 @@ class AllocationAgreementMigrator:
                     # proper versioning when the same record appears in multiple reports.
                     for (org_id, period_id), tfrs_ids in report_groups.items():
                         self.record_uuid_map = {}  # Reset for each organization + period combination
+                        previous_record_ids = set()  # Track record IDs from previous report for DELETE detection
                         logger.info(
                             f"Processing organization {org_id}, period {period_id} with {len(tfrs_ids)} reports"
                         )
@@ -435,26 +436,54 @@ class AllocationAgreementMigrator:
                                 tfrs_cursor, tfrs_id
                             )
 
-                            if not allocation_records:
-                                logger.warning(
-                                    f"No allocation agreement records found in source for TFRS report ID: {tfrs_id} (or cr.exclusion_agreement_id was NULL)."
-                                )
-                                continue
+                            current_record_ids = set()
+                            current_records_by_id = {}
 
-                            # Process each allocation agreement record
-                            for record_data in allocation_records:
-                                rec_id = record_data["agreement_record_id"]
-                                logger.info(
-                                    f"Found source allocation record ID: {rec_id} for TFRS report ID: {tfrs_id}. Preparing for LCFS insert."
-                                )
+                            if allocation_records:
+                                # Process each allocation agreement record
+                                for record_data in allocation_records:
+                                    rec_id = record_data["agreement_record_id"]
+                                    current_record_ids.add(rec_id)
+                                    current_records_by_id[rec_id] = record_data
+                                    logger.info(
+                                        f"Found source allocation record ID: {rec_id} for TFRS report ID: {tfrs_id}. Preparing for LCFS insert."
+                                    )
 
-                                # Insert each allocation agreement record with versioning
-                                if self.insert_version_row(
-                                    lcfs_cursor, lcfs_cr_id, record_data, "CREATE"
-                                ):
-                                    total_inserted += 1
-                                else:
-                                    total_skipped += 1
+                                    # Insert each allocation agreement record with versioning
+                                    if self.insert_version_row(
+                                        lcfs_cursor, lcfs_cr_id, record_data, "CREATE"
+                                    ):
+                                        total_inserted += 1
+                                    else:
+                                        total_skipped += 1
+
+                            # CRITICAL: Handle records that were DELETED in this supplemental
+                            # Find records that existed in the previous report but are NOT in this report
+                            deleted_record_ids = previous_record_ids - current_record_ids
+                            for deleted_rec_id in deleted_record_ids:
+                                # We need to get the record UUID from our map
+                                content_key = str(deleted_rec_id)
+                                if content_key in self.record_uuid_map:
+                                    logger.info(f"Record {deleted_rec_id} removed in supplemental, inserting DELETE")
+                                    # Create a minimal record_data for the DELETE
+                                    delete_record_data = {
+                                        "agreement_record_id": deleted_rec_id,
+                                        "responsibility": "Purchased",  # Default, will be looked up
+                                        "fuel_type": "Other",  # Default
+                                        "fuel_category": "Diesel",  # Default
+                                        "postal_address": "",
+                                        "ci_of_fuel": 0,
+                                        "quantity": 0,
+                                        "units": "L",
+                                        "quantity_not_sold": 0,
+                                    }
+                                    if self.insert_version_row(
+                                        lcfs_cursor, lcfs_cr_id, delete_record_data, "DELETE"
+                                    ):
+                                        total_inserted += 1
+
+                            # Update previous record IDs for next iteration
+                            previous_record_ids = current_record_ids
 
                     # Commit all changes
                     lcfs_conn.commit()
