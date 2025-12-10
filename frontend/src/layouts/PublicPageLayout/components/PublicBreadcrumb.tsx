@@ -1,4 +1,3 @@
-import React from 'react'
 import { Breadcrumbs, Typography, Container } from '@mui/material'
 import { Link, useLocation, useMatches } from 'react-router-dom'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
@@ -6,6 +5,23 @@ import { emphasize, styled } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+
+type BreadcrumbConfig = {
+  label: string
+  route?: string
+}
+
+type BreadcrumbMap = Record<string, BreadcrumbConfig>
+
+type RouteHandle = {
+  title?: string
+}
+
+interface PublicBreadcrumbProps {
+  customBreadcrumbs?: BreadcrumbMap
+  rootLabel?: string
+  rootPath?: string
+}
 
 const StyledBreadcrumb = styled(Chip)(({ theme }) => {
   const backgroundColor = theme.palette.common.white
@@ -33,13 +49,16 @@ export const PublicBreadcrumb = ({
   customBreadcrumbs = {},
   rootLabel = 'Public',
   rootPath = '/'
-}) => {
+}: PublicBreadcrumbProps) => {
   const location = useLocation()
   const matches = useMatches()
-  const title = matches[matches.length - 1]?.handle?.title
+  const lastMatchHandle = matches[matches.length - 1]?.handle as
+    | RouteHandle
+    | undefined
+  const title = lastMatchHandle?.title
 
   // Default breadcrumb mappings for public pages
-  const defaultBreadcrumbs = {
+  const defaultBreadcrumbs: BreadcrumbMap = {
     'credit-calculator': {
       label: 'Compliance unit calculator',
       route: '/credit-calculator'
@@ -49,7 +68,7 @@ export const PublicBreadcrumb = ({
 
   const pathnames = location.pathname.split('/').filter((x) => x)
 
-  const getBreadcrumbLabel = (name, index) => {
+  const getBreadcrumbLabel = (name: string, index: number): string => {
     const customCrumb = defaultBreadcrumbs[name]
 
     if (customCrumb) {
@@ -65,7 +84,7 @@ export const PublicBreadcrumb = ({
     return name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
   }
 
-  const getBreadcrumbRoute = (name, index) => {
+  const getBreadcrumbRoute = (name: string, index: number): string => {
     const customCrumb = defaultBreadcrumbs[name]
     return customCrumb?.route || `/${pathnames.slice(0, index + 1).join('/')}`
   }

@@ -98,7 +98,7 @@ class CHESEmailService:
         self,
         notification_type: NotificationTypeEnum,
         notification_context: Dict[str, Any],
-        organization_id: int,
+        organization_id: int = None,
         audience_type: Optional[AudienceType] = None,
     ) -> bool:
         """
