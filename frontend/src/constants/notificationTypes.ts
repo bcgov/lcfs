@@ -53,9 +53,15 @@ export const notificationTypes = {
     'IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION',
   IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION:
     'IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION'
-}
+} as const
+
+export type NotificationType =
+  (typeof notificationTypes)[keyof typeof notificationTypes]
 
 export const notificationChannels = {
   EMAIL: 'EMAIL',
   IN_APP: 'IN_APP'
-}
+} as const
+
+export type NotificationChannel =
+  (typeof notificationChannels)[keyof typeof notificationChannels]
