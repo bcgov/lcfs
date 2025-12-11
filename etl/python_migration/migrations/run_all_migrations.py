@@ -31,6 +31,7 @@ from .migrate_ghgenius_fuel_supply import GHGeniusMigrator
 from .migrate_orphaned_allocation_agreements import OrphanedAllocationAgreementMigrator
 from .migrate_orphaned_compliance_reports import OrphanedComplianceReportMigrator
 from .migrate_restore_timestamps import TimestampRestoreMigrator
+from .migrate_post_cleanup import PostMigrationCleanup
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,10 @@ class MigrationRunner:
             (
                 TimestampRestoreMigrator,
                 "Timestamp Restoration (Post-migration)",
+            ),
+            (
+                PostMigrationCleanup,
+                "Post-Migration Data Cleanup",
             ),
         ]
 
