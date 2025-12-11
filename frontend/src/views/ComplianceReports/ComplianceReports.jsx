@@ -161,7 +161,7 @@ export const ComplianceReports = () => {
         my={{ xs: 1, sm: 1, md: 2 }}
         mx={0}
       >
-        <Role roles={[roles.supplier]}>
+        <Role roles={[roles.compliance_reporting]}>
           <NewComplianceReportButton
             ref={newButtonRef}
             handleNewReport={(option) => {
