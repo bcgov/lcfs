@@ -7,7 +7,7 @@ import { wrapper } from '@/tests/utils/wrapper.jsx'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApiService } from '@/services/useApiService'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')

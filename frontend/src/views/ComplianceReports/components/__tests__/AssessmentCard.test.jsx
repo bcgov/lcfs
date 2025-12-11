@@ -73,7 +73,7 @@ vi.mock('@/hooks/useComplianceReports', () => ({
 }))
 
 // Mock constants
-vi.mock('@/constants/config.js', async (importOriginal) => {
+vi.mock('@/constants/config', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,

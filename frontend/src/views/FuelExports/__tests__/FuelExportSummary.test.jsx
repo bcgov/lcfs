@@ -89,7 +89,7 @@ vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
 }))
 
 // Mock constants
-vi.mock('@/constants/schedules.js', () => ({
+vi.mock('@/constants/schedules', () => ({
   defaultInitialPagination: {
     page: 1,
     size: 10,
@@ -108,7 +108,7 @@ vi.mock('@mui/material/Grid2', () => ({
 }))
 
 // Mock constants
-vi.mock('@/constants/statuses.js', () => ({
+vi.mock('@/constants/statuses', () => ({
   COMPLIANCE_REPORT_STATUSES: {
     DRAFT: 'Draft',
     SUBMITTED: 'Submitted'

@@ -11,9 +11,11 @@ export const roles = {
   signing_authority: 'Signing Authority',
   read_only: 'Read Only',
   beta_tester: 'Beta Tester'
-}
+} as const
 
-export const govRoles = [
+export type RoleName = (typeof roles)[keyof typeof roles]
+
+export const govRoles: RoleName[] = [
   roles.government,
   roles.administrator,
   roles.analyst,
@@ -21,7 +23,7 @@ export const govRoles = [
   roles.director
 ]
 
-export const nonGovRoles = [
+export const nonGovRoles: RoleName[] = [
   roles.supplier,
   roles.manage_users,
   roles.transfers,

@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { scheduleBSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 

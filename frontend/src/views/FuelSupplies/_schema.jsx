@@ -428,6 +428,9 @@ export const fuelSupplyColDefs = (
             ) {
               params.data.isCanadaProduced =
                 singleFuelCode?.fuelProductionFacilityCountry === 'Canada'
+              if (params.data.isCanadaProduced) {
+                params.data.isQ1Supplied = false
+              }
             }
           }
         }
@@ -525,6 +528,9 @@ export const fuelSupplyColDefs = (
         if (params.newValue) {
           params.data.isCanadaProduced =
             params.newValue === 'Yes' || params.newValue === true
+          if (params.data.isCanadaProduced) {
+            params.data.isQ1Supplied = false
+          }
         }
         return true
       },
