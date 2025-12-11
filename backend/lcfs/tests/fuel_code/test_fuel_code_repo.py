@@ -638,7 +638,7 @@ async def test_get_target_carbon_intensity(fuel_code_repo, mock_db):
     # Set up the mock chain correctly
     mock_result = MagicMock()
     mock_result.unique = MagicMock(return_value=mock_result)
-    mock_result.scalar_one = MagicMock(return_value=tci)
+    mock_result.scalar_one_or_none = MagicMock(return_value=tci)
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_target_carbon_intensity(1, "2024")
