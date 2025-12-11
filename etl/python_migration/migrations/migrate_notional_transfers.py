@@ -344,9 +344,12 @@ class NotionalTransferMigrator:
                             )
                             if not lcfs_cr_id:
                                 logger.warning(
-                                    f"TFRS #{chain_tfrs_id} not found in LCFS? Skipping diff, just storing previousRecords."
+                                    f"TFRS #{chain_tfrs_id} not found in LCFS; skipping."
                                 )
-                                previous_records = current_records
+                                # CRITICAL FIX: Do NOT update previous_records when skipping!
+                                # If we do, the first LCFS report found would see these as "existing"
+                                # records and potentially skip creating them if the data matches.
+                                # The first LCFS report in a chain should CREATE all its records.
                                 continue
 
                             # Compare old vs new for each record in currentRecords
@@ -369,17 +372,26 @@ class NotionalTransferMigrator:
 
                             # CRITICAL: Handle records that were DELETED in this supplemental
                             # Find records that existed in the previous report but are NOT in this report
-                            deleted_keys = set(previous_records.keys()) - set(current_records.keys())
-                            for deleted_key in deleted_keys:
-                                old_data = previous_records[deleted_key]
-                                logger.info(f"Record removed in supplemental, inserting DELETE: {deleted_key}")
-                                if self.insert_version_row(
-                                    lcfs_cursor, lcfs_cr_id, old_data, "DELETE", deleted_key
-                                ):
-                                    total_processed += 1
+                            # IMPORTANT: Only run DELETE detection if this report has actual records
+                            # A report with no records should not trigger mass deletion
+                            if previous_records and current_records:
+                                deleted_keys = set(previous_records.keys()) - set(current_records.keys())
+                                for deleted_key in deleted_keys:
+                                    old_data = previous_records[deleted_key]
+                                    logger.info(f"Record removed in supplemental, inserting DELETE: {deleted_key}")
+                                    if self.insert_version_row(
+                                        lcfs_cursor, lcfs_cr_id, old_data, "DELETE", deleted_key
+                                    ):
+                                        total_processed += 1
+                            elif not current_records and previous_records:
+                                logger.warning(
+                                    f"No records found for TFRS #{chain_tfrs_id} - skipping DELETE detection"
+                                )
 
                             # Update previousRecords for the next version
-                            previous_records = current_records
+                            # Only update if we have records - preserves state for DELETE detection
+                            if current_records:
+                                previous_records = current_records
 
                     # Commit all changes
                     lcfs_conn.commit()

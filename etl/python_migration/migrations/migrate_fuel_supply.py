@@ -604,9 +604,9 @@ class FuelSupplyMigrator:
                             tfrs_fuel_result = tfrs_cursor.fetchone()
 
                             if tfrs_fuel_result:
-                                base_code, version, minor = tfrs_fuel_result
+                                base_code, fc_version, minor = tfrs_fuel_result
                                 # Construct the full fuel code (e.g., BCLCF236.1)
-                                full_fuel_code = f"{base_code}{version}.{minor}"
+                                full_fuel_code = f"{base_code}{fc_version}.{minor}"
 
                                 # Now look up this fuel code in LCFS
                                 fuel_code_id = self.lookup_fuel_code_by_full_code(
@@ -825,9 +825,16 @@ class FuelSupplyMigrator:
 
     def get_fuel_supply_records_for_report(
         self, tfrs_cursor, legacy_id: int
-    ) -> List[Dict]:
-        """Get all fuel supply records for a specific TFRS compliance report"""
+    ) -> Tuple[List[Dict], bool]:
+        """Get all fuel supply records for a specific TFRS compliance report.
+
+        Returns:
+            Tuple of (records, had_snapshot_data):
+            - records: List of normalized fuel supply records (GHGenius filtered out)
+            - had_snapshot_data: True if snapshot data existed (even if all records were GHGenius)
+        """
         records = []
+        had_snapshot_data = False
 
         # Try to get snapshot data first
         snapshot_data = self.fetch_snapshot_data(tfrs_cursor, legacy_id)
@@ -839,7 +846,8 @@ class FuelSupplyMigrator:
             and snapshot_data["schedule_b"] is not None
             and "records" in snapshot_data["schedule_b"]
         ):
-            # Use snapshot data
+            # We have snapshot data - this is important for DELETE detection
+            had_snapshot_data = True
             raw_records = snapshot_data["schedule_b"]["records"]
             logger.info(
                 f"Found {len(raw_records)} raw records in snapshot for legacy_id {legacy_id}"
@@ -864,15 +872,15 @@ class FuelSupplyMigrator:
                 else:
                     logger.warning(f"Record {i+1} failed normalization and was skipped")
         else:
-            # Fall back to SQL query
+            # No snapshot data at all
             logger.info(
                 f"No snapshot data available for legacy_id {legacy_id}, using SQL fallback"
             )
 
         logger.info(
-            f"Final count: {len(records)} processed records for legacy_id {legacy_id}"
+            f"Final count: {len(records)} processed records for legacy_id {legacy_id} (had_snapshot={had_snapshot_data})"
         )
-        return records
+        return records, had_snapshot_data
 
     def normalize_tfrs_record(self, record: Dict) -> Optional[Dict]:
         """Normalize TFRS record fields to standard format for comparison"""
@@ -963,24 +971,26 @@ class FuelSupplyMigrator:
                 f"Found {len(compliance_reports)} compliance reports to process"
             )
 
-            # Step 3: Group reports by organization + period and process each group
+            # Step 3: Group reports by compliance_report_group_uuid to process each chain independently
+            # This is critical because the same organization/period can have multiple independent chains
+            # (e.g., separate original reports that were never supplemented)
             report_groups = {}
             for report_data in compliance_reports:
-                compliance_report_id, legacy_id, org_id, period_id, version = report_data
-                group_key = (org_id, period_id)
+                compliance_report_id, legacy_id, org_id, period_id, version, group_uuid = report_data
+                group_key = group_uuid
                 if group_key not in report_groups:
                     report_groups[group_key] = []
                 report_groups[group_key].append(report_data)
 
-            # Process each organization/period group with its own logical_records dictionary
-            for (org_id, period_id), group_reports in report_groups.items():
-                logical_records = {}  # Reset for each organization + period combination
+            # Process each compliance report chain with its own logical_records dictionary
+            for group_uuid, group_reports in report_groups.items():
+                logical_records = {}  # Reset for each compliance report chain
                 previous_report_keys = set()  # Track keys from previous report for DELETE detection
                 total_records_deleted = 0  # Track deleted records
-                logger.info(f"Processing organization {org_id}, period {period_id} with {len(group_reports)} reports")
+                logger.info(f"Processing report chain {group_uuid} with {len(group_reports)} reports")
 
                 for report_data in group_reports:
-                    compliance_report_id, legacy_id, org_id, period_id, version = report_data
+                    compliance_report_id, legacy_id, org_id, period_id, version, _ = report_data
                     total_reports_processed += 1
 
                     logger.info(
@@ -1005,10 +1015,17 @@ class FuelSupplyMigrator:
                         if report_stats["records_found"] == 0:
                             reports_with_no_records += 1
 
-                        # Update previous_report_keys for next iteration
-                        # This is the set of records that should exist in the next report
-                        # (excludes already deleted records)
-                        previous_report_keys = current_report_keys
+                        # Update previous_report_keys based on whether we had snapshot data
+                        # If no snapshot data at all, preserve the old keys for next iteration
+                        # If we had snapshot data (even with 0 non-GHGenius records), update the keys
+                        if report_stats.get("had_snapshot_data", False):
+                            # Update previous_report_keys for next iteration
+                            # This is the set of records that should exist in the next report
+                            previous_report_keys = current_report_keys
+                        else:
+                            # Don't update previous_report_keys when no snapshot data
+                            # This preserves the state for DELETE detection in subsequent reports
+                            logger.debug(f"No snapshot data for legacy_id {legacy_id} - preserving previous_report_keys")
 
                     except Exception as e:
                         total_errors += 1
@@ -1018,7 +1035,7 @@ class FuelSupplyMigrator:
                         continue
 
                 if total_records_deleted > 0:
-                    logger.info(f"Org {org_id}, Period {period_id}: Deleted {total_records_deleted} records removed in supplementals")
+                    logger.info(f"Report chain {group_uuid}: Deleted {total_records_deleted} records removed in supplementals")
 
             # Enhanced summary logging
             logger.info("=== MIGRATION SUMMARY ===")
@@ -1031,7 +1048,7 @@ class FuelSupplyMigrator:
             logger.info(f"Records Successfully Processed: {total_records_processed}")
             logger.info(f"Records Skipped: {total_records_skipped}")
             logger.info(f"Errors Encountered: {total_errors}")
-            logger.info(f"Migration completed for {len(report_groups)} organization/period groups")
+            logger.info(f"Migration completed for {len(report_groups)} compliance report chains")
             logger.info(f"LCFS Record Versions Created: {processed_count}")
             logger.info("=========================")
 
@@ -1088,6 +1105,7 @@ class FuelSupplyMigrator:
             "records_skipped": 0,
             "records_deleted": 0,
             "errors": 0,
+            "had_snapshot_data": False,
         }
         current_report_keys = set()
 
@@ -1098,12 +1116,13 @@ class FuelSupplyMigrator:
 
             try:
                 # Get fuel supply records for this compliance report
-                report_records = self.get_fuel_supply_records_for_report(
+                report_records, had_snapshot_data = self.get_fuel_supply_records_for_report(
                     tfrs_cursor, legacy_id
                 )
                 stats["records_found"] = len(report_records)
+                stats["had_snapshot_data"] = had_snapshot_data
                 logger.info(
-                    f"Successfully fetched {len(report_records)} records for legacy_id {legacy_id}"
+                    f"Successfully fetched {len(report_records)} records for legacy_id {legacy_id} (had_snapshot={had_snapshot_data})"
                 )
 
                 # Process each fuel supply record and track which keys are present
@@ -1127,7 +1146,11 @@ class FuelSupplyMigrator:
 
                 # CRITICAL: Handle records that were DELETED in this supplemental
                 # Find records that existed in the previous report but are NOT in this report
-                if previous_report_keys:
+                # IMPORTANT: Only run DELETE detection if this report has snapshot data.
+                # A report with NO snapshot data at all should be skipped.
+                # But a report with snapshot data (even if all records were GHGenius and filtered)
+                # should still trigger DELETE detection for non-GHGenius records that were removed.
+                if previous_report_keys and had_snapshot_data:
                     deleted_keys = previous_report_keys - current_report_keys
                     for deleted_key in deleted_keys:
                         if deleted_key in logical_records:
@@ -1147,6 +1170,10 @@ class FuelSupplyMigrator:
                                 stats["records_deleted"] += 1
                             else:
                                 stats["errors"] += 1
+                elif not had_snapshot_data:
+                    logger.warning(
+                        f"No snapshot data for legacy_id {legacy_id} - skipping DELETE detection"
+                    )
 
                 # Commit the transaction for this compliance report
                 lcfs_conn.commit()
@@ -1233,18 +1260,23 @@ class FuelSupplyMigrator:
                 return False
 
     def get_compliance_reports_chronological(self, lcfs_cursor) -> List[Tuple]:
-        """Get compliance reports ordered chronologically (original first, supplementals in order)"""
+        """Get compliance reports ordered chronologically (original first, supplementals in order)
+
+        Returns reports grouped by compliance_report_group_uuid to ensure separate report chains
+        are processed independently, even if they're for the same organization/period.
+        """
         lcfs_cursor.execute(
             """
-            SELECT 
+            SELECT
                 cr.compliance_report_id,
                 cr.legacy_id,
                 cr.organization_id,
                 cr.compliance_period_id,
-                cr.version
+                cr.version,
+                cr.compliance_report_group_uuid
             FROM compliance_report cr
             WHERE cr.legacy_id IS NOT NULL
-            ORDER BY cr.organization_id, cr.compliance_period_id, cr.version
+            ORDER BY cr.compliance_report_group_uuid, cr.version
         """
         )
         return lcfs_cursor.fetchall()

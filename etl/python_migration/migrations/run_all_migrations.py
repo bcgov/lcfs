@@ -29,6 +29,7 @@ from .migrate_notional_transfers import NotionalTransferMigrator
 from .migrate_fuel_supply import FuelSupplyMigrator
 from .migrate_ghgenius_fuel_supply import GHGeniusMigrator
 from .migrate_orphaned_allocation_agreements import OrphanedAllocationAgreementMigrator
+from .migrate_orphaned_compliance_reports import OrphanedComplianceReportMigrator
 from .migrate_restore_timestamps import TimestampRestoreMigrator
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,10 @@ class MigrationRunner:
         # Define migration order and configurations
         migrations = [
             (DataCleanupMigrator, "Data Cleanup Migration (Pre-migration)"),
+            (
+                OrphanedComplianceReportMigrator,
+                "Orphaned Compliance Report Migration",
+            ),
             (ComplianceSummaryMigrator, "Compliance Summary Migration"),
             (ComplianceSummaryUpdater, "Compliance Summary Update"),
             (ComplianceReportHistoryMigrator, "Compliance Report History Migration"),

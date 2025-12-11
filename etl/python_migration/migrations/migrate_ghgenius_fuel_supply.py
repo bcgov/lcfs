@@ -32,8 +32,10 @@ from core.utils import setup_logging, safe_decimal, safe_int, safe_str
 logger = logging.getLogger(__name__)
 
 # Path to the CSV file
+# CSV is kept in site/ folder (gitignored) to avoid including sensitive data in repo
 CSV_FILE_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+    "site",
     "ghgenius_fuel_supply_cis.csv"
 )
 
@@ -67,6 +69,25 @@ class GHGeniusMigrator:
             lcfs_id, legacy_id = row
             self.legacy_to_lcfs_mapping[legacy_id] = lcfs_id
         logger.info(f"Loaded {len(self.legacy_to_lcfs_mapping)} legacy mappings")
+
+        # Load compliance_report_group_uuid mapping for finding original reports
+        self.report_to_group_uuid: Dict[int, str] = {}
+        self.group_uuid_to_original: Dict[str, int] = {}
+        lcfs_cursor.execute(
+            """
+            SELECT compliance_report_id, compliance_report_group_uuid, version
+            FROM compliance_report
+            WHERE legacy_id IS NOT NULL
+            ORDER BY compliance_report_group_uuid, version
+            """
+        )
+        for row in lcfs_cursor.fetchall():
+            cr_id, group_uuid, version = row
+            self.report_to_group_uuid[cr_id] = group_uuid
+            # Track the original report (version 0) for each group
+            if version == 0:
+                self.group_uuid_to_original[group_uuid] = cr_id
+        logger.info(f"Loaded {len(self.group_uuid_to_original)} report group mappings")
 
         # Load fuel type mappings
         lcfs_cursor.execute("SELECT fuel_type_id, fuel_type FROM fuel_type")
@@ -163,6 +184,35 @@ class GHGeniusMigrator:
 
         logger.warning(f"Could not find fuel category: '{fuel_category}'")
         return None
+
+    def find_original_report_id(self, lcfs_report_id: int) -> Optional[int]:
+        """Find the original report (version 0) in the same compliance report chain.
+
+        This is critical for GHGenius records because the display logic queries
+        fuel_supply records from reports with version <= current_version.
+        If we create a record on a supplemental (version 2), it won't be visible
+        when viewing the original report (version 0).
+
+        By creating records on the original report, they become visible across
+        all versions in the chain.
+        """
+        group_uuid = self.report_to_group_uuid.get(lcfs_report_id)
+        if not group_uuid:
+            logger.warning(f"Could not find group_uuid for report {lcfs_report_id}")
+            return lcfs_report_id  # Fallback to original report_id
+
+        original_report_id = self.group_uuid_to_original.get(group_uuid)
+        if not original_report_id:
+            logger.warning(f"Could not find original report for group {group_uuid}")
+            return lcfs_report_id  # Fallback to original report_id
+
+        if original_report_id != lcfs_report_id:
+            logger.debug(
+                f"Remapping report {lcfs_report_id} to original {original_report_id} "
+                f"(group_uuid: {group_uuid})"
+            )
+
+        return original_report_id
 
     def read_csv_records(self) -> List[Dict]:
         """Read GHGenius records from CSV file"""
@@ -329,7 +379,7 @@ class GHGeniusMigrator:
                 "ETL_GHGENIUS",  # create_user - mark as GHGenius ETL
                 "ETL_GHGENIUS",  # update_user
                 group_uuid,
-                1,  # version
+                0,  # version - use 0 for original report to be visible across all versions
                 "CREATE",  # action_type
             )
 
@@ -386,8 +436,18 @@ class GHGeniusMigrator:
                         total_not_found += 1
                         continue
 
+                    # CRITICAL: Find the ORIGINAL report in the chain to insert the record.
+                    # The display logic queries records with version <= current_version,
+                    # so records must be on the original (version 0) to be visible across all versions.
+                    original_report_id = self.find_original_report_id(lcfs_report_id)
+                    if original_report_id != lcfs_report_id:
+                        logger.info(
+                            f"Record {tfrs_id}: Using original report {original_report_id} "
+                            f"instead of CSV report {lcfs_report_id}"
+                        )
+
                     # Insert the record (returns 'inserted', 'exists', or 'error')
-                    result = self.insert_fuel_supply_record(lcfs_cursor, record, lcfs_report_id)
+                    result = self.insert_fuel_supply_record(lcfs_cursor, record, original_report_id)
                     if result == "inserted":
                         total_processed += 1
                     elif result == "exists":
