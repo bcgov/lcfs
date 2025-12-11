@@ -212,7 +212,7 @@ describe('useComplianceReports', () => {
   })
 
   describe('useGetComplianceReportList', () => {
-    it('should fetch compliance report list with default parameters', async () => {
+    it('should fetch compliance report list for government user', async () => {
       const mockData = {
         reports: [{ complianceReportId: 1, status: 'Draft' }],
         pagination: { total: 1, page: 1, size: 10 }
@@ -220,11 +220,11 @@ describe('useComplianceReports', () => {
       mockPost.mockResolvedValue({ data: mockData })
 
       const { useCurrentUser } = await import('../useCurrentUser')
-      const hasRolesMock = vi.fn((...requestedRoles) =>
-        requestedRoles.includes(roles.government)
-      )
       vi.mocked(useCurrentUser).mockReturnValue({
-        hasRoles: hasRolesMock,
+        hasRoles: vi.fn((...requestedRoles) =>
+          requestedRoles.includes(roles.government)
+        ),
+        hasAnyRole: vi.fn(() => false),
         data: { organization: { organizationId: 1 } },
         isLoading: false
       })
@@ -239,6 +239,74 @@ describe('useComplianceReports', () => {
 
       expect(result.current.data).toEqual(mockData)
       expect(mockPost).toHaveBeenCalledWith('/reports/list', {
+        page: 1,
+        size: 10,
+        sort_orders: [],
+        filters: []
+      })
+    })
+
+    it('should fetch org compliance reports for user with compliance_reporting role only', async () => {
+      const mockData = {
+        reports: [{ complianceReportId: 1, status: 'Draft' }],
+        pagination: { total: 1, page: 1, size: 10 }
+      }
+      mockPost.mockResolvedValue({ data: mockData })
+
+      const { useCurrentUser } = await import('../useCurrentUser')
+      vi.mocked(useCurrentUser).mockReturnValue({
+        hasRoles: vi.fn(() => false),
+        hasAnyRole: vi.fn((...requestedRoles) =>
+          requestedRoles.includes(roles.compliance_reporting)
+        ),
+        data: { organization: { organizationId: 1 } },
+        isLoading: false
+      })
+
+      const { result } = renderHook(() => useGetComplianceReportList(), {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual(mockData)
+      expect(mockPost).toHaveBeenCalledWith('/organization/1/reports/list', {
+        page: 1,
+        size: 10,
+        sort_orders: [],
+        filters: []
+      })
+    })
+
+    it('should fetch org compliance reports for user with signing_authority role only', async () => {
+      const mockData = {
+        reports: [{ complianceReportId: 1, status: 'Draft' }],
+        pagination: { total: 1, page: 1, size: 10 }
+      }
+      mockPost.mockResolvedValue({ data: mockData })
+
+      const { useCurrentUser } = await import('../useCurrentUser')
+      vi.mocked(useCurrentUser).mockReturnValue({
+        hasRoles: vi.fn(() => false),
+        hasAnyRole: vi.fn((...requestedRoles) =>
+          requestedRoles.includes(roles.signing_authority)
+        ),
+        data: { organization: { organizationId: 1 } },
+        isLoading: false
+      })
+
+      const { result } = renderHook(() => useGetComplianceReportList(), {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual(mockData)
+      expect(mockPost).toHaveBeenCalledWith('/organization/1/reports/list', {
         page: 1,
         size: 10,
         sort_orders: [],
