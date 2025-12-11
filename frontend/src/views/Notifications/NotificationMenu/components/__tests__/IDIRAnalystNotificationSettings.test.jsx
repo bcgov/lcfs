@@ -139,10 +139,10 @@ describe('IDIRAnalystNotificationSettings', () => {
   })
 
   // Branch Coverage Tests
-  it('has exactly 4 categories in total', () => {
+  it('has exactly 5 categories in total', () => {
     render(<IDIRAnalystNotificationSettings />)
     const categoryElements = screen.getAllByTestId(/^category-/)
-    expect(categoryElements).toHaveLength(4)
+    expect(categoryElements).toHaveLength(5)
   })
 
   it('has exactly 2 fuel code notification types', () => {

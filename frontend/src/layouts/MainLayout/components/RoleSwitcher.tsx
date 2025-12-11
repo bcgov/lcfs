@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
@@ -21,21 +21,56 @@ import { idirRoleOptions } from '@/views/Users/AddEditUser/_schema'
 import withFeatureFlag from '@/utils/withFeatureFlag'
 import { FEATURE_FLAGS } from '@/constants/config'
 
+type RoleOption = {
+  label?: string
+  header?: string
+  value: string
+}
+
+type CurrentUser = {
+  userProfileId?: number
+  title?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  keycloakUsername?: string | null
+  keycloakEmail?: string | null
+  email?: string | null
+  phone?: string | null
+  mobilePhone?: string | null
+  isActive?: boolean | null
+  organizationId?: number | null
+  organization?: {
+    organizationId?: number | null
+    name?: string | null
+  }
+  roles?: Array<{ name?: string | null }>
+  isGovernmentUser?: boolean
+}
+
+interface RoleSwitcherProps {
+  currentUser?: CurrentUser | null
+  hasRoles?: (...roleNames: string[]) => boolean
+  open: boolean
+  anchorEl: HTMLElement | null
+  onClose: () => void
+}
+
 const RoleSwitcherComponent = ({
   currentUser,
   hasRoles,
   open,
   anchorEl,
   onClose
-}) => {
+}: RoleSwitcherProps) => {
   const { t } = useTranslation()
-  const [selectedRole, setSelectedRole] = useState('')
-  const [isAdministratorSelected, setIsAdministratorSelected] = useState(false)
-  const [roleUpdateError, setRoleUpdateError] = useState(null)
+  const [selectedRole, setSelectedRole] = useState<string>('')
+  const [isAdministratorSelected, setIsAdministratorSelected] =
+    useState<boolean>(false)
+  const [roleUpdateError, setRoleUpdateError] = useState<string | null>(null)
 
   const isGovernmentAdmin =
     currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
-  const idirOptions = useMemo(() => idirRoleOptions(t), [t])
+  const idirOptions = useMemo<RoleOption[]>(() => idirRoleOptions(t), [t])
 
   useEffect(() => {
     if (!currentUser?.roles) {
@@ -90,6 +125,9 @@ const RoleSwitcherComponent = ({
   const handleSaveRoles = ({
     nextRole = selectedRole,
     nextAdmin = isAdministratorSelected
+  }: {
+    nextRole?: string
+    nextAdmin?: boolean
   } = {}) => {
     if (!currentUser?.userProfileId) {
       setRoleUpdateError(t('common:submitError'))
@@ -138,18 +176,16 @@ const RoleSwitcherComponent = ({
     })
   }
 
-  const handleRoleSelectionChange = (event) => {
+  const handleRoleSelectionChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value
     setSelectedRole(value)
     handleSaveRoles({ nextRole: value, nextAdmin: isAdministratorSelected })
   }
 
-  const handleClose = (event) => {
-    if (event) {
-      if (
-        anchorEl &&
-        (anchorEl === event.target || anchorEl.contains(event.target))
-      ) {
+  const handleClose = (event?: MouseEvent | TouchEvent) => {
+    if (event && anchorEl) {
+      const target = event.target as Node | null
+      if (target && (anchorEl === target || anchorEl.contains(target))) {
         return
       }
     }

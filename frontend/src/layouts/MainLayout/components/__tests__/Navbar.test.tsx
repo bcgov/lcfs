@@ -1,7 +1,6 @@
-import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { Navbar } from '../Navbar'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -34,6 +33,10 @@ vi.mock('@/contexts/AuthorizationContext', () => ({
   })
 }))
 
+const mockedUseCurrentUser = useCurrentUser as unknown as Mock
+const mockedUseMediaQuery = useMediaQuery as unknown as Mock
+const mockedUseTheme = useTheme as unknown as Mock
+
 describe('Navbar', () => {
   const mockUser = {
     isGovernmentUser: true,
@@ -48,7 +51,7 @@ describe('Navbar', () => {
   }
 
   beforeEach(() => {
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: mockUser,
       hasRoles: (role) =>
         mockUser.roles.some((userRole) => userRole.name === role),
@@ -58,8 +61,8 @@ describe('Navbar', () => {
         )
       }
     })
-    useMediaQuery.mockReturnValue(false) // Set to false for desktop tests
-    useTheme.mockReturnValue({
+    mockedUseMediaQuery.mockReturnValue(false) // Set to false for desktop tests
+    mockedUseTheme.mockReturnValue({
       breakpoints: {
         down: () => {}
       }

@@ -6,7 +6,6 @@ from typing import List, Tuple, Dict, Optional, Union
 
 from fastapi import Depends
 from sqlalchemy import inspect
-from typing import List, Tuple, Dict, Optional, Union, Any
 
 from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import (
@@ -430,26 +429,36 @@ class ComplianceReportSummaryService:
             ("legacy" if compliance_data_service.is_legacy_year() else "description"),
             descriptions_dict[line].get("description"),
         )
-        # Use quantize with ROUND_HALF_UP for consistent rounding before formatting
-        gasoline_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
+        # Use Decimal arithmetic throughout for precise calculations
+        # Multiply the Line 4 value by 5% using Decimal to avoid floating point errors
+        gasoline_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
-        diesel_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_diesel * 0.05)
+        diesel_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_diesel or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
-        jet_fuel_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel * 0.05)
+        jet_fuel_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
         return base_desc.format(
-            "{:,.0f}".format(gasoline_cap),
-            "{:,.0f}".format(diesel_cap),
-            "{:,.0f}".format(jet_fuel_cap),
+            "{:,}".format(gasoline_cap),
+            "{:,}".format(diesel_cap),
+            "{:,}".format(jet_fuel_cap),
         )
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
@@ -1515,8 +1524,8 @@ class ComplianceReportSummaryService:
             report.version,
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum = Decimal("0")
 
         # Check if this is a historical report (pre-2024)
         is_historical = int(report.compliance_period.description) < 2024
@@ -1546,14 +1555,16 @@ class ComplianceReportSummaryService:
                 ED=ED,
                 is_historical=is_historical,
             )
+
             compliance_units_sum += compliance_units
 
-        return round(compliance_units_sum)
+        # Round to integer using ROUND_HALF_UP for consistent rounding
+        return int(compliance_units_sum.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
     @service_handler
     async def calculate_quarterly_fuel_supply_compliance_units(
         self, report: ComplianceReport
-    ) -> list[float | Any]:
+    ) -> list[int]:
         """
         Calculate the total compliance units for the early issuance Summary
         """
@@ -1564,11 +1575,11 @@ class ComplianceReportSummaryService:
             report.version,
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum_q1 = 0.0
-        compliance_units_sum_q2 = 0.0
-        compliance_units_sum_q3 = 0.0
-        compliance_units_sum_q4 = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum_q1 = Decimal("0")
+        compliance_units_sum_q2 = Decimal("0")
+        compliance_units_sum_q3 = Decimal("0")
+        compliance_units_sum_q4 = Decimal("0")
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
@@ -1578,7 +1589,7 @@ class ComplianceReportSummaryService:
             UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units_sum_q1 += calculate_compliance_units(
                 TCI, EER, RCI, UCI, fuel_supply.q1_quantity or 0, ED
             )
@@ -1592,11 +1603,12 @@ class ComplianceReportSummaryService:
                 TCI, EER, RCI, UCI, fuel_supply.q4_quantity or 0, ED
             )
 
+        # Round to integer using ROUND_HALF_UP for consistent rounding
         return [
-            round(compliance_units_sum_q1),
-            round(compliance_units_sum_q2),
-            round(compliance_units_sum_q3),
-            round(compliance_units_sum_q4),
+            int(compliance_units_sum_q1.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q2.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q3.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q4.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
         ]
 
     @service_handler
@@ -1614,8 +1626,9 @@ class ComplianceReportSummaryService:
         # Check if this is a historical report (pre-2024)
         is_historical = int(report.compliance_period.description) < 2024
 
-        # Initialize compliance units sum
-        compliance_units_sum = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum = Decimal("0")
+
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
             TCI = fuel_export.target_ci or 0  # Target Carbon Intensity / CI class
@@ -1637,9 +1650,11 @@ class ComplianceReportSummaryService:
                 ED=ED,
                 is_historical=is_historical,
             )
+
             compliance_units = -compliance_units
-            compliance_units = compliance_units if compliance_units < 0 else 0
+            compliance_units = compliance_units if compliance_units < 0 else Decimal("0")
 
             compliance_units_sum += compliance_units
 
-        return round(compliance_units_sum)
+        # Round to integer using ROUND_HALF_UP for consistent rounding
+        return int(compliance_units_sum.quantize(Decimal("1"), rounding=ROUND_HALF_UP))

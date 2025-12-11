@@ -529,7 +529,7 @@ class FinalSupplyEquipmentServices:
             ),
         }
 
-    def _calculate_capacity_utilization(self, row: dict, power_value: float | None) -> float | None:
+    def _calculate_capacity_utilization(self, row: dict, power_value: float | None) -> int | None:
         """
         Calculate the electricity reasonableness percentage for a row based on
         reported kWh usage and the configured charger power output reference data.
@@ -575,7 +575,7 @@ class FinalSupplyEquipmentServices:
             return None
 
         utilization = (kwh_value / reasonable_max) * 100
-        return round(utilization, 2)
+        return int(round(utilization))
 
     @service_handler
     async def create_fse_reporting_batch(

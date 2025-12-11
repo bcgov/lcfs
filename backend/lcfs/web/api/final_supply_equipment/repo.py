@@ -882,7 +882,7 @@ class FinalSupplyEquipmentRepository:
             .limit(1)
         )
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none() or 1
+        return result.scalar_one_or_none() or 0
 
     @repo_handler
     async def create_fse_reporting_batch(self, data) -> dict:
