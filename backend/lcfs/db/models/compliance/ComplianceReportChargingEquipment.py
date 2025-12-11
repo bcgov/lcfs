@@ -25,6 +25,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
     __tablename__ = "compliance_report_charging_equipment"
     __table_args__ = (
         UniqueConstraint(
+            "compliance_report_group_uuid",
             "charging_equipment_id",
             "charging_equipment_version",
             "supply_from_date",
