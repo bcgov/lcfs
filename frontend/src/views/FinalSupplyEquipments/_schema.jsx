@@ -485,20 +485,22 @@ export const finalSupplyEquipmentColDefs = (
   ]
 }
 
-export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) => [
+export const finalSupplyEquipmentSummaryColDefs = (
+  t,
+  status,
+  isIDIR = false
+) => [
   {
-    headerName: t(
+    headerName: `${t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
-    ),
-    minWidth: 210,
-    field: 'supplyFromDate'
-  },
-  {
-    headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
-    ),
-    minWidth: 190,
-    field: 'supplyToDate'
+    )} – ${t('finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate')}`,
+    minWidth: 300,
+    field: 'supplyDateRange',
+    valueGetter: (params) => {
+      const from = params.data?.supplyFromDate || '—'
+      const to = params.data?.supplyToDate || '—'
+      return `${from} – ${to}`
+    }
   },
   {
     headerName: t(
@@ -520,14 +522,14 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) =>
           sortable: false,
           suppressNavigable: true,
           valueGetter: (params) => {
-            const hasUsage = params.data?.kwhUsage 
+            const hasUsage = params.data?.kwhUsage
             const value = params.data?.capacityUtilizationPercent
             if (!hasUsage || value === null || value === undefined) {
               return null
             }
             return Number(value)
           },
-          valueFormatter: (params) => numberFormatter(params, false, 0),
+          valueFormatter: (params) => numberFormatter(params, false, 0)
         }
       ]
     : []),
@@ -540,10 +542,17 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) =>
   },
   {
     headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.siteName'
+    ),
+    minWidth: 220,
+    field: 'siteName'
+  },
+  {
+    headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
-    field: 'registrationNumber',
-    hide: true
+    minWidth: 160,
+    field: 'registrationNumber'
   },
   {
     headerName: t(
@@ -560,22 +569,12 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) =>
     field: 'manufacturer'
   },
   {
-    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.model'),
-    minWidth: 200,
-    field: 'model'
-  },
-  {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
     minWidth: 340,
     field: 'levelOfEquipment',
     valueGetter: (params) => params.data.levelOfEquipment
-  },
-  {
-    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
-    minWidth: 130,
-    field: 'ports'
   },
   {
     headerName: t(
@@ -600,39 +599,6 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status, isIDIR = false) =>
       status === COMPLIANCE_REPORT_STATUSES.DRAFT
         ? { marginTop: '0.7em' }
         : { marginTop: '0.7em', disableLink: true }
-  },
-  {
-    headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
-    ),
-    minWidth: 300,
-    field: 'streetAddress'
-  },
-  {
-    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'),
-    minWidth: 180,
-    field: 'city'
-  },
-  {
-    headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
-    ),
-    minWidth: 140,
-    field: 'postalCode'
-  },
-  {
-    headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
-    ),
-    minWidth: 150,
-    field: 'latitude'
-  },
-  {
-    headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
-    ),
-    minWidth: 150,
-    field: 'longitude'
   },
   {
     headerName: t(
@@ -779,14 +745,16 @@ export const getFSEReportingColDefs = (
     minWidth: 220
   },
   {
-    field: 'streetAddress',
+    field: 'registrationNumber',
     headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
     editable: false,
+    filter: false,
+    sortable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 220
+    minWidth: 150
   },
   {
     field: 'serialNumber',
@@ -799,14 +767,14 @@ export const getFSEReportingColDefs = (
     minWidth: 280
   },
   {
-    field: 'model',
+    field: 'manufacturer',
     headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
     ),
     editable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 150
+    minWidth: 220
   },
   {
     field: 'equipmentNotes',
@@ -817,17 +785,5 @@ export const getFSEReportingColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 300
-  },
-  {
-    field: 'registrationNumber',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
-    ),
-    editable: false,
-    filter: false,
-    sortable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 150
   }
 ]
