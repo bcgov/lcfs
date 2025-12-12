@@ -143,7 +143,7 @@ vi.mock('../_schema', async (importOriginal) => {
   }
 })
 
-vi.mock('@/constants/schedules.js', () => ({
+vi.mock('@/constants/schedules', () => ({
   defaultInitialPagination: { page: 1, size: 10 }
 }))
 

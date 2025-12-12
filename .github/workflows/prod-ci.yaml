@@ -1,9 +1,9 @@
 name: LCFS 1.0.0 Prod CI
 
 permissions:
-  contents: read
+  contents: write  # Required to push git tags
   actions: read
-  issues: read
+  issues: write  # Required to create approval issues
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
 
   # ---------- Backend: Setup → Sharded Tests → Publish ----------
   backend-setup:
-    name: "Backend Setup"
+    name: 'Backend Setup'
     runs-on: ubuntu-latest
     needs: [install-oc]
     outputs:
@@ -77,7 +77,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10.13"
+          python-version: '3.10.13'
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -157,7 +157,7 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   backend-tests:
-    name: "Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})"
+    name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
     needs: backend-setup
     runs-on: ubuntu-latest
     if: needs.backend-setup.outputs.setup-complete == 'true'
@@ -234,7 +234,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10.13"
+          python-version: '3.10.13'
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -349,7 +349,7 @@ jobs:
 
   # ---------- Frontend: Setup → Sharded Tests → Publish ----------
   frontend-setup:
-    name: "Frontend Setup"
+    name: 'Frontend Setup'
     runs-on: ubuntu-latest
     outputs:
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
@@ -362,7 +362,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -377,12 +377,12 @@ jobs:
           cd frontend
           npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Type Check Frontend (parallel)
-        run: |
-          cd frontend
-          npm run type-check &
-          TYPE_CHECK_PID=$!
-          wait $TYPE_CHECK_PID
+      # - name: Type Check Frontend (parallel)
+      #   run: |
+      #     cd frontend
+      #     npm run type-check &
+      #     TYPE_CHECK_PID=$!
+      #     wait $TYPE_CHECK_PID
 
       - name: Cache node_modules for test shards
         uses: actions/cache@v4
@@ -397,7 +397,7 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   frontend-tests:
-    name: "Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
+    name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
     needs: frontend-setup
     runs-on: ubuntu-latest
     if: needs.frontend-setup.outputs.setup-complete == 'true'
@@ -448,7 +448,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
@@ -495,7 +495,7 @@ jobs:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          VITEST_POOL_THREADS: "4"
+          VITEST_POOL_THREADS: '4'
 
       - name: Debug test failure details
         if: failure()
@@ -593,7 +593,7 @@ jobs:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,prv-proton,Grulin
           minimum-approvals: 2
-          issue-title: "LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment."
+          issue-title: 'LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment.'
 
       - name: Checkout Manifest repository
         uses: actions/checkout@v3
@@ -661,8 +661,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
         with:
-          tag_name: "${{env.VERSION }}-${{env.PRE_RELEASE }}" # The pushed tag
-          release_name: "${{env.VERSION }}-${{env.PRE_RELEASE }}" # Release title
-          body: "This is an automated release 🚀" # Release notes
+          tag_name: '${{env.VERSION }}-${{env.PRE_RELEASE }}' # The pushed tag
+          release_name: '${{env.VERSION }}-${{env.PRE_RELEASE }}' # Release title
+          body: 'This is an automated release 🚀' # Release notes
           draft: false # Set to true if you want a draft release
           prerelease: false

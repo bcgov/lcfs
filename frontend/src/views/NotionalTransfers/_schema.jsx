@@ -179,6 +179,9 @@ export const notionalTransferColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.isCanadaProduced = params.newValue === 'Yes'
+          if (params.data.isCanadaProduced) {
+            params.data.isQ1Supplied = false
+          }
         }
         return true
       },

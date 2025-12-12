@@ -9,6 +9,7 @@
   },
   "emailNotification": "Email notification",
   "inAppNotification": "In-app notification",
+  "governmentNotificationNoInApp": "Government notifications are displayed on the dashboard and don't require in-app alerts",
   "saveButton": "Save",
   "notificationsEmail": "Notifications email",
   "messages": {
@@ -30,6 +31,10 @@
   },
   "bceid": {
     "categories": {
+      "governmentNotifications": {
+        "title": "Government notifications",
+        "subscription": "Government notifications (alerts, deadlines & outages)"
+      },
       "transfers": {
         "title": "Transfers",
         "partnerActions": "Transfer partner proposed, declined, rescinded or signed & submitted",
@@ -48,6 +53,10 @@
   },
   "idirAnalyst": {
     "categories": {
+      "governmentNotifications": {
+        "title": "Government notifications",
+        "subscription": "Government notifications (alerts, deadlines & outages)"
+      },
       "transfers": {
         "title": "Transfers",
         "submittedForReview": "Submitted to government for analyst review",
@@ -73,6 +82,10 @@
   },
   "idirComplianceManager": {
     "categories": {
+      "governmentNotifications": {
+        "title": "Government notifications",
+        "subscription": "Government notifications (alerts, deadlines & outages)"
+      },
       "complianceReports": {
         "title": "Compliance & supplemental reports",
         "submittedForReview": "Submitted to government for analyst review",
@@ -83,6 +96,10 @@
   },
   "idirDirector": {
     "categories": {
+      "governmentNotifications": {
+        "title": "Government notifications",
+        "subscription": "Government notifications (alerts, deadlines & outages)"
+      },
       "transfers": {
         "title": "Transfers",
         "analystRecommendation": "Analyst recommendation"
