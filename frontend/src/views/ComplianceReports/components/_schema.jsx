@@ -159,7 +159,8 @@ export const renewableFuelColumns = (
   data,
   editable,
   compliancePeriodYear,
-  lines7And9Locked = false
+  lines7And9Locked = false,
+  lines6And8Locked = false
 ) => {
   /**
    * Editable Lines Logic:
@@ -366,8 +367,17 @@ export const renewableFuelColumns = (
     jetFuelEditableCells = []
   }
 
-  // Define all potential columns
-  const allColumns = [
+  if (lines6And8Locked) {
+    const stripLocked = (cells) =>
+      cells.filter(
+        (cell) => cell !== SUMMARY.LINE_6 && cell !== SUMMARY.LINE_8
+      )
+    gasolineEditableCells = stripLocked(gasolineEditableCells)
+    dieselEditableCells = stripLocked(dieselEditableCells)
+    jetFuelEditableCells = stripLocked(jetFuelEditableCells)
+  }
+
+  return [
     {
       id: 'line',
       label: t('report:summaryLabels.line'),

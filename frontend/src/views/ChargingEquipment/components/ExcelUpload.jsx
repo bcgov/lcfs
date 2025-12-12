@@ -29,7 +29,7 @@ export const ExcelUpload = ({
         Manufacturer: 'Example Manufacturer',
         Model: 'Model X',
         'Level of Equipment': levels[0]?.name || 'Level 3 - Direct Current',
-        Ports: 'Single port',
+        Ports: '',
         'Intended Uses':
           endUseTypes
             .slice(0, 2)
@@ -118,7 +118,7 @@ export const ExcelUpload = ({
             manufacturer: row['Manufacturer'] || '',
             model: row['Model'] || '',
             level_of_equipment_id: level?.level_of_equipment_id || '',
-            ports: row['Ports'] || 'Single port',
+            ports: row['Ports'] || '',
             intended_use_ids: intendedUseIds,
             intended_user_ids: intendedUserIds,
             notes: row['Notes'] || '',

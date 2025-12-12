@@ -1,12 +1,16 @@
 import pytest
 from datetime import datetime, date
+from types import SimpleNamespace
 from typing import List
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
@@ -18,6 +22,7 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     ReceivedOrTransferredEnumSchema,
 )
+from lcfs.tests.compliance_report.utils import make_summary, make_report
 
 
 def _assert_repo_calls(
@@ -68,6 +73,626 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
     """Common assertions for renewable fuel summary tests."""
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
+
+
+@pytest.mark.anyio
+async def test_low_carbon_deltas_use_previous_version_when_unassessed(
+    compliance_report_summary_service,
+    mock_summary_repo,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Supplemental without an assessed baseline should net against previous version, not zero."""
+
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 1
+
+    # No assessed report available
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+
+    # Previous version summary has issued/exported units
+    previous_summary = ComplianceReportSummary(
+        line_18_units_to_be_banked=50,
+        line_19_units_to_be_exported=25,
+    )
+    mock_summary_repo.get_previous_summary = AsyncMock(return_value=previous_summary)
+
+    # Current supplemental report (version > 0)
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 1
+    compliance_report.organization_id = organization_id
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description="2024",
+    )
+    compliance_report.compliance_report_group_uuid = "group-uuid"
+    compliance_report.compliance_report_id = 123
+    compliance_report.summary = MagicMock()
+    compliance_report.summary.is_locked = False
+    compliance_report.summary.line_17_non_banked_units_used = None
+
+    # Repo aggregates
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 0
+    mock_summary_repo.get_received_compliance_units.return_value = 0
+    mock_summary_repo.get_issued_compliance_units.return_value = 0
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(
+        return_value=0
+    )
+
+    # Current issuance/export
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=120)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=-20)
+    )
+
+    summary, _ = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    line_values = _get_line_values(summary)
+
+    # Lines 15/16 pull from previous version (not zero) when no assessed report exists
+    assert line_values[15] == 50
+    assert line_values[16] == 25
+
+    # Line 20 nets current issuance minus previous lines
+    # 120 + (-20) - 50 - 25 = 25
+    assert line_values[20] == 25
+
+
+@pytest.mark.anyio
+async def test_line20_early_issuance_without_assessed_uses_full_current_units(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Early-issuance supplementals with no assessed baseline should show full current issuance in line 20."""
+
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+    compliance_report_summary_service.repo.get_previous_summary = AsyncMock(
+        return_value=None
+    )
+    compliance_report_summary_service.repo.get_transferred_out_compliance_units = AsyncMock(
+        return_value=0
+    )
+    compliance_report_summary_service.repo.get_received_compliance_units = AsyncMock(
+        return_value=0
+    )
+    compliance_report_summary_service.repo.get_issued_compliance_units = AsyncMock(
+        return_value=0
+    )
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(
+        return_value=10
+    )
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 2
+    compliance_report.reporting_frequency = ReportingFrequency.QUARTERLY
+    compliance_report.organization_id = 7
+    compliance_report.compliance_report_id = 77
+    compliance_report.compliance_report_group_uuid = "group-uuid"
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description="2024",
+    )
+    compliance_report.summary = ComplianceReportSummary(is_locked=False)
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=120)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=30)
+    )
+
+    summary, _ = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            compliance_report.organization_id,
+            compliance_report,
+        )
+    )
+
+    line_values = _get_line_values(summary)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
+    assert line_values[20] == 150  # 120 + 30 - 0 - 0
+    compliance_report_summary_service.repo.get_previous_summary.assert_awaited_once_with(
+        compliance_report
+    )
+
+
+@pytest.mark.anyio
+async def test_submitted_summary_returns_stored_line6_values(
+    compliance_report_summary_service, mock_repo
+):
+    """Submitted reports should return stored summary values (line 6) without recalculation."""
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=111,
+        line_6_renewable_fuel_retained_diesel=222,
+        line_6_renewable_fuel_retained_jet_fuel=333,
+        line_4_eligible_renewable_fuel_required_gasoline=10,
+        line_4_eligible_renewable_fuel_required_diesel=10,
+        line_4_eligible_renewable_fuel_required_jet_fuel=10,
+        line_21_non_compliance_penalty_payable=0,
+    )
+    summary_model.is_locked = False
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.summary = summary_model
+    compliance_report.compliance_period = MagicMock(description="2024")
+    compliance_report.current_status = MagicMock(
+        status=ComplianceReportStatusEnum.Submitted
+    )
+    compliance_report.nickname = "Test"
+
+    mock_repo.get_compliance_report_by_id.return_value = compliance_report
+
+    summary_schema = await compliance_report_summary_service.calculate_compliance_report_summary(
+        report_id=1
+    )
+
+    line6_row = next(
+        row for row in summary_schema.renewable_fuel_target_summary if row.line == 6
+    )
+    assert line6_row.gasoline == 111
+    assert line6_row.diesel == 222
+    assert line6_row.jet_fuel == 333
+
+
+@pytest.mark.anyio
+async def test_locked_summary_handles_none_fields_without_crash(
+    compliance_report_summary_service, mock_repo
+):
+    """Locked summaries with None fields should coalesce to 0 and still display stored line 6."""
+
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=5,
+        line_6_renewable_fuel_retained_diesel=6,
+        line_6_renewable_fuel_retained_jet_fuel=7,
+        line_4_eligible_renewable_fuel_required_gasoline=None,
+        line_4_eligible_renewable_fuel_required_diesel=None,
+        line_4_eligible_renewable_fuel_required_jet_fuel=None,
+        line_21_non_compliance_penalty_payable=None,
+        is_locked=True,
+    )
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.summary = summary_model
+    compliance_report.compliance_period = MagicMock(description="2024")
+    compliance_report.current_status = MagicMock(
+        status=ComplianceReportStatusEnum.Submitted
+    )
+    compliance_report.nickname = "Test"
+
+    mock_repo.get_compliance_report_by_id.return_value = compliance_report
+
+    summary_schema = await compliance_report_summary_service.calculate_compliance_report_summary(
+        report_id=2
+    )
+
+    line6_row = next(
+        row for row in summary_schema.renewable_fuel_target_summary if row.line == 6
+    )
+    assert line6_row.gasoline == 5
+    assert line6_row.diesel == 6
+    assert line6_row.jet_fuel == 7
+
+
+@pytest.mark.anyio
+async def test_auto_populates_lines_7_9_for_2025_with_previous_assessed(
+    compliance_report_summary_service, mock_repo
+):
+    """Lines 7/9 pull from previous assessed for 2025+, and are locked in the summary schema."""
+
+    prev_summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=10,
+        line_6_renewable_fuel_retained_diesel=20,
+        line_6_renewable_fuel_retained_jet_fuel=30,
+        line_8_obligation_deferred_gasoline=5,
+        line_8_obligation_deferred_diesel=6,
+        line_8_obligation_deferred_jet_fuel=7,
+        line_18_units_to_be_banked=0,
+        line_19_units_to_be_exported=0,
+    )
+    prev_report = MagicMock()
+    prev_report.summary = prev_summary
+    mock_repo.get_assessed_compliance_report_by_period.return_value = prev_report
+
+    summary_model = ComplianceReportSummary(is_locked=False)
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.summary = summary_model
+    compliance_report.compliance_period = SimpleNamespace(
+        description="2025",
+        effective_date=datetime(2025, 1, 1),
+        expiration_date=datetime(2025, 12, 31),
+    )
+    compliance_report.current_status = MagicMock(
+        status=ComplianceReportStatusEnum.Draft
+    )
+    compliance_report.nickname = "Test"
+    compliance_report.organization_id = 1
+    compliance_report.compliance_report_id = 3
+    compliance_report.version = 0
+
+    # Ensure dependency mocks are present
+    compliance_report_summary_service.allocation_agreement_repo = AsyncMock()
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
+        return_value=[]
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = compliance_report
+
+    summary_schema = await compliance_report_summary_service.calculate_compliance_report_summary(
+        report_id=3
+    )
+
+    line7 = next(
+        row for row in summary_schema.renewable_fuel_target_summary if row.line == 7
+    )
+    line9 = next(
+        row for row in summary_schema.renewable_fuel_target_summary if row.line == 9
+    )
+    assert line7.gasoline == 10 and line7.diesel == 20 and line7.jet_fuel == 30
+    assert line9.gasoline == 5 and line9.diesel == 6 and line9.jet_fuel == 7
+    assert summary_schema.lines_7_and_9_locked is True
+
+
+@pytest.mark.anyio
+async def test_lines_7_and_9_unlocked_before_2025(
+    compliance_report_summary_service, mock_repo
+):
+    """Pre-2025 reports keep lines 7/9 editable even if a previous assessed report exists."""
+
+    prev_report = MagicMock()
+    prev_report.summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=99,
+        line_6_renewable_fuel_retained_diesel=99,
+        line_6_renewable_fuel_retained_jet_fuel=99,
+        line_8_obligation_deferred_gasoline=88,
+        line_8_obligation_deferred_diesel=88,
+        line_8_obligation_deferred_jet_fuel=88,
+    )
+    mock_repo.get_assessed_compliance_report_by_period.return_value = prev_report
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.compliance_period = SimpleNamespace(description="2024")
+    compliance_report.organization_id = 1
+
+    locked = await compliance_report_summary_service._should_lock_lines_7_and_9(
+        compliance_report
+    )
+    assert locked is False
+
+
+@pytest.mark.anyio
+async def test_retention_capped_to_five_percent(
+    compliance_report_summary_service,
+):
+    """Line 6 retention is capped to 5% of line 4."""
+
+    fossil = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    renewable = {"gasoline": 20000, "diesel": 20000, "jet_fuel": 20000}  # line4=1000
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2024
+
+    prev_summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=200,  # Should cap to 50
+        line_6_renewable_fuel_retained_diesel=200,
+        line_6_renewable_fuel_retained_jet_fuel=200,
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities=fossil,
+        renewable_quantities=renewable,
+        previous_retained=previous_retained,
+        previous_obligation=previous_obligation,
+        notional_transfers_sums=notional,
+        compliance_period=compliance_period,
+        prev_summary=prev_summary,
+        previous_year_required={"gasoline": 1000, "diesel": 1000, "jet_fuel": 1000},
+    )
+
+    line6 = next(row for row in result if row.line == 6)
+    assert line6.gasoline == 50 and line6.diesel == 40 and line6.jet_fuel == 0
+
+
+@pytest.mark.anyio
+async def test_deferral_capped_to_five_percent(
+    compliance_report_summary_service,
+):
+    """Line 8 deferral is capped to 5% of line 4."""
+
+    fossil = {"gasoline": 20000, "diesel": 20000, "jet_fuel": 0}  # drives line4 requirements
+    renewable = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}  # deficiency case
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2024
+
+    prev_summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=0,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=200,
+        line_8_obligation_deferred_diesel=200,
+        line_8_obligation_deferred_jet_fuel=200,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities=fossil,
+        renewable_quantities=renewable,
+        previous_retained=previous_retained,
+        previous_obligation=previous_obligation,
+        notional_transfers_sums=notional,
+        compliance_period=compliance_period,
+        prev_summary=prev_summary,
+        previous_year_required={"gasoline": 1000, "diesel": 1000, "jet_fuel": 1000},
+    )
+
+    line8 = next(row for row in result if row.line == 8)
+    assert line8.gasoline == 50 and line8.diesel == 40 and line8.jet_fuel == 0
+
+
+def test_line6_recalculation_trims_unlocked_values(
+    compliance_report_summary_service,
+):
+    """Unlocked summaries recalc line 6 and can trim stored values when caps are lower."""
+
+    fossil = {"gasoline": 1000, "diesel": 0, "jet_fuel": 0}  # drives line4=50
+    renewable = {"gasoline": 2000, "diesel": 0, "jet_fuel": 0}  # large excess
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+
+    prev_summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=100,  # Will be capped to 8
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+        is_locked=False,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities=fossil,
+        renewable_quantities=renewable,
+        previous_retained=previous_retained,
+        previous_obligation=previous_obligation,
+        notional_transfers_sums=notional,
+        compliance_period=2024,
+        prev_summary=prev_summary,
+        previous_year_required={"gasoline": 0, "diesel": 0, "jet_fuel": 0},
+    )
+
+    line6 = next(row for row in result if row.line == 6)
+    assert line6.gasoline == 8
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("year", "expected_jet_required"),
+    [
+        (2028, 10),  # 1% of 1000
+        (2030, 30),  # 3% of 1000
+    ],
+)
+async def test_jet_fuel_requirement_ramp(
+    compliance_report_summary_service, year, expected_jet_required
+):
+    """Line 4 jet fuel requirement ramps by year."""
+
+    fossil = {"gasoline": 0, "diesel": 0, "jet_fuel": 1000}
+    renewable = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+
+    prev_summary = ComplianceReportSummary()
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities=fossil,
+        renewable_quantities=renewable,
+        previous_retained=previous_retained,
+        previous_obligation=previous_obligation,
+        notional_transfers_sums=notional,
+        compliance_period=year,
+        prev_summary=prev_summary,
+        previous_year_required={"gasoline": 0, "diesel": 0, "jet_fuel": 0},
+    )
+
+    line4 = next(row for row in result if row.line == 4)
+    assert line4.jet_fuel == expected_jet_required
+
+
+@pytest.mark.anyio
+async def test_chain_low_carbon_uses_assessed_baseline(
+    compliance_report_summary_service, mock_repo, mock_trxn_repo, mock_summary_repo
+):
+    """For later versions, assessed baseline should drive lines 15/16, not previous version."""
+
+    compliance_period_start = datetime(2025, 1, 1)
+    compliance_period_end = datetime(2025, 12, 31)
+    organization_id = 9
+
+    assessed_summary = ComplianceReportSummary(
+        line_18_units_to_be_banked=12,
+        line_19_units_to_be_exported=34,
+    )
+    assessed_report = MagicMock()
+    assessed_report.summary = assessed_summary
+    mock_repo.get_assessed_compliance_report_by_period.return_value = assessed_report
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 2
+    compliance_report.organization_id = organization_id
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description="2025",
+    )
+    compliance_report.compliance_report_id = 456
+    compliance_report.summary = ComplianceReportSummary(is_locked=False)
+
+    # Previous version summary should be ignored because assessed baseline exists
+    previous_version_summary = ComplianceReportSummary(
+        line_18_units_to_be_banked=99, line_19_units_to_be_exported=88
+    )
+    mock_summary_repo.get_previous_summary = AsyncMock(
+        return_value=previous_version_summary
+    )
+
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 0
+    mock_summary_repo.get_received_compliance_units.return_value = 0
+    mock_summary_repo.get_issued_compliance_units.return_value = 0
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(
+        return_value=0
+    )
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=1)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=1)
+    )
+
+    summary, _ = await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+        compliance_period_start,
+        compliance_period_end,
+        organization_id,
+        compliance_report,
+    )
+
+    line_values = _get_line_values(summary)
+    assert line_values[15] == 12
+    assert line_values[16] == 34
+    # Line 20 uses assessed baseline
+    assert line_values[20] == (1 + 1 - 12 - 34)
+
+
+@pytest.mark.anyio
+async def test_locked_supplemental_reuses_stored_line17(
+    compliance_report_summary_service, mock_repo, mock_trxn_repo
+):
+    """Locked supplementals should reuse stored line 17 and skip recalculation."""
+
+    compliance_period_start = datetime(2025, 1, 1)
+    compliance_period_end = datetime(2025, 12, 31)
+
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+    compliance_report_summary_service.repo.get_previous_summary = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(
+        return_value=9999
+    )
+
+    summary_model = ComplianceReportSummary(
+        is_locked=True, line_17_non_banked_units_used=321
+    )
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 1
+    compliance_report.organization_id = 5
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description="2025",
+    )
+    compliance_report.compliance_report_id = 333
+    compliance_report.summary = summary_model
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=0)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=0)
+    )
+
+    summary, _ = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            compliance_report.organization_id,
+            compliance_report,
+        )
+    )
+
+    line_values = _get_line_values(summary)
+    assert line_values[17] == 321
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_unlocked_supplemental_recalculates_line17(
+    compliance_report_summary_service, mock_repo, mock_trxn_repo
+):
+    """Unlocked supplementals recompute line 17 from transaction aggregates."""
+
+    compliance_period_start = datetime(2025, 1, 1)
+    compliance_period_end = datetime(2025, 12, 31)
+
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+    compliance_report_summary_service.repo.get_previous_summary = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(
+        return_value=654
+    )
+
+    summary_model = ComplianceReportSummary(
+        is_locked=False, line_17_non_banked_units_used=111
+    )
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 1
+    compliance_report.organization_id = 6
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description="2025",
+    )
+    compliance_report.compliance_report_id = 444
+    compliance_report.summary = summary_model
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=0)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=0)
+    )
+
+    summary, _ = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            compliance_report.organization_id,
+            compliance_report,
+        )
+    )
+
+    line_values = _get_line_values(summary)
+    assert line_values[17] == 654
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_awaited_once_with(
+        compliance_report.organization_id, compliance_period_start.year
+    )
 
 
 @pytest.mark.anyio
@@ -1049,6 +1674,7 @@ async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
     compliance_period.effective_date = datetime(2025, 1, 1)
     compliance_period.expiration_date = datetime(2025, 12, 31)
     compliance_report.compliance_period = compliance_period
+    compliance_report.current_status = MagicMock(status=ComplianceReportStatusEnum.Draft)
 
     summary_model = ComplianceReportSummary(
         summary_id=1,
@@ -1541,6 +2167,8 @@ async def test_can_sign_flag_logic(
         compliance_report_id=1,
         summary=mock_summary,
     )
+    mock_compliance_report.current_status = MagicMock(status=ComplianceReportStatusEnum.Draft)
+    mock_compliance_report.current_status = MagicMock(status=ComplianceReportStatusEnum.Draft)
     mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1000
     previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 30}
     previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 15}
@@ -1592,10 +2220,10 @@ async def test_can_sign_flag_logic(
                 line=line,
                 line_type="test",
                 description="test description",
-                gasoline=10.0,
-                diesel=10.0,
-                jet_fuel=10.0,
-                total_value=30.0,
+                gasoline=1000.0,
+                diesel=1000.0,
+                jet_fuel=1000.0,
+                total_value=3000.0,
             )
             result.append(row)
         return result
@@ -1609,6 +2237,7 @@ async def test_can_sign_flag_logic(
     )
     # Expect can_sign True when all conditions met.
     assert result.can_sign is True
+    assert result.lines_6_and_8_locked is False  # still draft
 
     # Scenario 2: When no conditions are met.
     compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
@@ -1631,6 +2260,33 @@ async def test_can_sign_flag_logic(
 
     # Assert that `can_sign` is False
     assert result.can_sign is False
+    assert result.lines_6_and_8_locked is False
+
+
+@pytest.mark.anyio
+async def test_submitted_report_returns_locked_flags_for_lines_6_and_8(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_summary_repo,
+):
+    """Submitted reports should short-circuit to stored summary and mark lines 6/8 locked."""
+    summary = make_summary(line6=400, line8=200, locked=False)
+    summary.line_1_fossil_derived_base_fuel_gasoline = 10000
+
+    report = make_report(0, ComplianceReportStatusEnum.Submitted, "2025")
+    report.summary = summary
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
+    mock_summary_repo.get_previous_summary = AsyncMock(return_value=None)
+
+    locked = await compliance_report_summary_service.calculate_compliance_report_summary(
+        report_id=report.compliance_report_id
+    )
+
+    assert locked.lines_6_and_8_locked is True
+    line6 = next(r for r in locked.renewable_fuel_target_summary if r.line == 6)
+    assert line6.gasoline == 400
 
 
 @pytest.mark.anyio

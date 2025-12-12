@@ -21,6 +21,9 @@ vi.mock('@mui/material', () => ({
       renderTags,
       isOptionEqualToValue,
       multiple,
+      options: autocompleteOptions = [],
+      inputValue,
+      onInputChange,
       ...props
     }) => {
       // Test getOptionLabel if provided
@@ -38,9 +41,17 @@ vi.mock('@mui/material', () => ({
       return (
         <div
           data-test="autocomplete"
+          data-input-value={inputValue ?? ''}
           onClick={() => {
+            const defaultValue = multiple
+              ? autocompleteOptions.length > 0
+                ? [autocompleteOptions[0]]
+                : ['new value']
+              : autocompleteOptions.length > 0
+                ? autocompleteOptions[0]
+                : 'new value'
             // In multiple mode, MUI Autocomplete passes an array; in single mode, a single value
-            if (onChange) onChange({}, multiple ? ['new value'] : 'new value')
+            if (onChange) onChange({}, defaultValue)
             if (onOpen) onOpen()
           }}
           onKeyDown={(e) => {
@@ -51,6 +62,19 @@ vi.mock('@mui/material', () => ({
           {renderInput && renderInput({ inputProps: {} })}
           {renderOption && renderOption({}, 'option', { selected: false })}
           {renderTags && renderTags(['tag1', 'tag2'], () => ({ index: 0 }))}
+        <button
+          data-test="autocomplete-input-change"
+          onClick={(event) => {
+            event.stopPropagation()
+            const customValue =
+              event.currentTarget.getAttribute('data-value') || 'typed input'
+            if (onInputChange) {
+              onInputChange({}, customValue, 'input')
+            }
+            }}
+          >
+            change input
+          </button>
           Autocomplete
         </div>
       )
@@ -284,7 +308,7 @@ describe('AutocompleteCellEditor Component', () => {
       const autocomplete = screen.getByTestId('autocomplete')
       fireEvent.click(autocomplete)
 
-      expect(mockProps.onValueChange).toHaveBeenCalledWith('new value')
+      expect(mockProps.onValueChange).toHaveBeenCalledWith('Option 1')
     })
 
     it('updates selectedValues and calls onValueChange in multiple mode', () => {
@@ -294,7 +318,29 @@ describe('AutocompleteCellEditor Component', () => {
       const autocomplete = screen.getByTestId('autocomplete')
       fireEvent.click(autocomplete)
 
-      expect(props.onValueChange).toHaveBeenCalledWith(['new value'])
+      expect(props.onValueChange).toHaveBeenCalledWith(['Option 1'])
+    })
+
+    it('honours returnObject from colDef params when grabbing selected value', () => {
+      const props = {
+        ...mockProps,
+        options: [{ label: 'Org A', value: 'org-a' }],
+        colDef: {
+          cellEditorParams: {
+            label: 'Test Label',
+            returnObject: true
+          }
+        },
+        returnObject: undefined
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.click(autocomplete)
+
+      expect(props.onValueChange).toHaveBeenCalledWith(
+        expect.objectContaining({ label: 'Org A', value: 'org-a' })
+      )
     })
   })
 
@@ -306,6 +352,28 @@ describe('AutocompleteCellEditor Component', () => {
       fireEvent.keyDown(autocomplete, { key: 'Enter' })
 
       expect(mockProps.onKeyDownCapture).toHaveBeenCalled()
+    })
+  })
+
+  describe('freeSolo + returnObject handling', () => {
+    it('emits custom text when user types without selecting an option', () => {
+      const props = {
+        ...mockProps,
+        freeSolo: true,
+        returnObject: true
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      const changeButton = screen.getByTestId('autocomplete-input-change')
+      changeButton.setAttribute('data-value', 'Custom Org')
+      fireEvent.click(changeButton)
+
+      expect(mockRef.current.getValue()).toBe('Custom Org')
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.keyDown(autocomplete, { key: 'Tab' })
+
+      expect(mockProps.onValueChange).toHaveBeenCalledWith('Custom Org')
     })
   })
 
