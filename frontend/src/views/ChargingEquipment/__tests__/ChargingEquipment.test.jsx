@@ -38,13 +38,14 @@ vi.mock('@/hooks/useAuthorization', () => ({
 
 const mockNavigate = vi.fn()
 const mockSetSearchParams = vi.fn()
+const mockPathname = '/compliance-reporting/fse'
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
     useSearchParams: () => [new URLSearchParams(), mockSetSearchParams],
-    useLocation: () => ({ pathname: '/compliance-reporting/fse', state: null })
+    useLocation: () => ({ pathname: mockPathname, state: null })
   }
 })
 
@@ -53,7 +54,8 @@ vi.mock('react-i18next', () => ({
     t: (key, defaultValue) => {
       const translations = {
         'chargingEquipment:manageFSE': 'Manage FSE',
-        'chargingEquipment:manageFSEDescription': 'Add new FSE, submit draft or updated FSE to government for validation, or decommission FSE to remove from future compliance reports.',
+        'chargingEquipment:manageFSEDescription':
+          'Add new FSE, submit draft or updated FSE to government for validation, or decommission FSE to remove from future compliance reports.',
         'chargingEquipment:newFSE': 'New FSE',
         'chargingEquipment:selectAllDraftUpdated': 'Select All Draft/Updated',
         'chargingEquipment:selectAllValidated': 'Select All Validated',
@@ -78,9 +80,7 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 
 vi.mock('@/components/Role', () => ({
   Role: ({ children, roles }) => (
-    <div data-test="role-component">
-      {children}
-    </div>
+    <div data-test="role-component">{children}</div>
   )
 }))
 
@@ -185,16 +185,32 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 }))
 
 vi.mock('../components/BulkActionButtons', () => ({
-  BulkActionButtons: ({ selectedRows, canSubmit, canDecommission, onSubmitClick, onDecommissionClick }) => (
+  BulkActionButtons: ({
+    selectedRows,
+    canSubmit,
+    canDecommission,
+    onSubmitClick,
+    onDecommissionClick
+  }) => (
     <div data-test="bulk-action-buttons">
       {selectedRows?.length > 0 && canSubmit && (
         <button data-test="submit-selected-btn" onClick={onSubmitClick}>
-          Submit Selected ({selectedRows.filter(r => r.status === 'Draft' || r.status === 'Updated').length})
+          Submit Selected (
+          {
+            selectedRows.filter(
+              (r) => r.status === 'Draft' || r.status === 'Updated'
+            ).length
+          }
+          )
         </button>
       )}
       {selectedRows?.length > 0 && canDecommission && (
-        <button data-test="decommission-selected-btn" onClick={onDecommissionClick}>
-          Set to Decommissioned ({selectedRows.filter(r => r.status === 'Validated').length})
+        <button
+          data-test="decommission-selected-btn"
+          onClick={onDecommissionClick}
+        >
+          Set to Decommissioned (
+          {selectedRows.filter((r) => r.status === 'Validated').length})
         </button>
       )}
     </div>
@@ -202,25 +218,39 @@ vi.mock('../components/BulkActionButtons', () => ({
 }))
 
 vi.mock('../components/BulkActionModals', () => ({
-  BulkActionModals: ({ 
-    showSubmitModal, 
-    showDecommissionModal, 
-    onSubmitConfirm, 
+  BulkActionModals: ({
+    showSubmitModal,
+    showDecommissionModal,
+    onSubmitConfirm,
     onDecommissionConfirm,
     onSubmitCancel,
-    onDecommissionCancel 
+    onDecommissionCancel
   }) => (
     <div data-test="bulk-action-modals">
       {showSubmitModal && (
         <div data-test="submit-modal">
-          <button data-test="confirm-submit" onClick={onSubmitConfirm}>Confirm Submit</button>
-          <button data-test="cancel-submit" onClick={onSubmitCancel}>Cancel</button>
+          <button data-test="confirm-submit" onClick={onSubmitConfirm}>
+            Confirm Submit
+          </button>
+          <button data-test="cancel-submit" onClick={onSubmitCancel}>
+            Cancel
+          </button>
         </div>
       )}
       {showDecommissionModal && (
         <div data-test="decommission-modal">
-          <button data-test="confirm-decommission" onClick={onDecommissionConfirm}>Confirm Decommission</button>
-          <button data-test="cancel-decommission" onClick={onDecommissionCancel}>Cancel</button>
+          <button
+            data-test="confirm-decommission"
+            onClick={onDecommissionConfirm}
+          >
+            Confirm Decommission
+          </button>
+          <button
+            data-test="cancel-decommission"
+            onClick={onDecommissionCancel}
+          >
+            Cancel
+          </button>
         </div>
       )}
     </div>
@@ -283,9 +313,7 @@ const TestWrapper = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <MemoryRouter>
-          {children}
-        </MemoryRouter>
+        <MemoryRouter>{children}</MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>
   )
@@ -327,7 +355,9 @@ describe('ChargingEquipment', () => {
 
     // Setup mocks
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
-    const { useChargingEquipment } = await import('@/hooks/useChargingEquipment')
+    const { useChargingEquipment } = await import(
+      '@/hooks/useChargingEquipment'
+    )
     const { useOrganizationNames } = await import('@/hooks/useOrganizations')
 
     useCurrentUser.mockReturnValue(mockCurrentUser)
@@ -384,7 +414,7 @@ describe('ChargingEquipment', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/add')
   })
 
-  it('handles row click for draft equipment', async () => {
+  it('handles row click for draft equipment with returnTo state', async () => {
     render(
       <TestWrapper>
         <ChargingEquipment />
@@ -396,10 +426,15 @@ describe('ChargingEquipment', () => {
       fireEvent.click(draftRow)
     })
 
-    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/1/edit')
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/compliance-reporting/fse/1/edit',
+      {
+        state: { returnTo: mockPathname }
+      }
+    )
   })
 
-  it('handles row click for validated equipment', async () => {
+  it('handles row click for validated equipment with returnTo state', async () => {
     render(
       <TestWrapper>
         <ChargingEquipment />
@@ -411,7 +446,12 @@ describe('ChargingEquipment', () => {
       fireEvent.click(validatedRow)
     })
 
-    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/2/edit')
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/compliance-reporting/fse/2/edit',
+      {
+        state: { returnTo: mockPathname }
+      }
+    )
   })
 
   it('shows bulk action buttons when equipment is selected', async () => {
@@ -508,7 +548,9 @@ describe('ChargingEquipment', () => {
 
     // Only equipment with 'Validated' status should be decommissioned
     // Equipment ID 1 has status 'Draft', Equipment ID 2 has status 'Validated'
-    expect(mockChargingEquipment.decommissionEquipment).toHaveBeenCalledWith([2])
+    expect(mockChargingEquipment.decommissionEquipment).toHaveBeenCalledWith([
+      2
+    ])
   })
 
   it('handles clear filters action', async () => {
@@ -617,7 +659,9 @@ describe('ChargingEquipment', () => {
       )
 
       expect(screen.getByText('FSE index')).toBeInTheDocument()
-      expect(screen.getByText(/Index of all FSE for all organizations/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Index of all FSE for all organizations/)
+      ).toBeInTheDocument()
     })
 
     it('does not show New FSE button for IDIR users', async () => {
@@ -640,7 +684,9 @@ describe('ChargingEquipment', () => {
       // Check that the Role component is rendered (organization filter should be inside)
       expect(screen.getByTestId('role-component')).toBeInTheDocument()
       // The Autocomplete component should be present
-      expect(screen.getByPlaceholderText('Select organization')).toBeInTheDocument()
+      expect(
+        screen.getByPlaceholderText('Select organization')
+      ).toBeInTheDocument()
     })
 
     it('handles organization filter change for IDIR users', async () => {
@@ -671,7 +717,9 @@ describe('ChargingEquipment', () => {
       })
 
       // Should navigate to charging site view, not edit
-      expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/charging-sites/1')
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/compliance-reporting/charging-sites/1'
+      )
     })
 
     it('clears organization filter when clear filters is clicked', async () => {
@@ -698,7 +746,9 @@ describe('ChargingEquipment', () => {
       // IDIR users should not see bulk action buttons
       expect(screen.queryByText(/Select All Draft/)).not.toBeInTheDocument()
       expect(screen.queryByText(/Submit selected/)).not.toBeInTheDocument()
-      expect(screen.queryByText(/Set to Decommissioned/)).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/Set to Decommissioned/)
+      ).not.toBeInTheDocument()
     })
   })
 

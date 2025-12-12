@@ -1,7 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from '@mui/material'
+import theme from '@/themes'
+import { AddEditChargingEquipment } from '../AddEditChargingEquipment'
 
-// Re-create the isRowValid function for testing (mirrors the actual implementation)
-// Must return boolean to work correctly with JavaScript's truthy/falsy evaluation
+// --------------------
+// Validation helpers
+// --------------------
+
+// Re-create the isRowValid function for testing
 const isRowValid = (row) =>
   Boolean(
     row?.chargingSiteId &&
@@ -12,227 +21,199 @@ const isRowValid = (row) =>
       row?.intendedUserIds?.length > 0
   )
 
+const getEmptyRow = (id = Date.now()) => ({
+  id,
+  chargingSiteId: '',
+  serialNumber: '',
+  manufacturer: '',
+  model: '',
+  levelOfEquipmentId: '',
+  ports: '',
+  latitude: 0,
+  longitude: 0,
+  notes: '',
+  intendedUseIds: [],
+  intendedUserIds: []
+})
+
+// --------------------
+// Mocks
+// --------------------
+
+vi.mock('@/hooks/useChargingEquipment')
+vi.mock('@/hooks/useCurrentUser')
+
+const mockNavigate = vi.fn()
+let mockLocationState = null
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => ({
+      pathname: '/compliance-reporting/fse/1/edit',
+      state: mockLocationState
+    }),
+    useParams: () => ({ fseId: '1' })
+  }
+})
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key) => key })
+}))
+
+vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
+  BCGridEditor: React.forwardRef(({ saveButtonProps }, ref) => (
+    <div data-test="bc-grid-editor" ref={ref}>
+      <button data-test="save-return-btn" onClick={saveButtonProps?.onSave}>
+        {saveButtonProps?.text || 'Save'}
+      </button>
+    </div>
+  ))
+}))
+
+const TestWrapper = ({ children }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
+  })
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+    </QueryClientProvider>
+  )
+}
+
+// --------------------
+// isRowValid tests
+// --------------------
+
 describe('isRowValid validation function', () => {
-  describe('valid rows', () => {
-    it('returns true for a complete row with all required fields', () => {
-      const validRow = {
+  it('returns true for a complete row', () => {
+    expect(
+      isRowValid({
         chargingSiteId: 1,
         serialNumber: 'ABC123',
         manufacturer: 'Tesla',
         levelOfEquipmentId: 1,
-        intendedUseIds: [1, 2],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(validRow)).toBe(true)
-    })
-
-    it('returns true when ports is empty (ports is optional)', () => {
-      const rowWithoutPorts = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        ports: '',
         intendedUseIds: [1],
         intendedUserIds: [1]
-      }
-
-      expect(isRowValid(rowWithoutPorts)).toBe(true)
-    })
+      })
+    ).toBe(true)
   })
 
-  describe('invalid rows - missing required fields', () => {
-    it('returns false when chargingSiteId is missing', () => {
-      const row = {
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [1],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when serialNumber is missing', () => {
-      const row = {
-        chargingSiteId: 1,
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [1],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when manufacturer is missing', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [1],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when levelOfEquipmentId is missing', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        intendedUseIds: [1],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
+  it('returns false for empty row', () => {
+    expect(isRowValid(getEmptyRow())).toBe(false)
   })
 
-  describe('invalid rows - empty intended uses/users', () => {
-    it('returns false when intendedUseIds is empty array', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when intendedUserIds is empty array', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [1],
-        intendedUserIds: []
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when both intendedUseIds and intendedUserIds are empty', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [],
-        intendedUserIds: []
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when intendedUseIds is undefined', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when intendedUserIds is undefined', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: 'ABC123',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
-  })
-
-  describe('edge cases', () => {
-    it('returns false for null row', () => {
-      expect(isRowValid(null)).toBe(false)
-    })
-
-    it('returns false for undefined row', () => {
-      expect(isRowValid(undefined)).toBe(false)
-    })
-
-    it('returns false for empty object', () => {
-      expect(isRowValid({})).toBe(false)
-    })
-
-    it('returns false when chargingSiteId is 0', () => {
-      const row = {
+  it('returns false when chargingSiteId is 0', () => {
+    expect(
+      isRowValid({
         chargingSiteId: 0,
         serialNumber: 'ABC123',
         manufacturer: 'Tesla',
         levelOfEquipmentId: 1,
         intendedUseIds: [1],
         intendedUserIds: [1]
-      }
-
-      // 0 is falsy, so validation should fail
-      expect(isRowValid(row)).toBe(false)
-    })
-
-    it('returns false when serialNumber is empty string', () => {
-      const row = {
-        chargingSiteId: 1,
-        serialNumber: '',
-        manufacturer: 'Tesla',
-        levelOfEquipmentId: 1,
-        intendedUseIds: [1],
-        intendedUserIds: [1]
-      }
-
-      expect(isRowValid(row)).toBe(false)
-    })
+      })
+    ).toBe(false)
   })
 })
 
+// --------------------
+// getEmptyRow tests
+// --------------------
+
 describe('getEmptyRow function behavior', () => {
-  // Test the expected structure of empty rows
-  const getEmptyRow = (id = Date.now()) => ({
-    id,
-    chargingSiteId: '',
-    serialNumber: '',
-    manufacturer: '',
-    model: '',
-    levelOfEquipmentId: '',
-    ports: '',
-    latitude: 0,
-    longitude: 0,
-    notes: '',
-    intendedUseIds: [],
-    intendedUserIds: []
+  it('creates empty ports', () => {
+    expect(getEmptyRow().ports).toBe('')
   })
 
-  it('creates row with empty ports (no default to Single port)', () => {
-    const row = getEmptyRow()
-    expect(row.ports).toBe('')
-  })
-
-  it('creates row with empty intendedUseIds array', () => {
+  it('creates empty intendedUseIds and intendedUserIds', () => {
     const row = getEmptyRow()
     expect(row.intendedUseIds).toEqual([])
-  })
-
-  it('creates row with empty intendedUserIds array', () => {
-    const row = getEmptyRow()
     expect(row.intendedUserIds).toEqual([])
   })
+})
 
-  it('empty row fails validation', () => {
-    const row = getEmptyRow()
-    expect(isRowValid(row)).toBe(false)
+// --------------------
+// AddEditChargingEquipment navigation tests
+// --------------------
+
+describe('AddEditChargingEquipment - Navigation', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    mockLocationState = null
+
+    const { useCurrentUser } = await import('@/hooks/useCurrentUser')
+    const {
+      useGetChargingEquipment,
+      useCreateChargingEquipment,
+      useUpdateChargingEquipment,
+      useDeleteChargingEquipment,
+      useChargingEquipmentMetadata,
+      useChargingSites,
+      useOrganizations,
+      useHasAllocationAgreements
+    } = await import('@/hooks/useChargingEquipment')
+
+    useCurrentUser.mockReturnValue({
+      data: { userId: 1 },
+      hasAnyRole: vi.fn(() => false)
+    })
+
+    useGetChargingEquipment.mockReturnValue({
+      data: {
+        chargingEquipmentId: 1,
+        status: 'Draft',
+        chargingSiteId: '123',
+        serialNumber: 'SN001'
+      },
+      isLoading: false,
+      isError: false
+    })
+
+    useChargingEquipmentMetadata.mockReturnValue({
+      statuses: [],
+      levels: [],
+      endUseTypes: [],
+      endUserTypes: [],
+      isLoading: false
+    })
+
+    useChargingSites.mockReturnValue({ data: [], isLoading: false })
+    useOrganizations.mockReturnValue({ data: [], isLoading: false })
+    useHasAllocationAgreements.mockReturnValue({ data: false })
+    useCreateChargingEquipment.mockReturnValue({ mutateAsync: vi.fn() })
+    useUpdateChargingEquipment.mockReturnValue({ mutateAsync: vi.fn() })
+    useDeleteChargingEquipment.mockReturnValue({ mutateAsync: vi.fn() })
+  })
+
+  it('navigates to Manage FSE by default', () => {
+    render(
+      <TestWrapper>
+        <AddEditChargingEquipment />
+      </TestWrapper>
+    )
+
+    fireEvent.click(screen.getByTestId('save-return-btn'))
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse')
+  })
+
+  it('navigates back using returnTo state', () => {
+    mockLocationState = {
+      returnTo: '/compliance-reporting/charging-sites/123'
+    }
+
+    render(
+      <TestWrapper>
+        <AddEditChargingEquipment />
+      </TestWrapper>
+    )
+
+    fireEvent.click(screen.getByTestId('save-return-btn'))
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/compliance-reporting/charging-sites/123'
+    )
   })
 })

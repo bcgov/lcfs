@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Grid2 as Grid, Stack } from '@mui/material'
 import BCButton from '@/components/BCButton'
@@ -36,6 +36,7 @@ export const ChargingSiteFSEGrid = ({
 }) => {
   const { t } = useTranslation(['chargingSite'])
   const navigate = useNavigate()
+  const location = useLocation()
   const gridRef = useRef(null)
   const alertRef = useRef(null)
 
@@ -244,7 +245,9 @@ export const ChargingSiteFSEGrid = ({
       const colId = params?.column?.getColId?.()
       if (colId === 'ag-Grid-ControlsColumn') return
       const { chargingEquipmentId } = params.data
-      navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`)
+      navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`, {
+        state: { returnTo: location.pathname }
+      })
     },
     [navigate, siteId, isIDIR]
   )

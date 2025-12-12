@@ -1,7 +1,7 @@
 """Create Notional Transfer Base View for Metabase
 
 Revision ID: 3f5a7b9c1d2e
-Revises: 9f640abe256d
+Revises: 32a1f93375bd
 Create Date: 2025-08-13 12:42:00.000000
 
 """
@@ -15,7 +15,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "3f5a7b9c1d2e"
-down_revision = "9f640abe256d"
+down_revision = "32a1f93375bd"
 branch_labels = None
 depends_on = None
 
