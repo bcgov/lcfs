@@ -1,12 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  act
-} from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { ComplianceReports } from '../ComplianceReports'
 import { ROUTES } from '@/routes/routes'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
@@ -59,7 +53,7 @@ vi.mock('../components/NewComplianceReportButton', () => ({
         ref.current = { test: 'newButtonRef' }
       }
     }, [ref])
-    
+
     return (
       <button
         data-test="new-compliance-report-button"
@@ -97,7 +91,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
         onClick={() => {
           // Test pagination change callback
           if (props.onPaginationChange) {
-            props.onPaginationChange({ page: 2, size: 20, sortOrders: [], filters: [] })
+            props.onPaginationChange({
+              page: 2,
+              size: 20,
+              sortOrders: [],
+              filters: []
+            })
           }
         }}
       >
@@ -124,8 +123,15 @@ vi.mock('@/components/BCAlert', () => ({
   })
 }))
 
+// Store the current mock roles for testing
+let mockUserRoles = ['Compliance Reporting']
+
 vi.mock('@/components/Role', () => ({
-  Role: ({ children }) => <div>{children}</div>
+  Role: ({ children, roles }) => {
+    // Check if any of the required roles match the mock user roles
+    const hasRole = roles?.some((role) => mockUserRoles.includes(role))
+    return hasRole ? <div data-test="role-wrapper">{children}</div> : null
+  }
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
@@ -143,6 +149,8 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     mockAlertRef.current.triggerAlert.mockClear()
     mockGridRef.current.clearFilters.mockClear()
     mockLocation.state = null
+    // Reset mock user roles to default (compliance_reporting) for most tests
+    mockUserRoles = ['Compliance Reporting']
 
     // Mock sessionStorage
     Object.defineProperty(window, 'sessionStorage', {
@@ -155,14 +163,14 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
   it('renders without crashing and calls handleRefresh through reportsColDefs', () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     expect(screen.getByText('report:title')).toBeInTheDocument()
     expect(mockRefetch).toHaveBeenCalled()
   })
 
   it('handles pagination change callback', async () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     const gridViewer = screen.getByTestId('bc-grid-viewer')
     fireEvent.click(gridViewer)
 
@@ -172,18 +180,20 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
   it('handles clear filters with sessionStorage', async () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     const clearFiltersButton = screen.getByText('clearFilters')
     fireEvent.click(clearFiltersButton)
 
     await waitFor(() => {
-      expect(window.sessionStorage.removeItem).toHaveBeenCalledWith('compliance-reports-grid-filter')
+      expect(window.sessionStorage.removeItem).toHaveBeenCalledWith(
+        'compliance-reports-grid-filter'
+      )
     })
   })
 
   it('handles new compliance report creation', async () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     const newReportButton = screen.getByTestId('new-compliance-report-button')
     fireEvent.click(newReportButton)
 
@@ -196,12 +206,15 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
   it('displays alert from location state', async () => {
     // Set up location with state
-    vi.mocked(mockLocation).state = { message: 'Test message', severity: 'error' }
-    
+    vi.mocked(mockLocation).state = {
+      message: 'Test message',
+      severity: 'error'
+    }
+
     const { rerender } = render(<ComplianceReports />, { wrapper })
-    
+
     rerender(<ComplianceReports />)
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('alert-box')).toBeInTheDocument()
       expect(screen.getByText('Test message')).toBeInTheDocument()
@@ -210,11 +223,11 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
   it('displays alert with default severity when not provided', async () => {
     vi.mocked(mockLocation).state = { message: 'Test message without severity' }
-    
+
     const { rerender } = render(<ComplianceReports />, { wrapper })
-    
+
     rerender(<ComplianceReports />)
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('alert-box')).toBeInTheDocument()
     })
@@ -231,25 +244,27 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
   it('renders all main UI components', () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     expect(screen.getByText('report:title')).toBeInTheDocument()
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('new-compliance-report-button')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('new-compliance-report-button')
+    ).toBeInTheDocument()
     expect(screen.getByText('clearFilters')).toBeInTheDocument()
     expect(screen.getByTestId('credit-calculator')).toBeInTheDocument()
   })
 
   it('does not display alert when no message in location state', () => {
     vi.mocked(mockLocation).state = null
-    
+
     render(<ComplianceReports />, { wrapper })
-    
+
     expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
   })
 
   it('handles getRowId callback correctly', () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     // The getRowId function should be passed to BCGridViewer
     // We test this indirectly by ensuring the component renders successfully
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -259,9 +274,9 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     const testParams = {
       data: { complianceReportGroupUuid: 'test-uuid-123' }
     }
-    
+
     render(<ComplianceReports />, { wrapper })
-    
+
     // We can't directly test the useCallback function, but we ensure it's properly created
     // and used by the component
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -269,26 +284,28 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
   it('tests defaultColDef useMemo structure', () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     // Verify the component renders, which means useMemo worked properly
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   it('tests component functionality without dynamic mock changes', () => {
     render(<ComplianceReports />, { wrapper })
-    
+
     // Test that all basic functionality works
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('new-compliance-report-button')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('new-compliance-report-button')
+    ).toBeInTheDocument()
     expect(screen.getByText('clearFilters')).toBeInTheDocument()
     expect(screen.getByTestId('credit-calculator')).toBeInTheDocument()
   })
 
   it('handles location state effect with no severity', () => {
     vi.mocked(mockLocation).state = { message: 'Test message' }
-    
+
     render(<ComplianceReports />, { wrapper })
-    
+
     expect(screen.getByTestId('alert-box')).toBeInTheDocument()
     expect(screen.getByText('Test message')).toBeInTheDocument()
   })
@@ -300,7 +317,7 @@ describe('ComplianceReports - Comprehensive Tests', () => {
         complianceReportId: 123
       }
     }
-    
+
     render(<ComplianceReports />, { wrapper })
 
     // The component should render successfully with defaultColDef
@@ -311,10 +328,52 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     const testData = {
       reportStatus: 'DRAFT'
     }
-    
+
     render(<ComplianceReports />, { wrapper })
 
     // The component should render successfully with defaultColDef
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+  })
+
+  describe('Role-based Create Button Visibility', () => {
+    it('shows create button for user with compliance_reporting role', () => {
+      mockUserRoles = ['Compliance Reporting']
+
+      render(<ComplianceReports />, { wrapper })
+
+      expect(
+        screen.getByTestId('new-compliance-report-button')
+      ).toBeInTheDocument()
+    })
+
+    it('hides create button for user with only signing_authority role', () => {
+      mockUserRoles = ['Signing Authority']
+
+      render(<ComplianceReports />, { wrapper })
+
+      expect(
+        screen.queryByTestId('new-compliance-report-button')
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows create button for user with both compliance_reporting and signing_authority roles', () => {
+      mockUserRoles = ['Compliance Reporting', 'Signing Authority']
+
+      render(<ComplianceReports />, { wrapper })
+
+      expect(
+        screen.getByTestId('new-compliance-report-button')
+      ).toBeInTheDocument()
+    })
+
+    it('hides create button for user with no relevant roles', () => {
+      mockUserRoles = ['Read Only']
+
+      render(<ComplianceReports />, { wrapper })
+
+      expect(
+        screen.queryByTestId('new-compliance-report-button')
+      ).not.toBeInTheDocument()
+    })
   })
 })

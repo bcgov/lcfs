@@ -5,7 +5,7 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useAuditLogs } from '@/hooks/useAuditLog.js'
 

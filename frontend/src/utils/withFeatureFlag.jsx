@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom'
-import { isFeatureEnabled } from '@/constants/config.js'
+import { isFeatureEnabled } from '@/constants/config'
 
 export const withFeatureFlag = (WrappedComponent, featureFlag, redirect) => {
   const WithFeatureFlag = (props) => {

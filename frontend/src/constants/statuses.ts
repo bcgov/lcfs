@@ -9,12 +9,18 @@ export const TRANSFER_STATUSES = {
   REFUSED: 'Refused',
   DECLINED: 'Declined',
   RESCINDED: 'Rescinded'
-}
+} as const
+
+export type TransferStatus =
+  (typeof TRANSFER_STATUSES)[keyof typeof TRANSFER_STATUSES]
 
 export const TRANSFER_RECOMMENDATION = {
   RECORD: 'Record',
   REFUSE: 'Refuse'
-}
+} as const
+
+export type TransferRecommendation =
+  (typeof TRANSFER_RECOMMENDATION)[keyof typeof TRANSFER_RECOMMENDATION]
 
 export const TRANSACTION_STATUSES = {
   NEW: 'New', // Limited only for frontend
@@ -22,14 +28,17 @@ export const TRANSACTION_STATUSES = {
   RECOMMENDED: 'Recommended',
   APPROVED: 'Approved',
   DELETED: 'Deleted'
-}
+} as const
 
 export const ORGANIZATION_STATUSES = {
   UNREGISTERED: 'Unregistered',
   REGISTERED: 'Registered',
   SUSPENDED: 'Suspended',
   CANCELED: 'Canceled'
-}
+} as const
+
+export type OrganizationStatus =
+  (typeof ORGANIZATION_STATUSES)[keyof typeof ORGANIZATION_STATUSES]
 
 export const COMPLIANCE_REPORT_STATUSES = {
   DRAFT: 'Draft',
@@ -44,13 +53,13 @@ export const COMPLIANCE_REPORT_STATUSES = {
   RETURN_TO_ANALYST: 'Return to analyst',
   RETURN_TO_MANAGER: 'Return to manager',
   RETURN_TO_SUPPLIER: 'Return to supplier'
-}
+} as const
 
-export function getAllOrganizationStatuses() {
+export function getAllOrganizationStatuses(): OrganizationStatus[] {
   return Object.values(ORGANIZATION_STATUSES)
 }
 
-export function getAllTerminalTransferStatuses() {
+export function getAllTerminalTransferStatuses(): TransferStatus[] {
   return [
     TRANSFER_STATUSES.DECLINED,
     TRANSFER_STATUSES.DELETED,
@@ -65,9 +74,12 @@ export const FUEL_CODE_STATUSES = {
   RECOMMENDED: 'Recommended',
   APPROVED: 'Approved',
   DELETED: 'Deleted'
-}
+} as const
 
-export function getAllFuelCodeStatuses() {
+export type FuelCodeStatus =
+  (typeof FUEL_CODE_STATUSES)[keyof typeof FUEL_CODE_STATUSES]
+
+export function getAllFuelCodeStatuses(): FuelCodeStatus[] {
   return Object.values(FUEL_CODE_STATUSES)
 }
 
@@ -76,10 +88,10 @@ export const TRANSACTION_TYPES = {
   INITIATIVE_AGREEMENT: 'InitiativeAgreement',
   COMPLIANCE_REPORT: 'ComplianceReport',
   ADMINISTRATIVE_ADJUSTMENT: 'AdminAdjustment'
-}
+} as const
 
 export const REPORT_SCHEDULES_VIEW = {
   EDIT: 'edit',
   VIEW: 'view',
   CHANGELOG: 'changelog'
-}
+} as const
