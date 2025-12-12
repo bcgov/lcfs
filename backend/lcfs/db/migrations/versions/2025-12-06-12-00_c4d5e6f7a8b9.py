@@ -11,9 +11,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Drop the view that depends on compliance_report_summary first.
-    # It will be auto-recreated on startup from metabase.sql.
+    # Drop views that depend on compliance_report_summary first.
+    # They will be auto-recreated on startup from metabase.sql.
     op.execute("DROP VIEW IF EXISTS vw_compliance_report_base CASCADE")
+    op.execute("DROP VIEW IF EXISTS vw_compliance_report_fuel_volume_history CASCADE")
 
     # Drop legacy TFRS offset columns; they are no longer used by views or models.
     op.drop_column("compliance_report_summary", "credits_offset_a")
