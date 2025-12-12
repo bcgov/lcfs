@@ -245,6 +245,13 @@ const ComplianceReportSummary = ({
                 <SummaryTable
                   data-test="renewable-summary"
                   title={t('report:renewableFuelTargetSummary')}
+                  titleTooltip={
+                    summaryData?.lines6And8Locked
+                      ? 'Lines 6/8 locked from assessed snapshot'
+                      : summaryData?.lines7And9Locked
+                      ? 'Lines 7/9 locked from assessed snapshot'
+                      : undefined
+                  }
                   columns={
                     summaryData
                       ? renewableFuelColumns(
@@ -252,7 +259,8 @@ const ComplianceReportSummary = ({
                           summaryData?.renewableFuelTargetSummary,
                           canEdit,
                           compliancePeriodYear,
-                          summaryData?.lines7And9Locked
+                          summaryData?.lines7And9Locked,
+                          summaryData?.lines6And8Locked
                         )
                       : []
                   }
@@ -260,6 +268,7 @@ const ComplianceReportSummary = ({
                   onCellEditStopped={handleCellEdit}
                   useParenthesis={true}
                   lines7And9Locked={summaryData?.lines7And9Locked}
+                  lines6And8Locked={summaryData?.lines6And8Locked}
                   savingCellKey={savingCellKey}
                   tableType="renewable"
                 />
