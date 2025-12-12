@@ -180,6 +180,75 @@ class PostMigrationCleanup:
             logger.error(f"  Failed to fix zero-quantity fuel_supply records: {e}")
             return 0, False
 
+    def fix_missing_organization_snapshots(self, cursor) -> Tuple[int, bool]:
+        """
+        Fix: Create missing organization snapshots for compliance reports.
+
+        Some compliance reports may not have organization snapshots created
+        during migration. This creates them from the current organization data.
+        """
+        logger.info("Checking for missing organization snapshots...")
+
+        try:
+            # Count reports missing snapshots
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM compliance_report cr
+                LEFT JOIN compliance_report_organization_snapshot cros
+                    ON cr.compliance_report_id = cros.compliance_report_id
+                WHERE cros.compliance_report_id IS NULL
+            """)
+            missing_count = cursor.fetchone()[0]
+
+            if missing_count == 0:
+                logger.info("  No missing organization snapshots found")
+                return 0, True
+
+            # Create missing snapshots from current organization data
+            cursor.execute("""
+                INSERT INTO compliance_report_organization_snapshot (
+                    compliance_report_id, name, operating_name, email, phone,
+                    head_office_address, records_address, service_address,
+                    is_edited, create_date, update_date, create_user, update_user
+                )
+                SELECT
+                    cr.compliance_report_id,
+                    o.name,
+                    COALESCE(o.operating_name, o.name),
+                    o.email,
+                    o.phone,
+                    CONCAT_WS(', ',
+                        oaa.street_address, oaa.address_other, oaa.city,
+                        oaa.province_state, oaa.country, oaa."postalCode_zipCode"
+                    ) as head_office_address,
+                    o.records_address,
+                    CONCAT_WS(', ',
+                        oa.street_address, oa.address_other, oa.city,
+                        oa.province_state, oa.country, oa."postalCode_zipCode"
+                    ) as service_address,
+                    false,
+                    NOW(),
+                    NOW(),
+                    'ETL_POST_CLEANUP',
+                    'ETL_POST_CLEANUP'
+                FROM compliance_report cr
+                JOIN organization o ON cr.organization_id = o.organization_id
+                LEFT JOIN organization_address oa
+                    ON o.organization_address_id = oa.organization_address_id
+                LEFT JOIN organization_attorney_address oaa
+                    ON o.organization_attorney_address_id = oaa.organization_attorney_address_id
+                LEFT JOIN compliance_report_organization_snapshot cros
+                    ON cr.compliance_report_id = cros.compliance_report_id
+                WHERE cros.compliance_report_id IS NULL
+            """)
+
+            logger.info(f"  Created {missing_count} missing organization snapshots")
+            return missing_count, True
+
+        except Exception as e:
+            logger.error(f"  Failed to fix missing organization snapshots: {e}")
+            return 0, False
+
     def migrate(self) -> Tuple[int, int]:
         """
         Run all post-migration cleanup tasks.
@@ -197,6 +266,7 @@ class PostMigrationCleanup:
                     ("Allocation Agreement Fuel Categories", self.fix_allocation_agreement_fuel_categories),
                     ("Duplicate Fuel Supply Records", self.fix_duplicate_fuel_supply_records),
                     ("Zero-Quantity Fuel Supply Records", self.fix_zero_quantity_fuel_supply),
+                    ("Missing Organization Snapshots", self.fix_missing_organization_snapshots),
                 ]
 
                 for task_name, task_func in cleanup_tasks:
