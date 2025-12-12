@@ -1,58 +1,59 @@
 import React, { useRef, useState } from 'react'
 import { Box, Alert } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
+import { faDownload, faUpload, faFileImport } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import BCButton from '@/components/BCButton'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
+import ImportDialog from '@/components/ImportDialog'
+import {
+  useImportChargingEquipment,
+  useChargingEquipmentImportJobStatus
+} from '@/hooks/useChargingEquipment'
 
 export const ExcelUpload = ({
   onDataParsed,
   chargingSites = [],
-  organizations = [],
   levels = [],
   endUseTypes = [],
-  endUserTypes = []
+  endUserTypes = [],
+  organizationId,
+  onImportComplete
 }) => {
   const { t } = useTranslation(['chargingEquipment', 'common'])
   const fileInputRef = useRef(null)
+  const apiService = useApiService()
   const [uploadError, setUploadError] = useState('')
+  const [downloadError, setDownloadError] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
 
-  const downloadTemplate = () => {
-    // Create template data with headers and sample row
-    const templateData = [
-      {
-        'Charging Site': chargingSites[0]?.site_name || 'Example Site',
-        'Allocating Organization':
-          organizations[0]?.legal_name || organizations[0]?.name || 'Optional',
-        'Serial Number': 'ABC123456',
-        Manufacturer: 'Example Manufacturer',
-        Model: 'Model X',
-        'Level of Equipment': levels[0]?.name || 'Level 3 - Direct Current',
-        Ports: 'Single port',
-        'Intended Uses':
-          endUseTypes
-            .slice(0, 2)
-            .map((use) => use.type)
-            .join(',') || 'Light duty motor vehicles',
-        'Intended Users':
-          endUserTypes
-            .slice(0, 2)
-            .map((user) => user.type_name)
-            .join(',') || 'Multi-unit residential building,Fleet',
-        Notes: 'Optional notes'
-      }
-    ]
+  const downloadTemplate = async () => {
+    if (!organizationId) {
+      setDownloadError(t('chargingEquipment:templateMissingOrg'))
+      return
+    }
 
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new()
-    const ws = XLSX.utils.json_to_sheet(templateData)
-
-    // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'FSE Template')
-
-    // Generate and download the file
-    XLSX.writeFile(wb, 'FSE_Upload_Template.xlsx')
+    try {
+      setDownloadError('')
+      setIsDownloading(true)
+      await apiService.download({
+        url: apiRoutes.chargingEquipment.template.replace(
+          ':organizationId',
+          organizationId
+        )
+      })
+    } catch (error) {
+      const detail =
+        error?.response?.data?.detail ||
+        error?.message ||
+        t('chargingEquipment:templateDownloadError')
+      setDownloadError(detail)
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleFileUpload = (event) => {
@@ -71,11 +72,48 @@ export const ExcelUpload = ({
         const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
         // Transform Excel data to match our schema
+        const normalizeValue = (value, { upper = false } = {}) => {
+          if (value === undefined || value === null) return ''
+          const text =
+            typeof value === 'string' ? value.trim() : String(value).trim()
+          return upper ? text.toUpperCase() : text
+        }
+
+        const parseNumber = (value) => {
+          if (value === undefined || value === null || value === '') return ''
+          const parsed = Number(value)
+          return Number.isFinite(parsed) ? parsed : ''
+        }
+
         const transformedData = jsonData.map((row, index) => {
-          // Find matching charging site
-          const chargingSite = chargingSites.find(
-            (site) => site.site_name === row['Charging Site']
-          )
+          const siteValue =
+            row['Charging Site'] ||
+            row['Charging site'] ||
+            row['Site name'] ||
+            row['Site Name'] ||
+            ''
+          const normalizedSiteName = normalizeValue(siteValue)
+          const latitudeCell = row['Latitude']
+          const longitudeCell = row['Longitude']
+
+          const chargingSite = chargingSites.find((site) => {
+            const displayName = normalizeValue(
+              site.siteName || site.site_name || ''
+            )
+            const siteCode = normalizeValue(
+              site.siteCode || site.site_code || '',
+              { upper: true }
+            )
+
+            if (!normalizedSiteName) return false
+
+            return (
+              (displayName &&
+                normalizedSiteName.toLowerCase() ===
+                  displayName.toLowerCase()) ||
+              (siteCode && normalizedSiteName.toUpperCase() === siteCode)
+            )
+          })
 
           // Parse intended uses
           const intendedUseIds = []
@@ -84,9 +122,18 @@ export const ExcelUpload = ({
               .split(',')
               .map((s) => s.trim())
             useNames.forEach((useName) => {
-              const useType = endUseTypes.find((type) => type.type === useName)
-              if (useType) {
-                intendedUseIds.push(useType.end_use_type_id)
+              const useType = endUseTypes.find((type) => {
+                const label = type.type || type.type_name || ''
+                return (
+                  label &&
+                  useName &&
+                  label.trim().toLowerCase() === useName.trim().toLowerCase()
+                )
+              })
+              const useId =
+                useType?.end_use_type_id ?? useType?.endUseTypeId ?? null
+              if (useId) {
+                intendedUseIds.push(useId)
               }
             })
           }
@@ -98,30 +145,74 @@ export const ExcelUpload = ({
               .split(',')
               .map((s) => s.trim())
             userNames.forEach((userName) => {
-              const userType = endUserTypes.find(
-                (type) => type.type_name === userName
-              )
-              if (userType) {
-                intendedUserIds.push(userType.end_user_type_id)
+              const userType = endUserTypes.find((type) => {
+                const label = type.type_name || type.typeName || ''
+                return (
+                  label &&
+                  userName &&
+                  label.trim().toLowerCase() === userName.trim().toLowerCase()
+                )
+              })
+              const userId =
+                userType?.end_user_type_id ?? userType?.endUserTypeId ?? null
+              if (userId) {
+                intendedUserIds.push(userId)
               }
             })
           }
 
           // Find matching level
-          const level = levels.find((l) => l.name === row['Level of Equipment'])
+          const level = levels.find((l) => {
+            const levelName = l.name || l.level_name
+            const target =
+              row['Level of Equipment'] || row['Level Of Equipment']
+            return (
+              levelName &&
+              target &&
+              levelName.trim().toLowerCase() === target.trim().toLowerCase()
+            )
+          })
+
+          const chargingSiteId =
+            chargingSite?.charging_site_id ?? chargingSite?.chargingSiteId ?? ''
+          const levelId =
+            level?.level_of_equipment_id ?? level?.levelOfEquipmentId ?? ''
+
+          const defaultLatitude =
+            chargingSite?.latitude ?? chargingSite?.lat ?? ''
+          const defaultLongitude =
+            chargingSite?.longitude ?? chargingSite?.lng ?? ''
+          const latitudeOverride = parseNumber(latitudeCell)
+          const longitudeOverride = parseNumber(longitudeCell)
+          const latitude =
+            latitudeOverride !== '' ? latitudeOverride : defaultLatitude
+          const longitude =
+            longitudeOverride !== '' ? longitudeOverride : defaultLongitude
+
+          const serialNumber = row['Serial Number'] || ''
+          const manufacturer = row['Manufacturer'] || ''
+          const model = row['Model'] || ''
+          const notes = row['Notes'] || ''
 
           return {
             id: Date.now() + index, // Temporary ID
-            charging_site_id: chargingSite?.charging_site_id || '',
-            allocating_organization_name: row['Allocating Organization'] || '',
-            serial_number: row['Serial Number'] || '',
-            manufacturer: row['Manufacturer'] || '',
-            model: row['Model'] || '',
-            level_of_equipment_id: level?.level_of_equipment_id || '',
+            charging_site_id: chargingSiteId,
+            chargingSiteId,
+            allocating_organization_name: '',
+            serial_number: serialNumber,
+            serialNumber,
+            manufacturer,
+            model,
+            level_of_equipment_id: levelId,
+            levelOfEquipmentId: levelId,
             ports: row['Ports'] || 'Single port',
             intended_use_ids: intendedUseIds,
+            intendedUseIds,
             intended_user_ids: intendedUserIds,
-            notes: row['Notes'] || '',
+            intendedUserIds,
+            notes,
+            latitude,
+            longitude,
             // Add validation flags
             _errors: {
               charging_site_id: !chargingSite ? 'Charging site not found' : '',
@@ -164,39 +255,74 @@ export const ExcelUpload = ({
   }
 
   return (
-    <Box display="flex" gap={2} alignItems="center" mb={2}>
-      <BCButton
-        variant="outlined"
-        color="primary"
-        size="small"
-        startIcon={<FontAwesomeIcon icon={faDownload} />}
-        onClick={downloadTemplate}
-      >
-        {t('common:importExport.export.btn')}
-      </BCButton>
+    <>
+      <Box display="flex" gap={2} alignItems="center" mb={2} flexWrap="wrap">
+        <BCButton
+          variant="outlined"
+          color="primary"
+          size="small"
+          startIcon={<FontAwesomeIcon icon={faDownload} />}
+          onClick={downloadTemplate}
+          disabled={isDownloading || !organizationId}
+        >
+          {t('common:importExport.export.btn')}
+        </BCButton>
 
-      <BCButton
-        variant="outlined"
-        color="primary"
-        size="small"
-        component="label"
-        startIcon={<FontAwesomeIcon icon={faUpload} />}
-      >
-        {t('chargingSite:importBtn')}
-        <input
-          ref={fileInputRef}
-          type="file"
-          hidden
-          accept=".xlsx,.xls"
-          onChange={handleFileUpload}
-        />
-      </BCButton>
+        <BCButton
+          variant="outlined"
+          color="primary"
+          size="small"
+          startIcon={<FontAwesomeIcon icon={faUpload} />}
+          onClick={() => setIsImportDialogOpen(true)}
+          disabled={!organizationId}
+        >
+          {t('chargingEquipment:importBtn')}
+        </BCButton>
+
+        <BCButton
+          variant="text"
+          color="primary"
+          size="small"
+          component="label"
+          startIcon={<FontAwesomeIcon icon={faFileImport} />}
+        >
+          {t('chargingEquipment:loadToGridBtn')}
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept=".xlsx,.xls"
+            onChange={handleFileUpload}
+          />
+        </BCButton>
+      </Box>
 
       {uploadError && (
         <Alert severity="error" sx={{ mt: 1 }}>
           {uploadError}
         </Alert>
       )}
-    </Box>
+
+      {downloadError && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {downloadError}
+        </Alert>
+      )}
+
+      {organizationId && (
+        <ImportDialog
+          open={isImportDialogOpen}
+          close={() => setIsImportDialogOpen(false)}
+          complianceReportId={organizationId}
+          isOverwrite={false}
+          importHook={useImportChargingEquipment}
+          getJobStatusHook={useChargingEquipmentImportJobStatus}
+          onComplete={(summary) => {
+            onImportComplete?.(summary)
+            setIsImportDialogOpen(false)
+          }}
+        />
+      )}
+    </>
   )
 }

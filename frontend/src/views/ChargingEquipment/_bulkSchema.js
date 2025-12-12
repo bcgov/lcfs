@@ -1,4 +1,5 @@
 import {
+  AsyncSuggestionEditor,
   AutocompleteCellEditor,
   RequiredHeader,
   TextCellEditor
@@ -10,6 +11,8 @@ import {
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import i18n from '@/i18n'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { apiRoutes } from '@/constants/routes'
 
 const isEditableByStatus = (params) => {
   const status = params?.data?.status
@@ -107,11 +110,30 @@ export const bulkChargingEquipmentColDefs = (
       field: 'manufacturer',
       headerComponent: RequiredHeader,
       headerName: i18n.t('chargingEquipment:manufacturer'),
-      cellEditor: 'agTextCellEditor',
+      minWidth: 320,
+      cellEditor: AsyncSuggestionEditor,
+      cellEditorParams: (params) => ({
+        queryKey: 'fuel-code-search',
+        queryFn: async ({ client, queryKey }) => {
+          try {
+            const [, searchTerm] = queryKey
+            const path = `${
+              apiRoutes.searchFinalSupplyEquipments
+            }manufacturer=${encodeURIComponent(searchTerm)}`
+            const response = await client.get(path)
+            return response.data
+          } catch (error) {
+            console.error('Error fetching manufacturer data:', error)
+            return []
+          }
+        },
+        optionLabel: 'manufacturer',
+        title: 'fuelCode'
+      }),
+      suppressKeyboardEvent,
       cellDataType: 'text',
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      minWidth: 320,
       editable: isEditableByStatus
     },
     {
@@ -307,7 +329,7 @@ export const bulkChargingEquipmentColDefs = (
       headerName: i18n.t('chargingEquipment:notes'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
-      minWidth: 200,
+      minWidth: 400,
       editable: isEditableByStatus
     }
   ]

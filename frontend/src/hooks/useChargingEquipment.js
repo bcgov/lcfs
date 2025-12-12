@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
 
+const JOB_STATUS_STALE_TIME = 0 // Keep import status real-time
+
 export const useChargingEquipment = (paginationOptions) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
@@ -229,5 +231,94 @@ export const useHasAllocationAgreements = () => {
       )
       return Boolean(response.data)
     }
+  })
+}
+
+// Import charging equipment
+export const useImportChargingEquipment = (organizationId, options = {}) => {
+  const apiService = useApiService()
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ file, isOverwrite }) => {
+      if (!file) {
+        throw new Error('File is required for import')
+      }
+      if (!organizationId) {
+        throw new Error('Organization ID is required for import')
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('overwrite', isOverwrite)
+
+      const endpoint = apiRoutes.chargingEquipment.import.replace(
+        ':organizationId',
+        organizationId
+      )
+
+      return await apiService.post(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useChargingEquipmentImportJobStatus = (
+  jobId,
+  options = {}
+) => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+  const {
+    staleTime = JOB_STATUS_STALE_TIME,
+    cacheTime = 1 * 60 * 1000,
+    enabled = true,
+    refetchInterval = 2000,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingEquipmentImportJobStatus', jobId],
+    queryFn: async () => {
+      const endpoint = apiRoutes.chargingEquipment.importJobStatus.replace(
+        ':jobId',
+        jobId
+      )
+      const response = await apiService.get(endpoint)
+      return response.data
+    },
+    staleTime,
+    cacheTime,
+    enabled: enabled && !!jobId,
+    refetchInterval: (data) => {
+      const statusData = data?.state?.data
+      if (
+        !statusData ||
+        statusData?.progress === 100 ||
+        statusData?.status === 'Import process completed.' ||
+        statusData?.status === 'Import process failed.'
+      ) {
+        if (statusData?.progress === 100) {
+          queryClient.invalidateQueries({
+            queryKey: ['charging-equipment']
+          })
+        }
+        return false
+      }
+      return refetchInterval
+    },
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
   })
 }

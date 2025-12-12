@@ -32,6 +32,20 @@ from lcfs.web.core.decorators import service_handler
 logger = structlog.get_logger(__name__)
 
 
+def _parse_float(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        stripped = str(value).strip()
+        if stripped == "":
+            return None
+        return float(stripped)
+    except (ValueError, TypeError):
+        return None
+
+
 class ChargingEquipmentImporter:
     def __init__(
         self,
@@ -205,8 +219,23 @@ async def import_async(
                     charging_sites = await ce_repo.get_charging_sites_by_organization(
                         organization_id
                     )
-                    site_name_to_id = {
-                        s.site_name: s.charging_site_id for s in charging_sites
+                    site_lookup_by_name = {
+                        (s.site_name or "").strip().lower(): {
+                            "id": s.charging_site_id,
+                            "latitude": s.latitude,
+                            "longitude": s.longitude,
+                        }
+                        for s in charging_sites
+                        if s.site_name
+                    }
+                    site_lookup_by_code = {
+                        (s.site_code or "").strip().upper(): {
+                            "id": s.charging_site_id,
+                            "latitude": s.latitude,
+                            "longitude": s.longitude,
+                        }
+                        for s in charging_sites
+                        if s.site_code
                     }
                     levels = await ce_repo.get_levels_of_equipment()
                     level_name_to_id = {l.name: l.level_of_equipment_id for l in levels}
@@ -243,17 +272,20 @@ async def import_async(
                         if all(cell is None for cell in row):
                             continue
 
-                        (
-                            site_name,
-                            serial_number,
-                            manufacturer,
-                            model,
-                            level_name,
-                            ports,
-                            intended_uses_str,
-                            intended_users_str,
-                            notes,
-                        ) = list(row) + [None] * (9 - len(row))
+                        row_values = list(row)
+                        expanded = row_values + [None] * max(0, 11 - len(row_values))
+
+                        site_name = expanded[0]
+                        serial_number = expanded[1]
+                        manufacturer = expanded[2]
+                        model = expanded[3]
+                        level_name = expanded[4]
+                        ports = expanded[5]
+                        intended_uses_str = expanded[6]
+                        intended_users_str = expanded[7]
+                        notes = expanded[8]
+                        latitude_value = expanded[9]
+                        longitude_value = expanded[10]
 
                         # Validate required fields
                         missing_fields = []
@@ -273,13 +305,33 @@ async def import_async(
                             continue
 
                         # Lookups
-                        charging_site_id = site_name_to_id.get(str(site_name))
-                        if not charging_site_id:
+                        site_info = None
+                        if site_name:
+                            normalized_site = str(site_name).strip()
+                            site_info = site_lookup_by_name.get(
+                                normalized_site.lower()
+                            )
+                            if not site_info:
+                                site_info = site_lookup_by_code.get(
+                                    normalized_site.upper()
+                                )
+                        if not site_info:
+                            reference = site_name or ""
                             errors.append(
-                                f"Row {row_idx}: Charging Site '{site_name}' not found for your organization"
+                                f"Row {row_idx}: Charging Site '{reference}' not found for your organization"
                             )
                             rejected += 1
                             continue
+                        charging_site_id = site_info["id"]
+                        latitude = site_info.get("latitude")
+                        longitude = site_info.get("longitude")
+
+                        user_latitude = _parse_float(latitude_value)
+                        user_longitude = _parse_float(longitude_value)
+                        if user_latitude is not None:
+                            latitude = user_latitude
+                        if user_longitude is not None:
+                            longitude = user_longitude
 
                         level_id = level_name_to_id.get(str(level_name))
                         if not level_id:
@@ -325,6 +377,8 @@ async def import_async(
                                 model=str(model) if model else None,
                                 level_of_equipment_id=level_id,
                                 ports=str(ports) if ports else None,
+                                latitude=latitude,
+                                longitude=longitude,
                                 notes=str(notes) if notes else None,
                                 intended_use_ids=intended_use_ids,
                                 intended_user_ids=intended_user_ids,

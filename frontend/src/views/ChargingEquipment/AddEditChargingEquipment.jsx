@@ -118,6 +118,22 @@ export const AddEditChargingEquipment = ({ mode }) => {
     navigate(`${ROUTES.REPORTS.LIST}/fse`)
   }, [navigate])
 
+  const handleImportComplete = useCallback(
+    (summary) => {
+      if (!summary) return
+      const created = summary?.created ?? 0
+      const rejected = summary?.rejected ?? 0
+      alertRef.current?.triggerAlert({
+        message: t('chargingEquipment:importSummary', {
+          created,
+          rejected
+        }),
+        severity: rejected > 0 ? 'warning' : 'success'
+      })
+    },
+    [t]
+  )
+
   // Unified save handler for grid rows (create/update/delete)
   const saveRow = useCallback(
     async (data) => {
@@ -449,10 +465,11 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   setBulkData(data)
                 }}
                 chargingSites={chargingSites}
-                organizations={organizations}
                 levels={levels}
                 endUseTypes={endUseTypes}
                 endUserTypes={endUserTypes}
+                organizationId={currentUser?.organization?.organizationId}
+                onImportComplete={handleImportComplete}
               />
 
               <BCGridEditor

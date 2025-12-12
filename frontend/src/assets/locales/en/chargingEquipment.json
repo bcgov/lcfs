@@ -12,6 +12,8 @@
   "selectAllDraftUpdated": "Select all Draft/Updated",
   "selectAllValidated": "Select all Validated",
   "clearFilters": "Clear filters",
+  "importBtn": "Upload template",
+  "loadToGridBtn": "Load template into grid",
   "errorLoadingEquipment": "Error loading charging equipment",
   "equipmentSaved": "Equipment saved successfully",
   "saveAndReturn": "Save & Return",
@@ -49,5 +51,8 @@
   "deleteError": "Error deleting charging equipment",
   "deleteConfirmation": "Are you sure you want to delete this equipment? This action cannot be undone.",
   "bulkInputTitle": "Bulk FSE Input",
-  "bulkInputDescription": "Add multiple FSE entries using the grid below or upload from Excel."
+  "bulkInputDescription": "Add multiple FSE entries using the grid below or upload from Excel.",
+  "templateDownloadError": "Unable to download the template. Please try again.",
+  "templateMissingOrg": "You must select an organization before downloading the template.",
+  "importSummary": "{{created}} rows imported. {{rejected}} rejected."
 }
