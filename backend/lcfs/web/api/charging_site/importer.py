@@ -369,8 +369,9 @@ def _validate_row(
         return f"Row {row_idx}: Invalid postal code"
 
     # Validate allocating organization (optional field)
-    if allocating_org_name and allocating_org_name not in valid_org_names:
-        return f"Row {row_idx}: Invalid allocating organization: {allocating_org_name}. Must be from your allocation agreements."
+    # Validation disabled - any value is now accepted
+    # if allocating_org_name and allocating_org_name not in valid_org_names:
+    #     return f"Row {row_idx}: Invalid allocating organization: {allocating_org_name}. Must be from your allocation agreements."
 
     return None
 
@@ -407,12 +408,16 @@ def _parse_row(
 
     # Map allocating organization name to ID
     allocating_organization_id = None
-    if allocating_org_name and allocating_org_name in allocating_org_map:
-        allocating_organization_id = allocating_org_map[allocating_org_name]
+    allocating_organization_name_value = None
+    if allocating_org_name:
+        allocating_organization_name_value = str(allocating_org_name)
+        if allocating_org_name in allocating_org_map:
+            allocating_organization_id = allocating_org_map[allocating_org_name]
 
     return ChargingSiteCreateSchema(
         organization_id=organization_id,
         allocating_organization_id=allocating_organization_id,
+        allocating_organization_name=allocating_organization_name_value,
         site_name=str(site_name) or "",
         street_address=str(street_address) or "",
         city=str(city) or "",

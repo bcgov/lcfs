@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
+from lcfs.web.utils.transaction_windows import calculate_transaction_period_dates
 
 
 @pytest.fixture
@@ -76,8 +77,8 @@ async def test_first_report_uses_january_to_march_date_range(mock_service):
     mock_service.cr_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
 
     # Call the helper method
-    start_date, end_date = await mock_service._calculate_transaction_period_dates(
-        compliance_year, organization_id, exclude_report_id=1
+    start_date, end_date = await calculate_transaction_period_dates(
+        compliance_year, organization_id, mock_service.cr_repo, exclude_report_id=1
     )
 
     # Verify dates
@@ -113,8 +114,8 @@ async def test_subsequent_report_uses_april_to_march_date_range(mock_service):
     )
 
     # Call the helper method
-    start_date, end_date = await mock_service._calculate_transaction_period_dates(
-        compliance_year, organization_id, exclude_report_id=2
+    start_date, end_date = await calculate_transaction_period_dates(
+        compliance_year, organization_id, mock_service.cr_repo, exclude_report_id=2
     )
 
     # Verify dates
@@ -145,8 +146,8 @@ async def test_no_overlap_between_first_and_second_report(mock_service):
 
     # Calculate 2024 report dates (first report - no previous)
     mock_service.cr_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
-    start_2024, end_2024 = await mock_service._calculate_transaction_period_dates(
-        2024, organization_id, exclude_report_id=1
+    start_2024, end_2024 = await calculate_transaction_period_dates(
+        2024, organization_id, mock_service.cr_repo, exclude_report_id=1
     )
 
     # Calculate 2025 report dates (subsequent report - has previous)
@@ -154,8 +155,8 @@ async def test_no_overlap_between_first_and_second_report(mock_service):
     mock_service.cr_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=mock_prev_report
     )
-    start_2025, end_2025 = await mock_service._calculate_transaction_period_dates(
-        2025, organization_id, exclude_report_id=2
+    start_2025, end_2025 = await calculate_transaction_period_dates(
+        2025, organization_id, mock_service.cr_repo, exclude_report_id=2
     )
 
     # Verify no overlap: 2024 ends before 2025 starts
@@ -292,8 +293,8 @@ async def test_edge_case_exactly_on_march_31_boundary(mock_service):
     # First report (no previous)
     mock_service.cr_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
 
-    start_date, end_date = await mock_service._calculate_transaction_period_dates(
-        compliance_year, organization_id
+    start_date, end_date = await calculate_transaction_period_dates(
+        compliance_year, organization_id, mock_service.cr_repo
     )
 
     # Verify March 31, 2025 23:59:59 is included
@@ -326,8 +327,8 @@ async def test_edge_case_exactly_on_april_1_boundary(mock_service):
         return_value=mock_prev_report
     )
 
-    start_date, end_date = await mock_service._calculate_transaction_period_dates(
-        compliance_year, organization_id
+    start_date, end_date = await calculate_transaction_period_dates(
+        compliance_year, organization_id, mock_service.cr_repo
     )
 
     # Verify April 1, 2025 00:00:00 is included
