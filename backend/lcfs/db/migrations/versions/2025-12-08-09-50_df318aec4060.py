@@ -1,7 +1,7 @@
 """Consolidate charging infrastructure migrations and enforce 3 digit equipment numbers
 
 Revision ID: bbfbe5d4c7e8
-Revises: a7b8c9d0e1f2
+Revises: c4d5e6f7a8b9
 Create Date: 2025-11-25 09:30:00.000000
 
 """
@@ -16,7 +16,7 @@ from lcfs.utils.unique_key_generators import next_base36
 
 # revision identifiers, used by Alembic.
 revision = "bbfbe5d4c7e8"
-down_revision = "a7b8c9d0e1f2"
+down_revision = "c4d5e6f7a8b9"
 branch_labels = None
 depends_on = None
 
