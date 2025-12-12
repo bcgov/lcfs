@@ -538,7 +538,7 @@ async def test_create_fse_reporting_success(
                 }
             ],
             "complianceReportId": 10,
-            "organizationId": 1
+            "organizationId": 1,
         }
         response = await client.post(url, json=payload)
 
@@ -587,14 +587,16 @@ async def test_delete_fse_reporting_batch_success(
     with patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.delete_fse_reporting_batch"
     ) as mock_delete:
-        mock_delete.return_value = {"message": "2 FSE reporting records deleted successfully"}
+        mock_delete.return_value = {
+            "message": "2 FSE reporting records deleted successfully"
+        }
 
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("delete_fse_reporting_batch")
         payload = {
             "reportingIds": [1, 2],
             "complianceReportId": 10,
-            "organizationId": 1
+            "organizationId": 1,
         }
         response = await client.request("DELETE", url, json=payload)
 
@@ -647,3 +649,72 @@ async def test_set_default_dates_fse_reporting_unauthorized(
     }
     response = await client.post(url, json=payload)
     assert response.status_code == 403
+
+
+# Schema validation tests for required fields
+@pytest.mark.anyio
+async def test_save_fse_fails_with_empty_intended_use_types(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving FSE fails when intended_use_types is empty."""
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ), patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.validate_fse_record"
+    ):
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "complianceReportId": 1,
+            "organizationName": "Test Org",
+            "supplyFromDate": "2024-01-01",
+            "supplyToDate": "2024-12-31",
+            "serialNbr": "ABC123",
+            "manufacturer": "Test Mfg",
+            "levelOfEquipment": "Level 2",
+            "intendedUseTypes": [],  # Empty - should fail
+            "intendedUserTypes": ["general public"],
+            "streetAddress": "123 Main St",
+            "city": "Anytown",
+            "postalCode": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 422
+        data = response.json()
+        assert "intendedUseTypes" in str(data) or "intended_use_types" in str(data)
+
+
+@pytest.mark.anyio
+async def test_save_fse_fails_with_empty_intended_user_types(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving FSE fails when intended_user_types is empty."""
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ), patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.validate_fse_record"
+    ):
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "complianceReportId": 1,
+            "organizationName": "Test Org",
+            "supplyFromDate": "2024-01-01",
+            "supplyToDate": "2024-12-31",
+            "serialNbr": "ABC123",
+            "manufacturer": "Test Mfg",
+            "levelOfEquipment": "Level 2",
+            "intendedUseTypes": ["public charging"],
+            "intendedUserTypes": [],  # Empty - should fail
+            "streetAddress": "123 Main St",
+            "city": "Anytown",
+            "postalCode": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 422
+        data = response.json()
+        assert "intendedUserTypes" in str(data) or "intended_user_types" in str(data)
