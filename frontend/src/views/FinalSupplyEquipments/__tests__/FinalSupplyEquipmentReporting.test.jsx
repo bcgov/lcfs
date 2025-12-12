@@ -35,13 +35,19 @@ vi.mock('./_schema', () => ({
   ])
 }))
 
+const mockBCGrid = vi.fn(({ onGridReady }) => {
+  if (onGridReady) {
+    setTimeout(() => onGridReady(), 0)
+  }
+  return <div data-testid="bc-grid-editor">Grid Editor</div>
+})
+
 vi.mock('@/components/BCDataGrid/BCGridEditorPaginated', () => ({
-  BCGridEditorPaginated: vi.fn(({ onGridReady, gridRef }) => {
-    if (onGridReady) {
-      setTimeout(() => onGridReady(), 0)
-    }
-    return <div data-testid="bc-grid-editor">Grid Editor</div>
-  })
+  BCGridEditorPaginated: (props) => mockBCGrid(props)
+}))
+
+vi.mock('@/utils/schedules', () => ({
+  handleScheduleSave: vi.fn()
 }))
 
 import { useSiteNames } from '@/hooks/useChargingSite'
@@ -52,6 +58,7 @@ import {
   useSetFSEReportingDefaultDates
 } from '@/hooks/useFinalSupplyEquipment'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { handleScheduleSave } from '@/utils/schedules'
 
 describe('FinalSupplyEquipmentReporting', () => {
   const mockSiteNames = [
@@ -123,6 +130,11 @@ describe('FinalSupplyEquipmentReporting', () => {
 
     // Mock useComplianceReportStore
     vi.mocked(useComplianceReportStore).mockReturnValue(mockReportData)
+    handleScheduleSave.mockResolvedValue({
+      validationStatus: 'success',
+      modified: false
+    })
+    mockBCGrid.mockClear()
   })
 
   describe('Component Rendering', () => {
@@ -165,6 +177,48 @@ describe('FinalSupplyEquipmentReporting', () => {
       // Use text content instead of testid
       expect(screen.getByText('Grid Editor')).toBeInTheDocument()
     })
+  })
+
+  it('saves row changes when cell value changes', async () => {
+    render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+    const gridCall = mockBCGrid.mock.calls[0][0]
+    const mockUpdateData = vi.fn()
+    const mockAutoSize = vi.fn()
+    const mockParams = {
+      oldValue: '2024-01-01',
+      newValue: '2024-02-01',
+      node: {
+        data: {
+          chargingEquipmentId: 1,
+          chargingEquipmentVersion: 2,
+          chargingEquipmentComplianceId: 99,
+          supplyFromDate: '2024-02-01',
+          supplyToDate: '2024-02-15',
+          kwhUsage: 100,
+          complianceNotes: 'note'
+        },
+        updateData: mockUpdateData
+      },
+      data: {
+        chargingEquipmentId: 1,
+        chargingEquipmentVersion: 2,
+        chargingEquipmentComplianceId: 99,
+        supplyFromDate: '2024-02-01',
+        supplyToDate: '2024-02-15',
+        kwhUsage: 100,
+        complianceNotes: 'note'
+      },
+      api: { autoSizeAllColumns: mockAutoSize }
+    }
+
+    await gridCall.onCellValueChanged(mockParams)
+
+    expect(handleScheduleSave).toHaveBeenCalled()
+    expect(mockUpdateData).toHaveBeenCalledWith(
+      expect.objectContaining({ validationStatus: 'pending' })
+    )
+    expect(mockAutoSize).toHaveBeenCalled()
   })
 
   describe('Data Fetching', () => {

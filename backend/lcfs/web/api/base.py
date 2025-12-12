@@ -373,10 +373,15 @@ async def lcfs_cache_key_builder(
 
 class AudienceType(Enum):
     """Defines the target audience for notifications."""
-    SAME_ORGANIZATION = "same_organization"  # Notify users in the same organization + government
+
+    SAME_ORGANIZATION = (
+        "same_organization"  # Notify users in the same organization + government
+    )
     OTHER_ORGANIZATIONS = "other_organizations"  # Notify all other organizations (exclude posting org + government)
     GOVERNMENT_ONLY = "government_only"  # Notify only government users
-    ALL_EXCEPT_POSTING_ORG = "all_except_posting_org"  # Notify everyone except the posting organization
+    ALL_EXCEPT_POSTING_ORG = (
+        "all_except_posting_org"  # Notify everyone except the posting organization
+    )
 
 
 class NotificationTypeEnum(Enum):
@@ -442,6 +447,12 @@ class NotificationTypeEnum(Enum):
     BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE = (
         "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE"
     )
+    BCEID__GOVERNMENT_NOTIFICATION = "BCEID__GOVERNMENT_NOTIFICATION"
+    IDIR_ANALYST__GOVERNMENT_NOTIFICATION = "IDIR_ANALYST__GOVERNMENT_NOTIFICATION"
+    IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION = (
+        "IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION"
+    )
+    IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION = "IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION"
 
     def __str__(self):
         return self.value

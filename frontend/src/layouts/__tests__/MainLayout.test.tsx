@@ -1,14 +1,14 @@
-import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MainLayout } from '../MainLayout/MainLayout'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
-import { useMatches, useNavigate, useLocation, Outlet } from 'react-router-dom'
+import { useMatches, useNavigate } from 'react-router-dom'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
 import { useLoadingStore } from '@/stores/useLoadingStore'
 import { ROUTES } from '@/routes/routes'
 import { useAuth } from '@/hooks/useAuth'
+import type { ReactNode } from 'react'
 
 // Mock all required hooks and components
 vi.mock('react-router-dom', async () => {
@@ -39,7 +39,11 @@ vi.mock('@/components/Footer', () => ({
 }))
 vi.mock('@/components/DisclaimerBanner', () => ({
   __esModule: true,
-  default: ({ messages }) => (
+  default: ({
+    messages = []
+  }: {
+    messages?: Array<string | null | undefined>
+  }) => (
     <div data-test="disclaimer-banner">
       {messages.filter(Boolean).map((message, i) => (
         <div key={i}>{message}</div>
@@ -49,14 +53,16 @@ vi.mock('@/components/DisclaimerBanner', () => ({
 }))
 vi.mock('@/components/Loading', () => ({
   __esModule: true,
-  default: ({ fixed }) => (
+  default: ({ fixed }: { fixed?: boolean }) => (
     <div data-test="loading-component">
       {fixed ? 'Fixed Loading' : 'Loading'}
     </div>
   )
 }))
 vi.mock('@/components/RequireAuth', () => ({
-  RequireAuth: ({ children }) => <div data-test="require-auth">{children}</div>
+  RequireAuth: ({ children }: { children: ReactNode }) => (
+    <div data-test="require-auth">{children}</div>
+  )
 }))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -64,24 +70,31 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+const mockedUseMatches = useMatches as unknown as Mock
+const mockedUseNavigate = useNavigate as unknown as Mock
+const mockedUseCurrentUser = useCurrentUser as unknown as Mock
+const mockedUseAuthorization = useAuthorization as unknown as Mock
+const mockedUseLoadingStore = useLoadingStore as unknown as Mock
+const mockedUseAuth = useAuth as unknown as Mock
+
 describe('MainLayout', () => {
   const navigate = vi.fn()
 
   beforeEach(() => {
     // Default mock setup
-    useMatches.mockReturnValue([{ handle: { title: 'Test Page Title' } }])
-    useNavigate.mockReturnValue(navigate)
-    useCurrentUser.mockReturnValue({
+    mockedUseMatches.mockReturnValue([{ handle: { title: 'Test Page Title' } }])
+    mockedUseNavigate.mockReturnValue(navigate)
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         roles: [{ name: 'gov' }],
         isGovernmentUser: true
       }
     })
-    useAuthorization.mockReturnValue({
+    mockedUseAuthorization.mockReturnValue({
       forbidden: false
     })
-    useLoadingStore.mockReturnValue(false)
-    useAuth.mockReturnValue({
+    mockedUseLoadingStore.mockReturnValue(false)
+    mockedUseAuth.mockReturnValue({
       refreshToken: vi.fn()
     })
 
@@ -102,7 +115,7 @@ describe('MainLayout', () => {
   })
 
   it('displays the page title from route metadata', () => {
-    useMatches.mockReturnValue([{ handle: { title: 'Custom Page Title' } }])
+    mockedUseMatches.mockReturnValue([{ handle: { title: 'Custom Page Title' } }])
 
     render(<MainLayout />, { wrapper })
 
@@ -110,7 +123,7 @@ describe('MainLayout', () => {
   })
 
   it('uses default title when no title in route metadata', () => {
-    useMatches.mockReturnValue([{ handle: {} }])
+    mockedUseMatches.mockReturnValue([{ handle: {} }])
 
     render(<MainLayout />, { wrapper })
 
@@ -118,15 +131,11 @@ describe('MainLayout', () => {
   })
 
   it('redirects to unauthorized page when forbidden is true', async () => {
-    useAuthorization.mockReturnValue({
+    mockedUseAuthorization.mockReturnValue({
       forbidden: true
     })
 
-    Object.defineProperty(window, 'location', {
-      value: {
-        pathname: '/dashboard' // Set to a different page to trigger redirect
-      }
-    })
+    window.history.replaceState({}, '', '/dashboard')
 
     render(<MainLayout />, { wrapper })
 
@@ -136,15 +145,11 @@ describe('MainLayout', () => {
   })
 
   it('does not redirect when already on unauthorized page', () => {
-    useAuthorization.mockReturnValue({
+    mockedUseAuthorization.mockReturnValue({
       forbidden: true
     })
 
-    Object.defineProperty(window, 'location', {
-      value: {
-        pathname: ROUTES.AUTH.UNAUTHORIZED
-      }
-    })
+    window.history.replaceState({}, '', ROUTES.AUTH.UNAUTHORIZED)
 
     render(<MainLayout />, { wrapper })
 
@@ -153,7 +158,7 @@ describe('MainLayout', () => {
 
   it('shows different disclaimer banner for government vs non-government users', () => {
     // Test with government user
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         roles: [{ name: 'gov' }],
         isGovernmentUser: true
@@ -165,7 +170,7 @@ describe('MainLayout', () => {
     expect(disclaimerBanner.children.length).toBe(1)
 
     // Test with non-government user
-    useCurrentUser.mockReturnValue({
+    mockedUseCurrentUser.mockReturnValue({
       data: {
         roles: [{ name: 'supplier' }],
         isGovernmentUser: false
@@ -180,10 +185,12 @@ describe('MainLayout', () => {
   })
 
   it('displays loading component when loading state is true', () => {
-    useLoadingStore.mockImplementation((selector) => {
-      // This simulates the zustand store behavior
-      return selector({ loading: true })
-    })
+    mockedUseLoadingStore.mockImplementation(
+      (selector: (state: { loading: boolean }) => boolean) => {
+        // This simulates the zustand store behavior
+        return selector({ loading: true })
+      }
+    )
 
     render(<MainLayout />, { wrapper })
 
@@ -192,10 +199,12 @@ describe('MainLayout', () => {
   })
 
   it('does not display loading component when loading state is false', () => {
-    useLoadingStore.mockImplementation((selector) => {
-      // This simulates the zustand store behavior
-      return selector({ loading: false })
-    })
+    mockedUseLoadingStore.mockImplementation(
+      (selector: (state: { loading: boolean }) => boolean) => {
+        // This simulates the zustand store behavior
+        return selector({ loading: false })
+      }
+    )
 
     render(<MainLayout />, { wrapper })
 

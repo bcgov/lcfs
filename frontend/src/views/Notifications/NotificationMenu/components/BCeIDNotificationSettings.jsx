@@ -6,6 +6,11 @@ const BCeIDNotificationSettings = () => {
 
   // Categories for BCeID users
   const categories = {
+    'bceid.categories.governmentNotifications': {
+      title: 'bceid.categories.governmentNotifications.title',
+      BCEID__GOVERNMENT_NOTIFICATION:
+        'bceid.categories.governmentNotifications.subscription'
+    },
     'bceid.categories.transfers': {
       title: 'bceid.categories.transfers.title',
       BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:

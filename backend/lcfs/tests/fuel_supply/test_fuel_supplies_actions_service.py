@@ -565,6 +565,7 @@ def test_calculate_compliance_units(case):
         Q=quantity,
         ED=energy_density,
     )
+    # Convert Decimal result to float for comparison with expected float values
     assert (
-        result == case["expected_compliance_units"]
+        float(result) == case["expected_compliance_units"]
     ), f"Failed {case['description']}. Expected {case['expected_compliance_units']}, got {result}"

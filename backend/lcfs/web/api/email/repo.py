@@ -19,7 +19,7 @@ class CHESEmailRepository:
 
     @repo_handler
     async def get_subscribed_user_emails(
-        self, notification_type: str, organization_id: int, audience_type: AudienceType = AudienceType.SAME_ORGANIZATION
+        self, notification_type: str, organization_id: int = None, audience_type: AudienceType = AudienceType.SAME_ORGANIZATION
     ) -> List[str]:
         """
         Retrieve emails of users subscribed to a specific notification type and for the Email channel.
@@ -50,7 +50,7 @@ class CHESEmailRepository:
         )
         
         # Apply organization filtering based on audience type
-        if organization_id is not None:
+        if organization_id is not None or audience_type in [AudienceType.GOVERNMENT_ONLY, AudienceType.OTHER_ORGANIZATIONS]:
             if audience_type == AudienceType.OTHER_ORGANIZATIONS:
                 # Notify all other organizations (exclude posting org + government)
                 query = query.filter(

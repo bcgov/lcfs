@@ -707,6 +707,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 100,
                     "eer": 1.0,
                     "ci_of_fuel": 80,
+                    "uci": 0,
                     "quantity": 100000,
                     "energy_density": 10,
                 },
@@ -714,6 +715,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 90,
                     "eer": 1.2,
                     "ci_of_fuel": 70,
+                    "uci": 0,
                     "quantity": 200000,
                     "energy_density": 8,
                 },
@@ -721,6 +723,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 80,
                     "eer": 0.5,
                     "ci_of_fuel": 60,
+                    "uci": 0,
                     "quantity": 300000,
                     "energy_density": 8,
                 },
@@ -735,6 +738,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 100,
                     "eer": 1.0,
                     "ci_of_fuel": 80,
+                    "uci": 0,
                     "q1_quantity": 100000,
                     "energy_density": 10,
                 },
@@ -742,6 +746,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 90,
                     "eer": 1.2,
                     "ci_of_fuel": 70,
+                    "uci": 0,
                     "q1_quantity": 200000,
                     "energy_density": 8,
                 },
@@ -749,11 +754,16 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 80,
                     "eer": 0.5,
                     "ci_of_fuel": 60,
+                    "uci": 0,
                     "q1_quantity": 300000,
                     "energy_density": 8,
                 },
             ],
-            [28, 0, 0, 0],
+            # Row 1: (100*1.0 - 80) * (100000*10/1000000) = 20 * 1 = 20
+            # Row 2: (90*1.2 - 70) * (200000*8/1000000) = 38 * 1.6 = 60.8
+            # Row 3: (80*0.5 - 60) * (300000*8/1000000) = -20 * 2.4 = -48
+            # Total: 20 + 60.8 - 48 = 32.8 -> 33 (ROUND_HALF_UP)
+            [33, 0, 0, 0],
         ),
         (
             "Quarterly report with multiple quarter fields",
@@ -763,6 +773,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 100,
                     "eer": 1.0,
                     "ci_of_fuel": 80,
+                    "uci": 0,
                     "q1_quantity": 50000,
                     "q2_quantity": 50000,
                     "energy_density": 10,
@@ -771,6 +782,7 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 90,
                     "eer": 1.2,
                     "ci_of_fuel": 70,
+                    "uci": 0,
                     "q3_quantity": 200000,
                     "energy_density": 8,
                 },
@@ -778,11 +790,16 @@ async def test_unlocked_supplemental_recalculates_line17(
                     "target_ci": 80,
                     "eer": 0.5,
                     "ci_of_fuel": 60,
+                    "uci": 0,
                     "q4_quantity": 300000,
                     "energy_density": 8,
                 },
             ],
-            [10, 10, 59, -50],
+            # Q1: Row1 (100*1 - 80) * (50000*10/1000000) = 20 * 0.5 = 10
+            # Q2: Row1 (100*1 - 80) * (50000*10/1000000) = 20 * 0.5 = 10
+            # Q3: Row2 (90*1.2 - 70) * (200000*8/1000000) = 38 * 1.6 = 60.8 -> 61
+            # Q4: Row3 (80*0.5 - 60) * (300000*8/1000000) = -20 * 2.4 = -48
+            [10, 10, 61, -48],
         ),
     ],
 )
