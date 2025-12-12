@@ -241,6 +241,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=992,
             agreement_date=date,
+            transaction_effective_date=date,
             from_organization_id=organizations[0].organization_id,
             current_status_id=6,
             quantity=1,
@@ -248,6 +249,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=993,
             agreement_date=date,
+            transaction_effective_date=date,
             from_organization_id=organizations[0].organization_id,
             current_status_id=6,
             quantity=1,
@@ -255,6 +257,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=994,
             agreement_date=date,
+            transaction_effective_date=date,
             from_organization_id=organizations[1].organization_id,
             current_status_id=6,
             quantity=1,
@@ -262,6 +265,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=995,
             agreement_date=date,
+            transaction_effective_date=date,
             from_organization_id=organizations[1].organization_id,
             current_status_id=6,
             quantity=1,
@@ -269,6 +273,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=996,
             agreement_date=date,
+            transaction_effective_date=date,
             to_organization_id=organizations[0].organization_id,
             current_status_id=6,
             quantity=1,
@@ -276,6 +281,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=997,
             agreement_date=date,
+            transaction_effective_date=date,
             to_organization_id=organizations[0].organization_id,
             current_status_id=6,
             quantity=1,
@@ -283,6 +289,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=998,
             agreement_date=date,
+            transaction_effective_date=date,
             to_organization_id=organizations[1].organization_id,
             current_status_id=6,
             quantity=1,
@@ -290,6 +297,7 @@ async def transfers(dbsession, organizations):
         Transfer(
             transfer_id=999,
             agreement_date=date,
+            transaction_effective_date=date,
             to_organization_id=organizations[1].organization_id,
             current_status_id=6,
             quantity=1,
