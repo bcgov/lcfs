@@ -5,9 +5,11 @@ import { ChargingSiteFSEGrid } from '../../components/ChargingSiteFSEGrid'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 const mockNavigate = vi.fn()
+const mockPathname = '/compliance-reporting/charging-sites/123'
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: mockPathname }),
   useParams: () => ({ siteId: '123' })
 }))
 
@@ -21,7 +23,11 @@ vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   BCGridViewer: React.forwardRef((props, ref) => (
     <div data-testid="bc-grid-viewer">
-      <button onClick={() => props.onCellClicked({ data: { chargingEquipmentId: 456 } })}>
+      <button
+        onClick={() =>
+          props.onCellClicked({ data: { chargingEquipmentId: 456 } })
+        }
+      >
         Row Click
       </button>
     </div>
@@ -34,7 +40,10 @@ vi.mock('@/components/BCAlert', () => ({
   ))
 }))
 
-import { useChargingSiteEquipmentPaginated, useBulkUpdateEquipmentStatus } from '@/hooks/useChargingSite'
+import {
+  useChargingSiteEquipmentPaginated,
+  useBulkUpdateEquipmentStatus
+} from '@/hooks/useChargingSite'
 
 describe('ChargingSiteFSEGrid', () => {
   const mockEquipmentData = {
@@ -71,7 +80,7 @@ describe('ChargingSiteFSEGrid', () => {
 
   it('renders grid with equipment data', () => {
     render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
-    
+
     expect(screen.getByText('gridTitle')).toBeInTheDocument()
     expect(screen.getByText('gridDescription')).toBeInTheDocument()
     expect(screen.getByText('Row Click')).toBeInTheDocument()
@@ -80,18 +89,25 @@ describe('ChargingSiteFSEGrid', () => {
   it('renders IDIR view for government users', () => {
     const idirProps = { ...mockProps, isIDIR: true }
     render(<ChargingSiteFSEGrid {...idirProps} />, { wrapper })
-    
+
     expect(screen.getByText('equipmentProcessingTitle')).toBeInTheDocument()
-    expect(screen.getByText('equipmentProcessingDescription')).toBeInTheDocument()
+    expect(
+      screen.getByText('equipmentProcessingDescription')
+    ).toBeInTheDocument()
   })
 
-  it('handles row click navigation', () => {
+  it('handles row click navigation with returnTo state', () => {
     render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
-    
+
     const rowButton = screen.getByText('Row Click')
     fireEvent.click(rowButton)
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/456/edit')
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/compliance-reporting/fse/456/edit',
+      {
+        state: { returnTo: mockPathname }
+      }
+    )
   })
 
   it('displays loading state', () => {
