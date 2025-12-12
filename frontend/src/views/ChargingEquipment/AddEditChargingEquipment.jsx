@@ -113,10 +113,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
 
-  // Navigation handler
+  // Navigate back to origin page or default to Manage FSE
+  const navigateBack = useCallback(() => {
+    navigate(location.state?.returnTo || `${ROUTES.REPORTS.LIST}/fse`)
+  }, [navigate, location.state?.returnTo])
+
   const handleCancel = useCallback(() => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse`)
-  }, [navigate])
+    navigateBack()
+  }, [navigateBack])
 
   // Unified save handler for grid rows (create/update/delete)
   const saveRow = useCallback(
@@ -684,7 +688,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
               saveButtonProps={{
                 enabled: true,
                 text: t('chargingEquipment:saveAndReturn'),
-                onSave: () => navigate(ROUTES.REPORTS.LIST + '/fse')
+                onSave: navigateBack
               }}
             />
           </Box>

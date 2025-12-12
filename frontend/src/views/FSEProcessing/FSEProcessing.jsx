@@ -14,10 +14,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box, Grid, Stack, Card, CardContent, Chip } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  useNavigate,
-  useParams
-} from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
@@ -34,12 +31,13 @@ const fseProcessingColDefs = [
     width: 120,
     cellRenderer: (params) => {
       const status = params.value
-      const color = {
-        'Draft': 'default',
-        'Submitted': 'info',
-        'Validated': 'success',
-        'Updated': 'warning'
-      }[status] || 'default'
+      const color =
+        {
+          Draft: 'default',
+          Submitted: 'info',
+          Validated: 'success',
+          Updated: 'warning'
+        }[status] || 'default'
       return <Chip label={status} color={color} size="small" />
     }
   },
@@ -88,9 +86,7 @@ const fseProcessingColDefs = [
   }
 ]
 
-const defaultSortModel = [
-  { colId: 'registration_number', sort: 'asc' }
-]
+const defaultSortModel = [{ colId: 'registration_number', sort: 'asc' }]
 
 const initialPaginationOptions = {
   page: 1,
@@ -102,6 +98,7 @@ const initialPaginationOptions = {
 export const FSEProcessing = () => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
   const navigate = useNavigate()
+  const location = useLocation()
   const { siteId } = useParams()
   const gridRef = useRef()
   const alertRef = useRef(null)
@@ -127,12 +124,8 @@ export const FSEProcessing = () => {
     refetch
   } = useFSEProcessing(siteId)
 
-  const {
-    validateEquipment,
-    returnToDraft,
-    isValidating,
-    isReturningToDraft
-  } = useFSEProcessing()
+  const { validateEquipment, returnToDraft, isValidating, isReturningToDraft } =
+    useFSEProcessing()
 
   const getRowId = useCallback((params) => {
     return params.data.charging_equipment_id
@@ -278,7 +271,9 @@ export const FSEProcessing = () => {
 
     // For BCeID users, navigate to the edit page
     const { charging_equipment_id } = params.data
-    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', charging_equipment_id))
+    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', charging_equipment_id), {
+      state: { returnTo: location.pathname }
+    })
   }
 
   const canValidate = selectedRows.some((row) => row.status === 'Submitted')
@@ -297,7 +292,9 @@ export const FSEProcessing = () => {
           <BCAlert severity="error">
             Error loading FSE processing data
             <br />
-            <small>Please check if the backend service is running properly.</small>
+            <small>
+              Please check if the backend service is running properly.
+            </small>
           </BCAlert>
         </Grid>
       </Grid>
@@ -366,7 +363,9 @@ export const FSEProcessing = () => {
                 <BCTypography variant="body2" color="text.secondary">
                   Organization:
                 </BCTypography>
-                <BCTypography variant="body1">{site?.organization}</BCTypography>
+                <BCTypography variant="body1">
+                  {site?.organization}
+                </BCTypography>
               </Grid>
               <Grid item xs={12} sm={6} md={6}>
                 <BCTypography variant="body2" color="text.secondary">
@@ -466,7 +465,10 @@ export const FSEProcessing = () => {
               paginationOptions={paginationOptions}
               onPaginationChange={(opts) => setPaginationOptions(opts)}
               queryData={{
-                data: { items: equipment?.items || [], total_count: equipment?.total_count || 0 },
+                data: {
+                  items: equipment?.items || [],
+                  total_count: equipment?.total_count || 0
+                },
                 isLoading,
                 isError,
                 error
