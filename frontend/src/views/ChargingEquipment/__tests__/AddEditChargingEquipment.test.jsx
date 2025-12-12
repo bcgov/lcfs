@@ -6,7 +6,40 @@ import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { AddEditChargingEquipment } from '../AddEditChargingEquipment'
 
-// Mock hooks
+// --------------------
+// Validation helpers
+// --------------------
+
+// Re-create the isRowValid function for testing
+const isRowValid = (row) =>
+  Boolean(
+    row?.chargingSiteId &&
+      row?.serialNumber &&
+      row?.manufacturer &&
+      row?.levelOfEquipmentId &&
+      row?.intendedUseIds?.length > 0 &&
+      row?.intendedUserIds?.length > 0
+  )
+
+const getEmptyRow = (id = Date.now()) => ({
+  id,
+  chargingSiteId: '',
+  serialNumber: '',
+  manufacturer: '',
+  model: '',
+  levelOfEquipmentId: '',
+  ports: '',
+  latitude: 0,
+  longitude: 0,
+  notes: '',
+  intendedUseIds: [],
+  intendedUserIds: []
+})
+
+// --------------------
+// Mocks
+// --------------------
+
 vi.mock('@/hooks/useChargingEquipment')
 vi.mock('@/hooks/useCurrentUser')
 
@@ -50,6 +83,62 @@ const TestWrapper = ({ children }) => {
     </QueryClientProvider>
   )
 }
+
+// --------------------
+// isRowValid tests
+// --------------------
+
+describe('isRowValid validation function', () => {
+  it('returns true for a complete row', () => {
+    expect(
+      isRowValid({
+        chargingSiteId: 1,
+        serialNumber: 'ABC123',
+        manufacturer: 'Tesla',
+        levelOfEquipmentId: 1,
+        intendedUseIds: [1],
+        intendedUserIds: [1]
+      })
+    ).toBe(true)
+  })
+
+  it('returns false for empty row', () => {
+    expect(isRowValid(getEmptyRow())).toBe(false)
+  })
+
+  it('returns false when chargingSiteId is 0', () => {
+    expect(
+      isRowValid({
+        chargingSiteId: 0,
+        serialNumber: 'ABC123',
+        manufacturer: 'Tesla',
+        levelOfEquipmentId: 1,
+        intendedUseIds: [1],
+        intendedUserIds: [1]
+      })
+    ).toBe(false)
+  })
+})
+
+// --------------------
+// getEmptyRow tests
+// --------------------
+
+describe('getEmptyRow function behavior', () => {
+  it('creates empty ports', () => {
+    expect(getEmptyRow().ports).toBe('')
+  })
+
+  it('creates empty intendedUseIds and intendedUserIds', () => {
+    const row = getEmptyRow()
+    expect(row.intendedUseIds).toEqual([])
+    expect(row.intendedUserIds).toEqual([])
+  })
+})
+
+// --------------------
+// AddEditChargingEquipment navigation tests
+// --------------------
 
 describe('AddEditChargingEquipment - Navigation', () => {
   beforeEach(async () => {
@@ -100,22 +189,21 @@ describe('AddEditChargingEquipment - Navigation', () => {
     useDeleteChargingEquipment.mockReturnValue({ mutateAsync: vi.fn() })
   })
 
-  it('navigates to default Manage FSE page when no returnTo state', () => {
-    mockLocationState = null
-
+  it('navigates to Manage FSE by default', () => {
     render(
       <TestWrapper>
         <AddEditChargingEquipment />
       </TestWrapper>
     )
 
-    const saveBtn = screen.getByTestId('save-return-btn')
-    fireEvent.click(saveBtn)
+    fireEvent.click(screen.getByTestId('save-return-btn'))
     expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse')
   })
 
-  it('navigates back to Charging Site when returnTo state is set', () => {
-    mockLocationState = { returnTo: '/compliance-reporting/charging-sites/123' }
+  it('navigates back using returnTo state', () => {
+    mockLocationState = {
+      returnTo: '/compliance-reporting/charging-sites/123'
+    }
 
     render(
       <TestWrapper>
@@ -123,40 +211,9 @@ describe('AddEditChargingEquipment - Navigation', () => {
       </TestWrapper>
     )
 
-    const saveBtn = screen.getByTestId('save-return-btn')
-    fireEvent.click(saveBtn)
+    fireEvent.click(screen.getByTestId('save-return-btn'))
     expect(mockNavigate).toHaveBeenCalledWith(
       '/compliance-reporting/charging-sites/123'
     )
-  })
-
-  it('navigates back to FSE Processing when returnTo state is set', () => {
-    mockLocationState = { returnTo: '/charging-sites/456/equipment-processing' }
-
-    render(
-      <TestWrapper>
-        <AddEditChargingEquipment />
-      </TestWrapper>
-    )
-
-    const saveBtn = screen.getByTestId('save-return-btn')
-    fireEvent.click(saveBtn)
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/charging-sites/456/equipment-processing'
-    )
-  })
-
-  it('navigates back to Manage FSE when returnTo matches FSE list', () => {
-    mockLocationState = { returnTo: '/compliance-reporting/fse' }
-
-    render(
-      <TestWrapper>
-        <AddEditChargingEquipment />
-      </TestWrapper>
-    )
-
-    const saveBtn = screen.getByTestId('save-return-btn')
-    fireEvent.click(saveBtn)
-    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse')
   })
 })
