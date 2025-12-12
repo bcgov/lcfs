@@ -1,7 +1,7 @@
 """Modify constraint on compliance report charging equipment
 
 Revision ID: 64ab3b361bde
-Revises: b8c9d0e1f2a3
+Revises: bbfbe5d4c7e8
 Create Date: 2025-12-11 10:35:57.365155
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "64ab3b361bde"
-down_revision = "b8c9d0e1f2a3"
+down_revision = "bbfbe5d4c7e8"
 branch_labels = None
 depends_on = None
 
