@@ -121,11 +121,6 @@ class ComplianceReportSummary(BaseModel, Auditable):
         comment="User who made the penalty override"
     )
 
-    # Legacy TFRS Columns
-    credits_offset_a = Column(Integer)
-    credits_offset_b = Column(Integer)
-    credits_offset_c = Column(Integer)
-
     # Early Issuance Columns
     early_issuance_credits_q1 = Column(Integer)
     early_issuance_credits_q2 = Column(Integer)

@@ -1,11 +1,4 @@
-import React, {
-  forwardRef,
-  useState,
-  useEffect,
-  useRef,
-  useImperativeHandle,
-  useMemo
-} from 'react'
+import React, { forwardRef, useState, useEffect, useRef, useImperativeHandle } from 'react'
 import PropTypes from 'prop-types'
 import {
   Autocomplete,
@@ -36,8 +29,20 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onKeyDownCapture,
     onBlur,
     onPaste,
-    returnObject = false // NEW: when false, emit IDs; when true, emit option objects
+    returnObject: returnObjectProp
   } = props
+
+  const returnObject =
+    returnObjectProp ?? colDef?.cellEditorParams?.returnObject ?? false
+  const shouldUseInputState = freeSolo && !multiple
+
+  const getLabel = (option) => {
+    if (option == null) return ''
+    if (typeof option === 'string' || typeof option === 'number') {
+      return option.toString()
+    }
+    return option.label || option.name || option.value || ''
+  }
 
   // Helpers to map between raw values (ids/strings) and option objects
   const getRawValue = (optionOrValue) => {
@@ -87,20 +92,35 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     return findOptionByRaw(value)
   }
   const [selected, setSelected] = useState(initSelected)
+  const [inputValue, setInputValue] = useState(() =>
+    shouldUseInputState ? getLabel(value) : ''
+  )
   const [isOpen, setIsOpen] = useState(false)
   const inputRef = useRef(null)
 
+  const getMultipleValue = () => {
+    if (returnObject) {
+      return Array.isArray(selected) ? selected : []
+    }
+    return Array.isArray(selected)
+      ? selected.map((opt) => getRawValue(opt))
+      : []
+  }
+
+  const getSingleValue = () => {
+    if (selected) {
+      return returnObject ? selected : getRawValue(selected)
+    }
+    if (shouldUseInputState) {
+      return inputValue ?? ''
+    }
+    return returnObject ? null : ''
+  }
+
+  const getCurrentValue = () => (multiple ? getMultipleValue() : getSingleValue())
+
   useImperativeHandle(ref, () => ({
-    getValue: () => {
-      if (multiple) {
-        if (returnObject) return Array.isArray(selected) ? selected : []
-        return Array.isArray(selected)
-          ? selected.map((opt) => getRawValue(opt))
-          : []
-      }
-      if (returnObject) return selected || null
-      return selected ? getRawValue(selected) : ''
-    },
+    getValue: () => getCurrentValue(),
     isCancelBeforeStart: () => false,
     isCancelAfterEnd: () => false,
     afterGuiAttached: () => inputRef.current?.focus()
@@ -113,14 +133,23 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   const handleChange = (event, newValue) => {
     // newValue is an option object (single) or array of option objects (multiple)
     setSelected(newValue)
+    if (shouldUseInputState && !multiple) {
+      if (newValue == null) {
+        setInputValue('')
+      } else if (typeof newValue === 'string') {
+        setInputValue(newValue)
+      } else {
+        setInputValue(getLabel(newValue))
+      }
+    }
     if (onValueChange) {
       if (multiple) {
         onValueChange(
           returnObject
             ? newValue
             : Array.isArray(newValue)
-              ? newValue.map((o) => getRawValue(o))
-              : []
+                ? newValue.map((o) => getRawValue(o))
+                : []
         )
       } else {
         onValueChange(returnObject ? newValue : getRawValue(newValue))
@@ -147,17 +176,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     }
     if (event.key === 'Tab') {
       event.preventDefault()
-      onValueChange?.(
-        multiple
-          ? returnObject
-            ? selected || []
-            : (selected || []).map((o) => getRawValue(o))
-          : returnObject
-            ? selected
-            : selected
-              ? getRawValue(selected)
-              : ''
-      )
+      onValueChange?.(getCurrentValue())
       api.stopEditing()
       if (event.shiftKey) {
         api.tabToPreviousCell()
@@ -188,6 +207,14 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   const handleBlur = (event) => {
     onBlur?.(event)
     api.stopEditing()
+  }
+
+  const handleInputChange = (_event, newInputValue, reason) => {
+    if (!shouldUseInputState) return
+    setInputValue(newInputValue)
+    if (reason === 'input' || reason === 'clear') {
+      setSelected(null)
+    }
   }
 
   const isOptionEqualToValue = (option, value) => {
@@ -230,10 +257,9 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
         size="medium"
         freeSolo={freeSolo}
         isOptionEqualToValue={isOptionEqualToValue}
-        getOptionLabel={(option) => {
-          if (!option) return ''
-          return typeof option === 'string' ? option : option.label || ''
-        }}
+        inputValue={shouldUseInputState ? inputValue : undefined}
+        onInputChange={shouldUseInputState ? handleInputChange : undefined}
+        getOptionLabel={getLabel}
         renderOption={(props, option, { selected }) => {
           const isSelected = multiple
             ? Array.isArray(selected) && selected.some(Boolean)
@@ -312,7 +338,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
 })
 
 AutocompleteCellEditor.propTypes = {
-  value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  value: PropTypes.oneOfType([PropTypes.array, PropTypes.string, PropTypes.object]),
   options: PropTypes.array.isRequired,
   limitTags: PropTypes.number,
   multiple: PropTypes.bool,
@@ -325,7 +351,8 @@ AutocompleteCellEditor.propTypes = {
   node: PropTypes.object.isRequired,
   onKeyDownCapture: PropTypes.func,
   onBlur: PropTypes.func,
-  onPaste: PropTypes.func
+  onPaste: PropTypes.func,
+  returnObject: PropTypes.bool
 }
 
 AutocompleteCellEditor.displayName = 'AutocompleteEditor'

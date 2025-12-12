@@ -218,51 +218,7 @@ export const chargingSiteColDefs = (
     {
       field: 'allocatingOrganization',
       headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
-      valueGetter: (params) => {
-        // Hybrid approach: prefer ID, fallback to name
-        const storedId = params.data?.allocatingOrganizationId
-        const storedName = params.data?.allocatingOrganizationName
-
-        // If we have an ID, find the org by ID
-        if (storedId) {
-          const matchingOrg = allocationOrganizations?.find(
-            (org) => org.organizationId === storedId
-          )
-          if (matchingOrg) {
-            return {
-              label: matchingOrg.name,
-              value: matchingOrg.organizationId,
-              organizationId: matchingOrg.organizationId,
-              name: matchingOrg.name
-            }
-          }
-        }
-
-        // If we have a name but no ID, try to find by name
-        if (storedName) {
-          const matchingOrg = allocationOrganizations?.find(
-            (org) => org.name === storedName
-          )
-          if (matchingOrg) {
-            return {
-              label: matchingOrg.name,
-              value: matchingOrg.organizationId,
-              organizationId: matchingOrg.organizationId,
-              name: matchingOrg.name
-            }
-          }
-
-          // Return as simple text if not in list
-          return {
-            label: storedName,
-            value: null,
-            organizationId: null,
-            name: storedName
-          }
-        }
-
-        return null
-      },
+      valueGetter: (params) => params.data?.allocatingOrganizationName || '',
       valueSetter: (params) => {
         // Store both the ID and name (hybrid approach)
         if (params.newValue === '' || params.newValue === null) {
@@ -302,17 +258,18 @@ export const chargingSiteColDefs = (
           })) || [],
         multiple: false,
         openOnFocus: true,
-        returnObject: true
+        returnObject: true,
+        freeSolo: true
       },
       tooltipValueGetter: (p) =>
         !allocationOrganizations || allocationOrganizations.length === 0
-          ? 'No allocation agreements found. You must first enter an allocation agreement in your compliance report to use this field.'
+          ? 'No allocation agreements found. It is recommended to add an allocation agreement in your compliance report to use this field.'
           : "Allocating organizations tied to your allocation agreements. If an organization isn't listed you must first enter an allocation agreement in your compliance report.",
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 315,
-      editable: allocationOrganizations && allocationOrganizations.length > 0
+      editable: true
     },
     {
       field: 'notes',

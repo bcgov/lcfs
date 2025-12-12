@@ -372,7 +372,7 @@ class ComplianceReportSummaryRepository:
     ) -> int:
         result = await self.db.scalar(
             select(func.sum(Transfer.quantity)).where(
-                Transfer.agreement_date.between(
+                Transfer.transaction_effective_date.between(
                     compliance_period_start, compliance_period_end
                 ),
                 Transfer.from_organization_id == organization_id,
@@ -390,7 +390,7 @@ class ComplianceReportSummaryRepository:
     ) -> int:
         result = await self.db.scalar(
             select(func.sum(Transfer.quantity)).where(
-                Transfer.agreement_date.between(
+                Transfer.transaction_effective_date.between(
                     compliance_period_start, compliance_period_end
                 ),
                 Transfer.to_organization_id == organization_id,

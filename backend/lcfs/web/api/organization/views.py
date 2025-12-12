@@ -240,7 +240,7 @@ async def update_transfer(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING])
 async def create_compliance_report(
     request: Request,
     organization_id: int,

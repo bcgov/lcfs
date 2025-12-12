@@ -147,8 +147,7 @@ export const useComplianceReportWithCache = (reportId, options = {}) => {
   const cachedReport = getCachedReport(reportId)
   const needsFetch = shouldFetchReport(reportId)
   const { data: currentUser } = useCurrentUser({
-    enabled:
-      needsFetch && !!reportId
+    enabled: needsFetch && !!reportId
   })
   const queryResult = useGetComplianceReport(
     currentUser?.organization?.organizationId,
@@ -219,15 +218,7 @@ export const useUpdateComplianceReportSummary = (reportID, options = {}) => {
       return await client.put(path, data)
     },
     onSuccess: (data, variables, context) => {
-      if (clearCache) {
-        queryClient.removeQueries(['compliance-report-summary', reportID])
-      } else {
-        queryClient.setQueryData(
-          ['compliance-report-summary', reportID],
-          data.data
-        )
-      }
-
+      queryClient.invalidateQueries(['compliance-report-summary', reportID])
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
@@ -296,6 +287,7 @@ export const useDeleteComplianceReport = (orgID, reportID, options = {}) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
   const queryClient = useQueryClient()
+  const { removeReport } = useComplianceReportStore()
 
   const { onSuccess, onError, ...restOptions } = options
 
@@ -314,6 +306,9 @@ export const useDeleteComplianceReport = (orgID, reportID, options = {}) => {
       return await client.delete(path)
     },
     onSuccess: (data, variables, context) => {
+      // Remove from Zustand store first
+      removeReport(reportID)
+
       const queriesToInvalidate = [
         ['compliance-reports'],
         ['compliance-reports-list'],
@@ -483,7 +478,12 @@ export const useGetComplianceReportList = (
   options = {}
 ) => {
   const client = useApiService()
-  const { data: currentUser, hasRoles, isLoading } = useCurrentUser()
+  const {
+    data: currentUser,
+    hasRoles,
+    hasAnyRole,
+    isLoading
+  } = useCurrentUser()
 
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -495,7 +495,7 @@ export const useGetComplianceReportList = (
   return useQuery({
     queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
     queryFn: async () => {
-      if (hasRoles(roles.compliance_reporting, roles.signing_authority)) {
+      if (hasAnyRole(roles.compliance_reporting, roles.signing_authority)) {
         const orgId = currentUser?.organization?.organizationId
         if (!orgId) {
           throw new Error('Organization ID not found for supplier')
@@ -515,7 +515,9 @@ export const useGetComplianceReportList = (
         })
         return response.data
       } else {
-        throw new Error('User does not have permission to view compliance reports')
+        throw new Error(
+          'User does not have permission to view compliance reports'
+        )
       }
     },
     enabled: enabled && !isLoading,
