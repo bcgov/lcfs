@@ -5,24 +5,49 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 
+def _make_json_serializable(errors: list) -> list:
+    """Convert validation errors to JSON-serializable format."""
+    serializable_errors = []
+    for error in errors:
+        serializable_error = dict(error)
+        # Convert ctx values to strings if they contain non-serializable objects
+        if "ctx" in serializable_error:
+            ctx = serializable_error["ctx"]
+            if isinstance(ctx, dict):
+                serializable_error["ctx"] = {
+                    k: (
+                        str(v)
+                        if not isinstance(
+                            v, (str, int, float, bool, type(None), list, dict)
+                        )
+                        else v
+                    )
+                    for k, v in ctx.items()
+                }
+        serializable_errors.append(serializable_error)
+    return serializable_errors
+
+
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
     standard_errors = [
-        {"fields": [error["loc"][-1]], "message": error["msg"]}
-        for error in exc.errors()
+        {"fields": [error["loc"][-1]], "message": error["msg"]} for error in errors
     ]
 
     return JSONResponse(
         status_code=422,
         content={
             "message": "Validation failed",
-            "details": exc.errors(),  # This provides the detailed validation error
+            "details": _make_json_serializable(
+                errors
+            ),  # This provides the detailed validation error
             "errors": standard_errors,  # The body of the request, if needed
         },
     )
 
-async def validation_error_exception_handler_no_details(request: Request, exc: ValidationErrorException):
+
+async def validation_error_exception_handler_no_details(
+    request: Request, exc: ValidationErrorException
+):
     """Handler for ValidationErrorException that returns content without 'detail' wrapping"""
-    return JSONResponse(
-        status_code=422,
-        content=exc.errors
-    )
+    return JSONResponse(status_code=422, content=exc.errors)
