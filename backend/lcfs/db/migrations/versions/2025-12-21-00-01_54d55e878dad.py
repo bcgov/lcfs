@@ -39,24 +39,5 @@ def upgrade() -> None:
             ),
         )
 
-    # Drop the columns with CASCADE to handle dependent views (only if they exist)
-    # Using raw SQL to handle CASCADE and IF EXISTS
-    for col in ["credits_offset_b", "credits_offset_c", "credits_offset_a"]:
-        if column_exists("compliance_report_summary", col):
-            op.execute(f"ALTER TABLE compliance_report_summary DROP COLUMN IF EXISTS {col} CASCADE")
-
-
 def downgrade() -> None:
-    op.add_column(
-        "compliance_report_summary",
-        sa.Column("credits_offset_a", sa.INTEGER(), autoincrement=False, nullable=True),
-    )
-    op.add_column(
-        "compliance_report_summary",
-        sa.Column("credits_offset_c", sa.INTEGER(), autoincrement=False, nullable=True),
-    )
-    op.add_column(
-        "compliance_report_summary",
-        sa.Column("credits_offset_b", sa.INTEGER(), autoincrement=False, nullable=True),
-    )
     op.drop_column("compliance_report_summary", "historical_snapshot")

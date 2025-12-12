@@ -1,7 +1,7 @@
 """add renewable diesel fuel type
 
 Revision ID: a3290902296b
-Revises: b8c9d0e1f2a3
+Revises: c4d5e6f7a8b9
 Create Date: 2025-04-11 13:29:03.149771
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "a3290902296b"
-down_revision = "b8c9d0e1f2a3"  # Updated: TFRS migrations come after main migrations
+down_revision = "c4d5e6f7a8b9"
 branch_labels = None
 depends_on = None
 
