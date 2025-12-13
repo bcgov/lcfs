@@ -15,6 +15,7 @@ from sqlalchemy import (
     desc,
     literal,
     union_all,
+    case,
 )
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -753,6 +754,23 @@ class FinalSupplyEquipmentRepository:
 
         combined_subquery = combined_query.subquery()
 
+        ordering_columns = []
+        if compliance_report_group_uuid and mode == "all":
+            ordering_columns.append(
+                case(
+                    (
+                        combined_subquery.c.compliance_report_group_uuid
+                        == compliance_report_group_uuid,
+                        0,
+                    ),
+                    else_=1,
+                )
+            )
+        ordering_columns.append(combined_subquery.c.source_priority)
+        ordering_columns.append(
+            desc(combined_subquery.c.charging_equipment_compliance_id).nullslast()
+        )
+
         row_number_column = (
             func.row_number()
             .over(
@@ -760,12 +778,7 @@ class FinalSupplyEquipmentRepository:
                     combined_subquery.c.charging_equipment_id,
                     combined_subquery.c.charging_equipment_version,
                 ),
-                order_by=[
-                    combined_subquery.c.source_priority,
-                    desc(
-                        combined_subquery.c.charging_equipment_compliance_id
-                    ).nullslast(),
-                ],
+                order_by=ordering_columns,
             )
             .label("row_number")
         )
