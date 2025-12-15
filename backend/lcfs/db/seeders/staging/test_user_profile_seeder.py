@@ -17,19 +17,6 @@ async def seed_test_user_profiles(session):
     # Define the user profiles to seed based on actual test database
     user_profiles_to_seed = [
         {
-            "user_profile_id": 1,
-            "keycloak_email": "alex.zorkin@gov.bc.ca",
-            "keycloak_username": "ALZORKIN",
-            "email": "alex.zorkin@gov.bc.ca",
-            "title": "Developer",
-            "phone": "1234567890",
-            "mobile_phone": "1234567890",
-            "organization_id": None,
-            "is_active": True,
-            "first_name": "Alex",
-            "last_name": "Zorkin",
-        },
-        {
             "user_profile_id": 2,
             "keycloak_email": "hamed.valiollahibayeki@gov.bc.ca",
             "keycloak_username": "HVALIOLL",
@@ -719,22 +706,36 @@ async def seed_test_user_profiles(session):
             "first_name": "Wesley",
             "last_name": "Hawley",
         },
+        {
+            "user_profile_id": 55,
+            "keycloak_user_id": "",
+            "keycloak_email": "alex.zorkin@gov.bc.ca",
+            "keycloak_username": "ALZORKIN",
+            "email": "alex.zorkin@gov.bc.ca",
+            "title": "Lead Developer",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "Alex",
+            "last_name": "Zorkin",
+        },
     ]
 
     for user_profile_data in user_profiles_to_seed:
-        # Check if the user profile already exists
+        # Check if the user profile already exists by keycloak_username or user_profile_id
         existing_user_profile = await session.execute(
             select(UserProfile).where(
-                UserProfile.user_profile_id == user_profile_data["user_profile_id"]
+                (UserProfile.keycloak_username == user_profile_data["keycloak_username"])
+                | (UserProfile.user_profile_id == user_profile_data["user_profile_id"])
             )
         )
         if existing_user_profile.scalar():
             logger.info(
-                f"User profile with ID {user_profile_data['user_profile_id']} already exists, skipping."
+                f"User profile with username/id {user_profile_data['keycloak_username']}/{user_profile_data['user_profile_id']} already exists, skipping."
             )
             continue
 
-        # Create and add the new user profile
         user_profile = UserProfile(**user_profile_data)
         session.add(user_profile)
 

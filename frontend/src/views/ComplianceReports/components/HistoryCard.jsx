@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { timezoneFormatter } from '@/utils/formatters.js'
 import { ExpandMore } from '@mui/icons-material'
@@ -12,7 +12,7 @@ import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
 import { useTranslation } from 'react-i18next'
-import { roles } from '@/constants/roles.js'
+import { roles } from '@/constants/roles'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />

@@ -3,6 +3,11 @@ import NotificationSettingsForm from './NotificationSettingsForm'
 const IDIRComplianceManagerNotificationSettings = () => {
   // Categories for IDIR Compliance Manager
   const categories = {
+    'idirComplianceManager.categories.governmentNotifications': {
+      title: 'idirComplianceManager.categories.governmentNotifications.title',
+      IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION:
+        'idirComplianceManager.categories.governmentNotifications.subscription'
+    },
     'idirComplianceManager.categories.complianceReports': {
       title: 'idirComplianceManager.categories.complianceReports.title',
       IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW:

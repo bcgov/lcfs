@@ -147,8 +147,7 @@ export const useComplianceReportWithCache = (reportId, options = {}) => {
   const cachedReport = getCachedReport(reportId)
   const needsFetch = shouldFetchReport(reportId)
   const { data: currentUser } = useCurrentUser({
-    enabled:
-      needsFetch && !!reportId
+    enabled: needsFetch && !!reportId
   })
   const queryResult = useGetComplianceReport(
     currentUser?.organization?.organizationId,
@@ -479,7 +478,12 @@ export const useGetComplianceReportList = (
   options = {}
 ) => {
   const client = useApiService()
-  const { data: currentUser, hasRoles, isLoading } = useCurrentUser()
+  const {
+    data: currentUser,
+    hasRoles,
+    hasAnyRole,
+    isLoading
+  } = useCurrentUser()
 
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -491,7 +495,7 @@ export const useGetComplianceReportList = (
   return useQuery({
     queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
     queryFn: async () => {
-      if (hasRoles(roles.compliance_reporting, roles.signing_authority)) {
+      if (hasAnyRole(roles.compliance_reporting, roles.signing_authority)) {
         const orgId = currentUser?.organization?.organizationId
         if (!orgId) {
           throw new Error('Organization ID not found for supplier')
@@ -511,7 +515,9 @@ export const useGetComplianceReportList = (
         })
         return response.data
       } else {
-        throw new Error('User does not have permission to view compliance reports')
+        throw new Error(
+          'User does not have permission to view compliance reports'
+        )
       }
     },
     enabled: enabled && !isLoading,

@@ -19,7 +19,7 @@ import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 import BCButton from '@/components/BCButton'
 import { CalculateOutlined } from '@mui/icons-material'
 
@@ -161,7 +161,7 @@ export const ComplianceReports = () => {
         my={{ xs: 1, sm: 1, md: 2 }}
         mx={0}
       >
-        <Role roles={[roles.supplier]}>
+        <Role roles={[roles.compliance_reporting]}>
           <NewComplianceReportButton
             ref={newButtonRef}
             handleNewReport={(option) => {

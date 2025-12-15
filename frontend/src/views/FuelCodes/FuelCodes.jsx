@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs, defaultSortModel } from './_schema'
-import { defaultInitialPagination } from '@/constants/schedules.js'
+import { defaultInitialPagination } from '@/constants/schedules'
 
 const convertToBackendFilters = (model = {}) =>
   Object.entries(model).map(([field, cfg]) => ({
