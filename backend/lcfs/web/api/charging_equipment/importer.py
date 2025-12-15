@@ -204,6 +204,7 @@ async def import_async(
                     created = 0
                     rejected = 0
                     errors: List[str] = []
+                    success_rows: List[dict] = []
 
                     await _update_progress(
                         redis_client,
@@ -213,6 +214,7 @@ async def import_async(
                         created=created,
                         rejected=rejected,
                         errors=errors,
+                        successes=success_rows,
                     )
 
                     # Preload lookups
@@ -266,6 +268,7 @@ async def import_async(
                                 created=created,
                                 rejected=rejected,
                                 errors=errors,
+                                successes=success_rows,
                             )
 
                         # Check if the entire row is empty
@@ -383,7 +386,15 @@ async def import_async(
                                 intended_use_ids=intended_use_ids,
                                 intended_user_ids=intended_user_ids,
                             )
-                            await ce_service.create_charging_equipment(user, ce_data)
+                            created_equipment = await ce_service.create_charging_equipment(
+                                user, ce_data
+                            )
+                            success_rows.append(
+                                {
+                                    "row": row_idx,
+                                    "chargingEquipmentId": created_equipment.charging_equipment_id,
+                                }
+                            )
                             created += 1
                         except Exception as ex:
                             logger.error(str(ex))
@@ -399,6 +410,7 @@ async def import_async(
                         created=created,
                         rejected=rejected,
                         errors=errors,
+                        successes=success_rows,
                     )
                     logger.debug(
                         f"Completed importing charging equipment data, {created} rows created"
@@ -441,6 +453,7 @@ async def _update_progress(
     created: int = 0,
     rejected: int = 0,
     errors: List[str] | None = None,
+    successes: List[dict] | None = None,
 ):
     """
     Persists the job status and progress in Redis.
@@ -453,5 +466,6 @@ async def _update_progress(
         "created": created,
         "rejected": rejected,
         "errors": errors,
+        "successes": successes or [],
     }
     await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=60)

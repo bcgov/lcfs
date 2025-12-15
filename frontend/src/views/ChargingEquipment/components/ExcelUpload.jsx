@@ -1,7 +1,7 @@
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { Box, Alert } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faUpload, faFileImport } from '@fortawesome/free-solid-svg-icons'
+import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import BCButton from '@/components/BCButton'
@@ -23,7 +23,6 @@ export const ExcelUpload = ({
   onImportComplete
 }) => {
   const { t } = useTranslation(['chargingEquipment', 'common'])
-  const fileInputRef = useRef(null)
   const apiService = useApiService()
   const [uploadError, setUploadError] = useState('')
   const [downloadError, setDownloadError] = useState('')
@@ -56,166 +55,142 @@ export const ExcelUpload = ({
     }
   }
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0]
-    if (!file) return
+  const parseNumber = (value) => {
+    if (value === undefined || value === null || value === '') return ''
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : ''
+  }
 
-    setUploadError('')
+  const parseTemplateFile = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result)
-        const workbook = XLSX.read(data, { type: 'array' })
-        const sheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[sheetName]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-        // Transform Excel data to match our schema
-        const normalizeValue = (value, { upper = false } = {}) => {
-          if (value === undefined || value === null) return ''
-          const text =
-            typeof value === 'string' ? value.trim() : String(value).trim()
-          return upper ? text.toUpperCase() : text
-        }
-
-        const parseNumber = (value) => {
-          if (value === undefined || value === null || value === '') return ''
-          const parsed = Number(value)
-          return Number.isFinite(parsed) ? parsed : ''
-        }
-
-        const transformedData = jsonData.map((row, index) => {
-          const siteValue =
-            row['Charging Site'] ||
-            row['Charging site'] ||
-            row['Site name'] ||
-            row['Site Name'] ||
-            ''
-          const normalizedSiteName = normalizeValue(siteValue)
-          const latitudeCell = row['Latitude']
-          const longitudeCell = row['Longitude']
-
-          const chargingSite = chargingSites.find((site) => {
-            const displayName = normalizeValue(
-              site.siteName || site.site_name || ''
-            )
-            const siteCode = normalizeValue(
-              site.siteCode || site.site_code || '',
-              { upper: true }
-            )
-
-            if (!normalizedSiteName) return false
-
-            return (
-              (displayName &&
-                normalizedSiteName.toLowerCase() ===
-                  displayName.toLowerCase()) ||
-              (siteCode && normalizedSiteName.toUpperCase() === siteCode)
-            )
-          })
-
-          // Parse intended uses
-          const intendedUseIds = []
-          if (row['Intended Uses']) {
-            const useNames = row['Intended Uses']
-              .split(',')
-              .map((s) => s.trim())
-            useNames.forEach((useName) => {
-              const useType = endUseTypes.find((type) => {
-                const label = type.type || type.type_name || ''
-                return (
-                  label &&
-                  useName &&
-                  label.trim().toLowerCase() === useName.trim().toLowerCase()
-                )
-              })
-              const useId =
-                useType?.end_use_type_id ?? useType?.endUseTypeId ?? null
-              if (useId) {
-                intendedUseIds.push(useId)
-              }
-            })
+          const normalizeValue = (value, { upper = false } = {}) => {
+            if (value === undefined || value === null) return ''
+            const text =
+              typeof value === 'string' ? value.trim() : String(value).trim()
+            return upper ? text.toUpperCase() : text
           }
 
-          // Parse intended users
-          const intendedUserIds = []
-          if (row['Intended Users']) {
-            const userNames = row['Intended Users']
-              .split(',')
-              .map((s) => s.trim())
-            userNames.forEach((userName) => {
-              const userType = endUserTypes.find((type) => {
-                const label = type.type_name || type.typeName || ''
-                return (
-                  label &&
-                  userName &&
-                  label.trim().toLowerCase() === userName.trim().toLowerCase()
-                )
-              })
-              const userId =
-                userType?.end_user_type_id ?? userType?.endUserTypeId ?? null
-              if (userId) {
-                intendedUserIds.push(userId)
-              }
+          const transformedData = jsonData.map((row, index) => {
+            const siteValue =
+              row['Charging Site'] ||
+              row['Charging site'] ||
+              row['Site name'] ||
+              row['Site Name'] ||
+              ''
+            const normalizedSiteName = normalizeValue(siteValue)
+            const latitudeCell = row['Latitude']
+            const longitudeCell = row['Longitude']
+
+            const chargingSite = chargingSites.find((site) => {
+              const displayName = normalizeValue(
+                site.siteName || site.site_name || ''
+              )
+              const siteCode = normalizeValue(
+                site.siteCode || site.site_code || '',
+                { upper: true }
+              )
+
+              if (!normalizedSiteName) return false
+
+              return (
+                (displayName &&
+                  normalizedSiteName.toLowerCase() ===
+                    displayName.toLowerCase()) ||
+                (siteCode && normalizedSiteName.toUpperCase() === siteCode)
+              )
             })
-          }
 
-          // Find matching level
-          const level = levels.find((l) => {
-            const levelName = l.name || l.level_name
-            const target =
-              row['Level of Equipment'] || row['Level Of Equipment']
-            return (
-              levelName &&
-              target &&
-              levelName.trim().toLowerCase() === target.trim().toLowerCase()
-            )
-          })
+            const intendedUseIds = []
+            if (row['Intended Uses']) {
+              const useNames = row['Intended Uses']
+                .split(',')
+                .map((s) => s.trim())
+              useNames.forEach((useName) => {
+                const useType = endUseTypes.find((type) => {
+                  const label = type.type || type.type_name || ''
+                  return (
+                    label &&
+                    useName &&
+                    label.trim().toLowerCase() === useName.trim().toLowerCase()
+                  )
+                })
+                const useId =
+                  useType?.end_use_type_id ?? useType?.endUseTypeId ?? null
+                if (useId) {
+                  intendedUseIds.push(useId)
+                }
+              })
+            }
 
-          const chargingSiteId =
-            chargingSite?.charging_site_id ?? chargingSite?.chargingSiteId ?? ''
-          const levelId =
-            level?.level_of_equipment_id ?? level?.levelOfEquipmentId ?? ''
+            const intendedUserIds = []
+            if (row['Intended Users']) {
+              const userNames = row['Intended Users']
+                .split(',')
+                .map((s) => s.trim())
+              userNames.forEach((userName) => {
+                const userType = endUserTypes.find((type) => {
+                  const label = type.type_name || type.typeName || ''
+                  return (
+                    label &&
+                    userName &&
+                    label.trim().toLowerCase() === userName.trim().toLowerCase()
+                  )
+                })
+                const userId =
+                  userType?.end_user_type_id ?? userType?.endUserTypeId ?? null
+                if (userId) {
+                  intendedUserIds.push(userId)
+                }
+              })
+            }
 
-          const defaultLatitude =
-            chargingSite?.latitude ?? chargingSite?.lat ?? ''
-          const defaultLongitude =
-            chargingSite?.longitude ?? chargingSite?.lng ?? ''
-          const latitudeOverride = parseNumber(latitudeCell)
-          const longitudeOverride = parseNumber(longitudeCell)
-          const latitude =
-            latitudeOverride !== '' ? latitudeOverride : defaultLatitude
-          const longitude =
-            longitudeOverride !== '' ? longitudeOverride : defaultLongitude
+            const level = levels.find((l) => {
+              const levelName = l.name || l.level_name
+              const target =
+                row['Level of Equipment'] || row['Level Of Equipment']
+              return (
+                levelName &&
+                target &&
+                levelName.trim().toLowerCase() === target.trim().toLowerCase()
+              )
+            })
 
-          const serialNumber = row['Serial Number'] || ''
-          const manufacturer = row['Manufacturer'] || ''
-          const model = row['Model'] || ''
-          const notes = row['Notes'] || ''
+            const chargingSiteId =
+              chargingSite?.charging_site_id ??
+              chargingSite?.chargingSiteId ??
+              ''
+            const levelId =
+              level?.level_of_equipment_id ?? level?.levelOfEquipmentId ?? ''
 
-          return {
-            id: Date.now() + index, // Temporary ID
-            charging_site_id: chargingSiteId,
-            chargingSiteId,
-            allocating_organization_name: '',
-            serial_number: serialNumber,
-            serialNumber,
-            manufacturer,
-            model,
-            level_of_equipment_id: levelId,
-            levelOfEquipmentId: levelId,
-            ports: row['Ports'] || 'Single port',
-            intended_use_ids: intendedUseIds,
-            intendedUseIds,
-            intended_user_ids: intendedUserIds,
-            intendedUserIds,
-            notes,
-            latitude,
-            longitude,
-            // Add validation flags
-            _errors: {
-              charging_site_id: !chargingSite ? 'Charging site not found' : '',
+            const defaultLatitude =
+              chargingSite?.latitude ?? chargingSite?.lat ?? ''
+            const defaultLongitude =
+              chargingSite?.longitude ?? chargingSite?.lng ?? ''
+            const latitudeOverride = parseNumber(latitudeCell)
+            const longitudeOverride = parseNumber(longitudeCell)
+            const latitude =
+              latitudeOverride !== '' ? latitudeOverride : defaultLatitude
+            const longitude =
+              longitudeOverride !== '' ? longitudeOverride : defaultLongitude
+
+            const serialNumber = row['Serial Number'] || ''
+            const manufacturer = row['Manufacturer'] || ''
+            const model = row['Model'] || ''
+            const notes = row['Notes'] || ''
+
+            const rowErrors = {
+              charging_site_id: !chargingSite
+                ? 'Charging site not found'
+                : '',
               level_of_equipment_id: !level
                 ? 'Level of equipment not found'
                 : '',
@@ -234,24 +209,60 @@ export const ExcelUpload = ({
                   ? 'At least one intended user is required'
                   : ''
             }
-          }
-        })
+            const hasErrors = Object.values(rowErrors).some(Boolean)
+            const importStatus = hasErrors
+              ? t('chargingEquipment:importFailed')
+              : t('chargingEquipment:importPending')
 
-        onDataParsed(transformedData)
+            return {
+              id: Date.now() + index,
+              charging_site_id: chargingSiteId,
+              chargingSiteId,
+              allocating_organization_name: '',
+              serial_number: serialNumber,
+              serialNumber,
+              manufacturer,
+              model,
+              level_of_equipment_id: levelId,
+              levelOfEquipmentId: levelId,
+              ports: row['Ports'] || 'Single port',
+              intended_use_ids: intendedUseIds,
+              intendedUseIds,
+              intended_user_ids: intendedUserIds,
+              intendedUserIds,
+              notes,
+              latitude,
+              longitude,
+              excelRowNumber: index + 2,
+              validationStatus: hasErrors ? 'error' : 'success',
+              importStatus,
+              isImportPending: !hasErrors,
+              _errors: rowErrors
+            }
+          })
 
-        // Clear the input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ''
+          resolve(transformedData)
+        } catch (error) {
+          reject(error)
         }
-      } catch (error) {
-        setUploadError(
-          'Error parsing Excel file. Please check the format and try again.'
-        )
-        console.error('Excel parsing error:', error)
       }
-    }
+      reader.onerror = reject
+      reader.readAsArrayBuffer(file)
+    })
 
-    reader.readAsArrayBuffer(file)
+  const handleFileSelectedForImport = async (file) => {
+    try {
+      setUploadError('')
+      const data = await parseTemplateFile(file)
+      onDataParsed(data)
+    } catch (error) {
+      console.error('Excel parsing error:', error)
+      const message =
+        error?.message ||
+        'Error parsing Excel file. Please check the format and try again.'
+      setUploadError(message)
+      throw new Error(message)
+    }
   }
 
   return (
@@ -279,22 +290,6 @@ export const ExcelUpload = ({
           {t('chargingEquipment:importBtn')}
         </BCButton>
 
-        <BCButton
-          variant="text"
-          color="primary"
-          size="small"
-          component="label"
-          startIcon={<FontAwesomeIcon icon={faFileImport} />}
-        >
-          {t('chargingEquipment:loadToGridBtn')}
-          <input
-            ref={fileInputRef}
-            type="file"
-            hidden
-            accept=".xlsx,.xls"
-            onChange={handleFileUpload}
-          />
-        </BCButton>
       </Box>
 
       {uploadError && (
@@ -321,6 +316,7 @@ export const ExcelUpload = ({
             onImportComplete?.(summary)
             setIsImportDialogOpen(false)
           }}
+          onFileSelected={handleFileSelectedForImport}
         />
       )}
     </>

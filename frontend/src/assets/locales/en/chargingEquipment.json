@@ -13,7 +13,6 @@
   "selectAllValidated": "Select all Validated",
   "clearFilters": "Clear filters",
   "importBtn": "Upload template",
-  "loadToGridBtn": "Load template into grid",
   "errorLoadingEquipment": "Error loading charging equipment",
   "equipmentSaved": "Equipment saved successfully",
   "saveAndReturn": "Save & Return",
@@ -57,5 +56,11 @@
   },
   "templateDownloadError": "Unable to download the template. Please try again.",
   "templateMissingOrg": "You must select an organization before downloading the template.",
-  "importSummary": "{{created}} rows imported. {{rejected}} rejected."
+  "importSummary": "{{created}} rows imported. {{rejected}} rejected.",
+  "importPending": "Pending import",
+  "imported": "Imported",
+  "importFailed": "Validation failed",
+  "importInProgressWarning": "Import in progress. Please wait until all rows finish importing before saving.",
+  "noRowsToSave": "All rows have already been saved.",
+  "importUnmatchedRows": "Unable to confirm import for rows: {{rows}}. Please verify in Manage FSE before saving again."
 }

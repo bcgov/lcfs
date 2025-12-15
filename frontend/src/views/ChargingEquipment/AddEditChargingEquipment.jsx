@@ -26,7 +26,7 @@ import {
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -54,15 +54,26 @@ import { ExcelUpload } from './components/ExcelUpload'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 
 // Row validation helper - checks all required fields, returns boolean
-export const isRowValid = (row) =>
-  Boolean(
-    row?.chargingSiteId &&
-      row?.serialNumber &&
-      row?.manufacturer &&
-      row?.levelOfEquipmentId &&
-      row?.intendedUseIds?.length > 0 &&
-      row?.intendedUserIds?.length > 0
+export const isRowValid = (row) => {
+  const chargingSiteId = row?.chargingSiteId || row?.charging_site_id
+  const serialNumber = row?.serialNumber || row?.serial_number
+  const manufacturer = row?.manufacturer
+  const levelOfEquipmentId =
+    row?.levelOfEquipmentId || row?.level_of_equipment_id
+  const intendedUseIds =
+    row?.intendedUseIds || row?.intended_use_ids || []
+  const intendedUserIds =
+    row?.intendedUserIds || row?.intended_user_ids || []
+
+  return Boolean(
+    chargingSiteId &&
+      serialNumber &&
+      manufacturer &&
+      levelOfEquipmentId &&
+      intendedUseIds.length > 0 &&
+      intendedUserIds.length > 0
   )
+}
 
 export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
@@ -120,6 +131,13 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   // Bulk mode state (grid-based input like Charging Site/FSE)
   const [bulkData, setBulkData] = useState([])
+  const hasUnsavedRows = useMemo(
+    () =>
+      bulkData.some(
+        (row) => !row.chargingEquipmentId && !row.charging_equipment_id
+      ),
+    [bulkData]
+  )
   const [gridErrors, setGridErrors] = useState({})
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
@@ -138,6 +156,65 @@ export const AddEditChargingEquipment = ({ mode }) => {
       if (!summary) return
       const created = summary?.created ?? 0
       const rejected = summary?.rejected ?? 0
+      const errors = summary?.errors || []
+      const successes = summary?.successes || []
+
+      const errorMap = errors.reduce((acc, message) => {
+        const match = message.match(/Row\s+(\d+)/i)
+        if (match) {
+          acc[Number(match[1])] = message
+        }
+        return acc
+      }, {})
+
+      const successMap = successes.reduce((acc, entry) => {
+        if (entry?.row) {
+          acc[Number(entry.row)] = entry?.chargingEquipmentId || null
+        }
+        return acc
+      }, {})
+
+      const unmatchedRows = []
+
+      setBulkData((prev) =>
+        prev.map((row, index) => {
+          const rowNumber = row.excelRowNumber ?? index + 2
+          if (errorMap[rowNumber]) {
+            return {
+              ...row,
+              validationStatus: 'error',
+              importStatus: t('chargingEquipment:importFailed'),
+              validationMessage: errorMap[rowNumber],
+              isImportPending: false
+            }
+          }
+          if (successMap[rowNumber]) {
+            const backendId = successMap[rowNumber]
+            return {
+              ...row,
+              validationStatus: 'success',
+              importStatus: t('chargingEquipment:imported'),
+              chargingEquipmentId: backendId,
+              id: backendId || row.id,
+              isImportPending: false
+            }
+          }
+          if (row.isImportPending) {
+            unmatchedRows.push(rowNumber)
+          }
+          return row
+        })
+      )
+
+      if (unmatchedRows.length) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importUnmatchedRows', {
+            rows: unmatchedRows.join(', ')
+          }),
+          severity: 'warning'
+        })
+      }
+
       alertRef.current?.triggerAlert({
         message: t('chargingEquipment:importSummary', {
           created,
@@ -146,7 +223,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         severity: rejected > 0 ? 'warning' : 'success'
       })
     },
-    [t]
+    [setBulkData, t]
   )
 
   // Unified save handler for grid rows (create/update/delete)
@@ -400,6 +477,23 @@ export const AddEditChargingEquipment = ({ mode }) => {
     try {
       const rowData = []
       gridRef.current?.api?.forEachNode((node) => rowData.push(node.data))
+      const hasActiveImport = rowData.some((row) => row.isImportPending)
+      if (hasActiveImport) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importInProgressWarning'),
+          severity: 'info'
+        })
+        return
+      }
+
+      const pendingRows = rowData.filter((row) => row.isImportPending)
+      if (pendingRows.length > 0) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importInProgressWarning'),
+          severity: 'info'
+        })
+        return
+      }
 
       const validRows = rowData.filter(isRowValid)
 
@@ -411,10 +505,22 @@ export const AddEditChargingEquipment = ({ mode }) => {
         return
       }
 
-      await Promise.all(validRows.map((row) => saveRow(row)))
+      const rowsToSave = validRows.filter(
+        (row) => !row.chargingEquipmentId && !row.charging_equipment_id
+      )
+
+      if (rowsToSave.length === 0) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:noRowsToSave'),
+          severity: 'info'
+        })
+        return
+      }
+
+      await Promise.all(rowsToSave.map((row) => saveRow(row)))
 
       alertRef.current?.triggerAlert({
-        message: `Successfully saved ${validRows.length} charging equipment entries.`,
+        message: `Successfully saved ${rowsToSave.length} charging equipment entries.`,
         severity: 'success'
       })
 
@@ -582,7 +688,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     .map(() => getEmptyRow(Date.now() + Math.random()))
                 }
                 saveButtonProps={{
-                  enabled: true,
+                  enabled: hasUnsavedRows,
                   text: 'Save All',
                   onSave: handleBulkSave,
                   confirmText: 'You have unsaved or invalid rows.',

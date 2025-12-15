@@ -137,9 +137,9 @@ export const useDeleteChargingEquipment = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (row) => {
       await apiService.delete(
-        apiRoutes.chargingEquipment.delete.replace(':id', id)
+        apiRoutes.chargingEquipment.delete.replace(':id', row.id)
       )
     },
     onSuccess: () => {
@@ -301,7 +301,7 @@ export const useChargingEquipmentImportJobStatus = (
     cacheTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      const statusData = data?.state?.data
+      const statusData = data?.state?.data ?? data
       if (
         !statusData ||
         statusData?.progress === 100 ||

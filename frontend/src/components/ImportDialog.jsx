@@ -71,7 +71,8 @@ function ImportDialog({
   isOverwrite,
   importHook,
   getJobStatusHook,
-  onComplete
+  onComplete,
+  onFileSelected
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -221,7 +222,7 @@ function ImportDialog({
     importFile({ file, isOverwrite })
   }
 
-  const handleFileUpload = (file) => {
+  const handleFileUpload = async (file) => {
     setErrorMsg(null)
     if (!file) return
 
@@ -242,6 +243,17 @@ function ImportDialog({
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setUploadedFile(null)
       setErrorMsg(t(`common:importExport.import.dialog.fileError.tooLarge`))
+      return
+    }
+
+    try {
+      await onFileSelected?.(file)
+    } catch (error) {
+      setUploadedFile(null)
+      setErrorMsg(
+        error?.message ||
+          t(`common:importExport.import.dialog.fileError.uploadFailed`)
+      )
       return
     }
 

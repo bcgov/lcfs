@@ -1537,7 +1537,7 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance Report Fuel Supply Volume Summary View
 -- ==========================================
-drop view vw_compliance_report_fuel_volume_history;
+drop view if exists vw_compliance_report_fuel_volume_history;
 CREATE OR REPLACE VIEW vw_compliance_report_fuel_volume_history AS
 WITH
   ordered_reports AS (
@@ -1702,6 +1702,7 @@ ORDER BY
   vf.fuel_category,
   vf.version_rank;
 
+drop view if exists vw_compliance_report_fuel_volume_visualisation;
 CREATE OR REPLACE VIEW vw_compliance_report_fuel_volume_visualisation AS
 WITH
   ordered_reports AS (
