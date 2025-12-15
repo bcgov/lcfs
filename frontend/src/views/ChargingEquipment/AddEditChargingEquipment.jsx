@@ -53,6 +53,17 @@ import { govRoles } from '@/constants/roles'
 import { ExcelUpload } from './components/ExcelUpload'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 
+// Row validation helper - checks all required fields, returns boolean
+export const isRowValid = (row) =>
+  Boolean(
+    row?.chargingSiteId &&
+      row?.serialNumber &&
+      row?.manufacturer &&
+      row?.levelOfEquipmentId &&
+      row?.intendedUseIds?.length > 0 &&
+      row?.intendedUserIds?.length > 0
+  )
+
 export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
   const navigate = useNavigate()
@@ -113,10 +124,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
 
-  // Navigation handler
+  // Navigate back to origin page or default to Manage FSE
+  const navigateBack = useCallback(() => {
+    navigate(location.state?.returnTo || `${ROUTES.REPORTS.LIST}/fse`)
+  }, [navigate, location.state?.returnTo])
+
   const handleCancel = useCallback(() => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse`)
-  }, [navigate])
+    navigateBack()
+  }, [navigateBack])
 
   const handleImportComplete = useCallback(
     (summary) => {
@@ -182,6 +197,22 @@ export const AddEditChargingEquipment = ({ mode }) => {
         (equipment?.status &&
           ['Draft', 'Updated', 'Validated'].includes(equipment.status))
       if (!canEdit) return
+
+      // Validate required fields before saving
+      if (!isRowValid(params.node.data)) {
+        params.node.updateData({
+          ...params.node.data,
+          validationStatus: 'error'
+        })
+        setGridErrors({
+          [params.node.data.id]: ['intendedUseIds', 'intendedUserIds']
+        })
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:validation.fillRequiredFields'),
+          severity: 'error'
+        })
+        return
+      }
 
       try {
         const responseData = await handleScheduleSave({
@@ -337,23 +368,25 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }
 
+  // Default empty row template
+  const getEmptyRow = (id = Date.now()) => ({
+    id,
+    chargingSiteId: '',
+    serialNumber: '',
+    manufacturer: '',
+    model: '',
+    levelOfEquipmentId: '',
+    ports: '',
+    latitude: 0,
+    longitude: 0,
+    notes: '',
+    intendedUseIds: [],
+    intendedUserIds: []
+  })
+
   // Bulk mode handlers
   const handleAddRow = () => {
-    const newRow = {
-      id: Date.now(), // Temporary ID for new rows
-      chargingSiteId: '',
-      serialNumber: '',
-      manufacturer: '',
-      model: '',
-      levelOfEquipmentId: '',
-      ports: 'Single port',
-      latitude: 0,
-      longitude: 0,
-      notes: '',
-      intendedUseIds: [],
-      intendedUserIds: []
-    }
-    setBulkData([...bulkData, newRow])
+    setBulkData([...bulkData, getEmptyRow()])
   }
 
   // Auto-create one row on load to match Charging Site UX
@@ -365,37 +398,26 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   const handleBulkSave = async () => {
     try {
-      // Get current grid data instead of using stale bulkData state
       const rowData = []
       gridRef.current?.api?.forEachNode((node) => rowData.push(node.data))
 
-      // Filter out rows with missing required fields
-      const validRows = rowData.filter(
-        (row) =>
-          row.chargingSiteId &&
-          row.serialNumber &&
-          row.manufacturer &&
-          row.levelOfEquipmentId
-      )
+      const validRows = rowData.filter(isRowValid)
 
       if (validRows.length === 0) {
         alertRef.current?.triggerAlert({
-          message: 'No valid rows to save. Please fill in required fields.',
+          message: t('chargingEquipment:validation.fillRequiredFields'),
           severity: 'warning'
         })
         return
       }
 
-      // Save all valid rows using saveRow (handles both create and update)
-      const promises = validRows.map((row) => saveRow(row))
-      await Promise.all(promises)
+      await Promise.all(validRows.map((row) => saveRow(row)))
 
       alertRef.current?.triggerAlert({
         message: `Successfully saved ${validRows.length} charging equipment entries.`,
         severity: 'success'
       })
 
-      // Navigate back to list
       navigate(`${ROUTES.REPORTS.LIST}/fse`)
     } catch (error) {
       alertRef.current?.triggerAlert({
@@ -550,39 +572,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
                       saveRow,
                       alertRef,
                       setBulkData,
-                      {
-                        chargingSiteId: '',
-                        serialNumber: '',
-                        manufacturer: '',
-                        model: '',
-                        levelOfEquipmentId: '',
-                        ports: 'Single port',
-                        latitude: 0,
-                        longitude: 0,
-                        notes: '',
-                        intendedUseIds: [],
-                        intendedUserIds: []
-                      }
+                      getEmptyRow()
                     )
                   }
                 }}
                 onAddRows={(numRows) =>
                   Array(numRows)
                     .fill()
-                    .map(() => ({
-                      id: Date.now() + Math.random(),
-                      chargingSiteId: '',
-                      serialNumber: '',
-                      manufacturer: '',
-                      model: '',
-                      levelOfEquipmentId: '',
-                      ports: 'Single port',
-                      notes: '',
-                      latitude: 0,
-                      longitude: 0,
-                      intendedUseIds: [],
-                      intendedUserIds: []
-                    }))
+                    .map(() => getEmptyRow(Date.now() + Math.random()))
                 }
                 saveButtonProps={{
                   enabled: true,
@@ -681,7 +678,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   manufacturer: equipment?.manufacturer || '',
                   model: equipment?.model || '',
                   levelOfEquipmentId: equipment?.levelOfEquipmentId || '',
-                  ports: equipment?.ports || 'Single port',
+                  ports: equipment?.ports || '',
                   latitude: equipment?.latitude || 0,
                   longitude: equipment?.longitude || 0,
                   notes: equipment?.notes || '',
@@ -701,7 +698,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
               saveButtonProps={{
                 enabled: true,
                 text: t('chargingEquipment:saveAndReturn'),
-                onSave: () => navigate(ROUTES.REPORTS.LIST + '/fse')
+                onSave: navigateBack
               }}
             />
           </Box>

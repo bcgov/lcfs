@@ -17,7 +17,7 @@
   "errorLoadingEquipment": "Error loading charging equipment",
   "equipmentSaved": "Equipment saved successfully",
   "saveAndReturn": "Save & Return",
-  
+
   "chargingSite": "Charging site",
   "allocatingOrganization": "Allocating Organization",
   "serialNumber": "Serial number",
@@ -34,15 +34,15 @@
   "notes": "Notes",
   "complianceNotes": "Notes",
   "registrationNumber": "Registration Number",
-  
+
   "submitConfirmTitle": "Submit Confirmation",
   "submitConfirmMessage": "This will set {{count}} selected FSE to Submitted status.",
   "submitConfirmWarning": "No more edits will be possible.",
-  
-  "decommissionConfirmTitle": "Decommission Confirmation", 
+
+  "decommissionConfirmTitle": "Decommission Confirmation",
   "decommissionConfirmMessage": "This will set {{count}} selected FSE to Decommissioned status.",
   "decommissionConfirmWarning": "They will no longer be available in future compliance reports.",
-  
+
   "createSuccess": "Charging equipment created successfully",
   "updateSuccess": "Charging equipment updated successfully",
   "deleteSuccess": "Charging equipment deleted successfully",
@@ -52,6 +52,9 @@
   "deleteConfirmation": "Are you sure you want to delete this equipment? This action cannot be undone.",
   "bulkInputTitle": "Bulk FSE Input",
   "bulkInputDescription": "Add multiple FSE entries using the grid below or upload from Excel.",
+  "validation": {
+    "fillRequiredFields": "Please fill in all required fields including Intended Uses and Intended Users."
+  },
   "templateDownloadError": "Unable to download the template. Please try again.",
   "templateMissingOrg": "You must select an organization before downloading the template.",
   "importSummary": "{{created}} rows imported. {{rejected}} rejected."

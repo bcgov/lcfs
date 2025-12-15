@@ -15,10 +15,11 @@ from sqlalchemy import (
     desc,
     literal,
     union_all,
+    case,
 )
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, aliased
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import Organization
@@ -437,8 +438,10 @@ class FinalSupplyEquipmentRepository:
         """
         Check if a duplicate final supply equipment row exists in the database based on the provided data.
         Returns True if a duplicate is found, False otherwise.
+        Only checks within the current compliance report to avoid false duplicates across versions.
         """
         conditions = [
+            FinalSupplyEquipment.compliance_report_id == row.compliance_report_id,
             FinalSupplyEquipment.supply_from_date == row.supply_from_date,
             FinalSupplyEquipment.supply_to_date == row.supply_to_date,
             FinalSupplyEquipment.serial_nbr == row.serial_nbr,
@@ -455,8 +458,9 @@ class FinalSupplyEquipmentRepository:
 
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
+        found_duplicate = result.scalar()
 
-        return result.scalar()
+        return found_duplicate
 
     @repo_handler
     async def check_overlap_of_fse_row(
@@ -465,8 +469,10 @@ class FinalSupplyEquipmentRepository:
         """
         Check if there's an overlapping final supply equipment row in the database based on the provided data.
         Returns True if an overlap is found, False otherwise.
+        Only checks within the current compliance report to avoid false overlaps across versions.
         """
         conditions = [
+            FinalSupplyEquipment.compliance_report_id == row.compliance_report_id,
             and_(
                 FinalSupplyEquipment.supply_from_date <= row.supply_to_date,
                 FinalSupplyEquipment.supply_to_date >= row.supply_from_date,
@@ -748,6 +754,23 @@ class FinalSupplyEquipmentRepository:
 
         combined_subquery = combined_query.subquery()
 
+        ordering_columns = []
+        if compliance_report_group_uuid and mode == "all":
+            ordering_columns.append(
+                case(
+                    (
+                        combined_subquery.c.compliance_report_group_uuid
+                        == compliance_report_group_uuid,
+                        0,
+                    ),
+                    else_=1,
+                )
+            )
+        ordering_columns.append(combined_subquery.c.source_priority)
+        ordering_columns.append(
+            desc(combined_subquery.c.charging_equipment_compliance_id).nullslast()
+        )
+
         row_number_column = (
             func.row_number()
             .over(
@@ -755,12 +778,7 @@ class FinalSupplyEquipmentRepository:
                     combined_subquery.c.charging_equipment_id,
                     combined_subquery.c.charging_equipment_version,
                 ),
-                order_by=[
-                    combined_subquery.c.source_priority,
-                    desc(
-                        combined_subquery.c.charging_equipment_compliance_id
-                    ).nullslast(),
-                ],
+                order_by=ordering_columns,
             )
             .label("row_number")
         )

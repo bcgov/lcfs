@@ -36,6 +36,7 @@ export const FinalSupplyEquipmentReporting = () => {
   const previousSelectionRef = useRef(new Set())
   const globalSelectionRef = useRef(new Set())
   const validationStatusCacheRef = useRef(new Map())
+  const isSyncingSelectionRef = useRef(false)
 
   const navigate = useNavigate()
   const { complianceReportId, compliancePeriod } = useParams()
@@ -158,25 +159,57 @@ export const FinalSupplyEquipmentReporting = () => {
         }
       })
 
-      fseGridRef.current.api.setNodesSelected({
-        nodes: nodesToSelect,
-        newValue: true
-      })
+      isSyncingSelectionRef.current = true
+      try {
+        fseGridRef.current.api.setNodesSelected({
+          nodes: nodesToSelect,
+          newValue: true
+        })
+      } finally {
+        isSyncingSelectionRef.current = false
+      }
       previousSelectionRef.current = currentPageSelection
     }
   }, [data, isGridReady, paginationOptions.page])
 
+  const syncGridSelection = useCallback((targetSelection) => {
+    if (!fseGridRef.current?.api) return
+
+    isSyncingSelectionRef.current = true
+    try {
+      fseGridRef.current.api.forEachNode((node) => {
+        const equipmentId = node.data?.chargingEquipmentId
+        if (!equipmentId) return
+        const shouldSelect = targetSelection.has(equipmentId)
+        const currentlySelected =
+          typeof node.isSelected === 'function'
+            ? node.isSelected()
+            : !!node.selected
+        if (shouldSelect !== currentlySelected) {
+          node.setSelected?.(shouldSelect)
+        }
+      })
+    } finally {
+      isSyncingSelectionRef.current = false
+    }
+  }, [])
+
   // Handle row selection changes
   const handleSelectionChanged = useCallback(
-    async (api) => {
-      const selectedNodes = fseGridRef.current?.api.getSelectedNodes()
+    async () => {
+      if (isSyncingSelectionRef.current) return
+
+      const selectedNodes = fseGridRef.current?.api.getSelectedNodes() ?? []
       const currentSelection = new Set(
-        selectedNodes.map((node) => node.data.chargingEquipmentId)
+        selectedNodes
+          .map((node) => node.data.chargingEquipmentId)
+          .filter(Boolean)
       )
 
       // Find newly selected rows (not previously selected)
       const newlySelected = selectedNodes.filter(
         (node) =>
+          node.data?.chargingEquipmentId &&
           !previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
           !node.data.chargingEquipmentComplianceId
       )
@@ -184,22 +217,39 @@ export const FinalSupplyEquipmentReporting = () => {
       // Find newly unselected rows (previously selected but now unselected)
       const newlyUnselected = []
       const newlyUnselectedEquipmentIds = []
+      const newlyUnselectedNodes = []
       fseGridRef.current?.api.forEachNode((node) => {
+        const equipmentId = node.data?.chargingEquipmentId
         if (
-          previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
-          !currentSelection.has(node.data.chargingEquipmentId) &&
+          equipmentId &&
+          previousSelectionRef.current.has(equipmentId) &&
+          !currentSelection.has(equipmentId) &&
           node.data.chargingEquipmentComplianceId
         ) {
           newlyUnselected.push(
             parseInt(node.data.chargingEquipmentComplianceId)
           )
-          newlyUnselectedEquipmentIds.push(node.data.chargingEquipmentId)
+          newlyUnselectedEquipmentIds.push(equipmentId)
+          newlyUnselectedNodes.push(node)
         }
       })
 
-      try {
-        // Handle newly selected rows
-        if (newlySelected.length > 0) {
+      if (newlySelected.length === 0 && newlyUnselected.length === 0) {
+        return
+      }
+
+      const selectionResult = new Set(previousSelectionRef.current)
+
+      const revertSelection = () => {
+        syncGridSelection(selectionResult)
+        globalSelectionRef.current = new Set(selectionResult)
+        previousSelectionRef.current = new Set(selectionResult)
+        setHasSelectedRows(selectionResult.size > 0)
+      }
+
+      // Handle newly selected rows
+      if (newlySelected.length > 0) {
+        try {
           const newRows = newlySelected.map((node) => ({
             supplyFromDate: defaultFromDate,
             supplyToDate: defaultToDate,
@@ -217,6 +267,7 @@ export const FinalSupplyEquipmentReporting = () => {
 
           // Update grid rows with created FSE reporting data
           newlySelected.forEach((node, index) => {
+            const equipmentId = node.data?.chargingEquipmentId
             const createdData = Array.isArray(response.data)
               ? response.data[index]
               : response.data
@@ -231,19 +282,33 @@ export const FinalSupplyEquipmentReporting = () => {
                 reportData?.report?.complianceReportGroupUuid,
               complianceNotes: null
             })
+            if (equipmentId) {
+              selectionResult.add(equipmentId)
+            }
           })
+        } catch (error) {
+          console.error('Error updating FSE reporting records:', error)
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:errorAddDeleteRows'),
+            severity: 'error'
+          })
+          revertSelection()
+          return
         }
+      }
 
-        // Handle newly unselected rows
-        if (newlyUnselected.length > 0) {
+      // Handle newly unselected rows
+      if (newlyUnselected.length > 0) {
+        try {
           await deleteBatch(newlyUnselected)
           newlyUnselectedEquipmentIds.forEach((id) => {
             validationStatusCacheRef.current.delete(id)
           })
           // Update grid rows with deleted FSE reporting data
-          newlySelected.forEach((node, index) => {
+          newlyUnselectedNodes.forEach((node) => {
             node.updateData({
               ...node.data,
+              chargingEquipmentComplianceId: null,
               supplyFromDate: defaultFromDate,
               supplyToDate: defaultToDate,
               kwhUsage: node.data.kwhUsage,
@@ -251,34 +316,40 @@ export const FinalSupplyEquipmentReporting = () => {
               chargingEquipmentId: node.data.chargingEquipmentId,
               chargingEquipmentVersion: node.data.chargingEquipmentVersion,
               organizationId: reportData?.report?.organizationId,
-              complianceReportId: null
+              complianceReportId: null,
+              complianceReportGroupUuid: null
             })
           })
-        }
-
-        if (newlySelected.length > 0) {
-          fseGridAlertRef.current?.triggerAlert({
-            message: t('finalSupplyEquipment:rowsCreatedSuccessfully'),
-            severity: 'success'
+          newlyUnselectedEquipmentIds.forEach((id) => {
+            selectionResult.delete(id)
           })
-        } else if (newlyUnselected.length > 0) {
+        } catch (error) {
+          console.error('Error updating FSE reporting records:', error)
           fseGridAlertRef.current?.triggerAlert({
-            message: t('finalSupplyEquipment:rowsDeletedSuccessfully'),
-            severity: 'success'
+            message: t('finalSupplyEquipment:errorAddDeleteRows'),
+            severity: 'error'
           })
+          revertSelection()
+          return
         }
-      } catch (error) {
-        console.error('Error updating FSE reporting records:', error)
-        fseGridAlertRef.current?.triggerAlert({
-          message: t('finalSupplyEquipment:errorAddDeleteRows'),
-          severity: 'error'
-        })
       }
 
-      // Update global and previous selection tracking
-      globalSelectionRef.current = currentSelection
-      previousSelectionRef.current = currentSelection
-      setHasSelectedRows(currentSelection.size > 0)
+      // Update global and previous selection tracking only after successful updates
+      globalSelectionRef.current = new Set(selectionResult)
+      previousSelectionRef.current = new Set(selectionResult)
+      setHasSelectedRows(selectionResult.size > 0)
+
+      if (newlySelected.length > 0) {
+        fseGridAlertRef.current?.triggerAlert({
+          message: t('finalSupplyEquipment:rowsCreatedSuccessfully'),
+          severity: 'success'
+        })
+      } else if (newlyUnselected.length > 0) {
+        fseGridAlertRef.current?.triggerAlert({
+          message: t('finalSupplyEquipment:rowsDeletedSuccessfully'),
+          severity: 'success'
+        })
+      }
     },
     [
       saveRow,
@@ -287,7 +358,8 @@ export const FinalSupplyEquipmentReporting = () => {
       reportData,
       defaultFromDate,
       defaultToDate,
-      refetch
+      t,
+      syncGridSelection
     ]
   )
 

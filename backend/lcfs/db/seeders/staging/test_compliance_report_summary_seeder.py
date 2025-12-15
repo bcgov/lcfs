@@ -328,6 +328,176 @@ async def seed_test_compliance_report_summaries(session):
             "line_21_non_compliance_penalty_payable": 0.0,
             "total_non_compliance_penalty_payable": 0.0,
         },
+        # New LCFS1-10 summaries (lightweight values matching status)
+        # 101 Draft 2024 (unlocked)
+        {
+            "summary_id": 101,
+            "compliance_report_id": 101,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 100.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 20.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 120.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 5.0,
+            "line_5_net_notionally_transferred_gasoline": 20.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 40.0,
+            "line_20_surplus_deficit_units": 40.0,
+        },
+        # 102 Submitted 2024 (reserved)
+        {
+            "summary_id": 102,
+            "compliance_report_id": 102,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 80.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 16.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 96.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 4.0,
+            "line_5_net_notionally_transferred_gasoline": -15.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 1.0,
+            "line_20_surplus_deficit_units": 1.0,
+        },
+        # 103 Recommended 2024 (locked)
+        # CR 103 locked recommended: fuel 12 + notional 10, retention 2, deferral 1 => line10/20 = 21
+        {"summary_id": 103, "compliance_report_id": 103, "is_locked": True, "line_1_fossil_derived_base_fuel_gasoline": 60.0, "line_2_eligible_renewable_fuel_supplied_gasoline": 12.0, "line_3_total_tracked_fuel_supplied_gasoline": 72.0, "line_4_eligible_renewable_fuel_required_gasoline": 3.0, "line_5_net_notionally_transferred_gasoline": 10.0, "line_6_renewable_fuel_retained_gasoline": 2.0, "line_7_previously_retained_gasoline": 0.0, "line_8_obligation_deferred_gasoline": 1.0, "line_9_obligation_added_gasoline": 0.0, "line_10_net_renewable_fuel_supplied_gasoline": 21.0, "line_20_surplus_deficit_units": 21.0},
+        # 104 Assessed 2024 (locked)
+        # CR 104 locked assessed: fuel 14 + notional (-12), retention 3 => line10/20 = -1
+        {"summary_id": 104, "compliance_report_id": 104, "is_locked": True, "line_1_fossil_derived_base_fuel_gasoline": 50.0, "line_2_eligible_renewable_fuel_supplied_gasoline": 14.0, "line_3_total_tracked_fuel_supplied_gasoline": 64.0, "line_4_eligible_renewable_fuel_required_gasoline": 2.5, "line_5_net_notionally_transferred_gasoline": -12.0, "line_6_renewable_fuel_retained_gasoline": 3.0, "line_7_previously_retained_gasoline": 0.0, "line_8_obligation_deferred_gasoline": 0.0, "line_9_obligation_added_gasoline": 0.0, "line_10_net_renewable_fuel_supplied_gasoline": -1.0, "line_20_surplus_deficit_units": -1.0},
+        # 105 Analyst Adjustment 2025 (locked)
+        # CR 105 locked analyst adj: fuel 10 + notional 8, retention 1, deferral 0.5 => line10/20 = 17.5
+        {"summary_id": 105, "compliance_report_id": 105, "is_locked": True, "line_1_fossil_derived_base_fuel_gasoline": 40.0, "line_2_eligible_renewable_fuel_supplied_gasoline": 10.0, "line_3_total_tracked_fuel_supplied_gasoline": 50.0, "line_4_eligible_renewable_fuel_required_gasoline": 2.0, "line_5_net_notionally_transferred_gasoline": 8.0, "line_6_renewable_fuel_retained_gasoline": 1.0, "line_7_previously_retained_gasoline": 0.0, "line_8_obligation_deferred_gasoline": 0.5, "line_9_obligation_added_gasoline": 0.0, "line_10_net_renewable_fuel_supplied_gasoline": 17.5, "line_20_surplus_deficit_units": 17.5},
+        # 106 Supplier Supplemental 2025 (draft)
+        {
+            "summary_id": 106,
+            "compliance_report_id": 106,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 90.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 18.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 108.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 4.5,
+            "line_5_net_notionally_transferred_gasoline": -18.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 15.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 5.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 10.0,
+            "line_20_surplus_deficit_units": 10.0,
+        },
+        # 107 Gov Supplemental 2025 (draft)
+        {
+            "summary_id": 107,
+            "compliance_report_id": 107,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 40.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 8.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 48.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 2.0,
+            "line_5_net_notionally_transferred_gasoline": 7.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 15.0,
+            "line_20_surplus_deficit_units": 15.0,
+        },
+        # 108 Early issuance quarterly draft 2025
+        {
+            "summary_id": 108,
+            "compliance_report_id": 108,
+            "is_locked": False,
+            "early_issuance_credits_q1": 10,
+            "early_issuance_credits_q2": 20,
+            "early_issuance_credits_q3": 0,
+            "early_issuance_credits_q4": 0,
+            "line_1_fossil_derived_base_fuel_gasoline": 30.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 6.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 36.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 1.5,
+            "line_5_net_notionally_transferred_gasoline": -5.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 1.0,
+            "line_20_surplus_deficit_units": 1.0,
+        },
+        # 109 Assessed 2023 baseline
+        # CR 109 locked assessed baseline: fuel 13 + notional 14 => line10/20 27
+        {"summary_id": 109, "compliance_report_id": 109, "is_locked": True, "line_1_fossil_derived_base_fuel_gasoline": 65.0, "line_2_eligible_renewable_fuel_supplied_gasoline": 13.0, "line_3_total_tracked_fuel_supplied_gasoline": 78.0, "line_4_eligible_renewable_fuel_required_gasoline": 3.25, "line_5_net_notionally_transferred_gasoline": 14.0, "line_6_renewable_fuel_retained_gasoline": 0.0, "line_7_previously_retained_gasoline": 0.0, "line_8_obligation_deferred_gasoline": 0.0, "line_9_obligation_added_gasoline": 0.0, "line_10_net_renewable_fuel_supplied_gasoline": 27.0, "line_18_units_to_be_banked": 300.0, "line_19_units_to_be_exported": 100.0, "line_20_surplus_deficit_units": 27.0},
+        # 110 Draft 2025 with baseline
+        {
+            "summary_id": 110,
+            "compliance_report_id": 110,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 35.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 7.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 42.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 1.75,
+            "line_5_net_notionally_transferred_gasoline": -9.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": -2.0,
+            "line_20_surplus_deficit_units": -2.0,
+        },
+        # 111 Submitted 2025 (v0)
+        {
+            "summary_id": 111,
+            "compliance_report_id": 111,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 45.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 9.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 54.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 2.25,
+            "line_5_net_notionally_transferred_gasoline": -15.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": -6.0,
+            "line_20_surplus_deficit_units": -6.0,
+        },
+        # 112 Assessed 2025 (v1 supplemental): fuel 11 + net notional (-10) => line10/20 = 1
+        {
+            "summary_id": 112,
+            "compliance_report_id": 112,
+            "is_locked": True,
+            "line_1_fossil_derived_base_fuel_gasoline": 55.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 11.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 66.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 2.75,
+            "line_5_net_notionally_transferred_gasoline": -10.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 1.0,
+            "line_20_surplus_deficit_units": 1.0,
+        },
+        # 113 Draft 2025 (v2 supplemental)
+        {
+            "summary_id": 113,
+            "compliance_report_id": 113,
+            "is_locked": False,
+            "line_1_fossil_derived_base_fuel_gasoline": 50.0,
+            "line_2_eligible_renewable_fuel_supplied_gasoline": 10.0,
+            "line_3_total_tracked_fuel_supplied_gasoline": 60.0,
+            "line_4_eligible_renewable_fuel_required_gasoline": 2.5,
+            "line_5_net_notionally_transferred_gasoline": -12.0,
+            "line_6_renewable_fuel_retained_gasoline": 0.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_8_obligation_deferred_gasoline": 0.0,
+            "line_9_obligation_added_gasoline": 0.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": -2.0,
+            "line_20_surplus_deficit_units": -2.0,
+        },
     ]
 
     for summary_data in compliance_report_summaries_to_seed:
@@ -337,9 +507,12 @@ async def seed_test_compliance_report_summaries(session):
                 ComplianceReportSummary.summary_id == summary_data["summary_id"]
             )
         )
-        if existing_summary.scalar():
+        existing_summary = existing_summary.scalar()
+        if existing_summary:
+            for key, value in summary_data.items():
+                setattr(existing_summary, key, value)
             logger.info(
-                f"Compliance report summary with ID {summary_data['summary_id']} already exists, skipping."
+                f"Compliance report summary with ID {summary_data['summary_id']} updated with latest seeded values."
             )
             continue
 
