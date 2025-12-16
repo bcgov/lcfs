@@ -21,6 +21,7 @@ def upgrade() -> None:
         "uix_compliance_reporting_equipment_dates",
         "compliance_report_charging_equipment",
         type_="unique",
+        if_exists=True,
     )
     op.create_unique_constraint(
         "uix_compliance_reporting_equipment_dates",
