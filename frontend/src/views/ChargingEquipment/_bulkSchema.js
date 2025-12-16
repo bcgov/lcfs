@@ -69,9 +69,7 @@ export const bulkChargingEquipmentColDefs = (
           incoming && typeof incoming === 'object' ? incoming.value : incoming
         const next = raw === '' || raw == null ? '' : Number(raw)
         params.data.chargingSiteId = next
-        const site = chargingSites.find(
-          (s) => s.chargingSiteId === next
-        )
+        const site = chargingSites.find((s) => s.chargingSiteId === next)
         if (site) {
           params.data.latitude = site.latitude
           params.data.longitude = site.longitude
@@ -142,7 +140,9 @@ export const bulkChargingEquipmentColDefs = (
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       minWidth: 220,
-      editable: isEditableByStatus
+      editable: isEditableByStatus,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
     {
       field: 'levelOfEquipmentId',
@@ -198,7 +198,9 @@ export const bulkChargingEquipmentColDefs = (
         return true
       },
       minWidth: 120,
-      editable: isEditableByStatus
+      editable: isEditableByStatus,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
     {
       field: 'intendedUseIds',
@@ -305,7 +307,7 @@ export const bulkChargingEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: true
+      editable: isEditableByStatus
     },
     {
       field: 'longitude',
@@ -322,7 +324,7 @@ export const bulkChargingEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: true
+      editable: isEditableByStatus
     },
     {
       field: 'notes',
@@ -330,6 +332,8 @@ export const bulkChargingEquipmentColDefs = (
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       minWidth: 400,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: isEditableByStatus
     }
   ]
