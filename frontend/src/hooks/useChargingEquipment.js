@@ -138,8 +138,12 @@ export const useDeleteChargingEquipment = () => {
 
   return useMutation({
     mutationFn: async (row) => {
+      const id =
+        typeof row === 'number' || typeof row === 'string'
+          ? row
+          : row?.id
       await apiService.delete(
-        apiRoutes.chargingEquipment.delete.replace(':id', row.id)
+        apiRoutes.chargingEquipment.delete.replace(':id', id)
       )
     },
     onSuccess: () => {
@@ -155,7 +159,9 @@ export const useChargingEquipmentMetadata = () => {
   const statusesQuery = useQuery({
     queryKey: ['charging-equipment-statuses'],
     queryFn: async () => {
-      const response = await apiService.get(apiRoutes.chargingEquipment.statuses)
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.statuses
+      )
       return response.data
     }
   })
@@ -171,7 +177,9 @@ export const useChargingEquipmentMetadata = () => {
   const endUseTypesQuery = useQuery({
     queryKey: ['charging-equipment-end-use-types'],
     queryFn: async () => {
-      const response = await apiService.get(apiRoutes.chargingEquipment.endUseTypes)
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.endUseTypes
+      )
       return response.data
     }
   })
@@ -179,7 +187,9 @@ export const useChargingEquipmentMetadata = () => {
   const endUserTypesQuery = useQuery({
     queryKey: ['charging-equipment-end-user-types'],
     queryFn: async () => {
-      const response = await apiService.get(apiRoutes.chargingEquipment.endUserTypes)
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.endUserTypes
+      )
       return response.data
     }
   })
@@ -189,7 +199,11 @@ export const useChargingEquipmentMetadata = () => {
     levels: levelsQuery.data,
     endUseTypes: endUseTypesQuery.data,
     endUserTypes: endUserTypesQuery.data,
-    isLoading: statusesQuery.isLoading || levelsQuery.isLoading || endUseTypesQuery.isLoading || endUserTypesQuery.isLoading
+    isLoading:
+      statusesQuery.isLoading ||
+      levelsQuery.isLoading ||
+      endUseTypesQuery.isLoading ||
+      endUserTypesQuery.isLoading
   }
 }
 
@@ -200,7 +214,9 @@ export const useChargingSites = () => {
   return useQuery({
     queryKey: ['charging-sites'],
     queryFn: async () => {
-      const response = await apiService.get(apiRoutes.chargingEquipment.chargingSites)
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.chargingSites
+      )
       return response.data
     }
   })
@@ -213,7 +229,9 @@ export const useOrganizations = () => {
   return useQuery({
     queryKey: ['organizations-list'],
     queryFn: async () => {
-      const response = await apiService.get(apiRoutes.chargingEquipment.organizations)
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.organizations
+      )
       return response.data
     }
   })
@@ -258,6 +276,7 @@ export const useImportChargingEquipment = (organizationId, options = {}) => {
       )
 
       return await apiService.post(endpoint, formData, {
+        accept: 'application/json',
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -273,10 +292,7 @@ export const useImportChargingEquipment = (organizationId, options = {}) => {
   })
 }
 
-export const useChargingEquipmentImportJobStatus = (
-  jobId,
-  options = {}
-) => {
+export const useChargingEquipmentImportJobStatus = (jobId, options = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
   const {

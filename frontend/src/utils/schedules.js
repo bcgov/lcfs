@@ -20,8 +20,7 @@ export const handleScheduleSave = async ({
       ...updatedData,
       ...data,
       validationStatus: 'success',
-      modified: false,
-      id: data?.[idField] ?? updatedData.id
+      modified: false
     }
     alertRef.current?.triggerAlert({
       message: 'Row updated successfully.',

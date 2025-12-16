@@ -71,8 +71,7 @@ function ImportDialog({
   isOverwrite,
   importHook,
   getJobStatusHook,
-  onComplete,
-  onFileSelected
+  onComplete
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -143,10 +142,13 @@ function ImportDialog({
             setUploadStatus(data.status)
             setCreatedCount(data.created)
             setRejectedCount(data.rejected)
-            if (data.progress >= 100) {
-              if (data.status === 'Import process completed.') {
-                onComplete?.(data)
-              }
+          if (data.progress >= 100) {
+            if (data.status === 'Import process completed.') {
+              onComplete?.({
+                ...data,
+                jobId: jobID
+              })
+            }
               setDialogState(DIALOG_STATES.COMPLETED)
               setErrorMsgs(data.errors)
               clearInterval(intervalId)
@@ -222,7 +224,7 @@ function ImportDialog({
     importFile({ file, isOverwrite })
   }
 
-  const handleFileUpload = async (file) => {
+  const handleFileUpload = (file) => {
     setErrorMsg(null)
     if (!file) return
 
@@ -243,17 +245,6 @@ function ImportDialog({
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setUploadedFile(null)
       setErrorMsg(t(`common:importExport.import.dialog.fileError.tooLarge`))
-      return
-    }
-
-    try {
-      await onFileSelected?.(file)
-    } catch (error) {
-      setUploadedFile(null)
-      setErrorMsg(
-        error?.message ||
-          t(`common:importExport.import.dialog.fileError.uploadFailed`)
-      )
       return
     }
 

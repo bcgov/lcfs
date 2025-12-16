@@ -52,20 +52,12 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { ExcelUpload } from './components/ExcelUpload'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
 
 // Row validation helper - checks all required fields, returns boolean
-export const isRowValid = (row) => {
-  const chargingSiteId = row?.chargingSiteId || row?.charging_site_id
-  const serialNumber = row?.serialNumber || row?.serial_number
-  const manufacturer = row?.manufacturer
-  const levelOfEquipmentId =
-    row?.levelOfEquipmentId || row?.level_of_equipment_id
-  const intendedUseIds =
-    row?.intendedUseIds || row?.intended_use_ids || []
-  const intendedUserIds =
-    row?.intendedUserIds || row?.intended_user_ids || []
-
-  return Boolean(
+export const isRowValid = (row) =>
+  Boolean(
     chargingSiteId &&
       serialNumber &&
       manufacturer &&
@@ -73,7 +65,6 @@ export const isRowValid = (row) => {
       intendedUseIds.length > 0 &&
       intendedUserIds.length > 0
   )
-}
 
 export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
@@ -89,6 +80,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const isBulkMode = operationMode === 'bulk'
 
   const { data: currentUser, hasAnyRole } = useCurrentUser()
+  const apiService = useApiService()
+  const organizationId = currentUser?.organization?.organizationId
 
   // Check if user is IDIR/government - they should not access this component
   useEffect(() => {
@@ -141,6 +134,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const [gridErrors, setGridErrors] = useState({})
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
+  const lastImportJobIdRef = useRef(null)
 
   // Navigate back to origin page or default to Manage FSE
   const navigateBack = useCallback(() => {
@@ -151,79 +145,147 @@ export const AddEditChargingEquipment = ({ mode }) => {
     navigateBack()
   }, [navigateBack])
 
-  const handleImportComplete = useCallback(
-    (summary) => {
-      if (!summary) return
-      const created = summary?.created ?? 0
-      const rejected = summary?.rejected ?? 0
-      const errors = summary?.errors || []
-      const successes = summary?.successes || []
+  const loadImportedChargingEquipment = useCallback(
+    async (summary = null) => {
+      const createdCount = summary?.created ?? 0
 
-      const errorMap = errors.reduce((acc, message) => {
-        const match = message.match(/Row\s+(\d+)/i)
-        if (match) {
-          acc[Number(match[1])] = message
-        }
-        return acc
-      }, {})
-
-      const successMap = successes.reduce((acc, entry) => {
-        if (entry?.row) {
-          acc[Number(entry.row)] = entry?.chargingEquipmentId || null
-        }
-        return acc
-      }, {})
-
-      const unmatchedRows = []
-
-      setBulkData((prev) =>
-        prev.map((row, index) => {
-          const rowNumber = row.excelRowNumber ?? index + 2
-          if (errorMap[rowNumber]) {
-            return {
-              ...row,
-              validationStatus: 'error',
-              importStatus: t('chargingEquipment:importFailed'),
-              validationMessage: errorMap[rowNumber],
-              isImportPending: false
-            }
-          }
-          if (successMap[rowNumber]) {
-            const backendId = successMap[rowNumber]
-            return {
-              ...row,
-              validationStatus: 'success',
-              importStatus: t('chargingEquipment:imported'),
-              chargingEquipmentId: backendId,
-              id: backendId || row.id,
-              isImportPending: false
-            }
-          }
-          if (row.isImportPending) {
-            unmatchedRows.push(rowNumber)
-          }
-          return row
-        })
-      )
-
-      if (unmatchedRows.length) {
+      if (!organizationId) {
         alertRef.current?.triggerAlert({
-          message: t('chargingEquipment:importUnmatchedRows', {
-            rows: unmatchedRows.join(', ')
+          message: t('chargingEquipment:importMissingOrg', {
+            defaultValue:
+              'Organization information is required before refreshing imported equipment.'
           }),
-          severity: 'warning'
+          severity: 'error'
         })
+        return
       }
 
-      alertRef.current?.triggerAlert({
-        message: t('chargingEquipment:importSummary', {
-          created,
-          rejected
-        }),
-        severity: rejected > 0 ? 'warning' : 'success'
-      })
+      if (!createdCount) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importNoRows', {
+            defaultValue: 'No charging equipment rows were imported.'
+          }),
+          severity: 'info'
+        })
+        return
+      }
+
+      try {
+        const payload = {
+          page: 1,
+          size: createdCount,
+          sort_orders: [
+            {
+              field: 'create_date',
+              direction: 'desc'
+            }
+          ],
+          filters: [],
+          organization_id: organizationId
+        }
+
+        const response = await apiService.post(
+          apiRoutes.chargingEquipment.list,
+          payload
+        )
+        const payloadData = response?.data ?? response
+        const equipments = payloadData?.items ?? payloadData?.data?.items ?? []
+        const limitedItems = equipments.slice(0, createdCount).reverse()
+
+        if (!limitedItems.length) {
+          alertRef.current?.triggerAlert({
+            message: t('chargingEquipment:importNoRows', {
+              defaultValue: 'No charging equipment records were returned.'
+            }),
+            severity: 'info'
+          })
+          return
+        }
+
+        const formattedRows = limitedItems.map((item) => {
+          const levelMatch = (levels || []).find(
+            (level) =>
+              level?.name?.toLowerCase() ===
+              (item?.levelOfEquipmentName || '').toLowerCase()
+          )
+
+          return {
+            id: item?.chargingEquipmentId ?? `${Date.now()}-${Math.random()}`,
+            chargingEquipmentId: item?.chargingEquipmentId ?? null,
+            chargingSiteId: item?.chargingSiteId ?? '',
+            serialNumber: item?.serialNumber ?? '',
+            manufacturer: item?.manufacturer ?? '',
+            model: item?.model ?? '',
+            levelOfEquipmentId:
+              levelMatch?.levelOfEquipmentId ?? item?.levelOfEquipmentId ?? '',
+            ports: item?.ports ?? '',
+            latitude: item?.latitude ?? 0,
+            longitude: item?.longitude ?? 0,
+            notes: item?.notes ?? '',
+            intendedUseIds: (item?.intendedUses || []).map((use) =>
+              Number(use?.endUseTypeId)
+            ),
+            intendedUserIds: (item?.intendedUsers || []).map((user) =>
+              Number(user?.endUserTypeId)
+            ),
+            status: item?.status || 'Draft',
+            validationStatus: 'valid',
+            modified: false
+          }
+        })
+
+        setBulkData(formattedRows)
+        setGridErrors({})
+        setGridWarnings({})
+
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importRefreshSuccess', {
+            count: createdCount,
+            rejected: summary?.rejected ?? 0,
+            defaultValue:
+              summary?.rejected > 0
+                ? `${createdCount} rows imported, ${summary?.rejected} rejected.`
+                : `${createdCount} charging equipment rows imported.`
+          }),
+          severity: summary?.rejected > 0 ? 'warning' : 'success'
+        })
+      } catch (error) {
+        console.error('Error loading charging equipment after import:', error)
+        alertRef.current?.triggerAlert({
+          message:
+            error?.response?.data?.detail ||
+            t('chargingEquipment:importRefreshError', {
+              defaultValue:
+                'Unable to refresh charging equipment data after import.'
+            }),
+          severity: 'error'
+        })
+      }
     },
-    [setBulkData, t]
+    [
+      alertRef,
+      apiService,
+      organizationId,
+      levels,
+      setBulkData,
+      setGridErrors,
+      setGridWarnings,
+      t
+    ]
+  )
+
+  const handleImportComplete = useCallback(
+    (summary = null) => {
+      if (!summary) return
+      if (summary.jobId && summary.jobId === lastImportJobIdRef.current) {
+        return
+      }
+      if (summary.jobId) {
+        lastImportJobIdRef.current = summary.jobId
+      }
+      loadImportedChargingEquipment(summary)
+    },
+    [loadImportedChargingEquipment]
   )
 
   // Unified save handler for grid rows (create/update/delete)
@@ -589,14 +651,11 @@ export const AddEditChargingEquipment = ({ mode }) => {
               </BCTypography>
 
               <ExcelUpload
-                onDataParsed={(data) => {
-                  setBulkData(data)
-                }}
                 chargingSites={chargingSites}
                 levels={levels}
                 endUseTypes={endUseTypes}
                 endUserTypes={endUserTypes}
-                organizationId={currentUser?.organization?.organizationId}
+                organizationId={organizationId}
                 onImportComplete={handleImportComplete}
               />
 
@@ -719,6 +778,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
     <BCBox sx={containerSx}>
       <Grid container spacing={1}>
         <Grid item xs={12}>
+          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
+        </Grid>
+        <Grid item xs={12}>
           <Box
             display="flex"
             justifyContent="space-between"
@@ -755,7 +817,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
             </BCButton>
           </Box>
         </Grid>
-
         <Grid item xs={12}>
           <Box sx={{ width: '100%' }}>
             <BCGridEditor
@@ -808,10 +869,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
               }}
             />
           </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
         </Grid>
       </Grid>
     </BCBox>
