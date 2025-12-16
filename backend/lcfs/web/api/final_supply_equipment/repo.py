@@ -497,9 +497,9 @@ class FinalSupplyEquipmentRepository:
         Search for manufacturers based on the provided query.
         """
         result = await self.db.execute(
-            select(distinct(FinalSupplyEquipment.manufacturer)).where(
-                FinalSupplyEquipment.manufacturer.ilike(f"%{query}%")
-            )
+            select(distinct(ChargingEquipment.manufacturer)).where(
+                ChargingEquipment.manufacturer.ilike(f"%{query}%")
+            ).limit(10)
         )
         return result.scalars().all()
 
