@@ -231,10 +231,6 @@ export const ChargingSiteFSEGrid = ({
     [handleSelectionChanged]
   )
 
-  const handleAddEquipment = useCallback(() => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse/add`)
-  }, [navigate, siteId])
-
   const handleCellClicked = useCallback(
     (params) => {
       // For IDIR users, prevent navigation - they don't need edit access
@@ -270,7 +266,6 @@ export const ChargingSiteFSEGrid = ({
       currentUser,
       hasAnyRole,
       hasRoles,
-      handleAddEquipment,
       handleToggleSelectByStatus,
       handleBulkStatusUpdate,
       handleClearFilters
@@ -288,7 +283,6 @@ export const ChargingSiteFSEGrid = ({
     equipmentData?.chargingSiteStatus,
     equipmentData?.organizationId,
     currentUser?.userId,
-    handleAddEquipment,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
     handleClearFilters
