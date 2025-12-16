@@ -92,9 +92,11 @@ export const MultiSelectRenderer = (params) => {
       ? params.colDef.editable(params)
       : params.colDef.editable
   if (params.value && params.value !== '') {
-    const value = params.value?.map(
-      (item) => options.find((opt) => opt.value === item)?.label || item
-    )
+    const value = Array.isArray(params.value)
+      ? params.value?.map(
+          (item) => options.find((opt) => opt.value === item)?.label || item
+        )
+      : params.value
     return <CommonArrayRenderer disableLink value={value} />
   }
   const displayValue =
