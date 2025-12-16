@@ -876,7 +876,7 @@ class FinalSupplyEquipmentRepository:
                     EndUserType.type_name.in_(intended_user_names or []),
                 )
             )
-            .order_by(asc(ChargingPowerOutput.display_order))
+            .order_by(asc(EndUseType.end_use_type_id))
             .limit(1)
         )
         result = await self.db.execute(stmt)
