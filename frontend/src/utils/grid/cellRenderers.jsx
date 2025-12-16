@@ -91,14 +91,11 @@ export const MultiSelectRenderer = (params) => {
     typeof params.colDef.editable === 'function'
       ? params.colDef.editable(params)
       : params.colDef.editable
-  if (!isEditable) {
+  if (params.value && params.value !== '') {
     const value = params.value?.map(
       (item) => options.find((opt) => opt.value === item)?.label || item
     )
     return <CommonArrayRenderer disableLink value={value} />
-  }
-  if (params.value && params.value !== '') {
-    return <CommonArrayRenderer disableLink {...params} />
   }
   const displayValue =
     params.value ?? (hasOptions && isEditable ? 'Select' : '')
