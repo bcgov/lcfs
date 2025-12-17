@@ -70,7 +70,8 @@
     "siteNotFound": "Charging site not found",
     "noEquipmentFound": "No equipment records found for this charging site",
     "bulkUpdateSuccess": "Equipment status updated successfully",
-    "bulkUpdateError": "Failed to update equipment status"
+    "bulkUpdateError": "Failed to update equipment status",
+    "siteDeleted": "Charging site deleted successfully"
   },
   "documents": {
     "uploadTitle": "Upload supporting documents for charging site",
@@ -92,8 +93,8 @@
     "updated": "Updated"
   },
   "documentTitle": "Charging site/FSE attachments",
-  "gridTitle": "Add, submit or decommission FSE",
-  "gridDescription": "Add new FSE, submit draft or updated FSE to government for validation, or decommission FSE to remove from future compliance reports. Select buttons will only select FSE displayed on current page. Increase page size and/or use filters to assist bulk processing.",
+  "gridTitle": "Submit or decommission FSE",
+  "gridDescription": "Submit draft or updated FSE to government for validation, or decommission FSE to remove from future compliance reports. Select buttons will only select FSE displayed on current page. Increase page size and/or use filters to assist bulk processing.",
   "noSitesFound": "No charging sites found",
   "newSiteBtn": "New charging site",
   "addNewSite": "Add charging sites",

@@ -159,7 +159,8 @@ export const renewableFuelColumns = (
   data,
   editable,
   compliancePeriodYear,
-  lines7And9Locked = false
+  lines7And9Locked = false,
+  lines6And8Locked = false
 ) => {
   /**
    * Editable Lines Logic:
@@ -364,6 +365,16 @@ export const renewableFuelColumns = (
   if (parseInt(compliancePeriodYear) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
     jetFuelEditableCells = []
+  }
+
+  if (lines6And8Locked) {
+    const stripLocked = (cells) =>
+      cells.filter(
+        (cell) => cell !== SUMMARY.LINE_6 && cell !== SUMMARY.LINE_8
+      )
+    gasolineEditableCells = stripLocked(gasolineEditableCells)
+    dieselEditableCells = stripLocked(dieselEditableCells)
+    jetFuelEditableCells = stripLocked(jetFuelEditableCells)
   }
 
   return [

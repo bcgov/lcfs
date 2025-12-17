@@ -2,16 +2,18 @@ import re
 import structlog
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List, Tuple, Dict, Optional, Union
+from typing import List, Tuple, Dict, Optional, Union, Any
 
 from fastapi import Depends
 from sqlalchemy import inspect
-from typing import List, Tuple, Dict, Optional, Union, Any
 
 from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     ReportingFrequency,
+)
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.OtherUses import OtherUses
@@ -42,9 +44,12 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
+from lcfs.web.utils.transaction_windows import calculate_transaction_period_dates
 
 logger = structlog.get_logger(__name__)
 
+# Eligible renewable fuel types for Line 2 calculations (2025+)
+# These are the fuel types that count towards renewable fuel requirements
 ELIGIBLE_GASOLINE_RENEWABLE_TYPES = {
     "renewable gasoline",
     "ethanol",
@@ -56,6 +61,11 @@ ELIGIBLE_DIESEL_RENEWABLE_TYPES = {
     "biodiesel",
     "hdrd",
     "other diesel fuel",
+    "other",
+}
+
+ELIGIBLE_JET_FUEL_RENEWABLE_TYPES = {
+    "alternative jet fuel",
     "other",
 }
 
@@ -166,6 +176,7 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
             can_sign=False,
+            lines_6_and_8_locked=summary_obj.is_locked,
             penalty_override_enabled=(
                 summary_obj.penalty_override_enabled
                 if compliance_report
@@ -461,26 +472,37 @@ class ComplianceReportSummaryService:
             ("legacy" if compliance_data_service.is_legacy_year() else "description"),
             descriptions_dict[line].get("description"),
         )
-        # Use quantize with ROUND_HALF_UP for consistent rounding before formatting
-        gasoline_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
+        # Use Decimal arithmetic throughout for precise calculations
+        # Multiply the Line 4 value by 5% using Decimal to avoid floating point errors
+        # Coalesce None to 0 to avoid view-mode crashes on partially populated summaries
+        gasoline_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_gasoline or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
-        diesel_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_diesel * 0.05)
+        diesel_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_diesel or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
-        jet_fuel_cap = float(
-            Decimal(
-                str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel * 0.05)
+        jet_fuel_cap = int(
+            (
+                Decimal(
+                    str(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel or 0)
+                )
+                * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         )
         return base_desc.format(
-            "{:,.0f}".format(gasoline_cap),
-            "{:,.0f}".format(diesel_cap),
-            "{:,.0f}".format(jet_fuel_cap),
+            "{:,}".format(gasoline_cap),
+            "{:,}".format(diesel_cap),
+            "{:,}".format(jet_fuel_cap),
         )
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
@@ -491,8 +513,9 @@ class ComplianceReportSummaryService:
             ("legacy" if compliance_data_service.is_legacy_year() else "description"),
             descriptions_dict[line].get("description"),
         )
+        penalty_value = getattr(summary_obj, "line_21_non_compliance_penalty_payable", 0) or 0
         return base_desc.format(
-            "{:,}".format(int(summary_obj.line_21_non_compliance_penalty_payable / 600))
+            "{:,}".format(int(penalty_value / 600))
         )
 
     def _part3_special_description(self, line, descriptions_dict):
@@ -521,32 +544,88 @@ class ComplianceReportSummaryService:
             compliance_year = int(compliance_report.compliance_period.description)
 
         await self.repo.save_compliance_report_summary(summary_data, compliance_year)
+
+        # Expire the compliance report and its summary from the session's identity map
+        # to ensure calculate_compliance_report_summary fetches fresh data with the
+        # newly saved Line 6/8 values. Without this, SQLAlchemy may return cached
+        # objects that don't reflect the just-saved user input.
+        # Use sync_session to access the synchronous expire method on AsyncSession.
+        sync_session = self.repo.db.sync_session
+        if compliance_report.summary:
+            sync_session.expire(compliance_report.summary)
+        sync_session.expire(compliance_report)
+
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
 
     def _is_eligible_renewable(self, record, compliance_year) -> bool:
+        """
+        Determine if a fuel record is eligible for Line 2 renewable fuel calculations.
+
+        Eligibility rules by compliance year:
+        - 2024 (pre-2025): All renewable fuels are eligible, no Canadian production requirements
+        - 2025: Diesel requires Canadian production OR Q1 supplied; Gasoline and Jet fuel have no requirements
+        - 2026+: Both Diesel and Gasoline require Canadian production; Jet fuel has no requirements
+
+        Eligible renewable fuel types:
+        - Gasoline: Ethanol, Renewable gasoline, Renewable naphtha, Other
+        - Diesel: Biodiesel, HDRD, Other diesel fuel, Other
+        - Jet fuel: Alternative jet fuel, Other
+        """
+        # Must be a renewable fuel
         if not record.fuel_type.renewable:
             return False
 
+        # Pre-2025: All renewable fuels are eligible with no restrictions
         if compliance_year < 2025:
             return True
 
         category = (record.fuel_category.category or "").lower()
         fuel_type_name = (record.fuel_type.fuel_type or "").lower()
 
+        # Check if fuel type is in the eligible list for its category
         if category == "gasoline":
             if fuel_type_name not in ELIGIBLE_GASOLINE_RENEWABLE_TYPES:
                 return False
         elif category == "diesel":
             if fuel_type_name not in ELIGIBLE_DIESEL_RENEWABLE_TYPES:
                 return False
+        elif category == "jet fuel":
+            if fuel_type_name not in ELIGIBLE_JET_FUEL_RENEWABLE_TYPES:
+                return False
+            # Jet fuel never requires Canadian production - always eligible if it's in the list
+            return True
         else:
+            # Unknown category - include by default
             return True
 
-        if record.is_canada_produced or record.is_q1_supplied:
+        # Apply Canadian production requirements based on compliance year and category
+        # 2025: Only Diesel requires Canadian production (with Q1 exception)
+        # 2026+: Both Diesel and Gasoline require Canadian production
+        requires_canadian_production = False
+
+        if category == "diesel":
+            # Diesel requires Canadian production starting in 2025
+            requires_canadian_production = True
+        elif category == "gasoline":
+            # Gasoline requires Canadian production starting in 2026 (not 2025)
+            requires_canadian_production = compliance_year >= 2026
+
+        # If no Canadian production requirement applies, the fuel is eligible
+        if not requires_canadian_production:
             return True
 
+        # Check Canadian production criteria
+        # 1. Explicitly marked as Canadian produced
+        if record.is_canada_produced:
+            return True
+
+        # 2. Q1 supplied exception (only applies to Diesel in 2025)
+        if category == "diesel" and compliance_year == 2025 and record.is_q1_supplied:
+            return True
+
+        # 3. Fuel code indicates Canadian production facility
         fuel_code_country = (
             (record.fuel_code.fuel_production_facility_country or "")
             if getattr(record, "fuel_code", None)
@@ -592,15 +671,27 @@ class ComplianceReportSummaryService:
         compliance_data_service.set_period(
             int(compliance_report.compliance_period.description)
         )
-        # After the report has been submitted, the summary becomes locked
-        # so we can return the existing summary rather than re-calculating
-        if summary_model.is_locked:
+        # For locked or non-draft/non-analyst-adjustment reports, return the stored
+        # summary values to avoid recalculating user-entered lines (e.g., Line 6).
+        if summary_model.is_locked or (
+            summary_model
+            and compliance_report.current_status
+            and compliance_report.current_status.status
+            not in [
+                ComplianceReportStatusEnum.Draft,
+                ComplianceReportStatusEnum.Analyst_adjustment,
+            ]
+        ):
             locked_summary = self.convert_summary_to_dict(
                 compliance_report.summary, compliance_report
             )
-            # If the summary is locked, Lines 7 and 9 are also locked
-            locked_summary.lines_7_and_9_locked = True
-
+            # If the summary is locked or should be locked, Lines 7 and 9 are also locked
+            locked_summary.lines_7_and_9_locked = (
+                locked_summary.lines_7_and_9_locked
+                or await self._should_lock_lines_7_and_9(compliance_report)
+            )
+            # Lines 6 and 8 should be treated as locked when we short-circuit to stored summary
+            locked_summary.lines_6_and_8_locked = True
             return locked_summary
 
         compliance_period_start = compliance_report.compliance_period.effective_date
@@ -672,6 +763,32 @@ class ComplianceReportSummaryService:
                 "diesel": current_line_9_diesel,
                 "jet_fuel": current_line_9_jet,
             }
+            # For supplemental versions, seed Lines 6 and 8 from assessed baseline when blank
+            if compliance_report.version > 0:
+                if summary_model.line_6_renewable_fuel_retained_gasoline in [None, 0]:
+                    summary_model.line_6_renewable_fuel_retained_gasoline = (
+                        prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline or 0
+                    )
+                if summary_model.line_6_renewable_fuel_retained_diesel in [None, 0]:
+                    summary_model.line_6_renewable_fuel_retained_diesel = (
+                        prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel or 0
+                    )
+                if summary_model.line_6_renewable_fuel_retained_jet_fuel in [None, 0]:
+                    summary_model.line_6_renewable_fuel_retained_jet_fuel = (
+                        prev_compliance_report.summary.line_6_renewable_fuel_retained_jet_fuel or 0
+                    )
+                if summary_model.line_8_obligation_deferred_gasoline in [None, 0]:
+                    summary_model.line_8_obligation_deferred_gasoline = (
+                        prev_compliance_report.summary.line_8_obligation_deferred_gasoline or 0
+                    )
+                if summary_model.line_8_obligation_deferred_diesel in [None, 0]:
+                    summary_model.line_8_obligation_deferred_diesel = (
+                        prev_compliance_report.summary.line_8_obligation_deferred_diesel or 0
+                    )
+                if summary_model.line_8_obligation_deferred_jet_fuel in [None, 0]:
+                    summary_model.line_8_obligation_deferred_jet_fuel = (
+                        prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel or 0
+                    )
 
         elif prev_compliance_report:
             # For pre-2025 reports with previous report: use previous values but don't force update
@@ -842,6 +959,9 @@ class ComplianceReportSummaryService:
         lines_7_and_9_locked = await self._should_lock_lines_7_and_9(compliance_report)
         summary.lines_7_and_9_locked = lines_7_and_9_locked
         existing_summary.lines_7_and_9_locked = lines_7_and_9_locked
+        # Lines 6 and 8 are editable while in draft/analyst-adjustment; lock only if the underlying model is locked
+        summary.lines_6_and_8_locked = summary_model.is_locked
+        existing_summary.lines_6_and_8_locked = summary_model.is_locked
 
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
@@ -1298,49 +1418,6 @@ class ComplianceReportSummaryService:
 
         return summary
 
-    async def _calculate_transaction_period_dates(
-        self,
-        compliance_year: int,
-        organization_id: int,
-        exclude_report_id: int = None,
-    ) -> Tuple[datetime, datetime]:
-        """
-        Calculate the transaction period date range for Line 12 and Line 13.
-
-        Per LCFA requirements:
-        - First compliance report (no previous assessed report): January 1 to March 31 (following year)
-        - Subsequent reports (has previous assessed report): April 1 to March 31 (following year)
-
-        This prevents overlap in transfer aggregation across compliance periods.
-
-        Args:
-            compliance_year: The compliance period year (e.g., 2024)
-            organization_id: The organization ID
-            exclude_report_id: Report ID to exclude when checking for previous reports
-
-        Returns:
-            Tuple of (transaction_start_date, transaction_end_date)
-        """
-        # Check if there's a previous assessed report for the prior year
-        prev_assessed_report = (
-            await self.cr_repo.get_assessed_compliance_report_by_period(
-                organization_id, compliance_year - 1, exclude_report_id
-            )
-        )
-
-        # Transaction period always ends on March 31 of the following year
-        transaction_end_date = datetime(compliance_year + 1, 3, 31, 23, 59, 59)
-
-        if prev_assessed_report:
-            # Subsequent report: April 1 of compliance year to March 31 of following year
-            # This avoids overlap with previous period (which covered Jan 1 - Mar 31)
-            transaction_start_date = datetime(compliance_year, 4, 1, 0, 0, 0)
-        else:
-            # First report: January 1 of compliance year to March 31 of following year
-            transaction_start_date = datetime(compliance_year, 1, 1, 0, 0, 0)
-
-        return transaction_start_date, transaction_end_date
-
     async def calculate_low_carbon_fuel_target_summary(
         self,
         compliance_period_start: datetime,
@@ -1357,13 +1434,26 @@ class ComplianceReportSummaryService:
             compliance_report.compliance_report_id,
         )
 
+        # If this is a supplemental/adjustment and there is no assessed report yet,
+        # fall back to the previous version's summary so we net out issuance/deductions
+        # already reported in the superseded submission. This prevents compare-mode
+        # from treating the first submitted report as if it is still active.
+        previous_version_summary = None
+        if compliance_report.version > 0 and not assessed_report:
+            previous_version_summary = await self.repo.get_previous_summary(
+                compliance_report
+            )
+
         # Calculate correct transaction period dates for Line 12 and Line 13
         # First report: Jan 1 - Mar 31 (next year)
         # Subsequent reports: Apr 1 - Mar 31 (next year) to avoid overlap
         compliance_year = compliance_period_start.year
         transaction_start_date, transaction_end_date = (
-            await self._calculate_transaction_period_dates(
-                compliance_year, organization_id, compliance_report.compliance_report_id
+            await calculate_transaction_period_dates(
+                compliance_year,
+                organization_id,
+                self.cr_repo,
+                compliance_report.compliance_report_id,
             )
         )
 
@@ -1382,18 +1472,25 @@ class ComplianceReportSummaryService:
                 compliance_period_start, compliance_period_end, organization_id
             )
         )  # line 14
-        # Line 15: Only use values from assessed reports
-        compliance_units_prev_issued_for_fuel_supply = int(
-            assessed_report.summary.line_18_units_to_be_banked
-            if assessed_report and assessed_report.summary
-            else 0
-        )  # line 15
-        # Line 16: Only use values from assessed reports
-        compliance_units_prev_issued_for_fuel_export = int(
-            assessed_report.summary.line_19_units_to_be_exported
-            if assessed_report and assessed_report.summary
-            else 0
-        )  # line 16
+        # Line 15/16: Use assessed report if available, otherwise fall back to the
+        # previous version (unassessed supplemental) to avoid double-counting.
+        compliance_units_prev_issued_for_fuel_supply = 0
+        compliance_units_prev_issued_for_fuel_export = 0
+
+        if assessed_report and assessed_report.summary:
+            compliance_units_prev_issued_for_fuel_supply = int(
+                assessed_report.summary.line_18_units_to_be_banked
+            )
+            compliance_units_prev_issued_for_fuel_export = int(
+                assessed_report.summary.line_19_units_to_be_exported
+            )
+        elif previous_version_summary:
+            compliance_units_prev_issued_for_fuel_supply = int(
+                previous_version_summary.line_18_units_to_be_banked or 0
+            )
+            compliance_units_prev_issued_for_fuel_export = int(
+                previous_version_summary.line_19_units_to_be_exported or 0
+            )
 
         # For supplemental reports with a locked summary, use the stored line_17 value
         # This preserves the available balance from when the supplemental report was created
@@ -1553,8 +1650,8 @@ class ComplianceReportSummaryService:
             report.version,
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum = Decimal("0")
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
@@ -1572,16 +1669,17 @@ class ComplianceReportSummaryService:
             )
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units_sum += compliance_units
 
-        return round(compliance_units_sum)
+        # Round to integer using ROUND_HALF_UP for consistent rounding
+        return int(compliance_units_sum.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
     @service_handler
     async def calculate_quarterly_fuel_supply_compliance_units(
         self, report: ComplianceReport
-    ) -> list[float | Any]:
+    ) -> list[int]:
         """
         Calculate the total compliance units for the early issuance Summary
         """
@@ -1592,11 +1690,11 @@ class ComplianceReportSummaryService:
             report.version,
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum_q1 = 0.0
-        compliance_units_sum_q2 = 0.0
-        compliance_units_sum_q3 = 0.0
-        compliance_units_sum_q4 = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum_q1 = Decimal("0")
+        compliance_units_sum_q2 = Decimal("0")
+        compliance_units_sum_q3 = Decimal("0")
+        compliance_units_sum_q4 = Decimal("0")
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
@@ -1606,7 +1704,7 @@ class ComplianceReportSummaryService:
             UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units_sum_q1 += calculate_compliance_units(
                 TCI, EER, RCI, UCI, fuel_supply.q1_quantity or 0, ED
             )
@@ -1620,11 +1718,12 @@ class ComplianceReportSummaryService:
                 TCI, EER, RCI, UCI, fuel_supply.q4_quantity or 0, ED
             )
 
+        # Round to integer using ROUND_HALF_UP for consistent rounding
         return [
-            round(compliance_units_sum_q1),
-            round(compliance_units_sum_q2),
-            round(compliance_units_sum_q3),
-            round(compliance_units_sum_q4),
+            int(compliance_units_sum_q1.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q2.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q3.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
+            int(compliance_units_sum_q4.quantize(Decimal("1"), rounding=ROUND_HALF_UP)),
         ]
 
     @service_handler
@@ -1639,8 +1738,8 @@ class ComplianceReportSummaryService:
             report.compliance_report_group_uuid, report.compliance_report_id
         )
 
-        # Initialize compliance units sum
-        compliance_units_sum = 0.0
+        # Initialize compliance units sum using Decimal for precision
+        compliance_units_sum = Decimal("0")
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
             TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
@@ -1650,11 +1749,12 @@ class ComplianceReportSummaryService:
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
+            # Apply the compliance units formula (returns Decimal)
             compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units = -compliance_units
-            compliance_units = compliance_units if compliance_units < 0 else 0
+            compliance_units = compliance_units if compliance_units < 0 else Decimal("0")
 
             compliance_units_sum += compliance_units
 
-        return round(compliance_units_sum)
+        # Round to integer using ROUND_HALF_UP for consistent rounding
+        return int(compliance_units_sum.quantize(Decimal("1"), rounding=ROUND_HALF_UP))

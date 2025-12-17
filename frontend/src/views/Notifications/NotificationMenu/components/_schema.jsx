@@ -31,7 +31,8 @@ export const columnDefs = (t, currentUser) => [
     colId: 'user',
     field: 'user',
     headerName: t('notifications:notificationColLabels.user'),
-    valueGetter: (params) => params.data.originUserProfile.fullName.trim()
+    valueGetter: (params) =>
+      params.data.originUserProfile?.fullName?.trim() || 'System'
   },
   {
     colId: 'transactionId',
@@ -44,14 +45,17 @@ export const columnDefs = (t, currentUser) => [
     field: 'organization',
     headerName: t('notifications:notificationColLabels.organization'),
     valueGetter: (params) => {
-      const { service, toOrganizationId, fromOrganization } = JSON.parse(
-        params.data.message
-      )
-      if (
-        service === 'Transfer' &&
-        toOrganizationId === currentUser?.organization?.organizationId
-      ) {
-        return fromOrganization
+      try {
+        const parsed = JSON.parse(params.data.message)
+        const { service, toOrganizationId, fromOrganization } = parsed
+        if (
+          service === 'Transfer' &&
+          toOrganizationId === currentUser?.organization?.organizationId
+        ) {
+          return fromOrganization
+        }
+      } catch {
+        // Government notifications have different message format
       }
       return params.data.relatedOrganization?.name || ''
     }

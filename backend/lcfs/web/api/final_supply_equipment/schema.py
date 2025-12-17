@@ -2,7 +2,7 @@ from datetime import date
 from enum import Enum
 from typing import Optional, List, Union
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
@@ -50,6 +50,20 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     longitude: float
     notes: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @field_validator("intended_use_types")
+    @classmethod
+    def validate_intended_use_types(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError("At least one intended use type is required")
+        return v
+
+    @field_validator("intended_user_types")
+    @classmethod
+    def validate_intended_user_types(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError("At least one intended user type is required")
+        return v
 
 
 class FinalSupplyEquipmentSchema(BaseSchema):
@@ -113,7 +127,7 @@ class FSEReportingSchema(BaseSchema):
     intended_users: Optional[List[str]] = []
     deleted: Optional[bool] = None
     power_output: Optional[float] = 0
-    capacity_utilization_percent: Optional[float] = 0
+    capacity_utilization_percent: Optional[int] = 0
 
 
 class FSEReportingBaseSchema(BaseSchema):

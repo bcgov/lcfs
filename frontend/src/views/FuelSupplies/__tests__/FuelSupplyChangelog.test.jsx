@@ -41,7 +41,7 @@ vi.mock('@/hooks/useComplianceReports', () => ({
   useGetChangeLog: vi.fn()
 }))
 
-vi.mock('@/constants/schedules.js', () => ({
+vi.mock('@/constants/schedules', () => ({
   defaultInitialPagination: {
     page: 1,
     size: 10,

@@ -1,4 +1,5 @@
 import {
+  AsyncSuggestionEditor,
   AutocompleteCellEditor,
   RequiredHeader,
   TextCellEditor
@@ -10,6 +11,8 @@ import {
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import i18n from '@/i18n'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { apiRoutes } from '@/constants/routes'
 
 const isEditableByStatus = (params) => {
   const status = params?.data?.status
@@ -66,9 +69,7 @@ export const bulkChargingEquipmentColDefs = (
           incoming && typeof incoming === 'object' ? incoming.value : incoming
         const next = raw === '' || raw == null ? '' : Number(raw)
         params.data.chargingSiteId = next
-        const site = chargingSites.find(
-          (s) => s.chargingSiteId === next
-        )
+        const site = chargingSites.find((s) => s.chargingSiteId === next)
         if (site) {
           params.data.latitude = site.latitude
           params.data.longitude = site.longitude
@@ -107,11 +108,30 @@ export const bulkChargingEquipmentColDefs = (
       field: 'manufacturer',
       headerComponent: RequiredHeader,
       headerName: i18n.t('chargingEquipment:manufacturer'),
-      cellEditor: 'agTextCellEditor',
+      minWidth: 320,
+      cellEditor: AsyncSuggestionEditor,
+      cellEditorParams: (params) => ({
+        queryKey: 'fuel-code-search',
+        queryFn: async ({ client, queryKey }) => {
+          try {
+            const [, searchTerm] = queryKey
+            const path = `${
+              apiRoutes.searchFinalSupplyEquipments
+            }manufacturer=${encodeURIComponent(searchTerm)}`
+            const response = await client.get(path)
+            return response.data
+          } catch (error) {
+            console.error('Error fetching manufacturer data:', error)
+            return []
+          }
+        },
+        optionLabel: 'manufacturer',
+        title: 'fuelCode'
+      }),
+      suppressKeyboardEvent,
       cellDataType: 'text',
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      minWidth: 320,
       editable: isEditableByStatus
     },
     {
@@ -120,7 +140,9 @@ export const bulkChargingEquipmentColDefs = (
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       minWidth: 220,
-      editable: isEditableByStatus
+      editable: isEditableByStatus,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
     {
       field: 'levelOfEquipmentId',
@@ -176,7 +198,9 @@ export const bulkChargingEquipmentColDefs = (
         return true
       },
       minWidth: 120,
-      editable: isEditableByStatus
+      editable: isEditableByStatus,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
     {
       field: 'intendedUseIds',
@@ -283,7 +307,7 @@ export const bulkChargingEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: true
+      editable: isEditableByStatus
     },
     {
       field: 'longitude',
@@ -300,14 +324,16 @@ export const bulkChargingEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: true
+      editable: isEditableByStatus
     },
     {
       field: 'notes',
       headerName: i18n.t('chargingEquipment:notes'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
-      minWidth: 200,
+      minWidth: 400,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: isEditableByStatus
     }
   ]

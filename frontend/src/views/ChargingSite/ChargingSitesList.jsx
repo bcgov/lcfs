@@ -3,7 +3,7 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Outlet } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -26,9 +26,11 @@ const EXCLUDED_ORG_TYPES = new Set([
   'initiative_agreement_holder'
 ])
 
-export const ChargingSitesList = ({ alertRef }) => {
+export const ChargingSitesList = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const outletContext = useOutletContext?.() || {}
+  const alertRef = outletContext?.alertRef
   const { t } = useTranslation(['chargingSite'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
@@ -71,6 +73,19 @@ export const ChargingSitesList = ({ alertRef }) => {
     sortOrders: [],
     filters: []
   })
+
+  useEffect(() => {
+    if (!alertRef?.current || !location.state?.message) {
+      return
+    }
+
+    alertRef.current.triggerAlert({
+      message: location.state.message,
+      severity: location.state.severity || 'success'
+    })
+
+    navigate(location.pathname, { replace: true })
+  }, [alertRef, location.pathname, location.state, navigate])
 
   const handleNewSite = () => {
     navigate(ROUTES.REPORTS.CHARGING_SITE.ADD)

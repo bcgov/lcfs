@@ -25,6 +25,8 @@ CE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Intended Uses", "text"),
     SpreadsheetColumn("Intended Users", "text"),
     SpreadsheetColumn("Notes", "text"),
+    SpreadsheetColumn("Latitude", "text"),
+    SpreadsheetColumn("Longitude", "text"),
 ]
 
 
@@ -87,10 +89,12 @@ class ChargingEquipmentExporter:
 
         ports_options = ["Single port", "Dual port"]
 
-        site_names = [s.site_name for s in charging_sites]
+        site_names = [s.site_name or "" for s in charging_sites]
         level_names = [l.name for l in levels]
         end_use_names = [e.type for e in end_use_types]
         end_user_names = [u.type_name for u in end_user_types]
+        site_latitudes = [s.latitude for s in charging_sites]
+        site_longitudes = [s.longitude for s in charging_sites]
 
         # Charging Site validator (Column A)
         site_validator = DataValidation(
@@ -148,13 +152,15 @@ class ChargingEquipmentExporter:
         intended_users_validator.add("H2:H10000")
         validators.append(intended_users_validator)
 
-        # Build VALUES sheet data (A: Sites, B: Levels, C: Ports, D: Intended Uses, E: Intended Users)
+        # Build VALUES sheet data (A: Charging Sites, B: Levels, C: Ports, D: Intended Uses, E: Intended Users, F: Latitude, G: Longitude)
         data = [
             site_names,
             level_names,
             ports_options,
             end_use_names,
             end_user_names,
+            site_latitudes,
+            site_longitudes,
         ]
 
         # Determine the maximum length among all columns
@@ -174,6 +180,8 @@ class ChargingEquipmentExporter:
                 SpreadsheetColumn("Ports", "text"),
                 SpreadsheetColumn("Intended Uses", "text"),
                 SpreadsheetColumn("Intended Users", "text"),
+                SpreadsheetColumn("Latitude", "text"),
+                SpreadsheetColumn("Longitude", "text"),
             ],
             rows=rows,
             styles={"bold_headers": True},
@@ -198,6 +206,8 @@ class ChargingEquipmentExporter:
                     ", ".join(use.type for use in getattr(eq, "intended_uses", [])),
                     ", ".join(user.type_name for user in getattr(eq, "intended_users", [])),
                     eq.notes or "",
+                    eq.latitude if getattr(eq, "latitude", None) is not None else "",
+                    eq.longitude if getattr(eq, "longitude", None) is not None else "",
                 ]
             )
         return data

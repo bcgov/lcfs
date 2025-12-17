@@ -4,7 +4,7 @@ import { OrganizationView } from '../OrganizationView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
-import { roles } from '@/constants/roles.js'
+import { roles } from '@/constants/roles'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
 // Mock react-router-dom hooks - SINGLE DEFINITION

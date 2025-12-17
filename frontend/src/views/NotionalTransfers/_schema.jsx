@@ -142,10 +142,6 @@ export const notionalTransferColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.fuelCategory = params.newValue
-          if (params.data.fuelCategory != 'Diesel') {
-            params.data.isCanadaProduced = false
-            params.data.isQ1Supplied = false
-          }
         }
         return true
       },
@@ -179,9 +175,13 @@ export const notionalTransferColDefs = (
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.isCanadaProduced = params.newValue === 'Yes'
+          if (params.data.isCanadaProduced) {
+            params.data.isQ1Supplied = false
+          }
         }
         return true
       },
+      hide: true,
       minWidth: 250
     },
     {
@@ -215,7 +215,8 @@ export const notionalTransferColDefs = (
         }
         return true
       },
-      minWidth: 170
+      minWidth: 170,
+      hide: true
     },
     {
       field: 'receivedOrTransferred',
@@ -430,7 +431,7 @@ export const notionalTransferSummaryColDefs = (
       ),
       field: 'isCanadaProduced',
       minWidth: 250,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: true,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
@@ -438,7 +439,7 @@ export const notionalTransferSummaryColDefs = (
         'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
       ),
       field: 'isQ1Supplied',
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: true,
       minWidth: 170,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
