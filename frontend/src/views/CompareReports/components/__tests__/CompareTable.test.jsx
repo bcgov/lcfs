@@ -151,6 +151,25 @@ describe('CompareTable Component', () => {
     })
   })
 
+  describe('Highlighted Columns', () => {
+    it('applies highlight styles to specified columns', () => {
+      render(
+        <CompareTable
+          title="Test"
+          columns={basicColumns}
+          data={basicData}
+          highlightedColumns={['amount']}
+        />
+      )
+
+      const headerCell = screen.getByText('Amount').closest('th')
+      expect(headerCell).toHaveStyle('background-color: #e0e0e0')
+
+      const bodyCell = screen.getAllByText('1000')[0].closest('td')
+      expect(bodyCell).toHaveStyle('background-color: #e5e5e5')
+    })
+  })
+
   describe('Fuel Type Radio Selection', () => {
     it('calls setFuelType when radio button is clicked', () => {
       render(

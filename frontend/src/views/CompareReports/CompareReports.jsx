@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   lowCarbonColumns,
@@ -12,6 +12,7 @@ import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const Controls = styled(Box)({
   width: '66%'
@@ -27,6 +28,23 @@ export const CompareReports = () => {
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
+
+  const originalReport = useMemo(() => {
+    if (!Array.isArray(reportChain)) return null
+    return reportChain.find((report) => report.version === 0) || null
+  }, [reportChain])
+
+  const hasSupplementalReports = useMemo(() => {
+    if (!Array.isArray(reportChain)) return false
+    return reportChain.some((report) => (report.version ?? 0) > 0)
+  }, [reportChain])
+
+  const shouldShowOriginalNotAssessedLabel = useMemo(() => {
+    if (!originalReport) return false
+    if (!hasSupplementalReports) return false
+    const originalStatus = originalReport.currentStatus?.status
+    return originalStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+  }, [originalReport, hasSupplementalReports])
 
   useEffect(() => {
     if (currentReport) {
@@ -181,6 +199,30 @@ export const CompareReports = () => {
         ?.nickname || ''
     : ''
 
+  const originalReportId = originalReport?.complianceReportId
+
+  const isOriginalReport = (reportId) =>
+    !!originalReportId && reportId === originalReportId
+
+  const shouldLabelOriginal = (reportId) =>
+    shouldShowOriginalNotAssessedLabel && isOriginalReport(reportId)
+
+  const report1Label = shouldLabelOriginal(report1ID)
+    ? t('report:originalReportNotAssessed')
+    : selectedReportName1
+
+  const report2Label = shouldLabelOriginal(report2ID)
+    ? t('report:originalReportNotAssessed')
+    : selectedReportName2
+
+  const highlightedColumns = []
+  if (shouldLabelOriginal(report1ID)) {
+    highlightedColumns.push('report1')
+  }
+  if (shouldLabelOriginal(report2ID)) {
+    highlightedColumns.push('report2')
+  }
+
   return (
     <>
       <Controls>
@@ -250,28 +292,31 @@ export const CompareReports = () => {
         title={t('report:renewableFuelTargetSummary')}
         columns={renewableFuelColumns(
           t,
-          selectedReportName1,
-          selectedReportName2
+          report1Label,
+          report2Label
         )}
         data={renewableSummary}
         useParenthesis
         enableFuelControls
         setFuelType={setFuelType}
         fuelType={fuelType}
+        highlightedColumns={highlightedColumns}
       />
       <CompareTable
         title={t('report:lowCarbonFuelTargetSummary')}
-        columns={lowCarbonColumns(t, selectedReportName1, selectedReportName2)}
+        columns={lowCarbonColumns(t, report1Label, report2Label)}
         data={lowCarbonSummary}
+        highlightedColumns={highlightedColumns}
       />
       <CompareTable
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          selectedReportName1 || '',
-          selectedReportName2 || ''
+          report1Label || '',
+          report2Label || ''
         )}
         data={nonCompliancePenaltySummary}
+        highlightedColumns={highlightedColumns}
       />
     </>
   )
