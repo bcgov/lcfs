@@ -24,8 +24,8 @@ describe('BCFooter', () => {
   ]
   const repoDetails = {
     id: 'footer-about-version',
-    href: 'https://github.com/bcgov/lcfs/releases/tag/v1.2.0',
-    name: 'v1.2.0',
+    href: 'https://github.com/bcgov/lcfs/releases/tag/v1.2.1',
+    name: 'v1.2.1',
     label: 'LCFS repository changelog'
   }
 
