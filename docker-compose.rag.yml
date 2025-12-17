@@ -1,23 +1,22 @@
-
 services:
   ollama:
     image: ollama/ollama:latest
     container_name: lcfs-ollama
     restart: unless-stopped
     ports:
-      - "11434:11434"              # Ollama REST / OpenAI-compatible API
+      - "11434:11434" # Ollama REST / OpenAI-compatible API
     volumes:
       - ollama_models:/root/.ollama # persist pulled models
       - ./rag-system/scripts/pull-model.sh:/usr/local/bin/pull-model.sh:ro
     environment:
-      OLLAMA_MODEL: "smollm2:135m"  # SmolLM2 135M - smallest available model
+      OLLAMA_MODEL: "qwen2:1.5b"
     entrypoint: ["/bin/bash", "/usr/local/bin/pull-model.sh"]
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:11434/api/tags"]
       interval: 10s
       timeout: 3s
       retries: 10
-      start_period: 60s             # Give more time for model download
+      start_period: 60s # Give more time for model download
     networks:
       - shared_network
   # Qdrant Vector Database for RAG system
@@ -26,8 +25,8 @@ services:
     container_name: lcfs-qdrant
     restart: "no"
     ports:
-      - "6333:6333"  # REST API + Web Dashboard at http://localhost:6333/dashboard
-      - "6334:6334"  # gRPC API  
+      - "6333:6333" # REST API + Web Dashboard at http://localhost:6333/dashboard
+      - "6334:6334" # gRPC API
     volumes:
       - qdrant_storage:/qdrant/storage
     networks:
@@ -36,11 +35,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G        # Qdrant is memory efficient
-          cpus: '0.5'       # Moderate CPU needs
+          memory: 1G # Qdrant is memory efficient
+          cpus: "0.5" # Moderate CPU needs
         reservations:
-          memory: 256M      # Minimum memory
-          cpus: '0.1'       # Low CPU reservation
+          memory: 256M # Minimum memory
+          cpus: "0.1" # Low CPU reservation
     labels:
       - "lcfs.service=qdrant"
       - "lcfs.description=Vector database for LCFS RAG system"
@@ -56,14 +55,14 @@ services:
       HAYSTACK_TELEMETRY_ENABLED: "false"
       # No API keys needed - using local open-source models
       HF_HUB_DISABLE_TELEMETRY: "1"
-      TOKENIZERS_PARALLELISM: "false"  # Prevent tokenizer warnings
+      TOKENIZERS_PARALLELISM: "false" # Prevent tokenizer warnings
       # Qdrant connection settings
       QDRANT_HOST: "qdrant"
       QDRANT_PORT: "6333"
-      OLLAMA_URL: "http://ollama:11434"    # Ollama API URL for Haystack integration
-      OLLAMA_MODEL: "qwen2:0.5b"       # Qwen2 0.5B - better instruction following
+      OLLAMA_URL: "http://ollama:11434" # Ollama API URL for Haystack integration
+      OLLAMA_MODEL: "qwen2:1.5b" # Qwen2 1.5B
     ports:
-      - "1416:1416"  # Hayhooks default port
+      - "1416:1416" # Hayhooks default port
     volumes:
       # Cache Hugging Face models locally
       - huggingface_cache:/root/.cache/huggingface
@@ -72,15 +71,15 @@ services:
     depends_on:
       - qdrant
       - ollama
-    # Match OpenShift production specs exactly  
+    # Match OpenShift production specs exactly
     deploy:
       resources:
         limits:
-          memory: 5G        # Reduced since Qdrant handles vector storage
-          cpus: '1.0'       # Allow 1 full CPU for model loading
+          memory: 6G # Increased for qwen2:1.5b (requires 4-6GB)
+          cpus: "1.0" # Allow 1 full CPU for model loading
         reservations:
-          memory: 2G        # Realistic for model loading (vs 256Mi default)
-          cpus: '0.5'       # 500m CPU request (vs 50m default)
+          memory: 4G # Increased minimum for qwen2:1.5b
+          cpus: "0.5" # 500m CPU request (vs 50m default)
     labels:
       - "lcfs.service=rag-llm"
       - "lcfs.description=LCFS RAG System LLM API using open-source models"
