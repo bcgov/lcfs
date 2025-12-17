@@ -1,7 +1,7 @@
 """add renewable diesel fuel type
 
 Revision ID: a3290902296b
-Revises: c4d5e6f7a8b9
+Revises: 64ab3b361bde
 Create Date: 2025-04-11 13:29:03.149771
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "a3290902296b"
-down_revision = "c4d5e6f7a8b9"
+down_revision = "64ab3b361bde"
 branch_labels = None
 depends_on = None
 
