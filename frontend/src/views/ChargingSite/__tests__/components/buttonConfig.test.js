@@ -21,7 +21,6 @@ describe('buttonConfig', () => {
     isGovernmentUser: false,
     hasAnyRole: vi.fn(() => false),
     hasRoles: vi.fn(() => false),
-    handleAddEquipment: vi.fn(),
     handleToggleSelectByStatus: vi.fn(),
     handleBulkStatusUpdate: vi.fn(),
     handleClearFilters: vi.fn(),
@@ -47,7 +46,6 @@ describe('buttonConfig', () => {
         chargingSiteStatus: 'Draft',
         organizationId: 1,
         currentUser: { userId: 1 },
-        handleAddEquipment: vi.fn(),
         handleToggleSelectByStatus: vi.fn(),
         handleBulkStatusUpdate: vi.fn(),
         handleClearFilters: vi.fn()
@@ -75,7 +73,7 @@ describe('buttonConfig', () => {
       
       const buttons = equipmentButtonConfigFn(context)
       expect(buttons).toBeInstanceOf(Array)
-      expect(buttons.some(btn => btn.id === 'new-fse-btn')).toBe(true)
+      expect(buttons.some(btn => btn.id === 'select-all-draft-btn')).toBe(true)
     })
 
     it('returns buttons for IDIR analyst', () => {
