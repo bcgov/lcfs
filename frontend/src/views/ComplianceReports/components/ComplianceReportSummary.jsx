@@ -211,7 +211,9 @@ const ComplianceReportSummary = ({
     [summaryData, updateComplianceReportSummary, currentUser]
   )
 
-  if (isLoading || isFetching) {
+  // Only show full loading screen on initial load, not on background refetches
+  // Background refetches (isFetching) happen after cell edits and should show inline spinners instead
+  if (isLoading && !summaryData) {
     return <Loading message={t('report:summaryLoadingMsg')} />
   }
 
