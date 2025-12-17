@@ -47,16 +47,8 @@ from lcfs.web.utils.transaction_windows import calculate_transaction_period_date
 
 logger = structlog.get_logger(__name__)
 
-# REFACTORING NOTE: Legacy Report Handling
-# This service has been refactored to always use modern format for all reports.
-# Previously, reports were formatted differently based on compliance year (pre/post 2024).
-# Legacy-specific code has been deprecated but kept for reference.
-# Key changes:
-# - All reports now use LOW_CARBON_FUEL_TARGET_DESCRIPTIONS (modern format)
-# - Legacy PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS is deprecated
-# - Line formatting always uses modern numbering (no "line | line+11" format)
-# - Frontend feature flags control display, not backend logic
-
+# Eligible renewable fuel types for Line 2 calculations (2025+)
+# These are the fuel types that count towards renewable fuel requirements
 ELIGIBLE_GASOLINE_RENEWABLE_TYPES = {
     "renewable gasoline",
     "ethanol",
@@ -68,6 +60,11 @@ ELIGIBLE_DIESEL_RENEWABLE_TYPES = {
     "biodiesel",
     "hdrd",
     "other diesel fuel",
+    "other",
+}
+
+ELIGIBLE_JET_FUEL_RENEWABLE_TYPES = {
+    "alternative jet fuel",
     "other",
 }
 
@@ -503,32 +500,88 @@ class ComplianceReportSummaryService:
             compliance_year = int(compliance_report.compliance_period.description)
 
         await self.repo.save_compliance_report_summary(summary_data, compliance_year)
+
+        # Expire the compliance report and its summary from the session's identity map
+        # to ensure calculate_compliance_report_summary fetches fresh data with the
+        # newly saved Line 6/8 values. Without this, SQLAlchemy may return cached
+        # objects that don't reflect the just-saved user input.
+        # Use sync_session to access the synchronous expire method on AsyncSession.
+        sync_session = self.repo.db.sync_session
+        if compliance_report.summary:
+            sync_session.expire(compliance_report.summary)
+        sync_session.expire(compliance_report)
+
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
 
     def _is_eligible_renewable(self, record, compliance_year) -> bool:
+        """
+        Determine if a fuel record is eligible for Line 2 renewable fuel calculations.
+
+        Eligibility rules by compliance year:
+        - 2024 (pre-2025): All renewable fuels are eligible, no Canadian production requirements
+        - 2025: Diesel requires Canadian production OR Q1 supplied; Gasoline and Jet fuel have no requirements
+        - 2026+: Both Diesel and Gasoline require Canadian production; Jet fuel has no requirements
+
+        Eligible renewable fuel types:
+        - Gasoline: Ethanol, Renewable gasoline, Renewable naphtha, Other
+        - Diesel: Biodiesel, HDRD, Other diesel fuel, Other
+        - Jet fuel: Alternative jet fuel, Other
+        """
+        # Must be a renewable fuel
         if not record.fuel_type.renewable:
             return False
 
+        # Pre-2025: All renewable fuels are eligible with no restrictions
         if compliance_year < 2025:
             return True
 
         category = (record.fuel_category.category or "").lower()
         fuel_type_name = (record.fuel_type.fuel_type or "").lower()
 
+        # Check if fuel type is in the eligible list for its category
         if category == "gasoline":
             if fuel_type_name not in ELIGIBLE_GASOLINE_RENEWABLE_TYPES:
                 return False
         elif category == "diesel":
             if fuel_type_name not in ELIGIBLE_DIESEL_RENEWABLE_TYPES:
                 return False
+        elif category == "jet fuel":
+            if fuel_type_name not in ELIGIBLE_JET_FUEL_RENEWABLE_TYPES:
+                return False
+            # Jet fuel never requires Canadian production - always eligible if it's in the list
+            return True
         else:
+            # Unknown category - include by default
             return True
 
-        if record.is_canada_produced or record.is_q1_supplied:
+        # Apply Canadian production requirements based on compliance year and category
+        # 2025: Only Diesel requires Canadian production (with Q1 exception)
+        # 2026+: Both Diesel and Gasoline require Canadian production
+        requires_canadian_production = False
+
+        if category == "diesel":
+            # Diesel requires Canadian production starting in 2025
+            requires_canadian_production = True
+        elif category == "gasoline":
+            # Gasoline requires Canadian production starting in 2026 (not 2025)
+            requires_canadian_production = compliance_year >= 2026
+
+        # If no Canadian production requirement applies, the fuel is eligible
+        if not requires_canadian_production:
             return True
 
+        # Check Canadian production criteria
+        # 1. Explicitly marked as Canadian produced
+        if record.is_canada_produced:
+            return True
+
+        # 2. Q1 supplied exception (only applies to Diesel in 2025)
+        if category == "diesel" and compliance_year == 2025 and record.is_q1_supplied:
+            return True
+
+        # 3. Fuel code indicates Canadian production facility
         fuel_code_country = (
             (record.fuel_code.fuel_production_facility_country or "")
             if getattr(record, "fuel_code", None)

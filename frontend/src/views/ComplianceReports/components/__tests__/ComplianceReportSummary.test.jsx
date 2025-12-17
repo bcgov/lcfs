@@ -326,18 +326,22 @@ describe('ComplianceReportSummary', () => {
     expect(screen.getByText('report:summaryLoadingMsg')).toBeInTheDocument()
   })
 
-  // Test 2: Loading state during fetch
-  it('renders loading state when isFetching is true', () => {
+  // Test 2: Does not show full loading during background refetch (isFetching)
+  // This prevents the summary from flashing when saving inline edits
+  it('does not show loading state when isFetching is true but isLoading is false', () => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: false,
-      data: null,
+      data: mockSummaryData,
       isFetching: true
     })
 
     render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
 
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
+    // Should NOT show loading during background refetch - content should remain visible
+    expect(screen.queryByTestId('loading')).not.toBeInTheDocument()
+    // Summary content should be visible
+    expect(screen.getByTestId('renewable-summary')).toBeInTheDocument()
   })
 
   // Test 3: Error state rendering

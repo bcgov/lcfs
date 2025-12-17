@@ -528,3 +528,22 @@ async def test_bulk_update_reporting_dates(repo, fake_db):
     assert result == 2
     fake_db.execute.assert_called_once()
     fake_db.flush.assert_called_once()
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fake_db):
+    """Ensure mode='all' prioritizes rows matching provided compliance_report_group_uuid"""
+    fake_db.scalar.return_value = 0
+    data_result = MagicMock()
+    data_result.fetchall.return_value = []
+    fake_db.execute.return_value = data_result
+
+    pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
+    group_uuid = "group-123"
+
+    await repo.get_fse_reporting_list_paginated(1, pagination, group_uuid, "all")
+
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "CASE" in compiled_sql
+    assert group_uuid in compiled_sql

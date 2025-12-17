@@ -42,6 +42,7 @@ const getEmptyRow = (id = Date.now()) => ({
 
 vi.mock('@/hooks/useChargingEquipment')
 vi.mock('@/hooks/useCurrentUser')
+vi.mock('@/services/useApiService')
 
 const mockNavigate = vi.fn()
 let mockLocationState = null
@@ -145,6 +146,7 @@ describe('AddEditChargingEquipment - Navigation', () => {
     vi.clearAllMocks()
     mockLocationState = null
 
+    const { useApiService } = await import('@/services/useApiService')
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
     const {
       useGetChargingEquipment,
@@ -157,8 +159,18 @@ describe('AddEditChargingEquipment - Navigation', () => {
       useHasAllocationAgreements
     } = await import('@/hooks/useChargingEquipment')
 
+    useApiService.mockReturnValue({
+      post: vi.fn().mockResolvedValue({ data: {} }),
+      get: vi.fn().mockResolvedValue({ data: {} }),
+      put: vi.fn().mockResolvedValue({ data: {} }),
+      delete: vi.fn().mockResolvedValue({ data: {} })
+    })
+
     useCurrentUser.mockReturnValue({
-      data: { userId: 1 },
+      data: { 
+        userId: 1,
+        organization: { organizationId: 123 }
+      },
       hasAnyRole: vi.fn(() => false)
     })
 

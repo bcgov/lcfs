@@ -15,6 +15,7 @@ from sqlalchemy import (
     desc,
     literal,
     union_all,
+    case,
 )
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -496,9 +497,9 @@ class FinalSupplyEquipmentRepository:
         Search for manufacturers based on the provided query.
         """
         result = await self.db.execute(
-            select(distinct(FinalSupplyEquipment.manufacturer)).where(
-                FinalSupplyEquipment.manufacturer.ilike(f"%{query}%")
-            )
+            select(distinct(ChargingEquipment.manufacturer)).where(
+                ChargingEquipment.manufacturer.ilike(f"%{query}%")
+            ).limit(10)
         )
         return result.scalars().all()
 
@@ -768,6 +769,23 @@ class FinalSupplyEquipmentRepository:
 
         combined_subquery = combined_query.subquery()
 
+        ordering_columns = []
+        if compliance_report_group_uuid and mode == "all":
+            ordering_columns.append(
+                case(
+                    (
+                        combined_subquery.c.compliance_report_group_uuid
+                        == compliance_report_group_uuid,
+                        0,
+                    ),
+                    else_=1,
+                )
+            )
+        ordering_columns.append(combined_subquery.c.source_priority)
+        ordering_columns.append(
+            desc(combined_subquery.c.charging_equipment_compliance_id).nullslast()
+        )
+
         row_number_column = (
             func.row_number()
             .over(
@@ -775,12 +793,7 @@ class FinalSupplyEquipmentRepository:
                     combined_subquery.c.charging_equipment_id,
                     combined_subquery.c.charging_equipment_version,
                 ),
-                order_by=[
-                    combined_subquery.c.source_priority,
-                    desc(
-                        combined_subquery.c.charging_equipment_compliance_id
-                    ).nullslast(),
-                ],
+                order_by=ordering_columns,
             )
             .label("row_number")
         )
@@ -878,7 +891,7 @@ class FinalSupplyEquipmentRepository:
                     EndUserType.type_name.in_(intended_user_names or []),
                 )
             )
-            .order_by(asc(ChargingPowerOutput.display_order))
+            .order_by(asc(EndUseType.end_use_type_id))
             .limit(1)
         )
         result = await self.db.execute(stmt)

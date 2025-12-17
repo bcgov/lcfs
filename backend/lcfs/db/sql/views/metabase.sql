@@ -3051,6 +3051,7 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance Report Fuel Supply Volume Summary View
 -- ==========================================
+drop view if exists vw_compliance_report_fuel_volume_history;
 CREATE OR REPLACE VIEW vw_compliance_report_fuel_volume_history AS
 WITH
   ordered_reports AS (
@@ -3063,10 +3064,8 @@ WITH
       org.name AS organization_name,
       crs.status,
       ROW_NUMBER() OVER (
-        PARTITION BY
-          cr.compliance_report_group_uuid
-        ORDER BY
-          cr.version
+        PARTITION BY cr.compliance_report_group_uuid
+        ORDER BY cr.version
       ) AS version_rank
     FROM
       compliance_report cr
@@ -3099,44 +3098,94 @@ WITH
         ON ft.fuel_type_id = fs.fuel_type_id
       JOIN fuel_category fc
         ON fc.fuel_category_id = fs.fuel_category_id
+    WHERE fs.compliance_report_id IN (
+      SELECT compliance_report_id FROM ordered_reports
+    )
     GROUP BY
       fs.compliance_report_id,
       ft.fuel_type,
       fc.category,
       fs.units
   ),
-  summary_metrics AS (
-    SELECT
-      crs.*
-    FROM
-      compliance_report_summary crs
-  ),
-  versioned_fuel AS (
-    SELECT
+  -- Get all unique fuel type/category combinations PER report group
+  all_fuels AS (
+    SELECT DISTINCT
       orp.compliance_report_group_uuid,
-      orp.organization_name,
-      orp.compliance_period,
       fv.fuel_type,
       fv.fuel_category,
-      fv.quantity_units,
-      orp.compliance_report_id,
-      orp.version,
-      orp.nickname,
-      orp.version_rank,
-      fv.total_volume,
-      LAG(fv.total_volume) OVER (
-        PARTITION BY
-          orp.compliance_report_group_uuid,
-          fv.fuel_type,
-          fv.fuel_category,
-          fv.quantity_units
-        ORDER BY
-          orp.version_rank
-      ) AS previous_volume
+      fv.quantity_units
     FROM
       ordered_reports orp
       JOIN fuel_volumes fv
         ON fv.compliance_report_id = orp.compliance_report_id
+  ),
+  -- Create a complete matrix of reports x fuels (now partitioned by group)
+  report_fuel_matrix AS (
+    SELECT
+      orp.compliance_report_id,
+      orp.compliance_report_group_uuid,
+      orp.version,
+      orp.nickname,
+      orp.version_rank,
+      orp.organization_name,
+      orp.compliance_period,
+      af.fuel_type,
+      af.fuel_category,
+      af.quantity_units,
+      fv.total_volume
+    FROM
+      ordered_reports orp
+      JOIN all_fuels af
+        ON af.compliance_report_group_uuid = orp.compliance_report_group_uuid
+      LEFT JOIN fuel_volumes fv
+        ON fv.compliance_report_id = orp.compliance_report_id
+        AND fv.fuel_type = af.fuel_type
+        AND fv.fuel_category = af.fuel_category
+        AND fv.quantity_units = af.quantity_units
+  ),
+  -- Carry forward the most recent non-NULL volume
+  versioned_fuel AS (
+    SELECT
+      rfm.compliance_report_group_uuid,
+      rfm.organization_name,
+      rfm.compliance_period,
+      rfm.fuel_type,
+      rfm.fuel_category,
+      rfm.quantity_units,
+      rfm.compliance_report_id,
+      rfm.version,
+      rfm.nickname,
+      rfm.version_rank,
+      COALESCE(
+        rfm.total_volume,
+        (
+          SELECT total_volume
+          FROM report_fuel_matrix rfm2
+          WHERE rfm2.compliance_report_group_uuid = rfm.compliance_report_group_uuid
+            AND rfm2.fuel_type = rfm.fuel_type
+            AND rfm2.fuel_category = rfm.fuel_category
+            AND rfm2.quantity_units = rfm.quantity_units
+            AND rfm2.version_rank < rfm.version_rank
+            AND rfm2.total_volume IS NOT NULL
+          ORDER BY rfm2.version_rank DESC
+          LIMIT 1
+        )
+      ) AS total_volume
+    FROM report_fuel_matrix rfm
+  ),
+  -- Add previous volume for delta calculation
+  versioned_fuel_with_lag AS (
+    SELECT
+      *,
+      LAG(total_volume) OVER (
+        PARTITION BY
+          compliance_report_group_uuid,
+          fuel_type,
+          fuel_category,
+          quantity_units
+        ORDER BY version_rank
+      ) AS previous_volume
+    FROM versioned_fuel
   )
 SELECT
   vf.compliance_report_group_uuid,
@@ -3151,14 +3200,14 @@ SELECT
   vf.version_rank,
   vf.total_volume                     AS volume,
   CASE
-    WHEN vf.previous_volume IS NULL THEN NULL
+    WHEN vf.previous_volume IS NULL THEN 0
     ELSE vf.total_volume - vf.previous_volume
-  END                                 AS volume_delta_from_previous,
-  sm.line_20_surplus_deficit_units    AS compliance_units_issued
+  END                                 AS volume_delta_from_previous
+  --sm.line_20_surplus_deficit_units    AS compliance_units_issued
 FROM
-  versioned_fuel vf
-  LEFT JOIN summary_metrics sm
-    ON sm.compliance_report_id = vf.compliance_report_id
+  versioned_fuel_with_lag vf
+  -- LEFT JOIN compliance_report_summary sm
+    -- ON sm.compliance_report_id = vf.compliance_report_id
 ORDER BY
   vf.organization_name,
   vf.compliance_period,
@@ -3167,7 +3216,178 @@ ORDER BY
   vf.fuel_category,
   vf.version_rank;
 
-GRANT SELECT ON vw_compliance_report_fuel_volume_history TO basic_lcfs_reporting_role;
+drop view if exists vw_compliance_report_fuel_volume_visualisation;
+CREATE OR REPLACE VIEW vw_compliance_report_fuel_volume_visualisation AS
+WITH
+  ordered_reports AS (
+    SELECT
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.version,
+      cr.nickname,
+      cp.description AS compliance_period,
+      org.name AS organization_name,
+      crs.status,
+      ROW_NUMBER() OVER (
+        PARTITION BY cr.compliance_report_group_uuid
+        ORDER BY cr.version
+      ) AS version_rank
+    FROM
+      compliance_report cr
+      JOIN compliance_period cp
+        ON cp.compliance_period_id = cr.compliance_period_id
+      JOIN organization org
+        ON org.organization_id = cr.organization_id
+      JOIN compliance_report_status crs
+        ON crs.compliance_report_status_id = cr.current_status_id
+       AND crs.status <> 'Draft'
+  ),
+  fuel_volumes AS (
+    SELECT
+      fs.compliance_report_id,
+      ft.fuel_type,
+      fc.category AS fuel_category,
+      fs.units::text AS quantity_units,
+      SUM(
+        CASE
+          WHEN fs.quantity > 0 THEN fs.quantity
+          ELSE COALESCE(fs.q1_quantity, 0)
+             + COALESCE(fs.q2_quantity, 0)
+             + COALESCE(fs.q3_quantity, 0)
+             + COALESCE(fs.q4_quantity, 0)
+        END
+      ) AS total_volume
+    FROM
+      fuel_supply fs
+      JOIN fuel_type ft
+        ON ft.fuel_type_id = fs.fuel_type_id
+      JOIN fuel_category fc
+        ON fc.fuel_category_id = fs.fuel_category_id
+    WHERE fs.compliance_report_id IN (
+      SELECT compliance_report_id FROM ordered_reports
+    )
+    GROUP BY
+      fs.compliance_report_id,
+      ft.fuel_type,
+      fc.category,
+      fs.units
+  ),
+  all_fuels AS (
+    SELECT DISTINCT
+      orp.compliance_report_group_uuid,
+      fv.fuel_type,
+      fv.fuel_category,
+      fv.quantity_units
+    FROM
+      ordered_reports orp
+      JOIN fuel_volumes fv
+        ON fv.compliance_report_id = orp.compliance_report_id
+  ),
+  report_fuel_matrix AS (
+    SELECT
+      orp.compliance_report_id,
+      orp.compliance_report_group_uuid,
+      orp.version,
+      orp.nickname,
+      orp.version_rank,
+      orp.organization_name,
+      orp.compliance_period,
+      af.fuel_type,
+      af.fuel_category,
+      af.quantity_units,
+      fv.total_volume
+    FROM
+      ordered_reports orp
+      JOIN all_fuels af
+        ON af.compliance_report_group_uuid = orp.compliance_report_group_uuid
+      LEFT JOIN fuel_volumes fv
+        ON fv.compliance_report_id = orp.compliance_report_id
+        AND fv.fuel_type = af.fuel_type
+        AND fv.fuel_category = af.fuel_category
+        AND fv.quantity_units = af.quantity_units
+  ),
+  versioned_fuel AS (
+    SELECT
+      rfm.compliance_report_group_uuid,
+      rfm.organization_name,
+      rfm.compliance_period,
+      rfm.fuel_type,
+      rfm.fuel_category,
+      rfm.quantity_units,
+      rfm.compliance_report_id,
+      rfm.version,
+      rfm.nickname,
+      rfm.version_rank,
+      COALESCE(
+        rfm.total_volume,
+        (
+          SELECT total_volume
+          FROM report_fuel_matrix rfm2
+          WHERE rfm2.compliance_report_group_uuid = rfm.compliance_report_group_uuid
+            AND rfm2.fuel_type = rfm.fuel_type
+            AND rfm2.fuel_category = rfm.fuel_category
+            AND rfm2.quantity_units = rfm.quantity_units
+            AND rfm2.version_rank < rfm.version_rank
+            AND rfm2.total_volume IS NOT NULL
+          ORDER BY rfm2.version_rank DESC
+          LIMIT 1
+        )
+      ) AS total_volume
+    FROM report_fuel_matrix rfm
+  ),
+  versioned_fuel_with_lag AS (
+    SELECT
+      *,
+      LAG(total_volume) OVER (
+        PARTITION BY
+          compliance_report_group_uuid,
+          fuel_type,
+          fuel_category,
+          quantity_units
+        ORDER BY version_rank
+      ) AS previous_volume
+    FROM versioned_fuel
+  )
+SELECT
+  vf.organization_name,
+  vf.compliance_period,
+  vf.compliance_report_group_uuid,
+  -- Add visual hierarchy indicators
+  '  └─ ' || vf.fuel_category || ' - ' || vf.fuel_type AS fuel_hierarchy,
+  '    └─ v' || vf.version || ': ' || vf.nickname AS version_hierarchy,
+  vf.quantity_units,
+  vf.compliance_report_id             AS report_id,
+  vf.version                          AS report_version,
+  vf.version_rank,
+  vf.total_volume                     AS volume,
+  CASE
+    WHEN vf.previous_volume IS NULL THEN 0
+    ELSE vf.total_volume - vf.previous_volume
+  END                                 AS volume_delta,
+  CASE
+    WHEN vf.previous_volume IS NULL OR vf.previous_volume = 0 THEN NULL
+    ELSE ROUND(((vf.total_volume - vf.previous_volume)::numeric / vf.previous_volume * 100), 2)
+  END                                 AS volume_delta_pct,
+  -- Add change indicator
+  CASE
+    WHEN vf.previous_volume IS NULL THEN '🆕 New'
+    WHEN vf.total_volume > vf.previous_volume THEN '📈 Increase'
+    WHEN vf.total_volume < vf.previous_volume THEN '📉 Decrease'
+    ELSE '➡️ No Change'
+  END                                 AS change_indicator,
+  sm.line_20_surplus_deficit_units    AS compliance_units_issued
+FROM
+  versioned_fuel_with_lag vf
+  LEFT JOIN compliance_report_summary sm
+    ON sm.compliance_report_id = vf.compliance_report_id
+ORDER BY
+  vf.organization_name,
+  vf.compliance_period,
+  vf.compliance_report_group_uuid,
+  vf.fuel_type,
+  vf.fuel_category,
+  vf.version_rank;
+  GRANT SELECT ON vw_compliance_report_fuel_volume_history, vw_compliance_report_fuel_volume_visualisation TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Additional permissions for base tables
 -- ==========================================
