@@ -1,8 +1,4 @@
-import {
-  AddCircleOutlineRounded,
-  CheckBox,
-  CheckBoxOutlineBlank
-} from '@mui/icons-material'
+import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { roles, govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -68,18 +64,6 @@ class ButtonActionFactory {
       handler: config.handler,
       title: config.tooltip || ''
     }
-  }
-
-  // add equipment
-  addEquipment() {
-    return this.createButton({
-      style: BUTTON_STYLES.PRIMARY_CONTAINED,
-      id: 'new-fse-btn',
-      label: this.context.t('chargingSite:buttons.newFSE'),
-      icon: <AddCircleOutlineRounded sx={{ width: '24px', height: '24px' }} />,
-      disabled: this.context.isUpdating,
-      handler: this.context.handleAddEquipment
-    })
   }
 
   // Select Actions with Toggle Functionality
@@ -314,13 +298,11 @@ const BUTTON_RULES = {
   // TODO: Modify the rules as required based on workflow
   DEFAULT: {
     [USER_TYPES.BCEID_USER]: [
-      'addEquipment',
       'selectAllDraft',
       'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.BCEID_MANAGER]: [
-      'addEquipment',
       'selectAllDraft',
       'setSelectedAsSubmitted',
       'selectAllValidated',
@@ -453,7 +435,6 @@ export const buildButtonContext = ({
   currentUser,
   hasAnyRole,
   hasRoles,
-  handleAddEquipment,
   handleToggleSelectByStatus,
   handleBulkStatusUpdate,
   handleClearFilters
@@ -477,7 +458,6 @@ export const buildButtonContext = ({
     isGovernmentUser,
     hasAnyRole,
     hasRoles,
-    handleAddEquipment,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
     handleClearFilters

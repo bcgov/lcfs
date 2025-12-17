@@ -142,10 +142,13 @@ function ImportDialog({
             setUploadStatus(data.status)
             setCreatedCount(data.created)
             setRejectedCount(data.rejected)
-            if (data.progress >= 100) {
-              if (data.status === 'Import process completed.') {
-                onComplete?.(data)
-              }
+          if (data.progress >= 100) {
+            if (data.status === 'Import process completed.') {
+              onComplete?.({
+                ...data,
+                jobId: jobID
+              })
+            }
               setDialogState(DIALOG_STATES.COMPLETED)
               setErrorMsgs(data.errors)
               clearInterval(intervalId)
