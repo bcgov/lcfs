@@ -1,3 +1,6 @@
+import { useUserStore } from '@/stores/useUserStore'
+import { roles } from '@/constants/roles'
+
 export interface FeatureFlagsConfig {
   supplementalReporting?: boolean
   fullLegacyReports?: boolean
@@ -83,7 +86,14 @@ export type FeatureFlagValue =
   (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]
 
 export const isFeatureEnabled = (featureFlag: FeatureFlagValue): boolean => {
-  return CONFIG.feature_flags[featureFlag]
+  // Get user roles from the store
+  const userRoles = useUserStore.getState().user?.roles || []
+
+  // Check if user is a beta tester
+  const isBetaTester = userRoles.some((role: { name: string }) => role.name === roles.beta_tester)
+
+  // Feature is enabled if the flag is set OR the user is a beta tester
+  return CONFIG.feature_flags[featureFlag] || isBetaTester
 }
 
 export interface AppConfig {

@@ -24,6 +24,13 @@ export const BCGridBase = forwardRef(
     {
       autoSizeStrategy,
       autoHeight,
+      enableCellTextSelection,
+      getRowId,
+      overlayNoRowsTemplate,
+      queryData,
+      dataKey,
+      paginationOptions,
+      onPaginationChange,
       onRowClicked,
       ...props
     },
@@ -150,21 +157,19 @@ export const BCGridBase = forwardRef(
           loadingMessage: 'One moment please...'
         }}
         animateRows
-        overlayNoRowsTemplate="No rows found"
-        autoSizeStrategy={{
-          type: 'fitGridWidth',
-          defaultMinWidth: 100,
-          ...autoSizeStrategy
-        }}
+        autoSizeStrategy={{ type: 'fitCellContents', ...autoSizeStrategy }}
         suppressDragLeaveHidesColumns
         suppressMovableColumns
         suppressColumnMoveAnimation={false}
         suppressCsvExport={false}
         suppressColumnVirtualisation={true}
         enableBrowserTooltips={true}
+        enableCellTextSelection={enableCellTextSelection}
+        getRowId={getRowId}
         suppressPaginationPanel
         suppressScrollOnNewData
         onRowDataUpdated={determineHeight}
+        overlayNoRowsTemplate={overlayNoRowsTemplate || "No rows found"}
         getRowStyle={(params) => {
           const defaultStyle =
             typeof getRowStyle === 'function' ? getRowStyle(params) : {}

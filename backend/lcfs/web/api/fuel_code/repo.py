@@ -979,8 +979,13 @@ class FuelCodeRepository:
     @repo_handler
     async def get_target_carbon_intensity(
         self, fuel_category_id: int, compliance_period: str
-    ) -> TargetCarbonIntensity:
+    ) -> Optional[TargetCarbonIntensity]:
+        """
+        Get target carbon intensity for specified compliance period and fuel category.
 
+        Returns None if no TCI record exists for the given compliance period,
+        which can happen for legacy years (pre-2024) that were migrated from TFRS.
+        """
         compliance_period_id_subquery = (
             select(CompliancePeriod.compliance_period_id)
             .where(CompliancePeriod.description == compliance_period)
@@ -1001,7 +1006,7 @@ class FuelCodeRepository:
         )
         result = await self.db.execute(stmt)
 
-        return result.scalar_one()
+        return result.scalar_one_or_none()
 
     @repo_handler
     async def get_standardized_fuel_data(
@@ -1100,10 +1105,15 @@ class FuelCodeRepository:
         eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
 
         # Fetch target carbon intensity (TCI)
+        # For legacy years (pre-2024), TCI may not exist in the database
         target_carbon_intensity = await self.get_target_carbon_intensity(
             fuel_category_id, compliance_period
         )
-        target_ci = target_carbon_intensity.target_carbon_intensity
+        target_ci = (
+            target_carbon_intensity.target_carbon_intensity
+            if target_carbon_intensity
+            else None
+        )
 
         # Additional Carbon Intensity (UCI)
         uci = await self.get_additional_carbon_intensity(

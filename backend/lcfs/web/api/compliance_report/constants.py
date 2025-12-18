@@ -54,6 +54,8 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
     },
 }
 
+# DEPRECATED: Legacy PART3 format - keeping for reference but no longer used
+# All reports now use LOW_CARBON_FUEL_TARGET_DESCRIPTIONS format
 PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
     12: {
         "description": "Total credits from fuel supplied (from Schedule B)",
@@ -151,7 +153,7 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
 
 NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     11: {
-        "legacy": "Renewable fuel target non-compliance penalty total (Line 11|22, Gasoline + Diesel)",
+        "legacy": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel)",
         "description": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)",
         "field": "fossil_derived_base_fuel",
     },
