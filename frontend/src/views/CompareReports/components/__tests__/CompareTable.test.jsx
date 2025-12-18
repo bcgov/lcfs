@@ -141,6 +141,25 @@ describe('CompareTable Component', () => {
       expect(screen.getByText('Jet Fuel')).toBeInTheDocument()
     })
 
+    it('disables fuel radios when availability is false', () => {
+      render(
+        <CompareTable
+          title="Test"
+          columns={basicColumns}
+          data={basicData}
+          enableFuelControls={true}
+          setFuelType={mockSetFuelType}
+          fuelType="diesel"
+          fuelAvailability={{ gasoline: false, diesel: true, jetFuel: false }}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByDisplayValue('gasoline')).toBeDisabled()
+      expect(screen.getByDisplayValue('diesel')).not.toBeDisabled()
+      expect(screen.getByDisplayValue('jetFuel')).toBeDisabled()
+    })
+
     it('renders standard header when enableFuelControls=false', () => {
       render(<CompareTable title="Test" columns={basicColumns} data={basicData} />)
       

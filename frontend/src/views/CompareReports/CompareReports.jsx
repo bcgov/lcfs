@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   lowCarbonColumns,
@@ -17,6 +17,8 @@ const Controls = styled(Box)({
   width: '66%'
 })
 
+const FUEL_TYPES = ['gasoline', 'diesel', 'jetFuel']
+
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
@@ -27,6 +29,7 @@ export const CompareReports = () => {
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
+  const [hasUserSelectedFuel, setHasUserSelectedFuel] = useState(false)
 
   useEffect(() => {
     if (currentReport) {
@@ -58,6 +61,57 @@ export const CompareReports = () => {
   const [lowCarbonSummary, setLowCarbonSummary] = useState([])
   const [nonCompliancePenaltySummary, setNonCompliancePenaltySummary] =
     useState([])
+
+  const fuelAvailability = useMemo(() => {
+    const summaries = [report1Summary, report2Summary].filter(Boolean)
+    if (!summaries.length) return null
+
+    const getFuelValue = (summary, lineNumber, fuelKey) => {
+      const line = summary?.renewableFuelTargetSummary?.find(
+        (row) => Number(row.line) === lineNumber
+      )
+      return line?.[fuelKey]
+    }
+
+    const hasFuelContent = (summary, fuelKey) => {
+      const line3Value = getFuelValue(summary, 3, fuelKey)
+      const line9Value = getFuelValue(summary, 9, fuelKey)
+      const line3Number = Number(line3Value)
+      const line9Number = Number(line9Value)
+      const line3HasContent =
+        Number.isFinite(line3Number) && line3Number !== 0
+      const line9HasContent =
+        Number.isFinite(line9Number) && line9Number !== 0
+      return line3HasContent || line9HasContent
+    }
+
+    return FUEL_TYPES.reduce((acc, fuelKey) => {
+      acc[fuelKey] = summaries.some((summary) =>
+        hasFuelContent(summary, fuelKey)
+      )
+      return acc
+    }, {})
+  }, [report1Summary, report2Summary])
+
+  useEffect(() => {
+    if (!fuelAvailability) return
+    const availableFuelTypes = FUEL_TYPES.filter(
+      (fuelKey) => fuelAvailability[fuelKey]
+    )
+    if (!availableFuelTypes.length) return
+    const preferredFuelType = availableFuelTypes[0]
+
+    if (!hasUserSelectedFuel) {
+      if (fuelType !== preferredFuelType) {
+        setFuelType(preferredFuelType)
+      }
+      return
+    }
+
+    if (!fuelAvailability[fuelType]) {
+      setFuelType(preferredFuelType)
+    }
+  }, [fuelAvailability, fuelType, hasUserSelectedFuel])
 
   useEffect(() => {
     const renewableSummary = []
@@ -136,6 +190,7 @@ export const CompareReports = () => {
   function onSelectReport1(event) {
     const newReport1ID = event.target.value
     setReport1ID(newReport1ID)
+    setHasUserSelectedFuel(false)
 
     if (newReport1ID === report2ID && reportChain.length > 1) {
       const availableReports = reportChain.filter(
@@ -153,6 +208,7 @@ export const CompareReports = () => {
   function onSelectReport2(event) {
     const newReport2ID = event.target.value
     setReport2ID(newReport2ID)
+    setHasUserSelectedFuel(false)
 
     if (newReport2ID === report1ID && reportChain.length > 1) {
       const availableReports = reportChain.filter(
@@ -256,8 +312,12 @@ export const CompareReports = () => {
         data={renewableSummary}
         useParenthesis
         enableFuelControls
-        setFuelType={setFuelType}
+        setFuelType={(nextFuelType) => {
+          setFuelType(nextFuelType)
+          setHasUserSelectedFuel(true)
+        }}
         fuelType={fuelType}
+        fuelAvailability={fuelAvailability}
       />
       <CompareTable
         title={t('report:lowCarbonFuelTargetSummary')}

@@ -23,7 +23,8 @@ const CompareTable = ({
   useParenthesis = false,
   enableFuelControls = false,
   setFuelType,
-  fuelType
+  fuelType,
+  fuelAvailability = null
 }) => {
   const { t } = useTranslation(['common', 'report'])
   const rowFormatters = {
@@ -46,6 +47,13 @@ const CompareTable = ({
       display: 'block'
     }
   }
+
+  const isFuelDisabled = (fuelKey) =>
+    fuelAvailability ? !fuelAvailability[fuelKey] : false
+
+  const gasolineDisabled = isFuelDisabled('gasoline')
+  const dieselDisabled = isFuelDisabled('diesel')
+  const jetFuelDisabled = isFuelDisabled('jetFuel')
 
   return (
     <TableContainer component={Paper} sx={tableStyles.container}>
@@ -93,8 +101,16 @@ const CompareTable = ({
                     <FormControlLabel
                       value="gasoline"
                       control={<Radio />}
+                      disabled={gasolineDisabled}
                       label={
-                        <BCTypography variant="label">
+                        <BCTypography
+                          variant="label"
+                          sx={{
+                            color: gasolineDisabled
+                              ? 'text.disabled'
+                              : 'text.primary'
+                          }}
+                        >
                           {t('report:fuelLabels.gasoline')}
                         </BCTypography>
                       }
@@ -103,8 +119,16 @@ const CompareTable = ({
                     <FormControlLabel
                       value="diesel"
                       control={<Radio />}
+                      disabled={dieselDisabled}
                       label={
-                        <BCTypography variant="label">
+                        <BCTypography
+                          variant="label"
+                          sx={{
+                            color: dieselDisabled
+                              ? 'text.disabled'
+                              : 'text.primary'
+                          }}
+                        >
                           {t('report:fuelLabels.diesel')}
                         </BCTypography>
                       }
@@ -113,8 +137,16 @@ const CompareTable = ({
                     <FormControlLabel
                       value="jetFuel"
                       control={<Radio />}
+                      disabled={jetFuelDisabled}
                       label={
-                        <BCTypography variant="label">
+                        <BCTypography
+                          variant="label"
+                          sx={{
+                            color: jetFuelDisabled
+                              ? 'text.disabled'
+                              : 'text.primary'
+                          }}
+                        >
                           {t('report:fuelLabels.jetFuel')}
                         </BCTypography>
                       }
