@@ -104,6 +104,11 @@ class ChargingEquipmentListItemSchema(BaseSchema):
     intended_users: Optional[List[EndUserTypeSchema]] = []
     latitude: float
     longitude: float
+    site_latitude: Optional[float] = None
+    site_longitude: Optional[float] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
     created_date: datetime
     updated_date: Optional[datetime] = None
 

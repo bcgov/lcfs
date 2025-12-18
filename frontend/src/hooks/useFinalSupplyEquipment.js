@@ -492,7 +492,8 @@ export const useSaveFSEReporting = (
         })
       }
 
-      const chargingEquipmentComplianceId = data.chargingEquipmentComplianceId || null
+      const chargingEquipmentComplianceId =
+        data.chargingEquipmentComplianceId || null
 
       // UPDATE operation (has ID and not deleted)
       if (chargingEquipmentComplianceId) {
@@ -667,6 +668,141 @@ export const useSetFSEReportingDefaultDates = (
     onError: (error, variables, context) => {
       onError?.(error, variables, context)
     },
+    ...restOptions
+  })
+}
+
+/**
+ * Hook to fetch ALL FSE/Charging Equipment data for the map view.
+ */
+export const useGetAllFSEForMap = (
+  complianceReportId,
+  organizationId,
+  options = {}
+) => {
+  const client = useApiService()
+
+  const {
+    staleTime = 5 * 60 * 1000, // 5 minutes - map data doesn't change frequently
+    cacheTime = 10 * 60 * 1000, // 10 minutes
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['fse-map-data', complianceReportId, organizationId],
+    queryFn: async () => {
+      // Organization is mandatory only when we're scoped to a specific report
+      if (complianceReportId && !organizationId) {
+        throw new Error('Organization ID is required when viewing a report')
+      }
+
+      // If we have a compliance report ID, use the FSE reporting endpoint
+      if (complianceReportId) {
+        const params = new URLSearchParams({
+          organizationId: String(organizationId),
+          complianceReportId: String(complianceReportId),
+          mode: 'summary'
+        })
+
+        const response = await client.post(
+          `/final-supply-equipments/reporting/list?${params}`,
+          { page: 1, size: 10000, filters: [], sort_orders: [] }
+        )
+
+        // Transform FSE reporting data to consistent camelCase format
+        const items = response.data?.finalSupplyEquipments || []
+        return {
+          finalSupplyEquipments: items.map((eq) => ({
+            chargingEquipmentId:
+              eq.charging_equipment_id || eq.chargingEquipmentId,
+            chargingSiteId: eq.charging_site_id || eq.chargingSiteId,
+            siteName: eq.site_name || eq.siteName,
+            organizationName: eq.organization_name || eq.organizationName,
+            latitude: eq.latitude,
+            longitude: eq.longitude,
+            // Charging site coordinates (from the site itself, not equipment)
+            siteLatitude: eq.siteLatitude || eq.site_latitude,
+            siteLongitude: eq.siteLongitude || eq.site_longitude,
+            registrationNumber: eq.registration_number || eq.registrationNumber,
+            serialNumber: eq.serial_number || eq.serialNumber,
+            manufacturer: eq.manufacturer,
+            model: eq.model,
+            levelOfEquipmentName: eq.level_of_equipment || eq.levelOfEquipment,
+            ports: eq.ports,
+            status: eq.status || 'Draft',
+            intendedUses: eq.intended_uses || eq.intendedUses || [],
+            intendedUsers: eq.intended_users || eq.intendedUsers || [],
+            streetAddress: eq.street_address || eq.streetAddress,
+            city: eq.city,
+            postalCode: eq.postal_code || eq.postalCode
+          })),
+          pagination: response.data?.pagination,
+          totalCount: response.data?.pagination?.total || items.length
+        }
+      }
+
+      // Fetch all charging equipment (optionally filtered by organization)
+      const requestBody = {
+        page: 1,
+        size: 10000,
+        filters: [],
+        sort_orders: []
+      }
+
+      if (organizationId) {
+        requestBody.organization_id = organizationId
+      }
+
+      const response = await client.post(
+        '/charging-equipment/list',
+        requestBody
+      )
+
+      // Transform API response - handle both camelCase and snake_case
+      const items = response.data?.items || []
+
+      return {
+        finalSupplyEquipments: items.map((eq) => ({
+          chargingEquipmentId:
+            eq.chargingEquipmentId || eq.charging_equipment_id,
+          chargingSiteId: eq.chargingSiteId || eq.charging_site_id,
+          registrationNumber:
+            eq.registrationNumber ||
+            eq.registration_number ||
+            eq.equipment_number,
+          organizationName: eq.organizationName || eq.organization_name,
+          siteName: eq.siteName || eq.site_name,
+          latitude: eq.latitude,
+          longitude: eq.longitude,
+          // Charging site coordinates (from the site itself, not equipment)
+          siteLatitude: eq.siteLatitude || eq.site_latitude,
+          siteLongitude: eq.siteLongitude || eq.site_longitude,
+          levelOfEquipmentName:
+            eq.levelOfEquipmentName || eq.level_of_equipment_name,
+          ports: eq.ports,
+          serialNumber: eq.serialNumber || eq.serial_number,
+          manufacturer: eq.manufacturer,
+          model: eq.model,
+          version: eq.version,
+          status: eq.status,
+          intendedUses: eq.intendedUses || eq.intended_uses || [],
+          intendedUsers: eq.intendedUsers || eq.intended_users || [],
+          streetAddress: eq.streetAddress || eq.street_address,
+          city: eq.city || eq.town || eq.locality,
+          postalCode: eq.postalCode || eq.postal_code,
+          createdDate: eq.createdDate || eq.created_date,
+          updatedDate: eq.updatedDate || eq.updated_date
+        })),
+        pagination: response.data?.pagination,
+        totalCount: response.data?.pagination?.total || items.length
+      }
+    },
+    enabled: enabled && (complianceReportId ? !!organizationId : true),
+    staleTime,
+    cacheTime,
+    retry: 2,
+    retryDelay: 1000,
     ...restOptions
   })
 }
