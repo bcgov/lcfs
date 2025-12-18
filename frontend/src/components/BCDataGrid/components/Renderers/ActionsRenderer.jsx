@@ -10,10 +10,10 @@ export const ActionsRenderer = (props) => {
   return (
     <Stack direction="row" spacing={0.1} m={0} mt={0.2}>
       {props.enableDuplicate && (
-        <Tooltip title="Duplicate row">
+        <Tooltip title="duplicate">
           <span>
             <IconButton
-              aria-label="duplicate row"
+              aria-label="copy the data to new row"
               data-testid="duplicate-button"
               data-action="duplicate"
               color="primary"

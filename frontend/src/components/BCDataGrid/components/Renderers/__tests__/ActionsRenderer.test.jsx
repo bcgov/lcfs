@@ -118,12 +118,12 @@ describe('ActionsRenderer', () => {
         />
       )
       
-      expect(screen.getByLabelText('duplicate row')).toBeInTheDocument()
+      expect(screen.getByLabelText('copy the data to new row')).toBeInTheDocument()
     })
 
     it('should not render duplicate button when disabled', () => {
       render(<ActionsRenderer {...defaultProps} />)
-      expect(screen.queryByLabelText('duplicate row')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('copy the data to new row')).not.toBeInTheDocument()
     })
 
     it('should disable duplicate button when validation status is error', () => {
@@ -135,7 +135,7 @@ describe('ActionsRenderer', () => {
         />
       )
       
-      const duplicateButton = screen.getByLabelText('duplicate row')
+      const duplicateButton = screen.getByLabelText('copy the data to new row')
       expect(duplicateButton).toBeDisabled()
     })
 
@@ -148,7 +148,7 @@ describe('ActionsRenderer', () => {
         />
       )
       
-      const duplicateButton = screen.getByLabelText('duplicate row')
+      const duplicateButton = screen.getByLabelText('copy the data to new row')
       expect(duplicateButton).not.toBeDisabled()
     })
   })
