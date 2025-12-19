@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent
+} from 'react'
 import { logout } from '@/utils/keycloak'
 import { useKeycloak } from '@react-keycloak/web'
 import { useTranslation } from 'react-i18next'
@@ -195,13 +200,16 @@ export const UserProfileActions = () => {
             />
           </>
         )}
-        <RoleSwitcher
-          currentUser={currentUser}
-          hasRoles={hasRoles}
-          open={isRoleSwitcherOpen && canUseRoleSwitcher}
-          anchorEl={roleSwitcherAnchorRef.current}
-          onClose={handleRoleSwitcherClose}
-        />
+        {canUseRoleSwitcher && (
+          <RoleSwitcher
+            currentUser={currentUser}
+            hasRoles={hasRoles}
+            open={isRoleSwitcherOpen && canUseRoleSwitcher}
+            anchorEl={roleSwitcherAnchorRef.current}
+            onClose={handleRoleSwitcherClose}
+          />
+        )}
+
         {isLoading ? (
           <CircularProgress size={24} sx={{ color: '#fff', mx: 2 }} />
         ) : (
@@ -262,38 +270,6 @@ export const UserProfileActions = () => {
         >
           {t('logout')}
         </BCButton>
-        {canUseRoleSwitcher && (
-          <Fab
-            onClick={handleRoleSwitcherToggle}
-            sx={{
-              position: 'fixed',
-              bottom: -40,
-              right: 90,
-              zIndex: 1000,
-              borderRadius: '0 0px 8px 8px',
-              width: '240px',
-              height: '35px',
-              justifyContent: 'left',
-              boxShadow: 'none',
-              '&:hover': {
-                boxShadow: 'none',
-                backgroundColor: 'rgba(252, 186, 25, 0.8)'
-              },
-              
-            }}
-            variant="extended"
-            aria-label={t('roleSwitcher.buttonLabel')}
-            color="secondary"
-          >
-            {' '}
-            <BCTypography
-              variant="subtitle2"
-              sx={{ fontWeight: 600, color: '#003366' }}
-            >
-              {t('roleSwitcher.title')}
-            </BCTypography>
-          </Fab>
-        )}
       </BCBox>
     )
   )
