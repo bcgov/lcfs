@@ -4,7 +4,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
-import { AddEditChargingEquipment } from '../AddEditChargingEquipment'
+import {
+  AddEditChargingEquipment,
+  getNextRegistrationNumber,
+  createDuplicatedBulkRow
+} from '../AddEditChargingEquipment'
 
 // --------------------
 // Validation helpers
@@ -134,6 +138,60 @@ describe('getEmptyRow function behavior', () => {
     const row = getEmptyRow()
     expect(row.intendedUseIds).toEqual([])
     expect(row.intendedUserIds).toEqual([])
+  })
+})
+
+describe('getNextRegistrationNumber helper', () => {
+  it('increments to the next available number for the same prefix', () => {
+    const existingRows = [
+      { registrationNumber: 'ABC-0005' },
+      { registrationNumber: 'XYZ-0010' }
+    ]
+
+    expect(
+      getNextRegistrationNumber('ABC-0003', existingRows)
+    ).toBe('ABC-0006')
+  })
+
+  it('returns empty string when registration number cannot be parsed', () => {
+    expect(getNextRegistrationNumber('', [])).toBe('')
+    expect(getNextRegistrationNumber('N/A', [])).toBe('')
+  })
+})
+
+describe('createDuplicatedBulkRow helper', () => {
+  it('clones fields while clearing serial number and incrementing registration number', () => {
+    const baseRow = {
+      id: 'original',
+      chargingSiteId: 25,
+      serialNumber: 'SER123',
+      manufacturer: 'TestCo',
+      model: 'Model X',
+      levelOfEquipmentId: 2,
+      intendedUseIds: [1, 2],
+      intendedUserIds: [3],
+      notes: 'Hello world',
+      registrationNumber: 'REG-0007',
+      chargingEquipmentId: 99,
+      validationStatus: 'success'
+    }
+
+    const duplicated = createDuplicatedBulkRow(
+      baseRow,
+      [baseRow],
+      () => 'new-id'
+    )
+
+    expect(duplicated.id).toBe('new-id')
+    expect(duplicated.serialNumber).toBe('')
+    expect(duplicated.registrationNumber).toBe('REG-0008')
+    expect(duplicated.chargingEquipmentId).toBeUndefined()
+    expect(duplicated.intendedUseIds).toEqual([1, 2])
+    expect(duplicated.intendedUseIds).not.toBe(baseRow.intendedUseIds)
+    expect(duplicated.intendedUserIds).toEqual([3])
+    expect(duplicated.intendedUserIds).not.toBe(baseRow.intendedUserIds)
+    expect(duplicated.status).toBe('Draft')
+    expect(duplicated.validationStatus).toBeUndefined()
   })
 })
 
