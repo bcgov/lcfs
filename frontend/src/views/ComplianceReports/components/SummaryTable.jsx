@@ -426,20 +426,31 @@ const SummaryTable = ({
                       }}
                     >
                       {(() => {
-                        // Line 6 data is rendered instead of being zeroed out when the cell is read-only.
-                        const value =
+                        const rawValue =
                           row[column.id] !== undefined &&
                           row[column.id] !== null
                             ? row[column.id]
                             : 0
+                        const shouldFormat =
+                          row.format &&
+                          colIndex !== 0 &&
+                          column.id !== 'description' &&
+                          column.id !== 'line'
 
-                        return row.format && colIndex !== 0
-                          ? rowFormatters[row.format](
-                              value,
-                              useParenthesis,
-                              0
-                            )
-                          : value
+                        if (shouldFormat) {
+                          const numericValue =
+                            typeof rawValue === 'number'
+                              ? rawValue
+                              : Number(rawValue)
+
+                          return rowFormatters[row.format](
+                            Number.isFinite(numericValue) ? numericValue : 0,
+                            useParenthesis,
+                            0
+                          )
+                        }
+
+                        return rawValue
                       })()}
                     </span>
                   )}
