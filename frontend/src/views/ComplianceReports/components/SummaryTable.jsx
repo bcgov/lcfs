@@ -426,32 +426,20 @@ const SummaryTable = ({
                       }}
                     >
                       {(() => {
-                        // For Lines 6 and 8 (retention/deferral lines), display "0" for non-editable cells
-                        // Line 6 is at index 5, Line 8 is at index 7
-                        const isRetentionOrDeferralLine =
-                          rowIndex === 5 || rowIndex === 7
-                        const isFuelColumn =
-                          column.id === 'gasoline' ||
-                          column.id === 'diesel' ||
-                          column.id === 'jetFuel'
-
-                        if (
-                          isRetentionOrDeferralLine &&
-                          isFuelColumn &&
-                          !isCellEditable(rowIndex, column.id)
-                        ) {
-                          return row.format && colIndex !== 0
-                            ? rowFormatters[row.format](0, useParenthesis, 0)
-                            : '0'
-                        }
+                        // Line 6 data is rendered instead of being zeroed out when the cell is read-only.
+                        const value =
+                          row[column.id] !== undefined &&
+                          row[column.id] !== null
+                            ? row[column.id]
+                            : 0
 
                         return row.format && colIndex !== 0
                           ? rowFormatters[row.format](
-                              row[column.id],
+                              value,
                               useParenthesis,
                               0
                             )
-                          : row[column.id]
+                          : value
                       })()}
                     </span>
                   )}
