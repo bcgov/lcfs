@@ -1774,5 +1774,283 @@ describe('buttonClusterConfigFn', () => {
       expect(saveCommentBtn?.disabled).toBe(true)
     })
   })
+
+  describe('Director Delegated Authority', () => {
+    const transferData = {
+      currentStatus: {
+        status: TRANSFER_STATUSES.SUBMITTED
+      },
+      agreementDate: new Date(),
+      transferHistory: [],
+      fromOrganization: {
+        organizationId: 1
+      },
+      toOrganization: {
+        organizationId: 2
+      }
+    }
+
+    describe('Director Acting as Analyst', () => {
+      it('should show "Recommend" button with correct tooltip for Director', () => {
+        const hasRoles = vi
+          .fn()
+          .mockImplementation((role) => role === roles.director)
+        const hasAnyRole = vi.fn().mockReturnValue(false)
+        const currentUser = {
+          isGovernmentUser: true,
+          organization: {
+            organizationId: 3
+          }
+        }
+
+        const config = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles,
+          hasAnyRole,
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData,
+          isGovernmentUser: true,
+          recommendation: 'Record',
+          signingAuthorityDeclaration: false
+        })
+
+        const buttons = config[TRANSFER_STATUSES.SUBMITTED]
+        const recommendButton = buttons.find(
+          (btn) => btn.id === 'recommend-btn'
+        )
+
+        expect(recommendButton).toBeDefined()
+        expect(recommendButton.tooltip).toBe('Acting as Analyst')
+        expect(recommendButton.roleIndicator).toBe('Analyst')
+      })
+
+      it('should enable "Recommend" button when recommendation is provided', () => {
+        const hasRoles = vi
+          .fn()
+          .mockImplementation((role) => role === roles.director)
+        const hasAnyRole = vi.fn().mockReturnValue(false)
+        const currentUser = {
+          isGovernmentUser: true,
+          organization: {
+            organizationId: 3
+          }
+        }
+
+        const config = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles,
+          hasAnyRole,
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData,
+          isGovernmentUser: true,
+          recommendation: 'Record',
+          signingAuthorityDeclaration: false
+        })
+
+        const buttons = config[TRANSFER_STATUSES.SUBMITTED]
+        const recommendButton = buttons.find(
+          (btn) => btn.id === 'recommend-btn'
+        )
+
+        expect(recommendButton.disabled).toBe(false)
+      })
+
+      it('should disable "Recommend" button when recommendation is not provided', () => {
+        const hasRoles = vi
+          .fn()
+          .mockImplementation((role) => role === roles.director)
+        const hasAnyRole = vi.fn().mockReturnValue(false)
+        const currentUser = {
+          isGovernmentUser: true,
+          organization: {
+            organizationId: 3
+          }
+        }
+
+        const config = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles,
+          hasAnyRole,
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData,
+          isGovernmentUser: true,
+          recommendation: null,
+          signingAuthorityDeclaration: false
+        })
+
+        const buttons = config[TRANSFER_STATUSES.SUBMITTED]
+        const recommendButton = buttons.find(
+          (btn) => btn.id === 'recommend-btn'
+        )
+
+        expect(recommendButton.disabled).toBe(true)
+      })
+    })
+
+    describe('Director Native Actions', () => {
+      it('should show Director-level buttons without delegated authority indicator', () => {
+        const hasRoles = vi
+          .fn()
+          .mockImplementation((role) => role === roles.director)
+        const hasAnyRole = vi.fn().mockReturnValue(false)
+        const currentUser = {
+          isGovernmentUser: true,
+          organization: {
+            organizationId: 3
+          }
+        }
+
+        const recommendedTransferData = {
+          ...transferData,
+          currentStatus: {
+            status: TRANSFER_STATUSES.RECOMMENDED
+          }
+        }
+
+        const config = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles,
+          hasAnyRole,
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData: recommendedTransferData,
+          isGovernmentUser: true,
+          recommendation: null,
+          signingAuthorityDeclaration: false
+        })
+
+        const buttons = config[TRANSFER_STATUSES.RECOMMENDED]
+
+        const recordButton = buttons.find((btn) => btn.id === 'record-btn')
+        const refuseButton = buttons.find((btn) => btn.id === 'refuse-btn')
+
+        // Director native actions should not have tooltips or role indicators
+        expect(recordButton).toBeDefined()
+        expect(recordButton.tooltip).toBeUndefined()
+        expect(recordButton.roleIndicator).toBeUndefined()
+
+        expect(refuseButton).toBeDefined()
+        expect(refuseButton.tooltip).toBeUndefined()
+        expect(refuseButton.roleIndicator).toBeUndefined()
+      })
+    })
+
+    describe('Comparison with Analyst', () => {
+      it('should show same "Recommend" button but with tooltip for Director', () => {
+        const currentUser = {
+          isGovernmentUser: true,
+          organization: {
+            organizationId: 3
+          }
+        }
+
+        // Test as Analyst
+        const analystConfig = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles: vi.fn().mockImplementation((role) => role === roles.analyst),
+          hasAnyRole: vi.fn().mockReturnValue(false),
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData,
+          isGovernmentUser: true,
+          recommendation: 'Record',
+          signingAuthorityDeclaration: false
+        })
+
+        // Test as Director
+        const directorConfig = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles: vi
+            .fn()
+            .mockImplementation((role) => role === roles.director),
+          hasAnyRole: vi.fn().mockReturnValue(false),
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData,
+          isGovernmentUser: true,
+          recommendation: 'Record',
+          signingAuthorityDeclaration: false
+        })
+
+        const analystButtons = analystConfig[TRANSFER_STATUSES.SUBMITTED]
+        const directorButtons = directorConfig[TRANSFER_STATUSES.SUBMITTED]
+
+        const analystRecommendButton = analystButtons.find(
+          (btn) => btn.id === 'recommend-btn'
+        )
+        const directorRecommendButton = directorButtons.find(
+          (btn) => btn.id === 'recommend-btn'
+        )
+
+        // Both should have the button
+        expect(analystRecommendButton).toBeDefined()
+        expect(directorRecommendButton).toBeDefined()
+
+        // Director should have tooltip, Analyst should not
+        expect(directorRecommendButton.tooltip).toBe('Acting as Analyst')
+        expect(analystRecommendButton.tooltip).toBeFalsy()
+      })
+    })
+
+    describe('Button Grouping', () => {
+      it('should identify delegated authority buttons', () => {
+        const hasRoles = vi
+          .fn()
+          .mockImplementation((role) => role === roles.director)
+        const hasAnyRole = vi.fn().mockReturnValue(false)
+        const currentUser = {
+          isGovernmentUser: true,
+          organization: {
+            organizationId: 3
+          }
+        }
+
+        const config = buttonClusterConfigFn({
+          toOrgData,
+          hasRoles,
+          hasAnyRole,
+          currentUser,
+          methods,
+          t,
+          setModalData,
+          createUpdateTransfer,
+          transferData,
+          isGovernmentUser: true,
+          recommendation: 'Record',
+          signingAuthorityDeclaration: false
+        })
+
+        const buttons = config[TRANSFER_STATUSES.SUBMITTED]
+        const delegatedButtons = buttons.filter((btn) => btn.roleIndicator)
+
+        expect(delegatedButtons.length).toBeGreaterThan(0)
+        delegatedButtons.forEach((btn) => {
+          expect(btn.tooltip).toBe('Acting as Analyst')
+          expect(btn.roleIndicator).toBe('Analyst')
+        })
+      })
+    })
+  })
 })
 })

@@ -60,9 +60,11 @@ class ComplianceReportValidation:
                 detail="User does not have access to this compliance report.",
             )
 
-        is_analyst = user_has_roles(self.request.user, [RoleEnum.ANALYST])
+        is_analyst_or_director = user_has_roles(
+            self.request.user, [RoleEnum.ANALYST]
+        ) or user_has_roles(self.request.user, [RoleEnum.DIRECTOR])
         if (
-            not is_analyst
+            not is_analyst_or_director
             and compliance_report.current_status.status
             == ComplianceReportStatusEnum.Analyst_adjustment
         ):

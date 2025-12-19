@@ -7,7 +7,7 @@ import {
   useNavigate,
   useParams
 } from 'react-router-dom'
-import { roles, govRoles } from '@/constants/roles'
+import { roles, govRoles, formatDelegatedRoleLabel } from '@/constants/roles'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -18,10 +18,13 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
+  Box,
+  Divider,
   Stack,
   Step,
   StepLabel,
   Stepper,
+  Tooltip,
   useMediaQuery,
   useTheme
 } from '@mui/material'
@@ -435,12 +438,49 @@ export const AddEditViewTransfer = () => {
               TRANSFER_STATUSES.SUBMITTED,
               TRANSFER_STATUSES.RECOMMENDED
             ].includes(currentStatus) &&
-              hasAnyRole(roles.analyst) && (
+              hasAnyRole(roles.analyst, roles.director) && (
                 <>
-                  <Recommendation currentStatus={currentStatus} />
-                  <CategoryCheckbox
-                    isDisabled={currentStatus === TRANSFER_STATUSES.RECOMMENDED}
-                  />
+                  {hasRoles(roles.director) ? (
+                    <BCBox my={2}>
+                      <BCBox
+                        sx={{
+                          borderLeft: '3px solid',
+                          borderColor: 'primary.main',
+                          pl: 2,
+                          py: 0.5
+                        }}
+                      >
+                        <BCTypography
+                          variant="caption"
+                          sx={{
+                            color: 'primary.main',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            letterSpacing: '0.3px',
+                            mb: 2,
+                            display: 'block'
+                          }}
+                        >
+                          Acting as Analyst
+                        </BCTypography>
+                        <Recommendation currentStatus={currentStatus} />
+                        <CategoryCheckbox
+                          isDisabled={
+                            currentStatus === TRANSFER_STATUSES.RECOMMENDED
+                          }
+                        />
+                      </BCBox>
+                    </BCBox>
+                  ) : (
+                    <>
+                      <Recommendation currentStatus={currentStatus} />
+                      <CategoryCheckbox
+                        isDisabled={
+                          currentStatus === TRANSFER_STATUSES.RECOMMENDED
+                        }
+                      />
+                    </>
+                  )}
                 </>
               )}
 
@@ -492,32 +532,110 @@ export const AddEditViewTransfer = () => {
                   {t('backBtn')}
                 </BCTypography>
               </BCButton>
-              {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
-                (config) =>
-                  config && (
-                    <Role key={config.label}>
-                      <BCButton
-                        data-test={config.id}
-                        id={config.id}
-                        size="small"
-                        variant={config.variant}
-                        color={config.color}
-                        onClick={methods.handleSubmit(config.handler)}
-                        startIcon={
-                          config.startIcon && (
-                            <FontAwesomeIcon
-                              icon={config.startIcon}
-                              className="small-icon"
-                            />
-                          )
-                        }
-                        disabled={config.disabled}
+              {(() => {
+                const buttons =
+                  buttonClusterConfig[transferId ? currentStatus : 'New'] || []
+                const directorButtons = buttons.filter(
+                  (b) => b && !b.roleIndicator
+                )
+                const delegatedButtons = buttons.filter((b) => b?.roleIndicator)
+
+                return (
+                  <Stack direction="column" spacing={2.5}>
+                    {/* Primary Director Actions */}
+                    {directorButtons.length > 0 && (
+                      <Stack direction="row" spacing={2}>
+                        {directorButtons.map((config) => (
+                          <Role key={config.label}>
+                            <BCButton
+                              data-test={config.id}
+                              id={config.id}
+                              size="small"
+                              variant={config.variant}
+                              color={config.color}
+                              onClick={methods.handleSubmit(config.handler)}
+                              startIcon={
+                                config.startIcon && (
+                                  <FontAwesomeIcon
+                                    icon={config.startIcon}
+                                    className="small-icon"
+                                  />
+                                )
+                              }
+                              disabled={config.disabled}
+                            >
+                              {config.label}
+                            </BCButton>
+                          </Role>
+                        ))}
+                      </Stack>
+                    )}
+
+                    {/* Delegated Authority Actions */}
+                    {delegatedButtons.length > 0 && (
+                      <Box
+                        sx={{
+                          borderLeft: '3px solid',
+                          borderColor: 'primary.main',
+                          pl: 2,
+                          py: 0.5
+                        }}
                       >
-                        {config.label}
-                      </BCButton>
-                    </Role>
-                  )
-              )}
+                        <Stack direction="column" spacing={1.5}>
+                          <BCTypography
+                            variant="caption"
+                            sx={{
+                              color: 'primary.main',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              letterSpacing: '0.3px'
+                            }}
+                          >
+                            Acting as{' '}
+                            {formatDelegatedRoleLabel(
+                              delegatedButtons[0]?.roleIndicator || 'Analyst'
+                            )}
+                          </BCTypography>
+                          <Stack direction="row" spacing={2}>
+                            {delegatedButtons.map((config) => (
+                              <Role key={config.label}>
+                                <Tooltip
+                                  title={config.tooltip || ''}
+                                  placement="top"
+                                >
+                                  <span>
+                                    <BCButton
+                                      data-test={config.id}
+                                      id={config.id}
+                                      size="small"
+                                      variant={config.variant}
+                                      color={config.color}
+                                      onClick={methods.handleSubmit(
+                                        config.handler
+                                      )}
+                                      startIcon={
+                                        config.startIcon && (
+                                          <FontAwesomeIcon
+                                            icon={config.startIcon}
+                                            className="small-icon"
+                                          />
+                                        )
+                                      }
+                                      disabled={config.disabled}
+                                    >
+                                      {config.label}
+                                    </BCButton>
+                                  </span>
+                                </Tooltip>
+                              </Role>
+                            ))}
+                          </Stack>
+                        </Stack>
+                      </Box>
+                    )}
+                  </Stack>
+                )
+              })()}
             </Stack>
           </form>
         </FormProvider>
