@@ -57,8 +57,8 @@ import { apiRoutes } from '@/constants/routes'
 import { v4 as uuid } from 'uuid'
 
 // Row validation helper - checks all required fields, returns boolean
-export const isRowValid = (row) =>
-  Boolean(
+export const isRowValid = (row) => {
+  return Boolean(
     row.chargingSiteId &&
       row.serialNumber &&
       row.manufacturer &&
