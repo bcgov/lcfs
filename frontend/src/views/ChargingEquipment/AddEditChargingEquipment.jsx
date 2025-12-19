@@ -58,12 +58,12 @@ import { apiRoutes } from '@/constants/routes'
 // Row validation helper - checks all required fields, returns boolean
 export const isRowValid = (row) =>
   Boolean(
-    chargingSiteId &&
-      serialNumber &&
-      manufacturer &&
-      levelOfEquipmentId &&
-      intendedUseIds.length > 0 &&
-      intendedUserIds.length > 0
+    row.chargingSiteId &&
+      row.serialNumber &&
+      row.manufacturer &&
+      row.levelOfEquipmentId &&
+      row.intendedUseIds?.length > 0 &&
+      row.intendedUserIds?.length > 0
   )
 
 export const AddEditChargingEquipment = ({ mode }) => {
