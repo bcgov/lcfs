@@ -491,9 +491,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
   isIDIR = false
 ) => [
   {
-    headerName: `${t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
-    )} – ${t('finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate')}`,
+    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyDateRange'),
     minWidth: 300,
     field: 'supplyDateRange',
     valueGetter: (params) => {

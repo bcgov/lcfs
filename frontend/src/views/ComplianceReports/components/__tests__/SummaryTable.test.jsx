@@ -442,6 +442,33 @@ describe('SummaryTable', () => {
       expect(screen.getByText('$100.00')).toBeInTheDocument()
       expect(screen.getByText('200')).toBeInTheDocument() // Number format, not currency
     })
+
+    it('displays retained values for locked Line 6 cells', () => {
+      const lockedColumns = [
+        { id: 'line', label: 'Line' },
+        { id: 'description', label: 'Description' },
+        { id: 'gasoline', label: 'Gasoline', align: 'right' }
+      ]
+      const lockedData = [
+        {
+          line: '6',
+          description: 'Retained fuel',
+          gasoline: 12345,
+          format: 'number'
+        }
+      ]
+
+      customRender(
+        <SummaryTable
+          title="Locked Lines"
+          columns={lockedColumns}
+          data={lockedData}
+          lines6And8Locked
+        />
+      )
+
+      expect(screen.getByText('12345')).toBeInTheDocument()
+    })
   })
 
   describe('Input Component Features', () => {
