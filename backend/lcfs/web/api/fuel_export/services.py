@@ -26,6 +26,7 @@ from lcfs.web.api.fuel_export.schema import (
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.base import ActionTypeEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -247,7 +248,18 @@ class FuelExportServices:
             compliance_report_id, changelog, exclude_draft_reports=is_gov_user
         )
         fs_list = [FuelExportSchema.model_validate(fs) for fs in fuel_export_models]
-        return FuelExportsSchema(fuel_exports=fs_list if fs_list else [])
+
+        # Calculate total compliance units (excluding deleted records)
+        total_compliance_units = sum(
+            round(fs.compliance_units) if fs.compliance_units else 0
+            for fs in fuel_export_models
+            if fs.action_type != ActionTypeEnum.DELETE
+        )
+
+        return FuelExportsSchema(
+            fuel_exports=fs_list if fs_list else [],
+            total_compliance_units=total_compliance_units,
+        )
 
     @service_handler
     async def get_fuel_exports_paginated(
@@ -257,6 +269,19 @@ class FuelExportServices:
         fuel_exports, total_count = await self.repo.get_fuel_exports_paginated(
             pagination, compliance_report_id
         )
+
+        # Calculate total compliance units from all records (not just paginated ones)
+        # Get all fuel exports to calculate the total
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        all_fuel_exports = await self.repo.get_fuel_export_list(
+            compliance_report_id, changelog=False, exclude_draft_reports=is_gov_user
+        )
+        total_compliance_units = sum(
+            round(fs.compliance_units) if fs.compliance_units else 0
+            for fs in all_fuel_exports
+            if fs.action_type != ActionTypeEnum.DELETE
+        )
+
         return FuelExportsSchema(
             pagination=PaginationResponseSchema(
                 page=pagination.page,
@@ -267,6 +292,7 @@ class FuelExportServices:
                 ),
             ),
             fuel_exports=[FuelExportSchema.model_validate(fs) for fs in fuel_exports],
+            total_compliance_units=total_compliance_units,
         )
 
     @service_handler

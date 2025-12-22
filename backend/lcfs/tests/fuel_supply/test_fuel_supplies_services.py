@@ -359,3 +359,124 @@ async def test_delete_fuel_supply_changelog(fuel_supply_action_service):
     assert response.message == "Marked as deleted."
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with("some-uuid")
     mock_repo.create_fuel_supply.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supply_list_with_total_compliance_units(fuel_supply_service):
+    """Test that get_fuel_supply_list returns total compliance units correctly"""
+    service, mock_repo, _ = fuel_supply_service
+
+    # Create mock fuel supplies with compliance units
+    mock_fs1 = MagicMock(spec=FuelSupply)
+    mock_fs1.compliance_units = 1500.75
+    mock_fs1.action_type = ActionTypeEnum.CREATE
+    mock_fs1.fuel_supply_id = 1
+    mock_fs1.compliance_report_id = 1
+    mock_fs1.fuel_type = MagicMock(fuel_type="Diesel")
+    mock_fs1.fuel_type_id = 1
+    mock_fs1.fuel_category = MagicMock(category="Petroleum-based")
+    mock_fs1.fuel_category_id = 1
+    provision_mock1 = MagicMock()
+    provision_mock1.name = "Default"
+    mock_fs1.provision_of_the_act = provision_mock1
+    mock_fs1.provision_of_the_act_id = 1
+    mock_fs1.end_use_type = MagicMock(type="Transportation")
+    mock_fs1.end_use_id = 1
+    mock_fs1.fuel_code = None
+    mock_fs1.fuel_code_id = None
+    mock_fs1.fuel_type_other = None
+    mock_fs1.group_uuid = "test-uuid-1"
+    mock_fs1.version = 0
+    mock_fs1.ci_of_fuel = None
+    mock_fs1.target_ci = None
+    mock_fs1.energy_density = None
+    mock_fs1.eer = None
+    mock_fs1.uci = None
+    mock_fs1.units = "L"
+    mock_fs1.quantity = 1000
+    mock_fs1.q1_quantity = None
+    mock_fs1.q2_quantity = None
+    mock_fs1.q3_quantity = None
+    mock_fs1.q4_quantity = None
+
+    mock_fs2 = MagicMock(spec=FuelSupply)
+    mock_fs2.compliance_units = -500.25
+    mock_fs2.action_type = ActionTypeEnum.CREATE
+    mock_fs2.fuel_supply_id = 2
+    mock_fs2.compliance_report_id = 1
+    mock_fs2.fuel_type = MagicMock(fuel_type="Gasoline")
+    mock_fs2.fuel_type_id = 2
+    mock_fs2.fuel_category = MagicMock(category="Petroleum-based")
+    mock_fs2.fuel_category_id = 1
+    provision_mock2 = MagicMock()
+    provision_mock2.name = "Default"
+    mock_fs2.provision_of_the_act = provision_mock2
+    mock_fs2.provision_of_the_act_id = 1
+    mock_fs2.end_use_type = MagicMock(type="Transportation")
+    mock_fs2.end_use_id = 1
+    mock_fs2.fuel_code = None
+    mock_fs2.fuel_code_id = None
+    mock_fs2.fuel_type_other = None
+    mock_fs2.group_uuid = "test-uuid-2"
+    mock_fs2.version = 0
+    mock_fs2.ci_of_fuel = None
+    mock_fs2.target_ci = None
+    mock_fs2.energy_density = None
+    mock_fs2.eer = None
+    mock_fs2.uci = None
+    mock_fs2.units = "L"
+    mock_fs2.quantity = 500
+    mock_fs2.q1_quantity = None
+    mock_fs2.q2_quantity = None
+    mock_fs2.q3_quantity = None
+    mock_fs2.q4_quantity = None
+
+    # Mock a deleted fuel supply (should be excluded from total)
+    mock_fs3 = MagicMock(spec=FuelSupply)
+    mock_fs3.compliance_units = 1000.0
+    mock_fs3.action_type = ActionTypeEnum.DELETE
+    mock_fs3.fuel_supply_id = 3
+    mock_fs3.compliance_report_id = 1
+    mock_fs3.fuel_type = MagicMock(fuel_type="Diesel")
+    mock_fs3.fuel_type_id = 1
+    mock_fs3.fuel_category = MagicMock(category="Petroleum-based")
+    mock_fs3.fuel_category_id = 1
+    provision_mock3 = MagicMock()
+    provision_mock3.name = "Default"
+    mock_fs3.provision_of_the_act = provision_mock3
+    mock_fs3.provision_of_the_act_id = 1
+    mock_fs3.end_use_type = MagicMock(type="Transportation")
+    mock_fs3.end_use_id = 1
+    mock_fs3.fuel_code = None
+    mock_fs3.fuel_code_id = None
+    mock_fs3.fuel_type_other = None
+    mock_fs3.group_uuid = "test-uuid-3"
+    mock_fs3.version = 0
+    mock_fs3.ci_of_fuel = None
+    mock_fs3.target_ci = None
+    mock_fs3.energy_density = None
+    mock_fs3.eer = None
+    mock_fs3.uci = None
+    mock_fs3.units = "L"
+    mock_fs3.quantity = 1000
+    mock_fs3.q1_quantity = None
+    mock_fs3.q2_quantity = None
+    mock_fs3.q3_quantity = None
+    mock_fs3.q4_quantity = None
+
+    mock_fuel_supplies = [mock_fs1, mock_fs2, mock_fs3]
+
+    # Set the repository method to return the mock fuel supplies
+    mock_repo.get_fuel_supply_list = AsyncMock(return_value=mock_fuel_supplies)
+
+    compliance_report_id = 1
+    response = await service.get_fuel_supply_list(compliance_report_id)
+
+    # Validate response structure
+    assert hasattr(response, "fuel_supplies")
+    assert hasattr(response, "total_compliance_units")
+
+    # Expected total: round(1500.75) + round(-500.25) = 1501 + (-500) = 1001
+    # Deleted record (1000) should not be included
+    assert response.total_compliance_units == 1001
+    assert len(response.fuel_supplies) == 3
