@@ -409,3 +409,60 @@ async def test_director_record_transfer_persists_to_transaction_id(
     ), "to_transaction_id was not persisted and was lost on refresh"
     assert transfer.to_transaction_id == to_transaction.transaction_id
 
+
+# =============================================================================
+# DIRECTOR DELEGATED AUTHORITY TESTS
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_director_can_recommend_transfer(
+    transfer_service, mock_transfer_repo, mock_director
+):
+    """Test that Director can recommend a transfer (Analyst action)."""
+    from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
+
+    mock_transfer = MagicMock(spec=Transfer)
+    mock_transfer.transfer_id = 1
+    mock_transfer.current_status = MagicMock(spec=TransferStatus)
+    mock_transfer.current_status.status = TransferStatusEnum.Submitted
+    mock_transfer.transfer_history = []
+
+    recommended_status = MagicMock(spec=TransferStatus)
+    recommended_status.status = TransferStatusEnum.Recommended
+
+    transfer_create_schema = TransferCreateSchema(
+        transfer_id=1,
+        from_organization_id=1,
+        to_organization_id=2,
+        quantity=100,
+        price_per_unit=10.0,
+        agreement_date="2024-01-01",
+        current_status=TransferStatusEnum.Recommended.value,
+        recommendation="Record",
+    )
+
+    mock_transfer_repo.get_transfer_status_by_name.return_value = (
+        recommended_status
+    )
+    mock_transfer_repo.get_transfer_by_id.return_value = mock_transfer
+    mock_transfer_repo.update_transfer.return_value = mock_transfer
+    mock_transfer_repo.add_transfer_history.return_value = None
+
+    transfer_service._handle_transfer_comments = AsyncMock()
+    transfer_service._perform_notification_call = AsyncMock()
+
+    with patch("lcfs.web.api.transfer.services.user_has_roles") as mock_user_has_roles:
+        mock_user_has_roles.return_value = True
+
+        # Should not raise an exception
+        result = await transfer_service.update_transfer(
+            transfer_create_schema, mock_director
+        )
+
+        # Verify the transfer was updated
+        assert result == mock_transfer
+        mock_transfer_repo.update_transfer.assert_called_once()
+
+
+

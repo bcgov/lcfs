@@ -12,11 +12,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Input,
+  TextField,
   InputAdornment,
   CircularProgress,
   Tooltip
 } from '@mui/material'
+import { NumericFormat } from 'react-number-format'
 
 const SummaryTable = ({
   title,
@@ -309,74 +310,62 @@ const SummaryTable = ({
                         height: '100%'
                       }}
                     >
-                      <Input
-                        value={
-                          column.editable &&
-                          column.editableCells &&
-                          column.editableCells.includes(rowIndex)
-                            ? row[column.id]
-                            : formatNumberWithCommas({
-                                value: row[column.id]
-                              })
-                        }
-                        onChange={(e) =>
-                          handleCellChange(e, rowIndex, column.id)
-                        }
+                      <NumericFormat
+                        customInput={TextField}
+                        value={row[column.id]}
+                        thousandSeparator
+                        decimalScale={0}
+                        allowNegative={false}
+                        onValueChange={(values) => {
+                          const syntheticEvent = {
+                            target: {
+                              value: values.value
+                            }
+                          }
+                          handleCellChange(syntheticEvent, rowIndex, column.id)
+                        }}
                         onFocus={() => handleCellFocus(rowIndex, column.id)}
                         onBlur={() => handleBlur(rowIndex, column.id)}
                         onKeyDown={(e) => handleKeyDown(e, rowIndex, column.id)}
-                        type="text"
-                        inputProps={{
-                          inputMode:
-                            column.editable &&
-                            column.editableCells &&
-                            column.editableCells.includes(rowIndex)
-                              ? 'decimal'
-                              : 'numeric',
-                          pattern:
-                            column.editable &&
-                            column.editableCells &&
-                            column.editableCells.includes(rowIndex)
-                              ? '[0-9]*\\.?[0-9]*'
-                              : '[0-9]*',
-                          ...getCellConstraints(rowIndex, column.id),
-                          ...props.inputProps
+                        slotProps={{
+                          input: {
+                            startAdornment:
+                              row.format === 'currency' ? (
+                                <InputAdornment position="start">$</InputAdornment>
+                              ) : null
+                          },
+                          htmlInput: {
+                            inputMode: 'numeric',
+                            ...getCellConstraints(rowIndex, column.id),
+                            ...props.inputProps
+                          }
                         }}
-                        startAdornment={
-                          column.editable &&
-                          column.editableCells &&
-                          column.editableCells.includes(rowIndex) &&
-                          row.format === 'currency' ? (
-                            <InputAdornment position="start">$</InputAdornment>
-                          ) : null
-                        }
-                        endAdornment={null}
                         sx={{
                           width: '100%',
                           height: '100%',
-                          padding: '6px',
-                          paddingLeft: isCellSaving(rowIndex, column.id)
-                            ? column.editable &&
-                              column.editableCells &&
-                              column.editableCells.includes(rowIndex) &&
-                              row.format === 'currency'
-                              ? '60px'
-                              : '40px'
-                            : column.editable &&
-                                column.editableCells &&
-                                column.editableCells.includes(rowIndex) &&
-                                row.format === 'currency'
-                              ? '30px'
-                              : '6px', // Extra padding when loading
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          border: '1px solid #495057',
-                          backgroundColor: '#fff',
+                          '& .MuiOutlinedInput-root': {
+                            padding: '6px',
+                            paddingLeft: isCellSaving(rowIndex, column.id)
+                              ? row.format === 'currency'
+                                ? '60px'
+                                : '40px'
+                              : row.format === 'currency'
+                                ? '30px'
+                                : '6px',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            backgroundColor: '#fff'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            border: '1px solid #495057'
+                          },
                           '& .MuiInputBase-input': {
-                            textAlign: column.align || 'left'
+                            textAlign: column.align || 'left',
+                            padding: 0
                           }
                         }}
-                        disableUnderline
+                        size="small"
+                        variant="outlined"
                       />
                       {isCellSaving(rowIndex, column.id) && (
                         <div
