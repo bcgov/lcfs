@@ -11,7 +11,12 @@ export const fixLeafletIcons = () => {
   })
 }
 
-// Create a marker icons map to avoid URL imports
+/**
+ * Creates a Leaflet marker icon with the specified color
+ * Uses leaflet-color-markers library for consistent colored markers
+ * @param {string} color - Marker color (red, orange, grey, blue, green, violet, etc.)
+ * @returns {L.Icon} Leaflet icon instance
+ */
 export const createMarkerIcon = (color) => {
   return new L.Icon({
     iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
@@ -23,12 +28,25 @@ export const createMarkerIcon = (color) => {
   })
 }
 
-// Prepare marker icons
+/**
+ * Pre-configured marker icons for different statuses and purposes
+ * Color meanings:
+ * - green: Validated equipment/sites
+ * - blue: Submitted equipment/sites
+ * - grey: Draft equipment/sites
+ * - orange: Updated/Modified equipment/sites
+ * - red: Decommissioned/Error/Out-of-bounds equipment/sites
+ * - violet: Alternative site markers
+ * @constant {Object<string, L.Icon>}
+ */
 export const markerIcons = {
   default: new L.Icon.Default(),
   red: createMarkerIcon('red'),
   orange: createMarkerIcon('orange'),
-  grey: createMarkerIcon('grey')
+  grey: createMarkerIcon('grey'),
+  blue: createMarkerIcon('blue'),
+  green: createMarkerIcon('green'),
+  violet: createMarkerIcon('violet')
 }
 
 const normalizeNumber = (value) => {
@@ -133,7 +151,6 @@ export const findOverlappingPeriods = (currentLoc, allLocations) => {
     }))
 }
 
-
 /**
  * Sorts an array of strings containing a mix of alphabets and numbers.
  * - Strings with prefixed numbers appear first
@@ -152,7 +169,7 @@ export const sortMixedStrings = (arr) => {
       return -1
     }
     if (!aStartsWithNumber && bStartsWithNumber) {
-      return 1 
+      return 1
     }
 
     if (aStartsWithNumber && bStartsWithNumber) {

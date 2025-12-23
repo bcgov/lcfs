@@ -1068,8 +1068,12 @@ async def test_handle_assessed_status_caps_to_pre_deadline(
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
-    compliance_report_update_service.org_service.calculate_available_balance.return_value = 500
-    compliance_report_update_service.org_service.calculate_available_balance_for_period.return_value = 200
+    compliance_report_update_service.org_service.calculate_available_balance.return_value = (
+        500
+    )
+    compliance_report_update_service.org_service.calculate_available_balance_for_period.return_value = (
+        200
+    )
 
     with patch(
         "lcfs.web.api.compliance_report.update_service.user_has_roles",
@@ -1081,7 +1085,9 @@ async def test_handle_assessed_status_caps_to_pre_deadline(
 
     compliance_report_update_service.org_service.calculate_available_balance.assert_not_awaited()
     compliance_report_update_service.org_service.calculate_available_balance_for_period.assert_not_awaited()
-    assert mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    assert (
+        mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    )
     assert mock_report.transaction.compliance_units == -200
     assert (
         mock_report.transaction.update_user
@@ -1700,3 +1706,152 @@ async def test_handle_return_status_no_supplemental_initiator():
     # Assert that report with no supplemental initiator uses default mapping
     assert result_status == ComplianceReportStatusEnum.Submitted.value
     assert status_has_changed is False
+
+
+# =============================================================================
+# DIRECTOR DELEGATED AUTHORITY TESTS
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_director_can_recommend_by_analyst(
+    compliance_report_update_service, mock_repo, mock_user_has_roles
+):
+    """Test that Director can recommend a report (Analyst action)."""
+    # Mock data
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.compliance_report_group_uuid = "test-uuid"
+    mock_report.version = 0
+
+    director_user = MagicMock(spec=UserProfile)
+    director_user.user_profile_id = 1
+
+    # Mock Director having both GOVERNMENT and DIRECTOR roles
+    def user_has_roles_side_effect(user, roles_list):
+        if RoleEnum.GOVERNMENT in roles_list and RoleEnum.DIRECTOR in roles_list:
+            return True
+        if RoleEnum.GOVERNMENT in roles_list and RoleEnum.ANALYST in roles_list:
+            return False
+        return False
+
+    mock_user_has_roles.side_effect = user_has_roles_side_effect
+
+    # Mock dependencies
+    compliance_report_update_service.charging_equipment_repo.auto_validate_submitted_fse_for_report = (
+        AsyncMock()
+    )
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+    mock_repo.update_compliance_report = AsyncMock()
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Should not raise an exception
+    await compliance_report_update_service.handle_recommended_by_analyst_status(
+        mock_report, director_user
+    )
+
+    # Verify the report was updated
+    mock_repo.update_compliance_report.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_director_can_access_analyst_adjustment_status(
+    compliance_report_update_service, mock_user_has_roles
+):
+    """Test that Director can access reports in Analyst adjustment status."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = ComplianceReportStatusEnum.Analyst_adjustment
+
+    director_user = MagicMock(spec=UserProfile)
+
+    # Mock Director having both GOVERNMENT and DIRECTOR roles
+    def user_has_roles_side_effect(user, roles_list):
+        if RoleEnum.GOVERNMENT in roles_list and RoleEnum.DIRECTOR in roles_list:
+            return True
+        return False
+
+    mock_user_has_roles.side_effect = user_has_roles_side_effect
+
+    # Should not raise an exception
+    await compliance_report_update_service.handle_analyst_adjustment_status(
+        mock_report, director_user
+    )
+
+
+@pytest.mark.anyio
+async def test_director_can_recommend_by_manager(
+    compliance_report_update_service, mock_repo, mock_user_has_roles
+):
+    """Test that Director can recommend to Director (Manager action)."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.compliance_report_group_uuid = "test-uuid"
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = (
+        ComplianceReportStatusEnum.Recommended_by_analyst
+    )
+
+    director_user = MagicMock(spec=UserProfile)
+
+    # Mock Director having both GOVERNMENT and DIRECTOR roles
+    def user_has_roles_side_effect(user, roles_list):
+        if RoleEnum.GOVERNMENT in roles_list and RoleEnum.DIRECTOR in roles_list:
+            return True
+        if (
+            RoleEnum.GOVERNMENT in roles_list
+            and RoleEnum.COMPLIANCE_MANAGER in roles_list
+        ):
+            return False
+        return False
+
+    mock_user_has_roles.side_effect = user_has_roles_side_effect
+
+    mock_repo.update_compliance_report = AsyncMock()
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Should not raise an exception
+    await compliance_report_update_service.handle_recommended_by_manager_status(
+        mock_report, director_user
+    )
+
+    # Verify the report was updated
+    mock_repo.update_compliance_report.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_director_can_issue_assessment(
+    compliance_report_update_service, mock_repo, mock_user_has_roles
+):
+    """Test that Director can issue assessment (Director native action)."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.compliance_report_group_uuid = "test-uuid"
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = (
+        ComplianceReportStatusEnum.Recommended_by_manager
+    )
+    mock_report.is_non_assessment = False
+    mock_report.summary = MagicMock()
+    mock_report.summary.line_20_surplus_deficit_units = 100
+
+    director_user = MagicMock(spec=UserProfile)
+
+    # Mock Director having both GOVERNMENT and DIRECTOR roles
+    def user_has_roles_side_effect(user, roles_list):
+        if RoleEnum.GOVERNMENT in roles_list and RoleEnum.DIRECTOR in roles_list:
+            return True
+        return False
+
+    mock_user_has_roles.side_effect = user_has_roles_side_effect
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    compliance_report_update_service._create_or_update_assessed_transaction = (
+        AsyncMock()
+    )
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    # Should not raise an exception
+    await compliance_report_update_service.handle_assessed_status(
+        mock_report, director_user
+    )
