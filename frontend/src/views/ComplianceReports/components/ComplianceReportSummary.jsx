@@ -211,7 +211,9 @@ const ComplianceReportSummary = ({
     [summaryData, updateComplianceReportSummary, currentUser]
   )
 
-  if (isLoading || isFetching) {
+  // Only show full loading screen on initial load, not on background refetches
+  // Background refetches (isFetching) happen after cell edits and should show inline spinners instead
+  if (isLoading && !summaryData) {
     return <Loading message={t('report:summaryLoadingMsg')} />
   }
 
@@ -245,6 +247,13 @@ const ComplianceReportSummary = ({
                 <SummaryTable
                   data-test="renewable-summary"
                   title={t('report:renewableFuelTargetSummary')}
+                  titleTooltip={
+                    summaryData?.lines6And8Locked
+                      ? 'Lines 6/8 locked from assessed snapshot'
+                      : summaryData?.lines7And9Locked
+                      ? 'Lines 7/9 locked from assessed snapshot'
+                      : undefined
+                  }
                   columns={
                     summaryData
                       ? renewableFuelColumns(
@@ -252,7 +261,8 @@ const ComplianceReportSummary = ({
                           summaryData?.renewableFuelTargetSummary,
                           canEdit,
                           compliancePeriodYear,
-                          summaryData?.lines7And9Locked
+                          summaryData?.lines7And9Locked,
+                          summaryData?.lines6And8Locked
                         )
                       : []
                   }
@@ -260,6 +270,7 @@ const ComplianceReportSummary = ({
                   onCellEditStopped={handleCellEdit}
                   useParenthesis={true}
                   lines7And9Locked={summaryData?.lines7And9Locked}
+                  lines6And8Locked={summaryData?.lines6And8Locked}
                   savingCellKey={savingCellKey}
                   tableType="renewable"
                 />

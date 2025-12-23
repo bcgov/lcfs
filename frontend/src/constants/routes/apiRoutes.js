@@ -135,7 +135,10 @@ export const apiRoutes = {
     endUserTypes: '/charging-equipment/end-user-types/list',
     chargingSites: '/charging-equipment/charging-sites/list',
     organizations: '/charging-equipment/organizations/list',
-    hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements'
+    hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements',
+    template: '/charging-equipment/template/:organizationId',
+    import: '/charging-equipment/import/:organizationId',
+    importJobStatus: '/charging-equipment/status/:jobId'
   },
   getChargingSite: '/charging-sites/:siteId',
   getAllChargingSites: '/charging-sites/list-all',

@@ -26,7 +26,7 @@ import {
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -52,6 +52,101 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { ExcelUpload } from './components/ExcelUpload'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
+import { v4 as uuid } from 'uuid'
+
+// Row validation helper - checks all required fields, returns boolean
+export const isRowValid = (row) => {
+  return Boolean(
+    row.chargingSiteId &&
+      row.serialNumber &&
+      row.manufacturer &&
+      row.levelOfEquipmentId &&
+      row.intendedUseIds?.length > 0 &&
+      row.intendedUserIds?.length > 0
+  )
+}
+
+const parseRegistrationNumber = (value) => {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmedValue = value.trim()
+  if (!trimmedValue) {
+    return null
+  }
+
+  const match = trimmedValue.match(/^(.*?)(\d+)$/)
+  if (!match) {
+    return null
+  }
+
+  return {
+    prefix: match[1],
+    number: parseInt(match[2], 10),
+    width: match[2].length
+  }
+}
+
+export const getNextRegistrationNumber = (
+  registrationNumber,
+  existingRows = []
+) => {
+  const parsed = parseRegistrationNumber(registrationNumber)
+  if (!parsed) {
+    return ''
+  }
+
+  const { prefix, number, width } = parsed
+  let maxNumber = number
+
+  existingRows.forEach((row) => {
+    const rowParsed = parseRegistrationNumber(row?.registrationNumber)
+    if (rowParsed && rowParsed.prefix === prefix) {
+      maxNumber = Math.max(maxNumber, rowParsed.number)
+    }
+  })
+
+  const nextValue = (maxNumber + 1).toString().padStart(width, '0')
+  return `${prefix}${nextValue}`
+}
+
+export const createDuplicatedBulkRow = (
+  row = {},
+  existingRows = [],
+  idGenerator = uuid
+) => {
+  const duplicatedRow = {
+    ...row,
+    id: idGenerator(),
+    serialNumber: '',
+    status: 'Draft',
+    registrationNumber: getNextRegistrationNumber(
+      row?.registrationNumber,
+      existingRows
+    ),
+    modified: false,
+    isImportPending: false
+  }
+
+  delete duplicatedRow.chargingEquipmentId
+  delete duplicatedRow.charging_equipment_id
+  delete duplicatedRow.validationStatus
+  delete duplicatedRow.validationMsg
+  delete duplicatedRow.isNewSupplementalEntry
+  delete duplicatedRow.actionType
+
+  duplicatedRow.intendedUseIds = Array.isArray(row?.intendedUseIds)
+    ? [...row.intendedUseIds]
+    : []
+  duplicatedRow.intendedUserIds = Array.isArray(row?.intendedUserIds)
+    ? [...row.intendedUserIds]
+    : []
+
+  return duplicatedRow
+}
 
 export const AddEditChargingEquipment = ({ mode }) => {
   const { t } = useTranslation(['common', 'chargingEquipment'])
@@ -67,6 +162,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const isBulkMode = operationMode === 'bulk'
 
   const { data: currentUser, hasAnyRole } = useCurrentUser()
+  const apiService = useApiService()
+  const organizationId = currentUser?.organization?.organizationId
 
   // Check if user is IDIR/government - they should not access this component
   useEffect(() => {
@@ -109,14 +206,178 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   // Bulk mode state (grid-based input like Charging Site/FSE)
   const [bulkData, setBulkData] = useState([])
+  const [singleRowData, setSingleRowData] = useState([])
+  const hasUnsavedRows = useMemo(
+    () =>
+      bulkData.some(
+        (row) => !row.chargingEquipmentId && !row.charging_equipment_id
+      ),
+    [bulkData]
+  )
   const [gridErrors, setGridErrors] = useState({})
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)
+  const lastImportJobIdRef = useRef(null)
 
-  // Navigation handler
+  // Get pre-populated charging site ID from location state
+  const prePopulatedChargingSiteId = location.state?.chargingSiteId || null
+  
+  // Lock the Charging Site field only when coming from a Charging Site page
+  // (indicated by having a chargingSiteId in the location state)
+  const isChargingSiteLocked = Boolean(prePopulatedChargingSiteId)
+
+  // Navigate back to origin page or default to Manage FSE
+  const navigateBack = useCallback(() => {
+    navigate(location.state?.returnTo || `${ROUTES.REPORTS.LIST}/fse`)
+  }, [navigate, location.state?.returnTo])
+
   const handleCancel = useCallback(() => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse`)
-  }, [navigate])
+    navigateBack()
+  }, [navigateBack])
+
+  const loadImportedChargingEquipment = useCallback(
+    async (summary = null) => {
+      const createdCount = summary?.created ?? 0
+
+      if (!organizationId) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importMissingOrg', {
+            defaultValue:
+              'Organization information is required before refreshing imported equipment.'
+          }),
+          severity: 'error'
+        })
+        return
+      }
+
+      if (!createdCount) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importNoRows', {
+            defaultValue: 'No charging equipment rows were imported.'
+          }),
+          severity: 'info'
+        })
+        return
+      }
+
+      try {
+        const payload = {
+          page: 1,
+          size: createdCount,
+          sort_orders: [
+            {
+              field: 'create_date',
+              direction: 'desc'
+            }
+          ],
+          filters: [],
+          organization_id: organizationId
+        }
+
+        const response = await apiService.post(
+          apiRoutes.chargingEquipment.list,
+          payload
+        )
+        const payloadData = response?.data ?? response
+        const equipments = payloadData?.items ?? payloadData?.data?.items ?? []
+        const limitedItems = equipments.slice(0, createdCount).reverse()
+
+        if (!limitedItems.length) {
+          alertRef.current?.triggerAlert({
+            message: t('chargingEquipment:importNoRows', {
+              defaultValue: 'No charging equipment records were returned.'
+            }),
+            severity: 'info'
+          })
+          return
+        }
+
+        const formattedRows = limitedItems.map((item) => {
+          const levelMatch = (levels || []).find(
+            (level) =>
+              level?.name?.toLowerCase() ===
+              (item?.levelOfEquipmentName || '').toLowerCase()
+          )
+
+          return {
+            id: item?.chargingEquipmentId ?? uuid(),
+            chargingEquipmentId: item?.chargingEquipmentId ?? null,
+            chargingSiteId: item?.chargingSiteId ?? '',
+            serialNumber: item?.serialNumber ?? '',
+            manufacturer: item?.manufacturer ?? '',
+            model: item?.model ?? '',
+            levelOfEquipmentId:
+              levelMatch?.levelOfEquipmentId ?? item?.levelOfEquipmentId ?? '',
+            ports: item?.ports ?? '',
+            latitude: item?.latitude ?? 0,
+            longitude: item?.longitude ?? 0,
+            notes: item?.notes ?? '',
+            intendedUseIds: (item?.intendedUses || []).map((use) =>
+              Number(use?.endUseTypeId)
+            ),
+            intendedUserIds: (item?.intendedUsers || []).map((user) =>
+              Number(user?.endUserTypeId)
+            ),
+            status: item?.status || 'Draft',
+            registrationNumber: item?.registrationNumber || '',
+            validationStatus: 'valid',
+            modified: false
+          }
+        })
+
+        setBulkData(formattedRows)
+        setGridErrors({})
+        setGridWarnings({})
+
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importRefreshSuccess', {
+            count: createdCount,
+            rejected: summary?.rejected ?? 0,
+            defaultValue:
+              summary?.rejected > 0
+                ? `${createdCount} rows imported, ${summary?.rejected} rejected.`
+                : `${createdCount} charging equipment rows imported.`
+          }),
+          severity: summary?.rejected > 0 ? 'warning' : 'success'
+        })
+      } catch (error) {
+        console.error('Error loading charging equipment after import:', error)
+        alertRef.current?.triggerAlert({
+          message:
+            error?.response?.data?.detail ||
+            t('chargingEquipment:importRefreshError', {
+              defaultValue:
+                'Unable to refresh charging equipment data after import.'
+            }),
+          severity: 'error'
+        })
+      }
+    },
+    [
+      alertRef,
+      apiService,
+      organizationId,
+      levels,
+      setBulkData,
+      setGridErrors,
+      setGridWarnings,
+      t
+    ]
+  )
+
+  const handleImportComplete = useCallback(
+    (summary = null) => {
+      if (!summary) return
+      if (summary.jobId && summary.jobId === lastImportJobIdRef.current) {
+        return
+      }
+      if (summary.jobId) {
+        lastImportJobIdRef.current = summary.jobId
+      }
+      loadImportedChargingEquipment(summary)
+    },
+    [loadImportedChargingEquipment]
+  )
 
   // Unified save handler for grid rows (create/update/delete)
   const saveRow = useCallback(
@@ -167,6 +428,22 @@ export const AddEditChargingEquipment = ({ mode }) => {
           ['Draft', 'Updated', 'Validated'].includes(equipment.status))
       if (!canEdit) return
 
+      // Validate required fields before saving
+      if (!isRowValid(params.node.data)) {
+        params.node.updateData({
+          ...params.node.data,
+          validationStatus: 'error'
+        })
+        setGridErrors({
+          [params.node.data.id]: ['intendedUseIds', 'intendedUserIds']
+        })
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:validation.fillRequiredFields'),
+          severity: 'error'
+        })
+        return
+      }
+
       try {
         const responseData = await handleScheduleSave({
           alertRef,
@@ -181,6 +458,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         })
 
         params.node.updateData(responseData)
+        setSingleRowData([responseData])
         alertRef.current?.triggerAlert({
           message: isEdit
             ? t('chargingEquipment:updateSuccess')
@@ -321,65 +599,150 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }
 
-  // Bulk mode handlers
-  const handleAddRow = () => {
-    const newRow = {
-      id: Date.now(), // Temporary ID for new rows
-      chargingSiteId: '',
-      serialNumber: '',
-      manufacturer: '',
-      model: '',
-      levelOfEquipmentId: '',
-      ports: 'Single port',
-      latitude: 0,
-      longitude: 0,
-      notes: '',
-      intendedUseIds: [],
-      intendedUserIds: []
+  // Default empty row template
+  const getEmptyRow = useCallback(
+    (id = uuid()) => {
+      const chargingSiteIdValue = prePopulatedChargingSiteId
+        ? Number(prePopulatedChargingSiteId)
+        : ''
+
+      const row = {
+        id,
+        chargingSiteId: chargingSiteIdValue,
+        serialNumber: '',
+        manufacturer: '',
+        model: '',
+        levelOfEquipmentId: '',
+        ports: '',
+        latitude: 0,
+        longitude: 0,
+        notes: '',
+        intendedUseIds: [],
+        intendedUserIds: [],
+        registrationNumber: ''
+      }
+
+      // If charging site is pre-populated, also set the lat/long from the site
+      if (prePopulatedChargingSiteId && chargingSites) {
+        const site = chargingSites.find(
+          (s) => s.chargingSiteId === Number(prePopulatedChargingSiteId)
+        )
+        if (site) {
+          row.latitude = site.latitude || 0
+          row.longitude = site.longitude || 0
+        }
+      }
+
+      return row
+    },
+    [prePopulatedChargingSiteId, chargingSites]
+  )
+
+  const buildSingleRowData = useCallback((equipmentData = {}) => {
+    const baseId =
+      equipmentData?.chargingEquipmentId ?? equipmentData?.id ?? uuid()
+
+    return {
+      id: baseId,
+      chargingEquipmentId: equipmentData?.chargingEquipmentId,
+      chargingSiteId: equipmentData?.chargingSiteId || '',
+      serialNumber: equipmentData?.serialNumber || '',
+      manufacturer: equipmentData?.manufacturer || '',
+      model: equipmentData?.model || '',
+      levelOfEquipmentId: equipmentData?.levelOfEquipmentId || '',
+      ports: equipmentData?.ports || '',
+      latitude: equipmentData?.latitude || 0,
+      longitude: equipmentData?.longitude || 0,
+      notes: equipmentData?.notes || '',
+      intendedUseIds:
+        equipmentData?.intendedUses?.map((use) => use.endUseTypeId) ||
+        equipmentData?.intendedUseIds ||
+        [],
+      intendedUserIds:
+        equipmentData?.intendedUsers?.map((user) => user.endUserTypeId) ||
+        equipmentData?.intendedUserIds ||
+        [],
+      status: equipmentData?.status || 'Draft',
+      registrationNumber: equipmentData?.registrationNumber || ''
     }
-    setBulkData([...bulkData, newRow])
-  }
+  }, [])
+
+  // Bulk mode handlers
+  const handleAddRow = useCallback(() => {
+    setBulkData((prev) => [...prev, getEmptyRow()])
+  }, [getEmptyRow])
 
   // Auto-create one row on load to match Charging Site UX
   useEffect(() => {
-    if (isBulkMode && bulkData.length === 0) {
+    if (isBulkMode && bulkData.length === 0 && !sitesLoading) {
       handleAddRow()
     }
-  }, [isBulkMode, bulkData.length])
+  }, [isBulkMode, bulkData.length, handleAddRow, sitesLoading])
+
+  useEffect(() => {
+    if (isBulkMode) {
+      setSingleRowData([])
+      return
+    }
+
+    if (isEdit && equipment) {
+      setSingleRowData([buildSingleRowData(equipment)])
+    } else if (!isEdit && !equipmentLoading) {
+      setSingleRowData([buildSingleRowData()])
+    }
+  }, [buildSingleRowData, equipment, equipmentLoading, isBulkMode, isEdit])
 
   const handleBulkSave = async () => {
     try {
-      // Get current grid data instead of using stale bulkData state
       const rowData = []
       gridRef.current?.api?.forEachNode((node) => rowData.push(node.data))
+      const hasActiveImport = rowData.some((row) => row.isImportPending)
+      if (hasActiveImport) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importInProgressWarning'),
+          severity: 'info'
+        })
+        return
+      }
 
-      // Filter out rows with missing required fields
-      const validRows = rowData.filter(
-        (row) =>
-          row.chargingSiteId &&
-          row.serialNumber &&
-          row.manufacturer &&
-          row.levelOfEquipmentId
-      )
+      const pendingRows = rowData.filter((row) => row.isImportPending)
+      if (pendingRows.length > 0) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:importInProgressWarning'),
+          severity: 'info'
+        })
+        return
+      }
+
+      const validRows = rowData.filter(isRowValid)
 
       if (validRows.length === 0) {
         alertRef.current?.triggerAlert({
-          message: 'No valid rows to save. Please fill in required fields.',
+          message: t('chargingEquipment:validation.fillRequiredFields'),
           severity: 'warning'
         })
         return
       }
 
-      // Save all valid rows using saveRow (handles both create and update)
-      const promises = validRows.map((row) => saveRow(row))
-      await Promise.all(promises)
+      const rowsToSave = validRows.filter(
+        (row) => !row.chargingEquipmentId && !row.charging_equipment_id
+      )
+
+      if (rowsToSave.length === 0) {
+        alertRef.current?.triggerAlert({
+          message: t('chargingEquipment:noRowsToSave'),
+          severity: 'info'
+        })
+        return
+      }
+
+      await Promise.all(rowsToSave.map((row) => saveRow(row)))
 
       alertRef.current?.triggerAlert({
-        message: `Successfully saved ${validRows.length} charging equipment entries.`,
+        message: `Successfully saved ${rowsToSave.length} charging equipment entries.`,
         severity: 'success'
       })
 
-      // Navigate back to list
       navigate(`${ROUTES.REPORTS.LIST}/fse`)
     } catch (error) {
       alertRef.current?.triggerAlert({
@@ -388,6 +751,66 @@ export const AddEditChargingEquipment = ({ mode }) => {
       })
     }
   }
+
+  const handleBulkGridActions = useCallback(
+    async (action, params) => {
+      if (action === 'delete') {
+        const hasPersistedId =
+          Boolean(params?.node?.data?.chargingEquipmentId) ||
+          Boolean(params?.node?.data?.charging_equipment_id)
+
+        if (!hasPersistedId) {
+          params.api.applyTransaction({ remove: [params.node.data] })
+          setBulkData((prevRows = []) => {
+            const filtered = prevRows.filter((row) => row.id !== params.data.id)
+            if (filtered.length === 0) {
+              return [getEmptyRow()]
+            }
+            return filtered
+          })
+          return null
+        }
+
+        await handleScheduleDelete(
+          params,
+          'chargingEquipmentId',
+          saveRow,
+          alertRef,
+          setBulkData,
+          getEmptyRow()
+        )
+        return null
+      }
+
+      if (action === 'duplicate') {
+        let duplicatedRow = null
+        setBulkData((prevRows) => {
+          const existingRows = prevRows || []
+          const nextRow = createDuplicatedBulkRow(params.data, existingRows)
+          const updatedRows = [...existingRows]
+          const insertIndex = existingRows.findIndex(
+            (row) => row.id === params.data.id
+          )
+          const targetIndex =
+            insertIndex === -1 ? updatedRows.length : insertIndex + 1
+          updatedRows.splice(targetIndex, 0, nextRow)
+          duplicatedRow = nextRow
+          return updatedRows
+        })
+
+        return {
+          add: duplicatedRow ? [duplicatedRow] : [],
+          addIndex:
+            typeof params.rowIndex === 'number'
+              ? params.rowIndex + 1
+              : undefined
+        }
+      }
+
+      return null
+    },
+    [alertRef, getEmptyRow, saveRow, setBulkData]
+  )
 
   if (equipmentLoading || metadataLoading || sitesLoading || orgsLoading) {
     return <Loading />
@@ -445,14 +868,12 @@ export const AddEditChargingEquipment = ({ mode }) => {
               </BCTypography>
 
               <ExcelUpload
-                onDataParsed={(data) => {
-                  setBulkData(data)
-                }}
                 chargingSites={chargingSites}
-                organizations={organizations}
                 levels={levels}
                 endUseTypes={endUseTypes}
                 endUserTypes={endUserTypes}
+                organizationId={organizationId}
+                onImportComplete={handleImportComplete}
               />
 
               <BCGridEditor
@@ -465,7 +886,11 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   endUseTypes,
                   endUserTypes,
                   gridErrors,
-                  gridWarnings
+                  gridWarnings,
+                  { enableDuplicate: true },
+                  true,
+                  true,
+                  isChargingSiteLocked
                 )}
                 defaultColDef={defaultBulkColDef}
                 stopEditingWhenCellsLoseFocus
@@ -525,50 +950,14 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     setBulkData(updatedData)
                   }
                 }}
-                onAction={async (action, params) => {
-                  if (action === 'delete') {
-                    await handleScheduleDelete(
-                      params,
-                      'chargingEquipmentId',
-                      saveRow,
-                      alertRef,
-                      setBulkData,
-                      {
-                        chargingSiteId: '',
-                        serialNumber: '',
-                        manufacturer: '',
-                        model: '',
-                        levelOfEquipmentId: '',
-                        ports: 'Single port',
-                        latitude: 0,
-                        longitude: 0,
-                        notes: '',
-                        intendedUseIds: [],
-                        intendedUserIds: []
-                      }
-                    )
-                  }
-                }}
+                onAction={handleBulkGridActions}
                 onAddRows={(numRows) =>
                   Array(numRows)
                     .fill()
-                    .map(() => ({
-                      id: Date.now() + Math.random(),
-                      chargingSiteId: '',
-                      serialNumber: '',
-                      manufacturer: '',
-                      model: '',
-                      levelOfEquipmentId: '',
-                      ports: 'Single port',
-                      notes: '',
-                      latitude: 0,
-                      longitude: 0,
-                      intendedUseIds: [],
-                      intendedUserIds: []
-                    }))
+                    .map(() => getEmptyRow())
                 }
                 saveButtonProps={{
-                  enabled: true,
+                  enabled: hasUnsavedRows,
                   text: 'Save All',
                   onSave: handleBulkSave,
                   confirmText: 'You have unsaved or invalid rows.',
@@ -598,6 +987,9 @@ export const AddEditChargingEquipment = ({ mode }) => {
   return (
     <BCBox sx={containerSx}>
       <Grid container spacing={1}>
+        <Grid item xs={12}>
+          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
+        </Grid>
         <Grid item xs={12}>
           <Box
             display="flex"
@@ -635,7 +1027,6 @@ export const AddEditChargingEquipment = ({ mode }) => {
             </BCButton>
           </Box>
         </Grid>
-
         <Grid item xs={12}>
           <Box sx={{ width: '100%' }}>
             <BCGridEditor
@@ -652,46 +1043,21 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 gridWarnings,
                 { enableDelete: isEdit && equipment?.status === 'Draft' },
                 true,
-                isEdit && equipment?.status === 'Draft'
+                isEdit && equipment?.status === 'Draft',
+                isChargingSiteLocked // Lock only when coming from Charging Site page
               )}
               defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
-              rowData={[
-                {
-                  id: equipment?.chargingEquipmentId || Date.now(),
-                  chargingEquipmentId: equipment?.chargingEquipmentId,
-                  chargingSiteId: equipment?.chargingSiteId || '',
-                  serialNumber: equipment?.serialNumber || '',
-                  manufacturer: equipment?.manufacturer || '',
-                  model: equipment?.model || '',
-                  levelOfEquipmentId: equipment?.levelOfEquipmentId || '',
-                  ports: equipment?.ports || 'Single port',
-                  latitude: equipment?.latitude || 0,
-                  longitude: equipment?.longitude || 0,
-                  notes: equipment?.notes || '',
-                  intendedUseIds:
-                    equipment?.intendedUses?.map((use) => use.endUseTypeId) ||
-                    [],
-                  intendedUserIds:
-                    equipment?.intendedUsers?.map(
-                      (user) => user.endUserTypeId
-                    ) || [],
-                  status: equipment?.status || 'Draft'
-                }
-              ]}
+              rowData={singleRowData}
               onCellEditingStopped={handleCellEditingStopped}
               onAction={handleGridAction}
               showAddRowsButton={false}
               saveButtonProps={{
                 enabled: true,
                 text: t('chargingEquipment:saveAndReturn'),
-                onSave: () => navigate(ROUTES.REPORTS.LIST + '/fse')
+                onSave: navigateBack
               }}
             />
           </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <BCAlert2 ref={alertRef} dismissible={true} sx={{ mb: 0.5 }} />
         </Grid>
       </Grid>
     </BCBox>

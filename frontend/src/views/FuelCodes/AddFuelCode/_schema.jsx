@@ -522,7 +522,47 @@ export const fuelCodeColDefs = (
       title: 'fuelProductionFacilityCountry',
       enabled: true
     }),
-    minWidth: 325
+    minWidth: 325,
+    valueSetter: (params) => {
+      const newCountry = params.newValue?.trim() || ''
+      params.data.fuelProductionFacilityCountry = newCountry
+
+      // Auto-change prefix logic: BCLCF <-> C-BCLCF based on country
+      // PROXY prefix should NEVER be auto-changed
+      const currentPrefix = params.data.prefix
+      if (currentPrefix === 'PROXY' || currentPrefix === 'C-PROXY') {
+        // PROXY prefixes are never auto-changed
+        return true
+      }
+
+      const isCanada = newCountry.toLowerCase() === 'canada'
+
+      if (isCanada && currentPrefix === 'BCLCF') {
+        // Change BCLCF to C-BCLCF when country is Canada
+        const cBclcfPrefix = optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === 'C-BCLCF'
+        )
+        if (cBclcfPrefix) {
+          params.data.prefixId = cBclcfPrefix.fuelCodePrefixId
+          params.data.fuelCodePrefixId = cBclcfPrefix.fuelCodePrefixId
+          params.data.prefix = 'C-BCLCF'
+          params.data.fuelSuffix = cBclcfPrefix.nextFuelCode
+        }
+      } else if (!isCanada && currentPrefix === 'C-BCLCF') {
+        // Change C-BCLCF back to BCLCF when country is not Canada
+        const bclcfPrefix = optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === 'BCLCF'
+        )
+        if (bclcfPrefix) {
+          params.data.prefixId = bclcfPrefix.fuelCodePrefixId
+          params.data.fuelCodePrefixId = bclcfPrefix.fuelCodePrefixId
+          params.data.prefix = 'BCLCF'
+          params.data.fuelSuffix = bclcfPrefix.nextFuelCode
+        }
+      }
+
+      return true
+    }
   },
   {
     field: 'facilityNameplateCapacity',

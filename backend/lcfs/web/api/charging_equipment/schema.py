@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from pydantic import Field
+from pydantic import Field, field_validator
 from enum import Enum
 
 
@@ -70,8 +70,22 @@ class ChargingEquipmentCreateSchema(BaseSchema):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     notes: Optional[str] = None
-    intended_use_ids: Optional[List[int]] = []
-    intended_user_ids: Optional[List[int]] = []
+    intended_use_ids: List[int] = Field(default_factory=list)
+    intended_user_ids: List[int] = Field(default_factory=list)
+
+    @field_validator("intended_use_ids")
+    @classmethod
+    def validate_intended_use_ids(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError("At least one intended use is required")
+        return v
+
+    @field_validator("intended_user_ids")
+    @classmethod
+    def validate_intended_user_ids(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError("At least one intended user is required")
+        return v
 
 
 class ChargingEquipmentUpdateSchema(BaseSchema):
@@ -85,6 +99,20 @@ class ChargingEquipmentUpdateSchema(BaseSchema):
     intended_user_ids: Optional[List[int]] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+    @field_validator("intended_use_ids")
+    @classmethod
+    def validate_intended_use_ids(cls, v):
+        if v is not None and len(v) == 0:
+            raise ValueError("At least one intended use is required")
+        return v
+
+    @field_validator("intended_user_ids")
+    @classmethod
+    def validate_intended_user_ids(cls, v):
+        if v is not None and len(v) == 0:
+            raise ValueError("At least one intended user is required")
+        return v
 
 
 class ChargingEquipmentListItemSchema(BaseSchema):

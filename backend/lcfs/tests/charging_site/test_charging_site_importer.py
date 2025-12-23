@@ -96,15 +96,20 @@ class TestChargingSiteImporter:
         """Test successful import data initiation"""
         with patch(
             "lcfs.web.api.charging_site.importer.uuid.uuid4"
-        ) as mock_uuid, patch("asyncio.get_running_loop") as mock_loop:
+        ) as mock_uuid, patch(
+            "lcfs.web.api.charging_site.importer.asyncio.create_task"
+        ) as mock_create_task:
 
             mock_uuid.return_value = MagicMock()
             mock_uuid.return_value.__str__ = MagicMock(return_value="test-job-id")
 
-            # Mock the loop and executor
-            mock_event_loop = MagicMock()
-            mock_loop.return_value = mock_event_loop
-            mock_event_loop.run_in_executor.return_value = None
+            # Mock create_task to prevent actual background task from running
+            # Close the coroutine to prevent "never awaited" warning
+            def close_coroutine(coro):
+                coro.close()
+                return MagicMock()
+
+            mock_create_task.side_effect = close_coroutine
 
             job_id = await importer.import_data(
                 1, mock_user, "ORG001", mock_upload_file, False
@@ -112,6 +117,7 @@ class TestChargingSiteImporter:
 
             assert job_id == "test-job-id"
             importer.redis_client.set.assert_called()
+            mock_create_task.assert_called_once()
 
     @pytest.mark.anyio
     async def test_import_data_file_too_large(self, importer, mock_user):

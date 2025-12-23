@@ -276,9 +276,9 @@ describe('SummaryTable', () => {
 
       const inputs = screen.getAllByTestId('input')
 
-      // Test currency processing (preserves decimals)
+      // Test currency processing (all editable fields are integers - strips decimals when $ is present)
       fireEvent.change(inputs[0], { target: { value: '$123.45' } })
-      expect(inputs[0].value).toBe('123.45') // Should strip $ but keep decimal
+      expect(inputs[0].value).toBe('123') // Should strip $ and decimals (non-numeric + decimal)
     })
 
     it('processes integer field input correctly', () => {
@@ -300,9 +300,9 @@ describe('SummaryTable', () => {
 
       const input = screen.getByTestId('input')
 
-      // Test input processing - component strips invalid characters
+      // Test input processing - component strips non-numeric characters AND decimals
       fireEvent.change(input, { target: { value: '123.45abc' } })
-      expect(input.value).toBe('123.45') // Component strips non-numeric characters
+      expect(input.value).toBe('123') // Component strips non-numeric characters and decimals
     })
 
     it('handles empty string input', () => {
@@ -339,13 +339,13 @@ describe('SummaryTable', () => {
 
       const input = screen.getAllByTestId('input')[0]
 
-      // Enter decimal value
+      // Enter decimal value (preserved during typing if purely numeric)
       fireEvent.change(input, { target: { value: '123.456' } })
       expect(input.value).toBe('123.456')
 
-      // Blur should round to 2 decimal places
+      // Blur should convert to integer (all editable fields are integers)
       fireEvent.blur(input)
-      expect(input.value).toBe('123.46')
+      expect(input.value).toBe('123')
     })
 
     it('calls onCellEditStopped callback on blur', () => {
@@ -441,6 +441,33 @@ describe('SummaryTable', () => {
       // Should display formatted currency values
       expect(screen.getByText('$100.00')).toBeInTheDocument()
       expect(screen.getByText('200')).toBeInTheDocument() // Number format, not currency
+    })
+
+    it('displays retained values for locked Line 6 cells', () => {
+      const lockedColumns = [
+        { id: 'line', label: 'Line' },
+        { id: 'description', label: 'Description' },
+        { id: 'gasoline', label: 'Gasoline', align: 'right' }
+      ]
+      const lockedData = [
+        {
+          line: '6',
+          description: 'Retained fuel',
+          gasoline: 12345,
+          format: 'number'
+        }
+      ]
+
+      customRender(
+        <SummaryTable
+          title="Locked Lines"
+          columns={lockedColumns}
+          data={lockedData}
+          lines6And8Locked
+        />
+      )
+
+      expect(screen.getByText('12345')).toBeInTheDocument()
     })
   })
 

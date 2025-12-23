@@ -234,7 +234,9 @@ export const ChargingEquipment = () => {
   )
 
   const handleNewFSE = () => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse/add`)
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: { returnTo: location.pathname }
+    })
   }
 
   const handleSelectAllDraftUpdated = () => {
@@ -328,7 +330,9 @@ export const ChargingEquipment = () => {
     }
 
     // For supplier users, navigate to edit route
-    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', chargingEquipmentId))
+    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', chargingEquipmentId), {
+      state: { returnTo: location.pathname }
+    })
   }
 
   const handleSelectionChanged = (event) => {

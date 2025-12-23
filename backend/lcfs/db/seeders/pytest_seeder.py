@@ -1,3 +1,4 @@
+from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_output
 import structlog
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,6 +45,7 @@ async def seed_pytest(session: AsyncSession):
     await seed_pytest_user_roles(session)
     await seed_pytest_transactions(session)
     await seed_pytest_admin_adjustments(session)
+    await seed_charging_power_output(session)
     # await seed_pytest_transfers(session)
 
     # Update sequences after all seeders have run

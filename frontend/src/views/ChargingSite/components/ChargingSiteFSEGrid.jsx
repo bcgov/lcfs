@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Grid2 as Grid, Stack } from '@mui/material'
 import BCButton from '@/components/BCButton'
@@ -36,6 +36,7 @@ export const ChargingSiteFSEGrid = ({
 }) => {
   const { t } = useTranslation(['chargingSite'])
   const navigate = useNavigate()
+  const location = useLocation()
   const gridRef = useRef(null)
   const alertRef = useRef(null)
 
@@ -230,10 +231,6 @@ export const ChargingSiteFSEGrid = ({
     [handleSelectionChanged]
   )
 
-  const handleAddEquipment = useCallback(() => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse/add`)
-  }, [navigate, siteId])
-
   const handleCellClicked = useCallback(
     (params) => {
       // For IDIR users, prevent navigation - they don't need edit access
@@ -244,10 +241,24 @@ export const ChargingSiteFSEGrid = ({
       const colId = params?.column?.getColId?.()
       if (colId === 'ag-Grid-ControlsColumn') return
       const { chargingEquipmentId } = params.data
-      navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`)
+      navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`, {
+        state: {
+          returnTo: location.pathname,
+          chargingSiteId: siteId // Pass siteId to lock the Charging Site field
+        }
+      })
     },
-    [navigate, siteId, isIDIR]
+    [navigate, siteId, isIDIR, location.pathname]
   )
+
+  const handleNewFSE = useCallback(() => {
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: {
+        returnTo: location.pathname,
+        chargingSiteId: siteId
+      }
+    })
+  }, [navigate, location.pathname, siteId])
 
   // Build context for button configuration
   const buttonContext = useMemo(() => {
@@ -267,7 +278,6 @@ export const ChargingSiteFSEGrid = ({
       currentUser,
       hasAnyRole,
       hasRoles,
-      handleAddEquipment,
       handleToggleSelectByStatus,
       handleBulkStatusUpdate,
       handleClearFilters
@@ -285,7 +295,6 @@ export const ChargingSiteFSEGrid = ({
     equipmentData?.chargingSiteStatus,
     equipmentData?.organizationId,
     currentUser?.userId,
-    handleAddEquipment,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
     handleClearFilters
@@ -316,6 +325,22 @@ export const ChargingSiteFSEGrid = ({
           onClose={() => setModalData(null)}
           data={modalData}
         />
+        {/* New FSE Button - Only for BCeID users */}
+        {!isIDIR && (
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <BCButton
+                variant="contained"
+                color="primary"
+                type="button"
+                onClick={handleNewFSE}
+                fullWidth
+              >
+                {t('chargingSite:buttons.newFSE')}
+              </BCButton>
+            </Grid>
+          </Grid>
+        )}
         {/* Dynamic Action Buttons Based on Role */}
         {availableButtons.length > 0 && (
           <Grid container spacing={2} sx={{ mb: 3 }}>

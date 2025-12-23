@@ -421,3 +421,130 @@ async def test_unauthorized_access_government_role(
         "/api/charging-equipment/bulk/submit", json={"charging_equipment_ids": [1, 2]}
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_create_charging_equipment_fails_with_empty_intended_use_ids(
+    client: AsyncClient, fastapi_app, set_mock_user
+):
+    """Test that create fails when intended_use_ids is empty."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    response = await client.post(
+        "/api/charging-equipment/",
+        json={
+            "chargingSiteId": 1,
+            "serialNumber": "TEST123",
+            "manufacturer": "Tesla",
+            "levelOfEquipmentId": 1,
+            "intendedUseIds": [],  # Empty - should fail validation
+            "intendedUserIds": [1],
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    data = response.json()
+    assert "intendedUseIds" in str(data) or "intended_use_ids" in str(data)
+
+
+@pytest.mark.anyio
+async def test_create_charging_equipment_fails_with_empty_intended_user_ids(
+    client: AsyncClient, fastapi_app, set_mock_user
+):
+    """Test that create fails when intended_user_ids is empty."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    response = await client.post(
+        "/api/charging-equipment/",
+        json={
+            "chargingSiteId": 1,
+            "serialNumber": "TEST123",
+            "manufacturer": "Tesla",
+            "levelOfEquipmentId": 1,
+            "intendedUseIds": [1],
+            "intendedUserIds": [],  # Empty - should fail validation
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    data = response.json()
+    assert "intendedUserIds" in str(data) or "intended_user_ids" in str(data)
+
+
+@pytest.mark.anyio
+async def test_update_charging_equipment_fails_with_empty_intended_use_ids(
+    client: AsyncClient, fastapi_app, set_mock_user
+):
+    """Test that update fails when intended_use_ids is explicitly set to empty."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    response = await client.put(
+        "/api/charging-equipment/1",
+        json={
+            "intendedUseIds": [],  # Empty - should fail validation
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    data = response.json()
+    assert "intendedUseIds" in str(data) or "intended_use_ids" in str(data)
+
+
+@pytest.mark.anyio
+async def test_update_charging_equipment_fails_with_empty_intended_user_ids(
+    client: AsyncClient, fastapi_app, set_mock_user
+):
+    """Test that update fails when intended_user_ids is explicitly set to empty."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    response = await client.put(
+        "/api/charging-equipment/1",
+        json={
+            "intendedUserIds": [],  # Empty - should fail validation
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    data = response.json()
+    assert "intendedUserIds" in str(data) or "intended_user_ids" in str(data)
+
+
+@pytest.mark.anyio
+async def test_create_charging_equipment_with_no_default_ports(
+    client: AsyncClient,
+    fastapi_app,
+    set_mock_user,
+    valid_charging_equipment_base_schema,
+):
+    """Test that ports field has no default value and remains null if not provided."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    mock_service = AsyncMock()
+    mock_service.create_charging_equipment.return_value = (
+        valid_charging_equipment_base_schema
+    )
+    fastapi_app.dependency_overrides[ChargingEquipmentServices] = lambda: mock_service
+
+    try:
+        response = await client.post(
+            "/api/charging-equipment/",
+            json={
+                "chargingSiteId": 1,
+                "serialNumber": "TEST123",
+                "manufacturer": "Tesla",
+                "levelOfEquipmentId": 1,
+                "intendedUseIds": [1],
+                "intendedUserIds": [1],
+                # ports not provided - should be None, not defaulted
+            },
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        # Verify the service was called
+        mock_service.create_charging_equipment.assert_called_once()
+        # Get the call args
+        call_args = mock_service.create_charging_equipment.call_args
+        equipment_data = call_args[0][1]  # Second positional arg is equipment_data
+        assert equipment_data.ports is None
+    finally:
+        fastapi_app.dependency_overrides.clear()

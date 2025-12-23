@@ -86,6 +86,15 @@ def mock_end_use_type():
 
 
 @pytest.fixture
+def mock_end_user_type():
+    """Create a mock end user type."""
+    from lcfs.db.models.compliance.EndUserType import EndUserType
+
+    end_user = EndUserType(end_user_type_id=1, type_name="Fleet")
+    return end_user
+
+
+@pytest.fixture
 def valid_charging_equipment(
     mock_charging_site,
     mock_equipment_status,
@@ -127,7 +136,6 @@ def valid_charging_equipment_create_schema():
     """Create a valid charging equipment creation schema."""
     return ChargingEquipmentCreateSchema(
         charging_site_id=1,
-        allocating_organization_id=1,
         serial_number="ABC123456",
         manufacturer="Tesla",
         model="Supercharger V3",
@@ -135,6 +143,7 @@ def valid_charging_equipment_create_schema():
         ports=PortsEnum.DUAL_PORT,
         notes="Test equipment",
         intended_use_ids=[1],
+        intended_user_ids=[1],
     )
 
 
@@ -142,7 +151,6 @@ def valid_charging_equipment_create_schema():
 def valid_charging_equipment_update_schema():
     """Create a valid charging equipment update schema."""
     return ChargingEquipmentUpdateSchema(
-        allocating_organization_id=2,
         serial_number="XYZ987654",
         manufacturer="ChargePoint",
         model="Express Plus",
@@ -150,6 +158,7 @@ def valid_charging_equipment_update_schema():
         ports=PortsEnum.SINGLE_PORT,
         notes="Updated equipment",
         intended_use_ids=[1, 2],
+        intended_user_ids=[1, 2],
     )
 
 
