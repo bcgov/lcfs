@@ -476,7 +476,8 @@ async def test_get_fuel_supply_list_with_total_compliance_units(fuel_supply_serv
     assert hasattr(response, "fuel_supplies")
     assert hasattr(response, "total_compliance_units")
 
-    # Expected total: round(1500.75) + round(-500.25) = 1501 + (-500) = 1001
+    # Expected total: round(1500.75 + (-500.25)) = round(1000.5) = 1000
     # Deleted record (1000) should not be included
-    assert response.total_compliance_units == 1001
+    # Note: Python uses banker's rounding, so 1000.5 rounds to 1000 (nearest even)
+    assert response.total_compliance_units == 1000
     assert len(response.fuel_supplies) == 3
