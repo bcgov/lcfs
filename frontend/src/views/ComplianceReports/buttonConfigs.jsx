@@ -1,7 +1,12 @@
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { DateTime } from 'luxon'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { roles, govRoles, nonGovRoles } from '@/constants/roles'
+import {
+  roles,
+  govRoles,
+  nonGovRoles,
+  formatDelegatedRoleLabel
+} from '@/constants/roles'
 import { NEW_REGULATION_YEAR } from '@/constants/common'
 
 /**
@@ -70,7 +75,9 @@ class ButtonActionFactory {
       label: config.label,
       startIcon: config.icon,
       disabled: config.disabled || false,
-      handler: config.handler
+      handler: config.handler,
+      tooltip: config.tooltip || null,
+      roleIndicator: config.roleIndicator || null
     }
   }
 
@@ -466,7 +473,11 @@ const BUTTON_RULES = {
       // 'nonAssessment' // TODO: yet to implement logic
     ],
     [USER_TYPES.IDIR_MANAGER]: [],
-    [USER_TYPES.IDIR_DIRECTOR]: []
+    [USER_TYPES.IDIR_DIRECTOR]: [
+      'recommendByAnalyst',
+      'issueAssessment',
+      'returnToSupplier'
+    ]
   },
 
   [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: {
@@ -477,7 +488,7 @@ const BUTTON_RULES = {
       'deleteAnalystAdjustment'
     ],
     [USER_TYPES.IDIR_MANAGER]: [],
-    [USER_TYPES.IDIR_DIRECTOR]: []
+    [USER_TYPES.IDIR_DIRECTOR]: ['recommendByAnalyst', 'issueAssessment']
   },
 
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: {
@@ -485,7 +496,11 @@ const BUTTON_RULES = {
     [USER_TYPES.BCEID_SIGNER]: [],
     [USER_TYPES.IDIR_ANALYST]: [],
     [USER_TYPES.IDIR_MANAGER]: ['recommendByManager', 'returnToAnalyst'],
-    [USER_TYPES.IDIR_DIRECTOR]: ['issueAssessment', 'returnToAnalyst']
+    [USER_TYPES.IDIR_DIRECTOR]: [
+      'recommendByManager',
+      'issueAssessment',
+      'returnToAnalyst'
+    ]
   },
 
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: {
@@ -593,12 +608,30 @@ export const buttonClusterConfigFn = (context) => {
   const actionFactory = new ButtonActionFactory(context)
   const userType = getUserType(context)
   const currentStatus = context.currentStatus
+  const isDirector = userType === USER_TYPES.IDIR_DIRECTOR
 
   // Get buttons for current status and user type
   const statusRules = BUTTON_RULES[currentStatus] || {}
   const userButtons = statusRules[userType] || []
 
   const buttons = []
+
+  /**
+   * Maps button actions to their corresponding role levels.
+   * Used to display appropriate role indicators when Directors perform delegated actions.
+   * - Analyst: Actions typically performed by Analysts
+   * - Manager: Actions typically performed by Compliance Managers
+   * - Director: Native Director actions (no delegation indicator needed)
+   */
+  const roleMapping = {
+    recommendByAnalyst: 'Analyst',
+    returnToSupplier: 'Analyst',
+    createIdirSupplemental: 'Analyst',
+    issueAssessment: 'Director',
+    recommendByManager: 'Manager',
+    returnToAnalyst: 'Manager',
+    returnToManager: 'Director'
+  }
 
   // Process each potential button
   for (const buttonName of userButtons) {
@@ -609,6 +642,15 @@ export const buttonClusterConfigFn = (context) => {
 
     // Create the button
     const button = actionFactory[buttonName]?.()
+    if (button && isDirector) {
+      // Add role indicator for Directors to show which role they're acting as
+      const actingAsRole = roleMapping[buttonName]
+      if (actingAsRole && actingAsRole !== 'Director') {
+        const roleLabel = formatDelegatedRoleLabel(actingAsRole)
+        button.tooltip = `Acting as ${roleLabel}`
+        button.roleIndicator = actingAsRole
+      }
+    }
     if (button) {
       buttons.push(button)
     }
