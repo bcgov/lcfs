@@ -219,6 +219,13 @@ export const AddEditChargingEquipment = ({ mode }) => {
   const gridRef = useRef(null)
   const lastImportJobIdRef = useRef(null)
 
+  // Get pre-populated charging site ID from location state
+  const prePopulatedChargingSiteId = location.state?.chargingSiteId || null
+
+  // Lock the Charging Site field only when coming from a Charging Site page
+  // (indicated by having a chargingSiteId in the location state)
+  const isChargingSiteLocked = Boolean(prePopulatedChargingSiteId)
+
   // Navigate back to origin page or default to Manage FSE
   const navigateBack = useCallback(() => {
     navigate(location.state?.returnTo || `${ROUTES.REPORTS.LIST}/fse`)
@@ -456,7 +463,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
           message: isEdit
             ? t('chargingEquipment:updateSuccess')
             : t('chargingEquipment:createSuccess'),
-            severity: 'success'
+          severity: 'success'
         })
       } catch (error) {
         alertRef.current?.triggerAlert({
@@ -592,71 +599,85 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }
 
-  // Default empty row template - use chargingSiteId from navigation state if available
-  const getEmptyRow = (id = uuid()) => ({
-    id,
-    chargingSiteId: location.state?.chargingSiteId || '',
-    serialNumber: '',
-    manufacturer: '',
-    model: '',
-    levelOfEquipmentId: '',
-    ports: '',
-    latitude: 0,
-    longitude: 0,
-    notes: '',
-    intendedUseIds: [],
-    intendedUserIds: [],
-    registrationNumber: ''
-  })
+  // Default empty row template
+  const getEmptyRow = useCallback(
+    (id = uuid()) => {
+      const chargingSiteIdValue = prePopulatedChargingSiteId
+        ? Number(prePopulatedChargingSiteId)
+        : ''
 
-  const buildSingleRowData = useCallback(
-    (equipmentData = {}) => {
-      const baseId =
-        equipmentData?.chargingEquipmentId ??
-        equipmentData?.id ??
-        uuid()
-
-      return {
-        id: baseId,
-        chargingEquipmentId: equipmentData?.chargingEquipmentId,
-        chargingSiteId:
-          equipmentData?.chargingSiteId ||
-          location.state?.chargingSiteId ||
-          '',
-        serialNumber: equipmentData?.serialNumber || '',
-        manufacturer: equipmentData?.manufacturer || '',
-        model: equipmentData?.model || '',
-        levelOfEquipmentId: equipmentData?.levelOfEquipmentId || '',
-        ports: equipmentData?.ports || '',
-        latitude: equipmentData?.latitude || 0,
-        longitude: equipmentData?.longitude || 0,
-        notes: equipmentData?.notes || '',
-        intendedUseIds:
-          equipmentData?.intendedUses?.map((use) => use.endUseTypeId) ||
-          equipmentData?.intendedUseIds ||
-          [],
-        intendedUserIds:
-          equipmentData?.intendedUsers?.map((user) => user.endUserTypeId) ||
-          equipmentData?.intendedUserIds ||
-          [],
-        status: equipmentData?.status || 'Draft',
-        registrationNumber: equipmentData?.registrationNumber || ''
+      const row = {
+        id,
+        chargingSiteId: chargingSiteIdValue,
+        serialNumber: '',
+        manufacturer: '',
+        model: '',
+        levelOfEquipmentId: '',
+        ports: '',
+        latitude: 0,
+        longitude: 0,
+        notes: '',
+        intendedUseIds: [],
+        intendedUserIds: [],
+        registrationNumber: ''
       }
+
+      // If charging site is pre-populated, also set the lat/long from the site
+      if (prePopulatedChargingSiteId && chargingSites) {
+        const site = chargingSites.find(
+          (s) => s.chargingSiteId === Number(prePopulatedChargingSiteId)
+        )
+        if (site) {
+          row.latitude = site.latitude || 0
+          row.longitude = site.longitude || 0
+        }
+      }
+
+      return row
     },
-    [location.state?.chargingSiteId]
+    [prePopulatedChargingSiteId, chargingSites]
   )
 
+  const buildSingleRowData = useCallback((equipmentData = {}) => {
+    const baseId =
+      equipmentData?.chargingEquipmentId ?? equipmentData?.id ?? uuid()
+
+    return {
+      id: baseId,
+      chargingEquipmentId: equipmentData?.chargingEquipmentId,
+      chargingSiteId: equipmentData?.chargingSiteId || '',
+      serialNumber: equipmentData?.serialNumber || '',
+      manufacturer: equipmentData?.manufacturer || '',
+      model: equipmentData?.model || '',
+      levelOfEquipmentId: equipmentData?.levelOfEquipmentId || '',
+      ports: equipmentData?.ports || '',
+      latitude: equipmentData?.latitude || 0,
+      longitude: equipmentData?.longitude || 0,
+      notes: equipmentData?.notes || '',
+      intendedUseIds:
+        equipmentData?.intendedUses?.map((use) => use.endUseTypeId) ||
+        equipmentData?.intendedUseIds ||
+        [],
+      intendedUserIds:
+        equipmentData?.intendedUsers?.map((user) => user.endUserTypeId) ||
+        equipmentData?.intendedUserIds ||
+        [],
+      status: equipmentData?.status || 'Draft',
+      registrationNumber: equipmentData?.registrationNumber || ''
+    }
+  }, [])
+
   // Bulk mode handlers
-  const handleAddRow = () => {
-    setBulkData([...bulkData, getEmptyRow()])
-  }
+  const handleAddRow = useCallback(() => {
+    setBulkData((prev) => [...prev, getEmptyRow()])
+  }, [getEmptyRow])
 
   // Auto-create one row on load to match Charging Site UX
   useEffect(() => {
-    if (isBulkMode && bulkData.length === 0) {
+    if (isBulkMode && bulkData.length === 0 && !sitesLoading) {
       handleAddRow()
     }
-  }, [isBulkMode, bulkData.length])
+  }, [isBulkMode, bulkData.length, handleAddRow, sitesLoading])
 
   useEffect(() => {
     if (isBulkMode) {
@@ -669,13 +690,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
     } else if (!isEdit && !equipmentLoading) {
       setSingleRowData([buildSingleRowData()])
     }
-  }, [
-    buildSingleRowData,
-    equipment,
-    equipmentLoading,
-    isBulkMode,
-    isEdit
-  ])
+  }, [buildSingleRowData, equipment, equipmentLoading, isBulkMode, isEdit])
 
   const handleBulkSave = async () => {
     try {
@@ -845,21 +860,29 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
-              <BCTypography variant="h6" gutterBottom color="primary">
-                {t('chargingEquipment:bulkInputTitle')}
-              </BCTypography>
-              <BCTypography variant="body2" color="text.secondary" paragraph>
-                {t('chargingEquipment:bulkInputDescription')}
-              </BCTypography>
+              {!isChargingSiteLocked && (
+                <>
+                  <BCTypography variant="h6" gutterBottom color="primary">
+                    {t('chargingEquipment:bulkInputTitle')}
+                  </BCTypography>
+                  <BCTypography
+                    variant="body2"
+                    color="text.secondary"
+                    paragraph
+                  >
+                    {t('chargingEquipment:bulkInputDescription')}
+                  </BCTypography>
 
-              <ExcelUpload
-                chargingSites={chargingSites}
-                levels={levels}
-                endUseTypes={endUseTypes}
-                endUserTypes={endUserTypes}
-                organizationId={organizationId}
-                onImportComplete={handleImportComplete}
-              />
+                  <ExcelUpload
+                    chargingSites={chargingSites}
+                    levels={levels}
+                    endUseTypes={endUseTypes}
+                    endUserTypes={endUserTypes}
+                    organizationId={organizationId}
+                    onImportComplete={handleImportComplete}
+                  />
+                </>
+              )}
 
               <BCGridEditor
                 gridRef={gridRef}
@@ -872,7 +895,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
                   endUserTypes,
                   gridErrors,
                   gridWarnings,
-                  { enableDuplicate: true }
+                  { enableDuplicate: true },
+                  true,
+                  true,
+                  isChargingSiteLocked
                 )}
                 defaultColDef={defaultBulkColDef}
                 stopEditingWhenCellsLoseFocus
@@ -940,7 +966,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 }
                 saveButtonProps={{
                   enabled: hasUnsavedRows,
-                  text: 'Save All',
+                  text: t('chargingEquipment:saveAndReturn'),
                   onSave: handleBulkSave,
                   confirmText: 'You have unsaved or invalid rows.',
                   confirmLabel: 'Save and return'
@@ -1011,10 +1037,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
         </Grid>
         <Grid item xs={12}>
           <Box sx={{ width: '100%' }}>
-              <BCGridEditor
-                gridRef={gridRef}
-                alertRef={alertRef}
-                stopEditingWhenCellsLoseFocus
+            <BCGridEditor
+              gridRef={gridRef}
+              alertRef={alertRef}
+              stopEditingWhenCellsLoseFocus
               columnDefs={bulkChargingEquipmentColDefs(
                 chargingSites,
                 organizations,
@@ -1025,7 +1051,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 gridWarnings,
                 { enableDelete: isEdit && equipment?.status === 'Draft' },
                 true,
-                isEdit && equipment?.status === 'Draft'
+                isEdit && equipment?.status === 'Draft',
+                isChargingSiteLocked // Lock only when coming from Charging Site page
               )}
               defaultColDef={{ ...defaultBulkColDef, singleClickEdit: canEdit }}
               rowData={singleRowData}

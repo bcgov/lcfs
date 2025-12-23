@@ -89,6 +89,11 @@ class ChargingEquipmentServices:
                 ports=equipment.ports.value if equipment.ports else None,
                 latitude=equipment.latitude,
                 longitude=equipment.longitude,
+                site_latitude=equipment.charging_site.latitude,
+                site_longitude=equipment.charging_site.longitude,
+                street_address=equipment.charging_site.street_address,
+                city=equipment.charging_site.city,
+                postal_code=equipment.charging_site.postal_code,
                 level_of_equipment_name=equipment.level_of_equipment.name,
                 intended_uses=[
                     {

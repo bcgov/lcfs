@@ -370,4 +370,179 @@ describe('ComplianceReports buttonConfigs', () => {
       }).toThrow('Translation error')
     })
   })
+
+  describe('Director Delegated Authority', () => {
+    beforeEach(() => {
+      mockContext.hasRoles.mockImplementation((role) => role === roles.director)
+      mockContext.hasAnyRole.mockImplementation((...roleList) =>
+        roleList.includes(roles.director)
+      )
+    })
+
+    describe('Director Acting as Analyst', () => {
+      it('should show "Recommend to Director" button with correct tooltip for Director', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+
+        const config = buttonClusterConfigFn(mockContext)
+        const recommendButton = config[
+          COMPLIANCE_REPORT_STATUSES.SUBMITTED
+        ].find((btn) => btn.id === 'recommend-by-analyst-btn')
+
+        expect(recommendButton).toBeDefined()
+        expect(recommendButton.tooltip).toBe('Acting as Analyst')
+        expect(recommendButton.roleIndicator).toBe('Analyst')
+      })
+
+      it('should show "Return to Supplier" button with correct tooltip for Director', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+
+        const config = buttonClusterConfigFn(mockContext)
+        const returnButton = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED].find(
+          (btn) => btn.id === 'return-to-supplier-btn'
+        )
+
+        expect(returnButton).toBeDefined()
+        expect(returnButton.tooltip).toBe('Acting as Analyst')
+        expect(returnButton.roleIndicator).toBe('Analyst')
+      })
+
+      it('should NOT show "Create Supplemental Report" button for Director', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+
+        const config = buttonClusterConfigFn(mockContext)
+        const supplementalButton = config[
+          COMPLIANCE_REPORT_STATUSES.SUBMITTED
+        ].find((btn) => btn.id === 'create-idir-supplemental-btn')
+
+        expect(supplementalButton).toBeUndefined()
+      })
+    })
+
+    describe('Director Acting as Compliance Manager', () => {
+      it('should show "Recommend to Director" button with correct tooltip from Manager status', () => {
+        mockContext.currentStatus =
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+
+        const config = buttonClusterConfigFn(mockContext)
+        const recommendButton = config[
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+        ].find((btn) => btn.id === 'recommend-by-manager-btn')
+
+        expect(recommendButton).toBeDefined()
+        expect(recommendButton.tooltip).toBe('Acting as Compliance Manager')
+        expect(recommendButton.roleIndicator).toBe('Manager')
+      })
+
+      it('should show "Return to Analyst" button with correct tooltip for Director', () => {
+        mockContext.currentStatus =
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+
+        const config = buttonClusterConfigFn(mockContext)
+        const returnButton = config[
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+        ].find((btn) => btn.id === 'return-to-analyst-btn')
+
+        expect(returnButton).toBeDefined()
+        expect(returnButton.tooltip).toBe('Acting as Compliance Manager')
+        expect(returnButton.roleIndicator).toBe('Manager')
+      })
+    })
+
+    describe('Director Native Actions', () => {
+      it('should show "Issue Assessment" button without delegated authority indicator', () => {
+        mockContext.currentStatus =
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+
+        const config = buttonClusterConfigFn(mockContext)
+        const issueButton = config[
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+        ].find((btn) => btn.id === 'issue-assessment-btn')
+
+        expect(issueButton).toBeDefined()
+        expect(issueButton.tooltip).toBeFalsy()
+        expect(issueButton.roleIndicator).toBeFalsy()
+      })
+
+      it('should NOT show "Create Reassessment" button for Director', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.ASSESSED
+        mockContext.hadBeenAssessed = true
+
+        const config = buttonClusterConfigFn(mockContext)
+        const reassessmentButton = config[
+          COMPLIANCE_REPORT_STATUSES.ASSESSED
+        ]?.find((btn) => btn.id === 'create-government-adjustment-btn')
+
+        expect(reassessmentButton).toBeUndefined()
+      })
+    })
+
+    describe('Button Grouping', () => {
+      it('should separate Director buttons from delegated authority buttons', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+
+        const config = buttonClusterConfigFn(mockContext)
+        const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+
+        const directorButtons = buttons.filter((btn) => !btn.roleIndicator)
+        const delegatedButtons = buttons.filter((btn) => btn.roleIndicator)
+
+        expect(directorButtons.length).toBeGreaterThan(0)
+        expect(delegatedButtons.length).toBeGreaterThan(0)
+      })
+
+      it('should group Analyst-level actions with same tooltip', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+
+        const config = buttonClusterConfigFn(mockContext)
+        const delegatedButtons = config[
+          COMPLIANCE_REPORT_STATUSES.SUBMITTED
+        ].filter((btn) => btn.roleIndicator === 'Analyst')
+
+        expect(delegatedButtons.length).toBeGreaterThan(0)
+        delegatedButtons.forEach((btn) => {
+          expect(btn.tooltip).toBe('Acting as Analyst')
+        })
+      })
+
+      it('should group Manager-level actions with same tooltip', () => {
+        mockContext.currentStatus =
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+
+        const config = buttonClusterConfigFn(mockContext)
+        const delegatedButtons = config[
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+        ].filter((btn) => btn.roleIndicator === 'Manager')
+
+        expect(delegatedButtons.length).toBeGreaterThan(0)
+        delegatedButtons.forEach((btn) => {
+          expect(btn.tooltip).toBe('Acting as Compliance Manager')
+        })
+      })
+    })
+
+    describe('Comparison with Analyst', () => {
+      it('should show delegated authority tooltips for Director', () => {
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+
+        const config = buttonClusterConfigFn(mockContext)
+        const directorButtons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+
+        // Director should have buttons with tooltips for delegated actions
+        expect(directorButtons).toBeDefined()
+        expect(directorButtons.length).toBeGreaterThan(0)
+
+        const directorButtonsWithTooltips = directorButtons.filter(
+          (btn) => btn.tooltip
+        )
+
+        // At least some buttons should have tooltips (delegated authority)
+        expect(directorButtonsWithTooltips.length).toBeGreaterThan(0)
+
+        // All tooltips should indicate delegated authority
+        directorButtonsWithTooltips.forEach((btn) => {
+          expect(btn.tooltip).toMatch(/Acting as/)
+        })
+      })
+    })
+  })
 })

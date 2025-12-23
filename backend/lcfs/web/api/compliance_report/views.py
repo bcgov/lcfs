@@ -145,7 +145,12 @@ async def get_compliance_report_summary(
     status_code=status.HTTP_200_OK,
 )
 @view_handler(
-    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST, RoleEnum.DIRECTOR]
+    [
+        RoleEnum.COMPLIANCE_REPORTING,
+        RoleEnum.SIGNING_AUTHORITY,
+        RoleEnum.ANALYST,
+        RoleEnum.DIRECTOR,
+    ]
 )
 async def update_compliance_report_summary(
     request: Request,
@@ -159,19 +164,19 @@ async def update_compliance_report_summary(
     """
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
-    
+
     # Validate penalty override is only allowed for 2024 reports and later
     compliance_year = int(compliance_report.compliance_period.description)
     if compliance_year < 2024 and (
-        getattr(summary_data, 'penalty_override_enabled', False) or
-        getattr(summary_data, 'renewable_penalty_override', None) is not None or
-        getattr(summary_data, 'low_carbon_penalty_override', None) is not None
+        getattr(summary_data, "penalty_override_enabled", False)
+        or getattr(summary_data, "renewable_penalty_override", None) is not None
+        or getattr(summary_data, "low_carbon_penalty_override", None) is not None
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Penalty override is only available for compliance reports from 2024 onwards"
+            detail="Penalty override is only available for compliance reports from 2024 onwards",
         )
-    
+
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
     )
@@ -348,9 +353,9 @@ async def assign_analyst_to_report(
     """
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
-    
+
     await service.assign_analyst_to_report(
         report_id, assignment_data.assigned_analyst_id, request.user
     )
-    
+
     return await service.get_compliance_report_chain(report_id, request.user)
