@@ -64,6 +64,7 @@ export const AssessmentRecommendation = ({
 
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasRoles(roles.analyst)
+  const isDirector = hasRoles(roles.director)
 
   // Determine if this is an original report (should show non-assessment option)
   const isOriginalReport = useMemo(() => {
@@ -74,15 +75,23 @@ export const AssessmentRecommendation = ({
     )
   }, [reportData])
 
-  // Only allow editing non-assessment checkbox when user is analyst and report is submitted
+  // Allow editing non-assessment checkbox when user is analyst or director and report is submitted
   const canEditNonAssessmentStatus = useMemo(() => {
-    return isAnalyst && currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
-  }, [isAnalyst, currentStatus])
+    return (
+      (isAnalyst || isDirector) &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+    )
+  }, [isAnalyst, isDirector, currentStatus])
 
-  // Show non-assessment section only for original reports
+  // Show non-assessment section for analysts and directors on original reports
   const shouldShowNonAssessmentSection = useMemo(() => {
-    return isGovernmentUser && isAnalyst && isOriginalReport && currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
-  }, [isGovernmentUser, isAnalyst, isOriginalReport])
+    return (
+      isGovernmentUser &&
+      (isAnalyst || isDirector) &&
+      isOriginalReport &&
+      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+    )
+  }, [isGovernmentUser, isAnalyst, isDirector, isOriginalReport, currentStatus])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -120,6 +129,30 @@ export const AssessmentRecommendation = ({
     })
   }
 
+  // Don't show the component if Director on ASSESSED report (no content to display)
+  const shouldShowReassessmentButton =
+    isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+    isAnalyst &&
+    !isDirector
+
+  // Directors should not see analyst adjustment button
+  const shouldShowAnalystAdjustment =
+    isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+    currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&
+    isAnalyst &&
+    !isDirector
+
+  const hasContentToShow = isDirector ? shouldShowNonAssessmentSection : true // Always show for non-Directors
+
+  if (
+    !hasContentToShow &&
+    !shouldShowReassessmentButton &&
+    !shouldShowAnalystAdjustment
+  ) {
+    return null
+  }
+
   return (
     <BCBox
       sx={{
@@ -128,85 +161,168 @@ export const AssessmentRecommendation = ({
         padding: '20px'
       }}
     >
-      {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
-        currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
-          <BCTypography variant="body2">
-            The analyst can make changes to the reported activity information if
-            it is known to be incorrect, click to put the report in edit mode:
-            <br />
-            <Tooltip
-              title={
-                reportData.isNewest
-                  ? ''
-                  : 'Supplier has a supplemental report in progress.'
-              }
-              placement="right"
-            >
-              <span>
-                <BCButton
-                  onClick={openAdjustmentDialog}
-                  sx={{ mt: 2 }}
-                  color="primary"
-                  variant="outlined"
-                  disabled={!reportData.isNewest}
-                >
-                  Analyst adjustment
-                </BCButton>
-              </span>
-            </Tooltip>
-          </BCTypography>
-        )}
-
-      {/* Not subject to assessment section - Only show for original reports */}
-      {shouldShowNonAssessmentSection && (
+      {isDirector && shouldShowNonAssessmentSection ? (
         <BCBox
-          mt={currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ? 3 : 2}
+          sx={{
+            borderLeft: '3px solid',
+            borderColor: 'primary.main',
+            pl: 2,
+            py: 0.5
+          }}
         >
-          <BCBox display="flex" alignItems="center" mb={2}>
-            <BCTypography variant="h6" color="primary">
-              {t('report:notSubjectToAssessment')}
-            </BCTypography>
-            <Fade in={showSavedConfirmation}>
-              <BCBox display="flex" alignItems="center" ml={2}>
-                <CheckCircle
-                  sx={{
-                    color: 'success.main',
-                    fontSize: '1rem',
-                    mr: 0.5
-                  }}
-                />
-                <BCTypography variant="body2" color="success.main">
-                  Saved
-                </BCTypography>
-              </BCBox>
-            </Fade>
-          </BCBox>
-          <FormControlLabel
-            control={
-              <Checkbox
-                disabled={!canEditNonAssessmentStatus}
-                checked={methods.watch('isNonAssessment') || false}
-                onChange={handleNonAssessmentChange}
-              />
-            }
-            label={t('report:notSubjectToAssessmentDescription')}
+          <BCTypography
+            variant="caption"
             sx={{
-              alignItems: 'flex-start',
-              '& .MuiCheckbox-root': {
-                paddingTop: 0,
-                marginTop: '6px'
-              },
-              '& .MuiFormControlLabel-label': {
-                fontSize: '1rem',
-                lineHeight: 1.5
-              }
+              color: 'primary.main',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              letterSpacing: '0.3px',
+              mb: 2,
+              display: 'block'
             }}
-          />
+          >
+            Acting as Analyst
+          </BCTypography>
+
+          {/* Not subject to assessment section - Only show for original reports */}
+          {shouldShowNonAssessmentSection && (
+            <BCBox
+              mt={
+                currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ? 3 : 2
+              }
+            >
+              <BCBox display="flex" alignItems="center" mb={2}>
+                <BCTypography variant="h6" color="primary">
+                  {t('report:notSubjectToAssessment')}
+                </BCTypography>
+                <Fade in={showSavedConfirmation}>
+                  <BCBox display="flex" alignItems="center" ml={2}>
+                    <CheckCircle
+                      sx={{
+                        color: 'success.main',
+                        fontSize: '1rem',
+                        mr: 0.5
+                      }}
+                    />
+                    <BCTypography variant="body2" color="success.main">
+                      Saved
+                    </BCTypography>
+                  </BCBox>
+                </Fade>
+              </BCBox>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    disabled={!canEditNonAssessmentStatus}
+                    checked={methods.watch('isNonAssessment') || false}
+                    onChange={handleNonAssessmentChange}
+                  />
+                }
+                label={t('report:notSubjectToAssessmentDescription')}
+                sx={{
+                  alignItems: 'flex-start',
+                  '& .MuiCheckbox-root': {
+                    paddingTop: 0,
+                    marginTop: '6px'
+                  },
+                  '& .MuiFormControlLabel-label': {
+                    fontSize: '1rem',
+                    lineHeight: 1.5
+                  }
+                }}
+              />
+            </BCBox>
+          )}
         </BCBox>
+      ) : (
+        <>
+          {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+            currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
+              <BCTypography variant="body2">
+                The analyst can make changes to the reported activity
+                information if it is known to be incorrect, click to put the
+                report in edit mode:
+                <br />
+                <Tooltip
+                  title={
+                    reportData.isNewest
+                      ? ''
+                      : 'Supplier has a supplemental report in progress.'
+                  }
+                  placement="right"
+                >
+                  <span>
+                    <BCButton
+                      onClick={openAdjustmentDialog}
+                      sx={{ mt: 2 }}
+                      color="primary"
+                      variant="outlined"
+                      disabled={!reportData.isNewest}
+                    >
+                      Analyst adjustment
+                    </BCButton>
+                  </span>
+                </Tooltip>
+              </BCTypography>
+            )}
+
+          {/* Not subject to assessment section - Only show for original reports */}
+          {shouldShowNonAssessmentSection && (
+            <BCBox
+              mt={
+                currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ? 3 : 2
+              }
+            >
+              <BCBox display="flex" alignItems="center" mb={2}>
+                <BCTypography variant="h6" color="primary">
+                  {t('report:notSubjectToAssessment')}
+                </BCTypography>
+                <Fade in={showSavedConfirmation}>
+                  <BCBox display="flex" alignItems="center" ml={2}>
+                    <CheckCircle
+                      sx={{
+                        color: 'success.main',
+                        fontSize: '1rem',
+                        mr: 0.5
+                      }}
+                    />
+                    <BCTypography variant="body2" color="success.main">
+                      Saved
+                    </BCTypography>
+                  </BCBox>
+                </Fade>
+              </BCBox>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    disabled={!canEditNonAssessmentStatus}
+                    checked={methods.watch('isNonAssessment') || false}
+                    onChange={handleNonAssessmentChange}
+                  />
+                }
+                label={t('report:notSubjectToAssessmentDescription')}
+                sx={{
+                  alignItems: 'flex-start',
+                  '& .MuiCheckbox-root': {
+                    paddingTop: 0,
+                    marginTop: '6px'
+                  },
+                  '& .MuiFormControlLabel-label': {
+                    fontSize: '1rem',
+                    lineHeight: 1.5
+                  }
+                }}
+              />
+            </BCBox>
+          )}
+        </>
       )}
 
-      {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
-        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+      {shouldShowAnalystAdjustment && (
+        <BCTypography variant="body2">
+          The analyst can make changes to the reported activity information if
+          it is known to be incorrect, click to put the report in edit mode:
+          <br />
           <Tooltip
             title={
               reportData.isNewest
@@ -217,26 +333,50 @@ export const AssessmentRecommendation = ({
           >
             <span>
               <BCButton
-                data-test="create-reassesment"
-                variant="contained"
-                color="primary"
-                onClick={openReassessmentDialog}
-                startIcon={
-                  <Assignment
-                    sx={{
-                      width: '1rem',
-                      height: '1rem'
-                    }}
-                  />
-                }
+                onClick={openAdjustmentDialog}
                 sx={{ mt: 2 }}
-                disabled={isLoading || !reportData.isNewest}
+                color="primary"
+                variant="outlined"
+                disabled={!reportData.isNewest}
               >
-                {t('report:createReassessmentBtn')}
+                Analyst adjustment
               </BCButton>
             </span>
           </Tooltip>
-        )}
+        </BCTypography>
+      )}
+
+      {shouldShowReassessmentButton && (
+        <Tooltip
+          title={
+            reportData.isNewest
+              ? ''
+              : 'Supplier has a supplemental report in progress.'
+          }
+          placement="right"
+        >
+          <span>
+            <BCButton
+              data-test="create-reassesment"
+              variant="contained"
+              color="primary"
+              onClick={openReassessmentDialog}
+              startIcon={
+                <Assignment
+                  sx={{
+                    width: '1rem',
+                    height: '1rem'
+                  }}
+                />
+              }
+              sx={{ mt: 2 }}
+              disabled={isLoading || !reportData.isNewest}
+            >
+              {t('report:createReassessmentBtn')}
+            </BCButton>
+          </span>
+        </Tooltip>
+      )}
       <BCModal
         open={isReassessmentDialogOpen}
         onClose={() => setIsReassessmentDialogOpen(false)}

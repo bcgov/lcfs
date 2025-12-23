@@ -102,7 +102,7 @@ describe('FinalSupplyEquipments utils.js', () => {
 
     it('should have correct structure', () => {
       expect(typeof markerIcons).toBe('object')
-      expect(Object.keys(markerIcons)).toHaveLength(4)
+      expect(Object.keys(markerIcons)).toHaveLength(7)
     })
   })
 
