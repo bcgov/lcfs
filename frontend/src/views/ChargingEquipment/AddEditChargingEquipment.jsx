@@ -592,10 +592,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
     }
   }
 
-  // Default empty row template
+  // Default empty row template - use chargingSiteId from navigation state if available
   const getEmptyRow = (id = uuid()) => ({
     id,
-    chargingSiteId: '',
+    chargingSiteId: location.state?.chargingSiteId || '',
     serialNumber: '',
     manufacturer: '',
     model: '',
@@ -619,7 +619,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
       return {
         id: baseId,
         chargingEquipmentId: equipmentData?.chargingEquipmentId,
-        chargingSiteId: equipmentData?.chargingSiteId || '',
+        chargingSiteId:
+          equipmentData?.chargingSiteId ||
+          location.state?.chargingSiteId ||
+          '',
         serialNumber: equipmentData?.serialNumber || '',
         manufacturer: equipmentData?.manufacturer || '',
         model: equipmentData?.model || '',
@@ -640,7 +643,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         registrationNumber: equipmentData?.registrationNumber || ''
       }
     },
-    []
+    [location.state?.chargingSiteId]
   )
 
   // Bulk mode handlers

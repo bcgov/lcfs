@@ -176,6 +176,16 @@ export const ChargingSiteFSEGrid = ({
     }
   }, [setPaginationOptions])
 
+  // Navigate to create FSE page with siteId pre-selected
+  const handleCreateFSE = useCallback(() => {
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: {
+        returnTo: location.pathname,
+        chargingSiteId: parseInt(siteId)
+      }
+    })
+  }, [navigate, location.pathname, siteId])
+
   // Export selected equipment
   const handleExportSelected = useCallback(() => {
     console.log('Exporting selected equipment:', selectedRows)
@@ -268,7 +278,8 @@ export const ChargingSiteFSEGrid = ({
       hasRoles,
       handleToggleSelectByStatus,
       handleBulkStatusUpdate,
-      handleClearFilters
+      handleClearFilters,
+      handleCreateFSE
     })
   }, [
     setModalData,
@@ -285,7 +296,8 @@ export const ChargingSiteFSEGrid = ({
     currentUser?.userId,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
-    handleClearFilters
+    handleClearFilters,
+    handleCreateFSE
   ])
 
   // Get configured buttons based on user role and context
