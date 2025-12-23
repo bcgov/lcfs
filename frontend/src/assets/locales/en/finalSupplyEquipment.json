@@ -36,6 +36,7 @@
     "organizationName": "Organization",
     "supplyFrom": "Supply date range",
     "kwhUsage": "kWh usage",
+    "supplyDateRange": "Date range of supply",
     "supplyFromDate": "Dates of supply from",
     "supplyToDate": "Dates of supply to",
     "registrationNbr": "Registration #",

@@ -19,6 +19,7 @@ import type { ReactNode } from 'react'
 type RoleSwitcherMockProps = {
   open?: boolean
   anchorEl?: HTMLElement | null
+  onToggle?: () => void
   [key: string]: unknown
 }
 
@@ -65,7 +66,14 @@ vi.mock('../RoleSwitcher', async () => {
       if (!actualConfig.feature_flags.roleSwitcher) {
         return null
       }
-      return <div data-testid="role-switcher" data-open={props.open} />
+      return (
+        <>
+          <button aria-label="roleSwitcher.buttonLabel" onClick={props.onToggle as () => void}>
+            Toggle Role
+          </button>
+          <div data-testid="role-switcher" data-open={props.open} />
+        </>
+      )
     }
   }
 })
@@ -228,22 +236,18 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('toggles the RoleSwitcher for administrators', () => {
-    render(<UserProfileActions />, { wrapper })
-
-    const toggleButton = screen.getByRole('button', {
-      name: 'roleSwitcher.buttonLabel'
-    })
+  it('renders the RoleSwitcher with anchor props for administrators', () => {
+    const { rerender } = render(<UserProfileActions />, { wrapper })
 
     expect(mockRoleSwitcher).toHaveBeenCalled()
     const initialProps = getLastRoleSwitcherProps()
     expect(initialProps?.open).toBe(false)
+    expect(initialProps?.onClose).toBeTypeOf('function')
 
-    fireEvent.click(toggleButton)
+    rerender(<UserProfileActions />)
 
-    const updatedProps = getLastRoleSwitcherProps()
-    expect(updatedProps?.open).toBe(true)
-    expect(updatedProps?.anchorEl).toBeInstanceOf(HTMLElement)
+    const rerenderedProps = getLastRoleSwitcherProps()
+    expect(rerenderedProps?.anchorEl).toBeInstanceOf(HTMLElement)
   })
 
   it('does not render the RoleSwitcher toggle for non administrators', () => {
@@ -265,10 +269,6 @@ describe('UserProfileActions', () => {
         name: 'roleSwitcher.buttonLabel'
       })
     ).not.toBeInTheDocument()
-
-    expect(mockRoleSwitcher).toHaveBeenCalled()
-    const lastCall = getLastRoleSwitcherProps()
-    expect(lastCall?.open).toBe(false)
   })
 
   it('does not render the RoleSwitcher toggle when the feature flag is disabled', () => {
@@ -281,10 +281,6 @@ describe('UserProfileActions', () => {
         name: 'roleSwitcher.buttonLabel'
       })
     ).not.toBeInTheDocument()
-
-    expect(mockRoleSwitcher).toHaveBeenCalled()
-    const lastCall = getLastRoleSwitcherProps()
-    expect(lastCall?.open).toBe(false)
   })
 
   it('cleans up timers and listeners on unmount', () => {

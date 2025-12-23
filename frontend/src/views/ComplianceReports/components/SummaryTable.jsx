@@ -426,32 +426,31 @@ const SummaryTable = ({
                       }}
                     >
                       {(() => {
-                        // For Lines 6 and 8 (retention/deferral lines), display "0" for non-editable cells
-                        // Line 6 is at index 5, Line 8 is at index 7
-                        const isRetentionOrDeferralLine =
-                          rowIndex === 5 || rowIndex === 7
-                        const isFuelColumn =
-                          column.id === 'gasoline' ||
-                          column.id === 'diesel' ||
-                          column.id === 'jetFuel'
+                        const rawValue =
+                          row[column.id] !== undefined &&
+                          row[column.id] !== null
+                            ? row[column.id]
+                            : 0
+                        const shouldFormat =
+                          row.format &&
+                          colIndex !== 0 &&
+                          column.id !== 'description' &&
+                          column.id !== 'line'
 
-                        if (
-                          isRetentionOrDeferralLine &&
-                          isFuelColumn &&
-                          !isCellEditable(rowIndex, column.id)
-                        ) {
-                          return row.format && colIndex !== 0
-                            ? rowFormatters[row.format](0, useParenthesis, 0)
-                            : '0'
+                        if (shouldFormat) {
+                          const numericValue =
+                            typeof rawValue === 'number'
+                              ? rawValue
+                              : Number(rawValue)
+
+                          return rowFormatters[row.format](
+                            Number.isFinite(numericValue) ? numericValue : 0,
+                            useParenthesis,
+                            0
+                          )
                         }
 
-                        return row.format && colIndex !== 0
-                          ? rowFormatters[row.format](
-                              row[column.id],
-                              useParenthesis,
-                              0
-                            )
-                          : row[column.id]
+                        return rawValue
                       })()}
                     </span>
                   )}
