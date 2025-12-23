@@ -275,6 +275,15 @@ class ButtonActionFactory {
       handler: this.context.handleClearFilters
     })
   }
+
+  createFSE() {
+    return this.createButton({
+      style: BUTTON_STYLES.PRIMARY_CONTAINED,
+      id: 'create-fse-btn',
+      label: this.context.t('chargingSite:buttons.newFSE'),
+      handler: this.context.handleCreateFSE
+    })
+  }
 }
 
 // =============================================================================
@@ -298,11 +307,13 @@ const BUTTON_RULES = {
   // TODO: Modify the rules as required based on workflow
   DEFAULT: {
     [USER_TYPES.BCEID_USER]: [
+      'createFSE',
       'selectAllDraft',
       'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.BCEID_MANAGER]: [
+      'createFSE',
       'selectAllDraft',
       'setSelectedAsSubmitted',
       'selectAllValidated',
@@ -341,6 +352,9 @@ function shouldShowButton(buttonName, context) {
   const { chargingSiteStatus, organizationId, currentUser } = context
 
   switch (buttonName) {
+    case 'createFSE':
+      // Only show for non-government users (BCeID)
+      return !context.isGovernmentUser
     case 'selectAllSubmitted':
       // Only show if there are submitted equipment
       return context.isGovernmentUser
@@ -437,7 +451,8 @@ export const buildButtonContext = ({
   hasRoles,
   handleToggleSelectByStatus,
   handleBulkStatusUpdate,
-  handleClearFilters
+  handleClearFilters,
+  handleCreateFSE
 }) => {
   const isGovernmentUser = hasAnyRole && hasAnyRole(...govRoles)
 
@@ -460,6 +475,7 @@ export const buildButtonContext = ({
     hasRoles,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
-    handleClearFilters
+    handleClearFilters,
+    handleCreateFSE
   }
 }

@@ -176,6 +176,16 @@ export const ChargingSiteFSEGrid = ({
     }
   }, [setPaginationOptions])
 
+  // Navigate to create FSE page with siteId pre-selected
+  const handleCreateFSE = useCallback(() => {
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: {
+        returnTo: location.pathname,
+        chargingSiteId: parseInt(siteId)
+      }
+    })
+  }, [navigate, location.pathname, siteId])
+
   // Export selected equipment
   const handleExportSelected = useCallback(() => {
     console.log('Exporting selected equipment:', selectedRows)
@@ -280,7 +290,8 @@ export const ChargingSiteFSEGrid = ({
       hasRoles,
       handleToggleSelectByStatus,
       handleBulkStatusUpdate,
-      handleClearFilters
+      handleClearFilters,
+      handleCreateFSE
     })
   }, [
     setModalData,
@@ -297,7 +308,8 @@ export const ChargingSiteFSEGrid = ({
     currentUser?.userId,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
-    handleClearFilters
+    handleClearFilters,
+    handleCreateFSE
   ])
 
   // Get configured buttons based on user role and context
@@ -325,22 +337,6 @@ export const ChargingSiteFSEGrid = ({
           onClose={() => setModalData(null)}
           data={modalData}
         />
-        {/* New FSE Button - Only for BCeID users */}
-        {!isIDIR && (
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <BCButton
-                variant="contained"
-                color="primary"
-                type="button"
-                onClick={handleNewFSE}
-                fullWidth
-              >
-                {t('chargingSite:buttons.newFSE')}
-              </BCButton>
-            </Grid>
-          </Grid>
-        )}
         {/* Dynamic Action Buttons Based on Role */}
         {availableButtons.length > 0 && (
           <Grid container spacing={2} sx={{ mb: 3 }}>
