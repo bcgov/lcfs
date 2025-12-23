@@ -277,7 +277,7 @@
   "ciLabel": "Determining carbon intensity",
   "customCiOption": "Custom CI",
   "fuelCodeLabel": "Fuel code",
-  "qtySuppliedLabel": "Enter quantity supplied in L",
+  "qtySuppliedLabel": "Enter quantity supplied",
   "quantitySuppliedcu": "or enter compliance units",
   "formulaBefore2024": "Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1,000,000",
   "formulaAfter2024": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
