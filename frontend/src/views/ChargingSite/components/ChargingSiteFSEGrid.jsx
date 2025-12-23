@@ -176,6 +176,16 @@ export const ChargingSiteFSEGrid = ({
     }
   }, [setPaginationOptions])
 
+  // Navigate to create FSE page with siteId pre-selected
+  const handleCreateFSE = useCallback(() => {
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: {
+        returnTo: location.pathname,
+        chargingSiteId: parseInt(siteId)
+      }
+    })
+  }, [navigate, location.pathname, siteId])
+
   // Export selected equipment
   const handleExportSelected = useCallback(() => {
     console.log('Exporting selected equipment:', selectedRows)
@@ -242,11 +252,23 @@ export const ChargingSiteFSEGrid = ({
       if (colId === 'ag-Grid-ControlsColumn') return
       const { chargingEquipmentId } = params.data
       navigate(`${ROUTES.REPORTS.LIST}/fse/${chargingEquipmentId}/edit`, {
-        state: { returnTo: location.pathname }
+        state: {
+          returnTo: location.pathname,
+          chargingSiteId: siteId // Pass siteId to lock the Charging Site field
+        }
       })
     },
-    [navigate, siteId, isIDIR]
+    [navigate, siteId, isIDIR, location.pathname]
   )
+
+  const handleNewFSE = useCallback(() => {
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: {
+        returnTo: location.pathname,
+        chargingSiteId: siteId
+      }
+    })
+  }, [navigate, location.pathname, siteId])
 
   // Build context for button configuration
   const buttonContext = useMemo(() => {
@@ -268,7 +290,8 @@ export const ChargingSiteFSEGrid = ({
       hasRoles,
       handleToggleSelectByStatus,
       handleBulkStatusUpdate,
-      handleClearFilters
+      handleClearFilters,
+      handleCreateFSE
     })
   }, [
     setModalData,
@@ -285,7 +308,8 @@ export const ChargingSiteFSEGrid = ({
     currentUser?.userId,
     handleToggleSelectByStatus,
     handleBulkStatusUpdate,
-    handleClearFilters
+    handleClearFilters,
+    handleCreateFSE
   ])
 
   // Get configured buttons based on user role and context

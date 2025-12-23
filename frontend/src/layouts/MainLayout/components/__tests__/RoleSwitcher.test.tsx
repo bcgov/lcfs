@@ -178,7 +178,14 @@ describe('RoleSwitcher', () => {
       { wrapper }
     )
 
-    expect(screen.getByText('roleSwitcher.title')).toBeInTheDocument()
+    const titleButton = screen.getByText('roleSwitcher.title')
+    expect(titleButton).toBeInTheDocument()
+    expect(
+      screen.queryByRole('radio', { name: 'Analyst' })
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(titleButton)
+
     expect(
       screen.getByRole('radio', { name: 'Analyst' })
     ).toBeInTheDocument()
@@ -203,6 +210,8 @@ describe('RoleSwitcher', () => {
       />,
       { wrapper }
     )
+
+    fireEvent.click(screen.getByText('roleSwitcher.title'))
 
     const directorRadio = screen.getByRole('radio', { name: 'Director' })
     fireEvent.click(directorRadio)
@@ -237,6 +246,7 @@ describe('RoleSwitcher', () => {
       { wrapper }
     )
 
+    fireEvent.click(screen.getByText('roleSwitcher.title'))
     const directorRadio = screen.getByRole('radio', { name: 'Director' })
     fireEvent.click(directorRadio)
 
@@ -277,6 +287,7 @@ describe('RoleSwitcher', () => {
       { wrapper }
     )
 
+    fireEvent.click(screen.getByText('roleSwitcher.title'))
     const directorRadio = screen.getByRole('radio', { name: 'Director' })
 
     act(() => {

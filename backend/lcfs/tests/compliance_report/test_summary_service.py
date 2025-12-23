@@ -76,13 +76,19 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
 
 
 @pytest.mark.anyio
-async def test_low_carbon_deltas_use_previous_version_when_unassessed(
+async def test_low_carbon_deltas_zero_when_no_assessed_report(
     compliance_report_summary_service,
     mock_summary_repo,
     mock_repo,
     mock_trxn_repo,
 ):
-    """Supplemental without an assessed baseline should net against previous version, not zero."""
+    """Supplemental without an assessed baseline should have Line 15/16 as zero.
+
+    Line 15/16 represent 'previously issued credits'. If the original report was
+    superseded before being assessed, no credits were actually issued, so Line 15/16
+    should be 0. The previous version's Line 18/19 values should NOT be used because
+    those were calculated values that never resulted in actual credit issuance.
+    """
 
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)
@@ -91,7 +97,8 @@ async def test_low_carbon_deltas_use_previous_version_when_unassessed(
     # No assessed report available
     mock_repo.get_assessed_compliance_report_by_period.return_value = None
 
-    # Previous version summary has issued/exported units
+    # Previous version summary has calculated issued/exported units
+    # These should NOT be used for Line 15/16 since report was never assessed
     previous_summary = ComplianceReportSummary(
         line_18_units_to_be_banked=50,
         line_19_units_to_be_exported=25,
@@ -140,13 +147,14 @@ async def test_low_carbon_deltas_use_previous_version_when_unassessed(
 
     line_values = _get_line_values(summary)
 
-    # Lines 15/16 pull from previous version (not zero) when no assessed report exists
-    assert line_values[15] == 50
-    assert line_values[16] == 25
+    # Lines 15/16 should be 0 when no assessed report exists
+    # (no credits were actually issued)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
 
-    # Line 20 nets current issuance minus previous lines
-    # 120 + (-20) - 50 - 25 = 25
-    assert line_values[20] == 25
+    # Line 20 = current issuance + current export - Line 15 - Line 16
+    # 120 + (-20) - 0 - 0 = 100
+    assert line_values[20] == 100
 
 
 @pytest.mark.anyio
@@ -155,15 +163,16 @@ async def test_line20_early_issuance_without_assessed_uses_full_current_units(
     mock_repo,
     mock_trxn_repo,
 ):
-    """Early-issuance supplementals with no assessed baseline should show full current issuance in line 20."""
+    """Early-issuance supplementals with no assessed baseline should show full current issuance in line 20.
+
+    When there is no assessed report, Line 15/16 should be 0 (no credits were issued),
+    so Line 20 should equal the full current issuance + export values.
+    """
 
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)
 
     mock_repo.get_assessed_compliance_report_by_period.return_value = None
-    compliance_report_summary_service.repo.get_previous_summary = AsyncMock(
-        return_value=None
-    )
     compliance_report_summary_service.repo.get_transferred_out_compliance_units = AsyncMock(
         return_value=0
     )
@@ -207,19 +216,22 @@ async def test_line20_early_issuance_without_assessed_uses_full_current_units(
     )
 
     line_values = _get_line_values(summary)
+    # Line 15/16 are 0 because no assessed report exists (no credits were issued)
     assert line_values[15] == 0
     assert line_values[16] == 0
-    assert line_values[20] == 150  # 120 + 30 - 0 - 0
-    compliance_report_summary_service.repo.get_previous_summary.assert_awaited_once_with(
-        compliance_report
-    )
+    # Line 20 = 120 + 30 - 0 - 0 = 150
+    assert line_values[20] == 150
 
 
 @pytest.mark.anyio
-async def test_submitted_summary_returns_stored_line6_values(
+async def test_recommended_status_returns_stored_line6_values(
     compliance_report_summary_service, mock_repo
 ):
-    """Submitted reports should return stored summary values (line 6) without recalculation."""
+    """Reports in Recommended_by_analyst status should return stored summary values without recalculation.
+
+    Note: Submitted reports now recalculate on each view load to reflect underlying data changes,
+    but other post-submission statuses still return stored values.
+    """
 
     summary_model = ComplianceReportSummary(
         line_6_renewable_fuel_retained_gasoline=111,
@@ -236,7 +248,7 @@ async def test_submitted_summary_returns_stored_line6_values(
     compliance_report.summary = summary_model
     compliance_report.compliance_period = MagicMock(description="2024")
     compliance_report.current_status = MagicMock(
-        status=ComplianceReportStatusEnum.Submitted
+        status=ComplianceReportStatusEnum.Recommended_by_analyst
     )
     compliance_report.nickname = "Test"
 
@@ -2261,16 +2273,19 @@ async def test_can_sign_flag_logic(
 
 
 @pytest.mark.anyio
-async def test_submitted_report_returns_locked_flags_for_lines_6_and_8(
+async def test_recommended_report_returns_locked_flags_for_lines_6_and_8(
     compliance_report_summary_service,
     mock_repo,
     mock_summary_repo,
 ):
-    """Submitted reports should short-circuit to stored summary and mark lines 6/8 locked."""
+    """Reports in Recommended_by_analyst status should short-circuit to stored summary and mark lines 6/8 locked.
+
+    Note: Submitted reports now recalculate on each view load, so they no longer short-circuit.
+    """
     summary = make_summary(line6=400, line8=200, locked=False)
     summary.line_1_fossil_derived_base_fuel_gasoline = 10000
 
-    report = make_report(0, ComplianceReportStatusEnum.Submitted, "2025")
+    report = make_report(0, ComplianceReportStatusEnum.Recommended_by_analyst, "2025")
     report.summary = summary
 
     mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
@@ -3606,3 +3621,117 @@ async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
     assert line_9_row.diesel == previous_obligation["diesel"]  # 10
 
     assert line_9_row.jet_fuel == previous_obligation["jet_fuel"]  # 2
+
+
+# =====================================================
+# Tests for Line 15/16 and Submitted Report Recalculation
+# =====================================================
+
+
+@pytest.mark.anyio
+async def test_line_15_16_zero_when_no_assessed_report_for_supplemental(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_trxn_repo,
+    mock_fuel_supply_repo,
+    mock_fuel_export_repo,
+):
+    """
+    Line 15/16 should be 0 for supplemental reports when there is no assessed report.
+    Previously, the code would fall back to the superseded report's Line 18/19 values,
+    but those credits were never actually issued, so Line 15/16 should remain 0.
+    """
+    # Create a supplemental report (version > 0) with no assessed report
+    summary = make_summary(line6=0, line8=0, locked=False)
+    summary.line_18_units_to_be_banked = 7074  # This should NOT be used for Line 15
+    summary.line_19_units_to_be_exported = 500  # This should NOT be used for Line 16
+
+    report = make_report(1, ComplianceReportStatusEnum.Draft, "2024")  # version=1 (supplemental)
+    report.summary = summary
+    report.compliance_report_id = 200
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)  # No assessed report
+    mock_summary_repo.get_previous_summary = AsyncMock(return_value=summary)  # Previous version exists
+
+    # Mock other required repo methods
+    mock_repo.aggregate_quantities = MagicMock(
+        return_value={"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    )
+    mock_summary_repo.get_transferred_out_compliance_units = AsyncMock(return_value=0)
+    mock_summary_repo.get_received_compliance_units = AsyncMock(return_value=0)
+    mock_summary_repo.get_issued_compliance_units = AsyncMock(return_value=0)
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(return_value=1000)
+    mock_fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(return_value=[])
+    mock_fuel_export_repo.get_effective_fuel_exports = AsyncMock(return_value=[])
+    compliance_report_summary_service.allocation_agreement_repo = AsyncMock()
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(return_value=[])
+
+    result = await compliance_report_summary_service.calculate_compliance_report_summary(
+        report_id=200
+    )
+
+    # Line 15 should be 0 (not 7074 from previous version)
+    line_15 = next(row for row in result.low_carbon_fuel_target_summary if row.line == 15)
+    assert line_15.value == 0, f"Line 15 should be 0 when no assessed report, got {line_15.value}"
+
+    # Line 16 should be 0 (not 500 from previous version)
+    line_16 = next(row for row in result.low_carbon_fuel_target_summary if row.line == 16)
+    assert line_16.value == 0, f"Line 16 should be 0 when no assessed report, got {line_16.value}"
+
+
+@pytest.mark.anyio
+async def test_line_15_16_uses_assessed_report_values(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_trxn_repo,
+    mock_fuel_supply_repo,
+    mock_fuel_export_repo,
+):
+    """
+    Line 15/16 should use values from the assessed report when one exists.
+    """
+    # Create a supplemental report
+    summary = make_summary(line6=0, line8=0, locked=False)
+    report = make_report(1, ComplianceReportStatusEnum.Draft, "2024")
+    report.summary = summary
+    report.compliance_report_id = 201
+
+    # Create an assessed report with specific Line 18/19 values
+    assessed_summary = make_summary(line6=0, line8=0, locked=True)
+    assessed_summary.line_18_units_to_be_banked = 5000
+    assessed_summary.line_19_units_to_be_exported = 1000
+
+    assessed_report = make_report(0, ComplianceReportStatusEnum.Assessed, "2024")
+    assessed_report.summary = assessed_summary
+    assessed_report.compliance_report_id = 100
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=assessed_report)
+
+    # Mock other required repo methods
+    mock_repo.aggregate_quantities = MagicMock(
+        return_value={"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    )
+    mock_summary_repo.get_transferred_out_compliance_units = AsyncMock(return_value=0)
+    mock_summary_repo.get_received_compliance_units = AsyncMock(return_value=0)
+    mock_summary_repo.get_issued_compliance_units = AsyncMock(return_value=0)
+    mock_trxn_repo.calculate_line_17_available_balance_for_period = AsyncMock(return_value=1000)
+    mock_fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(return_value=[])
+    mock_fuel_export_repo.get_effective_fuel_exports = AsyncMock(return_value=[])
+    compliance_report_summary_service.allocation_agreement_repo = AsyncMock()
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(return_value=[])
+
+    result = await compliance_report_summary_service.calculate_compliance_report_summary(
+        report_id=201
+    )
+
+    # Line 15 should use assessed report's Line 18 value
+    line_15 = next(row for row in result.low_carbon_fuel_target_summary if row.line == 15)
+    assert line_15.value == 5000, f"Line 15 should be 5000 from assessed report, got {line_15.value}"
+
+    # Line 16 should use assessed report's Line 19 value
+    line_16 = next(row for row in result.low_carbon_fuel_target_summary if row.line == 16)
+    assert line_16.value == 1000, f"Line 16 should be 1000 from assessed report, got {line_16.value}"
