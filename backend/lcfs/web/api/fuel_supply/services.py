@@ -251,10 +251,12 @@ class FuelSupplyServices:
         fs_list = [self.map_entity_to_schema(fs) for fs in fuel_supply_models]
 
         # Calculate total compliance units (excluding deleted records)
-        total_compliance_units = sum(
-            round(fs.compliance_units) if fs.compliance_units else 0
-            for fs in fuel_supply_models
-            if fs.action_type != ActionTypeEnum.DELETE
+        total_compliance_units = round(
+            sum(
+                fs.compliance_units if fs.compliance_units else 0
+                for fs in fuel_supply_models
+                if fs.action_type != ActionTypeEnum.DELETE
+            )
         )
 
         return FuelSuppliesSchema(
@@ -317,10 +319,12 @@ class FuelSupplyServices:
         all_fuel_supplies = await self.repo.get_fuel_supply_list(
             compliance_report_id, ModeEnum.VIEW
         )
-        total_compliance_units = sum(
-            round(fs.compliance_units) if fs.compliance_units else 0
-            for fs in all_fuel_supplies
-            if fs.action_type != ActionTypeEnum.DELETE
+        total_compliance_units = round(
+            sum(
+                fs.compliance_units if fs.compliance_units else 0
+                for fs in all_fuel_supplies
+                if fs.action_type != ActionTypeEnum.DELETE
+            )
         )
 
         return FuelSuppliesSchema(

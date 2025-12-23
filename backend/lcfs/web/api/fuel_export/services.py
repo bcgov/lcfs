@@ -250,10 +250,12 @@ class FuelExportServices:
         fs_list = [FuelExportSchema.model_validate(fs) for fs in fuel_export_models]
 
         # Calculate total compliance units (excluding deleted records)
-        total_compliance_units = sum(
-            round(fs.compliance_units) if fs.compliance_units else 0
-            for fs in fuel_export_models
-            if fs.action_type != ActionTypeEnum.DELETE
+        total_compliance_units = round(
+            sum(
+                fs.compliance_units if fs.compliance_units else 0
+                for fs in fuel_export_models
+                if fs.action_type != ActionTypeEnum.DELETE
+            )
         )
 
         return FuelExportsSchema(
@@ -276,10 +278,12 @@ class FuelExportServices:
         all_fuel_exports = await self.repo.get_fuel_export_list(
             compliance_report_id, changelog=False, exclude_draft_reports=is_gov_user
         )
-        total_compliance_units = sum(
-            round(fs.compliance_units) if fs.compliance_units else 0
-            for fs in all_fuel_exports
-            if fs.action_type != ActionTypeEnum.DELETE
+        total_compliance_units = round(
+            sum(
+                fs.compliance_units if fs.compliance_units else 0
+                for fs in all_fuel_exports
+                if fs.action_type != ActionTypeEnum.DELETE
+            )
         )
 
         return FuelExportsSchema(
