@@ -409,6 +409,97 @@ describe('CompareReports Component', () => {
     expect(renewableTable).toBeInTheDocument()
   })
 
+  it('auto-selects the available fuel type and disables empty options', async () => {
+    const dieselOnlySummary = {
+      data: {
+        complianceReportId: 2,
+        renewableFuelTargetSummary: [
+          {
+            line: 3,
+            description: 'line3',
+            format: 'number',
+            gasoline: 0,
+            diesel: 120,
+            jetFuel: 0
+          },
+          {
+            line: 9,
+            description: 'line9',
+            format: 'number',
+            gasoline: 0,
+            diesel: 15,
+            jetFuel: 0
+          }
+        ],
+        lowCarbonFuelTargetSummary: [
+          {
+            line: 1,
+            description: 'lowCarbonFuelTargetSummary',
+            format: 'number',
+            value: 0
+          }
+        ],
+        nonCompliancePenaltySummary: [
+          {
+            line: 1,
+            description: 'nonCompliancePenaltySummary',
+            format: 'number',
+            value: 0
+          }
+        ]
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation(() => dieselOnlySummary)
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('diesel')).toBeChecked()
+    })
+
+    expect(screen.getByDisplayValue('gasoline')).toBeDisabled()
+    expect(screen.getByDisplayValue('jetFuel')).toBeDisabled()
+  })
+
+  it('prefers gasoline when multiple fuel categories have content', async () => {
+    const multiFuelSummary = {
+      data: {
+        complianceReportId: 2,
+        renewableFuelTargetSummary: [
+          {
+            line: 3,
+            description: 'line3',
+            format: 'number',
+            gasoline: 10,
+            diesel: 20,
+            jetFuel: 0
+          },
+          {
+            line: 9,
+            description: 'line9',
+            format: 'number',
+            gasoline: 0,
+            diesel: 5,
+            jetFuel: 0
+          }
+        ],
+        lowCarbonFuelTargetSummary: [],
+        nonCompliancePenaltySummary: []
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation(() => multiFuelSummary)
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('gasoline')).toBeChecked()
+    })
+
+    expect(screen.getByDisplayValue('diesel')).not.toBeDisabled()
+  })
+
   it('handles null/undefined data values in processing', () => {
     // Mock data with null/undefined values
     const nullValueReportData = {

@@ -56,22 +56,15 @@ vi.mock('@mui/material', () => ({
       {children}
     </tr>
   ),
-  Input: ({
-    value,
-    onChange,
-    onBlur,
-    startAdornment,
-    inputProps,
-    ...props
-  }) => (
+  TextField: ({ value, onChange, onBlur, slotProps, ...props }) => (
     <div data-test="input-wrapper">
-      {startAdornment}
+      {slotProps?.input?.startAdornment}
       <input
         data-test="input"
         value={value || ''}
         onChange={onChange}
         onBlur={onBlur}
-        {...inputProps}
+        {...slotProps?.htmlInput}
         {...props}
       />
     </div>
@@ -81,6 +74,52 @@ vi.mock('@mui/material', () => ({
       {children}
     </span>
   )
+}))
+
+// Mock react-number-format
+vi.mock('react-number-format', () => ({
+  NumericFormat: ({
+    customInput: CustomInput,
+    value,
+    onValueChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    thousandSeparator,
+    decimalScale,
+    allowNegative,
+    slotProps,
+    ...props
+  }) => {
+    const handleChange = (e) => {
+      const rawValue = e.target.value.replace(/,/g, '')
+      onValueChange?.({
+        value: rawValue,
+        floatValue: parseFloat(rawValue) || 0
+      })
+    }
+    return CustomInput ? (
+      <CustomInput
+        value={value || ''}
+        onChange={handleChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        slotProps={slotProps}
+        {...props}
+      />
+    ) : (
+      <input
+        data-test="input"
+        value={value || ''}
+        onChange={handleChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        {...props}
+      />
+    )
+  }
 }))
 
 // Custom render function with providers

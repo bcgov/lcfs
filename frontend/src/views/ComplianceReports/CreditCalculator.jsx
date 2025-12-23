@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef } from 'react'
+import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
@@ -132,6 +132,7 @@ export const CreditCalculator = () => {
   const [activeCalculatorMode, setActiveCalculatorMode] = useState('quantity')
   const [syncingField, setSyncingField] = useState(null)
   const syncingFieldRef = useRef(null)
+  const calculationDebounceRef = useRef(null)
   const [copySuccess, setCopySuccess] = useState(false)
 
   const { data: fuelTypeListData, isLoading: isFuelTypeListLoading } =
@@ -235,7 +236,6 @@ export const CreditCalculator = () => {
       setValue('endUseType', '')
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
-      setValue('quantity', DEFAULT_QUANTITY)
       setValue('customCi', '')
       setActiveCalculatorMode('quantity')
     }
@@ -245,7 +245,6 @@ export const CreditCalculator = () => {
     if (endUseType) {
       setValue('provisionOfTheAct', '')
       setValue('fuelCode', '')
-      setValue('quantity', DEFAULT_QUANTITY)
       setValue('customCi', '')
       setActiveCalculatorMode('quantity')
     }
@@ -328,20 +327,34 @@ export const CreditCalculator = () => {
 
     if (!hasBaseCriteria) return
 
-    if (
-      activeCalculatorMode === 'quantity' &&
-      syncingField !== 'quantity' &&
-      hasQuantityValue
-    ) {
-      refetchCalculatedData()
+    // Clear any pending debounced calculation
+    if (calculationDebounceRef.current) {
+      clearTimeout(calculationDebounceRef.current)
     }
 
-    if (
-      activeCalculatorMode === 'complianceUnits' &&
-      syncingField !== 'complianceUnits' &&
-      hasComplianceUnitsValue
-    ) {
-      refetchCalculatedQuantityData()
+    // Debounce the calculation to prevent screen jumping during typing
+    calculationDebounceRef.current = setTimeout(() => {
+      if (
+        activeCalculatorMode === 'quantity' &&
+        syncingField !== 'quantity' &&
+        hasQuantityValue
+      ) {
+        refetchCalculatedData()
+      }
+
+      if (
+        activeCalculatorMode === 'complianceUnits' &&
+        syncingField !== 'complianceUnits' &&
+        hasComplianceUnitsValue
+      ) {
+        refetchCalculatedQuantityData()
+      }
+    }, 300)
+
+    return () => {
+      if (calculationDebounceRef.current) {
+        clearTimeout(calculationDebounceRef.current)
+      }
     }
   }, [
     activeCalculatorMode,
@@ -365,7 +378,10 @@ export const CreditCalculator = () => {
       activeCalculatorMode === 'complianceUnits'
         ? calculatedQuantityData?.data
         : calculatedData?.data
-    setCalculatedResults(latestResults ?? null)
+    // Only update results when we have actual data to prevent showing zeros during recalculation
+    if (latestResults) {
+      setCalculatedResults(latestResults)
+    }
   }, [activeCalculatorMode, calculatedData, calculatedQuantityData])
 
   // Keep form fields in sync with whichever calculator response is active

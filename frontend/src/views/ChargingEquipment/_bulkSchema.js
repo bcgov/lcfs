@@ -30,7 +30,8 @@ export const bulkChargingEquipmentColDefs = (
   warnings = {},
   actionsOptions = null,
   allowAllocatingOrg = true,
-  showActions = true
+  showActions = true,
+  isChargingSiteLocked = false
 ) => {
   const cols = [validation]
   if (showActions) {
@@ -78,6 +79,7 @@ export const bulkChargingEquipmentColDefs = (
         return true
       },
       editable: (params) =>
+        !isChargingSiteLocked &&
         isEditableByStatus(params) &&
         (!params.data?.chargingEquipmentId || params.data?.status === 'Draft'),
       valueFormatter: (params) => {
@@ -86,12 +88,18 @@ export const bulkChargingEquipmentColDefs = (
         )
         return site ? site.siteName : ''
       },
-      cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings),
-      minWidth: 310,
-      editable: (params) =>
-        isEditableByStatus(params) &&
-        (!params.data?.chargingEquipmentId || params.data?.status === 'Draft')
+      cellStyle: (params) => {
+        const baseStyle = StandardCellWarningAndErrors(params, errors, warnings)
+        if (isChargingSiteLocked) {
+          return {
+            ...baseStyle,
+            backgroundColor: '#f5f5f5',
+            cursor: 'not-allowed'
+          }
+        }
+        return baseStyle
+      },
+      minWidth: 310
     },
     {
       field: 'serialNumber',

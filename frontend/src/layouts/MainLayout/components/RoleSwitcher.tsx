@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent
+} from 'react'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import {
   ClickAwayListener,
-  Divider,
   FormControl,
   FormControlLabel,
   Paper,
@@ -67,10 +72,12 @@ const RoleSwitcherComponent = ({
   const [isAdministratorSelected, setIsAdministratorSelected] =
     useState<boolean>(false)
   const [roleUpdateError, setRoleUpdateError] = useState<string | null>(null)
+  const [areOptionsVisible, setAreOptionsVisible] = useState<boolean>(false)
 
   const isGovernmentAdmin =
     currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
   const idirOptions = useMemo<RoleOption[]>(() => idirRoleOptions(t), [t])
+  const optionsContainerId = 'role-switcher-options'
 
   useEffect(() => {
     if (!currentUser?.roles) {
@@ -100,6 +107,9 @@ const RoleSwitcherComponent = ({
   useEffect(() => {
     if (!isGovernmentAdmin && open) {
       onClose()
+    }
+    if (!open) {
+      setAreOptionsVisible(false)
     }
   }, [isGovernmentAdmin, open, onClose])
 
@@ -191,6 +201,20 @@ const RoleSwitcherComponent = ({
     }
     onClose()
     setRoleUpdateError(null)
+    setAreOptionsVisible(false)
+  }
+
+  const toggleOptionsVisibility = () => {
+    setAreOptionsVisible((prev) => !prev)
+  }
+
+  const handleTitleKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      toggleOptionsVisibility()
+    }
   }
 
   if (!anchorEl) {
@@ -199,7 +223,7 @@ const RoleSwitcherComponent = ({
 
   return (
     <Popper
-      open={open && isGovernmentAdmin}
+      open={isGovernmentAdmin}
       anchorEl={anchorEl}
       placement="bottom-start"
       disablePortal={false}
@@ -228,11 +252,22 @@ const RoleSwitcherComponent = ({
             justifyContent="space-between"
             px={2}
             py={1}
+            role="button"
+            tabIndex={0}
+            aria-controls={optionsContainerId}
+            aria-expanded={areOptionsVisible}
+            onClick={toggleOptionsVisibility}
+            onKeyDown={handleTitleKeyDown}
             sx={{
-              backgroundColor: 'secondary.main',
+              backgroundColor: 'background.secondary',
               height: '35px',
               width: '100%',
-              borderRadius: '0'
+              borderRadius: '0',
+              cursor: 'pointer',
+              outline: 'none',
+              '&:focus-visible': {
+                boxShadow: '0 0 0 2px rgba(56, 89, 138, 0.4)'
+              }
             }}
           >
             <BCTypography
@@ -241,61 +276,68 @@ const RoleSwitcherComponent = ({
             >
               {t('roleSwitcher.title')}
             </BCTypography>
-            <IconButton
-              size="small"
-              aria-label={t('roleSwitcher.close')}
-              onClick={handleClose}
-              sx={{
-                color: '#003366'
-              }}
-            >
-              <Close fontSize="small" />
-            </IconButton>
-          </BCBox>
-          <BCBox px={2} py={1}>
-            <FormControl component="fieldset" disabled={isUpdatingRoles}>
-              <RadioGroup
-                value={selectedRole}
-                onChange={handleRoleSelectionChange}
-                aria-label={t('roleSwitcher.buttonLabel')}
+            {areOptionsVisible && (
+              <IconButton
+                size="small"
+                aria-label={t('roleSwitcher.close')}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  handleClose()
+                }}
+                sx={{
+                  color: '#003366'
+                }}
               >
-                {idirOptions.map((option) => (
-                  <FormControlLabel
-                    key={option.value}
-                    value={option.value}
-                    control={
-                      <Radio
-                        size="small"
-                        sx={{
-                          color: '#38598a',
-                          '&.Mui-checked': { color: '#38598a' }
-                        }}
-                      />
-                    }
-                    label={
-                      option.header ? (
-                        <BCTypography variant="body4" component="span">
-                          {option.header}
-                        </BCTypography>
-                      ) : (
-                        option.label
-                      )
-                    }
-                    sx={{ mt: 1 }}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
-            {roleUpdateError && (
-              <BCTypography
-                variant="caption"
-                color="error"
-                sx={{ display: 'block', mt: 1.5 }}
-              >
-                {roleUpdateError}
-              </BCTypography>
+                <Close fontSize="small" />
+              </IconButton>
             )}
           </BCBox>
+          {areOptionsVisible && (
+            <BCBox id={optionsContainerId} px={2} py={1}>
+              <FormControl component="fieldset" disabled={isUpdatingRoles}>
+                <RadioGroup
+                  value={selectedRole}
+                  onChange={handleRoleSelectionChange}
+                  aria-label={t('roleSwitcher.buttonLabel')}
+                >
+                  {idirOptions.map((option) => (
+                    <FormControlLabel
+                      key={option.value}
+                      value={option.value}
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: '#38598a',
+                            '&.Mui-checked': { color: '#38598a' }
+                          }}
+                        />
+                      }
+                      label={
+                        option.header ? (
+                          <BCTypography variant="body4" component="span">
+                            {option.header}
+                          </BCTypography>
+                        ) : (
+                          option.label
+                        )
+                      }
+                      sx={{ mt: 1 }}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+              {roleUpdateError && (
+                <BCTypography
+                  variant="caption"
+                  color="error"
+                  sx={{ display: 'block', mt: 1.5 }}
+                >
+                  {roleUpdateError}
+                </BCTypography>
+              )}
+            </BCBox>
+          )}
         </Paper>
       </ClickAwayListener>
     </Popper>
