@@ -82,6 +82,10 @@ vi.mock('@/components/ImportDialog', () => ({
   default: () => <div data-testid="import-dialog">Import Dialog Mock</div>
 }))
 
+vi.mock('../components/ExcelUpload', () => ({
+  ExcelUpload: () => <div data-testid="excel-upload">Excel Upload Mock</div>
+}))
+
 const TestWrapper = ({ children }) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -413,6 +417,58 @@ describe('AddEditChargingEquipment - Charging Site Field Behavior', () => {
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
+    it('should hide bulk input title when accessed from charging site', () => {
+      mockLocationState = {
+        returnTo: '/compliance-reporting/charging-sites/456',
+        chargingSiteId: '456'
+      }
+
+      render(
+        <TestWrapper>
+          <AddEditChargingEquipment mode="bulk" />
+        </TestWrapper>
+      )
+
+      // Title should not be visible
+      expect(
+        screen.queryByText('chargingEquipment:bulkInputTitle')
+      ).not.toBeInTheDocument()
+    })
+
+    it('should hide bulk input description when accessed from charging site', () => {
+      mockLocationState = {
+        returnTo: '/compliance-reporting/charging-sites/456',
+        chargingSiteId: '456'
+      }
+
+      render(
+        <TestWrapper>
+          <AddEditChargingEquipment mode="bulk" />
+        </TestWrapper>
+      )
+
+      // Description should not be visible
+      expect(
+        screen.queryByText('chargingEquipment:bulkInputDescription')
+      ).not.toBeInTheDocument()
+    })
+
+    it('should hide Excel upload component when accessed from charging site', () => {
+      mockLocationState = {
+        returnTo: '/compliance-reporting/charging-sites/456',
+        chargingSiteId: '456'
+      }
+
+      render(
+        <TestWrapper>
+          <AddEditChargingEquipment mode="bulk" />
+        </TestWrapper>
+      )
+
+      // Excel upload should not be visible
+      expect(screen.queryByTestId('excel-upload')).not.toBeInTheDocument()
+    })
+
     it('should lock charging site field when chargingSiteId is in state', () => {
       mockLocationState = {
         returnTo: '/compliance-reporting/charging-sites/456',
@@ -459,6 +515,55 @@ describe('AddEditChargingEquipment - Charging Site Field Behavior', () => {
       )
 
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+    })
+
+    it('should show bulk input title when accessed from Manage FSE', () => {
+      mockLocationState = {
+        returnTo: '/compliance-reporting/fse'
+      }
+
+      render(
+        <TestWrapper>
+          <AddEditChargingEquipment mode="bulk" />
+        </TestWrapper>
+      )
+
+      // Title should be visible
+      expect(
+        screen.getByText('chargingEquipment:bulkInputTitle')
+      ).toBeInTheDocument()
+    })
+
+    it('should show bulk input description when accessed from Manage FSE', () => {
+      mockLocationState = {
+        returnTo: '/compliance-reporting/fse'
+      }
+
+      render(
+        <TestWrapper>
+          <AddEditChargingEquipment mode="bulk" />
+        </TestWrapper>
+      )
+
+      // Description should be visible
+      expect(
+        screen.getByText('chargingEquipment:bulkInputDescription')
+      ).toBeInTheDocument()
+    })
+
+    it('should show Excel upload component when accessed from Manage FSE', () => {
+      mockLocationState = {
+        returnTo: '/compliance-reporting/fse'
+      }
+
+      render(
+        <TestWrapper>
+          <AddEditChargingEquipment mode="bulk" />
+        </TestWrapper>
+      )
+
+      // Excel upload should be visible
+      expect(screen.getByText('Excel Upload Mock')).toBeInTheDocument()
     })
 
     it('should NOT lock charging site field when no chargingSiteId in state', () => {
