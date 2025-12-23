@@ -411,7 +411,9 @@ describe('ChargingEquipment', () => {
     const newFseButton = screen.getByText('New FSE')
     fireEvent.click(newFseButton)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/add')
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/fse/add', {
+      state: { returnTo: mockPathname }
+    })
   })
 
   it('handles row click for draft equipment with returnTo state', async () => {

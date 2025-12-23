@@ -234,7 +234,9 @@ export const ChargingEquipment = () => {
   )
 
   const handleNewFSE = () => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse/add`)
+    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
+      state: { returnTo: location.pathname }
+    })
   }
 
   const handleSelectAllDraftUpdated = () => {

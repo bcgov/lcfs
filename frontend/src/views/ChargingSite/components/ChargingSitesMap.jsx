@@ -200,7 +200,7 @@ const ChargingSitesLegend = ({ sites, isFullscreen }) => {
         }}
       >
         <BCTypography variant="h6" fontWeight="bold" gutterBottom>
-          Charging Sites
+          Charging sites
         </BCTypography>
 
         <BCTypography variant="caption" component="div" sx={{ mb: 2 }}>
