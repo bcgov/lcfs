@@ -270,8 +270,9 @@ describe('AssessmentRecommendation', () => {
   })
 
   describe('Conditional Rendering - Reassessment Button', () => {
-    it('shows reassessment button when feature enabled and status is assessed', () => {
+    it('shows reassessment button for Analyst when feature enabled and status is assessed', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       const props = {
         ...defaultProps,
@@ -286,6 +287,22 @@ describe('AssessmentRecommendation', () => {
 
     it('hides reassessment button when feature disabled', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(false)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+
+      const props = {
+        ...defaultProps,
+        currentStatus: COMPLIANCE_REPORT_STATUSES.ASSESSED
+      }
+
+      render(<AssessmentRecommendation {...props} />)
+      expect(
+        screen.queryByText('report:createReassessmentBtn')
+      ).not.toBeInTheDocument()
+    })
+
+    it('hides reassessment button from Directors', () => {
+      vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.director)
 
       const props = {
         ...defaultProps,
@@ -300,6 +317,7 @@ describe('AssessmentRecommendation', () => {
 
     it('disables reassessment button when report is not newest', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       const props = {
         ...defaultProps,
@@ -330,6 +348,7 @@ describe('AssessmentRecommendation', () => {
 
     it('opens reassessment dialog when reassessment button clicked', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       const props = {
         ...defaultProps,
@@ -578,6 +597,7 @@ describe('AssessmentRecommendation', () => {
 
     it('renders reassessment modal with correct content', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       const props = {
         ...defaultProps,
