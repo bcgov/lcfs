@@ -221,7 +221,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
   // Get pre-populated charging site ID from location state
   const prePopulatedChargingSiteId = location.state?.chargingSiteId || null
-  
+
   // Lock the Charging Site field only when coming from a Charging Site page
   // (indicated by having a chargingSiteId in the location state)
   const isChargingSiteLocked = Boolean(prePopulatedChargingSiteId)
@@ -860,21 +860,29 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
-              <BCTypography variant="h6" gutterBottom color="primary">
-                {t('chargingEquipment:bulkInputTitle')}
-              </BCTypography>
-              <BCTypography variant="body2" color="text.secondary" paragraph>
-                {t('chargingEquipment:bulkInputDescription')}
-              </BCTypography>
+              {!isChargingSiteLocked && (
+                <>
+                  <BCTypography variant="h6" gutterBottom color="primary">
+                    {t('chargingEquipment:bulkInputTitle')}
+                  </BCTypography>
+                  <BCTypography
+                    variant="body2"
+                    color="text.secondary"
+                    paragraph
+                  >
+                    {t('chargingEquipment:bulkInputDescription')}
+                  </BCTypography>
 
-              <ExcelUpload
-                chargingSites={chargingSites}
-                levels={levels}
-                endUseTypes={endUseTypes}
-                endUserTypes={endUserTypes}
-                organizationId={organizationId}
-                onImportComplete={handleImportComplete}
-              />
+                  <ExcelUpload
+                    chargingSites={chargingSites}
+                    levels={levels}
+                    endUseTypes={endUseTypes}
+                    endUserTypes={endUserTypes}
+                    organizationId={organizationId}
+                    onImportComplete={handleImportComplete}
+                  />
+                </>
+              )}
 
               <BCGridEditor
                 gridRef={gridRef}
@@ -958,7 +966,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                 }
                 saveButtonProps={{
                   enabled: hasUnsavedRows,
-                  text: 'Save All',
+                  text: t('chargingEquipment:saveAndReturn'),
                   onSave: handleBulkSave,
                   confirmText: 'You have unsaved or invalid rows.',
                   confirmLabel: 'Save and return'

@@ -49,7 +49,7 @@
   "loadError": "Error loading charging equipment",
   "deleteError": "Error deleting charging equipment",
   "deleteConfirmation": "Are you sure you want to delete this equipment? This action cannot be undone.",
-  "bulkInputTitle": "Bulk FSE Input",
+  "bulkInputTitle": "Add new FSE",
   "bulkInputDescription": "Add multiple FSE entries using the grid below or upload from Excel.",
   "validation": {
     "fillRequiredFields": "Please fill in all required fields including Intended Uses and Intended Users."
