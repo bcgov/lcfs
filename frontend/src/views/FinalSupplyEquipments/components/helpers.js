@@ -90,11 +90,73 @@ export const transformData = (data) => {
 }
 
 /**
- * Groups equipment by charging site and calculates site-level aggregates
+ * Transform charging sites data to normalized format
  */
-export const groupBySite = (locations) => {
+export const transformChargingSites = (sites) => {
+  if (!sites || !Array.isArray(sites)) return []
+
+  return sites
+    .map((site) => {
+      const lat = parseFloat(site.latitude)
+      const lng = parseFloat(site.longitude)
+
+      return {
+        siteId: site.chargingSiteId || site.charging_site_id,
+        siteName: site.siteName || site.site_name,
+        organization: site.organization?.name || site.organizationName,
+        lat: isNaN(lat) ? 0 : lat,
+        lng: isNaN(lng) ? 0 : lng,
+        streetAddress: site.streetAddress || site.street_address,
+        city: site.city,
+        province: 'BC', // Default to BC for Canadian sites
+        postalCode: site.postalCode || site.postal_code,
+        status: site.status?.status || site.status || 'Draft',
+        isEmpty: true // Mark as empty site (no equipment)
+      }
+    })
+    .filter(
+      (site) =>
+        site.lat !== 0 &&
+        site.lng !== 0 &&
+        !isNaN(site.lat) &&
+        !isNaN(site.lng) &&
+        Math.abs(site.lat) <= 90 &&
+        Math.abs(site.lng) <= 180
+    )
+}
+
+/**
+ * Groups equipment by charging site and calculates site-level aggregates
+ * Also includes empty charging sites (sites with no equipment)
+ */
+export const groupBySite = (locations, allChargingSites = []) => {
   const grouped = {}
 
+  // First, add all charging sites (including empty ones)
+  allChargingSites.forEach((site) => {
+    const key = site.siteId || `${site.lat.toFixed(5)},${site.lng.toFixed(5)}`
+    if (!grouped[key]) {
+      grouped[key] = {
+        key,
+        items: [],
+        siteName: site.siteName,
+        siteId: site.siteId,
+        organization: site.organization,
+        streetAddress: site.streetAddress,
+        city: site.city,
+        province: site.province,
+        postalCode: site.postalCode,
+        lat: site.lat,
+        lng: site.lng,
+        siteLat: site.lat,
+        siteLng: site.lng,
+        isEmpty: true,
+        status: site.status || 'Draft'
+      }
+    }
+  })
+
+  // Then add equipment to their respective sites
   locations.forEach((loc) => {
     const key = loc.siteId || `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`
     if (!grouped[key]) {
@@ -114,6 +176,7 @@ export const groupBySite = (locations) => {
     }
     const group = grouped[key]
     group.items.push(loc)
+    group.isEmpty = false // Site has equipment
 
     // Backfill missing data from equipment
     if (!group.siteLat && loc.siteLat) group.siteLat = loc.siteLat
@@ -126,9 +189,13 @@ export const groupBySite = (locations) => {
   })
 
   Object.values(grouped).forEach((group) => {
-    const fallback = group.items[0] || { lat: 0, lng: 0 }
-    group.lat = group.siteLat || fallback.lat
-    group.lng = group.siteLng || fallback.lng
+    // Use site coordinates if available, otherwise fall back to first equipment
+    const fallback = group.items[0] || {
+      lat: group.lat || 0,
+      lng: group.lng || 0
+    }
+    group.lat = group.siteLat || group.lat || fallback.lat
+    group.lng = group.siteLng || group.lng || fallback.lng
 
     // Calculate total capacity
     group.totalCapacity = group.items.reduce((sum, item) => {
@@ -136,23 +203,29 @@ export const groupBySite = (locations) => {
       return !Number.isNaN(value) && value > 0 ? sum + value : sum
     }, 0)
 
-    // Determine site status from equipment statuses
-    const statusCounts = group.items.reduce((acc, item) => {
-      const status = item.status || 'Draft'
-      acc[status] = (acc[status] || 0) + 1
-      return acc
-    }, {})
-
-    const statuses = Object.keys(statusCounts)
-    if (statuses.length === 0) {
-      group.status = 'Draft'
-    } else if (statuses.length === 1) {
-      group.status = statuses[0]
+    // Determine site status
+    if (group.isEmpty || group.items.length === 0) {
+      // Empty site - use the site's own status if available
+      group.status = group.status || 'Draft'
     } else {
-      // Mixed statuses: use most common
-      group.status = Object.entries(statusCounts).sort(
-        (a, b) => b[1] - a[1]
-      )[0][0]
+      // Site has equipment - determine status from equipment
+      const statusCounts = group.items.reduce((acc, item) => {
+        const status = item.status || 'Draft'
+        acc[status] = (acc[status] || 0) + 1
+        return acc
+      }, {})
+
+      const statuses = Object.keys(statusCounts)
+      if (statuses.length === 0) {
+        group.status = 'Draft'
+      } else if (statuses.length === 1) {
+        group.status = statuses[0]
+      } else {
+        // Mixed statuses: use most common
+        group.status = Object.entries(statusCounts).sort(
+          (a, b) => b[1] - a[1]
+        )[0][0]
+      }
     }
   })
 

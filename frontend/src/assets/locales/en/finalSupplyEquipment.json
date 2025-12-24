@@ -61,6 +61,7 @@
     "supplyToDate": "Dates of supply to",
     "registrationNbr": "Registration #",
     "serialNbr": "Serial #",
+    "serialNumber": "Serial #",
     "manufacturer": "Manufacturer",
     "model": "Model",
     "levelOfEquipment": "Level of equipment",

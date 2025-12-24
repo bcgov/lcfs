@@ -33,5 +33,6 @@
   "validateMsg": {
     "isRequired": "{{field}} is required"
   },
-  "scheduleUpdated": "Fuel export schedule updated successfully"
+  "scheduleUpdated": "Fuel export schedule updated successfully",
+  "totalComplianceUnits": "Total compliance units:"
 }
