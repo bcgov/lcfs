@@ -12,12 +12,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
+  Input,
   InputAdornment,
   CircularProgress,
   Tooltip
 } from '@mui/material'
-import { NumericFormat } from 'react-number-format'
 
 const SummaryTable = ({
   title,
@@ -310,62 +309,66 @@ const SummaryTable = ({
                         height: '100%'
                       }}
                     >
-                      <NumericFormat
-                        customInput={TextField}
-                        value={row[column.id]}
-                        thousandSeparator
-                        decimalScale={0}
-                        allowNegative={false}
-                        onValueChange={(values) => {
-                          const syntheticEvent = {
-                            target: {
-                              value: values.value
-                            }
-                          }
-                          handleCellChange(syntheticEvent, rowIndex, column.id)
-                        }}
+                      <Input
+                        value={formatNumberWithCommas({ value: row[column.id] })}
+                        onChange={(e) =>
+                          handleCellChange(e, rowIndex, column.id)
+                        }
                         onFocus={() => handleCellFocus(rowIndex, column.id)}
                         onBlur={() => handleBlur(rowIndex, column.id)}
                         onKeyDown={(e) => handleKeyDown(e, rowIndex, column.id)}
-                        slotProps={{
-                          input: {
-                            startAdornment:
-                              row.format === 'currency' ? (
-                                <InputAdornment position="start">$</InputAdornment>
-                              ) : null
-                          },
-                          htmlInput: {
-                            inputMode: 'numeric',
-                            ...getCellConstraints(rowIndex, column.id),
-                            ...props.inputProps
-                          }
+                        type="text"
+                        inputProps={{
+                          inputMode:
+                            column.editable &&
+                            column.editableCells &&
+                            column.editableCells.includes(rowIndex)
+                              ? 'decimal'
+                              : 'numeric',
+                          pattern:
+                            column.editable &&
+                            column.editableCells &&
+                            column.editableCells.includes(rowIndex)
+                              ? '[0-9]*\\.?[0-9]*'
+                              : '[0-9]*',
+                          ...getCellConstraints(rowIndex, column.id),
+                          ...props.inputProps
                         }}
+                        startAdornment={
+                          column.editable &&
+                          column.editableCells &&
+                          column.editableCells.includes(rowIndex) &&
+                          row.format === 'currency' ? (
+                            <InputAdornment position="start">$</InputAdornment>
+                          ) : null
+                        }
+                        endAdornment={null}
                         sx={{
                           width: '100%',
                           height: '100%',
-                          '& .MuiOutlinedInput-root': {
-                            padding: '6px',
-                            paddingLeft: isCellSaving(rowIndex, column.id)
-                              ? row.format === 'currency'
-                                ? '60px'
-                                : '40px'
-                              : row.format === 'currency'
-                                ? '30px'
-                                : '6px',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            backgroundColor: '#fff'
-                          },
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            border: '1px solid #495057'
-                          },
+                          padding: '6px',
+                          paddingLeft: isCellSaving(rowIndex, column.id)
+                            ? column.editable &&
+                              column.editableCells &&
+                              column.editableCells.includes(rowIndex) &&
+                              row.format === 'currency'
+                              ? '60px'
+                              : '40px'
+                            : column.editable &&
+                                column.editableCells &&
+                                column.editableCells.includes(rowIndex) &&
+                                row.format === 'currency'
+                              ? '30px'
+                              : '6px',
+                          borderRadius: '8px',
+                          fontSize: '1rem',
+                          border: '1px solid #495057',
+                          backgroundColor: '#fff',
                           '& .MuiInputBase-input': {
-                            textAlign: column.align || 'left',
-                            padding: 0
+                            textAlign: column.align || 'left'
                           }
                         }}
-                        size="small"
-                        variant="outlined"
+                        disableUnderline
                       />
                       {isCellSaving(rowIndex, column.id) && (
                         <div
