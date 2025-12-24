@@ -2,8 +2,10 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.exc import DatabaseError
 
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
+from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
     ComplianceReportChargingEquipment,
 )
@@ -602,3 +604,143 @@ async def test_auto_submit_draft_updated_fse_for_report_missing_status(repo, moc
     assert mock_db.execute.call_count == 1
     # flush should not be called since no updates were made
     mock_db.flush.assert_not_called()
+
+
+class TestChargingEquipmentRepositoryDeletedFiltering:
+    """Test class for verifying deleted equipment and sites are filtered out"""
+
+    @pytest.mark.anyio
+    async def test_get_charging_equipment_list_excludes_deleted_equipment(
+        self, valid_charging_equipment
+    ):
+        """Test that get_charging_equipment_list excludes equipment with action_type=DELETE"""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        repo = ChargingEquipmentRepository(mock_db)
+
+        # Setup pagination
+        pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[])
+
+        # Mock the count and items query results
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+
+        mock_items_result = MagicMock()
+        mock_items_result.scalars.return_value.all.return_value = [valid_charging_equipment]
+
+        mock_db.execute.side_effect = [mock_count_result, mock_items_result]
+
+        # Call the repository method
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        # Verify results
+        assert len(items) == 1
+        assert total_count == 1
+        assert mock_db.execute.call_count == 2
+
+    @pytest.mark.anyio
+    async def test_get_charging_equipment_list_excludes_equipment_from_deleted_sites(
+        self, valid_charging_equipment
+    ):
+        """Test that get_charging_equipment_list excludes equipment from deleted charging sites"""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        repo = ChargingEquipmentRepository(mock_db)
+
+        # Setup pagination
+        pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[])
+
+        # Mock the count and items query results - no results since site is deleted
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 0
+
+        mock_items_result = MagicMock()
+        mock_items_result.scalars.return_value.all.return_value = []
+
+        mock_db.execute.side_effect = [mock_count_result, mock_items_result]
+
+        # Call the repository method
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        # Verify that no equipment is returned (site was deleted)
+        assert len(items) == 0
+        assert total_count == 0
+
+    @pytest.mark.anyio
+    async def test_get_all_equipment_by_organization_id_excludes_deleted(
+        self, valid_charging_equipment
+    ):
+        """Test that get_all_equipment_by_organization_id excludes deleted equipment"""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        repo = ChargingEquipmentRepository(mock_db)
+
+        # Mock the query result
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [valid_charging_equipment]
+        mock_db.execute.return_value = mock_result
+
+        # Call the repository method
+        result = await repo.get_all_equipment_by_organization_id(1)
+
+        # Verify results
+        assert len(result) == 1
+        mock_db.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_charging_sites_by_organization_excludes_deleted(self):
+        """Test that get_charging_sites_by_organization excludes deleted sites"""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        repo = ChargingEquipmentRepository(mock_db)
+
+        # Create mock site
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.action_type = ActionTypeEnum.CREATE
+        mock_sites = [mock_site]
+
+        # Mock the query result
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = mock_sites
+        mock_db.execute.return_value = mock_result
+
+        # Call the repository method
+        result = await repo.get_charging_sites_by_organization(1)
+
+        # Verify results
+        assert len(result) == 1
+        mock_db.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_charging_sites_by_organization_returns_empty_when_all_deleted(self):
+        """Test that get_charging_sites_by_organization returns empty list when all sites are deleted"""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        repo = ChargingEquipmentRepository(mock_db)
+
+        # Mock the query result - empty because all sites are deleted
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute.return_value = mock_result
+
+        # Call the repository method
+        result = await repo.get_charging_sites_by_organization(1)
+
+        # Verify results
+        assert len(result) == 0
+        mock_db.execute.assert_called_once()
