@@ -9,6 +9,7 @@ from sqlalchemy import select, func, and_, or_, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
@@ -66,7 +67,8 @@ class ChargingEquipmentRepository:
         exclude_draft: bool = False,
     ) -> tuple[List[ChargingEquipment], int]:
         """Get paginated list of charging equipment scoped to an organization when provided.
-        If exclude_draft is True, excludes equipment with DRAFT status."""
+        If exclude_draft is True, excludes equipment with DRAFT status.
+        Excludes deleted equipment and equipment from deleted charging sites."""
 
         # Base query with joins
         query = (
@@ -93,6 +95,10 @@ class ChargingEquipmentRepository:
                 joinedload(ChargingEquipment.level_of_equipment),
                 selectinload(ChargingEquipment.intended_uses),
                 selectinload(ChargingEquipment.intended_users),
+            )
+            .where(
+                ChargingEquipment.action_type != ActionTypeEnum.DELETE,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
             )
         )
 
@@ -166,7 +172,8 @@ class ChargingEquipmentRepository:
     async def get_all_equipment_by_organization_id(
         self, organization_id: int
     ) -> List[ChargingEquipment]:
-        """Return all charging equipment for a supplier organization with relationships loaded."""
+        """Return all charging equipment for a supplier organization with relationships loaded.
+        Excludes deleted equipment and equipment from deleted charging sites."""
         query = (
             select(ChargingEquipment)
             .join(ChargingSite)
@@ -177,7 +184,11 @@ class ChargingEquipmentRepository:
                 selectinload(ChargingEquipment.intended_uses),
                 selectinload(ChargingEquipment.intended_users),
             )
-            .where(ChargingSite.organization_id == organization_id)
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipment.action_type != ActionTypeEnum.DELETE,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
             .order_by(ChargingEquipment.update_date.desc())
         )
         result = await self.db.execute(query)
@@ -527,10 +538,14 @@ class ChargingEquipmentRepository:
     async def get_charging_sites_by_organization(
         self, organization_id: int
     ) -> List[ChargingSite]:
-        """Get all charging sites for an organization."""
+        """Get all charging sites for an organization.
+        Excludes deleted charging sites."""
         query = (
             select(ChargingSite)
-            .where(ChargingSite.organization_id == organization_id)
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
             .order_by(ChargingSite.site_name)
         )
         result = await self.db.execute(query)
