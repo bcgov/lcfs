@@ -53,16 +53,27 @@ vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
 
 vi.mock('../GeoMapping', () => ({
   default: ({ complianceReportId }) => (
-    <div data-test="geo-mapping" data-compliance-report-id={complianceReportId} />
+    <div
+      data-test="geo-mapping"
+      data-compliance-report-id={complianceReportId}
+    />
   )
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children, ...props }) => <div data-test="grid2" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="grid2" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/FormControlLabel', () => ({
@@ -140,10 +151,9 @@ const renderComponent = (props = {}) => {
     data: { finalSupplyEquipments: mockEquipmentData },
     status: COMPLIANCE_REPORT_STATUSES.DRAFT
   }
-  return render(
-    <FinalSupplyEquipmentSummary {...defaultProps} {...props} />,
-    { wrapper }
-  )
+  return render(<FinalSupplyEquipmentSummary {...defaultProps} {...props} />, {
+    wrapper
+  })
 }
 
 // -------- tests -------- //
@@ -177,11 +187,11 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('renders with data', () => {
       renderComponent()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-      expect(screen.getByTestId('form-control-label')).toBeInTheDocument()
-      expect(screen.getByText('Show Map')).toBeInTheDocument()
-      expect(
-        mockFinalSupplyEquipmentSummaryColDefs
-      ).toHaveBeenCalledWith(expect.any(Function), COMPLIANCE_REPORT_STATUSES.DRAFT, false)
+      expect(mockFinalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
+        expect.any(Function),
+        COMPLIANCE_REPORT_STATUSES.DRAFT,
+        false
+      )
     })
 
     it('renders with different status', () => {
@@ -250,7 +260,9 @@ describe('FinalSupplyEquipmentSummary', () => {
       // Simulate filter application through pagination change
       await act(async () => {
         gridViewerProps.onPaginationChange({
-          filters: [{ field: 'organizationName', type: 'contains', filter: 'test' }]
+          filters: [
+            { field: 'organizationName', type: 'contains', filter: 'test' }
+          ]
         })
       })
 
@@ -313,7 +325,7 @@ describe('FinalSupplyEquipmentSummary', () => {
 
     it('handles pagination calculations', async () => {
       renderComponent()
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({
           page: 2,
@@ -331,7 +343,9 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('generates correct grid options', () => {
       renderComponent()
       const gridOptions = gridViewerProps.gridOptions
-      expect(gridOptions.overlayNoRowsTemplate).toBe('finalSupplyEquipment:noFinalSupplyEquipmentsFound')
+      expect(gridOptions.overlayNoRowsTemplate).toBe(
+        'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
+      )
       expect(gridOptions.autoSizeStrategy.type).toBe('fitCellContents')
       expect(gridOptions.enableCellTextSelection).toBe(true)
       expect(gridOptions.ensureDomOrder).toBe(true)
@@ -343,7 +357,9 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(defaultColDef.floatingFilter).toBe(false)
       expect(defaultColDef.filter).toBe(false)
       expect(defaultColDef.cellRenderer).toBeDefined()
-      expect(defaultColDef.cellRendererParams.url()).toBe('final-supply-equipments')
+      expect(defaultColDef.cellRendererParams.url()).toBe(
+        'final-supply-equipments'
+      )
     })
 
     it('generates defaultColDef for non-DRAFT status', () => {
@@ -355,7 +371,10 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('generates columns using schema function', () => {
       renderComponent()
       expect(gridViewerProps.columnDefs).toHaveLength(2)
-      expect(gridViewerProps.columnDefs[0]).toHaveProperty('field', 'organizationName')
+      expect(gridViewerProps.columnDefs[0]).toHaveProperty(
+        'field',
+        'organizationName'
+      )
       expect(gridViewerProps.columnDefs[1]).toHaveProperty('field', 'serialNbr')
     })
   })
@@ -371,7 +390,7 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('handles pagination change', async () => {
       renderComponent()
       expect(typeof gridViewerProps.onPaginationChange).toBe('function')
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({ page: 2, size: 5 })
       })
@@ -380,31 +399,21 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(gridViewerProps.paginationOptions.size).toBe(5)
     })
 
-    it('toggles map visibility', async () => {
-      const user = userEvent.setup()
+    it('renders grid viewer with correct configuration', () => {
       renderComponent()
-
-      expect(screen.queryByTestId('geo-mapping')).not.toBeInTheDocument()
-      expect(screen.getByText('Show Map')).toBeInTheDocument()
-
-      const switchEl = screen.getByRole('checkbox')
-      await user.click(switchEl)
-
-      expect(screen.getByTestId('geo-mapping')).toBeInTheDocument()
-      expect(screen.getByText('Hide Map')).toBeInTheDocument()
+      
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(gridViewerProps.gridKey).toBe('final-supply-equipments')
+      expect(gridViewerProps.enableCopyButton).toBe(false)
     })
   })
 
   describe('Conditional Rendering', () => {
-    it('shows map when switch is toggled', async () => {
-      const user = userEvent.setup()
+    it('renders grid with proper data key', () => {
       renderComponent()
-
-      await user.click(screen.getByRole('checkbox'))
       
-      const geoMapping = screen.getByTestId('geo-mapping')
-      expect(geoMapping).toBeInTheDocument()
-      expect(geoMapping).toHaveAttribute('data-compliance-report-id', 'test-123')
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(gridViewerProps.dataKey).toBe('finalSupplyEquipments')
     })
 
     it('calculates grid suppression correctly', () => {
@@ -445,10 +454,12 @@ describe('FinalSupplyEquipmentSummary', () => {
   describe('Integration Tests', () => {
     it('combines filter and sort operations', async () => {
       renderComponent()
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({
-          filters: [{ field: 'organizationName', type: 'contains', filter: 'test' }],
+          filters: [
+            { field: 'organizationName', type: 'contains', filter: 'test' }
+          ],
           sortOrders: [{ field: 'serialNbr', direction: 'desc' }]
         })
       })
@@ -464,7 +475,7 @@ describe('FinalSupplyEquipmentSummary', () => {
 
     it('handles empty filter strings', async () => {
       renderComponent()
-      
+
       await act(async () => {
         gridViewerProps.onPaginationChange({
           filters: [{ field: 'organizationName', type: 'contains', filter: '' }]
@@ -479,7 +490,7 @@ describe('FinalSupplyEquipmentSummary', () => {
 
     it('passes all required props to BCGridViewer', () => {
       renderComponent()
-      
+
       expect(gridViewerProps.gridKey).toBe('final-supply-equipments')
       expect(gridViewerProps.dataKey).toBe('finalSupplyEquipments')
       expect(gridViewerProps.enableCopyButton).toBe(false)

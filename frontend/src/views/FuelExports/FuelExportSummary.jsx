@@ -1,4 +1,5 @@
 import BCBox from '@/components/BCBox'
+import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
@@ -132,6 +133,14 @@ export const FuelExportSummary = ({ data, status }) => {
   return (
     <Grid2 className="fuel-export-container" mx={-1}>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+        {data?.totalComplianceUnits !== undefined &&
+          data?.totalComplianceUnits !== null && (
+            <ComplianceUnitsTotal
+              label={t('fuelExport:totalComplianceUnits')}
+              value={data.totalComplianceUnits}
+              dataTest="fuel-export-total-compliance-units"
+            />
+          )}
         <BCGridViewer
           gridKey="fuel-exports"
           gridRef={gridRef}

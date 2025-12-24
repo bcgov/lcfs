@@ -69,7 +69,29 @@ export const handleScheduleSave = async ({
 
       if (error.code === 'ERR_BAD_REQUEST') {
         const { fields, message } = error.response.data.errors[0]
-        const fieldLabels = fields.map((field) => t(`${labelPrefix}.${field}`))
+        const fieldLabels = fields.map((field) => {
+          // Handle nested field names (e.g., "chargingEquipment.serialNumber")
+          // Extract the last part and try to translate it
+          const fieldParts = field.split('.')
+          const lastPart = fieldParts[fieldParts.length - 1]
+
+          // Try translating the full field path first
+          const fullTranslation = t(`${labelPrefix}.${field}`, {
+            defaultValue: ''
+          })
+          if (fullTranslation) return fullTranslation
+
+          // If that fails, try translating just the last part
+          const partialTranslation = t(`${labelPrefix}.${lastPart}`, {
+            defaultValue: ''
+          })
+          if (partialTranslation) return partialTranslation
+
+          // If no translation found, return a formatted version of the field name
+          return lastPart
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, (str) => str.toUpperCase())
+        })
         const errMsg = `Unable to save row: ${
           fieldLabels.length === 1 ? fieldLabels[0] : ''
         } ${message}`

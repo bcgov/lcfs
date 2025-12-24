@@ -141,6 +141,25 @@ describe('CompareTable Component', () => {
       expect(screen.getByText('Jet Fuel')).toBeInTheDocument()
     })
 
+    it('disables fuel radios when availability is false', () => {
+      render(
+        <CompareTable
+          title="Test"
+          columns={basicColumns}
+          data={basicData}
+          enableFuelControls={true}
+          setFuelType={mockSetFuelType}
+          fuelType="diesel"
+          fuelAvailability={{ gasoline: false, diesel: true, jetFuel: false }}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByDisplayValue('gasoline')).toBeDisabled()
+      expect(screen.getByDisplayValue('diesel')).not.toBeDisabled()
+      expect(screen.getByDisplayValue('jetFuel')).toBeDisabled()
+    })
+
     it('renders standard header when enableFuelControls=false', () => {
       render(<CompareTable title="Test" columns={basicColumns} data={basicData} />)
       
@@ -148,6 +167,25 @@ describe('CompareTable Component', () => {
       // Standard header should show column labels
       expect(screen.getByText('Line')).toBeInTheDocument()
       expect(screen.getByText('Description')).toBeInTheDocument()
+    })
+  })
+
+  describe('Highlighted Columns', () => {
+    it('applies highlight styles to specified columns', () => {
+      render(
+        <CompareTable
+          title="Test"
+          columns={basicColumns}
+          data={basicData}
+          highlightedColumns={['amount']}
+        />
+      )
+
+      const headerCell = screen.getByText('Amount').closest('th')
+      expect(headerCell).toHaveStyle('background-color: #e0e0e0')
+
+      const bodyCell = screen.getAllByText('1000')[0].closest('td')
+      expect(bodyCell).toHaveStyle('background-color: #e5e5e5')
     })
   })
 

@@ -6,7 +6,12 @@ import BCTypography from '@/components/BCTypography'
 import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { govRoles, nonGovRoles, roles } from '@/constants/roles'
+import {
+  govRoles,
+  nonGovRoles,
+  roles,
+  formatDelegatedRoleLabel
+} from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
@@ -29,7 +34,7 @@ import { AssessmentStatement } from '@/views/ComplianceReports/components/Assess
 import { useOrganization } from '@/hooks/useOrganization.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { Fab, Stack, Tooltip, Alert, AlertTitle } from '@mui/material'
+import { Fab, Stack, Tooltip, Box, Divider } from '@mui/material'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
@@ -285,17 +290,33 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
 
-        // Clear Filters before navigating to ensure they can see the report
-        sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
-
-        navigate(ROUTES.REPORTS.LIST, {
-          state: {
+        // If Director is acting as another role, stay on the report page and show alert
+        if (hasRoles(roles.director)) {
+          // Invalidate queries to refresh the report data
+          queryClient.invalidateQueries(['compliance-reports'])
+          queryClient.invalidateQueries(['complianceReport', complianceReportId])
+          
+          // Show success alert on the current page
+          alertRef.current?.triggerAlert({
             message: t('report:savedSuccessText', {
               status: updatedStatus.toLowerCase().replace('return', 'returned')
             }),
             severity: 'success'
-          }
-        })
+          })
+        } else {
+          // For non-Directors, navigate to the list as before
+          // Clear Filters before navigating to ensure they can see the report
+          sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+
+          navigate(ROUTES.REPORTS.LIST, {
+            state: {
+              message: t('report:savedSuccessText', {
+                status: updatedStatus.toLowerCase().replace('return', 'returned')
+              }),
+              severity: 'success'
+            }
+          })
+        }
       },
       onError: (error) => {
         setModalData(null)
@@ -476,10 +497,15 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     }
 
     const shouldShowAssessmentStatement =
-      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental && currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+      isGovernmentUser &&
+      !qReport?.isQuarterly &&
+      !hasDraftSupplemental &&
+      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
     const shouldShowAssessmentRecommendation =
-      hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
+      (hasRoles(roles.analyst) || hasRoles(roles.director)) &&
+      !qReport?.isQuarterly &&
+      !hasDraftSupplemental
 
     const shouldShowAssessmentSectionTitle =
       (shouldShowAssessmentStatement || shouldShowAssessmentRecommendation) &&
@@ -812,31 +838,109 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                 mb={2}
                 gap={2}
               >
-                {buttonClusterConfig[currentStatus]?.map(
-                  (config) =>
-                    config && (
-                      <BCButton
-                        key={config.id}
-                        id={config.id}
-                        data-test={config.id}
-                        size="small"
-                        variant={config.variant}
-                        color={config.color}
-                        onClick={methods.handleSubmit(config.handler)}
-                        disabled={config.disabled}
-                        startIcon={
-                          config.startIcon && (
-                            <FontAwesomeIcon
-                              icon={config.startIcon}
-                              className="small-icon"
-                            />
-                          )
-                        }
-                      >
-                        {config.label}
-                      </BCButton>
-                    )
-                )}
+                {(() => {
+                  const buttons = buttonClusterConfig[currentStatus] || []
+                  const directorButtons = buttons.filter(
+                    (b) => b && !b.roleIndicator
+                  )
+                  const delegatedButtons = buttons.filter(
+                    (b) => b?.roleIndicator
+                  )
+
+                  return (
+                    <Stack direction="column" spacing={2.5}>
+                      {/* Primary Director Actions */}
+                      {directorButtons.length > 0 && (
+                        <Stack direction="row" spacing={2}>
+                          {directorButtons.map((config) => (
+                            <BCButton
+                              key={config.id}
+                              id={config.id}
+                              data-test={config.id}
+                              size="small"
+                              variant={config.variant}
+                              color={config.color}
+                              onClick={methods.handleSubmit(config.handler)}
+                              disabled={config.disabled}
+                              startIcon={
+                                config.startIcon && (
+                                  <FontAwesomeIcon
+                                    icon={config.startIcon}
+                                    className="small-icon"
+                                  />
+                                )
+                              }
+                            >
+                              {config.label}
+                            </BCButton>
+                          ))}
+                        </Stack>
+                      )}
+
+                      {/* Delegated Authority Actions */}
+                      {delegatedButtons.length > 0 && (
+                        <Box
+                          sx={{
+                            borderLeft: '3px solid',
+                            borderColor: 'primary.main',
+                            pl: 2,
+                            py: 0.5
+                          }}
+                        >
+                          <Stack direction="column" spacing={1.5}>
+                            <BCTypography
+                              variant="caption"
+                              sx={{
+                                color: 'primary.main',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                letterSpacing: '0.3px'
+                              }}
+                            >
+                              Acting as{' '}
+                              {formatDelegatedRoleLabel(
+                                delegatedButtons[0]?.roleIndicator || 'Analyst'
+                              )}
+                            </BCTypography>
+                            <Stack direction="row" spacing={2}>
+                              {delegatedButtons.map((config) => (
+                                <Tooltip
+                                  key={config.id}
+                                  title={config.tooltip || ''}
+                                  placement="top"
+                                >
+                                  <span>
+                                    <BCButton
+                                      id={config.id}
+                                      data-test={config.id}
+                                      size="small"
+                                      variant={config.variant}
+                                      color={config.color}
+                                      onClick={methods.handleSubmit(
+                                        config.handler
+                                      )}
+                                      disabled={config.disabled}
+                                      startIcon={
+                                        config.startIcon && (
+                                          <FontAwesomeIcon
+                                            icon={config.startIcon}
+                                            className="small-icon"
+                                          />
+                                        )
+                                      }
+                                    >
+                                      {config.label}
+                                    </BCButton>
+                                  </span>
+                                </Tooltip>
+                              ))}
+                            </Stack>
+                          </Stack>
+                        </Box>
+                      )}
+                    </Stack>
+                  )
+                })()}
               </Stack>
             )}
         </Stack>

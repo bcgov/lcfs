@@ -381,3 +381,82 @@ async def test_action_create_fuel_export_energy_too_high(
     assert error_data["errors"][0]["fields"] == ["quantity"]
     assert "Reduce quantity" in error_data["errors"][0]["message"]
     assert "141.76" in error_data["errors"][0]["message"]  # Energy density s
+
+
+@pytest.mark.anyio
+async def test_get_fuel_export_list_with_total_compliance_units(fuel_export_service, mock_repo):
+    """Test that get_fuel_export_list returns total compliance units correctly"""
+    # Set up a dummy request with a valid user
+    dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
+    dummy_request = MagicMock()
+    dummy_request.user = dummy_user
+    fuel_export_service.request = dummy_request
+    
+    # Create mock fuel exports with compliance units
+    mock_export1 = FuelExport(
+        fuel_export_id=1,
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_type=mock_fuel_type,
+        fuel_category_id=1,
+        fuel_category=mock_fuel_category,
+        quantity=100,
+        units="L",
+        export_date=date.today(),
+        group_uuid="test-uuid-1",
+        provision_of_the_act_id=1,
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+        compliance_units=-1200.75,  # Negative for exports
+    )
+    
+    mock_export2 = FuelExport(
+        fuel_export_id=2,
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_type=mock_fuel_type,
+        fuel_category_id=1,
+        fuel_category=mock_fuel_category,
+        quantity=50,
+        units="L",
+        export_date=date.today(),
+        group_uuid="test-uuid-2",
+        provision_of_the_act_id=1,
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+        compliance_units=-300.25,  # Negative for exports
+    )
+    
+    # Mock a deleted fuel export (should be excluded from total)
+    mock_export3 = FuelExport(
+        fuel_export_id=3,
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_type=mock_fuel_type,
+        fuel_category_id=1,
+        fuel_category=mock_fuel_category,
+        quantity=75,
+        units="L",
+        export_date=date.today(),
+        group_uuid="test-uuid-3",
+        provision_of_the_act_id=1,
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
+        version=0,
+        action_type=ActionTypeEnum.DELETE,
+        compliance_units=-500.0,  # Should not be included
+    )
+    
+    mock_exports = [mock_export1, mock_export2, mock_export3]
+    mock_repo.get_fuel_export_list.return_value = mock_exports
+    
+    result = await fuel_export_service.get_fuel_export_list(1)
+    
+    assert isinstance(result, FuelExportsSchema)
+    assert hasattr(result, "total_compliance_units")
+    
+    # Expected total: round(-1200.75) + round(-300.25) = -1201 + (-300) = -1501
+    # Deleted record (-500) should not be included
+    assert result.total_compliance_units == -1501
+    assert len(result.fuel_exports) == 3

@@ -84,6 +84,7 @@
     "react-i18next": "^15.4.1",
     "react-input-mask": "^2.0.4",
     "react-leaflet": "^4.2.1",
+    "react-leaflet-cluster": "^2.1.0",
     "react-leaflet-custom-control": "1.4.0",
     "react-number-format": "^5.4.3",
     "react-quill": "^2.0.0",

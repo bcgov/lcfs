@@ -76,6 +76,7 @@ export const ROUTES = {
       ADD: '/compliance-reporting/charging-sites/add'
     },
     MANAGE_FSE: '/compliance-reporting/fse',
+    FSE_MAP: '/compliance-reporting/fse-map',
     ADD_FSE: '/compliance-reporting/fse/add',
     EDIT_FSE: '/compliance-reporting/fse/:fseId/edit',
     ADD: {

@@ -157,12 +157,15 @@ export const AddEditChargingSite = ({
         severity: 'pending'
       })
 
-      // clean up any null or empty string values
+      // clean up any null or empty string values, but preserve allocatingOrganizationId
+      // even when null (to properly clear it when user enters free text)
       const updatedData = {
         ...Object.entries(params.node.data)
-          .filter(
-            ([, value]) => value !== null && value !== '' && value !== undefined
-          )
+          .filter(([key, value]) => {
+            // Always include allocatingOrganizationId (even when null) to properly clear it
+            if (key === 'allocatingOrganizationId') return true
+            return value !== null && value !== '' && value !== undefined
+          })
           .reduce((acc, [key, value]) => {
             acc[key] = value
             return acc

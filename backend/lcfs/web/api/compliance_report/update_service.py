@@ -263,9 +263,11 @@ class ComplianceReportUpdateService:
         self, report: ComplianceReport, user: UserProfile
     ):
         """Handle actions when a report is Recommended by analyst."""
-        # Implement logic for Recommended by analyst status
-        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
-        if not has_analyst_role:
+        # Implement logic for Recommended by analyst status - Directors can also recommend
+        has_analyst_or_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
+        ) or user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR])
+        if not has_analyst_or_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_recommended_by_analyst_status(
@@ -282,9 +284,11 @@ class ComplianceReportUpdateService:
                 detail="This report has been superseded by a draft supplemental report and cannot be processed further.",
             )
 
-        # Implement logic for Recommended by analyst status
-        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
-        if not has_analyst_role:
+        # Implement logic for Recommended by analyst status - Directors can also recommend
+        has_analyst_or_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
+        ) or user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR])
+        if not has_analyst_or_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         # Auto-validate all submitted FSE records associated with this report
@@ -311,10 +315,14 @@ class ComplianceReportUpdateService:
             )
 
         # Implement logic for Recommended by manager status
+        # Allow Compliance Managers and Directors to recommend to director
         has_compliance_manager_role = user_has_roles(
             user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
         )
-        if not has_compliance_manager_role:
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
+        if not (has_compliance_manager_role or has_director_role):
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         await self.repo.update_compliance_report(report)

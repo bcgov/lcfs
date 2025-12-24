@@ -5,6 +5,7 @@ import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { wrapper } from '@/tests/utils/wrapper'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // Mock hooks and stores
 vi.mock('@/hooks/useCurrentUser')
@@ -23,17 +24,23 @@ describe('CompareReports Component', () => {
     {
       nickname: 'Original Report',
       complianceReportId: 1,
-      timestamp: '2021-01-01'
+      timestamp: '2021-01-01',
+      version: 0,
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
     },
     {
       nickname: 'Supplemental Report 1',
       complianceReportId: 2,
-      timestamp: '2021-02-01'
+      timestamp: '2021-02-01',
+      version: 1,
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
     },
     {
       nickname: 'Government Adjustment 2',
       complianceReportId: 3,
-      timestamp: '2021-03-01'
+      timestamp: '2021-03-01',
+      version: 2,
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
     }
   ]
 
@@ -193,6 +200,16 @@ describe('CompareReports Component', () => {
 
     expect(report1Select).toHaveTextContent('Government Adjustment 2')
     expect(report2Select).toHaveTextContent('Original Report')
+  })
+
+  it('does not label supplemental reports as not assessed when original is not selected', async () => {
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText('report:originalReportNotAssessed')
+      ).not.toBeInTheDocument()
+    })
   })
 
   it('allows selecting different reports', async () => {
@@ -407,6 +424,157 @@ describe('CompareReports Component', () => {
     // Should render fuel control buttons and allow fuel type changes
     const renewableTable = screen.getByText('report:renewableFuelTargetSummary')
     expect(renewableTable).toBeInTheDocument()
+  })
+
+  it('labels the original report column when supplemental exists and original is not assessed', async () => {
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [
+          {
+            nickname: 'Original Report',
+            complianceReportId: 1,
+            timestamp: '2021-01-01',
+            version: 0,
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+          },
+          {
+            nickname: 'Supplemental Report 1',
+            complianceReportId: 2,
+            timestamp: '2021-02-01',
+            version: 1,
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
+          }
+        ],
+        report: { compliancePeriod: '2021', complianceReportId: 2 }
+      }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText('report:originalReportNotAssessed').length
+      ).toBeGreaterThan(0)
+    })
+  })
+
+  it('does not label the original report when it has been assessed', async () => {
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [
+          {
+            ...mockReportChain[0],
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+          },
+          mockReportChain[1],
+          mockReportChain[2]
+        ],
+        report: { compliancePeriod: '2021', complianceReportId: 3 }
+      }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    fireEvent.mouseDown(report1Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText('report:originalReportNotAssessed')
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('auto-selects the available fuel type and disables empty options', async () => {
+    const dieselOnlySummary = {
+      data: {
+        complianceReportId: 2,
+        renewableFuelTargetSummary: [
+          {
+            line: 3,
+            description: 'line3',
+            format: 'number',
+            gasoline: 0,
+            diesel: 120,
+            jetFuel: 0
+          },
+          {
+            line: 9,
+            description: 'line9',
+            format: 'number',
+            gasoline: 0,
+            diesel: 15,
+            jetFuel: 0
+          }
+        ],
+        lowCarbonFuelTargetSummary: [
+          {
+            line: 1,
+            description: 'lowCarbonFuelTargetSummary',
+            format: 'number',
+            value: 0
+          }
+        ],
+        nonCompliancePenaltySummary: [
+          {
+            line: 1,
+            description: 'nonCompliancePenaltySummary',
+            format: 'number',
+            value: 0
+          }
+        ]
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation(() => dieselOnlySummary)
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('diesel')).toBeChecked()
+    })
+
+    expect(screen.getByDisplayValue('gasoline')).toBeDisabled()
+    expect(screen.getByDisplayValue('jetFuel')).toBeDisabled()
+  })
+
+  it('prefers gasoline when multiple fuel categories have content', async () => {
+    const multiFuelSummary = {
+      data: {
+        complianceReportId: 2,
+        renewableFuelTargetSummary: [
+          {
+            line: 3,
+            description: 'line3',
+            format: 'number',
+            gasoline: 10,
+            diesel: 20,
+            jetFuel: 0
+          },
+          {
+            line: 9,
+            description: 'line9',
+            format: 'number',
+            gasoline: 0,
+            diesel: 5,
+            jetFuel: 0
+          }
+        ],
+        lowCarbonFuelTargetSummary: [],
+        nonCompliancePenaltySummary: []
+      }
+    }
+
+    useGetComplianceReportSummary.mockImplementation(() => multiFuelSummary)
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('gasoline')).toBeChecked()
+    })
+
+    expect(screen.getByDisplayValue('diesel')).not.toBeDisabled()
   })
 
   it('handles null/undefined data values in processing', () => {

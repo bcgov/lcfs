@@ -15,6 +15,7 @@ import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditCharg
 import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
 import { FSEProcessing } from '@/views/FSEProcessing'
+import FSEFullMap from '@/views/FinalSupplyEquipments/FSEFullMap'
 
 export const reportRoutes = [
   {
@@ -60,6 +61,11 @@ export const reportRoutes = [
             handle: { title: 'Edit FSE' }
           }
         ]
+      },
+      {
+        path: 'fse-map',
+        element: <FSEFullMap />,
+        handle: { title: 'FSE map' }
       }
     ]
   },
