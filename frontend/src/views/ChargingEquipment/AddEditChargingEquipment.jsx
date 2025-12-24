@@ -729,10 +729,8 @@ export const AddEditChargingEquipment = ({ mode }) => {
       )
 
       if (rowsToSave.length === 0) {
-        alertRef.current?.triggerAlert({
-          message: t('chargingEquipment:noRowsToSave'),
-          severity: 'info'
-        })
+        // All rows already saved, just navigate back to origin
+        navigateBack()
         return
       }
 
@@ -743,7 +741,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         severity: 'success'
       })
 
-      navigate(`${ROUTES.REPORTS.LIST}/fse`)
+      navigateBack()
     } catch (error) {
       alertRef.current?.triggerAlert({
         message: error.message || 'Error saving bulk data',
@@ -965,7 +963,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
                     .map(() => getEmptyRow())
                 }
                 saveButtonProps={{
-                  enabled: hasUnsavedRows,
+                  enabled: true,
                   text: t('chargingEquipment:saveAndReturn'),
                   onSave: handleBulkSave,
                   confirmText: 'You have unsaved or invalid rows.',

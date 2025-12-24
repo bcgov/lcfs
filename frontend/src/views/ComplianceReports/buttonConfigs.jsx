@@ -475,7 +475,6 @@ const BUTTON_RULES = {
     [USER_TYPES.IDIR_MANAGER]: [],
     [USER_TYPES.IDIR_DIRECTOR]: [
       'recommendByAnalyst',
-      'issueAssessment',
       'returnToSupplier'
     ]
   },
@@ -498,7 +497,6 @@ const BUTTON_RULES = {
     [USER_TYPES.IDIR_MANAGER]: ['recommendByManager', 'returnToAnalyst'],
     [USER_TYPES.IDIR_DIRECTOR]: [
       'recommendByManager',
-      'issueAssessment',
       'returnToAnalyst'
     ]
   },

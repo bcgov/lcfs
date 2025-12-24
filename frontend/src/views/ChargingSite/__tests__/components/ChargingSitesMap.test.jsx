@@ -21,6 +21,12 @@ vi.mock('react-leaflet', () => ({
   })
 }))
 
+vi.mock('react-leaflet-cluster', () => ({
+  default: ({ children }) => (
+    <div data-testid="marker-cluster-group">{children}</div>
+  )
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))

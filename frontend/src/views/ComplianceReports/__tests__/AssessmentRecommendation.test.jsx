@@ -212,6 +212,7 @@ describe('AssessmentRecommendation', () => {
   describe('Conditional Rendering - Government Adjustment Section', () => {
     it('shows government adjustment section when feature enabled and status is submitted', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       render(<AssessmentRecommendation {...defaultProps} />)
       expect(screen.getByText('Analyst adjustment')).toBeInTheDocument()
@@ -337,6 +338,7 @@ describe('AssessmentRecommendation', () => {
   describe('Event Handlers', () => {
     it('opens adjustment dialog when analyst adjustment button clicked', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
@@ -365,6 +367,7 @@ describe('AssessmentRecommendation', () => {
 
     it('calls createAnalystAdjustment when modal primary button clicked', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
@@ -476,7 +479,7 @@ describe('AssessmentRecommendation', () => {
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     })
 
-    it('shows non-assessment checkbox for original reports only', () => {
+    it('shows non-assessment checkbox for original reports', () => {
       mockHasRoles.mockImplementation((role) => role === roles.analyst)
       mockCurrentUserData.isGovernmentUser = true
 
@@ -499,7 +502,7 @@ describe('AssessmentRecommendation', () => {
       ).toBeInTheDocument()
     })
 
-    it('hides non-assessment section for supplemental reports', () => {
+    it('shows non-assessment section for supplemental reports', () => {
       mockHasRoles.mockImplementation((role) => role === roles.analyst)
       mockCurrentUserData.isGovernmentUser = true
 
@@ -509,7 +512,7 @@ describe('AssessmentRecommendation', () => {
           ...defaultProps.reportData,
           report: {
             version: 1,
-            supplementalInitiator: null,
+            supplementalInitiator: 'Supplier Supplemental',
             reportingFrequency: 'Annual'
           }
         }
@@ -518,8 +521,31 @@ describe('AssessmentRecommendation', () => {
       render(<AssessmentRecommendation {...supplementalReportProps} />)
 
       expect(
-        screen.queryByText('report:notSubjectToAssessment')
-      ).not.toBeInTheDocument()
+        screen.getByText('report:notSubjectToAssessment')
+      ).toBeInTheDocument()
+    })
+
+    it('shows non-assessment section for quarterly reports', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+      mockCurrentUserData.isGovernmentUser = true
+
+      const quarterlyReportProps = {
+        ...defaultProps,
+        reportData: {
+          ...defaultProps.reportData,
+          report: {
+            version: 0,
+            supplementalInitiator: null,
+            reportingFrequency: 'Quarterly'
+          }
+        }
+      }
+
+      render(<AssessmentRecommendation {...quarterlyReportProps} />)
+
+      expect(
+        screen.getByText('report:notSubjectToAssessment')
+      ).toBeInTheDocument()
     })
 
     it('saves non-assessment status immediately on checkbox change', async () => {
@@ -583,6 +609,7 @@ describe('AssessmentRecommendation', () => {
   describe('Modal Dialogs', () => {
     it('renders adjustment modal with correct content', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
@@ -617,6 +644,7 @@ describe('AssessmentRecommendation', () => {
 
     it('closes dialogs when cancel button clicked', () => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
