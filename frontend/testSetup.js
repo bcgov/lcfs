@@ -101,7 +101,11 @@ beforeAll(async () => {
   vi.mock('react-leaflet-custom-control', () => ({
     default: ({ children }) => children
   }))
-  
+
+  vi.mock('react-leaflet-cluster', () => ({
+    default: ({ children }) => children
+  }))
+
   vi.mock('react-leaflet', () => ({
     useMap: () => ({
       fitBounds: vi.fn()

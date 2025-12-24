@@ -939,4 +939,142 @@ describe('ComplianceReportSummary', () => {
       expect(screen.getByTestId('non-compliance-summary')).toBeInTheDocument()
     })
   })
+
+  // Test 30: Hides renewable summary when Lines 3 and 9 are all zero
+  it('hides renewable summary table and shows message when Lines 3 and 9 are all zero', async () => {
+    // Create full summary with 11 lines where Lines 3 and 9 are all zero
+    const emptyRenewableSummary = Array.from({ length: 11 }, (_, i) => ({
+      line: i + 1,
+      gasoline: i === 2 || i === 8 ? 0 : 100, // Line 3 (index 2) and Line 9 (index 8) are zero
+      diesel: i === 2 || i === 8 ? 0 : 100,
+      jetFuel: i === 2 || i === 8 ? 0 : 100
+    }))
+
+    useGetComplianceReportSummary.mockReturnValue({
+      data: {
+        ...mockSummaryData,
+        renewableFuelTargetSummary: emptyRenewableSummary
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isFetching: false
+    })
+
+    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+
+    await waitFor(() => {
+      // Should NOT show the renewable summary table
+      expect(screen.queryByTestId('renewable-summary')).not.toBeInTheDocument()
+      // Should show the no renewable fuel requirement message
+      expect(
+        screen.getByTestId('no-renewable-fuel-message')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('report:noRenewableFuelRequirement')
+      ).toBeInTheDocument()
+      // Should still show other summary tables
+      expect(screen.getByTestId('low-carbon-summary')).toBeInTheDocument()
+      expect(screen.getByTestId('non-compliance-summary')).toBeInTheDocument()
+    })
+  })
+
+  // Test 31: Shows renewable summary when Line 3 has non-zero values
+  it('shows renewable summary table when Line 3 has non-zero values', async () => {
+    const summaryWithLine3Values = Array.from({ length: 11 }, (_, i) => ({
+      line: i + 1,
+      gasoline: i === 2 ? 1000 : 0, // Line 3 (index 2) has value
+      diesel: 0,
+      jetFuel: 0
+    }))
+
+    useGetComplianceReportSummary.mockReturnValue({
+      data: {
+        ...mockSummaryData,
+        renewableFuelTargetSummary: summaryWithLine3Values
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isFetching: false
+    })
+
+    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+
+    await waitFor(() => {
+      // Should show the renewable summary table
+      expect(screen.getByTestId('renewable-summary')).toBeInTheDocument()
+      // Should NOT show the message
+      expect(
+        screen.queryByTestId('no-renewable-fuel-message')
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  // Test 32: Shows renewable summary when Line 9 has non-zero values
+  it('shows renewable summary table when Line 9 has non-zero values', async () => {
+    const summaryWithLine9Values = Array.from({ length: 11 }, (_, i) => ({
+      line: i + 1,
+      gasoline: i === 8 ? 500 : 0, // Line 9 (index 8) has value
+      diesel: 0,
+      jetFuel: 0
+    }))
+
+    useGetComplianceReportSummary.mockReturnValue({
+      data: {
+        ...mockSummaryData,
+        renewableFuelTargetSummary: summaryWithLine9Values
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isFetching: false
+    })
+
+    render(<ComplianceReportSummary {...defaultProps} />, { wrapper })
+
+    await waitFor(() => {
+      // Should show the renewable summary table
+      expect(screen.getByTestId('renewable-summary')).toBeInTheDocument()
+      // Should NOT show the message
+      expect(
+        screen.queryByTestId('no-renewable-fuel-message')
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  // Test 33: Sets hasEligibleRenewableFuel correctly based on Lines 3 and 9
+  it('sets hasEligibleRenewableFuel to false when Lines 3 and 9 are all zero', async () => {
+    const emptyRenewableSummary = Array.from({ length: 11 }, (_, i) => ({
+      line: i + 1,
+      gasoline: i === 2 || i === 8 ? 0 : 100,
+      diesel: i === 2 || i === 8 ? 0 : 100,
+      jetFuel: i === 2 || i === 8 ? 0 : 100
+    }))
+
+    const mockSetHasEligibleRenewableFuel = vi.fn()
+
+    useGetComplianceReportSummary.mockReturnValue({
+      data: {
+        ...mockSummaryData,
+        renewableFuelTargetSummary: emptyRenewableSummary
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isFetching: false
+    })
+
+    render(
+      <ComplianceReportSummary
+        {...defaultProps}
+        setHasEligibleRenewableFuel={mockSetHasEligibleRenewableFuel}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(mockSetHasEligibleRenewableFuel).toHaveBeenCalledWith(false)
+    })
+  })
 })

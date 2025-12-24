@@ -229,11 +229,6 @@ describe('HistoryCard', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'Test Org has met renewable fuel targets set under section 9 of the Low Carbon Fuels Act.'
-        )
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(
           'Test Org has met the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.'
         )
       ).toBeInTheDocument()
@@ -270,7 +265,7 @@ describe('HistoryCard', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'Test Org has met renewable fuel targets set under section 9 of the Low Carbon Fuels Act.'
+          'Test Org has met the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.'
         )
       ).toBeInTheDocument()
     })
@@ -301,11 +296,6 @@ describe('HistoryCard', () => {
     })
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          'Test Org has not met renewable fuel targets set under section 9 of the Low Carbon Fuels Act.'
-        )
-      ).toBeInTheDocument()
       expect(
         screen.getByText(
           'Test Org has not met the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.'

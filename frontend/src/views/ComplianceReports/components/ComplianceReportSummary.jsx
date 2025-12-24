@@ -31,6 +31,35 @@ import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
 import { ExpandMore } from '@mui/icons-material'
+import { SUMMARY } from '@/constants/common'
+
+/**
+ * Checks if the renewable fuel target summary should be hidden.
+ * Returns true if all values in Lines 3 and 9 are zero or null
+ * for every fuel category (gasoline, diesel, jetFuel).
+ */
+const shouldHideRenewableSummary = (renewableFuelTargetSummary) => {
+  if (!renewableFuelTargetSummary) return false
+
+  const line3 = renewableFuelTargetSummary[SUMMARY.LINE_3]
+  const line9 = renewableFuelTargetSummary[SUMMARY.LINE_9]
+
+  if (!line3 || !line9) return false
+
+  const isZeroOrNull = (value) => value === null || value === undefined || value === 0
+
+  const line3AllZero =
+    isZeroOrNull(line3.gasoline) &&
+    isZeroOrNull(line3.diesel) &&
+    isZeroOrNull(line3.jetFuel)
+
+  const line9AllZero =
+    isZeroOrNull(line9.gasoline) &&
+    isZeroOrNull(line9.diesel) &&
+    isZeroOrNull(line9.jetFuel)
+
+  return line3AllZero && line9AllZero
+}
 
 const ComplianceReportSummary = ({
   reportID,
@@ -79,10 +108,10 @@ const ComplianceReportSummary = ({
       setSummaryData(data)
       setHasRecords(data && data.canSign)
       setPenaltyOverrideEnabled(data.penaltyOverrideEnabled || false)
+      // Set hasEligibleRenewableFuel based on Lines 3 and 9
+      // If both lines are all zero/null, there's no renewable fuel requirement
       setHasEligibleRenewableFuel(
-        data.renewableFuelTargetSummary[2].diesel > 0 ||
-          data.renewableFuelTargetSummary[2].gasoline > 0 ||
-          false
+        !shouldHideRenewableSummary(data.renewableFuelTargetSummary)
       )
     }
     if (isError) {
@@ -244,36 +273,57 @@ const ComplianceReportSummary = ({
             onComponent={<CompareReports />}
             offComponent={
               <>
-                <SummaryTable
-                  data-test="renewable-summary"
-                  title={t('report:renewableFuelTargetSummary')}
-                  titleTooltip={
-                    summaryData?.lines6And8Locked
-                      ? 'Lines 6/8 locked from assessed snapshot'
-                      : summaryData?.lines7And9Locked
-                      ? 'Lines 7/9 locked from assessed snapshot'
-                      : undefined
-                  }
-                  columns={
-                    summaryData
-                      ? renewableFuelColumns(
-                          t,
-                          summaryData?.renewableFuelTargetSummary,
-                          canEdit,
-                          compliancePeriodYear,
-                          summaryData?.lines7And9Locked,
-                          summaryData?.lines6And8Locked
-                        )
-                      : []
-                  }
-                  data={summaryData?.renewableFuelTargetSummary}
-                  onCellEditStopped={handleCellEdit}
-                  useParenthesis={true}
-                  lines7And9Locked={summaryData?.lines7And9Locked}
-                  lines6And8Locked={summaryData?.lines6And8Locked}
-                  savingCellKey={savingCellKey}
-                  tableType="renewable"
-                />
+                {shouldHideRenewableSummary(
+                  summaryData?.renewableFuelTargetSummary
+                ) ? (
+                  <Box sx={{ mb: 3 }}>
+                    <BCTypography
+                      variant="h6"
+                      color="primary"
+                      sx={{ mb: 1 }}
+                    >
+                      {t('report:renewableFuelTargetSummary')}
+                    </BCTypography>
+                    <BCTypography
+                      variant="body1"
+                      color="text.secondary"
+                      data-test="no-renewable-fuel-message"
+                    >
+                      {t('report:noRenewableFuelRequirement')}
+                    </BCTypography>
+                  </Box>
+                ) : (
+                  <SummaryTable
+                    data-test="renewable-summary"
+                    title={t('report:renewableFuelTargetSummary')}
+                    titleTooltip={
+                      summaryData?.lines6And8Locked
+                        ? 'Lines 6/8 locked from assessed snapshot'
+                        : summaryData?.lines7And9Locked
+                        ? 'Lines 7/9 locked from assessed snapshot'
+                        : undefined
+                    }
+                    columns={
+                      summaryData
+                        ? renewableFuelColumns(
+                            t,
+                            summaryData?.renewableFuelTargetSummary,
+                            canEdit,
+                            compliancePeriodYear,
+                            summaryData?.lines7And9Locked,
+                            summaryData?.lines6And8Locked
+                          )
+                        : []
+                    }
+                    data={summaryData?.renewableFuelTargetSummary}
+                    onCellEditStopped={handleCellEdit}
+                    useParenthesis={true}
+                    lines7And9Locked={summaryData?.lines7And9Locked}
+                    lines6And8Locked={summaryData?.lines6And8Locked}
+                    savingCellKey={savingCellKey}
+                    tableType="renewable"
+                  />
+                )}
                 <SummaryTable
                   data-test="low-carbon-summary"
                   title={t('report:lowCarbonFuelTargetSummary')}
