@@ -64,7 +64,10 @@ import {
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom'
-import { useGetAllFSEForMap } from '@/hooks/useFinalSupplyEquipment'
+import {
+  useGetAllFSEForMap,
+  useGetAllChargingSitesForMap
+} from '@/hooks/useFinalSupplyEquipment'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
@@ -79,6 +82,7 @@ import {
 } from './components/constants'
 import {
   transformData,
+  transformChargingSites,
   groupBySite,
   buildAddressLine,
   formatCoordinates,
@@ -520,7 +524,7 @@ const EquipmentRow = ({ equipment, index, onClick, disableClick }) => {
 const SitePopup = ({ siteData, isGovernmentUser }) => {
   const { t } = useTranslation(['fse'])
   const navigate = useNavigate()
-  const { items, siteName, siteId, organization } = siteData
+  const { items = [], siteName, siteId, organization, isEmpty } = siteData
   const primary = items[0]
 
   const [search, setSearch] = useState('')
@@ -534,6 +538,7 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
   const displayOrg = organization || null
 
   const filtered = useMemo(() => {
+    if (isEmpty || !items.length) return []
     if (!search) return items
     const term = search.toLowerCase()
     return items.filter(
@@ -542,21 +547,23 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
         (eq.serial || '').toLowerCase().includes(term) ||
         (eq.manufacturer || '').toLowerCase().includes(term)
     )
-  }, [items, search])
+  }, [items, search, isEmpty])
 
   const statusCounts = useMemo(() => {
+    if (isEmpty || !items.length) return {}
     return items.reduce((acc, eq) => {
       acc[eq.status] = (acc[eq.status] || 0) + 1
       return acc
     }, {})
-  }, [items])
+  }, [items, isEmpty])
 
   const siteStatus = useMemo(() => {
+    if (isEmpty || !items.length) return siteData.status || 'Draft'
     const statuses = Object.keys(statusCounts)
     if (statuses.length === 0) return 'Draft'
     if (statuses.length === 1) return statuses[0]
     return Object.entries(statusCounts).sort((a, b) => b[1] - a[1])[0][0]
-  }, [statusCounts])
+  }, [statusCounts, isEmpty, siteData.status, items.length])
 
   const siteStatusConfig = STATUS_CONFIG[siteStatus] || STATUS_CONFIG.Draft
   const LIMIT = 4
@@ -666,32 +673,55 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
             alignItems="center"
             sx={{ flex: 1 }}
           >
-            {Object.entries(statusCounts).map(([k, v]) => {
-              const cfg = STATUS_CONFIG[k] || STATUS_CONFIG.Draft
-              return (
-                <Box
-                  key={k}
-                  component="span"
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.25,
-                    px: 0.7,
-                    py: 0.18,
-                    borderRadius: '999px',
-                    fontSize: '0.6rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.03em',
-                    color: cfg.color,
-                    backgroundColor: cfg.bg,
-                    border: `1px solid ${cfg.color}`,
-                    lineHeight: 1
-                  }}
-                >
-                  {v} {t(cfg.labelKey)}
-                </Box>
-              )
-            })}
+            {isEmpty ? (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.25,
+                  px: 0.7,
+                  py: 0.18,
+                  borderRadius: '999px',
+                  fontSize: '0.6rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.03em',
+                  color: siteStatusConfig.color,
+                  backgroundColor: siteStatusConfig.bg,
+                  border: `1px solid ${siteStatusConfig.color}`,
+                  lineHeight: 1
+                }}
+              >
+                {t(siteStatusConfig.labelKey)}
+              </Box>
+            ) : (
+              Object.entries(statusCounts).map(([k, v]) => {
+                const cfg = STATUS_CONFIG[k] || STATUS_CONFIG.Draft
+                return (
+                  <Box
+                    key={k}
+                    component="span"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.25,
+                      px: 0.7,
+                      py: 0.18,
+                      borderRadius: '999px',
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.03em',
+                      color: cfg.color,
+                      backgroundColor: cfg.bg,
+                      border: `1px solid ${cfg.color}`,
+                      lineHeight: 1
+                    }}
+                  >
+                    {v} {t(cfg.labelKey)}
+                  </Box>
+                )
+              })
+            )}
           </Stack>
 
           {/* Right: Equipment count */}
@@ -733,8 +763,31 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
         </Stack>
       </Box>
 
+      {/* Empty site message */}
+      {isEmpty && (
+        <Box
+          sx={{
+            px: 1.5,
+            py: 1.5,
+            backgroundColor: '#f7f9fd',
+            borderBottom: '1px solid #e4e9f2',
+            textAlign: 'center'
+          }}
+        >
+          <BCTypography
+            sx={{
+              color: '#5c5c5c',
+              fontSize: '0.8rem',
+              fontStyle: 'italic'
+            }}
+          >
+            {t('map.noEquipmentAtSite', 'No equipment registered at this site')}
+          </BCTypography>
+        </Box>
+      )}
+
       {/* Search */}
-      {items.length > LIMIT && (
+      {!isEmpty && items.length > LIMIT && (
         <Box
           sx={{
             px: 1.25,
@@ -772,84 +825,92 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
       )}
 
       {/* Equipment List */}
-      <Box
-        sx={{
-          maxHeight: 145,
-          overflowY: 'auto',
-          backgroundColor: '#fff',
-          '&::-webkit-scrollbar': {
-            width: '8px'
-          },
-          '&::-webkit-scrollbar-track': {
-            backgroundColor: '#f1f3f5',
-            borderRadius: '4px'
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#cbd5e0',
-            borderRadius: '4px',
-            '&:hover': {
-              backgroundColor: '#a0aec0'
-            }
-          },
-          // Firefox
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#cbd5e0 #f1f3f5'
-        }}
-      >
-        {displayed.map((eq, idx) => (
-          <EquipmentRow
-            key={eq.id || idx}
-            equipment={eq}
-            index={idx}
-            disableClick={isGovernmentUser}
-            onClick={() => {
-              const url = getEquipmentUrl(eq.id)
-              if (url) navigate(url)
+      {!isEmpty && (
+        <>
+          <Box
+            sx={{
+              maxHeight: 145,
+              overflowY: 'auto',
+              backgroundColor: '#fff',
+              '&::-webkit-scrollbar': {
+                width: '8px'
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f3f5',
+                borderRadius: '4px'
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#cbd5e0',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: '#a0aec0'
+                }
+              },
+              // Firefox
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#cbd5e0 #f1f3f5'
             }}
-          />
-        ))}
-        {filtered.length === 0 && search && (
-          <Box sx={{ py: 1, textAlign: 'center' }}>
-            <BCTypography sx={{ fontSize: '0.8rem', color: '#8a94a6' }}>
-              {t('map.noEquipmentFound')}
-            </BCTypography>
-          </Box>
-        )}
-      </Box>
-
-      {/* Show More */}
-      {hasMore && !search && (
-        <Box
-          onClick={() => setExpanded(!expanded)}
-          sx={{
-            py: 0.6,
-            textAlign: 'center',
-            cursor: 'pointer',
-            backgroundColor: '#f7f9fd',
-            borderTop: '1px solid #e4e9f2',
-            '&:hover': { backgroundColor: '#edf2f8' }
-          }}
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="center"
-            spacing={0.4}
           >
-            <BCTypography
-              sx={{ color: '#003366', fontWeight: 600, fontSize: '0.72rem' }}
-            >
-              {expanded
-                ? t('map.showFewerResults')
-                : t('map.viewAll', { count: filtered.length })}
-            </BCTypography>
-            {expanded ? (
-              <CollapseIcon sx={{ fontSize: 13, color: '#003366' }} />
-            ) : (
-              <ExpandIcon sx={{ fontSize: 13, color: '#003366' }} />
+            {displayed.map((eq, idx) => (
+              <EquipmentRow
+                key={eq.id || idx}
+                equipment={eq}
+                index={idx}
+                disableClick={isGovernmentUser}
+                onClick={() => {
+                  const url = getEquipmentUrl(eq.id)
+                  if (url) navigate(url)
+                }}
+              />
+            ))}
+            {filtered.length === 0 && search && (
+              <Box sx={{ py: 1, textAlign: 'center' }}>
+                <BCTypography sx={{ fontSize: '0.8rem', color: '#8a94a6' }}>
+                  {t('map.noEquipmentFound')}
+                </BCTypography>
+              </Box>
             )}
-          </Stack>
-        </Box>
+          </Box>
+
+          {/* Show More */}
+          {hasMore && !search && (
+            <Box
+              onClick={() => setExpanded(!expanded)}
+              sx={{
+                py: 0.6,
+                textAlign: 'center',
+                cursor: 'pointer',
+                backgroundColor: '#f7f9fd',
+                borderTop: '1px solid #e4e9f2',
+                '&:hover': { backgroundColor: '#edf2f8' }
+              }}
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="center"
+                spacing={0.4}
+              >
+                <BCTypography
+                  sx={{
+                    color: '#003366',
+                    fontWeight: 600,
+                    fontSize: '0.72rem'
+                  }}
+                >
+                  {expanded
+                    ? t('map.showFewerResults')
+                    : t('map.viewAll', { count: filtered.length })}
+                </BCTypography>
+                {expanded ? (
+                  <CollapseIcon sx={{ fontSize: 13, color: '#003366' }} />
+                ) : (
+                  <ExpandIcon sx={{ fontSize: 13, color: '#003366' }} />
+                )}
+              </Stack>
+            </Box>
+          )}
+        </>
       )}
 
       {/* Footer */}
@@ -1520,6 +1581,14 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
       enabled: isGovernmentUser ? true : !!effectiveOrganizationId
     })
 
+  // Fetch all charging sites (including empty ones)
+  const { data: chargingSitesData } = useGetAllChargingSitesForMap(
+    effectiveOrganizationId,
+    {
+      enabled: isGovernmentUser ? true : !!effectiveOrganizationId
+    }
+  )
+
   // Handle loading state with minimum display time
   useEffect(() => {
     if (isLoading || isRefetching) {
@@ -1541,18 +1610,21 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   }, [isLoading, isRefetching])
 
   // Transform and group equipment data
-  const { locations, grouped, stats } = useMemo(() => {
+  const { locations, grouped, stats, allSites } = useMemo(() => {
     const locs = transformData(data)
-    const grp = groupBySite(locs)
+    const sites = transformChargingSites(chargingSitesData?.chargingSites || [])
+    const grp = groupBySite(locs, sites)
+
     return {
       locations: locs,
+      allSites: sites,
       grouped: grp,
       stats: {
         totalEquipment: locs.length,
         totalSites: Object.keys(grp).length
       }
     }
-  }, [data])
+  }, [data, chargingSitesData])
 
   // Prepare marker arrays for map rendering
   const equipmentMarkers = locations // Individual equipment markers
@@ -1653,46 +1725,62 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
           onRefresh={refetch}
           isRefreshing={isRefetching}
         />
-        <MarkerClusterGroup
-          key={viewMode}
-          chunkedLoading
-          iconCreateFunction={clusterIcon}
-          maxClusterRadius={50}
-          spiderfyOnMaxZoom
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick
-          animate
-        >
-          {viewMode === 'equipment'
-            ? equipmentMarkers.map((equipment, idx) => (
-                <Marker
-                  key={`eq-${equipment.id || idx}`}
-                  position={[equipment.lat, equipment.lng]}
-                  icon={getMarkerIconForStatus(equipment.status)}
-                >
-                  <Popup maxWidth={360} minWidth={300}>
-                    <EquipmentPopup
-                      equipment={equipment}
-                      isGovernmentUser={isGovernmentUser}
-                    />
-                  </Popup>
-                </Marker>
-              ))
-            : siteMarkers.map((site) => (
-                <Marker
-                  key={`site-${site.key}`}
-                  position={[site.lat, site.lng]}
-                  icon={getMarkerIconForStatus(site.status)}
-                >
-                  <Popup maxWidth={400} minWidth={320}>
-                    <SitePopup
-                      siteData={site}
-                      isGovernmentUser={isGovernmentUser}
-                    />
-                  </Popup>
-                </Marker>
-              ))}
-        </MarkerClusterGroup>
+        {/* Equipment markers cluster */}
+        {viewMode === 'equipment' && (
+          <MarkerClusterGroup
+            key="equipment"
+            chunkedLoading
+            iconCreateFunction={clusterIcon}
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom
+            showCoverageOnHover={false}
+            zoomToBoundsOnClick
+            animate
+          >
+            {equipmentMarkers.map((equipment, idx) => (
+              <Marker
+                key={`eq-${equipment.id || idx}`}
+                position={[equipment.lat, equipment.lng]}
+                icon={getMarkerIconForStatus(equipment.status)}
+              >
+                <Popup maxWidth={360} minWidth={300}>
+                  <EquipmentPopup
+                    equipment={equipment}
+                    isGovernmentUser={isGovernmentUser}
+                  />
+                </Popup>
+              </Marker>
+            ))}
+          </MarkerClusterGroup>
+        )}
+        {/* Charging sites cluster */}
+        {viewMode === 'sites' && (
+          <MarkerClusterGroup
+            key="sites"
+            chunkedLoading
+            iconCreateFunction={clusterIcon}
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom
+            showCoverageOnHover={false}
+            zoomToBoundsOnClick
+            animate
+          >
+            {siteMarkers.map((site) => (
+              <Marker
+                key={`site-${site.key}`}
+                position={[site.lat, site.lng]}
+                icon={getMarkerIconForStatus(site.status)}
+              >
+                <Popup maxWidth={400} minWidth={320}>
+                  <SitePopup
+                    siteData={site}
+                    isGovernmentUser={isGovernmentUser}
+                  />
+                </Popup>
+              </Marker>
+            ))}
+          </MarkerClusterGroup>
+        )}
       </>
     ),
     [

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { MapContainer, useMap, Marker, Popup, TileLayer } from 'react-leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 import { createPortal } from 'react-dom'
 import { Control, DomEvent, DomUtil } from 'leaflet'
+import L from 'leaflet'
 import {
   Paper,
   Chip,
@@ -31,6 +33,43 @@ import colors from '@/themes/base/colors'
 
 // Fix Leaflet icon issue
 fixLeafletIcons()
+
+// Cluster styling (matching FSE map)
+const CLUSTER_STYLES = `
+  .charging-site-marker-cluster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: 'BCSans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: white;
+    background: #003366;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .charging-site-marker-cluster:hover {
+    transform: scale(1.05);
+    background: #002147;
+  }
+  .cs-cluster-sm { width: 32px; height: 32px; font-size: 12px; }
+  .cs-cluster-md { width: 40px; height: 40px; font-size: 13px; }
+  .cs-cluster-lg { width: 48px; height: 48px; font-size: 14px; }
+  .cs-cluster-xl { width: 56px; height: 56px; font-size: 15px; }
+`
+
+// Inject cluster styles
+if (typeof document !== 'undefined') {
+  const styleId = 'charging-site-cluster-styles'
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = CLUSTER_STYLES
+    document.head.appendChild(style)
+  }
+}
 
 // Slide transition for the dialog
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -121,11 +160,11 @@ const MapBoundsHandler = ({ sites }) => {
 
       if (validSites.length === 1) {
         // Single site - center on it with reasonable zoom
-        map.setView([validSites[0].latitude, validSites[0].longitude], 12)
+        map.setView([validSites[0].latitude, validSites[0].longitude], 10)
       } else if (validSites.length > 1) {
         // Multiple sites - fit bounds to show all
         const bounds = validSites.map((site) => [site.latitude, site.longitude])
-        map.fitBounds(bounds, { padding: [20, 20] })
+        map.fitBounds(bounds, { padding: [50, 50] })
       }
     }
   }, [map, sites])
@@ -512,6 +551,31 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
   )
 }
 
+// Cluster icon function (matching FSE map style)
+const createClusterIcon = (cluster) => {
+  const count = cluster.getChildCount()
+  let cls = 'cs-cluster-sm'
+  let size = 32
+
+  // Scale cluster size based on count
+  if (count >= 50) {
+    cls = 'cs-cluster-xl'
+    size = 56
+  } else if (count >= 20) {
+    cls = 'cs-cluster-lg'
+    size = 48
+  } else if (count >= 5) {
+    cls = 'cs-cluster-md'
+    size = 40
+  }
+
+  return L.divIcon({
+    html: `<div class="charging-site-marker-cluster ${cls}">${count}</div>`,
+    className: '',
+    iconSize: L.point(size, size, true)
+  })
+}
+
 // Map content component (extracted for reuse)
 const MapContent = ({ sites, showLegend, isFullscreen }) => {
   const sitesArray = Array.isArray(sites) ? sites : [sites]
@@ -529,14 +593,24 @@ const MapContent = ({ sites, showLegend, isFullscreen }) => {
         <ChargingSitesLegend sites={sitesArray} isFullscreen={isFullscreen} />
       )}
 
-      {/* Render markers for all valid sites */}
-      {sitesArray.map((site, index) => (
-        <ChargingSiteMarker
-          key={site.chargingSiteId || `site-${index}`}
-          site={site}
-          isFullscreen={isFullscreen}
-        />
-      ))}
+      {/* Render markers for all valid sites with clustering */}
+      <MarkerClusterGroup
+        chunkedLoading
+        iconCreateFunction={createClusterIcon}
+        maxClusterRadius={50}
+        spiderfyOnMaxZoom
+        showCoverageOnHover={false}
+        zoomToBoundsOnClick
+        animate
+      >
+        {sitesArray.map((site, index) => (
+          <ChargingSiteMarker
+            key={site.chargingSiteId || `site-${index}`}
+            site={site}
+            isFullscreen={isFullscreen}
+          />
+        ))}
+      </MarkerClusterGroup>
     </>
   )
 }
@@ -558,7 +632,7 @@ const ChargingSitesMap = ({
 
   // Default center (BC center)
   const defaultCenter = [53.7267, -127.6476]
-  const defaultZoom = 5
+  const defaultZoom = 6
 
   const handleToggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)

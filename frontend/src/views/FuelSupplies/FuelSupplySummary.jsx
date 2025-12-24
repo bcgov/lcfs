@@ -1,5 +1,6 @@
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
@@ -147,6 +148,14 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
         sx={{ height: '100%', width: '100%' }}
         data-test="fuel-supply-summary"
       >
+        {data?.totalComplianceUnits !== undefined &&
+          data?.totalComplianceUnits !== null && (
+            <ComplianceUnitsTotal
+              label={t('fuelSupply:totalComplianceUnits')}
+              value={data.totalComplianceUnits}
+              dataTest="fuel-supply-total-compliance-units"
+            />
+          )}
         <BCGridViewer
           gridKey="fuel-supplies"
           gridRef={gridRef}

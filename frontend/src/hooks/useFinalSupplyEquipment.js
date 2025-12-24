@@ -673,6 +673,51 @@ export const useSetFSEReportingDefaultDates = (
 }
 
 /**
+ * Hook to fetch all charging sites for the map view
+ */
+export const useGetAllChargingSitesForMap = (organizationId, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['charging-sites-map-data', organizationId],
+    queryFn: async () => {
+      const requestBody = {
+        page: 1,
+        size: 10000,
+        filters: [],
+        sort_orders: []
+      }
+
+      const endpoint = organizationId
+        ? `/charging-sites/organization/${organizationId}/list-all`
+        : '/charging-sites/list-all'
+
+      const response = await client.post(endpoint, requestBody)
+
+      return {
+        chargingSites:
+          response.data?.chargingSites || response.data?.charging_sites || [],
+        pagination: response.data?.pagination,
+        totalCount: response.data?.pagination?.total || 0
+      }
+    },
+    enabled,
+    staleTime,
+    cacheTime,
+    retry: 2,
+    retryDelay: 1000,
+    ...restOptions
+  })
+}
+
+/**
  * Hook to fetch ALL FSE/Charging Equipment data for the map view.
  */
 export const useGetAllFSEForMap = (

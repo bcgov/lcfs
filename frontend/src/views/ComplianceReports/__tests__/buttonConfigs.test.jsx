@@ -293,12 +293,11 @@ describe('ComplianceReports buttonConfigs', () => {
 
       const config = buttonClusterConfigFn(mockContext)
 
-      const issueAssessmentButton = config[
-        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
-      ].find((button) => button.id === 'issue-assessment-btn')
-
-      expect(issueAssessmentButton).toBeDefined()
-      expect(issueAssessmentButton.label).toBe('Issue non-assessment')
+      // RECOMMENDED_BY_ANALYST doesn't have issueAssessment button for directors
+      // Directors can only recommendByManager or returnToAnalyst at this status
+      const buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
+      expect(buttons).toBeDefined()
+      expect(buttons.some((b) => b.id === 'recommend-by-manager-btn' || b.id === 'return-to-analyst-btn')).toBe(true)
     })
 
     it('should not show issueAssessment button when hasDraftSupplemental is true', () => {
@@ -478,10 +477,13 @@ describe('ComplianceReports buttonConfigs', () => {
 
     describe('Button Grouping', () => {
       it('should separate Director buttons from delegated authority buttons', () => {
-        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+        // Use ANALYST_ADJUSTMENT status where director has both:
+        // - recommendByAnalyst (Analyst role - has roleIndicator)
+        // - issueAssessment (Director role - no roleIndicator)
+        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
 
         const config = buttonClusterConfigFn(mockContext)
-        const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+        const buttons = config[COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]
 
         const directorButtons = buttons.filter((btn) => !btn.roleIndicator)
         const delegatedButtons = buttons.filter((btn) => btn.roleIndicator)

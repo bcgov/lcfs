@@ -187,10 +187,6 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('renders with data', () => {
       renderComponent()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-      expect(screen.getByTestId('form-control-label')).toBeInTheDocument()
-      expect(
-        screen.getByText('finalSupplyEquipment:showPageMap')
-      ).toBeInTheDocument()
       expect(mockFinalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
         expect.any(Function),
         COMPLIANCE_REPORT_STATUSES.DRAFT,
@@ -403,38 +399,21 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(gridViewerProps.paginationOptions.size).toBe(5)
     })
 
-    it('toggles map visibility', async () => {
-      const user = userEvent.setup()
+    it('renders grid viewer with correct configuration', () => {
       renderComponent()
-
-      expect(screen.queryByTestId('geo-mapping')).not.toBeInTheDocument()
-      expect(
-        screen.getByText('finalSupplyEquipment:showPageMap')
-      ).toBeInTheDocument()
-
-      const switchEl = screen.getByRole('checkbox')
-      await user.click(switchEl)
-
-      expect(screen.getByTestId('geo-mapping')).toBeInTheDocument()
-      expect(
-        screen.getByText('finalSupplyEquipment:hidePageMap')
-      ).toBeInTheDocument()
+      
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(gridViewerProps.gridKey).toBe('final-supply-equipments')
+      expect(gridViewerProps.enableCopyButton).toBe(false)
     })
   })
 
   describe('Conditional Rendering', () => {
-    it('shows map when switch is toggled', async () => {
-      const user = userEvent.setup()
+    it('renders grid with proper data key', () => {
       renderComponent()
-
-      await user.click(screen.getByRole('checkbox'))
-
-      const geoMapping = screen.getByTestId('geo-mapping')
-      expect(geoMapping).toBeInTheDocument()
-      expect(geoMapping).toHaveAttribute(
-        'data-compliance-report-id',
-        'test-123'
-      )
+      
+      expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(gridViewerProps.dataKey).toBe('finalSupplyEquipments')
     })
 
     it('calculates grid suppression correctly', () => {

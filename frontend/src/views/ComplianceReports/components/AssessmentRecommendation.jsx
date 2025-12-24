@@ -66,7 +66,7 @@ export const AssessmentRecommendation = ({
   const isAnalyst = hasRoles(roles.analyst)
   const isDirector = hasRoles(roles.director)
 
-  // Determine if this is an original report (should show non-assessment option)
+  // Determine if this is an original report (kept for backward compatibility)
   const isOriginalReport = useMemo(() => {
     return (
       reportData?.report?.version === 0 &&
@@ -83,15 +83,14 @@ export const AssessmentRecommendation = ({
     )
   }, [isAnalyst, isDirector, currentStatus])
 
-  // Show non-assessment section for analysts and directors on original reports
+  // Show non-assessment section for analysts and directors on all report types
   const shouldShowNonAssessmentSection = useMemo(() => {
     return (
       isGovernmentUser &&
       (isAnalyst || isDirector) &&
-      isOriginalReport &&
       currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
     )
-  }, [isGovernmentUser, isAnalyst, isDirector, isOriginalReport, currentStatus])
+  }, [isGovernmentUser, isAnalyst, isDirector, currentStatus])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -236,37 +235,36 @@ export const AssessmentRecommendation = ({
         </BCBox>
       ) : (
         <>
-          {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
-            currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
-              <BCTypography variant="body2">
-                The analyst can make changes to the reported activity
-                information if it is known to be incorrect, click to put the
-                report in edit mode:
-                <br />
-                <Tooltip
-                  title={
-                    reportData.isNewest
-                      ? ''
-                      : 'Supplier has a supplemental report in progress.'
-                  }
-                  placement="right"
-                >
-                  <span>
-                    <BCButton
-                      onClick={openAdjustmentDialog}
-                      sx={{ mt: 2 }}
-                      color="primary"
-                      variant="outlined"
-                      disabled={!reportData.isNewest}
-                    >
-                      Analyst adjustment
-                    </BCButton>
-                  </span>
-                </Tooltip>
-              </BCTypography>
-            )}
+          {/* Analyst adjustment section - Show above non-assessment */}
+          {shouldShowAnalystAdjustment && (
+            <BCTypography variant="body2" sx={{ mb: 2 }}>
+              The analyst can make changes to the reported activity information if
+              it is known to be incorrect, click to put the report in edit mode:
+              <br />
+              <Tooltip
+                title={
+                  reportData.isNewest
+                    ? ''
+                    : 'Supplier has a supplemental report in progress.'
+                }
+                placement="right"
+              >
+                <span>
+                  <BCButton
+                    onClick={openAdjustmentDialog}
+                    sx={{ mt: 2 }}
+                    color="primary"
+                    variant="outlined"
+                    disabled={!reportData.isNewest}
+                  >
+                    Analyst adjustment
+                  </BCButton>
+                </span>
+              </Tooltip>
+            </BCTypography>
+          )}
 
-          {/* Not subject to assessment section - Only show for original reports */}
+          {/* Not subject to assessment section - Show for all report types */}
           {shouldShowNonAssessmentSection && (
             <BCBox
               mt={
@@ -316,34 +314,6 @@ export const AssessmentRecommendation = ({
             </BCBox>
           )}
         </>
-      )}
-
-      {shouldShowAnalystAdjustment && (
-        <BCTypography variant="body2">
-          The analyst can make changes to the reported activity information if
-          it is known to be incorrect, click to put the report in edit mode:
-          <br />
-          <Tooltip
-            title={
-              reportData.isNewest
-                ? ''
-                : 'Supplier has a supplemental report in progress.'
-            }
-            placement="right"
-          >
-            <span>
-              <BCButton
-                onClick={openAdjustmentDialog}
-                sx={{ mt: 2 }}
-                color="primary"
-                variant="outlined"
-                disabled={!reportData.isNewest}
-              >
-                Analyst adjustment
-              </BCButton>
-            </span>
-          </Tooltip>
-        </BCTypography>
       )}
 
       {shouldShowReassessmentButton && (
