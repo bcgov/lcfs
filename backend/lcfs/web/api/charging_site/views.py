@@ -207,7 +207,7 @@ async def bulk_update_equipment_status(
     response_model=ChargingSitesSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_charging_sites(
     request: Request,
     organization_id: int,
