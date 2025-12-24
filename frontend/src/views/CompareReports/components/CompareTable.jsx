@@ -24,6 +24,7 @@ const CompareTable = ({
   enableFuelControls = false,
   setFuelType,
   fuelType,
+  highlightedColumns = [],
   fuelAvailability = null
 }) => {
   const { t } = useTranslation(['common', 'report'])
@@ -45,9 +46,27 @@ const CompareTable = ({
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       display: 'block'
+    },
+    highlightedHeaderCell: {
+      backgroundColor: '#e0e0e0'
+    },
+    highlightedBodyCell: {
+      backgroundColor: '#e5e5e5'
     }
   }
 
+  const isColumnHighlighted = (columnId) =>
+    highlightedColumns?.includes(columnId)
+
+  const getHeaderCellStyles = (columnId) => ({
+    ...tableStyles.headerCell,
+    ...(isColumnHighlighted(columnId) ? tableStyles.highlightedHeaderCell : {})
+  })
+
+  const getBodyCellStyles = (columnId) => ({
+    ...tableStyles.bodyCell,
+    ...(isColumnHighlighted(columnId) ? tableStyles.highlightedBodyCell : {})
+  })
   const isFuelDisabled = (fuelKey) =>
     fuelAvailability ? !fuelAvailability[fuelKey] : false
 
@@ -181,7 +200,7 @@ const CompareTable = ({
               <TableCell
                 align="center"
                 sx={{
-                  ...tableStyles.headerCell,
+                  ...getHeaderCellStyles(columns[2].id),
                   borderRight: '1px solid #495057',
                   maxWidth: columns[2].maxWidth || 'none',
                   width: columns[2].width || 'auto'
@@ -192,7 +211,7 @@ const CompareTable = ({
               <TableCell
                 align="center"
                 sx={{
-                  ...tableStyles.headerCell,
+                  ...getHeaderCellStyles(columns[3].id),
                   maxWidth: columns[3].maxWidth || 'none',
                   width: columns[3].width || 'auto',
                   borderRight: '1px solid #495057'
@@ -203,7 +222,7 @@ const CompareTable = ({
               <TableCell
                 align="center"
                 sx={{
-                  ...tableStyles.headerCell,
+                  ...getHeaderCellStyles(columns[4].id),
                   maxWidth: columns[4].maxWidth || 'none',
                   width: columns[4].width || 'auto'
                 }}
@@ -221,7 +240,7 @@ const CompareTable = ({
                   key={column.id}
                   align="center"
                   sx={{
-                    ...tableStyles.headerCell,
+                    ...getHeaderCellStyles(column.id),
                     borderRight:
                       index < columns.length - 1 ? '1px solid #495057' : 'none',
                     maxWidth: column.maxWidth || 'none',
@@ -257,12 +276,15 @@ const CompareTable = ({
                         ? '1px solid #495057'
                         : 'none',
                     maxWidth: column.maxWidth || 'none',
-                    width: column.width || 'auto'
+                    width: column.width || 'auto',
+                    backgroundColor: isColumnHighlighted(column.id)
+                      ? tableStyles.highlightedBodyCell.backgroundColor
+                      : '#fcfcfc'
                   }}
                 >
                   <span
                     style={{
-                      ...tableStyles.bodyCell,
+                      ...getBodyCellStyles(column.id),
                       fontWeight:
                         column.bold ||
                         (column.id === 'description' && !row.line)
