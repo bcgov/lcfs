@@ -8,6 +8,9 @@ import { useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
+import GeoMapping from './GeoMapping'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
 import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
@@ -17,6 +20,7 @@ export const FinalSupplyEquipmentSummary = ({
   status,
   organizationId
 }) => {
+  const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
   const { hasAnyRole } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
@@ -51,7 +55,6 @@ export const FinalSupplyEquipmentSummary = ({
     }),
     [t]
   )
-
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -64,11 +67,9 @@ export const FinalSupplyEquipmentSummary = ({
     }),
     [status]
   )
-
   const columns = useMemo(() => {
     return finalSupplyEquipmentSummaryColDefs(t, status, isIDIR)
   }, [t, status, isIDIR])
-
   const getRowId = (params) => {
     return String(params.data.chargingEquipmentId)
   }
@@ -95,6 +96,25 @@ export const FinalSupplyEquipmentSummary = ({
           enablePageCaching={false}
         />
       </BCBox>
+      <>
+        {/* Toggle Map Switch */}
+        <FormControlLabel
+          control={
+            <Switch
+              sx={{ mt: -1 }}
+              checked={showMap}
+              onChange={() => setShowMap(!showMap)}
+            />
+          }
+          label={showMap ? 'Hide Map' : 'Show Map'}
+          sx={{ mt: 2 }}
+        />
+
+        {/* Conditional Rendering of MapComponent */}
+        {showMap && (
+          <GeoMapping complianceReportId={complianceReportId} data={fseData} />
+        )}
+      </>
     </Grid2>
   )
 }
