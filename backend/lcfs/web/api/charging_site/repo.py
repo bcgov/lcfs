@@ -18,6 +18,7 @@ from lcfs.db.models.compliance import (
 )
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.organization import Organization
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.base import (
@@ -337,7 +338,8 @@ class ChargingSiteRepository:
         self, organization_id: Optional[int] = None
     ) -> Sequence[ChargingSite]:
         """
-        Retrieve all charging sites, optionally filtered by organization
+        Retrieve all charging sites, optionally filtered by organization.
+        Excludes deleted charging sites.
         """
         query = select(ChargingSite).options(
             joinedload(ChargingSite.organization),
@@ -345,7 +347,7 @@ class ChargingSiteRepository:
             joinedload(ChargingSite.allocating_organization),
             selectinload(ChargingSite.documents),
             selectinload(ChargingSite.charging_equipment),
-        )
+        ).where(ChargingSite.action_type != ActionTypeEnum.DELETE)
 
         if organization_id:
             query = query.where(ChargingSite.organization_id == organization_id)
@@ -358,7 +360,8 @@ class ChargingSiteRepository:
         self, organization_id: int
     ) -> Sequence[ChargingSite]:
         """
-        Retrieve all charging sites for a specific organization, ordered by creation date
+        Retrieve all charging sites for a specific organization, ordered by creation date.
+        Excludes deleted charging sites.
         """
         query = (
             select(ChargingSite)
@@ -366,7 +369,10 @@ class ChargingSiteRepository:
                 joinedload(ChargingSite.status),
                 joinedload(ChargingSite.allocating_organization),
             )
-            .where(ChargingSite.organization_id == organization_id)
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
             .order_by(asc(ChargingSite.create_date))
         )
         results = await self.db.execute(query)
@@ -400,6 +406,7 @@ class ChargingSiteRepository:
         """
         Retrieve all charging sites with pagination, filtering, and sorting.
         If exclude_draft is True, excludes sites with DRAFT status.
+        Excludes deleted charging sites.
         """
         stmt = (
             select(ChargingSite)
@@ -409,6 +416,7 @@ class ChargingSiteRepository:
                 joinedload(ChargingSite.allocating_organization),
                 selectinload(ChargingSite.documents),
             )
+            .where(ChargingSite.action_type != ActionTypeEnum.DELETE)
         )
 
         # Add condition to exclude draft sites if requested
@@ -647,11 +655,15 @@ class ChargingSiteRepository:
     @repo_handler
     async def get_site_names_by_organization(self, organization_id: int):
         """
-        Get site names and charging site IDs for the given organization
+        Get site names and charging site IDs for the given organization.
+        Excludes deleted charging sites.
         """
         result = await self.db.execute(
             select(ChargingSite.site_name, ChargingSite.charging_site_id)
-            .where(ChargingSite.organization_id == organization_id)
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
             .order_by(ChargingSite.site_name)
         )
         return result.all()
