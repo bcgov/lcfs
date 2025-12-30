@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
@@ -23,7 +23,15 @@ export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButt
   ...props
 }: ClearFiltersButtonProps, ref) => {
   const { t } = useTranslation(['common'])
-  
+
+  // Handle keyboard events for accessibility
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onClick?.()
+    }
+  }
+
   return (
     <BCButton
       ref={ref}
@@ -31,6 +39,7 @@ export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButt
       size={size}
       color={color}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       startIcon={<FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />}
       sx={{...sx}}
       {...props}
