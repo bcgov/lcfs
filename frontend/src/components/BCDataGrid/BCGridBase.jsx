@@ -237,7 +237,7 @@ export const BCGridBase = forwardRef(
         overlayNoRowsTemplate="No rows found"
         autoSizeStrategy={{
           type: 'fitGridWidth',
-          defaultMinWidth: 100,
+          defaultMinWidth: 50,
           ...autoSizeStrategy
         }}
         suppressDragLeaveHidesColumns
