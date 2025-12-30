@@ -9,16 +9,13 @@ export const ComplianceUnitsTotal = ({ label, value, dataTest }) => {
       ? Math.round(value).toLocaleString('en-US')
       : '0'
 
-  const valueColor = value < 0 ? colors.error.main : colors.success.main
-
   return (
     <Box
       sx={{
         display: 'flex',
         alignItems: 'baseline',
         gap: 1,
-        mb: 2,
-        mt: -1.5,
+        mb: 1.5,
         ml: 1
       }}
       data-test={dataTest}
@@ -38,7 +35,7 @@ export const ComplianceUnitsTotal = ({ label, value, dataTest }) => {
         sx={{
           fontWeight: 700,
           fontSize: '1rem',
-          color: valueColor
+          color: colors.text.primary
         }}
       >
         {formattedValue}
