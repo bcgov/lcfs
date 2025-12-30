@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from lcfs.db.models import Organization, CompliancePeriod, ComplianceReport
@@ -141,18 +142,18 @@ def mock_snapshot_service():
 def mock_org_snapshot_repo():
     """Mock OrganizationSnapshotRepository with default complete snapshot"""
     repo = AsyncMock(spec=OrganizationSnapshotRepository)
-    # Create a mock snapshot with all required fields populated
-    # Uses field names from OrganizationSnapshotSchema
-    mock_snapshot = MagicMock()
-    mock_snapshot.compliance_report_id = 1
-    mock_snapshot.is_edited = False
-    mock_snapshot.name = "Test Organization"
-    mock_snapshot.operating_name = "Test Operating Name"
-    mock_snapshot.email = "test@example.com"
-    mock_snapshot.phone = "123-456-7890"
-    mock_snapshot.service_address = "123 Test St, Vancouver, BC"
-    mock_snapshot.records_address = "456 Records St, Victoria, BC"
-    mock_snapshot.head_office_address = "789 Head Office St, Burnaby, BC"
+    # Create a snapshot with all required fields populated
+    mock_snapshot = SimpleNamespace(
+        compliance_report_id=1,
+        is_edited=False,
+        name="Test Organization",
+        operating_name="Test Operating Name",
+        email="test@example.com",
+        phone="123-456-7890",
+        service_address="123 Test St, Vancouver, BC",
+        records_address="456 Records St, Victoria, BC",
+        head_office_address="789 Head Office St, Burnaby, BC",
+    )
     repo.get_by_compliance_report_id = AsyncMock(return_value=mock_snapshot)
     return repo
 
