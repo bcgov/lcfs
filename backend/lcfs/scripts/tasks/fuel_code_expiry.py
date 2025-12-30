@@ -63,6 +63,8 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
         # Send emails to each contact
         success_count = 0
         total_emails = len(email_groups)
+        # Track fuel codes that were successfully notified
+        notified_fuel_code_ids: list[int] = []
 
         base_context = {
             "subject": "Important Notice from the Deputy Director: Upcoming Expiry of BC LCFS Fuel Codes",
@@ -93,6 +95,9 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
                     )
                     if sent:
                         success_count += 1
+                        # Collect fuel code IDs that were successfully notified
+                        for code in comp_data["codes"]:
+                            notified_fuel_code_ids.append(code.fuel_code_id)
                         logger.info(
                             f"Successfully sent to {contact_email} | {company_name}"
                         )
@@ -105,6 +110,14 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
                     logger.error(
                         f"Error sending to {contact_email} | {company_name}: {e}"
                     )
+
+        # Mark successfully notified fuel codes to prevent duplicate notifications
+        if notified_fuel_code_ids:
+            logger.info(
+                f"Marking {len(notified_fuel_code_ids)} fuel codes as notified"
+            )
+            await fuel_code_repo.mark_fuel_codes_notified(notified_fuel_code_ids)
+
         logger.info(
             f"Sent fuel code expiry notifications to {success_count}/{total_emails} contacts"
         )
