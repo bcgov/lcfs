@@ -32,6 +32,8 @@ from lcfs.web.api.notification.schema import (
 )
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.organization_snapshot.repo import OrganizationSnapshotRepository
+from lcfs.web.api.organization_snapshot.schema import OrganizationSnapshotSchema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
@@ -52,6 +54,9 @@ class ComplianceReportUpdateService:
         org_service: OrganizationsService = Depends(OrganizationsService),
         trx_service: TransactionsService = Depends(TransactionsService),
         notfn_service: NotificationService = Depends(NotificationService),
+        org_snapshot_repo: OrganizationSnapshotRepository = Depends(
+            OrganizationSnapshotRepository
+        ),
     ):
         self.summary_repo = summary_repo
         self.repo = repo
@@ -59,6 +64,7 @@ class ComplianceReportUpdateService:
         self.org_service = org_service
         self.trx_service = trx_service
         self.notfn_service = notfn_service
+        self.org_snapshot_repo = org_snapshot_repo
         self._charging_equipment_repo = None
 
     @property
@@ -240,14 +246,21 @@ class ComplianceReportUpdateService:
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
+        # Validate organization details are complete before submission
+        await self._validate_organization_details_for_submission(
+            report.compliance_report_id
+        )
+
         # Auto-submit all FSE records in Draft or Updated status to Submitted status
         await self.charging_equipment_repo.auto_submit_draft_updated_fse_for_report(
             report.compliance_report_id
         )
 
         # Ensure summary exists and snapshot user-entered lines before transaction creation
-        calculated_summary = await self.summary_service.calculate_compliance_report_summary(
-            report.compliance_report_id
+        calculated_summary = (
+            await self.summary_service.calculate_compliance_report_summary(
+                report.compliance_report_id
+            )
         )
         report.summary = report.summary or calculated_summary
 
@@ -435,8 +448,10 @@ class ComplianceReportUpdateService:
                 report.organization_id
             )
 
-        pre_deadline_balance = await self.org_service.calculate_available_balance_for_period(
-            report.organization_id, compliance_year
+        pre_deadline_balance = (
+            await self.org_service.calculate_available_balance_for_period(
+                report.organization_id, compliance_year
+            )
         )
         return pre_deadline_balance
 
@@ -520,3 +535,33 @@ class ComplianceReportUpdateService:
         """Handle actions when a report is Reassessed."""
         # Implement logic for Reassessed status
         pass
+
+    async def _validate_organization_details_for_submission(
+        self, compliance_report_id: int
+    ) -> None:
+        """
+        Validates that all required organization details are complete for report submission.
+
+        Uses OrganizationSnapshotSchema's validation methods for consistency.
+        Raises HTTPException if any required fields are missing.
+        """
+        try:
+            snapshot = await self.org_snapshot_repo.get_by_compliance_report_id(
+                compliance_report_id
+            )
+            # Convert to schema for validation
+            snapshot_schema = OrganizationSnapshotSchema.model_validate(snapshot)
+        except Exception:
+            # If no snapshot found, create empty schema to get all missing fields
+            snapshot_schema = OrganizationSnapshotSchema(
+                compliance_report_id=compliance_report_id, is_edited=False
+            )
+
+        missing_fields = snapshot_schema.get_missing_required_fields()
+
+        if missing_fields:
+            missing_list = ", ".join(missing_fields)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Organization details are incomplete. The following required fields are missing: {missing_list}. Please complete all organization details before submitting the compliance report.",
+            )

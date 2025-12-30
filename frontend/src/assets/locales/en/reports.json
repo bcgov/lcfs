@@ -254,7 +254,7 @@
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
   "noRecords": "Cannot submit: You must report fuel activity information (FSE data alone is not sufficient)",
-  "invalidAddress": "Cannot submit: Please fill out all required address fields",
+  "invalidAddress": "Cannot submit: Organization details are incomplete. Please fill out all required fields in the Organization details section before submitting.",
   "addressEdited": " - edited",
   "viewLegacyBtn": "View Full Historical Report in TFRS",
   "reportAssessed": "Compliance report, Assessed",
