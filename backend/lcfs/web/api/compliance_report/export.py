@@ -141,6 +141,8 @@ class ComplianceReportExporter:
             else:
                 data = await loader(uuid, cid, report.version, is_quarterly)
 
+            row_count = len(data) - 1 if data else 0
+
             # Process each result
             if data:
                 await self._add_sheet(wb, sheet_name, data)
@@ -664,52 +666,68 @@ class ComplianceReportExporter:
 
     async def _load_fse_data(self, cid, is_quarterly) -> List[List[Any]]:
         """Load final supply equipment data."""
-        result = await self.fse_repo.get_fse_paginated(
-            compliance_report_id=cid,
+        # FSE doesn't have quarterly data, always use annual columns
+        headers = [col.label for col in FSE_EXPORT_COLUMNS]
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        if not report:
+            return [headers]
+        report_group_uuid = report.compliance_report_group_uuid if report else None
+        organization_name = (
+            report.organization.name if report and report.organization else None
+        )
+        organization_id = (
+            report.organization_id
+            if report and getattr(report, "organization_id", None)
+            else report.organization.organization_id
+            if report and report.organization
+            else None
+        )
+        if not organization_id:
+            return [headers]
+
+        reporting_result = await self.fse_repo.get_fse_reporting_list_paginated(
+            organization_id=organization_id,
             pagination=PaginationRequestSchema(
                 page=1, size=1000, filters=[], sort_orders=[]
             ),
+            compliance_report_group_uuid=report_group_uuid,
+            mode="summary",
         )
-        data = result[0]  # get_fse_paginated returns a tuple (data, total_count)
-        # FSE doesn't have quarterly data, always use annual columns
-        headers = [col.label for col in FSE_EXPORT_COLUMNS]
+        reporting_rows = reporting_result[0]
 
         rows = []
-        for fse in data:
+        for item in reporting_rows:
+            row = dict(item._mapping) if hasattr(item, "_mapping") else dict(item)
+            notes_parts = []
+            compliance_notes = row.get("compliance_notes")
+            equipment_notes = row.get("equipment_notes")
+            if compliance_notes:
+                notes_parts.append(compliance_notes)
+            if equipment_notes and equipment_notes not in notes_parts:
+                notes_parts.append(equipment_notes)
+
+            intended_uses = row.get("intended_uses") or []
+            intended_users = row.get("intended_users") or []
+
             rows.append(
                 [
-                    fse.organization_name,
-                    self._format_date(fse.supply_from_date),
-                    self._format_date(fse.supply_to_date),
-                    fse.kwh_usage,
-                    fse.serial_nbr,
-                    fse.manufacturer,
-                    fse.model,
-                    fse.level_of_equipment.name if fse.level_of_equipment else None,
-                    fse.ports,
-                    (
-                        ", ".join(
-                            [use_type.type for use_type in fse.intended_use_types]
-                        )
-                        if fse.intended_use_types
-                        else None
-                    ),
-                    (
-                        ", ".join(
-                            [
-                                user_type.type_name
-                                for user_type in fse.intended_user_types
-                            ]
-                        )
-                        if fse.intended_user_types
-                        else None
-                    ),
-                    fse.street_address,
-                    fse.city,
-                    fse.postal_code,
-                    fse.latitude,
-                    fse.longitude,
-                    fse.notes,
+                    row.get("organization_name") or organization_name,
+                    self._format_date(row.get("supply_from_date")),
+                    self._format_date(row.get("supply_to_date")),
+                    row.get("kwh_usage"),
+                    row.get("serial_number"),
+                    row.get("manufacturer"),
+                    row.get("model"),
+                    row.get("level_of_equipment"),
+                    row.get("ports"),
+                    ", ".join(intended_uses) if intended_uses else None,
+                    ", ".join(intended_users) if intended_users else None,
+                    row.get("street_address"),
+                    row.get("city"),
+                    row.get("postal_code"),
+                    row.get("latitude"),
+                    row.get("longitude"),
+                    " | ".join(notes_parts) if notes_parts else None,
                 ]
             )
 
