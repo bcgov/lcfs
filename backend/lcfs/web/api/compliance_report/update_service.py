@@ -541,9 +541,6 @@ class ComplianceReportUpdateService:
     ) -> None:
         """
         Validates that all required organization details are complete for report submission.
-
-        Uses OrganizationSnapshotSchema's validation methods for consistency.
-        Raises HTTPException if any required fields are missing.
         """
         try:
             snapshot = await self.org_snapshot_repo.get_by_compliance_report_id(

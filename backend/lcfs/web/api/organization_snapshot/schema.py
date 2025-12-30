@@ -5,8 +5,7 @@ from pydantic import model_validator
 from lcfs.web.api.base import BaseSchema
 
 
-# Single source of truth for required organization fields with their display labels
-# Used for both backend validation and error messaging
+# Required organization fields with their display labels
 REQUIRED_ORG_FIELDS: List[Tuple[str, str]] = [
     ("name", "Legal name"),
     ("operating_name", "Operating name"),
