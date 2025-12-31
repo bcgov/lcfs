@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.base import ActionTypeEnum
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
@@ -7,11 +7,11 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.exception.exceptions import DatabaseException
 from lcfs.db.models.compliance import (
     ChargingEquipment,
-    ChargingEquipmentStatus,
     ChargingSite,
     ChargingSiteStatus,
-    EndUserType
+    EndUserType,
 )
+from lcfs.db.models.organization import Organization
 
 
 @pytest.fixture
@@ -39,11 +39,13 @@ class TestChargingSiteRepository:
     async def test_get_intended_user_types(self, charging_site_repo, mock_db_session):
         """Test getting intended user types"""
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [MagicMock(spec=EndUserType)]
+        mock_result.scalars.return_value.all.return_value = [
+            MagicMock(spec=EndUserType)
+        ]
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_intended_user_types()
-        
+
         assert len(result) == 1
         mock_db_session.execute.assert_called_once()
 
@@ -54,9 +56,9 @@ class TestChargingSiteRepository:
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_site
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_charging_site_by_id(1)
-        
+
         assert result == mock_site
         mock_db_session.execute.assert_called_once()
 
@@ -68,15 +70,15 @@ class TestChargingSiteRepository:
         equipment_ids = [1, 2]
         new_status_id = 2
         allowed_source_status_ids = [1]
-        
+
         mock_result = MagicMock()
         mock_result.fetchall.return_value = [(1,), (2,)]
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.bulk_update_equipment_status(
             equipment_ids, new_status_id, allowed_source_status_ids
         )
-        
+
         assert result == [1, 2]
         mock_db_session.execute.assert_called_once()
 
@@ -87,24 +89,25 @@ class TestChargingSiteRepository:
         """Test getting paginated equipment for charging site"""
         # Create pagination with proper list objects instead of Query objects
         pagination = PaginationRequestSchema(
-            page=1, 
-            size=10, 
-            sort_orders=[], 
-            filters=[]
+            page=1, size=10, sort_orders=[], filters=[]
         )
-        
+
         # Mock count query
         mock_db_session.scalar.return_value = 2
-        
+
         # Mock equipment query
         mock_result = MagicMock()
-        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_equipment_list
-        mock_db_session.execute.return_value = mock_result
-        
-        equipment, total_count = await charging_site_repo.get_equipment_for_charging_site_paginated(
-            1, pagination
+        mock_result.unique.return_value.scalars.return_value.all.return_value = (
+            mock_equipment_list
         )
-        
+        mock_db_session.execute.return_value = mock_result
+
+        equipment, total_count = (
+            await charging_site_repo.get_equipment_for_charging_site_paginated(
+                1, pagination
+            )
+        )
+
         assert len(equipment) == 2
         assert total_count == 2
 
@@ -113,24 +116,30 @@ class TestChargingSiteRepository:
         """Test getting charging sites"""
         mock_sites = [MagicMock(spec=ChargingSite)]
         mock_result = MagicMock()
-        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_sites
+        mock_result.unique.return_value.scalars.return_value.all.return_value = (
+            mock_sites
+        )
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_charging_sites()
-        
+
         assert len(result) == 1
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
-    async def test_get_charging_sites_with_organization_filter(self, charging_site_repo, mock_db_session):
+    async def test_get_charging_sites_with_organization_filter(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test getting charging sites filtered by organization"""
         mock_sites = [MagicMock(spec=ChargingSite)]
         mock_result = MagicMock()
-        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_sites
+        mock_result.unique.return_value.scalars.return_value.all.return_value = (
+            mock_sites
+        )
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_charging_sites(organization_id=1)
-        
+
         assert len(result) == 1
         mock_db_session.execute.assert_called_once()
 
@@ -140,9 +149,9 @@ class TestChargingSiteRepository:
         mock_site = MagicMock(spec=ChargingSite)
         mock_db_session.add.return_value = None
         mock_db_session.flush.return_value = None
-        
+
         result = await charging_site_repo.create_charging_site(mock_site)
-        
+
         assert result == mock_site
         mock_db_session.add.assert_called_once_with(mock_site)
         mock_db_session.flush.assert_called_once()
@@ -154,13 +163,16 @@ class TestChargingSiteRepository:
         mock_db_session.merge.return_value = mock_site
         mock_db_session.flush.return_value = None
         mock_db_session.refresh.return_value = None
-        
+
         result = await charging_site_repo.update_charging_site(mock_site)
 
         assert result == mock_site
         mock_db_session.merge.assert_called_once_with(mock_site)
         mock_db_session.flush.assert_called_once()
-        mock_db_session.refresh.assert_called_once_with(mock_site, ['allocating_organization', 'organization', 'status', 'update_date'])
+        mock_db_session.refresh.assert_called_once_with(
+            mock_site,
+            ["allocating_organization", "organization", "status", "update_date"],
+        )
 
     @pytest.mark.anyio
     async def test_delete_charging_site(self, charging_site_repo, mock_db_session):
@@ -169,40 +181,44 @@ class TestChargingSiteRepository:
         mock_site.intended_users = []
         mock_site.documents = []
         mock_site.charging_equipment = []
-        
+
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_site
         mock_db_session.execute.return_value = mock_result
         mock_db_session.delete.return_value = None
         mock_db_session.flush.return_value = None
         mock_db_session.commit.return_value = None
-        
+
         await charging_site_repo.delete_charging_site(1)
-        
+
         mock_db_session.delete.assert_called_once_with(mock_site)
         mock_db_session.flush.assert_called_once()
         mock_db_session.commit.assert_called_once()
 
     @pytest.mark.anyio
-    async def test_delete_charging_site_not_found(self, charging_site_repo, mock_db_session):
+    async def test_delete_charging_site_not_found(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test deleting a charging site that doesn't exist"""
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute.return_value = mock_result
-        
+
         with pytest.raises(DatabaseException):
             await charging_site_repo.delete_charging_site(1)
 
     @pytest.mark.anyio
-    async def test_get_charging_site_by_site_name(self, charging_site_repo, mock_db_session):
+    async def test_get_charging_site_by_site_name(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test getting charging site by site name"""
         mock_site = MagicMock(spec=ChargingSite)
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_site
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_charging_site_by_site_name("Test Site", 1)
-        
+
         assert result == mock_site
         mock_db_session.execute.assert_called_once()
 
@@ -220,25 +236,29 @@ class TestChargingSiteRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
-    async def test_get_charging_site_status_by_name(self, charging_site_repo, mock_db_session):
+    async def test_get_charging_site_status_by_name(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test getting charging site status by name"""
         mock_status = MagicMock(spec=ChargingSiteStatus)
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_status
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_charging_site_status_by_name("Draft")
-        
+
         assert result == mock_status
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
-    async def test_update_charging_site_status(self, charging_site_repo, mock_db_session):
+    async def test_update_charging_site_status(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test updating charging site status"""
         mock_db_session.execute.return_value = None
-        
+
         await charging_site_repo.update_charging_site_status(1, 2)
-        
+
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
@@ -247,7 +267,9 @@ class TestChargingSiteRepository:
         mock_statuses = [MagicMock(spec=ChargingSiteStatus)]
 
         # Mock the individual method calls
-        charging_site_repo.get_charging_site_statuses = AsyncMock(return_value=mock_statuses)
+        charging_site_repo.get_charging_site_statuses = AsyncMock(
+            return_value=mock_statuses
+        )
 
         result = await charging_site_repo.get_charging_site_options(MagicMock())
 
@@ -255,7 +277,9 @@ class TestChargingSiteRepository:
         assert result[0] == mock_statuses
 
     @pytest.mark.anyio
-    async def test_get_site_names_by_organization(self, charging_site_repo, mock_db_session):
+    async def test_get_site_names_by_organization(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test getting site names by organization"""
         # Mock the result with site_name and charging_site_id
         mock_result = MagicMock()
@@ -264,16 +288,18 @@ class TestChargingSiteRepository:
             ("Site 2", 2),
         ]
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_site_names_by_organization(1)
-        
+
         assert len(result) == 2
         assert result[0] == ("Site 1", 1)
         assert result[1] == ("Site 2", 2)
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
-    async def test_get_site_names_by_organization_empty(self, charging_site_repo, mock_db_session):
+    async def test_get_site_names_by_organization_empty(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test getting site names when no sites exist for organization"""
         mock_result = MagicMock()
         mock_result.all.return_value = []
@@ -290,7 +316,9 @@ class TestChargingSiteRepositoryDeletedFiltering:
     """Test class for verifying deleted charging sites are filtered out"""
 
     @pytest.mark.anyio
-    async def test_get_charging_sites_excludes_deleted(self, charging_site_repo, mock_db_session):
+    async def test_get_charging_sites_excludes_deleted(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test that get_charging_sites excludes sites with action_type=DELETE"""
         # Create mock sites - only non-deleted should be returned
         mock_site = MagicMock(spec=ChargingSite)
@@ -298,7 +326,9 @@ class TestChargingSiteRepositoryDeletedFiltering:
         mock_sites = [mock_site]
 
         mock_result = MagicMock()
-        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_sites
+        mock_result.unique.return_value.scalars.return_value.all.return_value = (
+            mock_sites
+        )
         mock_db_session.execute.return_value = mock_result
 
         result = await charging_site_repo.get_charging_sites()
@@ -310,14 +340,18 @@ class TestChargingSiteRepositoryDeletedFiltering:
         assert call_args is not None
 
     @pytest.mark.anyio
-    async def test_get_charging_sites_with_org_excludes_deleted(self, charging_site_repo, mock_db_session):
+    async def test_get_charging_sites_with_org_excludes_deleted(
+        self, charging_site_repo, mock_db_session
+    ):
         """Test that get_charging_sites with organization filter excludes deleted sites"""
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.action_type = ActionTypeEnum.CREATE
         mock_sites = [mock_site]
 
         mock_result = MagicMock()
-        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_sites
+        mock_result.unique.return_value.scalars.return_value.all.return_value = (
+            mock_sites
+        )
         mock_db_session.execute.return_value = mock_result
 
         result = await charging_site_repo.get_charging_sites(organization_id=1)
@@ -383,3 +417,95 @@ class TestChargingSiteRepositoryDeletedFiltering:
         assert len(result) == 1
         assert result[0] == ("Active Site", 1)
         mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_allocation_agreement_organizations(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test getting allocation agreement organizations"""
+        mock_org1 = MagicMock(spec=Organization)
+        mock_org1.organization_id = 1
+        mock_org1.name = "Test Org 1"
+        mock_org2 = MagicMock(spec=Organization)
+        mock_org2.organization_id = 2
+        mock_org2.name = "Test Org 2"
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_org1, mock_org2]
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_allocation_agreement_organizations(1)
+
+        assert len(result) == 2
+        assert result[0].name == "Test Org 1"
+        assert result[1].name == "Test Org 2"
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_distinct_allocating_organization_names(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test getting distinct allocating organization names from charging sites"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = [("Org A",), ("Org B",), ("Org C",)]
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_distinct_allocating_organization_names(1)
+
+        assert len(result) == 3
+        assert result == ["Org A", "Org B", "Org C"]
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_transaction_partners_from_allocation_agreements(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test getting transaction partners from allocation agreements"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = [
+            ("Partner A",),
+            ("Partner B",),
+            ("Partner C",),
+        ]
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_transaction_partners_from_allocation_agreements(
+            1
+        )
+
+        assert len(result) == 3
+        assert result == ["Partner A", "Partner B", "Partner C"]
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_search_organizations_by_name(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test searching organizations by name"""
+        mock_org1 = MagicMock(spec=Organization)
+        mock_org1.organization_id = 1
+        mock_org1.name = "Test Company"
+        mock_org2 = MagicMock(spec=Organization)
+        mock_org2.organization_id = 2
+        mock_org2.name = "Test Corporation"
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_org1, mock_org2]
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.search_organizations_by_name("test")
+
+        assert len(result) == 2
+        assert result[0].name == "Test Company"
+        assert result[1].name == "Test Corporation"
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_search_organizations_by_name_empty_query(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test searching organizations with empty query returns empty list"""
+        result = await charging_site_repo.search_organizations_by_name("")
+
+        assert len(result) == 0
+        mock_db_session.execute.assert_not_called()
