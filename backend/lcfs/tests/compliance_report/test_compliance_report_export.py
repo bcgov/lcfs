@@ -42,6 +42,12 @@ def mock_fs_repo():
 def mock_cr_repo():
     """Mock ComplianceReportRepository."""
     repo = AsyncMock()
+    # Create a default mock report for methods that need compliance year
+    mock_report = Mock()
+    mock_period = Mock()
+    mock_period.description = "2025"
+    mock_report.compliance_period = mock_period
+    repo.get_compliance_report_by_id.return_value = mock_report
     return repo
 
 
@@ -161,6 +167,8 @@ def mock_fuel_supply_data():
     fs1.provision_of_the_act.name = "Section 19(b)(i)"
     fs1.fuel_code = Mock()
     fs1.fuel_code.fuel_code = "FC001"
+    fs1.is_canada_produced = True
+    fs1.is_q1_supplied = False
     fs1.quantity = 10000
     fs1.q1_quantity = 2500
     fs1.q2_quantity = 3000
@@ -347,8 +355,10 @@ class TestComplianceReportExporter:
         assert result[0] == expected_headers
 
         # Check data row contains annual quantity field
+        # Position shifted due to "Fuel produced in Canada" column added at position 7
         data_row = result[1]
-        assert data_row[7] == 10000  # quantity field
+        assert data_row[7] == "Yes"  # is_canada_produced field (2025 report)
+        assert data_row[8] == 10000  # quantity field
         assert len(data_row) == len(expected_headers)
 
     @pytest.mark.anyio
@@ -370,12 +380,15 @@ class TestComplianceReportExporter:
         assert result[0] == expected_headers
 
         # Check data row contains quarterly fields and total
+        # Positions shifted due to "Fuel produced in Canada" and "Supplied in Q1" columns added
         data_row = result[1]
-        assert data_row[7] == 2500  # Q1 quantity
-        assert data_row[8] == 3000  # Q2 quantity
-        assert data_row[9] == 2000  # Q3 quantity
-        assert data_row[10] == 2500  # Q4 quantity
-        assert data_row[11] == 10000  # Total quantity (sum of quarters)
+        assert data_row[7] == "Yes"  # is_canada_produced field (2025 report)
+        assert data_row[8] == ""  # is_q1_supplied field (2025 report, False = "")
+        assert data_row[9] == 2500  # Q1 quantity
+        assert data_row[10] == 3000  # Q2 quantity
+        assert data_row[11] == 2000  # Q3 quantity
+        assert data_row[12] == 2500  # Q4 quantity
+        assert data_row[13] == 10000  # Total quantity (sum of quarters)
         assert len(data_row) == len(expected_headers)
 
     @pytest.mark.anyio
@@ -519,10 +532,12 @@ class TestComplianceReportExporter:
 
     def test_column_count_consistency(self):
         """Test that quarterly columns have the correct number of additional columns."""
-        # Fuel supply: should have 4 extra columns (Q1, Q2, Q3, Q4, Total) replacing 1 (Quantity)
+        # Fuel supply: should have 5 extra columns (Supplied in Q1, Q1, Q2, Q3, Q4, Total) replacing 1 (Quantity)
+        # Annual has "Fuel produced in Canada" + Quantity = 16 total
+        # Quarterly has "Fuel produced in Canada" + "Supplied in Q1" + Q1-Q4 + Total = 21 total
         annual_fs_count = len(FUEL_SUPPLY_COLUMNS)
         quarterly_fs_count = len(FUEL_SUPPLY_QUARTERLY_COLUMNS)
-        assert quarterly_fs_count == annual_fs_count + 4
+        assert quarterly_fs_count == annual_fs_count + 5
 
         # Notional transfer: should have 4 extra columns
         annual_nt_count = len(NOTIONAL_TRANSFER_COLUMNS)
@@ -538,6 +553,8 @@ class TestComplianceReportExporter:
         """Test that quarterly columns have the expected labels."""
         # Test fuel supply quarterly columns
         fs_labels = [col.label for col in FUEL_SUPPLY_QUARTERLY_COLUMNS]
+        assert "Fuel produced in Canada" in fs_labels
+        assert "Supplied in Q1" in fs_labels
         assert "Q1 Quantity" in fs_labels
         assert "Q2 Quantity" in fs_labels
         assert "Q3 Quantity" in fs_labels
@@ -559,6 +576,11 @@ class TestComplianceReportExporter:
         assert "Q3 Quantity" in aa_labels
         assert "Q4 Quantity" in aa_labels
         assert "Total Quantity" in aa_labels
+        
+        # Test other uses columns (annual only, but includes new fields for 2025+)
+        ou_labels = [col.label for col in OTHER_USES_COLUMNS]
+        assert "Fuel produced in Canada" in ou_labels
+        assert "Supplied in Q1" in ou_labels
 
 
 class TestReportingFrequencyDetection:
