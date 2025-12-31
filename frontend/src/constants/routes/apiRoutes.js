@@ -118,7 +118,8 @@ export const apiRoutes = {
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',
   intendedUsers: '/charging-sites/intended-users',
-  allocationOrganizations: '/charging-sites/allocation-organizations',
+  allocationOrganizationsSearch:
+    '/charging-sites/allocation-organizations/search?',
 
   // charging-equipment (new FSE system)
   chargingEquipment: {
@@ -135,7 +136,8 @@ export const apiRoutes = {
     endUserTypes: '/charging-equipment/end-user-types/list',
     chargingSites: '/charging-equipment/charging-sites/list',
     organizations: '/charging-equipment/organizations/list',
-    hasAllocationAgreements: '/charging-equipment/organizations/has-allocation-agreements',
+    hasAllocationAgreements:
+      '/charging-equipment/organizations/has-allocation-agreements',
     template: '/charging-equipment/template/:organizationId',
     import: '/charging-equipment/import/:organizationId',
     importJobStatus: '/charging-equipment/status/:jobId'
@@ -146,8 +148,10 @@ export const apiRoutes = {
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
   // Charging-site specific equipment endpoints
   // Backend: POST /charging-sites/{site_id}/equipment/list-all
-  getChargingSiteEquipmentPaginated: '/charging-sites/:siteId/equipment/list-all',
-  bulkUpdateEquipmentStatus: '/charging-sites/:siteId/equipment/bulk-status-update',
+  getChargingSiteEquipmentPaginated:
+    '/charging-sites/:siteId/equipment/list-all',
+  bulkUpdateEquipmentStatus:
+    '/charging-sites/:siteId/equipment/bulk-status-update',
   exportChargingSites: '/charging-sites/export/:orgID',
   importChargingSites: '/charging-sites/import',
   getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
@@ -224,5 +228,5 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache',
+  geocoderClearCache: '/geocoder/cache'
 }
