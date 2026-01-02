@@ -19,8 +19,8 @@ FSE_EXPORT_SHEETNAME = "FSE"
 VALIDATION_SHEETNAME = "VALUES"
 FSE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Organization", "text"),
-    SpreadsheetColumn("Supply from date", "date"),
-    SpreadsheetColumn("Supply to date", "date"),
+    SpreadsheetColumn("Dates of supply from", "date"),
+    SpreadsheetColumn("Dates of supply to", "date"),
     SpreadsheetColumn("kWh usage", "int"),
     SpreadsheetColumn("Serial #", "text"),
     SpreadsheetColumn("Manufacturer", "text"),
