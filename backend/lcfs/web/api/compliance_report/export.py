@@ -790,7 +790,7 @@ class ComplianceReportExporter:
                     row.get("manufacturer"),
                     row.get("model"),
                     row.get("level_of_equipment"),
-                    row.get("ports"),
+                    row.get("ports").value if row.get("ports") else None,
                     ", ".join(intended_uses) if intended_uses else None,
                     ", ".join(intended_users) if intended_users else None,
                     row.get("street_address"),
