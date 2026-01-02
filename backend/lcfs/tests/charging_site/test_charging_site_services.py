@@ -22,6 +22,7 @@ from lcfs.db.models.compliance import (
     ChargingEquipmentStatus,
     EndUserType,
 )
+from lcfs.db.models.organization import Organization
 
 
 @pytest.fixture
@@ -914,3 +915,139 @@ class TestChargingSiteService:
         assert len(result) == 0
         assert result == []
         mock_repo.get_site_names_by_organization.assert_called_once_with(1)
+
+    @pytest.mark.anyio
+    async def test_search_allocation_organizations_success(
+        self, charging_site_service, mock_repo
+    ):
+        """Test successful search for allocation organizations"""
+        # Mock matched organizations
+        mock_org1 = MagicMock(spec=Organization)
+        mock_org1.organization_id = 1
+        mock_org1.name = "ABC Company"
+
+        mock_org2 = MagicMock(spec=Organization)
+        mock_org2.organization_id = 2
+        mock_org2.name = "ABC Corporation"
+
+        mock_repo.get_allocation_agreement_organizations.return_value = [
+            mock_org1,
+            mock_org2,
+        ]
+
+        # Mock transaction partners
+        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
+            "ABC Company",  # Duplicate - should be filtered
+            "ABC Partner A",
+            "ABC Partner B",
+        ]
+
+        # Mock historical names
+        mock_repo.get_distinct_allocating_organization_names.return_value = [
+            "ABC Corporation",  # Duplicate - should be filtered
+            "ABC Historical C",
+        ]
+
+        result = await charging_site_service.search_allocation_organizations(1, "abc")
+
+        assert len(result) == 5  # 2 matched + 3 unmatched (duplicates removed)
+        assert result[0]["name"] == "ABC Company"
+        assert result[0]["organizationId"] == 1
+        assert result[1]["name"] == "ABC Corporation"
+        assert result[1]["organizationId"] == 2
+
+        # Verify unmatched entries have None as organizationId
+        unmatched = [r for r in result if r["organizationId"] is None]
+        assert len(unmatched) == 3
+
+        mock_repo.get_allocation_agreement_organizations.assert_called_once_with(1)
+        mock_repo.get_transaction_partners_from_allocation_agreements.assert_called_once_with(
+            1
+        )
+        mock_repo.get_distinct_allocating_organization_names.assert_called_once_with(1)
+
+    @pytest.mark.anyio
+    async def test_search_allocation_organizations_with_query_filter(
+        self, charging_site_service, mock_repo
+    ):
+        """Test search filters results by query string"""
+        mock_org1 = MagicMock(spec=Organization)
+        mock_org1.organization_id = 1
+        mock_org1.name = "ABC Company"
+
+        mock_org2 = MagicMock(spec=Organization)
+        mock_org2.organization_id = 2
+        mock_org2.name = "XYZ Corporation"
+
+        mock_repo.get_allocation_agreement_organizations.return_value = [
+            mock_org1,
+            mock_org2,
+        ]
+        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
+            "ABC Partner"
+        ]
+        mock_repo.get_distinct_allocating_organization_names.return_value = [
+            "XYZ Historical"
+        ]
+
+        # Search for "abc" - should only return ABC entries
+        result = await charging_site_service.search_allocation_organizations(1, "abc")
+
+        assert len(result) == 2
+        assert all("abc" in r["name"].lower() for r in result)
+
+    @pytest.mark.anyio
+    async def test_search_allocation_organizations_empty_query(
+        self, charging_site_service, mock_repo
+    ):
+        """Test search with empty query returns all results"""
+        mock_org = MagicMock(spec=Organization)
+        mock_org.organization_id = 1
+        mock_org.name = "Test Org"
+
+        mock_repo.get_allocation_agreement_organizations.return_value = [mock_org]
+        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
+            "Partner A"
+        ]
+        mock_repo.get_distinct_allocating_organization_names.return_value = [
+            "Historical B"
+        ]
+
+        result = await charging_site_service.search_allocation_organizations(1, "")
+
+        assert len(result) == 3  # All results returned
+
+    @pytest.mark.anyio
+    async def test_search_allocation_organizations_limits_results(
+        self, charging_site_service, mock_repo
+    ):
+        """Test search limits results to 50"""
+        # Create 60 mock organizations
+        mock_orgs = []
+        for i in range(60):
+            mock_org = MagicMock(spec=Organization)
+            mock_org.organization_id = i
+            mock_org.name = f"Org {i:02d}"
+            mock_orgs.append(mock_org)
+
+        mock_repo.get_allocation_agreement_organizations.return_value = mock_orgs
+        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = []
+        mock_repo.get_distinct_allocating_organization_names.return_value = []
+
+        result = await charging_site_service.search_allocation_organizations(1, "org")
+
+        assert len(result) == 50  # Limited to 50
+
+    @pytest.mark.anyio
+    async def test_search_allocation_organizations_exception(
+        self, charging_site_service, mock_repo
+    ):
+        """Test search handles exceptions properly"""
+        mock_repo.get_allocation_agreement_organizations.side_effect = Exception(
+            "Database error"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await charging_site_service.search_allocation_organizations(1, "test")
+
+        assert exc_info.value.status_code == 500

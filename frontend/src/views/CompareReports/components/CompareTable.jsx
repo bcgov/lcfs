@@ -39,13 +39,18 @@ const CompareTable = ({
     headerCell: {
       fontWeight: 'bold',
       backgroundColor: '#f0f0f0',
-      borderBottom: '2px solid #495057'
+      borderBottom: '2px solid #495057',
+      padding: '12px 16px'
     },
     bodyCell: {
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
-      display: 'block'
+      display: 'block',
+      lineHeight: 1.6
+    },
+    tableCell: {
+      padding: '12px 16px'
     },
     highlightedHeaderCell: {
       backgroundColor: '#e0e0e0'
@@ -279,7 +284,8 @@ const CompareTable = ({
                     width: column.width || 'auto',
                     backgroundColor: isColumnHighlighted(column.id)
                       ? tableStyles.highlightedBodyCell.backgroundColor
-                      : '#fcfcfc'
+                      : '#fcfcfc',
+                    ...tableStyles.tableCell
                   }}
                 >
                   <span

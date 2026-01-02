@@ -19,6 +19,17 @@ import BCModal from '@/components/BCModal.jsx'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes.js'
 
+// Required organization fields for compliance report submission
+const REQUIRED_ORG_FIELDS = [
+  'name',
+  'operatingName',
+  'email',
+  'phone',
+  'serviceAddress',
+  'recordsAddress',
+  'headOfficeAddress'
+]
+
 export const OrganizationAddress = ({
   snapshotData,
   complianceReportId,
@@ -189,13 +200,7 @@ export const OrganizationAddress = ({
   }, [reset, snapshotData])
 
   // Required fields for the read-only view
-  const requiredFields = [
-    'name',
-    'operatingName',
-    'phone',
-    'email',
-    'serviceAddress'
-  ]
+  const requiredFields = REQUIRED_ORG_FIELDS
 
   // Define which form fields use regular text input vs address autocomplete
   const textFormFields = [

@@ -356,7 +356,6 @@ export const ChargingSitesList = () => {
           defaultColDef={indexDefaultColDef}
           queryData={queryData}
           dataKey="chargingSites"
-          autoSizeStrategy={{ type: 'fitGridWidth', defaultMinWidth: 80 }}
           paginationOptions={paginationOptions}
           onPaginationChange={setPaginationOptions}
           getRowId={(p) => String(p.data?.chargingSiteId || p.node?.id)}

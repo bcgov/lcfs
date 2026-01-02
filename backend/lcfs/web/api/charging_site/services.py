@@ -59,9 +59,7 @@ def _get_allocating_organization_display_name_expression():
     """
     allocating_org_name_subquery = (
         select(Organization.name)
-        .where(
-            Organization.organization_id == ChargingSite.allocating_organization_id
-        )
+        .where(Organization.organization_id == ChargingSite.allocating_organization_id)
         .correlate(ChargingSite)
         .scalar_subquery()
     )
@@ -115,32 +113,50 @@ class ChargingSiteService:
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
-    async def get_allocation_agreement_organizations(
-        self, organization_id: int
+    async def search_allocation_organizations(
+        self, organization_id: int, query: str
     ) -> List[dict]:
         """
-        Service method to get organizations that have allocation agreements
-        with the specified organization from current draft and assessed reports.
+        Search for allocating organization suggestions.
         """
-        logger.info(
-            "Getting allocation agreement organizations",
-            organization_id=organization_id,
-        )
         try:
-            organizations = (
-                await self.repo.get_allocation_agreement_organizations(organization_id)
+            query_lower = query.lower().strip()
+
+            # Use existing method to get matched organizations
+            matched_orgs = await self.repo.get_allocation_agreement_organizations(
+                organization_id
             )
-            return [
-                {
-                    "organizationId": org.organization_id,
-                    "name": org.name,
-                }
-                for org in organizations
-            ]
+
+            # Get unmatched names from allocation agreements and charging sites
+            transaction_partners = (
+                await self.repo.get_transaction_partners_from_allocation_agreements(
+                    organization_id
+                )
+            )
+            historical_names = (
+                await self.repo.get_distinct_allocating_organization_names(
+                    organization_id
+                )
+            )
+
+            # Build suggestions dict - matched orgs take precedence
+            suggestions = {}
+            for org in matched_orgs:
+                if query_lower in org.name.lower():
+                    suggestions[org.name.lower()] = {
+                        "organizationId": org.organization_id,
+                        "name": org.name,
+                    }
+
+            # Add unmatched names (transaction partners + historical)
+            for name in transaction_partners + historical_names:
+                name_lower = name.lower()
+                if name_lower not in suggestions and query_lower in name_lower:
+                    suggestions[name_lower] = {"organizationId": None, "name": name}
+
+            return sorted(suggestions.values(), key=lambda x: x["name"].lower())[:50]
         except Exception as e:
-            logger.error(
-                "Error fetching allocation agreement organizations", error=str(e)
-            )
+            logger.error("Error searching allocation organizations", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
     @service_handler
@@ -474,9 +490,8 @@ class ChargingSiteService:
             )
 
         new_site_name = (
-            (charging_site_data.site_name or existing_charging_site.site_name)
-            .strip()
-        )
+            charging_site_data.site_name or existing_charging_site.site_name
+        ).strip()
         if not new_site_name:
             raise HTTPException(
                 status_code=400, detail="Charging site name cannot be blank."
@@ -602,4 +617,7 @@ class ChargingSiteService:
         Get site names and charging site IDs for the given organization
         """
         sites = await self.repo.get_site_names_by_organization(organization_id)
-        return [{"siteName": site.site_name, "chargingSiteId": site.charging_site_id} for site in sites]
+        return [
+            {"siteName": site.site_name, "chargingSiteId": site.charging_site_id}
+            for site in sites
+        ]

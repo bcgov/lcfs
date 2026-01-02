@@ -32,7 +32,7 @@ export const TogglePanel = ({
           }`}</Box>
         }
       />
-      <Box>
+      <Box sx={{ mt: 1 }}>
         {isToggle && onComponent}
         {!isToggle && offComponent}
       </Box>

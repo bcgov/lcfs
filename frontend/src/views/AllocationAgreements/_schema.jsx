@@ -499,8 +499,6 @@ export const allocationAgreementColDefs = (
                 isSupplemental
               ),
             minWidth: 175,
-            width: 175,
-            flex: 0,
             editable: () => {
               return isQuarterEditable(1, compliancePeriod)
             }
@@ -526,8 +524,6 @@ export const allocationAgreementColDefs = (
                 isSupplemental
               ),
             minWidth: 175,
-            width: 175,
-            flex: 0,
             editable: () => {
               return isQuarterEditable(2, compliancePeriod)
             }
@@ -553,8 +549,6 @@ export const allocationAgreementColDefs = (
                 isSupplemental
               ),
             minWidth: 175,
-            width: 175,
-            flex: 0,
             editable: () => {
               return isQuarterEditable(3, compliancePeriod)
             }
@@ -580,8 +574,6 @@ export const allocationAgreementColDefs = (
                 isSupplemental
               ),
             minWidth: 175,
-            width: 175,
-            flex: 0,
             editable: () => {
               return isQuarterEditable(4, compliancePeriod)
             }
@@ -600,8 +592,6 @@ export const allocationAgreementColDefs = (
                 isSupplemental
               ),
             minWidth: 175,
-            width: 175,
-            flex: 0,
             valueGetter: (params) => {
               const data = params.data
               return (

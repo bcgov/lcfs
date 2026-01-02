@@ -391,6 +391,9 @@ class FuelCodeServices:
             if not fuel_code_data.notes:
                 raise ValueError("Notes is required")
 
+        # Store original expiration_date to detect changes
+        original_expiration_date = fuel_code.expiration_date
+
         for field, value in fuel_code_data.model_dump(
             exclude={
                 "feedstock_fuel_transport_modes",
@@ -400,6 +403,11 @@ class FuelCodeServices:
             }
         ).items():
             setattr(fuel_code, field, value)
+
+        # If expiration_date changed, clear the notification timestamp
+        # so a new expiry notification will be sent
+        if fuel_code.expiration_date != original_expiration_date:
+            fuel_code.expiry_notification_sent_at = None
 
         fuel_code.feedstock_fuel_transport_modes.clear()
 

@@ -116,9 +116,11 @@ export const HistoryCard = ({
     }
 
     // Default assessment lines for normal reports
+    // Only show renewable fuel target assessment if there is a renewable fuel requirement
+    // (any non-zero value in Lines 3 or 9 for any fuel category)
     return (
       <>
-        {report?.summary?.totalRenewableFuelSupplied > 0 && (
+        {report?.summary?.hasRenewableFuelRequirement && (
           <StyledListItem disablePadding>
             <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
               <strong>

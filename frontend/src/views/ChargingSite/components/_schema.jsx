@@ -60,12 +60,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
   }
 }
 
-export const chargingSiteColDefs = (
-  allocationOrganizations,
-  errors,
-  warnings,
-  gridReady
-) => {
+export const chargingSiteColDefs = (errors, warnings, gridReady) => {
   return [
     validation,
     actions((params) => ({
@@ -218,58 +213,49 @@ export const chargingSiteColDefs = (
     {
       field: 'allocatingOrganization',
       headerName: i18n.t('chargingSite:columnLabels.allocatingOrganization'),
-      valueGetter: (params) => params.data?.allocatingOrganizationName || '',
-      valueSetter: (params) => {
-        // Store both the ID and name (hybrid approach)
-        if (params.newValue === '' || params.newValue === null) {
-          params.data.allocatingOrganizationId = null
-          params.data.allocatingOrganizationName = null
-        } else if (typeof params.newValue === 'string') {
-          // Custom text input - try to match to an org
-          const matchingOrg = allocationOrganizations?.find(
-            (org) => org.name.toLowerCase() === params.newValue.toLowerCase()
-          )
-          if (matchingOrg) {
-            params.data.allocatingOrganizationId = matchingOrg.organizationId
-            params.data.allocatingOrganizationName = matchingOrg.name
-          } else {
-            // No match, store as name only
-            params.data.allocatingOrganizationId = null
-            params.data.allocatingOrganizationName = params.newValue
-          }
-        } else {
-          // Object from autocomplete
-          params.data.allocatingOrganizationId =
-            params.newValue?.organizationId || null
-          params.data.allocatingOrganizationName =
-            params.newValue?.name || params.newValue?.label || null
-        }
-        return true
-      },
-      valueFormatter: (params) => params.value?.name || params.value || '',
-      cellEditor: AutocompleteCellEditor,
-      cellEditorParams: {
-        options:
-          allocationOrganizations?.map((obj) => ({
-            label: obj.name,
-            value: obj.name, // Use name as value to match valueGetter output
-            organizationId: obj.organizationId,
-            name: obj.name
-          })) || [],
-        multiple: false,
-        openOnFocus: true,
-        returnObject: true,
-        freeSolo: true
-      },
-      tooltipValueGetter: (p) =>
-        !allocationOrganizations || allocationOrganizations.length === 0
-          ? 'No allocation agreements found. It is recommended to add an allocation agreement in your compliance report to use this field.'
-          : "Allocating organizations tied to your allocation agreements. If an organization isn't listed you must first enter an allocation agreement in your compliance report.",
+      cellDataType: 'object',
+      cellEditor: AsyncSuggestionEditor,
+      cellEditorParams: (params) => ({
+        queryKey: 'allocating-org-search',
+        queryFn: async ({ queryKey, client }) => {
+          let path = apiRoutes.allocationOrganizationsSearch
+          path += 'query=' + encodeURIComponent(queryKey[1] || '')
+          const response = await client.get(path)
+          params.node.data.apiDataCache = response.data
+          return response.data
+        },
+        optionLabel: 'name',
+        api: params.api,
+        minWords: 1
+      }),
+      cellRenderer: (params) =>
+        params.value ||
+        (!params.value && (
+          <BCTypography variant="body4">Enter or search a name</BCTypography>
+        )),
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 315,
-      editable: true
+      editable: true,
+      valueGetter: (params) => params.data?.allocatingOrganizationName || '',
+      valueSetter: (params) => {
+        const { newValue: selectedOrg, data } = params
+
+        if (typeof selectedOrg === 'object') {
+          // Only update related fields if a match is found in the API data
+          data.allocatingOrganizationId = selectedOrg?.organizationId || null
+          data.allocatingOrganizationName = selectedOrg?.name || null
+        } else {
+          // If no match, only update the allocatingOrganizationName field
+          data.allocatingOrganizationId = null
+          data.allocatingOrganizationName = selectedOrg
+        }
+
+        return true
+      },
+      tooltipValueGetter: (p) =>
+        'Enter or select the allocating organization name. Suggestions include organizations from your allocation agreements and previously entered values.'
     },
     {
       field: 'notes',
@@ -355,7 +341,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     field: 'siteName',
     headerName: t('chargingSite:fseColumnLabels.siteName'),
     sortable: false,
-    flex: enableSelection ? 1 : undefined,
     minWidth: 310,
     valueGetter: (params) =>
       params.data.chargingSite?.siteName || params.data.siteName || ''
@@ -366,7 +351,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     cols.push({
       field: 'organizationName',
       headerName: t('chargingSite:fseColumnLabels.organizationName'),
-      flex: 1,
       minWidth: 200
     })
   }
