@@ -55,6 +55,7 @@ class SummarySchema(BaseSchema):
     line_11_fossil_derived_base_fuel_total: float
     line_21_non_compliance_penalty_payable: float
     total_renewable_fuel_supplied: Optional[float] = 0
+    has_renewable_fuel_requirement: Optional[bool] = True
 
     class Config:
         extra = "allow"
