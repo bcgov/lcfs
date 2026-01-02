@@ -55,6 +55,7 @@ class SummarySchema(BaseSchema):
     line_11_fossil_derived_base_fuel_total: float
     line_21_non_compliance_penalty_payable: float
     total_renewable_fuel_supplied: Optional[float] = 0
+    has_renewable_fuel_requirement: Optional[bool] = True
 
     class Config:
         extra = "allow"
@@ -534,17 +535,17 @@ ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS = [
 ]
 
 FSE_EXPORT_COLUMNS = [
-    ExportColumn("Organization name"),
-    ExportColumn("Supply from Date"),
-    ExportColumn("Supply to Date"),
-    ExportColumn("kWh Usage"),
+    ExportColumn("Organization"),
+    ExportColumn("Dates of supply from"),
+    ExportColumn("Dates of supply to"),
+    ExportColumn("kWh usage"),
     ExportColumn("Serial #"),
     ExportColumn("Manufacturer"),
     ExportColumn("Model"),
     ExportColumn("Level of equipment"),
     ExportColumn("Ports"),
-    ExportColumn("Intended use types"),
-    ExportColumn("Intended user types"),
+    ExportColumn("Intended use"),
+    ExportColumn("Intended users"),
     ExportColumn("Street address"),
     ExportColumn("City"),
     ExportColumn("Postal code"),
