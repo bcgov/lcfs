@@ -396,9 +396,7 @@ export const ChargingSiteFSEGrid = ({
               filter: false,
               sortable: true,
               resizable: true,
-              minWidth: 100,
-              width: 140,
-              flex: 0
+              minWidth: 100
             }}
           />
         </BCBox>

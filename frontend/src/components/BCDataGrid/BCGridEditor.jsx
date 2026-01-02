@@ -8,7 +8,7 @@ import '@ag-grid-community/styles/ag-theme-material.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -49,6 +49,8 @@ export const BCGridEditor = ({
   },
   showMandatoryColumns = true,
   onAddRows,
+  defaultColDef,
+  columnDefs,
   ...props
 }) => {
   const localRef = useRef(null)
@@ -61,15 +63,29 @@ export const BCGridEditor = ({
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
 
   useEffect(() => {
-    if (!showRequiredIndicator && props.columnDefs?.length) {
-      const foundRequired = props.columnDefs.some(
+    if (!showRequiredIndicator && columnDefs?.length) {
+      const foundRequired = columnDefs.some(
         (colDef) => colDef.headerComponent === RequiredHeader
       )
       if (foundRequired && showMandatoryColumns) {
         setShowRequiredIndicator(true)
       }
     }
-  }, [props.columnDefs, showRequiredIndicator])
+  }, [columnDefs, showRequiredIndicator])
+
+  // Transform columnDefs to convert minWidth to width for initial sizing,
+  // allowing columns to be resized down to the global minWidth (50px)
+  const transformedColumnDefs = useMemo(() => {
+    if (!columnDefs) return columnDefs
+    return columnDefs.map((col) => {
+      // If column has minWidth but no width, use minWidth as initial width
+      if (col.minWidth && !col.width) {
+        const { minWidth, ...rest } = col
+        return { ...rest, width: minWidth }
+      }
+      return col
+    })
+  }, [columnDefs])
 
   const handleGridReady = useCallback(
     (params) => {
@@ -85,6 +101,26 @@ export const BCGridEditor = ({
       props.onGridReady?.(params)
     },
     [showRequiredIndicator, props.onGridReady]
+  )
+
+  // Check if columns should be expanded to fill the grid width on first data render
+  const handleFirstDataRendered = useCallback(
+    (params) => {
+      const allColumns = params.api.getAllDisplayedColumns()
+      const totalColumnWidth = allColumns.reduce(
+        (sum, col) => sum + col.getActualWidth(),
+        0
+      )
+      const gridWidth = params.api.getGridBodyElement()?.clientWidth || 0
+
+      // Add some buffer (50px) to account for scrollbar and borders
+      if (totalColumnWidth < gridWidth - 50) {
+        params.api.sizeColumnsToFit()
+      }
+
+      props.onFirstDataRendered?.(params)
+    },
+    [props.onFirstDataRendered]
   )
 
   const findFirstEditableColumn = useCallback(() => {
@@ -370,7 +406,13 @@ export const BCGridEditor = ({
         onCellClicked={onCellClicked}
         onCellEditingStopped={handleOnCellEditingStopped}
         onCellFocused={onCellFocused}
+        onFirstDataRendered={handleFirstDataRendered}
         autoHeight={true}
+        defaultColDef={{
+          minWidth: 50,
+          ...defaultColDef
+        }}
+        columnDefs={transformedColumnDefs}
         {...props}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
@@ -476,5 +518,7 @@ BCGridEditor.propTypes = {
     confirmText: PropTypes.string,
     confirmLabel: PropTypes.string
   }),
-  onGridReady: PropTypes.func
+  onGridReady: PropTypes.func,
+  defaultColDef: PropTypes.object,
+  columnDefs: PropTypes.array
 }

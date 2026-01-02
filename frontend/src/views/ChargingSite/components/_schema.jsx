@@ -341,7 +341,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     field: 'siteName',
     headerName: t('chargingSite:fseColumnLabels.siteName'),
     sortable: false,
-    flex: enableSelection ? 1 : undefined,
     minWidth: 310,
     valueGetter: (params) =>
       params.data.chargingSite?.siteName || params.data.siteName || ''
@@ -352,7 +351,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     cols.push({
       field: 'organizationName',
       headerName: t('chargingSite:fseColumnLabels.organizationName'),
-      flex: 1,
       minWidth: 200
     })
   }
