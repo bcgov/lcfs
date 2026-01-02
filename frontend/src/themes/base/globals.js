@@ -203,6 +203,15 @@ const globals = {
   '.ag-theme-material .ag-row-hover': {
     cursor: 'pointer'
   },
+  // Expand checkbox click target area - make entire cell clickable
+  '.ag-theme-material .ag-cell[col-id="__select__"], .ag-theme-material .ag-cell[col-id="ag-Grid-SelectionColumn"]':
+    {
+      cursor: 'pointer'
+    },
+  '.ag-theme-quartz .ag-cell[col-id="__select__"], .ag-theme-quartz .ag-cell[col-id="ag-Grid-SelectionColumn"]':
+    {
+      cursor: 'pointer'
+    },
   '.ag-overlay-loading-center-box': {
     height: 100,
     width: 150,

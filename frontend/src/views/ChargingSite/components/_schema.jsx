@@ -252,7 +252,7 @@ export const chargingSiteColDefs = (
         options:
           allocationOrganizations?.map((obj) => ({
             label: obj.name,
-            value: obj.organizationId,
+            value: obj.name, // Use name as value to match valueGetter output
             organizationId: obj.organizationId,
             name: obj.name
           })) || [],

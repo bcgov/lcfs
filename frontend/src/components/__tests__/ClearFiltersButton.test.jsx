@@ -19,10 +19,12 @@ vi.mock('react-i18next', () => ({
 
 // Mock BCButton component
 vi.mock('@/components/BCButton', () => ({
-  default: vi.fn().mockImplementation(({ children, onClick, disabled, startIcon, size, color, variant, sx, ...props }) => {
+  default: vi.fn().mockImplementation(({ children, onClick, onKeyDown, disabled, startIcon, size, color, variant, sx, ...props }) => {
     const handleClick = disabled ? undefined : onClick
+    const handleKeyDown = disabled ? undefined : onKeyDown
     const buttonProps = {
       onClick: handleClick,
+      onKeyDown: handleKeyDown,
       'data-test': 'bc-button',
       'data-size': size,
       'data-color': color,
@@ -30,11 +32,11 @@ vi.mock('@/components/BCButton', () => ({
       style: sx,
       ...props
     }
-    
+
     if (disabled) {
       buttonProps.disabled = true
     }
-    
+
     return (
       <button {...buttonProps}>
         {startIcon && <span data-test="start-icon">{startIcon}</span>}
@@ -162,22 +164,32 @@ describe('ClearFiltersButton', () => {
       expect(defaultProps.onClick).toHaveBeenCalledTimes(3)
     })
 
-    it('handles keyboard events', () => {
+    it('handles Enter key activation', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
-      fireEvent.click(button) // Use click instead of keyDown for simple mock
-      
+      fireEvent.keyDown(button, { key: 'Enter', code: 'Enter' })
+
       expect(defaultProps.onClick).toHaveBeenCalledTimes(1)
     })
 
-    it('handles space key activation', () => {
+    it('handles Space key activation', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
-      fireEvent.click(button) // Use click instead of keyDown for simple mock
-      
+      fireEvent.keyDown(button, { key: ' ', code: 'Space' })
+
       expect(defaultProps.onClick).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not trigger on other keys', () => {
+      render(<ClearFiltersButton {...defaultProps} />)
+
+      const button = screen.getByRole('button')
+      fireEvent.keyDown(button, { key: 'Tab', code: 'Tab' })
+      fireEvent.keyDown(button, { key: 'Escape', code: 'Escape' })
+
+      expect(defaultProps.onClick).not.toHaveBeenCalled()
     })
 
     it('passes event object to onClick handler', async () => {

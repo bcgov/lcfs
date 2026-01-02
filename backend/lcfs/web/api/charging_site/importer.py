@@ -368,6 +368,21 @@ def _validate_row(
     if not postal_code_pattern.match(postal_code):
         return f"Row {row_idx}: Invalid postal code"
 
+    # Validate coordinates
+    try:
+        lat = float(latitude)
+        if lat < -90 or lat > 90:
+            return f"Row {row_idx}: Invalid latitude '{latitude}'. Latitude must be between -90 and 90 degrees"
+    except (ValueError, TypeError):
+        return f"Row {row_idx}: Invalid latitude value '{latitude}'. Must be a valid number"
+
+    try:
+        lng = float(longitude)
+        if lng < -180 or lng > 180:
+            return f"Row {row_idx}: Invalid longitude '{longitude}'. Longitude must be between -180 and 180 degrees"
+    except (ValueError, TypeError):
+        return f"Row {row_idx}: Invalid longitude value '{longitude}'. Must be a valid number"
+
     # Validate allocating organization (optional field)
     # Validation disabled - any value is now accepted
     # if allocating_org_name and allocating_org_name not in valid_org_names:

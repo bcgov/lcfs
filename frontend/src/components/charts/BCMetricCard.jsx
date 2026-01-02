@@ -18,12 +18,20 @@ export const BCMetricCard = ({
 
   return (
     <Card
+      tabIndex={0}
+      role="region"
+      aria-label={ariaLabel || title}
       sx={{
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
         boxShadow: '0 16px 40px rgba(15, 23, 42, 0.1)',
-        border: '0.5px solid rgba(15, 23, 42, 0.4)'
+        border: '0.5px solid rgba(15, 23, 42, 0.4)',
+        '&:focus': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: '2px'
+        }
       }}
     >
       {/* <Box
@@ -80,6 +88,7 @@ export const BCMetricCard = ({
                 option={option}
                 height={72}
                 ariaLabel={ariaLabel}
+                tabIndex={-1}
               />
             )}
           </Grid>

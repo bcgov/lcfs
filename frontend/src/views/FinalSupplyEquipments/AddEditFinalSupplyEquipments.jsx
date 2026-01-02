@@ -281,7 +281,7 @@ export const AddEditFinalSupplyEquipments = () => {
       setErrors({ [newRowID]: 'finalSupplyEquipment' })
 
       alertRef.current?.triggerAlert({
-        message: 'Unable to save row: Fuel supply equipment fields required',
+        message: 'Unable to save row: Final supply equipment fields required',
         severity: 'error'
       })
       return transaction

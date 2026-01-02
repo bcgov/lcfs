@@ -290,17 +290,33 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
 
-        // Clear Filters before navigating to ensure they can see the report
-        sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
-
-        navigate(ROUTES.REPORTS.LIST, {
-          state: {
+        // If Director is acting as another role, stay on the report page and show alert
+        if (hasRoles(roles.director)) {
+          // Invalidate queries to refresh the report data
+          queryClient.invalidateQueries(['compliance-reports'])
+          queryClient.invalidateQueries(['complianceReport', complianceReportId])
+          
+          // Show success alert on the current page
+          alertRef.current?.triggerAlert({
             message: t('report:savedSuccessText', {
               status: updatedStatus.toLowerCase().replace('return', 'returned')
             }),
             severity: 'success'
-          }
-        })
+          })
+        } else {
+          // For non-Directors, navigate to the list as before
+          // Clear Filters before navigating to ensure they can see the report
+          sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+
+          navigate(ROUTES.REPORTS.LIST, {
+            state: {
+              message: t('report:savedSuccessText', {
+                status: updatedStatus.toLowerCase().replace('return', 'returned')
+              }),
+              severity: 'success'
+            }
+          })
+        }
       },
       onError: (error) => {
         setModalData(null)

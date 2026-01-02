@@ -310,15 +310,7 @@ const SummaryTable = ({
                       }}
                     >
                       <Input
-                        value={
-                          column.editable &&
-                          column.editableCells &&
-                          column.editableCells.includes(rowIndex)
-                            ? row[column.id]
-                            : formatNumberWithCommas({
-                                value: row[column.id]
-                              })
-                        }
+                        value={formatNumberWithCommas({ value: row[column.id] })}
                         onChange={(e) =>
                           handleCellChange(e, rowIndex, column.id)
                         }
@@ -367,7 +359,7 @@ const SummaryTable = ({
                                 column.editableCells.includes(rowIndex) &&
                                 row.format === 'currency'
                               ? '30px'
-                              : '6px', // Extra padding when loading
+                              : '6px',
                           borderRadius: '8px',
                           fontSize: '1rem',
                           border: '1px solid #495057',

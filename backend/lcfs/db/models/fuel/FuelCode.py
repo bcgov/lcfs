@@ -15,6 +15,13 @@ from .FuelType import QuantityUnitsEnum
 
 
 class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
+    """
+    Contains a list of all fuel codes.
+
+    The expiry_notification_sent_at field tracks when an expiry notification
+    email was sent for this fuel code. This prevents duplicate notifications
+    from being sent on subsequent scheduler runs.
+    """
     __tablename__ = "fuel_code"
     __table_args__ = {"comment": "Contains a list of all of fuel codes"}
 
@@ -87,6 +94,11 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
     )
     former_company = Column(String(500), nullable=True, comment="Former company")
     notes = Column(String(1000), nullable=True, comment="Notes")
+    expiry_notification_sent_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when expiry notification email was sent. Used to prevent duplicate notifications.",
+    )
 
     # Define the relationships
     fuel_code_status = relationship(

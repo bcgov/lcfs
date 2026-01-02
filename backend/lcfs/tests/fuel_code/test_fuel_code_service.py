@@ -96,6 +96,7 @@ def create_mock_fuel_code_model():
             self.version = 0
             self.action_type = None
             self.history_records = []
+            self.expiry_notification_sent_at = None
 
             # Create nested objects as simple classes too
             self.fuel_code_status = self.MockFuelCodeStatus()
@@ -501,3 +502,111 @@ async def test_get_transport_modes_success():
     assert result[1].transport_mode_id == 2
     assert result[1].transport_mode == "Ship"
     repo_mock.get_transport_modes.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_fuel_code_clears_notification_when_expiration_date_changes():
+    """Test that expiry_notification_sent_at is cleared when expiration_date changes"""
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    # Create mock fuel code with an existing notification timestamp
+    mock_fuel_code = create_mock_fuel_code_model()
+    mock_fuel_code.feedstock_fuel_transport_modes = MagicMock()
+    mock_fuel_code.feedstock_fuel_transport_modes.clear = MagicMock()
+    mock_fuel_code.finished_fuel_transport_modes = MagicMock()
+    mock_fuel_code.finished_fuel_transport_modes.clear = MagicMock()
+    mock_fuel_code.group_uuid = str(uuid4())
+    mock_fuel_code.version = 0
+    mock_fuel_code.history_records = [MagicMock(fuel_status_id=1)]
+    mock_fuel_code.expiration_date = date(2024, 10, 1)  # Original date
+    mock_fuel_code.expiry_notification_sent_at = datetime(2024, 7, 1)  # Already notified
+
+    # Update with a NEW expiration date
+    mock_fuel_code_data = FuelCodeCreateUpdateSchema(
+        fuel_code_id=1,
+        fuel_type_id=1,
+        prefix_id=1001,
+        fuel_suffix="001",
+        carbon_intensity=20.5,
+        company="XYZ Corp",
+        application_date=date(2023, 10, 1),
+        approval_date=date(2023, 10, 2),
+        effective_date=date(2023, 10, 3),
+        expiration_date=date(2025, 10, 1),  # Changed expiration date
+        edrms="EDRMS-123",
+        feedstock="Corn oil",
+        feedstock_location="Canada",
+        fuel_production_facility_city="Victoria",
+        fuel_production_facility_country="Canada",
+        fuel_production_facility_province_state="BC",
+        feedstock_fuel_transport_mode=[],
+        finished_fuel_transport_mode=[],
+    )
+
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.update_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_fuel_code_history.return_value = None
+    repo_mock.create_fuel_code_history.return_value = None
+
+    # Act
+    await service.update_fuel_code(mock_fuel_code_data)
+
+    # Assert - expiry_notification_sent_at should be cleared
+    assert mock_fuel_code.expiry_notification_sent_at is None
+
+
+@pytest.mark.anyio
+async def test_update_fuel_code_keeps_notification_when_expiration_date_unchanged():
+    """Test that expiry_notification_sent_at is NOT cleared when expiration_date stays the same"""
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    original_notification_time = datetime(2024, 7, 1)
+
+    # Create mock fuel code with an existing notification timestamp
+    mock_fuel_code = create_mock_fuel_code_model()
+    mock_fuel_code.feedstock_fuel_transport_modes = MagicMock()
+    mock_fuel_code.feedstock_fuel_transport_modes.clear = MagicMock()
+    mock_fuel_code.finished_fuel_transport_modes = MagicMock()
+    mock_fuel_code.finished_fuel_transport_modes.clear = MagicMock()
+    mock_fuel_code.group_uuid = str(uuid4())
+    mock_fuel_code.version = 0
+    mock_fuel_code.history_records = [MagicMock(fuel_status_id=1)]
+    mock_fuel_code.expiration_date = date(2024, 10, 1)
+    mock_fuel_code.expiry_notification_sent_at = original_notification_time
+
+    # Update with the SAME expiration date
+    mock_fuel_code_data = FuelCodeCreateUpdateSchema(
+        fuel_code_id=1,
+        fuel_type_id=1,
+        prefix_id=1001,
+        fuel_suffix="001",
+        carbon_intensity=25.0,  # Changed something else
+        company="XYZ Corp Updated",  # Changed something else
+        application_date=date(2023, 10, 1),
+        approval_date=date(2023, 10, 2),
+        effective_date=date(2023, 10, 3),
+        expiration_date=date(2024, 10, 1),  # Same expiration date
+        edrms="EDRMS-123",
+        feedstock="Corn oil",
+        feedstock_location="Canada",
+        fuel_production_facility_city="Victoria",
+        fuel_production_facility_country="Canada",
+        fuel_production_facility_province_state="BC",
+        feedstock_fuel_transport_mode=[],
+        finished_fuel_transport_mode=[],
+    )
+
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.update_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_fuel_code_history.return_value = None
+    repo_mock.create_fuel_code_history.return_value = None
+
+    # Act
+    await service.update_fuel_code(mock_fuel_code_data)
+
+    # Assert - expiry_notification_sent_at should NOT be cleared
+    assert mock_fuel_code.expiry_notification_sent_at == original_notification_time

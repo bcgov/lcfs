@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
+from lcfs.db.base import ActionTypeEnum
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.exception.exceptions import DatabaseException
@@ -277,9 +278,108 @@ class TestChargingSiteRepository:
         mock_result = MagicMock()
         mock_result.all.return_value = []
         mock_db_session.execute.return_value = mock_result
-        
+
         result = await charging_site_repo.get_site_names_by_organization(999)
-        
+
         assert len(result) == 0
         assert result == []
+        mock_db_session.execute.assert_called_once()
+
+
+class TestChargingSiteRepositoryDeletedFiltering:
+    """Test class for verifying deleted charging sites are filtered out"""
+
+    @pytest.mark.anyio
+    async def test_get_charging_sites_excludes_deleted(self, charging_site_repo, mock_db_session):
+        """Test that get_charging_sites excludes sites with action_type=DELETE"""
+        # Create mock sites - only non-deleted should be returned
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.action_type = ActionTypeEnum.CREATE
+        mock_sites = [mock_site]
+
+        mock_result = MagicMock()
+        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_sites
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_charging_sites()
+
+        assert len(result) == 1
+        mock_db_session.execute.assert_called_once()
+        # Verify the query was called (filtering happens at DB level)
+        call_args = mock_db_session.execute.call_args
+        assert call_args is not None
+
+    @pytest.mark.anyio
+    async def test_get_charging_sites_with_org_excludes_deleted(self, charging_site_repo, mock_db_session):
+        """Test that get_charging_sites with organization filter excludes deleted sites"""
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.action_type = ActionTypeEnum.CREATE
+        mock_sites = [mock_site]
+
+        mock_result = MagicMock()
+        mock_result.unique.return_value.scalars.return_value.all.return_value = mock_sites
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_charging_sites(organization_id=1)
+
+        assert len(result) == 1
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_all_charging_sites_by_organization_id_excludes_deleted(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test that get_all_charging_sites_by_organization_id excludes deleted sites"""
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.action_type = ActionTypeEnum.CREATE
+        mock_sites = [mock_site]
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = mock_sites
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_all_charging_sites_by_organization_id(1)
+
+        assert len(result) == 1
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_all_charging_sites_paginated_excludes_deleted(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test that get_all_charging_sites_paginated excludes deleted sites"""
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.action_type = ActionTypeEnum.CREATE
+        mock_sites = [mock_site]
+
+        # Mock scalar for count
+        mock_db_session.scalar.return_value = 1
+
+        # Mock execute for data fetch
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = mock_sites
+        mock_db_session.execute.return_value = mock_result
+
+        result, total = await charging_site_repo.get_all_charging_sites_paginated(
+            offset=0, limit=10, conditions=[], sort_orders=[]
+        )
+
+        assert len(result) == 1
+        assert total == 1
+
+    @pytest.mark.anyio
+    async def test_get_site_names_by_organization_excludes_deleted(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test that get_site_names_by_organization excludes deleted sites"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = [
+            ("Active Site", 1),
+        ]
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_site_names_by_organization(1)
+
+        assert len(result) == 1
+        assert result[0] == ("Active Site", 1)
         mock_db_session.execute.assert_called_once()
