@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from lcfs.db.models import Organization, CompliancePeriod, ComplianceReport
@@ -28,6 +29,7 @@ from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.organization_snapshot.repo import OrganizationSnapshotRepository
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
@@ -134,6 +136,26 @@ def mock_org_repo():
 @pytest.fixture
 def mock_snapshot_service():
     return AsyncMock(spec=OrganizationSnapshotService)
+
+
+@pytest.fixture
+def mock_org_snapshot_repo():
+    """Mock OrganizationSnapshotRepository with default complete snapshot"""
+    repo = AsyncMock(spec=OrganizationSnapshotRepository)
+    # Create a snapshot with all required fields populated
+    mock_snapshot = SimpleNamespace(
+        compliance_report_id=1,
+        is_edited=False,
+        name="Test Organization",
+        operating_name="Test Operating Name",
+        email="test@example.com",
+        phone="123-456-7890",
+        service_address="123 Test St, Vancouver, BC",
+        records_address="456 Records St, Victoria, BC",
+        head_office_address="789 Head Office St, Burnaby, BC",
+    )
+    repo.get_by_compliance_report_id = AsyncMock(return_value=mock_snapshot)
+    return repo
 
 
 @pytest.fixture
@@ -261,6 +283,7 @@ def compliance_report_update_service(
     mock_user_profile,
     mock_trx_service,
     mock_notfn_service,
+    mock_org_snapshot_repo,
 ):
     service = ComplianceReportUpdateService()
     service.repo = mock_repo
@@ -271,6 +294,7 @@ def compliance_report_update_service(
     service.org_service = mock_org_service
     service.trx_service = mock_trx_service
     service.notfn_service = mock_notfn_service
+    service.org_snapshot_repo = mock_org_snapshot_repo
     service._charging_equipment_repo = AsyncMock()
     service._charging_equipment_repo.auto_submit_draft_updated_fse_for_report = (
         AsyncMock(return_value=0)

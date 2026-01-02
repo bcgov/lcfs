@@ -61,6 +61,17 @@ const shouldHideRenewableSummary = (renewableFuelTargetSummary) => {
   return line3AllZero && line9AllZero
 }
 
+// Required organization fields for compliance report submission
+const REQUIRED_ORG_FIELDS = [
+  'name',
+  'operatingName',
+  'email',
+  'phone',
+  'serviceAddress',
+  'recordsAddress',
+  'headOfficeAddress'
+]
+
 const ComplianceReportSummary = ({
   reportID,
   currentStatus,
@@ -124,17 +135,12 @@ const ComplianceReportSummary = ({
 
   useEffect(() => {
     if (snapshotData) {
-      // Exclude headOfficeAddress and recordsAddress from the validity check
-      const { headOfficeAddress, recordsAddress, ...rest } = snapshotData
-      const dataToCheck = {
-        ...rest,
-        isEdited: true // Hardcode since we don't want it in the validity check
-      }
-      const hasValidAddress = Object.values(dataToCheck).reduce(
-        (previousValue, currentValue) => currentValue && !!previousValue,
-        true
-      )
-      setHasValidAddress(hasValidAddress)
+      // Check that all required fields have non-empty values
+      const isComplete = REQUIRED_ORG_FIELDS.every((field) => {
+        const value = snapshotData[field]
+        return value && typeof value === 'string' && value.trim() !== ''
+      })
+      setHasValidAddress(isComplete)
     }
   }, [snapshotData])
 
@@ -300,8 +306,8 @@ const ComplianceReportSummary = ({
                       summaryData?.lines6And8Locked
                         ? 'Lines 6/8 locked from assessed snapshot'
                         : summaryData?.lines7And9Locked
-                        ? 'Lines 7/9 locked from assessed snapshot'
-                        : undefined
+                          ? 'Lines 7/9 locked from assessed snapshot'
+                          : undefined
                     }
                     columns={
                       summaryData
