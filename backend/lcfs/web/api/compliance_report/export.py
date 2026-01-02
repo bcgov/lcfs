@@ -127,13 +127,6 @@ class ComplianceReportExporter:
         )
         await self._add_summary_sheet(wb, summary_schema)
 
-        # Choose column definitions based on reporting frequency
-        column_definitions = (
-            self.quarterly_column_definitions
-            if is_quarterly
-            else self.annual_column_definitions
-        )
-
         # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
             if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
@@ -404,6 +397,10 @@ class ComplianceReportExporter:
         """Load fuel supply data."""
         data = await self.fs_repo.get_effective_fuel_supplies(uuid, cid, version)
 
+        # Get the compliance report to check the year
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        compliance_year = int(report.compliance_period.description)
+
         # Choose column definitions based on reporting frequency
         columns = (
             self.quarterly_column_definitions[FUEL_SUPPLY_SHEET]
@@ -414,6 +411,16 @@ class ComplianceReportExporter:
 
         rows = []
         for fs in data:
+            # Format is_canada_produced field - only show for 2025+
+            is_canada_produced_value = None
+            if compliance_year >= 2025:
+                is_canada_produced_value = "Yes" if fs.is_canada_produced else ""
+
+            # Format is_q1_supplied field - only show for 2025 (quarterly reports)
+            is_q1_supplied_value = None
+            if compliance_year == 2025 and is_quarterly:
+                is_q1_supplied_value = "Yes" if fs.is_q1_supplied else ""
+
             if is_quarterly:
                 # Calculate total quantity for quarterly reports
                 total_quantity = (
@@ -435,6 +442,8 @@ class ComplianceReportExporter:
                             else None
                         ),
                         fs.fuel_code.fuel_code if fs.fuel_code else None,
+                        is_canada_produced_value,
+                        is_q1_supplied_value,
                         fs.q1_quantity,
                         fs.q2_quantity,
                         fs.q3_quantity,
@@ -464,6 +473,7 @@ class ComplianceReportExporter:
                             else None
                         ),
                         fs.fuel_code.fuel_code if fs.fuel_code else None,
+                        is_canada_produced_value,
                         fs.quantity,
                         fs.units.value if fs.units else None,
                         fs.target_ci,
@@ -474,6 +484,28 @@ class ComplianceReportExporter:
                         fs.energy,
                     ]
                 )
+
+        # Filter out columns with None values for pre-2025 reports
+        if compliance_year < 2025:
+            # Find indices of columns to remove
+            indices_to_remove = []
+            if "Fuel produced in Canada" in headers:
+                indices_to_remove.append(headers.index("Fuel produced in Canada"))
+            if "Supplied in Q1" in headers:
+                indices_to_remove.append(headers.index("Supplied in Q1"))
+
+            # Remove columns from headers
+            filtered_headers = [
+                h for i, h in enumerate(headers) if i not in indices_to_remove
+            ]
+
+            # Remove corresponding values from rows
+            filtered_rows = [
+                [v for i, v in enumerate(row) if i not in indices_to_remove]
+                for row in rows
+            ]
+
+            return [filtered_headers] + filtered_rows
 
         return [headers] + rows
 
@@ -543,17 +575,34 @@ class ComplianceReportExporter:
         data: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
             uuid, cid
         )
+
+        # Get the compliance report to check the year
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        compliance_year = int(report.compliance_period.description)
+
         # Other uses doesn't have quarterly data, always use annual columns
         headers = [col.label for col in OTHER_USES_COLUMNS]
 
         rows = []
         for ou in data:
+            # Format is_canada_produced field - only show for 2025+
+            is_canada_produced_value = None
+            if compliance_year >= 2025:
+                is_canada_produced_value = "Yes" if ou.is_canada_produced else ""
+
+            # Format is_q1_supplied field - only show for 2025
+            is_q1_supplied_value = None
+            if compliance_year == 2025:
+                is_q1_supplied_value = "Yes" if ou.is_q1_supplied else ""
+
             rows.append(
                 [
                     ou.fuel_type,
                     ou.fuel_category,
                     ou.provision_of_the_act,
                     ou.fuel_code,
+                    is_canada_produced_value,
+                    is_q1_supplied_value,
                     ou.quantity_supplied,
                     ou.units,
                     ou.ci_of_fuel,
@@ -561,6 +610,28 @@ class ComplianceReportExporter:
                     ou.rationale,
                 ]
             )
+
+        # Filter out columns with None values for pre-2025 reports
+        if compliance_year < 2025:
+            # Find indices of columns to remove
+            indices_to_remove = []
+            if "Fuel produced in Canada" in headers:
+                indices_to_remove.append(headers.index("Fuel produced in Canada"))
+            if "Supplied in Q1" in headers:
+                indices_to_remove.append(headers.index("Supplied in Q1"))
+
+            # Remove columns from headers
+            filtered_headers = [
+                h for i, h in enumerate(headers) if i not in indices_to_remove
+            ]
+
+            # Remove corresponding values from rows
+            filtered_rows = [
+                [v for i, v in enumerate(row) if i not in indices_to_remove]
+                for row in rows
+            ]
+
+            return [filtered_headers] + filtered_rows
 
         return [headers] + rows
 

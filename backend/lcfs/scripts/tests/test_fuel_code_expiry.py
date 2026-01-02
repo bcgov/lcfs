@@ -13,7 +13,7 @@ from lcfs.web.api.base import NotificationTypeEnum
 
 # Mock fuel code data structure
 MockFuelCode = namedtuple(
-    "MockFuelCode", ["fuel_code", "contact_email", "expiry_date", "company"]
+    "MockFuelCode", ["fuel_code_id", "fuel_code", "contact_email", "expiry_date", "company"]
 )
 
 
@@ -28,18 +28,21 @@ def mock_fuel_codes():
     """Mock fuel code data"""
     return [
         MockFuelCode(
+            fuel_code_id=1,
             fuel_code="FC001",
             contact_email="user1@example.com",
             expiry_date=date.today() + timedelta(days=30),
             company="Company A",
         ),
         MockFuelCode(
+            fuel_code_id=2,
             fuel_code="FC002",
             contact_email="user2@example.com",
             expiry_date=date.today() + timedelta(days=60),
             company="Company B",
         ),
         MockFuelCode(
+            fuel_code_id=3,
             fuel_code="FC003",
             contact_email="user1@example.com",  # Same email as FC001
             expiry_date=date.today() + timedelta(days=45),
@@ -53,18 +56,21 @@ def mock_fuel_codes_invalid_emails():
     """Mock fuel code data with invalid emails"""
     return [
         MockFuelCode(
+            fuel_code_id=1,
             fuel_code="FC001",
             contact_email="invalid-email",
             expiry_date=date.today() + timedelta(days=30),
             company="Company A",
         ),
         MockFuelCode(
+            fuel_code_id=2,
             fuel_code="FC002",
             contact_email="user@valid.com",
             expiry_date=date.today() + timedelta(days=60),
             company="Company B",
         ),
         MockFuelCode(
+            fuel_code_id=3,
             fuel_code="FC003",
             contact_email="",
             expiry_date=date.today() + timedelta(days=45),
@@ -96,6 +102,7 @@ class TestNotifyExpiringFuelCode:
             # Setup mocks
             mock_repo = AsyncMock()
             mock_repo.get_expiring_fuel_codes.return_value = mock_fuel_codes
+            mock_repo.mark_fuel_codes_notified = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
             mock_email_repo = AsyncMock()
@@ -116,6 +123,12 @@ class TestNotifyExpiringFuelCode:
             assert (
                 mock_email_service.send_fuel_code_expiry_notifications.call_count == 2
             )
+
+            # Verify that fuel codes are marked as notified after successful email sending
+            mock_repo.mark_fuel_codes_notified.assert_called_once()
+            # All 3 fuel code IDs should be marked (1, 2, 3)
+            notified_ids = mock_repo.mark_fuel_codes_notified.call_args[0][0]
+            assert sorted(notified_ids) == [1, 2, 3]
 
     @pytest.mark.anyio
     @patch(
@@ -194,6 +207,7 @@ class TestNotifyExpiringFuelCode:
 
             mock_repo = AsyncMock()
             mock_repo.get_expiring_fuel_codes.return_value = mock_fuel_codes
+            mock_repo.mark_fuel_codes_notified = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
             mock_email_repo = AsyncMock()
@@ -206,6 +220,8 @@ class TestNotifyExpiringFuelCode:
             result = await notify_expiring_fuel_code(mock_db_session)
 
             assert result is False
+            # No fuel codes should be marked as notified when all emails fail
+            mock_repo.mark_fuel_codes_notified.assert_not_called()
 
     @pytest.mark.anyio
     async def test_notify_expiring_fuel_code_partial_success(
@@ -222,13 +238,14 @@ class TestNotifyExpiringFuelCode:
 
             mock_repo = AsyncMock()
             mock_repo.get_expiring_fuel_codes.return_value = mock_fuel_codes
+            mock_repo.mark_fuel_codes_notified = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
             mock_email_repo = AsyncMock()
             mock_email_repo_class.return_value = mock_email_repo
 
             mock_email_service = AsyncMock()
-            # First call succeeds, second fails
+            # First call succeeds (Company A with codes 1,3), second fails (Company B with code 2)
             mock_email_service.send_fuel_code_expiry_notifications.side_effect = [
                 True,
                 False,
@@ -238,6 +255,12 @@ class TestNotifyExpiringFuelCode:
             result = await notify_expiring_fuel_code(mock_db_session)
 
             assert result is True  # Should return True if at least one email succeeded
+
+            # Only fuel codes from successful email should be marked as notified
+            mock_repo.mark_fuel_codes_notified.assert_called_once()
+            notified_ids = mock_repo.mark_fuel_codes_notified.call_args[0][0]
+            # Only codes 1 and 3 (Company A) should be marked since that email succeeded
+            assert sorted(notified_ids) == [1, 3]
 
     @pytest.mark.anyio
     @patch(
@@ -304,10 +327,10 @@ class TestGroupCodesByEmailThenCompany:
         # Should have 2 email addresses (valid one + fallback)
         assert len(result) == 2
         assert "user@valid.com" in result
-        assert "tfrs@gov.bc.ca" in result  # fallback email
+        assert "lcfs@gov.bc.ca" in result  # fallback email
 
         # Fallback should have 2 companies (invalid-email and empty email cases)
-        fallback_data = result["tfrs@gov.bc.ca"]
+        fallback_data = result["lcfs@gov.bc.ca"]
         assert len(fallback_data["companies"]) == 2
         assert "Company A" in fallback_data["companies"]
         assert "Company C" in fallback_data["companies"]
@@ -373,6 +396,7 @@ class TestIsValidEmail:
             mock_repo.get_expiring_fuel_codes.return_value = (
                 mock_fuel_codes_invalid_emails
             )
+            mock_repo.mark_fuel_codes_notified = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
             mock_email_repo = AsyncMock()
@@ -385,10 +409,15 @@ class TestIsValidEmail:
             result = await notify_expiring_fuel_code(mock_db_session)
 
             assert result is True
-            # Should have 3 email groups: valid email + tfrs@gov.bc.ca for 2 invalid companies
+            # Should have 3 email groups: valid email + lcfs@gov.bc.ca for 2 invalid companies
             assert (
                 mock_email_service.send_fuel_code_expiry_notifications.call_count == 3
             )
+
+            # Verify all fuel codes are marked as notified
+            mock_repo.mark_fuel_codes_notified.assert_called_once()
+            notified_ids = mock_repo.mark_fuel_codes_notified.call_args[0][0]
+            assert sorted(notified_ids) == [1, 2, 3]
 
     def test_edge_cases(self):
         """Test edge cases for email validation"""
@@ -435,9 +464,9 @@ class TestIntegration:
         # Create test data
         test_codes = [
             MockFuelCode(
-                "FC001", "valid@example.com", date.today() + timedelta(days=30), "Company A"
+                1, "FC001", "valid@example.com", date.today() + timedelta(days=30), "Company A"
             ),
-            MockFuelCode("FC002", "invalid-email", date.today() + timedelta(days=60), "Company B"),
+            MockFuelCode(2, "FC002", "invalid-email", date.today() + timedelta(days=60), "Company B"),
         ]
 
         with patch(
@@ -451,6 +480,7 @@ class TestIntegration:
             # Setup mocks
             mock_repo = AsyncMock()
             mock_repo.get_expiring_fuel_codes.return_value = test_codes
+            mock_repo.mark_fuel_codes_notified = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
             mock_email_repo = AsyncMock()
@@ -488,6 +518,11 @@ class TestIntegration:
                 assert "contact_email" in context
                 assert "expiry_count" in context
 
+            # Verify fuel codes are marked as notified
+            mock_repo.mark_fuel_codes_notified.assert_called_once()
+            notified_ids = mock_repo.mark_fuel_codes_notified.call_args[0][0]
+            assert sorted(notified_ids) == [1, 2]
+
     @pytest.mark.anyio
     @patch(
         "lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email",
@@ -507,6 +542,7 @@ class TestIntegration:
 
             mock_repo = AsyncMock()
             mock_repo.get_expiring_fuel_codes.return_value = mock_fuel_codes
+            mock_repo.mark_fuel_codes_notified = AsyncMock()
             mock_repo_class.return_value = mock_repo
 
             mock_email_repo = AsyncMock()
@@ -520,5 +556,5 @@ class TestIntegration:
 
             # Verify that info logging occurred
             assert (
-                mock_logger.info.call_count >= 3
-            )  # At least start, found codes, and completion messages
+                mock_logger.info.call_count >= 4
+            )  # At least start, found codes, marking notified, and completion messages
