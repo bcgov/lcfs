@@ -1204,7 +1204,8 @@ class FuelCodeRepository:
     @repo_handler
     async def get_expiring_fuel_codes(self) -> List[FuelCode]:
         """
-        Get all fuel codes that are expiring within a 90 days date range.
+        Get all fuel codes that are expiring within a 90 days date range
+        and have not yet been sent an expiry notification.
         """
         query = (
             select(FuelCode)
@@ -1218,8 +1219,30 @@ class FuelCodeRepository:
                         date.today(), date.today() + timedelta(days=90)
                     ),
                     FuelCodeStatus.status == FuelCodeStatusEnum.Approved,
+                    # Only include fuel codes that haven't been notified yet
+                    FuelCode.expiry_notification_sent_at.is_(None),
                 )
             )
         )
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def mark_fuel_codes_notified(self, fuel_code_ids: List[int]) -> None:
+        """
+        Mark fuel codes as having been sent an expiry notification.
+
+        Args:
+            fuel_code_ids: List of fuel code IDs to mark as notified
+        """
+        from datetime import datetime, timezone
+
+        if not fuel_code_ids:
+            return
+
+        stmt = (
+            update(FuelCode)
+            .where(FuelCode.fuel_code_id.in_(fuel_code_ids))
+            .values(expiry_notification_sent_at=datetime.now(timezone.utc))
+        )
+        await self.db.execute(stmt)
