@@ -127,19 +127,14 @@ class ComplianceReportExporter:
         )
         await self._add_summary_sheet(wb, summary_schema)
 
-        # Choose column definitions based on reporting frequency
-        column_definitions = (
-            self.quarterly_column_definitions
-            if is_quarterly
-            else self.annual_column_definitions
-        )
-
         # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
             if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
                 data = await loader(cid, is_quarterly)
             else:
                 data = await loader(uuid, cid, report.version, is_quarterly)
+
+            row_count = len(data) - 1 if data else 0
 
             # Process each result
             if data:
@@ -402,6 +397,10 @@ class ComplianceReportExporter:
         """Load fuel supply data."""
         data = await self.fs_repo.get_effective_fuel_supplies(uuid, cid, version)
 
+        # Get the compliance report to check the year
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        compliance_year = int(report.compliance_period.description)
+
         # Choose column definitions based on reporting frequency
         columns = (
             self.quarterly_column_definitions[FUEL_SUPPLY_SHEET]
@@ -412,6 +411,16 @@ class ComplianceReportExporter:
 
         rows = []
         for fs in data:
+            # Format is_canada_produced field - only show for 2025+
+            is_canada_produced_value = None
+            if compliance_year >= 2025:
+                is_canada_produced_value = "Yes" if fs.is_canada_produced else ""
+
+            # Format is_q1_supplied field - only show for 2025 (quarterly reports)
+            is_q1_supplied_value = None
+            if compliance_year == 2025 and is_quarterly:
+                is_q1_supplied_value = "Yes" if fs.is_q1_supplied else ""
+
             if is_quarterly:
                 # Calculate total quantity for quarterly reports
                 total_quantity = (
@@ -433,6 +442,8 @@ class ComplianceReportExporter:
                             else None
                         ),
                         fs.fuel_code.fuel_code if fs.fuel_code else None,
+                        is_canada_produced_value,
+                        is_q1_supplied_value,
                         fs.q1_quantity,
                         fs.q2_quantity,
                         fs.q3_quantity,
@@ -462,6 +473,7 @@ class ComplianceReportExporter:
                             else None
                         ),
                         fs.fuel_code.fuel_code if fs.fuel_code else None,
+                        is_canada_produced_value,
                         fs.quantity,
                         fs.units.value if fs.units else None,
                         fs.target_ci,
@@ -472,6 +484,28 @@ class ComplianceReportExporter:
                         fs.energy,
                     ]
                 )
+
+        # Filter out columns with None values for pre-2025 reports
+        if compliance_year < 2025:
+            # Find indices of columns to remove
+            indices_to_remove = []
+            if "Fuel produced in Canada" in headers:
+                indices_to_remove.append(headers.index("Fuel produced in Canada"))
+            if "Supplied in Q1" in headers:
+                indices_to_remove.append(headers.index("Supplied in Q1"))
+
+            # Remove columns from headers
+            filtered_headers = [
+                h for i, h in enumerate(headers) if i not in indices_to_remove
+            ]
+
+            # Remove corresponding values from rows
+            filtered_rows = [
+                [v for i, v in enumerate(row) if i not in indices_to_remove]
+                for row in rows
+            ]
+
+            return [filtered_headers] + filtered_rows
 
         return [headers] + rows
 
@@ -541,17 +575,34 @@ class ComplianceReportExporter:
         data: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
             uuid, cid
         )
+
+        # Get the compliance report to check the year
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        compliance_year = int(report.compliance_period.description)
+
         # Other uses doesn't have quarterly data, always use annual columns
         headers = [col.label for col in OTHER_USES_COLUMNS]
 
         rows = []
         for ou in data:
+            # Format is_canada_produced field - only show for 2025+
+            is_canada_produced_value = None
+            if compliance_year >= 2025:
+                is_canada_produced_value = "Yes" if ou.is_canada_produced else ""
+
+            # Format is_q1_supplied field - only show for 2025
+            is_q1_supplied_value = None
+            if compliance_year == 2025:
+                is_q1_supplied_value = "Yes" if ou.is_q1_supplied else ""
+
             rows.append(
                 [
                     ou.fuel_type,
                     ou.fuel_category,
                     ou.provision_of_the_act,
                     ou.fuel_code,
+                    is_canada_produced_value,
+                    is_q1_supplied_value,
                     ou.quantity_supplied,
                     ou.units,
                     ou.ci_of_fuel,
@@ -559,6 +610,28 @@ class ComplianceReportExporter:
                     ou.rationale,
                 ]
             )
+
+        # Filter out columns with None values for pre-2025 reports
+        if compliance_year < 2025:
+            # Find indices of columns to remove
+            indices_to_remove = []
+            if "Fuel produced in Canada" in headers:
+                indices_to_remove.append(headers.index("Fuel produced in Canada"))
+            if "Supplied in Q1" in headers:
+                indices_to_remove.append(headers.index("Supplied in Q1"))
+
+            # Remove columns from headers
+            filtered_headers = [
+                h for i, h in enumerate(headers) if i not in indices_to_remove
+            ]
+
+            # Remove corresponding values from rows
+            filtered_rows = [
+                [v for i, v in enumerate(row) if i not in indices_to_remove]
+                for row in rows
+            ]
+
+            return [filtered_headers] + filtered_rows
 
         return [headers] + rows
 
@@ -664,52 +737,68 @@ class ComplianceReportExporter:
 
     async def _load_fse_data(self, cid, is_quarterly) -> List[List[Any]]:
         """Load final supply equipment data."""
-        result = await self.fse_repo.get_fse_paginated(
-            compliance_report_id=cid,
+        # FSE doesn't have quarterly data, always use annual columns
+        headers = [col.label for col in FSE_EXPORT_COLUMNS]
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        if not report:
+            return [headers]
+        report_group_uuid = report.compliance_report_group_uuid if report else None
+        organization_name = (
+            report.organization.name if report and report.organization else None
+        )
+        organization_id = (
+            report.organization_id
+            if report and getattr(report, "organization_id", None)
+            else report.organization.organization_id
+            if report and report.organization
+            else None
+        )
+        if not organization_id:
+            return [headers]
+
+        reporting_result = await self.fse_repo.get_fse_reporting_list_paginated(
+            organization_id=organization_id,
             pagination=PaginationRequestSchema(
                 page=1, size=1000, filters=[], sort_orders=[]
             ),
+            compliance_report_group_uuid=report_group_uuid,
+            mode="summary",
         )
-        data = result[0]  # get_fse_paginated returns a tuple (data, total_count)
-        # FSE doesn't have quarterly data, always use annual columns
-        headers = [col.label for col in FSE_EXPORT_COLUMNS]
+        reporting_rows = reporting_result[0]
 
         rows = []
-        for fse in data:
+        for item in reporting_rows:
+            row = dict(item._mapping) if hasattr(item, "_mapping") else dict(item)
+            notes_parts = []
+            compliance_notes = row.get("compliance_notes")
+            equipment_notes = row.get("equipment_notes")
+            if compliance_notes:
+                notes_parts.append(compliance_notes)
+            if equipment_notes and equipment_notes not in notes_parts:
+                notes_parts.append(equipment_notes)
+
+            intended_uses = row.get("intended_uses") or []
+            intended_users = row.get("intended_users") or []
+
             rows.append(
                 [
-                    fse.organization_name,
-                    self._format_date(fse.supply_from_date),
-                    self._format_date(fse.supply_to_date),
-                    fse.kwh_usage,
-                    fse.serial_nbr,
-                    fse.manufacturer,
-                    fse.model,
-                    fse.level_of_equipment.name if fse.level_of_equipment else None,
-                    fse.ports,
-                    (
-                        ", ".join(
-                            [use_type.type for use_type in fse.intended_use_types]
-                        )
-                        if fse.intended_use_types
-                        else None
-                    ),
-                    (
-                        ", ".join(
-                            [
-                                user_type.type_name
-                                for user_type in fse.intended_user_types
-                            ]
-                        )
-                        if fse.intended_user_types
-                        else None
-                    ),
-                    fse.street_address,
-                    fse.city,
-                    fse.postal_code,
-                    fse.latitude,
-                    fse.longitude,
-                    fse.notes,
+                    row.get("organization_name") or organization_name,
+                    self._format_date(row.get("supply_from_date")),
+                    self._format_date(row.get("supply_to_date")),
+                    row.get("kwh_usage"),
+                    row.get("serial_number"),
+                    row.get("manufacturer"),
+                    row.get("model"),
+                    row.get("level_of_equipment"),
+                    row.get("ports"),
+                    ", ".join(intended_uses) if intended_uses else None,
+                    ", ".join(intended_users) if intended_users else None,
+                    row.get("street_address"),
+                    row.get("city"),
+                    row.get("postal_code"),
+                    row.get("latitude"),
+                    row.get("longitude"),
+                    " | ".join(notes_parts) if notes_parts else None,
                 ]
             )
 

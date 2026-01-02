@@ -5,7 +5,8 @@ import { useEffect, useRef } from 'react'
 export const BCResponsiveEChart = ({
   option,
   height = 300,
-  ariaLabel = undefined
+  ariaLabel = undefined,
+  tabIndex = 0
 }) => {
   const chartRef = useRef(null)
   const chartInstance = useRef(null)
@@ -45,6 +46,20 @@ export const BCResponsiveEChart = ({
   }, [option])
 
   return (
-    <Box ref={chartRef} aria-label={ariaLabel} sx={{ width: '100%', height }} />
+    <Box
+      ref={chartRef}
+      role="img"
+      aria-label={ariaLabel}
+      tabIndex={tabIndex}
+      sx={{
+        width: '100%',
+        height,
+        '&:focus': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: '2px'
+        }
+      }}
+    />
   )
 }
