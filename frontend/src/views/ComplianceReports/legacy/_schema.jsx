@@ -90,7 +90,7 @@ export const scheduleCSummaryColDefs = (t) => [
     headerName: t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType',
     floatingFilter: false,
-    width: '260px'
+    minWidth: 260
   },
   {
     headerName: t('legacy:columnLabels.fuelClass'),
