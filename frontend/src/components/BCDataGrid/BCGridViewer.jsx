@@ -424,6 +424,13 @@ export const BCGridViewer = forwardRef(
             }
           })
         }
+
+        // Expand columns to fill the grid width if they don't naturally fill it
+        // Use setTimeout to ensure grid has finished initial layout
+        setTimeout(() => {
+          if (!params.api) return
+          params.api.sizeColumnsToFit()
+        }, 100)
       },
       [
         gridKey,
@@ -436,6 +443,7 @@ export const BCGridViewer = forwardRef(
 
     const onFirstDataRendered = useCallback((params) => {
       params.api.hideOverlay()
+      // Columns are already sized to fit in onGridReady
     }, [])
 
     const handleChangePage = (_, newPage) => {
@@ -536,10 +544,25 @@ export const BCGridViewer = forwardRef(
         floatingFilter: true,
         floatingFilterComponentParams: {
           browserAutoComplete: false
-        }
+        },
+        minWidth: 50
       }),
       []
     )
+
+    // Transform columnDefs to convert minWidth to width for initial sizing,
+    // allowing columns to be resized down to the global minWidth (50px)
+    const transformedColumnDefs = useMemo(() => {
+      if (!columnDefs) return columnDefs
+      return columnDefs.map((col) => {
+        // If column has minWidth but no width, use minWidth as initial width
+        if (col.minWidth && !col.width) {
+          const { minWidth, ...rest } = col
+          return { ...rest, width: minWidth }
+        }
+        return col
+      })
+    }, [columnDefs])
 
     return isError && error?.response?.status !== 404 ? (
       <div className="error-container">
@@ -576,7 +599,7 @@ export const BCGridViewer = forwardRef(
             ...defaultColDefParams,
             ...defaultColDef
           }}
-          columnDefs={columnDefs}
+          columnDefs={transformedColumnDefs}
           gridOptions={gridOptions}
           rowData={!isLoading && ((data && data[dataKey]) || [])}
           onGridReady={onGridReady}

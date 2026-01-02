@@ -21,7 +21,6 @@ import ImportDialog from '@/components/ImportDialog'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import {
   useSaveChargingSite,
-  useGetAllocationOrganizations,
   useImportChargingSites,
   useGetChargingSitesImportJobStatus
 } from '@/hooks/useChargingSite'
@@ -57,12 +56,6 @@ export const AddEditChargingSite = ({
     [currentUser]
   )
   const navigate = useNavigate()
-
-  const {
-    data: allocationOrganizations,
-    isLoading: optionsLoading,
-    isFetched
-  } = useGetAllocationOrganizations()
 
   const { mutateAsync: saveRow } = useSaveChargingSite(organizationId)
 
@@ -128,16 +121,9 @@ export const AddEditChargingSite = ({
   }, [isGridReady, isEditMode, data, rowData, organizationId])
 
   useEffect(() => {
-    if (!optionsLoading && Array.isArray(allocationOrganizations)) {
-      const updatedColumnDefs = chargingSiteColDefs(
-        allocationOrganizations,
-        errors,
-        warnings,
-        isGridReady
-      )
-      setColumnDefs(updatedColumnDefs)
-    }
-  }, [errors, warnings, allocationOrganizations, isGridReady])
+    const updatedColumnDefs = chargingSiteColDefs(errors, warnings, isGridReady)
+    setColumnDefs(updatedColumnDefs)
+  }, [errors, warnings, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
@@ -216,7 +202,11 @@ export const AddEditChargingSite = ({
         }
       )
 
-      if (deletionSucceeded && isEditMode && params?.node?.data?.chargingSiteId) {
+      if (
+        deletionSucceeded &&
+        isEditMode &&
+        params?.node?.data?.chargingSiteId
+      ) {
         const successMessage = t('chargingSite:messages.siteDeleted', {
           defaultValue: 'Charging site deleted successfully.'
         })
