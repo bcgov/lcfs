@@ -114,6 +114,7 @@ export const BCGridViewer = forwardRef(
     const [showScrollbar, setShowScrollbar] = useState(false)
     const [containerWidth, setContainerWidth] = useState(null)
     const minWidthRelaxedRef = useRef(false)
+    const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
     const syncingFromGridRef = useRef(false)
     const syncingFromCustomRef = useRef(false)
     const [scrollContentWidth, setScrollContentWidth] = useState(null)
@@ -463,6 +464,7 @@ export const BCGridViewer = forwardRef(
           if (minWidthRelaxedRef.current) return
           relaxColumnMinWidths(params.api, params.columnApi, 50)
           minWidthRelaxedRef.current = true
+          setMinWidthRelaxed(true)
         })
       },
       [
@@ -482,6 +484,7 @@ export const BCGridViewer = forwardRef(
       if (minWidthRelaxedRef.current) return
       relaxColumnMinWidths(params.api, params.columnApi, 50)
       minWidthRelaxedRef.current = true
+      setMinWidthRelaxed(true)
     }, [])
 
     const handleChangePage = (_, newPage) => {
@@ -602,7 +605,14 @@ export const BCGridViewer = forwardRef(
       if (!columnDefs) return columnDefs
 
       if (shouldFitColumns) {
-        return addFlexToColumns(columnDefs).columnDefs
+        const flexDefs = addFlexToColumns(columnDefs).columnDefs
+        if (!minWidthRelaxed) {
+          return flexDefs
+        }
+        return flexDefs.map((col) => ({
+          ...col,
+          minWidth: 50
+        }))
       }
 
       return columnDefs.map((col) => {
@@ -610,12 +620,15 @@ export const BCGridViewer = forwardRef(
         if (nextCol.flex != null) {
           delete nextCol.flex
         }
-        if (nextCol.minWidth && !nextCol.width) {
+        if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
           nextCol.width = nextCol.minWidth
+        }
+        if (minWidthRelaxed) {
+          nextCol.minWidth = 50
         }
         return nextCol
       })
-    }, [columnDefs, shouldFitColumns])
+    }, [columnDefs, shouldFitColumns, minWidthRelaxed])
 
     // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
     // This prevents the "squished then expand" visual effect on page load
