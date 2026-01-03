@@ -162,6 +162,7 @@ export const BCGridEditorPaginated = ({
   const syncingFromCustomRef = useRef(false)
   const [scrollContentWidth, setScrollContentWidth] = useState(null)
   const minWidthRelaxedRef = useRef(false)
+  const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
   const hasInitializedFromCache = useRef(false)
   const previousGridKey = useRef(gridKey)
@@ -215,7 +216,14 @@ export const BCGridEditorPaginated = ({
     if (!columnDefs) return columnDefs
 
     if (shouldFitColumns) {
-      return addFlexToColumns(columnDefs).columnDefs
+      const flexDefs = addFlexToColumns(columnDefs).columnDefs
+      if (!minWidthRelaxed) {
+        return flexDefs
+      }
+      return flexDefs.map((col) => ({
+        ...col,
+        minWidth: 50
+      }))
     }
 
     return columnDefs.map((col) => {
@@ -223,12 +231,15 @@ export const BCGridEditorPaginated = ({
       if (nextCol.flex != null) {
         delete nextCol.flex
       }
-      if (nextCol.minWidth && !nextCol.width) {
+      if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
         nextCol.width = nextCol.minWidth
+      }
+      if (minWidthRelaxed) {
+        nextCol.minWidth = 50
       }
       return nextCol
     })
-  }, [columnDefs, shouldFitColumns])
+  }, [columnDefs, shouldFitColumns, minWidthRelaxed])
 
   // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
   // This prevents the "squished then expand" visual effect on page load
@@ -257,6 +268,7 @@ export const BCGridEditorPaginated = ({
       if (minWidthRelaxedRef.current) return
       relaxColumnMinWidths(params.api, params.columnApi, 50)
       minWidthRelaxedRef.current = true
+      setMinWidthRelaxed(true)
 
       props.onFirstDataRendered?.(params)
     },
@@ -563,6 +575,7 @@ export const BCGridEditorPaginated = ({
         if (minWidthRelaxedRef.current) return
         relaxColumnMinWidths(params.api, params.columnApi, 50)
         minWidthRelaxedRef.current = true
+        setMinWidthRelaxed(true)
       })
 
       props.onGridReady?.(params)
