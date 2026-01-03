@@ -233,6 +233,18 @@ export const BCGridBase = forwardRef(
       clearFilters
     }))
 
+    const resolvedAutoSizeStrategy = useMemo(() => {
+      if (autoSizeStrategy === null) {
+        return undefined
+      }
+
+      return {
+        type: 'fitGridWidth',
+        defaultMinWidth: 50,
+        ...autoSizeStrategy
+      }
+    }, [autoSizeStrategy])
+
     return (
       <AgGridReact
         ref={ref}
@@ -244,11 +256,7 @@ export const BCGridBase = forwardRef(
         }}
         animateRows
         overlayNoRowsTemplate="No rows found"
-        autoSizeStrategy={{
-          type: 'fitGridWidth',
-          defaultMinWidth: 50,
-          ...autoSizeStrategy
-        }}
+        autoSizeStrategy={resolvedAutoSizeStrategy}
         suppressDragLeaveHidesColumns
         suppressMovableColumns
         suppressColumnMoveAnimation={false}

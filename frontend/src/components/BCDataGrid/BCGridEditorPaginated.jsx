@@ -7,7 +7,14 @@ import '@ag-grid-community/styles/ag-theme-material.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -22,6 +29,11 @@ import {
   AccessibleHeader,
   BCPagination
 } from '@/components/BCDataGrid/components'
+import {
+  addFlexToColumns,
+  getColumnMinWidthSum,
+  relaxColumnMinWidths
+} from '@/components/BCDataGrid/columnSizingUtils'
 import {
   runOnNextFrame,
   getGridScrollInfo as getGridScrollInfoUtil,
@@ -145,9 +157,11 @@ export const BCGridEditorPaginated = ({
   const [isPaginationVisible, setIsPaginationVisible] = useState(true)
   const [isGridVisible, setIsGridVisible] = useState(true)
   const [showScrollbar, setShowScrollbar] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(null)
   const syncingFromGridRef = useRef(false)
   const syncingFromCustomRef = useRef(false)
   const [scrollContentWidth, setScrollContentWidth] = useState(null)
+  const minWidthRelaxedRef = useRef(false)
 
   const hasInitializedFromCache = useRef(false)
   const previousGridKey = useRef(gridKey)
@@ -187,34 +201,62 @@ export const BCGridEditorPaginated = ({
     }
   }, [columnDefs, showRequiredIndicator])
 
-  // Transform columnDefs to convert minWidth to width for initial sizing,
-  // allowing columns to be resized down to the global minWidth (50px)
+  const fallbackMinWidth = defaultColDef?.minWidth ?? 100
+  const totalMinWidth = useMemo(
+    () => getColumnMinWidthSum(columnDefs, fallbackMinWidth),
+    [columnDefs, fallbackMinWidth]
+  )
+  const shouldFitColumns = useMemo(
+    () => containerWidth !== null && totalMinWidth <= containerWidth,
+    [containerWidth, totalMinWidth]
+  )
+
   const transformedColumnDefs = useMemo(() => {
     if (!columnDefs) return columnDefs
+
+    if (shouldFitColumns) {
+      return addFlexToColumns(columnDefs).columnDefs
+    }
+
     return columnDefs.map((col) => {
-      // If column has minWidth but no width, use minWidth as initial width
-      if (col.minWidth && !col.width) {
-        const { minWidth, ...rest } = col
-        return { ...rest, width: minWidth }
+      const nextCol = { ...col }
+      if (nextCol.flex != null) {
+        delete nextCol.flex
       }
-      return col
+      if (nextCol.minWidth && !nextCol.width) {
+        nextCol.width = nextCol.minWidth
+      }
+      return nextCol
     })
+  }, [columnDefs, shouldFitColumns])
+
+  // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
+  // This prevents the "squished then expand" visual effect on page load
+  const computedAutoSizeStrategy = useMemo(() => {
+    if (!columnDefs || columnDefs.length === 0) {
+      return { type: 'fitGridWidth', defaultMinWidth: 100 }
+    }
+
+    // Find the minimum minWidth value from columnDefs (default to 100 if none set)
+    const minWidths = columnDefs
+      .filter((col) => col.minWidth)
+      .map((col) => col.minWidth)
+
+    // Use the minimum of all minWidths, or 100 as a fallback
+    const defaultMinWidth =
+      minWidths.length > 0 ? Math.min(...minWidths) : 100
+
+    return { type: 'fitGridWidth', defaultMinWidth }
   }, [columnDefs])
 
-  // Check if columns should be expanded to fill the grid width on first data render
+  // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
   const handleFirstDataRendered = useCallback(
     (params) => {
-      const allColumns = params.api.getAllDisplayedColumns()
-      const totalColumnWidth = allColumns.reduce(
-        (sum, col) => sum + col.getActualWidth(),
-        0
-      )
-      const gridWidth = params.api.getGridBodyElement()?.clientWidth || 0
-
-      // Add some buffer (50px) to account for scrollbar and borders
-      if (totalColumnWidth < gridWidth - 50) {
-        params.api.sizeColumnsToFit()
-      }
+      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
+      // Preserve current widths to avoid visual jumps.
+      if (minWidthRelaxedRef.current) return
+      relaxColumnMinWidths(params.api, params.columnApi, 50)
+      minWidthRelaxedRef.current = true
 
       props.onFirstDataRendered?.(params)
     },
@@ -428,6 +470,33 @@ export const BCGridEditorPaginated = ({
     }
   }, [enableFloatingPagination, suppressPagination, data])
 
+  useLayoutEffect(() => {
+    const container = gridContainerRef.current
+    if (!container) return
+
+    const updateWidth = () => {
+      const rect = container.getBoundingClientRect()
+      const nextWidth = Math.floor(rect.width)
+      setContainerWidth((prev) =>
+        prev === nextWidth || Number.isNaN(nextWidth) ? prev : nextWidth
+      )
+    }
+
+    updateWidth()
+
+    let resizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(updateWidth)
+      resizeObserver.observe(container)
+    }
+
+    window.addEventListener('resize', updateWidth)
+    return () => {
+      window.removeEventListener('resize', updateWidth)
+      resizeObserver?.disconnect()
+    }
+  }, [])
+
   const handleGridReady = useCallback(
     (params) => {
       if (!showRequiredIndicator) {
@@ -489,6 +558,12 @@ export const BCGridEditorPaginated = ({
           defaultState: { sort: null }
         })
       }
+
+      requestAnimationFrame(() => {
+        if (minWidthRelaxedRef.current) return
+        relaxColumnMinWidths(params.api, params.columnApi, 50)
+        minWidthRelaxedRef.current = true
+      })
 
       props.onGridReady?.(params)
     },
@@ -856,6 +931,7 @@ export const BCGridEditorPaginated = ({
         onFilterChanged={handleFilterChanged}
         onFirstDataRendered={handleFirstDataRendered}
         autoHeight={false}
+        autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
         loading={isLoading || loading}
         rowData={!isLoading && ((data && data[dataKey]) || [])}
         defaultColDef={{
