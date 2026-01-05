@@ -104,7 +104,7 @@ async def geocode_addresses(
             if addr:
                 result = await geocoder.forward_geocode(addr, use_fallback=True)
                 if result.success:
-                    print(f"  -> Success via {addr_type}: ({result.address.latitude}, {result.address.longitude})")
+                    print(f"  -> Success via {addr_type}")
                     break
                 else:
                     print(f"  -> {addr_type} failed, trying next...")
