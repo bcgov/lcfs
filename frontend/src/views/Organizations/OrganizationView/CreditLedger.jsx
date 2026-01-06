@@ -265,7 +265,6 @@ export const CreditLedger = ({ organizationId }) => {
             sortable: true,
             floatingFilter: false
           }}
-          autoSizeStrategy={{ type: 'fitGridWidth' }}
         />
       </BCBox>
       <BCBox mt={4}>

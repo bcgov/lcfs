@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, desc, func, select, update, and_
+from sqlalchemy import asc, desc, func, select, update, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
 
@@ -13,10 +13,8 @@ from lcfs.db.models.compliance import (
     ChargingSiteStatus,
     ChargingEquipmentStatus,
     ComplianceReport,
-    ComplianceReportStatus,
     AllocationAgreement,
 )
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.organization import Organization
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
@@ -50,9 +48,7 @@ def _allocating_organization_display_name_expression():
     """
     allocating_org_name_subquery = (
         select(Organization.name)
-        .where(
-            Organization.organization_id == ChargingSite.allocating_organization_id
-        )
+        .where(Organization.organization_id == ChargingSite.allocating_organization_id)
         .correlate(ChargingSite)
         .scalar_subquery()
     )
@@ -82,50 +78,21 @@ class ChargingSiteRepository:
     ) -> Sequence[Organization]:
         """
         Retrieve organizations that have allocation agreements with the specified organization.
-        Includes allocation agreements from current draft, submitted, and assessed reports.
+        Returns organizations from allocation agreements (all statuses, historical included).
         """
-        # Subquery to get compliance report status IDs for Draft, Submitted, and Assessed
-        # Including Submitted and in-progress statuses since those reports are actively being processed
-        status_subquery = (
-            select(ComplianceReportStatus.compliance_report_status_id)
-            .where(
-                ComplianceReportStatus.status.in_(
-                    [
-                        ComplianceReportStatusEnum.Draft,
-                        ComplianceReportStatusEnum.Submitted,
-                        ComplianceReportStatusEnum.Recommended_by_analyst,
-                        ComplianceReportStatusEnum.Recommended_by_manager,
-                        ComplianceReportStatusEnum.Assessed,
-                    ]
-                )
-            )
-            .scalar_subquery()
-        )
-
-        # Subquery to get all compliance reports for this organization
-        # that are in active statuses (Draft, Submitted, being reviewed, or Assessed)
-        compliance_reports_subquery = (
-            select(ComplianceReport.compliance_report_id)
-            .where(
-                and_(
-                    ComplianceReport.organization_id == organization_id,
-                    ComplianceReport.current_status_id.in_(status_subquery),
-                )
-            )
-            .scalar_subquery()
-        )
-
-        # Get unique organizations from allocation agreements
-        # We need to look up the organization by transaction_partner name
+        # Get all distinct transaction partners from allocation agreements
         query = (
             select(Organization)
             .join(
                 AllocationAgreement,
                 AllocationAgreement.transaction_partner == Organization.name,
             )
-            .where(
-                AllocationAgreement.compliance_report_id.in_(compliance_reports_subquery)
+            .join(
+                ComplianceReport,
+                AllocationAgreement.compliance_report_id
+                == ComplianceReport.compliance_report_id,
             )
+            .where(ComplianceReport.organization_id == organization_id)
             .distinct()
             .order_by(Organization.name)
         )
@@ -341,13 +308,17 @@ class ChargingSiteRepository:
         Retrieve all charging sites, optionally filtered by organization.
         Excludes deleted charging sites.
         """
-        query = select(ChargingSite).options(
-            joinedload(ChargingSite.organization),
-            joinedload(ChargingSite.status),
-            joinedload(ChargingSite.allocating_organization),
-            selectinload(ChargingSite.documents),
-            selectinload(ChargingSite.charging_equipment),
-        ).where(ChargingSite.action_type != ActionTypeEnum.DELETE)
+        query = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.organization),
+                joinedload(ChargingSite.status),
+                joinedload(ChargingSite.allocating_organization),
+                selectinload(ChargingSite.documents),
+                selectinload(ChargingSite.charging_equipment),
+            )
+            .where(ChargingSite.action_type != ActionTypeEnum.DELETE)
+        )
 
         if organization_id:
             query = query.where(ChargingSite.organization_id == organization_id)
@@ -400,8 +371,12 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_all_charging_sites_paginated(
-        self, offset: int, limit: int, conditions: list, sort_orders: list,
-        exclude_draft: bool = False
+        self,
+        offset: int,
+        limit: int,
+        conditions: list,
+        sort_orders: list,
+        exclude_draft: bool = False,
     ) -> tuple[list[ChargingSite], int]:
         """
         Retrieve all charging sites with pagination, filtering, and sorting.
@@ -530,7 +505,7 @@ class ChargingSiteRepository:
         await self.db.flush()
         await self.db.refresh(
             charging_site,
-            ["allocating_organization", "organization", "status", "update_date"]
+            ["allocating_organization", "organization", "status", "update_date"],
         )
         return charging_site
 
@@ -543,7 +518,7 @@ class ChargingSiteRepository:
         await self.db.flush()
         await self.db.refresh(
             merged_site,
-            ["allocating_organization", "organization", "status", "update_date"]
+            ["allocating_organization", "organization", "status", "update_date"],
         )
         return merged_site
 
@@ -667,3 +642,72 @@ class ChargingSiteRepository:
             .order_by(ChargingSite.site_name)
         )
         return result.all()
+
+    @repo_handler
+    async def get_distinct_allocating_organization_names(
+        self, organization_id: int
+    ) -> List[str]:
+        """
+        Retrieve distinct allocating organization names
+        """
+        result = await self.db.execute(
+            select(func.distinct(ChargingSite.allocating_organization_name))
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingSite.allocating_organization_name.isnot(None),
+                ChargingSite.allocating_organization_name != "",
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
+            .order_by(ChargingSite.allocating_organization_name)
+        )
+        return [row[0] for row in result.all()]
+
+    @repo_handler
+    async def search_organizations_by_name(
+        self, query: str, limit: int = 50
+    ) -> List[Organization]:
+        """
+        Search for organizations by name or operating name (case-insensitive partial match).
+        """
+        if not query or not query.strip():
+            # Return empty list if no query provided
+            return []
+
+        search_pattern = f"%{query.strip()}%"
+        result = await self.db.execute(
+            select(Organization)
+            .where(
+                or_(
+                    Organization.name.ilike(search_pattern),
+                    Organization.operating_name.ilike(search_pattern),
+                )
+            )
+            .order_by(Organization.name)
+            .limit(limit)
+        )
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_transaction_partners_from_allocation_agreements(
+        self, organization_id: int
+    ) -> List[str]:
+        """
+        Retrieve distinct transaction partner names from allocation agreements
+        """
+        query = (
+            select(func.distinct(AllocationAgreement.transaction_partner))
+            .join(
+                ComplianceReport,
+                AllocationAgreement.compliance_report_id
+                == ComplianceReport.compliance_report_id,
+            )
+            .where(
+                ComplianceReport.organization_id == organization_id,
+                AllocationAgreement.transaction_partner.isnot(None),
+                AllocationAgreement.transaction_partner != "",
+            )
+            .order_by(AllocationAgreement.transaction_partner)
+        )
+
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]

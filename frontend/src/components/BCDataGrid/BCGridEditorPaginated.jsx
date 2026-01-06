@@ -7,7 +7,14 @@ import '@ag-grid-community/styles/ag-theme-material.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -22,6 +29,11 @@ import {
   AccessibleHeader,
   BCPagination
 } from '@/components/BCDataGrid/components'
+import {
+  addFlexToColumns,
+  getColumnMinWidthSum,
+  relaxColumnMinWidths
+} from '@/components/BCDataGrid/columnSizingUtils'
 import {
   runOnNextFrame,
   getGridScrollInfo as getGridScrollInfoUtil,
@@ -127,6 +139,7 @@ export const BCGridEditorPaginated = ({
   enableFloatingPagination = true,
   loading,
   defaultColDef,
+  columnDefs,
   ...props
 }) => {
   const localRef = useRef(null)
@@ -144,9 +157,12 @@ export const BCGridEditorPaginated = ({
   const [isPaginationVisible, setIsPaginationVisible] = useState(true)
   const [isGridVisible, setIsGridVisible] = useState(true)
   const [showScrollbar, setShowScrollbar] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(null)
   const syncingFromGridRef = useRef(false)
   const syncingFromCustomRef = useRef(false)
   const [scrollContentWidth, setScrollContentWidth] = useState(null)
+  const minWidthRelaxedRef = useRef(false)
+  const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
   const hasInitializedFromCache = useRef(false)
   const previousGridKey = useRef(gridKey)
@@ -176,15 +192,88 @@ export const BCGridEditorPaginated = ({
 
   // Detect required fields
   useEffect(() => {
-    if (!showRequiredIndicator && props.columnDefs?.length) {
-      const foundRequired = props.columnDefs.some(
+    if (!showRequiredIndicator && columnDefs?.length) {
+      const foundRequired = columnDefs.some(
         (colDef) => colDef.headerComponent === RequiredHeader
       )
       if (foundRequired && showMandatoryColumns) {
         setShowRequiredIndicator(true)
       }
     }
-  }, [props.columnDefs, showRequiredIndicator])
+  }, [columnDefs, showRequiredIndicator])
+
+  const fallbackMinWidth = defaultColDef?.minWidth ?? 100
+  const totalMinWidth = useMemo(
+    () => getColumnMinWidthSum(columnDefs, fallbackMinWidth),
+    [columnDefs, fallbackMinWidth]
+  )
+  const shouldFitColumns = useMemo(
+    () => containerWidth !== null && totalMinWidth <= containerWidth,
+    [containerWidth, totalMinWidth]
+  )
+
+  const transformedColumnDefs = useMemo(() => {
+    if (!columnDefs) return columnDefs
+
+    if (shouldFitColumns) {
+      const flexDefs = addFlexToColumns(columnDefs).columnDefs
+      if (!minWidthRelaxed) {
+        return flexDefs
+      }
+      return flexDefs.map((col) => ({
+        ...col,
+        minWidth: 50
+      }))
+    }
+
+    return columnDefs.map((col) => {
+      const nextCol = { ...col }
+      if (nextCol.flex != null) {
+        delete nextCol.flex
+      }
+      if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+        nextCol.width = nextCol.minWidth
+      }
+      if (minWidthRelaxed) {
+        nextCol.minWidth = 50
+      }
+      return nextCol
+    })
+  }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+
+  // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
+  // This prevents the "squished then expand" visual effect on page load
+  const computedAutoSizeStrategy = useMemo(() => {
+    if (!columnDefs || columnDefs.length === 0) {
+      return { type: 'fitGridWidth', defaultMinWidth: 100 }
+    }
+
+    // Find the minimum minWidth value from columnDefs (default to 100 if none set)
+    const minWidths = columnDefs
+      .filter((col) => col.minWidth)
+      .map((col) => col.minWidth)
+
+    // Use the minimum of all minWidths, or 100 as a fallback
+    const defaultMinWidth =
+      minWidths.length > 0 ? Math.min(...minWidths) : 100
+
+    return { type: 'fitGridWidth', defaultMinWidth }
+  }, [columnDefs])
+
+  // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
+  const handleFirstDataRendered = useCallback(
+    (params) => {
+      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
+      // Preserve current widths to avoid visual jumps.
+      if (minWidthRelaxedRef.current) return
+      relaxColumnMinWidths(params.api, params.columnApi, 50)
+      minWidthRelaxedRef.current = true
+      setMinWidthRelaxed(true)
+
+      props.onFirstDataRendered?.(params)
+    },
+    [props.onFirstDataRendered]
+  )
 
   const getGridScrollInfo = useCallback(
     () => getGridScrollInfoUtil(gridContainerRef),
@@ -393,6 +482,33 @@ export const BCGridEditorPaginated = ({
     }
   }, [enableFloatingPagination, suppressPagination, data])
 
+  useLayoutEffect(() => {
+    const container = gridContainerRef.current
+    if (!container) return
+
+    const updateWidth = () => {
+      const rect = container.getBoundingClientRect()
+      const nextWidth = Math.floor(rect.width)
+      setContainerWidth((prev) =>
+        prev === nextWidth || Number.isNaN(nextWidth) ? prev : nextWidth
+      )
+    }
+
+    updateWidth()
+
+    let resizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(updateWidth)
+      resizeObserver.observe(container)
+    }
+
+    window.addEventListener('resize', updateWidth)
+    return () => {
+      window.removeEventListener('resize', updateWidth)
+      resizeObserver?.disconnect()
+    }
+  }, [])
+
   const handleGridReady = useCallback(
     (params) => {
       if (!showRequiredIndicator) {
@@ -454,6 +570,13 @@ export const BCGridEditorPaginated = ({
           defaultState: { sort: null }
         })
       }
+
+      requestAnimationFrame(() => {
+        if (minWidthRelaxedRef.current) return
+        relaxColumnMinWidths(params.api, params.columnApi, 50)
+        minWidthRelaxedRef.current = true
+        setMinWidthRelaxed(true)
+      })
 
       props.onGridReady?.(params)
     },
@@ -780,7 +903,8 @@ export const BCGridEditorPaginated = ({
     floatingFilter: true,
     floatingFilterComponentParams: {
       browserAutoComplete: false
-    }
+    },
+    minWidth: 50
   }
 
   return (
@@ -818,13 +942,16 @@ export const BCGridEditorPaginated = ({
         onCellFocused={onCellFocused}
         onSortChanged={handleSortChanged}
         onFilterChanged={handleFilterChanged}
+        onFirstDataRendered={handleFirstDataRendered}
         autoHeight={false}
+        autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
         loading={isLoading || loading}
         rowData={!isLoading && ((data && data[dataKey]) || [])}
         defaultColDef={{
           ...defaultColDefParams,
           ...defaultColDef
         }}
+        columnDefs={transformedColumnDefs}
         {...props}
       />
 

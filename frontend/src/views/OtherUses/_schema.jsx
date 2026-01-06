@@ -55,7 +55,7 @@ export const otherUsesColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
-    minWidth: '280',
+    minWidth: 280,
     cellEditorParams: {
       options: optionsData?.fuelTypes.map((obj) => obj.fuelType),
       multiple: false,
@@ -444,7 +444,7 @@ export const otherUsesSummaryColDefs = (complianceYear, optionsData) => [
     field: 'fuelType',
     floatingFilter: false,
     flex: 1,
-    width: '260px'
+    minWidth: 260
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),

@@ -108,7 +108,9 @@ export const BCGridBase = forwardRef(
           const cellEl = e.target.closest('.ag-cell')
           if (!cellEl) return
 
-          const link = cellEl.querySelector('a[href]')
+          // Look for links in the cell - check both direct children and nested elements
+          // React Router's Link component renders as an <a> tag
+          const link = cellEl.querySelector('a[href], a[data-discover="true"]')
           if (link) {
             e.preventDefault()
             e.stopPropagation()
@@ -116,10 +118,17 @@ export const BCGridBase = forwardRef(
             return
           }
 
-          const focusables = cellEl.querySelectorAll(
-            'button, [href], :not(.ag-hidden) > input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          )
-          if (focusables.length === 0 && onRowClicked) {
+          // Check for buttons that might be in the cell
+          const button = cellEl.querySelector('button:not([disabled])')
+          if (button) {
+            e.preventDefault()
+            e.stopPropagation()
+            button.click()
+            return
+          }
+
+          // If no interactive elements found, trigger row click if handler is provided
+          if (onRowClicked) {
             e.preventDefault()
             e.stopPropagation()
             onRowClicked({ ...params, event: e })
@@ -224,6 +233,18 @@ export const BCGridBase = forwardRef(
       clearFilters
     }))
 
+    const resolvedAutoSizeStrategy = useMemo(() => {
+      if (autoSizeStrategy === null) {
+        return undefined
+      }
+
+      return {
+        type: 'fitGridWidth',
+        defaultMinWidth: 50,
+        ...autoSizeStrategy
+      }
+    }, [autoSizeStrategy])
+
     return (
       <AgGridReact
         ref={ref}
@@ -235,11 +256,7 @@ export const BCGridBase = forwardRef(
         }}
         animateRows
         overlayNoRowsTemplate="No rows found"
-        autoSizeStrategy={{
-          type: 'fitGridWidth',
-          defaultMinWidth: 100,
-          ...autoSizeStrategy
-        }}
+        autoSizeStrategy={resolvedAutoSizeStrategy}
         suppressDragLeaveHidesColumns
         suppressMovableColumns
         suppressColumnMoveAnimation={false}
