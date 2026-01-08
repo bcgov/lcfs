@@ -29,8 +29,7 @@ export function ReportsMenu() {
   const isIDIR = hasAnyRole(...govRoles)
   const canAccessChargingSitesTab =
     isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_CHARGING_SITES)
-  const canAccessFseTab =
-    isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_FSE)
+  const canAccessFseTab = isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_FSE)
 
   const tabs = useMemo(() => {
     const baseTabs = [
@@ -44,9 +43,7 @@ export function ReportsMenu() {
     if (canAccessChargingSitesTab) {
       baseTabs.push({
         key: 'chargingSites',
-        label: isIDIR
-          ? t('tabs.chargingSites')
-          : t('tabs.manageChargingSites'),
+        label: isIDIR ? t('tabs.chargingSites') : t('tabs.manageChargingSites'),
         path: ROUTES.REPORTS.CHARGING_SITE.INDEX
       })
     }
@@ -57,6 +54,11 @@ export function ReportsMenu() {
         label: isIDIR ? t('tabs.fseIndex') : t('tabs.manageFSE'),
         path: ROUTES.REPORTS.MANAGE_FSE
       })
+      baseTabs.push({
+        key: 'fseMap',
+        label: t('tabs.fseMap'),
+        path: ROUTES.REPORTS.FSE_MAP
+      })
     }
 
     return baseTabs
@@ -66,8 +68,7 @@ export function ReportsMenu() {
     // Only select tab when on the exact index route, not on detail/nested pages
     const index = tabs.findIndex((tab) => {
       return (
-        location.pathname === tab.path ||
-        location.pathname === `${tab.path}/`
+        location.pathname === tab.path || location.pathname === `${tab.path}/`
       )
     })
     if (index !== -1) {

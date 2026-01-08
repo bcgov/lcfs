@@ -627,14 +627,16 @@ class ComplianceReportSummaryService:
         compliance_data_service.set_period(
             int(compliance_report.compliance_period.description)
         )
-        # For locked or non-draft/non-analyst-adjustment reports, return the stored
-        # summary values to avoid recalculating user-entered lines (e.g., Line 6).
+        # For locked or non-editable reports, return the stored summary values
+        # to avoid recalculating user-entered lines (e.g., Line 6).
+        # Submitted reports should recalculate to reflect any underlying data changes.
         if summary_model.is_locked or (
             summary_model
             and compliance_report.current_status
             and compliance_report.current_status.status
             not in [
                 ComplianceReportStatusEnum.Draft,
+                ComplianceReportStatusEnum.Submitted,
                 ComplianceReportStatusEnum.Analyst_adjustment,
             ]
         ):
@@ -1391,15 +1393,10 @@ class ComplianceReportSummaryService:
             compliance_report.compliance_report_id,
         )
 
-        # If this is a supplemental/adjustment and there is no assessed report yet,
-        # fall back to the previous version's summary so we net out issuance/deductions
-        # already reported in the superseded submission. This prevents compare-mode
-        # from treating the first submitted report as if it is still active.
-        previous_version_summary = None
-        if compliance_report.version > 0 and not assessed_report:
-            previous_version_summary = await self.repo.get_previous_summary(
-                compliance_report
-            )
+        # Note: We do NOT fall back to previous version's summary for Line 15/16 when
+        # there's no assessed report. Line 15/16 should only reflect credits that were
+        # ACTUALLY ISSUED from an assessed report. If the original report was superseded
+        # before assessment, no credits were issued, so Line 15/16 should remain 0.
 
         # Calculate correct transaction period dates for Line 12 and Line 13
         # First report: Jan 1 - Mar 31 (next year)
@@ -1436,18 +1433,12 @@ class ComplianceReportSummaryService:
 
         if assessed_report and assessed_report.summary:
             compliance_units_prev_issued_for_fuel_supply = int(
-                assessed_report.summary.line_18_units_to_be_banked
+                assessed_report.summary.line_18_units_to_be_banked or 0
             )
             compliance_units_prev_issued_for_fuel_export = int(
-                assessed_report.summary.line_19_units_to_be_exported
+                assessed_report.summary.line_19_units_to_be_exported or 0
             )
-        elif previous_version_summary:
-            compliance_units_prev_issued_for_fuel_supply = int(
-                previous_version_summary.line_18_units_to_be_banked or 0
-            )
-            compliance_units_prev_issued_for_fuel_export = int(
-                previous_version_summary.line_19_units_to_be_exported or 0
-            )
+        # If no assessed report exists, Line 15/16 remain 0 since no credits were issued
 
         # For supplemental reports with a locked summary, use the stored line_17 value
         # This preserves the available balance from when the supplemental report was created

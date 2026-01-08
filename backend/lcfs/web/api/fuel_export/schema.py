@@ -211,3 +211,4 @@ class DeleteFuelExportResponseSchema(BaseSchema):
 class FuelExportsSchema(BaseSchema):
     fuel_exports: Optional[List[FuelExportSchema]] = []
     pagination: Optional[PaginationResponseSchema] = None
+    total_compliance_units: Optional[int] = None

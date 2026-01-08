@@ -208,8 +208,7 @@ export const ComplianceReports = () => {
             overlayNoRowsTemplate={t('report:noReportsFound')}
             autoSizeStrategy={{
               type: 'fitGridWidth',
-              defaultMinWidth: 50,
-              defaultMaxWidth: 600
+              defaultMinWidth: 50
             }}
             defaultColDef={defaultColDef}
             paginationOptions={paginationOptions}

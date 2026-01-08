@@ -56,14 +56,7 @@ vi.mock('@mui/material', () => ({
       {children}
     </tr>
   ),
-  Input: ({
-    value,
-    onChange,
-    onBlur,
-    startAdornment,
-    inputProps,
-    ...props
-  }) => (
+  Input: ({ value, onChange, onBlur, onFocus, onKeyDown, inputProps, startAdornment, ...props }) => (
     <div data-test="input-wrapper">
       {startAdornment}
       <input
@@ -71,7 +64,22 @@ vi.mock('@mui/material', () => ({
         value={value || ''}
         onChange={onChange}
         onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
         {...inputProps}
+        {...props}
+      />
+    </div>
+  ),
+  TextField: ({ value, onChange, onBlur, slotProps, ...props }) => (
+    <div data-test="input-wrapper">
+      {slotProps?.input?.startAdornment}
+      <input
+        data-test="input"
+        value={value || ''}
+        onChange={onChange}
+        onBlur={onBlur}
+        {...slotProps?.htmlInput}
         {...props}
       />
     </div>
@@ -80,7 +88,55 @@ vi.mock('@mui/material', () => ({
     <span data-test="input-adornment" {...props}>
       {children}
     </span>
-  )
+  ),
+  CircularProgress: () => <div data-test="circular-progress" />,
+  Tooltip: ({ children }) => children
+}))
+
+// Mock react-number-format
+vi.mock('react-number-format', () => ({
+  NumericFormat: ({
+    customInput: CustomInput,
+    value,
+    onValueChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    thousandSeparator,
+    decimalScale,
+    allowNegative,
+    slotProps,
+    ...props
+  }) => {
+    const handleChange = (e) => {
+      const rawValue = e.target.value.replace(/,/g, '')
+      onValueChange?.({
+        value: rawValue,
+        floatValue: parseFloat(rawValue) || 0
+      })
+    }
+    return CustomInput ? (
+      <CustomInput
+        value={value || ''}
+        onChange={handleChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        slotProps={slotProps}
+        {...props}
+      />
+    ) : (
+      <input
+        data-test="input"
+        value={value || ''}
+        onChange={handleChange}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        {...props}
+      />
+    )
+  }
 }))
 
 // Custom render function with providers
@@ -264,9 +320,9 @@ describe('SummaryTable', () => {
 
       const input = screen.getByTestId('input')
 
-      // Should accept any value when no constraints
+      // Should accept any value when no constraints - displayed with commas
       fireEvent.change(input, { target: { value: '9999' } })
-      expect(input.value).toBe('9999')
+      expect(input.value).toBe('9,999')
     })
   })
 
@@ -405,11 +461,12 @@ describe('SummaryTable', () => {
 
       const input = screen.getAllByTestId('input')[0]
 
-      // Test blur behavior with invalid input
+      // Test blur behavior with invalid input - component strips non-numeric chars leaving empty,
+      // then on blur converts empty to 0
       fireEvent.change(input, { target: { value: 'abc' } })
       fireEvent.blur(input)
 
-      expect(input.value).toBe('') // Component clears invalid input
+      expect(input.value).toBe('0') // Component converts empty/invalid to 0 on blur
     })
   })
 
@@ -441,6 +498,33 @@ describe('SummaryTable', () => {
       // Should display formatted currency values
       expect(screen.getByText('$100.00')).toBeInTheDocument()
       expect(screen.getByText('200')).toBeInTheDocument() // Number format, not currency
+    })
+
+    it('displays retained values for locked Line 6 cells', () => {
+      const lockedColumns = [
+        { id: 'line', label: 'Line' },
+        { id: 'description', label: 'Description' },
+        { id: 'gasoline', label: 'Gasoline', align: 'right' }
+      ]
+      const lockedData = [
+        {
+          line: '6',
+          description: 'Retained fuel',
+          gasoline: 12345,
+          format: 'number'
+        }
+      ]
+
+      customRender(
+        <SummaryTable
+          title="Locked Lines"
+          columns={lockedColumns}
+          data={lockedData}
+          lines6And8Locked
+        />
+      )
+
+      expect(screen.getByText('12345')).toBeInTheDocument()
     })
   })
 
@@ -548,6 +632,212 @@ describe('SummaryTable', () => {
 
       const container = screen.getByTestId('table-container')
       expect(container).toBeInTheDocument()
+    })
+  })
+
+  describe('Lines 6 and 8 Max Constraint Enforcement', () => {
+    // These tests ensure the max constraint on Lines 6 and 8 is properly enforced
+    // If these tests fail, it means the max constraint logic has been removed or broken
+    const line6And8Columns = [
+      { id: 'line', label: 'Line', align: 'center' },
+      { id: 'description', label: 'Description', align: 'left' },
+      {
+        id: 'gasoline',
+        label: 'Gasoline',
+        align: 'right',
+        editable: true,
+        editableCells: [0, 1], // Line 6 at index 0, Line 8 at index 1
+        cellConstraints: {
+          0: { min: 0, max: 20000 }, // Line 6 max of 20,000
+          1: { min: 0, max: 15000 }  // Line 8 max of 15,000
+        }
+      },
+      {
+        id: 'diesel',
+        label: 'Diesel',
+        align: 'right',
+        editable: true,
+        editableCells: [0, 1],
+        cellConstraints: {
+          0: { min: 0, max: 10000 }, // Line 6 diesel max
+          1: { min: 0, max: 8000 }   // Line 8 diesel max
+        }
+      }
+    ]
+
+    const line6And8Data = [
+      {
+        line: 6,
+        description: 'Renewable fuel retained',
+        gasoline: 0,
+        diesel: 0,
+        format: 'number'
+      },
+      {
+        line: 8,
+        description: 'Renewable fuel deferred',
+        gasoline: 0,
+        diesel: 0,
+        format: 'number'
+      }
+    ]
+
+    it('clamps Line 6 gasoline value to max constraint when exceeded', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line6GasolineInput = screen.getAllByTestId('input')[0]
+
+      // Try to enter a value exceeding the max of 20,000
+      fireEvent.change(line6GasolineInput, { target: { value: '25000' } })
+
+      // Value should be clamped to max (20000) - displayed with commas
+      expect(line6GasolineInput.value).toBe('20,000')
+    })
+
+    it('clamps Line 8 gasoline value to max constraint when exceeded', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line8GasolineInput = screen.getAllByTestId('input')[2]
+
+      // Try to enter a value exceeding the max of 15,000
+      fireEvent.change(line8GasolineInput, { target: { value: '18000' } })
+
+      // Value should be clamped to max (15000) - displayed with commas
+      expect(line8GasolineInput.value).toBe('15,000')
+    })
+
+    it('clamps Line 6 diesel value to max constraint when exceeded', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line6DieselInput = screen.getAllByTestId('input')[1]
+
+      // Try to enter a value exceeding the max of 10,000
+      fireEvent.change(line6DieselInput, { target: { value: '12000' } })
+
+      // Value should be clamped to max (10000) - displayed with commas
+      expect(line6DieselInput.value).toBe('10,000')
+    })
+
+    it('clamps Line 8 diesel value to max constraint when exceeded', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line8DieselInput = screen.getAllByTestId('input')[3]
+
+      // Try to enter a value exceeding the max of 8,000
+      fireEvent.change(line8DieselInput, { target: { value: '9500' } })
+
+      // Value should be clamped to max (8000) - displayed with commas
+      expect(line8DieselInput.value).toBe('8,000')
+    })
+
+    it('allows values at exactly the max constraint', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line6GasolineInput = screen.getAllByTestId('input')[0]
+
+      // Enter exactly the max value
+      fireEvent.change(line6GasolineInput, { target: { value: '20000' } })
+
+      // Value should be accepted as-is - displayed with commas
+      expect(line6GasolineInput.value).toBe('20,000')
+    })
+
+    it('allows values below the max constraint', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line6GasolineInput = screen.getAllByTestId('input')[0]
+
+      // Enter a value below the max
+      fireEvent.change(line6GasolineInput, { target: { value: '15000' } })
+
+      // Value should be accepted as-is - displayed with commas
+      expect(line6GasolineInput.value).toBe('15,000')
+    })
+
+    it('enforces min constraint (prevents negative values)', () => {
+      customRender(
+        <SummaryTable
+          columns={line6And8Columns}
+          data={line6And8Data}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const line6GasolineInput = screen.getAllByTestId('input')[0]
+
+      // Try to enter a negative value
+      fireEvent.change(line6GasolineInput, { target: { value: '-100' } })
+
+      // Value should be clamped to min (0)
+      // Note: The component strips non-numeric chars first, so -100 becomes 100
+      // But if it somehow allowed negative, it would be clamped to 0
+      expect(parseInt(line6GasolineInput.value) >= 0).toBe(true)
+    })
+
+    it('does not modify values when no constraints exist', () => {
+      const noConstraintColumns = [
+        { id: 'line', label: 'Line' },
+        {
+          id: 'value',
+          label: 'Value',
+          editable: true,
+          editableCells: [0]
+          // No cellConstraints defined
+        }
+      ]
+      const noConstraintData = [{ line: 1, value: 0 }]
+
+      customRender(
+        <SummaryTable
+          columns={noConstraintColumns}
+          data={noConstraintData}
+          onCellEditStopped={mockOnCellEditStopped}
+        />
+      )
+
+      const input = screen.getByTestId('input')
+
+      // Enter a large value with no constraints
+      fireEvent.change(input, { target: { value: '999999999' } })
+
+      // Value should be accepted without clamping - displayed with commas
+      expect(input.value).toBe('999,999,999')
     })
   })
 

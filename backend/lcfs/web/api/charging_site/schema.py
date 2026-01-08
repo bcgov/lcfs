@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import Field
+from pydantic import Field, field_validator
 from lcfs.services.s3.schema import FileResponseSchema
 from enum import Enum
 from lcfs.web.api.base import (
@@ -38,8 +38,15 @@ class ChargingSiteSchema(BaseSchema):
     street_address: str
     city: str
     postal_code: str
-    latitude: float
-    longitude: float
+    latitude: float = Field(
+        ..., ge=-90, le=90, description="Latitude must be between -90 and 90 degrees"
+    )
+    longitude: float = Field(
+        ...,
+        ge=-180,
+        le=180,
+        description="Longitude must be between -180 and 180 degrees",
+    )
     documents: Optional[List[FileResponseSchema]] = Field(default_factory=list)
     notes: Optional[str] = None
     create_date: Optional[datetime] = None
@@ -69,10 +76,31 @@ class ChargingSiteCreateSchema(BaseSchema):
     street_address: str
     city: str
     postal_code: str
-    latitude: float
-    longitude: float
+    latitude: float = Field(
+        ..., ge=-90, le=90, description="Latitude must be between -90 and 90 degrees"
+    )
+    longitude: float = Field(
+        ...,
+        ge=-180,
+        le=180,
+        description="Longitude must be between -180 and 180 degrees",
+    )
     notes: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @field_validator("latitude")
+    @classmethod
+    def validate_latitude(cls, v):
+        if v < -90 or v > 90:
+            raise ValueError("Latitude must be between -90 and 90 degrees")
+        return v
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_longitude(cls, v):
+        if v < -180 or v > 180:
+            raise ValueError("Longitude must be between -180 and 180 degrees")
+        return v
 
 
 class CommonPaginatedCSRequestSchema(BaseSchema):

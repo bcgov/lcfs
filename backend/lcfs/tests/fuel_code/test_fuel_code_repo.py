@@ -887,3 +887,21 @@ async def test_get_fuel_code_history(fuel_code_repo, mock_db):
 
     result = await fuel_code_repo.get_fuel_code_history(1, version=0)
     assert result == history
+
+
+@pytest.mark.anyio
+async def test_mark_fuel_codes_notified(fuel_code_repo, mock_db):
+    """Test marking fuel codes as notified"""
+    fuel_code_ids = [1, 2, 3]
+
+    await fuel_code_repo.mark_fuel_codes_notified(fuel_code_ids)
+
+    mock_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_mark_fuel_codes_notified_empty_list(fuel_code_repo, mock_db):
+    """Test marking fuel codes as notified with empty list does nothing"""
+    await fuel_code_repo.mark_fuel_codes_notified([])
+
+    mock_db.execute.assert_not_called()

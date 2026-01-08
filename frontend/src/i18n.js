@@ -41,6 +41,7 @@ const resources = {
     notionalTransfer: notionalTransferEn,
     otherUses: otherUsesEn,
     finalSupplyEquipment: finalSupplyEquipmentEn,
+    fse: finalSupplyEquipmentEn,
     fuelSupply: fuelSupplyEn,
     fuelExport: fuelExportEn,
     dashboard: dashboardEn,

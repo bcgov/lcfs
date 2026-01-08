@@ -31,3 +31,11 @@ export const nonGovRoles: RoleName[] = [
   roles.signing_authority,
   roles.read_only
 ]
+
+export const formatDelegatedRoleLabel = (role: string): string => {
+  const roleLabels: Record<string, string> = {
+    Analyst: 'Analyst',
+    Manager: 'Compliance Manager'
+  }
+  return roleLabels[role] || role
+}

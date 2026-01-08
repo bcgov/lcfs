@@ -184,7 +184,12 @@ const TestWrapper = ({ children }) => {
 
 describe('AddEditFuelCode', () => {
   const mockOptionsData = {
-    fuelCodePrefixes: [{ fuelCodePrefixId: 1, prefix: 'BCLCF', nextFuelCode: 'BCLCF001' }],
+    fuelCodePrefixes: [
+      { fuelCodePrefixId: 1, prefix: 'BCLCF', nextFuelCode: 'BCLCF001' },
+      { fuelCodePrefixId: 2, prefix: 'PROXY', nextFuelCode: 'PROXY001' },
+      { fuelCodePrefixId: 3, prefix: 'C-BCLCF', nextFuelCode: 'C-BCLCF001' },
+      { fuelCodePrefixId: 4, prefix: 'C-PROXY', nextFuelCode: 'C-PROXY001' }
+    ],
     fuelTypes: [{ fuelTypeId: 1, fuelType: 'Diesel' }]
   }
 

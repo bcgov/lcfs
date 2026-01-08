@@ -490,7 +490,8 @@ describe('BCGridBase Component', () => {
 
       const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
       expect(agGridProps.autoSizeStrategy).toEqual({
-        type: 'fitCellContents',
+        defaultMinWidth: 50,
+        type: 'fitGridWidth',
         skipHeader: true
       })
     })

@@ -164,6 +164,25 @@ class ComplianceReportSummary(BaseModel, Auditable):
             self.line_2_eligible_renewable_fuel_supplied_jet_fuel
         )
 
+    @property
+    def has_renewable_fuel_requirement(self):
+        """
+        Returns True if there is any renewable fuel requirement.
+        Checks if any fuel category in Lines 3 (total tracked fuel supplied)
+        or Line 9 (obligation added) has a non-zero value.
+        """
+        line_3_has_value = (
+            (self.line_3_total_tracked_fuel_supplied_gasoline or 0) != 0 or
+            (self.line_3_total_tracked_fuel_supplied_diesel or 0) != 0 or
+            (self.line_3_total_tracked_fuel_supplied_jet_fuel or 0) != 0
+        )
+        line_9_has_value = (
+            (self.line_9_obligation_added_gasoline or 0) != 0 or
+            (self.line_9_obligation_added_diesel or 0) != 0 or
+            (self.line_9_obligation_added_jet_fuel or 0) != 0
+        )
+        return line_3_has_value or line_9_has_value
+
     def __repr__(self):
         return (
             f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter})>"

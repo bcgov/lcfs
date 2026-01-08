@@ -103,14 +103,18 @@ async def test_analyst_adjustment_uses_assessed_baseline_for_lines_7_9(
 
 
 @pytest.mark.anyio
-async def test_early_issuance_quarterly_uses_previous_version_when_unassessed(
+async def test_early_issuance_quarterly_zero_baselines_when_unassessed(
     compliance_report_summary_service: ComplianceReportSummaryService,
     mock_repo,
     mock_summary_repo,
     mock_trxn_repo,
 ):
     """
-    Early issuance (quarterly) with no assessed baseline should fall back to previous version for lines 15/16.
+    Early issuance (quarterly) with no assessed baseline should have zero baselines for lines 15/16.
+
+    Line 15/16 represent 'previously issued credits'. Even though a previous version exists with
+    calculated Line 18/19 values, those credits were never actually issued (no assessment occurred),
+    so Line 15/16 should be 0.
     """
     v0 = make_report(
         0, ComplianceReportStatusEnum.Submitted, "2025", nickname="early v0", reporting_frequency="QUARTERLY"
@@ -145,10 +149,10 @@ async def test_early_issuance_quarterly_uses_previous_version_when_unassessed(
         v1,
     )
     line_values = {row.line: row.value for row in lc_summary}
-    # Falls back to previous version summary (v0) since no assessed baseline
-    assert line_values[15] == 5000
-    assert line_values[16] == 2000
-    assert line_values[20] == -7000
+    # Lines 15/16 are 0 because no assessed report exists (no credits were actually issued)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
+    assert line_values[20] == 0
 
 
 @pytest.mark.anyio
@@ -195,15 +199,18 @@ async def test_early_issuance_quarterly_with_assessed_baseline_uses_assessed_not
 
 
 @pytest.mark.anyio
-async def test_gov_supplemental_from_submitted_uses_previous_version_deltas(
+async def test_gov_supplemental_from_submitted_has_zero_baselines(
     compliance_report_summary_service: ComplianceReportSummaryService,
     mock_repo,
     mock_summary_repo,
     mock_trxn_repo,
 ):
     """
-    Government-initiated supplemental off a submitted original should NOT treat the original as assessed,
-    but should still use the previous version's lines 15/16 baseline for deltas.
+    Government-initiated supplemental off a submitted original should have zero baselines for lines 15/16.
+
+    Line 15/16 represent 'previously issued credits'. Even though the original was submitted with
+    calculated Line 18/19 values, those credits were never actually issued (original wasn't assessed),
+    so Line 15/16 should be 0.
     """
     v0_submitted = make_report(0, ComplianceReportStatusEnum.Submitted, "2025", nickname="v0 submitted")
     v0_submitted.summary = make_summary(line18=10000, line19=-3000, locked=False)
@@ -229,9 +236,10 @@ async def test_gov_supplemental_from_submitted_uses_previous_version_deltas(
     )
     line_values = {row.line: row.value for row in lc_summary}
 
-    assert line_values[15] == 10000  # prior submitted issuance used as baseline, not treated as assessed
-    assert line_values[16] == -3000  # prior submitted export debit baseline
-    assert line_values[20] == -7000  # 0 + 0 - 10000 - (-3000)
+    # Lines 15/16 are 0 because no assessed report exists (original's credits were never issued)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
+    assert line_values[20] == 0  # 0 + 0 - 0 - 0
 
 
 @pytest.mark.anyio
@@ -385,14 +393,18 @@ async def test_analyst_adjustment_off_assessed_with_penalty(
 
 
 @pytest.mark.anyio
-async def test_early_issuance_multiple_submissions_without_assessed_uses_latest_previous(
+async def test_early_issuance_multiple_submissions_without_assessed_has_zero_baselines(
     compliance_report_summary_service: ComplianceReportSummaryService,
     mock_repo,
     mock_summary_repo,
     mock_trxn_repo,
 ):
     """
-    Early issuance with multiple submissions and no assessed baseline should use the immediately previous version for lines 15/16.
+    Early issuance with multiple submissions and no assessed baseline should have zero baselines for lines 15/16.
+
+    Line 15/16 represent 'previously issued credits'. Even though multiple previous versions exist
+    with calculated Line 18/19 values, those credits were never actually issued (no assessment),
+    so Line 15/16 should be 0.
     """
     v0 = make_report(0, ComplianceReportStatusEnum.Submitted, "2025", nickname="early v0", reporting_frequency="QUARTERLY")
     v0.summary = make_summary(line18=4000, line19=-1500, locked=False)
@@ -421,6 +433,7 @@ async def test_early_issuance_multiple_submissions_without_assessed_uses_latest_
     )
     line_values = {row.line: row.value for row in lc_summary}
 
-    assert line_values[15] == 7000  # from v1 (latest previous)
-    assert line_values[16] == -2500
-    assert line_values[20] == -4500
+    # Lines 15/16 are 0 because no assessed report exists (no credits were ever issued)
+    assert line_values[15] == 0
+    assert line_values[16] == 0
+    assert line_values[20] == 0

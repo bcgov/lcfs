@@ -1,29 +1,32 @@
-import structlog
-
 """Charging Site API."""
 
+import structlog
 from typing import List, Union
 from fastapi import (
     APIRouter,
+    Body,
     Depends,
     File,
     Form,
     HTTPException,
     Path,
+    Query,
     Request,
     Response,
     UploadFile,
     status,
-    Body,
 )
-
-from lcfs.db.models.user.Role import RoleEnum
 from fastapi.responses import JSONResponse, StreamingResponse
+
+from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
+from lcfs.web.api.charging_site.export import ChargingSiteExporter
+from lcfs.web.api.charging_site.importer import ChargingSiteImporter
 from lcfs.web.api.charging_site.schema import (
-    ChargingEquipmentStatusSchema,
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentPaginatedSchema,
+    ChargingEquipmentStatusSchema,
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
     ChargingSiteStatusSchema,
@@ -32,9 +35,6 @@ from lcfs.web.api.charging_site.schema import (
     DeleteChargingSiteResponseSchema,
 )
 from lcfs.web.api.charging_site.services import ChargingSiteService
-from lcfs.web.api.charging_site.export import ChargingSiteExporter
-from lcfs.web.api.charging_site.importer import ChargingSiteImporter
-from lcfs.db import dependencies
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
 from lcfs.web.core.decorators import view_handler
@@ -62,21 +62,27 @@ async def get_intended_users(
 
 
 @router.get(
-    "/allocation-organizations",
+    "/allocation-organizations/search",
     response_model=List[dict],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_allocation_organizations(
+async def search_allocation_organizations(
     request: Request,
+    query: str = Query(
+        default="", min_length=0, description="Organization name to search for"
+    ),
     service: ChargingSiteService = Depends(),
 ) -> List[dict]:
     """
-    Endpoint to get list of organizations with allocation agreements for the logged-in supplier.
-    Returns organizations from current draft and assessed compliance reports.
+    Search endpoint for allocating organization suggestions.
+    Returns organizations matching the search query from:
+    - Registered organizations matching the query
+    - Historical allocating organization names from charging sites
+    - Transaction partners from allocation agreements
     """
     organization_id = request.user.organization_id
-    return await service.get_allocation_agreement_organizations(organization_id)
+    return await service.search_allocation_organizations(organization_id, query)
 
 
 @router.get(
@@ -207,7 +213,7 @@ async def bulk_update_equipment_status(
     response_model=ChargingSitesSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_charging_sites(
     request: Request,
     organization_id: int,
@@ -346,7 +352,9 @@ async def delete_charging_site_row(
     validate: ChargingSiteValidation = Depends(),
 ):
     """Endpoint to delete single charging site row"""
-    await validate.charging_site_delete_update_access(charging_site_id, organization_id)
+    await validate.charging_site_delete_update_access(
+        charging_site_id, organization_id, delete=True
+    )
     # Delete existing charging site row
     await cs_service.delete_charging_site(charging_site_id)
     return DeleteChargingSiteResponseSchema(

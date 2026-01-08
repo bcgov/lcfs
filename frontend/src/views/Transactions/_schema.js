@@ -55,7 +55,7 @@ export const transactionsColDefs = (t) => [
     colId: 'transactionId',
     field: 'transactionId',
     headerName: t('txn:txnColLabels.txnId'),
-    width: 130,
+    minWidth: 130,
     valueGetter: (params) => {
       const transactionType = params.data.transactionType
       const prefix = prefixMap[transactionType] || ''
@@ -75,7 +75,7 @@ export const transactionsColDefs = (t) => [
     colId: 'compliancePeriod',
     field: 'compliancePeriod',
     headerName: t('txn:txnColLabels.compliancePeriod'),
-    width: 150,
+    minWidth: 150,
     valueGetter: (params) => {
       return params.data?.compliancePeriod || 'N/A'
     },
@@ -156,7 +156,6 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.quantity'),
     valueFormatter: numberFormatter,
     minWidth: 140,
-    width: 140,
     filter: 'agNumberColumnFilter',
     filterParams: {
       filterOptions: ['startsWith'],
@@ -168,7 +167,7 @@ export const transactionsColDefs = (t) => [
     field: 'pricePerUnit',
     headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: currencyFormatter,
-    width: 190,
+    minWidth: 190,
     valueGetter: (params) => {
       const value = params.data?.pricePerUnit
       return value !== null && value !== undefined ? value : 'N/A'

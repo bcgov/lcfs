@@ -8,7 +8,14 @@ import '@ag-grid-community/styles/ag-theme-material.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -19,6 +26,11 @@ import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 import { BCAlert2 } from '@/components/BCAlert'
 import { RequiredHeader } from '@/components/BCDataGrid/components'
+import {
+  addFlexToColumns,
+  getColumnMinWidthSum,
+  relaxColumnMinWidths
+} from '@/components/BCDataGrid/columnSizingUtils'
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -49,27 +61,91 @@ export const BCGridEditor = ({
   },
   showMandatoryColumns = true,
   onAddRows,
+  defaultColDef,
+  columnDefs,
   ...props
 }) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
+  const gridContainerRef = useRef(null)
   const pendingSavePromiseRef = useRef(null)
   const firstEditableColumnRef = useRef(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
   const { t } = useTranslation(['common'])
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(null)
+  const minWidthRelaxedRef = useRef(false)
+  const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
   useEffect(() => {
-    if (!showRequiredIndicator && props.columnDefs?.length) {
-      const foundRequired = props.columnDefs.some(
+    if (!showRequiredIndicator && columnDefs?.length) {
+      const foundRequired = columnDefs.some(
         (colDef) => colDef.headerComponent === RequiredHeader
       )
       if (foundRequired && showMandatoryColumns) {
         setShowRequiredIndicator(true)
       }
     }
-  }, [props.columnDefs, showRequiredIndicator])
+  }, [columnDefs, showRequiredIndicator])
+
+  const fallbackMinWidth = defaultColDef?.minWidth ?? 100
+  const totalMinWidth = useMemo(
+    () => getColumnMinWidthSum(columnDefs, fallbackMinWidth),
+    [columnDefs, fallbackMinWidth]
+  )
+  const shouldFitColumns = useMemo(
+    () => containerWidth !== null && totalMinWidth <= containerWidth,
+    [containerWidth, totalMinWidth]
+  )
+
+  const transformedColumnDefs = useMemo(() => {
+    if (!columnDefs) return columnDefs
+
+    if (shouldFitColumns) {
+      const flexDefs = addFlexToColumns(columnDefs).columnDefs
+      if (!minWidthRelaxed) {
+        return flexDefs
+      }
+      return flexDefs.map((col) => ({
+        ...col,
+        minWidth: 50
+      }))
+    }
+
+    return columnDefs.map((col) => {
+      const nextCol = { ...col }
+      if (nextCol.flex != null) {
+        delete nextCol.flex
+      }
+      if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+        nextCol.width = nextCol.minWidth
+      }
+      if (minWidthRelaxed) {
+        nextCol.minWidth = 50
+      }
+      return nextCol
+    })
+  }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+
+  // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
+  // This prevents the "squished then expand" visual effect on page load
+  const computedAutoSizeStrategy = useMemo(() => {
+    if (!columnDefs || columnDefs.length === 0) {
+      return { type: 'fitGridWidth', defaultMinWidth: 100 }
+    }
+
+    // Find the minimum minWidth value from columnDefs (default to 100 if none set)
+    const minWidths = columnDefs
+      .filter((col) => col.minWidth)
+      .map((col) => col.minWidth)
+
+    // Use the minimum of all minWidths, or 100 as a fallback
+    const defaultMinWidth =
+      minWidths.length > 0 ? Math.min(...minWidths) : 100
+
+    return { type: 'fitGridWidth', defaultMinWidth }
+  }, [columnDefs])
 
   const handleGridReady = useCallback(
     (params) => {
@@ -78,13 +154,36 @@ export const BCGridEditor = ({
         const foundRequired = actualCols.some(
           (colDef) => colDef.headerComponent === RequiredHeader
         )
-        if (foundRequired) {
-          setShowRequiredIndicator(true)
-        }
+      if (foundRequired) {
+        setShowRequiredIndicator(true)
       }
+    }
+
+      requestAnimationFrame(() => {
+        if (minWidthRelaxedRef.current) return
+        relaxColumnMinWidths(params.api, params.columnApi, 50)
+        minWidthRelaxedRef.current = true
+        setMinWidthRelaxed(true)
+      })
+
       props.onGridReady?.(params)
     },
     [showRequiredIndicator, props.onGridReady]
+  )
+
+  // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
+  const handleFirstDataRendered = useCallback(
+    (params) => {
+      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
+      // Preserve current widths to avoid visual jumps.
+      if (minWidthRelaxedRef.current) return
+      relaxColumnMinWidths(params.api, params.columnApi, 50)
+      minWidthRelaxedRef.current = true
+      setMinWidthRelaxed(true)
+
+      props.onFirstDataRendered?.(params)
+    },
+    [props.onFirstDataRendered]
   )
 
   const findFirstEditableColumn = useCallback(() => {
@@ -182,6 +281,33 @@ export const BCGridEditor = ({
       }
     }
   }, [handleExcelPaste, handlePaste, ref, enablePaste])
+
+  useLayoutEffect(() => {
+    const container = gridContainerRef.current
+    if (!container) return
+
+    const updateWidth = () => {
+      const rect = container.getBoundingClientRect()
+      const nextWidth = Math.floor(rect.width)
+      setContainerWidth((prev) =>
+        prev === nextWidth || Number.isNaN(nextWidth) ? prev : nextWidth
+      )
+    }
+
+    updateWidth()
+
+    let resizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(updateWidth)
+      resizeObserver.observe(container)
+    }
+
+    window.addEventListener('resize', updateWidth)
+    return () => {
+      window.removeEventListener('resize', updateWidth)
+      resizeObserver?.disconnect()
+    }
+  }, [])
 
   const handleOnCellEditingStopped = useCallback(
     (params) => {
@@ -349,7 +475,12 @@ export const BCGridEditor = ({
   }, [isGridValid, ref, saveButtonProps.onSave, waitForPendingSave])
 
   return (
-    <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
+    <BCBox
+      ref={gridContainerRef}
+      my={2}
+      component="div"
+      style={{ height: '100%', width: '100%' }}
+    >
       {showRequiredIndicator && (
         <BCTypography
           variant="body4"
@@ -370,7 +501,14 @@ export const BCGridEditor = ({
         onCellClicked={onCellClicked}
         onCellEditingStopped={handleOnCellEditingStopped}
         onCellFocused={onCellFocused}
+        onFirstDataRendered={handleFirstDataRendered}
         autoHeight={true}
+        autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
+        defaultColDef={{
+          minWidth: 50,
+          ...defaultColDef
+        }}
+        columnDefs={transformedColumnDefs}
         {...props}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
@@ -476,5 +614,7 @@ BCGridEditor.propTypes = {
     confirmText: PropTypes.string,
     confirmLabel: PropTypes.string
   }),
-  onGridReady: PropTypes.func
+  onGridReady: PropTypes.func,
+  defaultColDef: PropTypes.object,
+  columnDefs: PropTypes.array
 }

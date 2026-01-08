@@ -55,7 +55,6 @@ export const FinalSupplyEquipmentSummary = ({
     }),
     [t]
   )
-
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -68,11 +67,9 @@ export const FinalSupplyEquipmentSummary = ({
     }),
     [status]
   )
-
   const columns = useMemo(() => {
     return finalSupplyEquipmentSummaryColDefs(t, status, isIDIR)
   }, [t, status, isIDIR])
-
   const getRowId = (params) => {
     return String(params.data.chargingEquipmentId)
   }

@@ -28,7 +28,7 @@ const fseProcessingColDefs = [
   {
     field: 'status',
     headerName: 'Status',
-    width: 120,
+    minWidth: 120,
     cellRenderer: (params) => {
       const status = params.value
       const color =
@@ -44,44 +44,44 @@ const fseProcessingColDefs = [
   {
     field: 'registration_number',
     headerName: 'Registration #',
-    width: 150,
+    minWidth: 150,
     sortable: true,
     filter: true
   },
   {
     field: 'version',
     headerName: 'Ver.',
-    width: 70,
+    minWidth: 70,
     type: 'number'
   },
   {
     field: 'allocating_organization_name',
     headerName: 'Allocating Organization',
-    width: 200,
+    minWidth: 200,
     filter: true
   },
   {
     field: 'serial_number',
     headerName: 'Serial #',
-    width: 120,
+    minWidth: 120,
     filter: true
   },
   {
     field: 'manufacturer',
     headerName: 'Manufacturer',
-    width: 140,
+    minWidth: 140,
     filter: true
   },
   {
     field: 'model',
     headerName: 'Model',
-    width: 120,
+    minWidth: 120,
     filter: true
   },
   {
     field: 'level_of_equipment_name',
     headerName: 'Level of Equipment',
-    width: 160,
+    minWidth: 160,
     filter: true
   }
 ]

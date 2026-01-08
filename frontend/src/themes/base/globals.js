@@ -92,12 +92,34 @@ const globals = {
     '--ag-borders': `1px solid ${grey[700]}`,
     '--ag-border-color': grey[700],
     '--ag-odd-row-background-color': rgba(light.main, 0.6),
-    '--ag-header-background-color': background.grey,
+    '--ag-header-background-color': 'transparent',
     '--ag-font-size': pxToRem(16),
     '--ag-color': rgba(dark.main, 0.9),
     '--ag-font-family':
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
+  },
+  // Apply header background and borders only to actual header cells, not empty space
+  '.ag-theme-material .ag-header-cell': {
+    backgroundColor: background.grey,
+    borderTop: `1px solid ${grey[700]}`
+  },
+  // Prevent header text from wrapping - truncate with ellipsis instead
+  '.ag-theme-material .ag-header-cell-text': {
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  },
+  // Remove extended line from header row - remove borders from row containers
+  '.ag-theme-material .ag-header-viewport': {
+    backgroundColor: 'transparent',
+    border: 'none !important'
+  },
+  '.ag-theme-material .ag-header-row': {
+    border: 'none !important'
+  },
+  '.ag-theme-material .ag-header-row.ag-header-row-floating-filter': {
+    border: 'none !important'
   },
   '.bc-grid-container': {
     width: '100%'
@@ -156,7 +178,7 @@ const globals = {
   '.ag-theme-quartz': {
     '--ag-borders': `0.5px solid ${grey[400]} !important`,
     '--ag-input-focus-border-color': primary.main,
-    '--ag-header-background-color': background.grey,
+    '--ag-header-background-color': 'transparent',
     '--ag-font-size': pxToRem(16),
     '--ag-color': rgba(dark.main, 0.9),
     '--ag-font-family':
@@ -176,7 +198,14 @@ const globals = {
   },
   '.ag-theme-quartz .ag-header-cell': {
     fontWeight: 600,
-    color: grey[700]
+    color: grey[700],
+    backgroundColor: background.grey
+  },
+  // Prevent header text from wrapping - truncate with ellipsis instead
+  '.ag-theme-quartz .ag-header-cell-text': {
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   },
   '.ag-theme-quartz .ag-header-cell, .ag-theme-quartz .ag-cell, .ag-theme-quartz .MuiOutlinedInput-notchedOutline':
     {
@@ -197,12 +226,20 @@ const globals = {
     {
       border: `2px solid ${link.focus}`
     },
-  '.ag-theme-material .ag-header-row,': {
-    borderTop: `1px solid ${grey[700]}`
-  },
+  // Header row border is handled by individual cells, not the row container
+  // This prevents the border from extending past the last column
   '.ag-theme-material .ag-row-hover': {
     cursor: 'pointer'
   },
+  // Expand checkbox click target area - make entire cell clickable
+  '.ag-theme-material .ag-cell[col-id="__select__"], .ag-theme-material .ag-cell[col-id="ag-Grid-SelectionColumn"]':
+    {
+      cursor: 'pointer'
+    },
+  '.ag-theme-quartz .ag-cell[col-id="__select__"], .ag-theme-quartz .ag-cell[col-id="ag-Grid-SelectionColumn"]':
+    {
+      cursor: 'pointer'
+    },
   '.ag-overlay-loading-center-box': {
     height: 100,
     width: 150,

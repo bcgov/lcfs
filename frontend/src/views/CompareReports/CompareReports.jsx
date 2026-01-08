@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   lowCarbonColumns,
@@ -12,10 +12,13 @@ import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const Controls = styled(Box)({
   width: '66%'
 })
+
+const FUEL_TYPES = ['gasoline', 'diesel', 'jetFuel']
 
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -27,6 +30,24 @@ export const CompareReports = () => {
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
+  const [hasUserSelectedFuel, setHasUserSelectedFuel] = useState(false)
+
+  const originalReport = useMemo(() => {
+    if (!Array.isArray(reportChain)) return null
+    return reportChain.find((report) => report.version === 0) || null
+  }, [reportChain])
+
+  const hasSupplementalReports = useMemo(() => {
+    if (!Array.isArray(reportChain)) return false
+    return reportChain.some((report) => (report.version ?? 0) > 0)
+  }, [reportChain])
+
+  const shouldShowOriginalNotAssessedLabel = useMemo(() => {
+    if (!originalReport) return false
+    if (!hasSupplementalReports) return false
+    const originalStatus = originalReport.currentStatus?.status
+    return originalStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+  }, [originalReport, hasSupplementalReports])
 
   useEffect(() => {
     if (currentReport) {
@@ -58,6 +79,57 @@ export const CompareReports = () => {
   const [lowCarbonSummary, setLowCarbonSummary] = useState([])
   const [nonCompliancePenaltySummary, setNonCompliancePenaltySummary] =
     useState([])
+
+  const fuelAvailability = useMemo(() => {
+    const summaries = [report1Summary, report2Summary].filter(Boolean)
+    if (!summaries.length) return null
+
+    const getFuelValue = (summary, lineNumber, fuelKey) => {
+      const line = summary?.renewableFuelTargetSummary?.find(
+        (row) => Number(row.line) === lineNumber
+      )
+      return line?.[fuelKey]
+    }
+
+    const hasFuelContent = (summary, fuelKey) => {
+      const line3Value = getFuelValue(summary, 3, fuelKey)
+      const line9Value = getFuelValue(summary, 9, fuelKey)
+      const line3Number = Number(line3Value)
+      const line9Number = Number(line9Value)
+      const line3HasContent =
+        Number.isFinite(line3Number) && line3Number !== 0
+      const line9HasContent =
+        Number.isFinite(line9Number) && line9Number !== 0
+      return line3HasContent || line9HasContent
+    }
+
+    return FUEL_TYPES.reduce((acc, fuelKey) => {
+      acc[fuelKey] = summaries.some((summary) =>
+        hasFuelContent(summary, fuelKey)
+      )
+      return acc
+    }, {})
+  }, [report1Summary, report2Summary])
+
+  useEffect(() => {
+    if (!fuelAvailability) return
+    const availableFuelTypes = FUEL_TYPES.filter(
+      (fuelKey) => fuelAvailability[fuelKey]
+    )
+    if (!availableFuelTypes.length) return
+    const preferredFuelType = availableFuelTypes[0]
+
+    if (!hasUserSelectedFuel) {
+      if (fuelType !== preferredFuelType) {
+        setFuelType(preferredFuelType)
+      }
+      return
+    }
+
+    if (!fuelAvailability[fuelType]) {
+      setFuelType(preferredFuelType)
+    }
+  }, [fuelAvailability, fuelType, hasUserSelectedFuel])
 
   useEffect(() => {
     const renewableSummary = []
@@ -136,6 +208,7 @@ export const CompareReports = () => {
   function onSelectReport1(event) {
     const newReport1ID = event.target.value
     setReport1ID(newReport1ID)
+    setHasUserSelectedFuel(false)
 
     if (newReport1ID === report2ID && reportChain.length > 1) {
       const availableReports = reportChain.filter(
@@ -153,6 +226,7 @@ export const CompareReports = () => {
   function onSelectReport2(event) {
     const newReport2ID = event.target.value
     setReport2ID(newReport2ID)
+    setHasUserSelectedFuel(false)
 
     if (newReport2ID === report1ID && reportChain.length > 1) {
       const availableReports = reportChain.filter(
@@ -180,6 +254,30 @@ export const CompareReports = () => {
     ? reportChain.find((report) => report.complianceReportId === report2ID)
         ?.nickname || ''
     : ''
+
+  const originalReportId = originalReport?.complianceReportId
+
+  const isOriginalReport = (reportId) =>
+    !!originalReportId && reportId === originalReportId
+
+  const shouldLabelOriginal = (reportId) =>
+    shouldShowOriginalNotAssessedLabel && isOriginalReport(reportId)
+
+  const report1Label = shouldLabelOriginal(report1ID)
+    ? t('report:originalReportNotAssessed')
+    : selectedReportName1
+
+  const report2Label = shouldLabelOriginal(report2ID)
+    ? t('report:originalReportNotAssessed')
+    : selectedReportName2
+
+  const highlightedColumns = []
+  if (shouldLabelOriginal(report1ID)) {
+    highlightedColumns.push('report1')
+  }
+  if (shouldLabelOriginal(report2ID)) {
+    highlightedColumns.push('report2')
+  }
 
   return (
     <>
@@ -250,28 +348,35 @@ export const CompareReports = () => {
         title={t('report:renewableFuelTargetSummary')}
         columns={renewableFuelColumns(
           t,
-          selectedReportName1,
-          selectedReportName2
+          report1Label,
+          report2Label
         )}
         data={renewableSummary}
         useParenthesis
         enableFuelControls
-        setFuelType={setFuelType}
+        setFuelType={(nextFuelType) => {
+          setFuelType(nextFuelType)
+          setHasUserSelectedFuel(true)
+        }}
         fuelType={fuelType}
+        highlightedColumns={highlightedColumns}
+        fuelAvailability={fuelAvailability}
       />
       <CompareTable
         title={t('report:lowCarbonFuelTargetSummary')}
-        columns={lowCarbonColumns(t, selectedReportName1, selectedReportName2)}
+        columns={lowCarbonColumns(t, report1Label, report2Label)}
         data={lowCarbonSummary}
+        highlightedColumns={highlightedColumns}
       />
       <CompareTable
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          selectedReportName1 || '',
-          selectedReportName2 || ''
+          report1Label || '',
+          report2Label || ''
         )}
         data={nonCompliancePenaltySummary}
+        highlightedColumns={highlightedColumns}
       />
     </>
   )
