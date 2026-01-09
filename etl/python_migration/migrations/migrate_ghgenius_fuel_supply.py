@@ -48,12 +48,14 @@ class GHGeniusMigrator:
         self.provision_id: Optional[int] = None  # GHGenius provision ID
 
         # Unit mapping from TFRS to LCFS
-        # Note: m³ may appear as UTF-8 or Latin-1 encoded, so we include both
+        # Note: m³ may appear in various encodings due to CSV export issues
         self.unit_mapping = {
             "L": "Litres",
             "kg": "Kilograms",
             "m³": "Cubic_metres",  # UTF-8 encoded
             "m\xb3": "Cubic_metres",  # Latin-1 encoded (byte 0xb3)
+            "m\ufffd": "Cubic_metres",  # Corrupted: replacement character (U+FFFD)
+            "m\xef\xbf\xbd": "Cubic_metres",  # Raw UTF-8 bytes for replacement char
             "kWh": "Kilowatt_hour",
         }
 
@@ -446,13 +448,23 @@ class GHGeniusMigrator:
                             f"instead of CSV report {lcfs_report_id}"
                         )
 
-                    # Insert the record (returns 'inserted', 'exists', or 'error')
-                    result = self.insert_fuel_supply_record(lcfs_cursor, record, original_report_id)
-                    if result == "inserted":
-                        total_processed += 1
-                    elif result == "exists":
-                        total_already_exists += 1
-                    else:
+                    # Insert the record with savepoint to handle individual failures
+                    # This prevents one bad record from aborting the entire transaction
+                    try:
+                        lcfs_cursor.execute("SAVEPOINT record_insert")
+                        result = self.insert_fuel_supply_record(lcfs_cursor, record, original_report_id)
+                        if result == "inserted":
+                            lcfs_cursor.execute("RELEASE SAVEPOINT record_insert")
+                            total_processed += 1
+                        elif result == "exists":
+                            lcfs_cursor.execute("RELEASE SAVEPOINT record_insert")
+                            total_already_exists += 1
+                        else:
+                            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT record_insert")
+                            total_skipped += 1
+                    except Exception as e:
+                        logger.error(f"Record {tfrs_id} failed: {e}")
+                        lcfs_cursor.execute("ROLLBACK TO SAVEPOINT record_insert")
                         total_skipped += 1
 
                 # Commit all changes
