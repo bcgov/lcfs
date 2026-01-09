@@ -45,7 +45,8 @@ jobs:
             "https://${ARTIFACTORY_REGISTRY}/artifactory/api/system/ping"
           REPO_INFO="$(curl -fsS "${AUTH_CURL_FLAGS[@]}" \
             "https://${ARTIFACTORY_REGISTRY}/artifactory/api/repositories/${ARTIFACTORY_REPO}")"
-          echo "${REPO_INFO}" | tr -d '\n' | grep -q '"packageType"[[:space:]]*:[[:space:]]*"docker"' || \
+          echo ${REPO_INFO}
+            echo "${REPO_INFO}" | tr -d '\n' | grep -q '"packageType"[[:space:]]*:[[:space:]]*"docker"' || \
             { echo "Repo ${ARTIFACTORY_REPO} is not a Docker repo."; exit 1; }
           echo "${REPO_INFO}" | tr -d '\n' | grep -q '"rclass"[[:space:]]*:[[:space:]]*\"(local|virtual|federated)\"' || \
             { echo "Repo ${ARTIFACTORY_REPO} must be local or virtual or federated."; exit 1; }
