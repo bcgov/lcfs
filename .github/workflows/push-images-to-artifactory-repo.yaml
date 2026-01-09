@@ -1,6 +1,9 @@
 name: Push Images to Artifactory
 
 on:
+  push:
+    branches:
+      - devops/artifactory
   workflow_dispatch:
 
 env:
@@ -48,8 +51,8 @@ jobs:
           echo "${REPO_INFO}" | tr -d '\n' | grep -q '"packageType"[[:space:]]*:[[:space:]]*"docker"' || \
             { echo "Repo ${ARTIFACTORY_REPO} is not a Docker repo."; exit 1; }
           echo "333"
-            echo "${REPO_INFO}" | tr -d '\n' | grep -q '"rclass"[[:space:]]*:[[:space:]]*\"(local|virtual)\"' || \
-            { echo "Repo ${ARTIFACTORY_REPO} must be local or virtual."; exit 1; }
+            echo "${REPO_INFO}" | tr -d '\n' | grep -q '"rclass"[[:space:]]*:[[:space:]]*\"(local|virtual|federated)\"' || \
+            { echo "Repo ${ARTIFACTORY_REPO} must be local or virtual or federated."; exit 1; }
           skopeo login --authfile /tmp/artifactory-auth.json \
             --username "${ARTIFACTORY_USERNAME}" \
             --password "${AUTH_PASSWORD}" \
