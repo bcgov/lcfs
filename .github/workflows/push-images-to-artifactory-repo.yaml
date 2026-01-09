@@ -9,6 +9,7 @@ env:
   ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
   ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
   ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+  ARTIFACTORY_API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
   METABASE_IMAGE_TAG: v0.52.6.x
 
 jobs:
@@ -24,10 +25,22 @@ jobs:
       - name: Login to Artifactory
         run: |
           set -euo pipefail
-          AUTH_PASSWORD="${ARTIFACTORY_TOKEN:-${ARTIFACTORY_PASSWORD}}"
-          curl -fsS -u "${ARTIFACTORY_USERNAME}:${AUTH_PASSWORD}" \
+          AUTH_CURL_FLAGS=()
+          AUTH_PASSWORD=""
+          if [ -n "${ARTIFACTORY_TOKEN:-}" ]; then
+            AUTH_CURL_FLAGS=(-H "Authorization: Bearer ${ARTIFACTORY_TOKEN}")
+            AUTH_PASSWORD="${ARTIFACTORY_TOKEN}"
+          elif [ -n "${ARTIFACTORY_API_KEY:-}" ]; then
+            AUTH_CURL_FLAGS=(-H "X-JFrog-Art-Api: ${ARTIFACTORY_API_KEY}")
+            AUTH_PASSWORD="${ARTIFACTORY_API_KEY}"
+          else
+            AUTH_CURL_FLAGS=(-u "${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}")
+            AUTH_PASSWORD="${ARTIFACTORY_PASSWORD}"
+          fi
+
+          curl -fsS "${AUTH_CURL_FLAGS[@]}" \
             "https://${ARTIFACTORY_REGISTRY}/artifactory/api/system/ping"
-          REPO_INFO="$(curl -fsS -u "${ARTIFACTORY_USERNAME}:${AUTH_PASSWORD}" \
+          REPO_INFO="$(curl -fsS "${AUTH_CURL_FLAGS[@]}" \
             "https://${ARTIFACTORY_REGISTRY}/artifactory/api/repositories/${ARTIFACTORY_REPO}")"
           echo "${REPO_INFO}" | tr -d '\n' | grep -q '"packageType"[[:space:]]*:[[:space:]]*"docker"' || \
             { echo "Repo ${ARTIFACTORY_REPO} is not a Docker repo."; exit 1; }
