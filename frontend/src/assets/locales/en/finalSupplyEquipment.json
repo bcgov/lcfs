@@ -29,6 +29,7 @@
   ],
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
+  "noChargingEquipmentMessage": "Charging sites and final supply equipment must first be created in the FSE maintenance system to report them.",
   "defaultFromDate": "Default from",
   "defaultToDate": "Default to",
   "setDefaultValues": "Set default values",
