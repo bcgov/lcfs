@@ -8,6 +8,7 @@ env:
   ARTIFACTORY_REPO: ${{ secrets.ARTIFACTORY_REPO }}
   ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
   ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+  ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
   METABASE_IMAGE_TAG: v0.52.6.x
 
 jobs:
@@ -23,9 +24,12 @@ jobs:
       - name: Login to Artifactory
         run: |
           set -euo pipefail
+          AUTH_PASSWORD="${ARTIFACTORY_TOKEN:-${ARTIFACTORY_PASSWORD}}"
+          curl -fsS -u "${ARTIFACTORY_USERNAME}:${AUTH_PASSWORD}" \
+            "https://${ARTIFACTORY_REGISTRY}/artifactory/api/system/ping"
           skopeo login --authfile /tmp/artifactory-auth.json \
             --username "${ARTIFACTORY_USERNAME}" \
-            --password "${ARTIFACTORY_PASSWORD}" \
+            --password "${AUTH_PASSWORD}" \
             "${ARTIFACTORY_REGISTRY}"
 
       - name: Copy Metabase image from Docker Hub
