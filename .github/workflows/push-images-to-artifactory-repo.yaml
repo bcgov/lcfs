@@ -27,6 +27,12 @@ jobs:
           AUTH_PASSWORD="${ARTIFACTORY_TOKEN:-${ARTIFACTORY_PASSWORD}}"
           curl -fsS -u "${ARTIFACTORY_USERNAME}:${AUTH_PASSWORD}" \
             "https://${ARTIFACTORY_REGISTRY}/artifactory/api/system/ping"
+          REPO_INFO="$(curl -fsS -u "${ARTIFACTORY_USERNAME}:${AUTH_PASSWORD}" \
+            "https://${ARTIFACTORY_REGISTRY}/artifactory/api/repositories/${ARTIFACTORY_REPO}")"
+          echo "${REPO_INFO}" | tr -d '\n' | grep -q '"packageType"[[:space:]]*:[[:space:]]*"docker"' || \
+            { echo "Repo ${ARTIFACTORY_REPO} is not a Docker repo."; exit 1; }
+          echo "${REPO_INFO}" | tr -d '\n' | grep -q '"rclass"[[:space:]]*:[[:space:]]*\"(local|virtual)\"' || \
+            { echo "Repo ${ARTIFACTORY_REPO} must be local or virtual."; exit 1; }
           skopeo login --authfile /tmp/artifactory-auth.json \
             --username "${ARTIFACTORY_USERNAME}" \
             --password "${AUTH_PASSWORD}" \
