@@ -1,0 +1,37 @@
+name: Push Images to Artifactory
+
+on:
+  workflow_dispatch:
+
+env:
+  ARTIFACTORY_REGISTRY: ${{ secrets.ARTIFACTORY_REGISTRY }}
+  ARTIFACTORY_REPO: ${{ secrets.ARTIFACTORY_REPO }}
+  ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+  ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+  METABASE_IMAGE_TAG: v0.52.6.x
+
+jobs:
+  push-metabase-to-artifactory:
+    name: Push Metabase image to Artifactory
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      - name: Login to Artifactory
+        run: |
+          set -euo pipefail
+          skopeo login --authfile /tmp/artifactory-auth.json \
+            --username "${ARTIFACTORY_USERNAME}" \
+            --password "${ARTIFACTORY_PASSWORD}" \
+            "${ARTIFACTORY_REGISTRY}"
+
+      - name: Copy Metabase image from Docker Hub
+        run: |
+          set -euo pipefail
+          skopeo copy --src-tls-verify=true --dest-tls-verify=true \
+            --dest-authfile /tmp/artifactory-auth.json \
+            "docker://metabase/metabase:${METABASE_IMAGE_TAG}" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/metabase:${METABASE_IMAGE_TAG}"

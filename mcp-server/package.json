@@ -18,7 +18,7 @@
   "author": "LCFS Development Team",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.24.0",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "dockerode": "^4.0.2",
     "zod": "^3.22.0"
   },
