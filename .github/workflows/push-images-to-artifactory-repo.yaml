@@ -14,6 +14,10 @@ env:
   ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
   ARTIFACTORY_API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
   METABASE_IMAGE_TAG: v0.52.6.x
+  CLAMAV_IMAGE_TAG: 1.4.3_base
+  DANDYREDIS_REDIS_IMAGE_TAG: 8.2.2-alpine
+  DANDYREDIS_HAPROXY_TAG: 3.0.8-alpine
+  SHELLCHECK_IMAGE_TAG: v0.10.0
 
 jobs:
   push-metabase-to-artifactory:
@@ -40,7 +44,6 @@ jobs:
             AUTH_CURL_FLAGS=(-u "${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}")
             AUTH_PASSWORD="${ARTIFACTORY_PASSWORD}"
           fi
-
           curl -fsS "${AUTH_CURL_FLAGS[@]}" \
             "https://${ARTIFACTORY_REGISTRY}/artifactory/api/system/ping"
           REPO_INFO="$(curl -fsS "${AUTH_CURL_FLAGS[@]}" \
@@ -57,7 +60,26 @@ jobs:
       - name: Copy Metabase image from Docker Hub
         run: |
           set -euo pipefail
+          echo "Pushing Metabase image"
           skopeo copy --src-tls-verify=true --dest-tls-verify=true \
             --dest-authfile /tmp/artifactory-auth.json \
             "docker://metabase/metabase:${METABASE_IMAGE_TAG}" \
-            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/metabase:${METABASE_IMAGE_TAG}"
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/metabase/metabase:${METABASE_IMAGE_TAG}"
+          echo "Pushing Clamav image"
+          skopeo copy --src-tls-verify=true --dest-tls-verify=true \
+            --dest-authfile /tmp/artifactory-auth.json \
+            "docker://clamav/clamav:${CLAMAV_IMAGE_TAG}" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/clamav/clamav:${CLAMAV_IMAGE_TAG}"
+          echo "Pushing Dandyredis images"
+          skopeo copy --src-tls-verify=true --dest-tls-verify=true \
+            --dest-authfile /tmp/artifactory-auth.json \
+            "docker://public.ecr.aws/docker/library/redis:${DANDYREDIS_REDIS_IMAGE_TAG}" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/redis:${DANDYREDIS_REDIS_IMAGE_TAG}"
+          skopeo copy --src-tls-verify=true --dest-tls-verify=true \
+            --dest-authfile /tmp/artifactory-auth.json \
+            "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_IMAGE_TAG}" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}"
+          skopeo copy --src-tls-verify=true --dest-tls-verify=true \
+            --dest-authfile /tmp/artifactory-auth.json \
+            "docker://koalaman/shellcheck:${SHELLCHECK_IMAGE_TAG}" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/koalaman/shellcheck:${SHELLCHECK_IMAGE_TAG}"
