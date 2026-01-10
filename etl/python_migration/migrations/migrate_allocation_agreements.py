@@ -144,16 +144,17 @@ class AllocationAgreementMigrator:
         """
         Get the exclusion_agreement_id for a given TFRS compliance report.
 
-        IMPORTANT: We only use the direct exclusion_agreement_id from this report.
-        We do NOT use a fallback to find allocation agreements from other reports,
-        because different reports in the same org/period can be separate chains
-        with different allocation agreements.
+        Uses a two-step approach:
+        1. First check if this report has its own direct exclusion_agreement_id
+        2. If not, look for a sibling exclusion report in the same org/period
+           (this handles the split scenario where organizations have separate
+           main compliance reports and exclusion reports)
 
         Returns the exclusion_agreement_id or None if not found.
         """
-        # Check if this report has its own exclusion_agreement_id
+        # Step 1: Check if this report has its own exclusion_agreement_id
         query_direct = """
-            SELECT exclusion_agreement_id
+            SELECT exclusion_agreement_id, organization_id, compliance_period_id
             FROM compliance_report
             WHERE id = %s
         """
@@ -164,14 +165,44 @@ class AllocationAgreementMigrator:
             return None
 
         direct_exclusion_id = result[0]
+        organization_id = result[1]
+        compliance_period_id = result[2]
 
         if direct_exclusion_id:
-            logger.debug(f"Report {tfrs_id} has exclusion_agreement_id: {direct_exclusion_id}")
+            logger.debug(f"Report {tfrs_id} has direct exclusion_agreement_id: {direct_exclusion_id}")
             return direct_exclusion_id
 
-        # No exclusion_agreement_id means this report has no allocation agreements
-        # Do NOT fallback to other reports - they may be different chains
-        logger.debug(f"Report {tfrs_id} has no exclusion_agreement_id")
+        # Step 2: Fallback - look for sibling exclusion reports in the same org/period
+        # This handles the split scenario where:
+        # - Organization has a main compliance report (no exclusion_agreement_id)
+        # - Organization also has a separate exclusion report with allocation agreements
+        # We find the LATEST accepted exclusion report's allocation data
+        # TFRS schema: compliance_report_workflow_state has director_status_id = 'Accepted'
+        query_sibling = """
+            SELECT cr.exclusion_agreement_id
+            FROM compliance_report cr
+            INNER JOIN compliance_report_workflow_state ws ON cr.status_id = ws.id
+            WHERE cr.organization_id = %s
+              AND cr.compliance_period_id = %s
+              AND cr.exclusion_agreement_id IS NOT NULL
+              AND ws.director_status_id = 'Accepted'
+              AND cr.id != %s
+            ORDER BY cr.id DESC
+            LIMIT 1
+        """
+        tfrs_cursor.execute(query_sibling, (organization_id, compliance_period_id, tfrs_id,))
+        sibling_result = tfrs_cursor.fetchone()
+
+        if sibling_result and sibling_result[0]:
+            sibling_exclusion_id = sibling_result[0]
+            logger.info(
+                f"Report {tfrs_id} inheriting exclusion_agreement_id {sibling_exclusion_id} "
+                f"from sibling exclusion report in org {organization_id}, period {compliance_period_id}"
+            )
+            return sibling_exclusion_id
+
+        # No exclusion_agreement_id found anywhere
+        logger.debug(f"Report {tfrs_id} has no exclusion_agreement_id (direct or sibling)")
         return None
 
     def get_allocation_agreement_records(self, tfrs_cursor, tfrs_id: int) -> List[Dict]:
