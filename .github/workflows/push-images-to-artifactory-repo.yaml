@@ -77,7 +77,7 @@ jobs:
             "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/redis:${DANDYREDIS_REDIS_IMAGE_TAG}"
           skopeo copy --src-tls-verify=true --dest-tls-verify=true \
             --dest-authfile /tmp/artifactory-auth.json \
-            "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_IMAGE_TAG}" \
+            "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}" \
             "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}"
           skopeo copy --src-tls-verify=true --dest-tls-verify=true \
             --dest-authfile /tmp/artifactory-auth.json \
