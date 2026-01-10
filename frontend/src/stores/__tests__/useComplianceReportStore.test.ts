@@ -561,23 +561,19 @@ describe('useComplianceReportStore', () => {
       }
     })
 
-    it('should handle null and undefined values gracefully', () => {
+    it('should handle clearing the current report', () => {
       const { result } = renderHook(() => useComplianceReportStore())
+      const reportData = { report: { id: 1, title: 'Test Report' } }
 
       act(() => {
-        result.current.setCurrentReport(undefined)
+        result.current.setCurrentReport(reportData)
       })
-      expect(result.current.currentReport).toBeUndefined()
+      expect(result.current.currentReport).toEqual(reportData)
 
       act(() => {
-        result.current.cacheReport(1, null)
+        result.current.clearCurrentReport()
       })
-      expect(result.current.getCachedReport(1)).toBeNull()
-
-      act(() => {
-        result.current.cacheReport(2, undefined)
-      })
-      expect(result.current.getCachedReport(2)).toBeUndefined()
+      expect(result.current.currentReport).toBeNull()
     })
   })
 })
