@@ -16,7 +16,7 @@ env:
   METABASE_IMAGE_TAG: v0.52.6.x
   CLAMAV_IMAGE_TAG: 1.4.3_base
   DANDYREDIS_REDIS_IMAGE_TAG: 8.2.2-alpine
-  DANDYREDIS_HAPROXY_TAG: 3.0.8-alpine
+  DANDYREDIS_HAPROXY_IMAGE_TAG: 3.0.8-alpine
   SHELLCHECK_IMAGE_TAG: v0.10.0
 
 jobs:
@@ -75,8 +75,11 @@ jobs:
             --dest-authfile /tmp/artifactory-auth.json \
             "docker://public.ecr.aws/docker/library/redis:${DANDYREDIS_REDIS_IMAGE_TAG}" \
             "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/redis:${DANDYREDIS_REDIS_IMAGE_TAG}"
-
           skopeo copy --src-tls-verify=true --dest-tls-verify=true \
             --dest-authfile /tmp/artifactory-auth.json \
             "docker://koalaman/shellcheck:${SHELLCHECK_IMAGE_TAG}" \
             "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/koalaman/shellcheck:${SHELLCHECK_IMAGE_TAG}"
+          skopeo copy --src-tls-verify=true --dest-tls-verify=true \
+            --dest-authfile /tmp/artifactory-auth.json \
+            "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}"
