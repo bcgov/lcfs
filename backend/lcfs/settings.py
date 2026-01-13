@@ -103,12 +103,12 @@ class Settings(BaseSettings):
     # dynamically (e.g., database-driven configuration per compliance period).
     #
     # Current behavior:
-    # - 2025: Blocked when feature_reporting_2025_enabled is False
+    # - 2025: Enabled by default (backend allows it), frontend flag controls UI visibility
     # - 2026: ALWAYS blocked unless org has early issuance enabled for 2026
     #
-    # Set LCFS_FEATURE_REPORTING_2025_ENABLED=true to enable 2025 reporting.
+    # Set LCFS_FEATURE_REPORTING_2025_ENABLED=false to disable 2025 reporting on backend.
     # Frontend has corresponding flag: reporting2025Enabled in config.ts
-    feature_reporting_2025_enabled: bool = False
+    feature_reporting_2025_enabled: bool = True
 
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present

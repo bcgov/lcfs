@@ -392,7 +392,7 @@ async def seed_test_compliance_report_summaries(session):
         # 105 Analyst Adjustment 2025 (locked)
         # CR 105 locked analyst adj: fuel 10 + notional 8, retention 1, deferral 0.5 => line10/20 = 17.5
         {"summary_id": 105, "compliance_report_id": 105, "is_locked": True, "line_1_fossil_derived_base_fuel_gasoline": 40.0, "line_2_eligible_renewable_fuel_supplied_gasoline": 10.0, "line_3_total_tracked_fuel_supplied_gasoline": 50.0, "line_4_eligible_renewable_fuel_required_gasoline": 2.0, "line_5_net_notionally_transferred_gasoline": 8.0, "line_6_renewable_fuel_retained_gasoline": 1.0, "line_7_previously_retained_gasoline": 0.0, "line_8_obligation_deferred_gasoline": 0.5, "line_9_obligation_added_gasoline": 0.0, "line_10_net_renewable_fuel_supplied_gasoline": 17.5, "line_20_surplus_deficit_units": 17.5},
-        # 106 Supplier Supplemental 2025 (draft) - uses previous retention (line 7)
+        # 106 Original 2025 report (draft) - org 6's first 2025 report
         {
             "summary_id": 106,
             "compliance_report_id": 106,
@@ -403,13 +403,13 @@ async def seed_test_compliance_report_summaries(session):
             "line_4_eligible_renewable_fuel_required_gasoline": 2250000.0,
             "line_5_net_notionally_transferred_gasoline": -900000.0,
             "line_6_renewable_fuel_retained_gasoline": 0.0,
-            "line_7_previously_retained_gasoline": 750000.0,
+            "line_7_previously_retained_gasoline": 0.0,
             "line_8_obligation_deferred_gasoline": 0.0,
             "line_9_obligation_added_gasoline": 0.0,
-            "line_10_net_renewable_fuel_supplied_gasoline": 8850000.0,
-            "line_20_surplus_deficit_units": 8850000.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 8100000.0,
+            "line_20_surplus_deficit_units": 8100000.0,
         },
-        # 107 Gov Supplemental 2025 (draft) - uses previous retention (line 7) and retains more (line 6)
+        # 107 Original 2025 report (draft) - org 7's first 2025 report with retention
         {
             "summary_id": 107,
             "compliance_report_id": 107,
@@ -432,8 +432,8 @@ async def seed_test_compliance_report_summaries(session):
             "line_6_renewable_fuel_retained_gasoline": 100000.0,
             "line_6_renewable_fuel_retained_diesel": 50000.0,
             "line_6_renewable_fuel_retained_jet_fuel": 25000.0,
-            "line_7_previously_retained_gasoline": 200000.0,
-            "line_7_previously_retained_diesel": 100000.0,
+            "line_7_previously_retained_gasoline": 0.0,
+            "line_7_previously_retained_diesel": 0.0,
             "line_7_previously_retained_jet_fuel": 0.0,
             "line_8_obligation_deferred_gasoline": 0.0,
             "line_8_obligation_deferred_diesel": 0.0,
@@ -441,10 +441,10 @@ async def seed_test_compliance_report_summaries(session):
             "line_9_obligation_added_gasoline": 0.0,
             "line_9_obligation_added_diesel": 0.0,
             "line_9_obligation_added_jet_fuel": 0.0,
-            "line_10_net_renewable_fuel_supplied_gasoline": 4450000.0,
-            "line_10_net_renewable_fuel_supplied_diesel": 3050000.0,
+            "line_10_net_renewable_fuel_supplied_gasoline": 4250000.0,
+            "line_10_net_renewable_fuel_supplied_diesel": 2950000.0,
             "line_10_net_renewable_fuel_supplied_jet_fuel": 1975000.0,
-            "line_20_surplus_deficit_units": 9475000.0,
+            "line_20_surplus_deficit_units": 9175000.0,
         },
         # 108 Early issuance quarterly draft 2025 - defers obligation (line 8)
         {
