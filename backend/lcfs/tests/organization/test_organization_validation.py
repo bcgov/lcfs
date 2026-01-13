@@ -81,8 +81,10 @@ async def test_create_compliance_report_success(
     mock_request.user.organization.organization_id = 1
     organization_validation.request = mock_request
 
-    # Mock the report repository methods
-    mock_report_repo.get_compliance_period.return_value = True
+    # Mock the compliance period with proper attributes
+    mock_period = MagicMock()
+    mock_period.description = "2024"
+    mock_report_repo.get_compliance_period.return_value = mock_period
     mock_report_repo.get_compliance_report_by_period.return_value = False
 
     # Call the method under test
