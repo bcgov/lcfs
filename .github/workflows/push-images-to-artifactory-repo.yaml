@@ -84,6 +84,13 @@ jobs:
             --username "${ARTIFACTORY_USERNAME}" \
             --password "${AUTH_PASSWORD}" \
             "${ARTIFACTORY_REGISTRY}"
+
+      - name: Restore oc command from Cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
         with:
