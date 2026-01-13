@@ -125,9 +125,25 @@ jobs:
           #   --dest-authfile /tmp/artifactory-auth.json \
           #   "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}" \
           #   "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}"
-          OPENSHIFT_REGISTRY="$(oc registry info --public)"
-          oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
-          skopeo copy --src-tls-verify=false --dest-tls-verify=true \
-            --src-authfile /tmp/openshift-auth.json --dest-authfile /tmp/artifactory-auth.json \
-            "docker://${OPENSHIFT_REGISTRY}/${{ env.PROD_NAMESPACE }}/lcfs-backend:0.2.0-20240614165335" \
-            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend:0.2.0-20240614165335"
+          TAGS_JSON="$(skopeo list-tags --authfile /tmp/artifactory-auth.json \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend")"
+          TAGS="$(echo "${TAGS_JSON}" | tr -d '\n' | sed -E 's/.*"Tags":[[]([^]]*)].*/\1/' | tr -d '"' | tr ',' '\n')"
+          if [ -z "${TAGS// }" ]; then
+            echo "No tags found for lcfs/prod/lcfs-backend."
+          else
+            echo "Deleting all tags for lcfs/prod/lcfs-backend..."
+            echo "${TAGS}" | while IFS= read -r tag; do
+              [ -z "${tag}" ] && continue
+              skopeo delete --authfile /tmp/artifactory-auth.json \
+                "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend:${tag}"
+            done
+          fi
+          # OPENSHIFT_REGISTRY="$(oc registry info --public)"
+          # oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
+
+
+
+          # skopeo copy --src-tls-verify=false --dest-tls-verify=true \
+          #   --src-authfile /tmp/openshift-auth.json --dest-authfile /tmp/artifactory-auth.json \
+          #   "docker://${OPENSHIFT_REGISTRY}/${{ env.PROD_NAMESPACE }}/lcfs-backend:0.2.0-20240614165335" \
+          #   "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend:0.2.0-20240614165335"
