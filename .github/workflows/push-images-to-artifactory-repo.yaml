@@ -125,9 +125,39 @@ jobs:
           #   --dest-authfile /tmp/artifactory-auth.json \
           #   "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}" \
           #   "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}"
-          echo "Deleting all tags for lcfs/prod/lcfs-backend..."
-          skopeo delete --authfile /tmp/artifactory-auth.json --all \
-            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend"
+          TAGS_JSON="$(skopeo list-tags --authfile /tmp/artifactory-auth.json \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend")"
+          export TAGS_JSON
+          TAGS="$(python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("TAGS_JSON", "")
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError:
+              print("::error::Failed to parse tag list JSON from skopeo.", file=sys.stderr)
+              sys.exit(1)
+
+          tags = data.get("Tags")
+          if not isinstance(tags, list):
+              print("::error::Tag list response missing Tags array.", file=sys.stderr)
+              sys.exit(1)
+
+          print("\n".join(tag for tag in tags if tag))
+          PY
+          )"
+                    if [ -z "${TAGS// }" ]; then
+                      echo "No tags found for lcfs/prod/lcfs-backend."
+                    else
+                      echo "Deleting all tags for lcfs/prod/lcfs-backend..."
+                      echo "${TAGS}" | while IFS= read -r tag; do
+                        [ -z "${tag}" ] && continue
+                        skopeo delete --authfile /tmp/artifactory-auth.json \
+                          "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend:${tag}"
+                      done
+                    fi
           # OPENSHIFT_REGISTRY="$(oc registry info --public)"
           # oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
 
