@@ -64,12 +64,18 @@ export const UserActivity = () => {
     []
   )
 
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
+  const handleClearFilters = useCallback(() => {
+    setPaginationOptions({ ...initialPaginationOptions })
+
+    try {
+      sessionStorage.removeItem('all-user-activities-grid-filter')
+      sessionStorage.removeItem('all-user-activities-grid-column')
+    } catch (error) {
+      // no-op if sessionStorage is unavailable
     }
-  }
+
+    gridRef?.current?.clearFilters?.()
+  }, [])
 
   return (
     <BCBox>
@@ -96,6 +102,7 @@ export const UserActivity = () => {
               ...newPagination
             }))
           }
+          onClearFilters={handleClearFilters}
         />
       </BCBox>
     </BCBox>
