@@ -112,27 +112,35 @@ class OrganizationValidation:
         if not period:
             raise HTTPException(status_code=404, detail="Compliance period not found")
 
-        # Feature flag check for 2025 reporting period.
-        # This flag gates access to 2025 compliance reports until regulatory requirements are finalized.
-        # Configure via environment variable: LCFS_FEATURE_REPORTING_2025_ENABLED=true
-        # Frontend also has a corresponding flag: reporting2025Enabled in config.js
-        if period.description == "2025" and not settings.feature_reporting_2025_enabled:
+        # TEMPORARY SOLUTION - Issue #3730
+        # This is a temporary approach to gate compliance year access.
+        # A more robust long-term solution should be implemented to support future years
+        # dynamically (e.g., database-driven configuration per compliance period).
+        #
+        # Compliance year access rules (also enforced in compliance_report/validation.py):
+        # - 2025: Blocked when feature_reporting_2025_enabled is False
+        # - 2026: ALWAYS requires early issuance, regardless of 2025 flag status
+
+        # Validate access to 2025/2026 compliance periods
+        # 2025: Blocked when feature_reporting_2025_enabled is False
+        if (
+            period.description == "2025"
+            and not settings.feature_reporting_2025_enabled
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="2025 reporting is not yet available.",
             )
 
-        # 2026 reporting availability is tied to the 2025 feature flag.
-        # When 2025 reporting is disabled, 2026 is also disabled UNLESS the organization
-        # has early issuance enabled for 2026 (set via OrganizationEarlyIssuanceByYear table).
-        if period.description == "2026" and not settings.feature_reporting_2025_enabled:
+        # 2026: ALWAYS requires early issuance, regardless of 2025 flag status
+        if period.description == "2026":
             early_issuance = await self.org_repo.get_early_issuance_by_year(
                 organization_id, "2026"
             )
             if not early_issuance or not early_issuance.has_early_issuance:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="2026 reporting is not yet available.",
+                    detail="2026 reporting is only available to early issuance suppliers.",
                 )
 
         is_report_present = await self.report_repo.get_compliance_report_by_period(

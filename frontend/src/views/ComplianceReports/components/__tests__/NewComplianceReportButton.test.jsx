@@ -11,7 +11,10 @@ import {
 import { NewComplianceReportButton } from '../NewComplianceReportButton'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
-import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
+import {
+  useGetOrgComplianceReportReportedYears,
+  useOrgEarlyIssuance
+} from '@/hooks/useOrganization'
 
 // Mock translation hook
 vi.mock('react-i18next', () => ({
@@ -28,8 +31,6 @@ vi.mock('@/hooks/useOrganization', () => ({
   useGetOrgComplianceReportReportedYears: vi.fn(),
   useOrgEarlyIssuance: vi.fn()
 }))
-
-import { useOrgEarlyIssuance } from '@/hooks/useOrganization'
 
 const useCompliancePeriodMock = useCompliancePeriod
 const useGetOrgComplianceReportReportedYearsMock =
@@ -62,6 +63,7 @@ describe('NewComplianceReportButton', () => {
     const defaults = {
       periods: { data: mockPeriodsData, isLoading: false, isFetched: true },
       reportedPeriods: [],
+      // By default, early issuance is disabled (2026 should be blocked)
       earlyIssuance2026: { hasEarlyIssuance: false }
     }
 
@@ -320,7 +322,12 @@ describe('NewComplianceReportButton', () => {
       expect(item2025).toHaveAttribute('aria-disabled', 'true')
     })
 
-    it('disables 2026 menu item when 2025 feature flag is off and no early issuance', async () => {
+    it('disables 2026 menu item when org does not have early issuance', async () => {
+      // Early issuance is false by default in setupMocks
+      setupMocks({
+        earlyIssuance2026: { hasEarlyIssuance: false }
+      })
+
       render(<NewComplianceReportButton {...defaultProps} />, { wrapper })
 
       const button = screen.getByRole('button')
@@ -450,7 +457,7 @@ describe('NewComplianceReportButton', () => {
   })
 
   describe('Information Bulletin', () => {
-    it('renders information bulletin box when feature flags are off', async () => {
+    it('renders information bulletin box when 2025 feature flag is off', async () => {
       render(<NewComplianceReportButton {...defaultProps} />, { wrapper })
 
       const button = screen.getByRole('button')
@@ -462,7 +469,7 @@ describe('NewComplianceReportButton', () => {
 
       expect(
         screen.getByText(
-          '2025 and 2026 reporting are temporarily unavailable due to regulatory updates'
+          '2025 reporting is temporarily unavailable due to regulatory updates'
         )
       ).toBeInTheDocument()
     })

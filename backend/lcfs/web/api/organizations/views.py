@@ -439,16 +439,22 @@ async def get_current_org_early_issuance(
 ):
     """
     Check if the current user's organization has early issuance enabled for a specific compliance year.
+    Used to determine if an organization can create compliance reports for future years (e.g., 2026).
+
+    TEMPORARY SOLUTION - Issue #3730
+    This endpoint is part of a temporary approach to gate 2026 compliance year access.
+    A more robust long-term solution should be implemented to support future years
+    dynamically (e.g., database-driven configuration per compliance period).
     """
-    organization_id = request.user.organization_id
-    if not organization_id:
+    org_id = request.user.organization_id
+    if not org_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User is not associated with an organization",
         )
 
     has_early_issuance = await service.get_early_issuance_for_year(
-        organization_id, compliance_year
+        org_id, compliance_year
     )
     return {"hasEarlyIssuance": has_early_issuance}
 
