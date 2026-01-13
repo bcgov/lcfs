@@ -97,11 +97,17 @@ class Settings(BaseSettings):
     # Feature flags
     feature_credit_market_notifications: bool = True
     feature_fuel_code_expiry_email: bool = True
-    # Gates access to 2025/2026 compliance reporting. When False:
-    # - 2025 reporting is blocked for all organizations
-    # - 2026 reporting is blocked unless org has early issuance enabled
-    # Set LCFS_FEATURE_REPORTING_2025_ENABLED=true to enable.
-    # Frontend has corresponding flag: reporting2025Enabled in config.js
+    # TEMPORARY SOLUTION - Issue #3730
+    # This is a temporary approach to gate compliance year access.
+    # A more robust long-term solution should be implemented to support future years
+    # dynamically (e.g., database-driven configuration per compliance period).
+    #
+    # Current behavior:
+    # - 2025: Blocked when feature_reporting_2025_enabled is False
+    # - 2026: ALWAYS blocked unless org has early issuance enabled for 2026
+    #
+    # Set LCFS_FEATURE_REPORTING_2025_ENABLED=true to enable 2025 reporting.
+    # Frontend has corresponding flag: reporting2025Enabled in config.ts
     feature_reporting_2025_enabled: bool = False
 
     def __init__(self, **kwargs):

@@ -71,17 +71,15 @@ async def test_update_transfer_success(organization_validation, mock_transaction
 
 @pytest.mark.anyio
 async def test_create_compliance_report_success(
-    organization_validation, mock_report_repo, set_mock_user, fastapi_app
+    organization_validation, mock_report_repo
 ):
-    # Mock user setup
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-
     # Mock the request object and its attributes
     mock_request = MagicMock()
     mock_request.user.organization.organization_id = 1
     organization_validation.request = mock_request
 
     # Mock the compliance period with proper attributes
+    # The validation checks period.description for 2025/2026 restrictions
     mock_period = MagicMock()
     mock_period.description = "2024"
     mock_report_repo.get_compliance_period.return_value = mock_period

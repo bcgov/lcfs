@@ -572,7 +572,15 @@ class OrganizationsService:
     async def get_early_issuance_for_year(
         self, organization_id: int, compliance_year: str
     ) -> bool:
-        """Check if an organization has early issuance enabled for a specific compliance year."""
+        """
+        Check if an organization has early issuance enabled for a specific compliance year.
+        Used to determine if an organization can create compliance reports for future years.
+
+        TEMPORARY SOLUTION - Issue #3730
+        This method is part of a temporary approach to gate 2026 compliance year access.
+        A more robust long-term solution should be implemented to support future years
+        dynamically (e.g., database-driven configuration per compliance period).
+        """
         early_issuance = await self.repo.get_early_issuance_by_year(
             organization_id, compliance_year
         )
