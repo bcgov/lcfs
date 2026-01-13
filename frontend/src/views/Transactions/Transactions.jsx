@@ -3,7 +3,6 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { DownloadButton } from '@/components/DownloadButton'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { apiRoutes } from '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
@@ -425,7 +424,6 @@ export const Transactions = () => {
                   downloadLabel={t('txn:downloadingTxnInfo')}
                   dataTest="download-transactions-button"
                 />
-                <ClearFiltersButton onClick={handleClearFilters} />
               </Box>
             </Grid>
             <Grid

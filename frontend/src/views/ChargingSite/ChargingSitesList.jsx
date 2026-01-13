@@ -1,7 +1,6 @@
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
 import { useNavigate, useLocation, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -341,9 +340,6 @@ export const ChargingSitesList = () => {
                   {t('newSiteBtn')}
                 </BCTypography>
               </BCButton>
-            )}
-            {isIDIR && (
-              <ClearFiltersButton onClick={handleClearFilters} />
             )}
           </Stack>
         </Grid>
