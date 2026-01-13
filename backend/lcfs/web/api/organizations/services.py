@@ -569,6 +569,16 @@ class OrganizationsService:
         return organization
 
     @service_handler
+    async def get_early_issuance_for_year(
+        self, organization_id: int, compliance_year: str
+    ) -> bool:
+        """Check if an organization has early issuance enabled for a specific compliance year."""
+        early_issuance = await self.repo.get_early_issuance_by_year(
+            organization_id, compliance_year
+        )
+        return early_issuance.has_early_issuance if early_issuance else False
+
+    @service_handler
     async def get_penalty_analytics(
         self, organization_id: int
     ) -> PenaltyAnalyticsResponseSchema:

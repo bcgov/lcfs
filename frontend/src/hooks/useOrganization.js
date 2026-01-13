@@ -300,6 +300,36 @@ export const useGetOrgComplianceReportReportedYears = (orgID, options = {}) => {
   })
 }
 
+export const useOrgEarlyIssuance = (complianceYear, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['org-early-issuance', complianceYear],
+    queryFn: async () => {
+      if (!complianceYear) {
+        throw new Error('Compliance year is required')
+      }
+      const response = await client.get(
+        `/organizations/current/early-issuance/${complianceYear}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!complianceYear,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 // Mutation hooks for updating organization data
 export const useUpdateOrganization = (orgID, options = {}) => {
   const client = useApiService()

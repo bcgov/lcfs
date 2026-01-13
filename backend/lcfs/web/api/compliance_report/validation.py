@@ -4,8 +4,10 @@ from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from fastapi import status
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.settings import settings
 
 
 class ComplianceReportValidation:
@@ -13,9 +15,11 @@ class ComplianceReportValidation:
         self,
         request: Request = None,
         repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
+        org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
     ) -> None:
         self.request = request
         self.repo = repo
+        self.org_repo = org_repo
 
     async def validate_organization_access(self, compliance_report_id: int):
         compliance_report = await self.repo.get_compliance_report_schema_by_id(
@@ -28,6 +32,31 @@ class ComplianceReportValidation:
             )
 
         organization_id = compliance_report.organization_id
+        compliance_year = compliance_report.compliance_period.description
+
+        # Feature flag check for 2025 reporting period.
+        # This flag gates access to 2025 compliance reports until regulatory requirements are finalized.
+        # Configure via environment variable: LCFS_FEATURE_REPORTING_2025_ENABLED=true
+        # Frontend also has a corresponding flag: reporting2025Enabled in config.js
+        if compliance_year == "2025" and not settings.feature_reporting_2025_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="2025 reporting is not yet available.",
+            )
+
+        # 2026 reporting availability is tied to the 2025 feature flag.
+        # When 2025 reporting is disabled, 2026 is also disabled UNLESS the organization
+        # has early issuance enabled for 2026 (set via OrganizationEarlyIssuanceByYear table).
+        if compliance_year == "2026" and not settings.feature_reporting_2025_enabled:
+            early_issuance = await self.org_repo.get_early_issuance_by_year(
+                organization_id, "2026"
+            )
+            if not early_issuance or not early_issuance.has_early_issuance:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="2026 reporting is not yet available.",
+                )
+
         user_organization_id = (
             self.request.user.organization.organization_id
             if self.request.user.organization

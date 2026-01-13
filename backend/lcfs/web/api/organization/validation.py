@@ -8,6 +8,7 @@ from lcfs.web.api.transfer.schema import TransferCreateSchema
 from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.utils.constants import LCFS_Constants
+from lcfs.settings import settings
 
 
 class OrganizationValidation:
@@ -110,6 +111,30 @@ class OrganizationValidation:
         )
         if not period:
             raise HTTPException(status_code=404, detail="Compliance period not found")
+
+        # Feature flag check for 2025 reporting period.
+        # This flag gates access to 2025 compliance reports until regulatory requirements are finalized.
+        # Configure via environment variable: LCFS_FEATURE_REPORTING_2025_ENABLED=true
+        # Frontend also has a corresponding flag: reporting2025Enabled in config.js
+        if period.description == "2025" and not settings.feature_reporting_2025_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="2025 reporting is not yet available.",
+            )
+
+        # 2026 reporting availability is tied to the 2025 feature flag.
+        # When 2025 reporting is disabled, 2026 is also disabled UNLESS the organization
+        # has early issuance enabled for 2026 (set via OrganizationEarlyIssuanceByYear table).
+        if period.description == "2026" and not settings.feature_reporting_2025_enabled:
+            early_issuance = await self.org_repo.get_early_issuance_by_year(
+                organization_id, "2026"
+            )
+            if not early_issuance or not early_issuance.has_early_issuance:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="2026 reporting is not yet available.",
+                )
+
         is_report_present = await self.report_repo.get_compliance_report_by_period(
             organization_id, report_data.compliance_period
         )

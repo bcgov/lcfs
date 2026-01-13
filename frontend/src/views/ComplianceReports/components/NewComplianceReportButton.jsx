@@ -11,14 +11,22 @@ import {
   faInfoCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
-import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
+import {
+  useGetOrgComplianceReportReportedYears,
+  useOrgEarlyIssuance
+} from '@/hooks/useOrganization'
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config'
 
 export const NewComplianceReportButton = forwardRef((props, ref) => {
   const { handleNewReport, isButtonLoading, setIsButtonLoading } = props
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
+  const { data: earlyIssuance2026 } = useOrgEarlyIssuance('2026')
   const { t } = useTranslation(['common', 'report'])
+
+  const is2025Enabled = isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED)
+  // 2026 is available if 2025 is enabled OR if the org has early issuance for 2026
+  const is2026Available = is2025Enabled || earlyIssuance2026?.hasEarlyIssuance
 
   const reportedPeriodIDs = reportedPeriods?.map((p) => p.compliancePeriodId)
 
@@ -103,16 +111,16 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
               onClick={() => handleComplianceOptionClick(period)}
               disabled={
                 reportedPeriodIDs?.includes(period.compliancePeriodId) ||
-                (period.description === '2025' &&
-                  !isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED))
+                (period.description === '2025' && !is2025Enabled) ||
+                (period.description === '2026' && !is2026Available)
               }
               className={`compliance-period-${period.description}`}
             >
               {period.description}
             </MenuItem>
           ))}
-          {/* Show info message only when 2025 reporting is disabled */}
-          {!isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED) && (
+          {/* Show info message when reporting periods are disabled */}
+          {(!is2025Enabled || !is2026Available) && (
             <Box
               sx={{
                 px: 2,
@@ -132,7 +140,11 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
                   }}
                 />
                 <BCTypography variant="caption" color="text.secondary">
-                  2025 reporting is temporarily unavailable due to regulatory updates
+                  {!is2025Enabled && !is2026Available
+                    ? '2025 and 2026 reporting are temporarily unavailable due to regulatory updates'
+                    : !is2025Enabled
+                      ? '2025 reporting is temporarily unavailable due to regulatory updates'
+                      : '2026 reporting is temporarily unavailable due to regulatory updates'}
                 </BCTypography>
               </Box>
             </Box>
