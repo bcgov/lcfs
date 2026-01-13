@@ -718,6 +718,36 @@ class FinalSupplyEquipmentRepository:
         }
 
     @repo_handler
+    async def has_charging_equipment_for_organization(
+        self, organization_id: int
+    ) -> bool:
+        """
+        Check if an organization has any charging equipment (excluding decommissioned).
+        """
+        query = (
+            select(func.count())
+            .select_from(ChargingEquipment)
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(
+                and_(
+                    ChargingSite.organization_id == organization_id,
+                    ChargingEquipmentStatus.status != "Decommissioned",
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        count = result.scalar() or 0
+        return count > 0
+
+    @repo_handler
     async def get_fse_reporting_list_paginated(
         self,
         organization_id: int,
