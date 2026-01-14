@@ -133,7 +133,10 @@ jobs:
           for REPO_PATH in "${REPO_PATHS[@]}"; do
             REPO_REF="${REPO_BASE}/${REPO_PATH}"
             echo "Fetching tags for ${REPO_PATH}..."
-            TAGS_JSON="$(skopeo list-tags --authfile /tmp/artifactory-auth.json "${REPO_REF}")"
+            if ! TAGS_JSON="$(skopeo list-tags --authfile /tmp/artifactory-auth.json "${REPO_REF}")"; then
+              echo "Repository ${REPO_PATH} not found; skipping."
+              continue
+            fi
             export TAGS_JSON
             TAGS="$(python3 - <<'PY'
           import json
