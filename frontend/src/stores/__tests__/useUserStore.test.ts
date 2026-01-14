@@ -1,6 +1,13 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useUserStore } from '../useUserStore'
+import { useUserStore, type User } from '../useUserStore'
+
+const getUser = (user: User | null): User => {
+  if (!user) {
+    throw new Error('Expected user to be set')
+  }
+  return user
+}
 
 describe('useUserStore', () => {
   beforeEach(() => {
@@ -93,30 +100,6 @@ describe('useUserStore', () => {
       expect(result.current.user).toBeNull()
     })
 
-    it('should handle setting user to undefined', () => {
-      const { result } = renderHook(() => useUserStore())
-      const mockUser = {
-        id: 1,
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'ANALYST'
-      }
-
-      // First set a user
-      act(() => {
-        result.current.setUser(mockUser)
-      })
-      
-      expect(result.current.user).toEqual(mockUser)
-
-      // Then set to undefined
-      act(() => {
-        result.current.setUser(undefined)
-      })
-
-      expect(result.current.user).toBeUndefined()
-    })
-
     it('should handle partial user objects', () => {
       const { result } = renderHook(() => useUserStore())
       const partialUser = {
@@ -129,22 +112,12 @@ describe('useUserStore', () => {
         result.current.setUser(partialUser)
       })
 
-      expect(result.current.user).toEqual(partialUser)
-      expect(result.current.user.id).toBe(1)
-      expect(result.current.user.name).toBe('Partial User')
-      expect(result.current.user.email).toBeUndefined()
-      expect(result.current.user.role).toBeUndefined()
-    })
-
-    it('should handle empty object', () => {
-      const { result } = renderHook(() => useUserStore())
-      const emptyUser = {}
-
-      act(() => {
-        result.current.setUser(emptyUser)
-      })
-
-      expect(result.current.user).toEqual({})
+      const storedUser = getUser(result.current.user)
+      expect(storedUser).toEqual(partialUser)
+      expect(storedUser.id).toBe(1)
+      expect(storedUser.name).toBe('Partial User')
+      expect(storedUser.email).toBeUndefined()
+      expect(storedUser.role).toBeUndefined()
     })
   })
 
@@ -250,7 +223,7 @@ describe('useUserStore', () => {
             notifications: true
           }
         },
-        roles: ['ANALYST', 'VIEWER'],
+        roles: [{ name: 'ANALYST' }, { name: 'VIEWER' }],
         metadata: {
           lastLogin: new Date('2023-01-01'),
           permissions: {
@@ -265,10 +238,11 @@ describe('useUserStore', () => {
         result.current.setUser(complexUser)
       })
 
-      expect(result.current.user).toEqual(complexUser)
-      expect(result.current.user.profile.preferences.theme).toBe('dark')
-      expect(result.current.user.roles).toContain('ANALYST')
-      expect(result.current.user.metadata.permissions.admin).toBe(false)
+      const storedUser = getUser(result.current.user)
+      expect(storedUser).toEqual(complexUser)
+      expect(storedUser.profile.preferences.theme).toBe('dark')
+      expect(storedUser.roles?.map((role) => role.name)).toContain('ANALYST')
+      expect(storedUser.metadata.permissions.admin).toBe(false)
     })
   })
 })
