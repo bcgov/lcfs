@@ -125,16 +125,40 @@ jobs:
           #   --dest-authfile /tmp/artifactory-auth.json \
           #   "docker://public.ecr.aws/docker/library/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}" \
           #   "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/dandyredis/haproxy:${DANDYREDIS_HAPROXY_IMAGE_TAG}"
-          if [ -n "${ARTIFACTORY_TOKEN:-}" ]; then
-            AUTH_DELETE_FLAGS=(-H "Authorization: Bearer ${ARTIFACTORY_TOKEN}")
-          elif [ -n "${ARTIFACTORY_API_KEY:-}" ]; then
-            AUTH_DELETE_FLAGS=(-H "X-JFrog-Art-Api: ${ARTIFACTORY_API_KEY}")
+          REPO_PATH="lcfs/prod/lcfs-backend"
+          REPO_REF="docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/${REPO_PATH}"
+          echo "Fetching tags for ${REPO_PATH}..."
+          TAGS_JSON="$(skopeo list-tags --authfile /tmp/artifactory-auth.json "${REPO_REF}")"
+          export TAGS_JSON
+          TAGS="$(python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("TAGS_JSON", "")
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError:
+              print("::error::Failed to parse tag list JSON from skopeo.", file=sys.stderr)
+              sys.exit(1)
+
+          tags = data.get("Tags")
+          if not isinstance(tags, list):
+              print("::error::Tag list response missing Tags array.", file=sys.stderr)
+              sys.exit(1)
+
+          print("\n".join(tag for tag in tags if tag))
+          PY
+          )"
+          if [ -z "${TAGS// }" ]; then
+            echo "No tags found for ${REPO_PATH}."
           else
-            AUTH_DELETE_FLAGS=(-u "${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}")
+            echo "Deleting tags for ${REPO_PATH}..."
+            echo "${TAGS}" | while IFS= read -r tag; do
+              [ -z "${tag}" ] && continue
+              skopeo delete --authfile /tmp/artifactory-auth.json "${REPO_REF}:${tag}"
+            done
           fi
-          echo "Deleting lcfs/prod/lcfs-backend directory in Artifactory..."
-          curl -fsS -X DELETE "${AUTH_DELETE_FLAGS[@]}" \
-            "https://${ARTIFACTORY_REGISTRY}/artifactory/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend/"
           # OPENSHIFT_REGISTRY="$(oc registry info --public)"
           # oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
 
