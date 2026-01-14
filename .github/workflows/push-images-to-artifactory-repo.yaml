@@ -136,35 +136,35 @@ jobs:
             TAGS_JSON="$(skopeo list-tags --authfile /tmp/artifactory-auth.json "${REPO_REF}")"
             export TAGS_JSON
             TAGS="$(python3 - <<'PY'
-              import json
-              import os
-              import sys
+          import json
+          import os
+          import sys
 
-              raw = os.environ.get("TAGS_JSON", "")
-              try:
-                  data = json.loads(raw)
-              except json.JSONDecodeError:
-                  print("::error::Failed to parse tag list JSON from skopeo.", file=sys.stderr)
-                  sys.exit(1)
+          raw = os.environ.get("TAGS_JSON", "")
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError:
+              print("::error::Failed to parse tag list JSON from skopeo.", file=sys.stderr)
+              sys.exit(1)
 
-              tags = data.get("Tags")
-              if not isinstance(tags, list):
-                  print("::error::Tag list response missing Tags array.", file=sys.stderr)
-                  sys.exit(1)
+          tags = data.get("Tags")
+          if not isinstance(tags, list):
+              print("::error::Tag list response missing Tags array.", file=sys.stderr)
+              sys.exit(1)
 
-              print("\n".join(tag for tag in tags if tag))
-              PY
-              )"
-              if [ -z "${TAGS// }" ]; then
-                echo "No tags found for ${REPO_PATH}."
-              else
-                echo "Deleting tags for ${REPO_PATH}..."
-                echo "${TAGS}" | while IFS= read -r tag; do
-                  [ -z "${tag}" ] && continue
-                  skopeo delete --authfile /tmp/artifactory-auth.json "${REPO_REF}:${tag}"
-                done
-              fi
-            done
+          print("\n".join(tag for tag in tags if tag))
+          PY
+          )"
+                        if [ -z "${TAGS// }" ]; then
+                          echo "No tags found for ${REPO_PATH}."
+                        else
+                          echo "Deleting tags for ${REPO_PATH}..."
+                          echo "${TAGS}" | while IFS= read -r tag; do
+                            [ -z "${tag}" ] && continue
+                            skopeo delete --authfile /tmp/artifactory-auth.json "${REPO_REF}:${tag}"
+                          done
+                        fi
+                      done
           # OPENSHIFT_REGISTRY="$(oc registry info --public)"
           # oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
 
