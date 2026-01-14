@@ -168,12 +168,16 @@ jobs:
                           done
                         fi
                       done
-          # OPENSHIFT_REGISTRY="$(oc registry info --public)"
-          # oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
+          OPENSHIFT_REGISTRY="$(oc registry info --public)"
+          oc registry login --registry="${OPENSHIFT_REGISTRY}" --to=/tmp/openshift-auth.json
 
 
 
-          # skopeo copy --src-tls-verify=false --dest-tls-verify=true \
-          #   --src-authfile /tmp/openshift-auth.json --dest-authfile /tmp/artifactory-auth.json \
-          #   "docker://${OPENSHIFT_REGISTRY}/${{ env.PROD_NAMESPACE }}/lcfs-backend:0.2.0-20240614165335" \
-          #   "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend:0.2.0-20240614165335"
+          skopeo copy --src-tls-verify=false --dest-tls-verify=true \
+            --src-authfile /tmp/openshift-auth.json --dest-authfile /tmp/artifactory-auth.json \
+            "docker://${OPENSHIFT_REGISTRY}/${{ env.PROD_NAMESPACE }}/lcfs-backend:0.2.0-20240614165335" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-backend:0.2.0-20240614165335"
+          skopeo copy --src-tls-verify=false --dest-tls-verify=true \
+            --src-authfile /tmp/openshift-auth.json --dest-authfile /tmp/artifactory-auth.json \
+            "docker://${OPENSHIFT_REGISTRY}/${{ env.PROD_NAMESPACE }}/lcfs-frontend:0.2.0-20240614165335" \
+            "docker://${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPO}/lcfs/prod/lcfs-frontend:0.2.0-20240614165335"
