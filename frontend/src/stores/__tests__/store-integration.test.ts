@@ -1,8 +1,44 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useUserStore } from '../useUserStore'
-import { useLoadingStore } from '../useLoadingStore'
-import useComplianceReportStore from '../useComplianceReportStore'
+import { useUserStore, type User } from '../useUserStore'
+import {
+  useLoadingStore,
+  type LoadingDetails,
+  type LoadingState
+} from '../useLoadingStore'
+import useComplianceReportStore, {
+  type ComplianceReport
+} from '../useComplianceReportStore'
+
+const getUser = (user: User | null): User => {
+  if (!user) {
+    throw new Error('Expected user to be set')
+  }
+  return user
+}
+
+const getReport = (report: ComplianceReport | null): ComplianceReport => {
+  if (!report) {
+    throw new Error('Expected report to be set')
+  }
+  return report
+}
+
+const getCachedReport = (
+  report: ComplianceReport | undefined
+): ComplianceReport => {
+  if (!report) {
+    throw new Error('Expected cached report to be set')
+  }
+  return report
+}
+
+const getLoadingDetails = (loading: LoadingState): LoadingDetails => {
+  if (typeof loading === 'boolean') {
+    throw new Error('Expected loading details object')
+  }
+  return loading
+}
 
 describe('Store Integration Tests', () => {
   beforeEach(() => {
@@ -112,9 +148,16 @@ describe('Store Integration Tests', () => {
         reportHook.result.current.cacheReport(1, mockReport)
       })
 
-      expect(userHook.result.current.user.id).toBe(mockUser.id)
-      expect(reportHook.result.current.currentReport.report.authorId).toBe(mockUser.id)
-      expect(reportHook.result.current.getCachedReport(1).metadata.createdBy).toBe(mockUser.id)
+      const storedUser = getUser(userHook.result.current.user)
+      expect(storedUser.id).toBe(mockUser.id)
+
+      const currentReport = getReport(reportHook.result.current.currentReport)
+      expect(currentReport.report.authorId).toBe(mockUser.id)
+
+      const cachedReport = getCachedReport(
+        reportHook.result.current.getCachedReport(1)
+      )
+      expect(cachedReport.metadata?.createdBy).toBe(mockUser.id)
     })
 
     it('should handle user switching with report context preservation', () => {
@@ -148,7 +191,8 @@ describe('Store Integration Tests', () => {
       })
 
       // Both reports should be cached but current should be user 2's report
-      expect(userHook.result.current.user.id).toBe(2)
+      const storedUser = getUser(userHook.result.current.user)
+      expect(storedUser.id).toBe(2)
       expect(reportHook.result.current.getCurrentReportId()).toBe(2)
       expect(reportHook.result.current.isReportCached(1)).toBe(true)
       expect(reportHook.result.current.isReportCached(2)).toBe(true)
@@ -223,8 +267,11 @@ describe('Store Integration Tests', () => {
       })
 
       // All reports should be cached and loading should be complete
-      expect(loadingHook.result.current.loading.isLoading).toBe(false)
-      expect(loadingHook.result.current.loading.completed).toBe(3)
+      const loadingDetails = getLoadingDetails(
+        loadingHook.result.current.loading
+      )
+      expect(loadingDetails.isLoading).toBe(false)
+      expect(loadingDetails.completed).toBe(3)
       expect(reportHook.result.current.reportCache.size).toBe(3)
       reports.forEach(report => {
         expect(reportHook.result.current.isReportCached(report.report.id)).toBe(true)
@@ -284,14 +331,17 @@ describe('Store Integration Tests', () => {
       })
 
       // Verify final state
-      expect(userHook.result.current.user.id).toBe(1)
+      const storedUser = getUser(userHook.result.current.user)
+      expect(storedUser.id).toBe(1)
       expect(loadingHook.result.current.loading).toBe(false)
       expect(reportHook.result.current.getCurrentReportId()).toBe(1)
       expect(reportHook.result.current.reportCache.size).toBe(2)
       
       // Verify user owns the reports
       userReports.forEach(report => {
-        const cachedReport = reportHook.result.current.getCachedReport(report.report.id)
+        const cachedReport = getCachedReport(
+          reportHook.result.current.getCachedReport(report.report.id)
+        )
         expect(cachedReport.report.authorId).toBe(mockUser.id)
       })
     })
@@ -357,7 +407,10 @@ describe('Store Integration Tests', () => {
       })
 
       expect(userHook.result.current.user).toBeTruthy()
-      expect(loadingHook.result.current.loading.hasError).toBe(true)
+      const loadingDetails = getLoadingDetails(
+        loadingHook.result.current.loading
+      )
+      expect(loadingDetails.hasError).toBe(true)
       expect(reportHook.result.current.currentReport).toBeNull()
       expect(reportHook.result.current.reportCache.size).toBe(0)
     })
@@ -392,7 +445,8 @@ describe('Store Integration Tests', () => {
       expect(duration).toBeLessThan(100)
       
       // Final state should be consistent
-      expect(userHook.result.current.user.id).toBe(49)
+      const storedUser = getUser(userHook.result.current.user)
+      expect(storedUser.id).toBe(49)
       expect(loadingHook.result.current.loading).toBe(false) // 49 is odd
       expect(reportHook.result.current.reportCache.size).toBe(10) // 0, 5, 10, ..., 45
     })
