@@ -455,7 +455,15 @@ class FuelSupplyMigrator:
                         result["effective_carbon_intensity"] = float(category_ci_row[0])
                 else:
                     # Use default carbon intensity from fuel type
-                    if default_ci:
+                    lcfs_cursor.execute(
+                        """SELECT default_carbon_intensity FROM default_carbon_intensity 
+                        WHERE fuel_type_id = %s AND compliance_period_id = %s""",
+                        (fuel_type_id, compliance_period_id),
+                    )
+                    dci_row = lcfs_cursor.fetchone()
+                    if dci_row:
+                        result["effective_carbon_intensity"] = float(dci_row[0])
+                    elif default_ci:
                         result["effective_carbon_intensity"] = float(default_ci)
 
             # Get target carbon intensity (TCI)
@@ -933,7 +941,7 @@ class FuelSupplyMigrator:
         try:
             # Get the full record data
             full_record = record_data.get("_full_record", record_data)
-            
+
             # Process the record using existing logic
             return self.process_schedule_b_record(
                 full_record,
@@ -1289,7 +1297,7 @@ class FuelSupplyMigrator:
         """
         # Extract values from the full record if available
         full_record = record.get("_full_record", record)
-        
+
         # Use business identifiers that define a unique logical fuel supply record
         key_parts = [
             str(full_record.get("fuel_type", "")).strip(),

@@ -53,6 +53,11 @@ export const idirTextFields = (t) => [
     label: t('admin:userForm.email')
   },
   {
+    name: 'altEmail',
+    label: t('admin:userForm.idirAltEmail'),
+    optional: true
+  },
+  {
     name: 'phone',
     label: t('admin:userForm.phone'),
     optional: true
