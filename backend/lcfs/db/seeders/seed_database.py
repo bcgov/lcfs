@@ -24,7 +24,8 @@ async def seed_database(environment):
                 logger.info("Database seeding started.")
 
                 if environment == "dev":
-                    await seed_dev(session)
+                    # await seed_dev(session)
+                    pass
                 elif environment == "prod":
                     await seed_prod(session)
                 elif environment == "staging":
