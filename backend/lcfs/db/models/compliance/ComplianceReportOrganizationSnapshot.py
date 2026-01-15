@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Float
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -35,6 +35,12 @@ class ComplianceReportOrganizationSnapshot(BaseModel, Auditable):
     )
     records_address = Column(
         String(500), nullable=True, comment="Organization's address in BC where records are maintained."
+    )
+    latitude = Column(
+        Float, nullable=True, comment="Latitude coordinate for mapping (priority: records_address > service_address > head_office_address)"
+    )
+    longitude = Column(
+        Float, nullable=True, comment="Longitude coordinate for mapping (priority: records_address > service_address > head_office_address)"
     )
 
     is_edited = Column(

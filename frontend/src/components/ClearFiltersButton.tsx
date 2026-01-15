@@ -1,4 +1,4 @@
-import { forwardRef, KeyboardEvent } from 'react'
+import { forwardRef, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import FilterListOffIcon from '@mui/icons-material/FilterListOff'
@@ -23,10 +23,16 @@ export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButt
 }: ClearFiltersButtonProps, ref) => {
   const { t } = useTranslation(['common'])
 
-  // Handle keyboard events for accessibility
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (event.key === 'Enter' && !event.repeat) {
       event.preventDefault()
+      event.currentTarget.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    }
+  }
+
+  const handleKeyUp = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
       onClick?.()
     }
   }

@@ -1874,6 +1874,98 @@ ORDER BY
   vf.fuel_category,
   vf.version_rank;
   GRANT SELECT ON vw_compliance_report_fuel_volume_history, vw_compliance_report_fuel_volume_visualisation TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Fuel Supply Map View
+-- ==========================================
+-- Provides location data for fuel suppliers based on organization snapshot
+-- Combines fuel supply data with organization lat/long for Metabase mapping
+DROP VIEW IF EXISTS vw_fuel_supply_map CASCADE;
+CREATE OR REPLACE VIEW vw_fuel_supply_map AS
+WITH
+  latest_fs AS (
+    SELECT
+      fs.group_uuid,
+      MAX(fs.version) AS max_version
+    FROM fuel_supply fs
+    WHERE action_type <> 'DELETE'
+    GROUP BY fs.group_uuid
+  ),
+  selected_fs AS (
+    SELECT fs.*
+    FROM fuel_supply fs
+    JOIN latest_fs lfs ON fs.group_uuid = lfs.group_uuid AND fs.version = lfs.max_version
+    WHERE fs.action_type != 'DELETE'
+  ),
+  fuel_supply_aggregated AS (
+    SELECT
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.compliance_period_id,
+      cr.organization_id,
+      fs.fuel_type_id,
+      fs.fuel_category_id,
+      SUM(
+        CASE
+          WHEN fs.quantity > 0 THEN fs.quantity
+          ELSE COALESCE(fs.q1_quantity, 0) + COALESCE(fs.q2_quantity, 0) +
+               COALESCE(fs.q3_quantity, 0) + COALESCE(fs.q4_quantity, 0)
+        END
+      ) AS total_quantity,
+      SUM(COALESCE(fs.compliance_units, 0)) AS total_compliance_units,
+      fs.units AS quantity_units
+    FROM selected_fs fs
+    JOIN compliance_report cr ON fs.compliance_report_id = cr.compliance_report_id
+    JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+    WHERE crs.status NOT IN ('Draft'::compliancereportstatusenum)
+    GROUP BY
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.compliance_period_id,
+      cr.organization_id,
+      fs.fuel_type_id,
+      fs.fuel_category_id,
+      fs.units
+  )
+SELECT DISTINCT
+  fsa.compliance_report_group_uuid,
+  fsa.compliance_report_id,
+  cp.description AS compliance_period,
+  org.organization_id,
+  org.name AS organization_name,
+  -- Organization snapshot location data (priority: records > service > head_office)
+  COALESCE(os.records_address, os.service_address, os.head_office_address) AS primary_address,
+  os.records_address,
+  os.service_address,
+  os.head_office_address,
+  os.latitude,
+  os.longitude,
+  -- Fuel details
+  ft.fuel_type,
+  fc.category AS fuel_category,
+  fsa.total_quantity,
+  fsa.quantity_units,
+  fsa.total_compliance_units,
+  -- Report status
+  crs.status::text AS report_status
+FROM fuel_supply_aggregated fsa
+JOIN compliance_report cr ON fsa.compliance_report_id = cr.compliance_report_id
+JOIN compliance_period cp ON fsa.compliance_period_id = cp.compliance_period_id
+JOIN organization org ON fsa.organization_id = org.organization_id
+JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+LEFT JOIN compliance_report_organization_snapshot os ON cr.compliance_report_id = os.compliance_report_id
+LEFT JOIN fuel_type ft ON fsa.fuel_type_id = ft.fuel_type_id
+LEFT JOIN fuel_category fc ON fsa.fuel_category_id = fc.fuel_category_id
+-- Only include reports that have been submitted (exclude drafts)
+WHERE crs.status NOT IN ('Draft'::compliancereportstatusenum)
+ORDER BY
+  cp.description DESC,
+  org.name,
+  ft.fuel_type,
+  fc.category;
+
+GRANT SELECT ON vw_fuel_supply_map TO basic_lcfs_reporting_role;
+
 -- ==========================================
 -- Additional permissions for base tables
 -- ==========================================

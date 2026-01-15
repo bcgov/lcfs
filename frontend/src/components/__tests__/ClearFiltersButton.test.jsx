@@ -166,15 +166,19 @@ describe('ClearFiltersButton', () => {
 
       const button = screen.getByRole('button')
       fireEvent.keyDown(button, { key: 'Enter', code: 'Enter' })
+      fireEvent.keyUp(button, { key: 'Enter', code: 'Enter' })
 
       expect(defaultProps.onClick).toHaveBeenCalledTimes(1)
     })
 
-    it('handles Space key activation', () => {
+    it('handles Space key activation via native button behavior', async () => {
+      const user = userEvent.setup()
       render(<ClearFiltersButton {...defaultProps} />)
 
       const button = screen.getByRole('button')
-      fireEvent.keyDown(button, { key: ' ', code: 'Space' })
+      button.focus()
+      // Spacebar triggers native button click behavior
+      await user.keyboard(' ')
 
       expect(defaultProps.onClick).toHaveBeenCalledTimes(1)
     })

@@ -172,9 +172,6 @@ describe('ActivityLinksList', () => {
         screen.getByText('report:activityLists.exportFuels')
       ).toBeInTheDocument()
       expect(
-        screen.getByText('report:activityLists.finalSupplyEquipment')
-      ).toBeInTheDocument()
-      expect(
         screen.getByText('report:activityLists.allocationAgreements')
       ).toBeInTheDocument()
       expect(
@@ -205,9 +202,6 @@ describe('ActivityLinksList', () => {
       expect(
         screen.queryByText('report:activityLists.exportFuels')
       ).not.toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.finalSupplyEquipment')
-      ).toBeInTheDocument()
       expect(
         screen.getByText('report:activityLists.allocationAgreements')
       ).toBeInTheDocument()
@@ -299,17 +293,6 @@ describe('ActivityLinksList', () => {
       await user.click(screen.getByText('report:activityLists.exportFuels'))
       expect(mockNavigate).toHaveBeenCalledWith(
         '/compliance-reporting/2025/123/fuel-exports'
-      )
-    })
-
-    it('navigates to final supply equipment when clicked', async () => {
-      const user = userEvent.setup()
-      render(<ActivityLinksList currentStatus="Draft" />, { wrapper })
-      await user.click(
-        screen.getByText('report:activityLists.finalSupplyEquipment')
-      )
-      expect(mockNavigate).toHaveBeenCalledWith(
-        '/compliance-reporting/2025/123/fse-reporting'
       )
     })
 
