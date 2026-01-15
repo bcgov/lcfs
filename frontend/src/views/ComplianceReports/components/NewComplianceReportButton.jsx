@@ -11,13 +11,28 @@ import {
   faInfoCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
-import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
+import {
+  useGetOrgComplianceReportReportedYears,
+  useOrgEarlyIssuance
+} from '@/hooks/useOrganization'
 import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config'
 
+/**
+ * TEMPORARY SOLUTION - Issue #3730
+ * This component uses hardcoded year checks for 2025/2026 compliance periods.
+ * A more robust long-term solution should be implemented to support future years
+ * dynamically (e.g., backend-driven configuration per compliance period).
+ *
+ * Current behavior:
+ * - 2025: Disabled when REPORTING_2025_ENABLED feature flag is false
+ * - 2026: ALWAYS disabled unless org has early issuance enabled for 2026
+ */
 export const NewComplianceReportButton = forwardRef((props, ref) => {
   const { handleNewReport, isButtonLoading, setIsButtonLoading } = props
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
+  // Check if org has early issuance for 2026 - always required for 2026 reporting
+  const { data: earlyIssuance2026 } = useOrgEarlyIssuance('2026')
   const { t } = useTranslation(['common', 'report'])
 
   const reportedPeriodIDs = reportedPeriods?.map((p) => p.compliancePeriodId)
@@ -97,20 +112,31 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
             }
           }}
         >
-          {filteredDates().map((period) => (
-            <MenuItem
-              key={period.compliancePeriodId}
-              onClick={() => handleComplianceOptionClick(period)}
-              disabled={
-                reportedPeriodIDs?.includes(period.compliancePeriodId) ||
-                (period.description === '2025' &&
-                  !isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED))
-              }
-              className={`compliance-period-${period.description}`}
-            >
-              {period.description}
-            </MenuItem>
-          ))}
+          {filteredDates().map((period) => {
+            // Determine if this period should be disabled
+            const isAlreadyReported = reportedPeriodIDs?.includes(
+              period.compliancePeriodId
+            )
+            // 2025: Blocked when feature flag is disabled
+            const is2025Blocked =
+              period.description === '2025' &&
+              !isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED)
+            // 2026: ALWAYS requires early issuance, regardless of 2025 flag
+            const is2026Blocked =
+              period.description === '2026' &&
+              !earlyIssuance2026?.hasEarlyIssuance
+
+            return (
+              <MenuItem
+                key={period.compliancePeriodId}
+                onClick={() => handleComplianceOptionClick(period)}
+                disabled={isAlreadyReported || is2025Blocked || is2026Blocked}
+                className={`compliance-period-${period.description}`}
+              >
+                {period.description}
+              </MenuItem>
+            )
+          })}
           {/* Show info message only when 2025 reporting is disabled */}
           {!isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED) && (
             <Box
