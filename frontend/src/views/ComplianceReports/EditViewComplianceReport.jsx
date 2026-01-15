@@ -79,6 +79,11 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     state.getCachedReport(complianceReportId)
   )
 
+  // Use the actual compliance period from the report data, not the URL parameter
+  // This prevents URL manipulation from showing incorrect year in the UI
+  const reportCompliancePeriod =
+    reportData?.report?.compliancePeriod?.description || compliancePeriod
+
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
@@ -214,14 +219,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       const submittedYear = submittedDate.getFullYear()
       const currentYear = now.getFullYear()
       if (
-        (isDraft && currentYear > parseInt(compliancePeriod)) ||
-        submittedYear > parseInt(compliancePeriod)
+        (isDraft && currentYear > parseInt(reportCompliancePeriod)) ||
+        submittedYear > parseInt(reportCompliancePeriod)
       ) {
         // For drafts created in Jan/Feb of years after the compliance period,
         // treat them as Q1 instead of Q4 since they're early in the calendar year
         if (
           isDraft &&
-          currentYear > parseInt(compliancePeriod) &&
+          currentYear > parseInt(reportCompliancePeriod) &&
           (month === 0 || month === 1)
         ) {
           quarter = 1
@@ -248,7 +253,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     reportData?.report?.history,
     reportData?.report?.updateDate,
     currentStatus,
-    compliancePeriod,
+    reportCompliancePeriod,
     isDeleted,
     isDeleting
   ])
@@ -549,7 +554,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
       // Report metadata
       reportVersion: reportData?.report?.version,
-      compliancePeriod,
+      compliancePeriod: reportCompliancePeriod,
       isSigningAuthorityDeclared,
 
       // Report type flags
@@ -585,7 +590,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     createSupplementalReport,
     createAnalystAdjustment,
     createIdirSupplementalReport,
-    compliancePeriod,
+    reportCompliancePeriod,
     isGovernmentUser,
     isSigningAuthorityDeclared,
     hasDraftSupplemental,
@@ -681,8 +686,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             color="primary"
           >
             {qReport?.isQuarterly
-              ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
-              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report?.nickname}`}
+              ? `${reportCompliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
+              : `${reportCompliancePeriod} ${t('report:complianceReport')} - ${reportData?.report?.nickname}`}
           </BCTypography>
           <BCTypography
             variant="h6"
@@ -698,7 +703,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             {canEdit && (
               <ActivityListCard
                 name={orgData?.name}
-                period={compliancePeriod}
+                period={reportCompliancePeriod}
                 isQuarterlyReport={qReport?.isQuarterly}
                 quarter={qReport?.quarter}
                 reportID={complianceReportId}
@@ -718,7 +723,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               hasGovernmentReassessmentInProgress={
                 reportData?.hasGovernmentReassessmentInProgress
               }
-              compliancePeriodYear={compliancePeriod}
+              compliancePeriodYear={reportCompliancePeriod}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -736,7 +741,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     enableCompareMode={reportData?.chain?.length > 1}
                     canEdit={canEdit}
                     currentStatus={currentStatus}
-                    compliancePeriodYear={compliancePeriod}
+                    compliancePeriodYear={reportCompliancePeriod}
                     isSigningAuthorityDeclared={isSigningAuthorityDeclared}
                     setIsSigningAuthorityDeclared={
                       setIsSigningAuthorityDeclared
@@ -759,7 +764,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           {!isGovernmentUser && (
             <Introduction
               expanded={location.state?.newReport}
-              compliancePeriod={compliancePeriod}
+              compliancePeriod={reportCompliancePeriod}
               isEarlyIssuance={isEarlyIssuance}
             />
           )}
