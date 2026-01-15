@@ -46,33 +46,9 @@ async def test_scheduler_lifecycle(mock_app):
         start_scheduler(mock_app)
         assert scheduler.running, "Scheduler should be running after start"
 
-        # Should add the job
-        mock_add_job.assert_called_once()
-        call_args = mock_add_job.call_args
-
-        # Safely handle call_args
-        if not call_args:
-            pytest.fail("add_job was called but call_args is None")
-
-        # Check positional args
-        assert call_args[0][0] == check_overdue_supplemental_reports
-
-        # Check keyword args - examine what's actually being passed
-        if len(call_args) > 1:
-            kwargs = call_args[1]
-        else:
-            kwargs = getattr(call_args, "kwargs", {})
-
-        assert "id" in kwargs
-        assert kwargs.get("args") == [mock_app]
-
-        # The scheduler might be using cron trigger instead of date trigger
-        # Check for either date trigger or cron-style parameters
-        if "trigger" in kwargs:
-            assert kwargs.get("trigger") in ["date", "cron"]
-        elif "hour" in kwargs or "minute" in kwargs:
-            assert isinstance(kwargs.get("hour"), (int, type(None)))
-            assert isinstance(kwargs.get("minute"), (int, type(None)))
+        # Job is disabled per ticket #3752 - auto-submit functionality removed
+        # The scheduler should start but no jobs should be added
+        mock_add_job.assert_not_called()
 
         safe_shutdown_scheduler()
 
@@ -156,7 +132,7 @@ async def test_check_overdue_supplemental_reports_job_single_failure(mock_app):
 
 @pytest.mark.anyio
 async def test_scheduler_adds_startup_job(mock_app):
-    """Test that the scheduler adds the startup job correctly."""
+    """Test that the scheduler starts correctly (job disabled per #3752)."""
     # Ensure scheduler is stopped before test
     safe_shutdown_scheduler()
 
@@ -175,44 +151,48 @@ async def test_scheduler_adds_startup_job(mock_app):
             # Verify start was called
             mock_start.assert_called_once()
 
-            # Verify the job was added
-            mock_add_job.assert_called_once()
-            call_args = mock_add_job.call_args
+            # DISABLED per ticket #3752 - auto-submit job commented out
+            # Verify no jobs are added when auto-submit is disabled
+            mock_add_job.assert_not_called()
 
-            # Safely handle call_args
-            if not call_args:
-                pytest.fail("add_job was called but call_args is None")
+            # # Verify the job was added
+            # mock_add_job.assert_called_once()
+            # call_args = mock_add_job.call_args
 
-            # Verify the function is correct
-            assert call_args[0][0] == check_overdue_supplemental_reports
+            # # Safely handle call_args
+            # if not call_args:
+            #     pytest.fail("add_job was called but call_args is None")
 
-            # Handle kwargs safely
-            if len(call_args) > 1:
-                kwargs = call_args[1]
-            else:
-                kwargs = getattr(call_args, "kwargs", {})
+            # # Verify the function is correct
+            # assert call_args[0][0] == check_overdue_supplemental_reports
 
-            # Check for job ID and args
-            assert "id" in kwargs
-            assert kwargs.get("args") == [mock_app]
+            # # Handle kwargs safely
+            # if len(call_args) > 1:
+            #     kwargs = call_args[1]
+            # else:
+            #     kwargs = getattr(call_args, "kwargs", {})
 
-            # Verify job configuration based on actual parameters
-            if kwargs.get("trigger") == "date":
-                # Date trigger - should have run_date
-                run_date = kwargs.get("run_date")
-                if run_date:
-                    now = datetime.now(utc)
-                    time_diff = abs((run_date - now).total_seconds())
-                    assert time_diff < 5, "Run date should be within 5 seconds of now"
-            else:
-                # Cron trigger - should have time parameters
-                assert (
-                    "hour" in kwargs or "minute" in kwargs
-                ), "Expected cron-style trigger parameters"
-                if "hour" in kwargs:
-                    assert isinstance(kwargs.get("hour"), (int, type(None)))
-                if "minute" in kwargs:
-                    assert isinstance(kwargs.get("minute"), (int, type(None)))
+            # # Check for job ID and args
+            # assert "id" in kwargs
+            # assert kwargs.get("args") == [mock_app]
+
+            # # Verify job configuration based on actual parameters
+            # if kwargs.get("trigger") == "date":
+            #     # Date trigger - should have run_date
+            #     run_date = kwargs.get("run_date")
+            #     if run_date:
+            #         now = datetime.now(utc)
+            #         time_diff = abs((run_date - now).total_seconds())
+            #         assert time_diff < 5, "Run date should be within 5 seconds of now"
+            # else:
+            #     # Cron trigger - should have time parameters
+            #     assert (
+            #         "hour" in kwargs or "minute" in kwargs
+            #     ), "Expected cron-style trigger parameters"
+            #     if "hour" in kwargs:
+            #         assert isinstance(kwargs.get("hour"), (int, type(None)))
+            #     if "minute" in kwargs:
+            #         assert isinstance(kwargs.get("minute"), (int, type(None)))
 
         finally:
             # Reset scheduler state
@@ -238,16 +218,20 @@ async def test_scheduler_startup_job_essentials(mock_app):
         # Verify scheduler.start was called
         mock_scheduler_instance.start.assert_called_once()
 
-        # Verify add_job was called with correct parameters
-        mock_scheduler_instance.add_job.assert_called_once()
+        # DISABLED per ticket #3752 - auto-submit job commented out
+        # Verify no jobs are added when auto-submit is disabled
+        mock_scheduler_instance.add_job.assert_not_called()
 
-        call_args = mock_scheduler_instance.add_job.call_args
+        # # Verify add_job was called with correct parameters
+        # mock_scheduler_instance.add_job.assert_called_once()
 
-        # Verify the function and basic parameters
-        assert call_args[0][0] == check_overdue_supplemental_reports
-        kwargs = call_args[1] if len(call_args) > 1 else call_args.kwargs
-        assert kwargs.get("args") == [mock_app]
-        assert "id" in kwargs
+        # call_args = mock_scheduler_instance.add_job.call_args
+
+        # # Verify the function and basic parameters
+        # assert call_args[0][0] == check_overdue_supplemental_reports
+        # kwargs = call_args[1] if len(call_args) > 1 else call_args.kwargs
+        # assert kwargs.get("args") == [mock_app]
+        # assert "id" in kwargs
 
 
 @pytest.mark.anyio
