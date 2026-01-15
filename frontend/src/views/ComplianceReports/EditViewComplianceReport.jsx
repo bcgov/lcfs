@@ -823,8 +823,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                   : 'Supplemental Report Submission'}
               </AlertTitle>
               {daysRemaining >= 0
-                ? `Please submit this supplemental report by ${submissionDeadline.toLocaleString(DateTime.DATE_FULL)} (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining).`
-                : 'The suggested 30-day submission period for this supplemental report has passed.'}
+                ? `Please submit this supplemental report by ${submissionDeadline.toLocaleString(DateTime.DATE_FULL)} (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining). After 30 days from the date of creation government will be alerted and may lead to a discretionary penalty.`
+                : 'The suggested 30-day submission period for this supplemental report has passed. Government has been alerted and this may lead to a discretionary penalty.'}
             </Alert>
           )}
           {/* Action Buttons */}
