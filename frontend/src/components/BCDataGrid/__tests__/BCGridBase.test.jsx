@@ -479,7 +479,7 @@ describe('BCGridBase Component', () => {
   })
 
   describe('Props Integration', () => {
-    it('merges autoSizeStrategy with default fitGridWidth', () => {
+    it('merges autoSizeStrategy with default fitCellContents', () => {
       const customAutoSizeStrategy = { skipHeader: true }
 
       render(
