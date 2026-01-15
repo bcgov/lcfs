@@ -89,7 +89,7 @@ export const transactionsColDefs = (t) => [
     colId: 'transactionType',
     field: 'transactionType',
     headerName: t('txn:txnColLabels.type'),
-    valueGetter: (params) => {
+    valueFormatter: (params) => {
       const transactionType = params.data.transactionType
       // Map StandaloneTransaction to Legacy Transaction for display
       const displayType =
@@ -116,15 +116,15 @@ export const transactionsColDefs = (t) => [
     },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      valueKey: 'transactionType',
+      valueKey: 'type',
       labelKey: 'transactionType',
       optionsQuery: () => ({
         data: [
-          { transactionType: 'Compliance Report' },
-          { transactionType: 'Admin Adjustment' },
-          { transactionType: 'Transfer' },
-          { transactionType: 'Initiative Agreement' },
-          { transactionType: 'Legacy Transaction' }
+          { transactionType: 'Compliance Report', type: 'ComplianceReport' },
+          { transactionType: 'Admin Adjustment', type: 'AdminAdjustment' },
+          { transactionType: 'Transfer', type: 'Transfer' },
+          { transactionType: 'Initiative Agreement', type: 'InitiativeAgreement' },
+          { transactionType: 'Legacy Transaction', type: 'StandaloneTransaction' }
         ],
         isLoading: false
       })
