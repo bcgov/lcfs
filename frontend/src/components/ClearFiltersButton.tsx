@@ -2,7 +2,6 @@ import { forwardRef, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import FilterListOffIcon from '@mui/icons-material/FilterListOff'
-import { RefObject } from 'react'
 
 interface ClearFiltersButtonProps {
   onClick?: () => void
@@ -45,6 +44,7 @@ export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButt
       color={color}
       onClick={onClick}
       onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
       endIcon={<FilterListOffIcon className="small-icon" />}
       sx={{...sx}}
       {...props}
