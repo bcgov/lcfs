@@ -127,30 +127,30 @@ async def seed_test_compliance_reports(session):
             "reporting_frequency": "ANNUAL",
             "nickname": "Original Report",
         },
-        # LCFS5 (org 5, user 11): Submitted 2025, reserved tx 106
+        # LCFS5 (org 5, user 11): Submitted 2025, reserved tx 105
         {
             "compliance_report_id": 105,
             "organization_id": 5,
             "compliance_period_id": 16,  # 2025
             "current_status_id": 2,  # Submitted
-            "transaction_id": 106,
-            # Supplemental off existing org 5 baseline (id 6) chain
-            "compliance_report_group_uuid": "1122a80e-99a3-447b-a62e-4c758dd83700",
-            "version": 1,
+            "transaction_id": 105,
+            # New 2025 report chain for org 5 (separate from 2024 report id 6)
+            "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111105",
+            "version": 0,
             "reporting_frequency": "ANNUAL",
-            "nickname": "Supplemental Report 1",
+            "nickname": "Original Report",
         },
-        # LCFS6 (org 6, user 12): Submitted 2025, adjustment tx 105
+        # LCFS6 (org 6, user 12): Submitted 2025, adjustment tx 106
         {
             "compliance_report_id": 106,
             "organization_id": 6,
             "compliance_period_id": 16,
             "current_status_id": 2,  # Submitted
-            "transaction_id": 105,
+            "transaction_id": 106,
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111106",
-            "version": 1,
+            "version": 0,
             "reporting_frequency": "ANNUAL",
-            "nickname": "Supplemental Report 1",
+            "nickname": "Original Report",
         },
         # LCFS7 (org 7, user 13): Submitted 2025, reserved tx 107
         {
@@ -160,9 +160,9 @@ async def seed_test_compliance_reports(session):
             "current_status_id": 2,  # Submitted
             "transaction_id": 107,
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111107",
-            "version": 1,
+            "version": 0,
             "reporting_frequency": "ANNUAL",
-            "nickname": "Supplemental Report 1",
+            "nickname": "Original Report",
         },
         # LCFS8 (org 8, user 14): Submitted quarterly 2025
         {
@@ -196,7 +196,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111110",
             "version": 0,
             "reporting_frequency": "ANNUAL",
-            "nickname": "Supplemental Report 1",
+            "nickname": "Original Report",
         },
         # New chain: Org 2, versions 0-2 in 2025 (all submitted for summary testing)
         {
