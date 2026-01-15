@@ -381,7 +381,7 @@ export const FinalSupplyEquipmentReporting = () => {
         params.data.chargingEquipmentId +
         '-' +
         params.data.chargingEquipmentVersion,
-      stopEditingWhenCellsLoseFocus: false
+      stopEditingWhenCellsLoseFocus: true
     }),
     [handleSelectionChanged]
   )

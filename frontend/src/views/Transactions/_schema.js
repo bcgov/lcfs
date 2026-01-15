@@ -90,13 +90,18 @@ export const transactionsColDefs = (t) => [
     field: 'transactionType',
     headerName: t('txn:txnColLabels.type'),
     valueGetter: (params) => {
-      const value = spacesFormatter({ value: params.data.transactionType })
+      const transactionType = params.data.transactionType
+      // Map StandaloneTransaction to Legacy Transaction for display
+      const displayType =
+        transactionType === 'StandaloneTransaction'
+          ? 'Legacy Transaction'
+          : spacesFormatter({ value: transactionType })
       const suffix = params.data.description
 
       if (suffix) {
-        return `${value} - ${suffix}`
+        return `${displayType} - ${suffix}`
       }
-      return value
+      return displayType
     },
     filter: true, // Enable filtering
     filterParams: {
@@ -118,7 +123,8 @@ export const transactionsColDefs = (t) => [
           { transactionType: 'Compliance Report' },
           { transactionType: 'Admin Adjustment' },
           { transactionType: 'Transfer' },
-          { transactionType: 'Initiative Agreement' }
+          { transactionType: 'Initiative Agreement' },
+          { transactionType: 'Legacy Transaction' }
         ],
         isLoading: false
       })
