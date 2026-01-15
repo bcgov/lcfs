@@ -1057,7 +1057,7 @@ describe('GovernmentNotificationsCard', () => {
       await user.click(cancelButton)
 
       await waitFor(() => {
-        expect(screen.queryByText('Delete notification')).not.toBeInTheDocument()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       })
     })
 
