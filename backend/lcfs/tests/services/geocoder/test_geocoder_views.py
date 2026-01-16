@@ -51,7 +51,10 @@ class TestGeocoderViews:
         """Test successful address validation endpoint."""
         mock_geocoder_service.validate_address.return_value = [sample_address]
         
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', return_value=mock_geocoder_service):
+        async def mock_get_service():
+            return mock_geocoder_service
+        
+        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', side_effect=mock_get_service):
             response = await client.post(
                 "/api/geocoder/validate",
                 json={
@@ -64,9 +67,8 @@ class TestGeocoderViews:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "addresses" in data
-        assert len(data["addresses"]) >= 1  # API may return multiple results
-        # Just verify we get some reasonable results
-        assert any("Main St" in addr["full_address"] for addr in data["addresses"])
+        assert len(data["addresses"]) >= 1
+        assert data["addresses"][0]["full_address"] == "123 Main St, Vancouver, BC"
 
     @pytest.mark.anyio
     async def test_validate_address_invalid_request(self, client):
