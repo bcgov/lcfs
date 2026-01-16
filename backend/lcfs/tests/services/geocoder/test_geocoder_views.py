@@ -3,18 +3,27 @@ Tests for geocoder API views.
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from httpx import AsyncClient
 from fastapi import status
 
 from lcfs.services.geocoder.client import BCGeocoderService, Address, GeocodingResult
+from lcfs.services.geocoder.dependency import get_geocoder_service_async
 
 
 @pytest.fixture
-def mock_geocoder_service():
-    """Create a mock geocoder service."""
+def mock_geocoder_service(fastapi_app):
+    """Create a mock geocoder service and override the dependency."""
     service = AsyncMock(spec=BCGeocoderService)
-    return service
+
+    async def _override_service():
+        return service
+
+    fastapi_app.dependency_overrides[get_geocoder_service_async] = _override_service
+    try:
+        yield service
+    finally:
+        fastapi_app.dependency_overrides.pop(get_geocoder_service_async, None)
 
 
 @pytest.fixture
@@ -50,19 +59,15 @@ class TestGeocoderViews:
     async def test_validate_address_success(self, client, mock_geocoder_service, sample_address):
         """Test successful address validation endpoint."""
         mock_geocoder_service.validate_address.return_value = [sample_address]
-        
-        async def mock_get_service():
-            return mock_geocoder_service
-        
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', side_effect=mock_get_service):
-            response = await client.post(
-                "/api/geocoder/validate",
-                json={
-                    "address_string": "123 Main St, Vancouver",
-                    "min_score": 50,
-                    "max_results": 5
-                }
-            )
+
+        response = await client.post(
+            "/api/geocoder/validate",
+            json={
+                "address_string": "123 Main St, Vancouver",
+                "min_score": 50,
+                "max_results": 5
+            }
+        )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -87,15 +92,14 @@ class TestGeocoderViews:
     async def test_forward_geocode_success(self, client, mock_geocoder_service, sample_geocoding_result):
         """Test successful forward geocoding endpoint."""
         mock_geocoder_service.forward_geocode.return_value = sample_geocoding_result
-        
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', return_value=mock_geocoder_service):
-            response = await client.post(
-                "/api/geocoder/forward",
-                json={
-                    "address_string": "123 Main St, Vancouver",
-                    "use_fallback": True
-                }
-            )
+
+        response = await client.post(
+            "/api/geocoder/forward",
+            json={
+                "address_string": "123 Main St, Vancouver",
+                "use_fallback": True
+            }
+        )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -108,16 +112,15 @@ class TestGeocoderViews:
     async def test_reverse_geocode_success(self, client, mock_geocoder_service, sample_geocoding_result):
         """Test successful reverse geocoding endpoint."""
         mock_geocoder_service.reverse_geocode.return_value = sample_geocoding_result
-        
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', return_value=mock_geocoder_service):
-            response = await client.post(
-                "/api/geocoder/reverse",
-                json={
-                    "latitude": 49.2827,
-                    "longitude": -123.1207,
-                    "use_fallback": True
-                }
-            )
+
+        response = await client.post(
+            "/api/geocoder/reverse",
+            json={
+                "latitude": 49.2827,
+                "longitude": -123.1207,
+                "use_fallback": True
+            }
+        )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -144,15 +147,14 @@ class TestGeocoderViews:
             sample_geocoding_result,
             sample_geocoding_result
         ]
-        
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', return_value=mock_geocoder_service):
-            response = await client.post(
-                "/api/geocoder/batch",
-                json={
-                    "addresses": ["123 Main St, Vancouver", "456 Oak St, Victoria"],
-                    "batch_size": 5
-                }
-            )
+
+        response = await client.post(
+            "/api/geocoder/batch",
+            json={
+                "addresses": ["123 Main St, Vancouver", "456 Oak St, Victoria"],
+                "batch_size": 5
+            }
+        )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -165,42 +167,51 @@ class TestGeocoderViews:
     async def test_boundary_check_success(self, client, mock_geocoder_service):
         """Test successful BC boundary check endpoint."""
         mock_geocoder_service.check_bc_boundary.return_value = True
-        
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', return_value=mock_geocoder_service):
-            response = await client.post(
-                "/api/geocoder/boundary-check",
-                json={
-                    "latitude": 49.2827,
-                    "longitude": -123.1207
-                }
-            )
+
+        response = await client.post(
+            "/api/geocoder/boundary-check",
+            json={
+                "latitude": 49.2827,
+                "longitude": -123.1207
+            }
+        )
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["is_in_bc"] is True
 
     @pytest.mark.anyio
-    async def test_autocomplete_success(self, client, mock_geocoder_service):
+    async def test_autocomplete_success(self, client, mock_geocoder_service, sample_address):
         """Test successful address autocomplete endpoint."""
         mock_geocoder_service.autocomplete_address.return_value = [
-            "123 Main St, Vancouver, BC",
-            "124 Main St, Vancouver, BC"
-        ]
-        
-        with patch('lcfs.web.api.geocoder.views.get_geocoder_service_async', return_value=mock_geocoder_service):
-            response = await client.post(
-                "/api/geocoder/autocomplete",
-                json={
-                    "partial_address": "123 Main",
-                    "max_results": 5
-                }
+            sample_address,
+            Address(
+                full_address="124 Main St, Vancouver, BC",
+                street_address="124 Main St",
+                city="Vancouver",
+                province="BC",
+                postal_code="V6B 1A2",
+                country="Canada",
+                latitude=49.2828,
+                longitude=-123.1208,
+                score=90
             )
-        
+        ]
+
+        response = await client.post(
+            "/api/geocoder/autocomplete",
+            json={
+                "partial_address": "123 Main",
+                "max_results": 5
+            }
+        )
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # API returns actual suggestions, just verify we get results
         assert "suggestions" in data
-        assert len(data["suggestions"]) >= 1
+        assert len(data["suggestions"]) == 2
+        assert data["suggestions"][0]["full_address"] == "123 Main St, Vancouver, BC"
 
     # Note: Removing health check and cache management tests as these endpoints
     # may not be implemented yet. The core geocoding functionality is well tested above.
