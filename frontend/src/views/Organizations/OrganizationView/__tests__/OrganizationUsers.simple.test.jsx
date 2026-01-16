@@ -67,13 +67,6 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   )
 }))
 
-vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick, ...props }) => (
-    <button data-testid="clear-filters-button" onClick={onClick} {...props}>
-      Clear filters
-    </button>
-  )
-}))
 
 vi.mock('@/components/Role', () => ({
   Role: ({ children }) => <div data-testid="role-wrapper">{children}</div>
@@ -163,14 +156,6 @@ describe('OrganizationUsers', () => {
     expect(screen.getByTestId('grid')).toBeInTheDocument()
   })
 
-  it('renders clear filters button', () => {
-    render(
-      <Wrapper>
-        <OrganizationUsers />
-      </Wrapper>
-    )
-    expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
-  })
 
   it('renders new user button', () => {
     render(
@@ -181,16 +166,6 @@ describe('OrganizationUsers', () => {
     expect(screen.getByText('New user')).toBeInTheDocument()
   })
 
-  it('handles clear filters button click', () => {
-    render(
-      <Wrapper>
-        <OrganizationUsers />
-      </Wrapper>
-    )
-    const clearButton = screen.getByTestId('clear-filters-button')
-    fireEvent.click(clearButton)
-    // Should not throw
-  })
 
   it('handles new user button click', () => {
     render(

@@ -44,13 +44,6 @@ vi.mock('../CreditMarketDetailsCard', () => ({
   )
 }))
 
-vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick }) => (
-    <button data-test="clear-filters-button" onClick={onClick}>
-      Clear Filters Button
-    </button>
-  )
-}))
 
 // Mock BCTypography component
 vi.mock('@/components/BCTypography', () => ({
@@ -164,10 +157,6 @@ describe('CreditTradingMarket', () => {
     expect(screen.getByTestId('credit-market-details-card')).toHaveTextContent('Details Card 1')
   })
 
-  it('renders clear filters button', () => {
-    renderComponent()
-    expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
-  })
 
   it('clears selection via button', () => {
     mockHasAnyRole.mockReturnValue(true)

@@ -7,6 +7,8 @@
   "newEquipment": "New Equipment",
   "editEquipment": "Edit Equipment",
   "editFSEShort": "Edit FSE",
+  "showFSEFor": "Show FSE for:",
+  "selectOrganization": "Select organization",
   "submitSelected": "Submit selected",
   "setToDecommissioned": "Set to Decommissioned",
   "selectAllDraftUpdated": "Select all Draft/Updated",

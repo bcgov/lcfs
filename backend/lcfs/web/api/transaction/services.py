@@ -90,11 +90,16 @@ class TransactionsService:
                 filter_value = filter.filter
                 # check if the date string is selected for filter
                 if filter.filter is None:
-                    filter_value = [
-                        datetime.strptime(
-                            filter.date_from, "%Y-%m-%d %H:%M:%S"
-                        ).strftime("%Y-%m-%d")
-                    ]
+                    if not filter.date_from and not filter.date_to:
+                        continue
+
+                    filter_value = []
+                    if filter.date_from:
+                        filter_value.append(
+                            datetime.strptime(
+                                filter.date_from, "%Y-%m-%d %H:%M:%S"
+                            ).strftime("%Y-%m-%d")
+                        )
                     if filter.date_to:
                         filter_value.append(
                             datetime.strptime(

@@ -116,7 +116,7 @@ describe('AuditLog Component', () => {
   describe('Component Initialization', () => {
     it('renders without crashing', () => {
       render(<AuditLog />)
-      expect(screen.getAllByTestId('bc-box')).toHaveLength(2)
+      expect(screen.getAllByTestId('bc-box')).toHaveLength(1)
     })
 
     it('initializes useTranslation hook with correct namespaces', () => {
@@ -148,11 +148,6 @@ describe('AuditLog Component', () => {
       expect(title).toHaveTextContent('admin:AuditLog')
     })
 
-    it('renders ClearFiltersButton', () => {
-      render(<AuditLog />)
-      expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
-    })
-
     it('renders BCGridViewer', () => {
       render(<AuditLog />)
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -182,44 +177,7 @@ describe('AuditLog Component', () => {
     })
   })
 
-  describe('handleClearFilters Function', () => {
-    it('resets pagination options to initial values', async () => {
-      render(<AuditLog />)
-      
-      // First trigger a pagination change
-      const paginationButton = screen.getByTestId('test-pagination')
-      await act(async () => {
-        fireEvent.click(paginationButton)
-      })
 
-      // Verify pagination changed (hook called with new values)
-      expect(vi.mocked(useAuditLogs)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          page: 2,
-          size: 20
-        }),
-        expect.any(Object)
-      )
-
-      // Clear filters
-      const clearButton = screen.getByTestId('clear-filters-button')
-      await act(async () => {
-        fireEvent.click(clearButton)
-      })
-
-      // Verify reset back to initial values
-      expect(vi.mocked(useAuditLogs)).toHaveBeenLastCalledWith(
-        {
-          page: 1,
-          size: 10,
-          sortOrders: defaultAuditLogSortModel,
-          filters: []
-        },
-        expect.any(Object)
-      )
-    })
-
-  })
 
   describe('onPaginationChange Function', () => {
     it('merges new pagination with previous state', async () => {

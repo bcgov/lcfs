@@ -10,7 +10,6 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -129,13 +128,6 @@ export const Users = () => {
               {t('admin:newUserBtn')}
             </BCTypography>
           </BCButton>
-          <ClearFiltersButton
-            onClick={handleClearFilters}
-            sx={{
-              minWidth: 'fit-content',
-              whiteSpace: 'nowrap'
-            }}
-          />
         </BCBox>
         <BCBox
           my={2}

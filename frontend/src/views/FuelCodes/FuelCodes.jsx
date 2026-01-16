@@ -3,7 +3,6 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
@@ -164,13 +163,6 @@ const FuelCodesBase = () => {
           label={t('fuelCode:fuelCodeDownloadBtn')}
           downloadLabel={`${t('fuelCode:fuelCodeDownloadingMsg')}...`}
           dataTest="fuel-code-download-btn"
-        />
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-          sx={{
-            minWidth: 'fit-content',
-            whiteSpace: 'nowrap'
-          }}
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>

@@ -2,7 +2,6 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { useState, useCallback, useRef, useMemo } from 'react'
@@ -131,15 +130,6 @@ export const OrganizationUsers = () => {
             <BCTypography variant="button">{t('org:newUsrBtn')}</BCTypography>
           </BCButton>
         </Role>
-
-        <ClearFiltersButton
-          data-test="clear-filters-button"
-          onClick={handleClearFilters}
-          sx={{
-            minWidth: 'fit-content',
-            whiteSpace: 'nowrap'
-          }}
-        />
       </BCBox>
 
       {/* The users data grid */}

@@ -1,7 +1,6 @@
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
 import { useNavigate, useLocation, useOutletContext } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -9,7 +8,7 @@ import { Outlet } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Autocomplete, Box, Grid, Stack, TextField } from '@mui/material'
+import { Box, Grid, Stack } from '@mui/material'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
@@ -121,7 +120,7 @@ export const ChargingSitesList = () => {
     }
   }, [filteredOrgNames, selectedOrg.id])
 
-  const renderOrganizationOption = (props, option) => {
+  const renderOrganizationOption = useCallback((props, option) => {
     const orgTypeLabel = option?.orgType || option?.org_type
     const formattedOrgType = orgTypeLabel
       ? orgTypeLabel
@@ -142,7 +141,7 @@ export const ChargingSitesList = () => {
         </Box>
       </li>
     )
-  }
+  }, [])
 
   const onRowClicked = (params) => {
     navigate(
@@ -236,6 +235,55 @@ export const ChargingSitesList = () => {
     )
   }, [selectedOrg.id, filteredOrgNames])
 
+  const filterToolbarConfig = useMemo(() => {
+    if (!isIDIR) return null
+
+    const selectFilters = [
+      {
+        id: 'organization',
+        label: t('filtersLabel'),
+        placeholder: t('selectOrgPlaceholder', 'Select organization'),
+        value: selectedOrgOption,
+        options: filteredOrgNames,
+        onChange: (option) => handleOrganizationChange(null, option),
+        getOptionLabel: (option) => option?.name || '',
+        renderOption: renderOrganizationOption,
+        isLoading: orgLoading,
+        width: 320,
+        isOptionEqualToValue: (option, value) =>
+          option?.organizationId === value?.organizationId
+      }
+    ]
+
+    const additionalPills =
+      selectedOrg.id && selectedOrg.label
+        ? [
+            {
+              id: `organization-${selectedOrg.id}`,
+              label: t('common:Organization', 'Organization'),
+              value: selectedOrg.label,
+              type: 'select',
+              onRemove: () => handleOrganizationChange(null, null)
+            }
+          ]
+        : []
+
+    return {
+      selectFilters,
+      additionalPills
+    }
+  }, [
+    filteredOrgNames,
+    handleOrganizationChange,
+    isIDIR,
+    orgLoading,
+    renderOrganizationOption,
+    selectedOrg.id,
+    selectedOrg.label,
+    selectedOrgOption,
+    t
+  ])
+
   // Apply cached filter when component mounts and org data is loaded
   useEffect(() => {
     if (selectedOrg.id && filteredOrgNames.length > 0) {
@@ -279,7 +327,7 @@ export const ChargingSitesList = () => {
       </BCTypography>
       <Grid container spacing={2} alignItems="center">
         <Grid item xs={12} lg={7}>
-          <Stack spacing={1} direction={'row'}>
+          <Stack spacing={1} direction="row">
             {!isIDIR && (
               <BCButton
                 id="new-site-button"
@@ -293,59 +341,8 @@ export const ChargingSitesList = () => {
                 </BCTypography>
               </BCButton>
             )}
-            <ClearFiltersButton onClick={handleClearFilters} />
           </Stack>
         </Grid>
-        {isIDIR && (
-          <Grid
-            item
-            xs={12}
-            lg={5}
-            sx={{
-              display: 'flex',
-              justifyContent: { xs: 'flex-start', lg: 'flex-end' },
-              alignItems: 'center'
-            }}
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              <BCTypography variant="body2" color="primary">
-                {t('filtersLabel')}
-              </BCTypography>
-              <Autocomplete
-                disablePortal
-                id="idir-orgs"
-                loading={orgLoading}
-                options={filteredOrgNames}
-                value={selectedOrgOption}
-                getOptionLabel={(option) => option?.name || ''}
-                isOptionEqualToValue={(option, value) =>
-                  option.organizationId === value.organizationId
-                }
-                onChange={handleOrganizationChange}
-                renderOption={renderOrganizationOption}
-                sx={({ functions: { pxToRem } }) => ({
-                  width: 300,
-                  '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
-                })}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={t(
-                      'selectOrgPlaceholder',
-                      'Select organization'
-                    )}
-                    slotProps={{
-                      htmlInput: {
-                        ...params.inputProps,
-                        style: { fontSize: 16, padding: '8px' }
-                      }
-                    }}
-                  />
-                )}
-              />
-            </Box>
-          </Grid>
-        )}
       </Grid>
       <BCBox component="div" sx={{ mt: 2, height: '100%', width: '100%' }}>
         <BCGridViewer
@@ -359,6 +356,8 @@ export const ChargingSitesList = () => {
           paginationOptions={paginationOptions}
           onPaginationChange={setPaginationOptions}
           getRowId={(p) => String(p.data?.chargingSiteId || p.node?.id)}
+          filterToolbarConfig={filterToolbarConfig || undefined}
+          onClearFilters={handleClearFilters}
         />
       </BCBox>
       <ChargingSitesMap

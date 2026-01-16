@@ -148,38 +148,11 @@ describe('ChargingSitesList', () => {
 
       expect(screen.getByText('chargingSitesTitle')).toBeInTheDocument()
       expect(screen.getByText('csDescription')).toBeInTheDocument()
-      expect(screen.getByText('common:ClearFilters')).toBeInTheDocument()
-      expect(screen.getByText('filtersLabel')).toBeInTheDocument()
-      expect(
-        screen.getByPlaceholderText('selectOrgPlaceholder')
-      ).toBeInTheDocument()
       expect(screen.getByText(/Grid - Page: 1, Size: 10/)).toBeInTheDocument()
       // Check map components separately to handle text splitting
       expect(screen.getByText(/Map - Sites: 2/)).toBeInTheDocument()
       expect(screen.getByText(/Legend: No/)).toBeInTheDocument()
       expect(screen.getByText(/Height: 500/)).toBeInTheDocument()
-    })
-
-    it('handles organization dropdown selection', async () => {
-      const user = userEvent.setup()
-      render(<ChargingSitesList />, { wrapper })
-
-      const autocomplete = screen.getByRole('combobox')
-      await user.click(autocomplete)
-
-      expect(autocomplete).toBeInTheDocument()
-    })
-
-    it('handles clear filters button click', async () => {
-      const user = userEvent.setup()
-      render(<ChargingSitesList />, { wrapper })
-
-      const clearButton = screen.getByText('common:ClearFilters')
-      await user.click(clearButton)
-
-      expect(mockSessionStorage.removeItem).toHaveBeenCalledWith(
-        'selectedOrganization'
-      )
     })
 
     it('shows success alert when location state contains a message', async () => {
@@ -243,7 +216,6 @@ describe('ChargingSitesList', () => {
       expect(screen.getByText('mngTitle')).toBeInTheDocument()
       expect(screen.getByText('mngCSdescription')).toBeInTheDocument()
       expect(screen.getByText('newSiteBtn')).toBeInTheDocument()
-      expect(screen.queryByText('filtersLabel')).not.toBeInTheDocument()
     })
 
     it('navigates to add new site when button clicked', async () => {
@@ -256,11 +228,7 @@ describe('ChargingSitesList', () => {
       expect(mockNavigate).toHaveBeenCalledWith(expect.stringContaining('add'))
     })
 
-    it('still shows clear filters button for BCeID users', () => {
-      render(<ChargingSitesList />, { wrapper })
 
-      expect(screen.getByText('common:ClearFilters')).toBeInTheDocument()
-    })
   })
 
   describe('Row Click Navigation', () => {

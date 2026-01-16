@@ -217,6 +217,32 @@ export const OrgStatusRenderer = (props) => {
   )
 }
 
+OrgStatusRenderer.filterPillRenderer = ({ rawValue }) => {
+  const statusValue = rawValue || ''
+  if (!statusValue) return null
+  const statusArr = getAllOrganizationStatuses()
+  const statusColorArr = ['info', 'success', 'warning', 'error']
+  const statusIndex = statusArr.indexOf(statusValue)
+
+  return (
+    <BCBadge
+      badgeContent={statusValue}
+      color={statusColorArr[statusIndex] || 'info'}
+      variant="contained"
+      size="lg"
+      sx={{
+        '& .MuiBadge-badge': {
+          minWidth: '120px',
+          fontWeight: 'regular',
+          textTransform: 'capitalize',
+          fontSize: '0.875rem',
+          padding: '0.4em 0.6em'
+        }
+      }}
+    />
+  )
+}
+
 const ORG_TYPE_COLOR_MAP = {
   fuel_supplier: 'info',
   aggregator: 'warning',
@@ -224,6 +250,26 @@ const ORG_TYPE_COLOR_MAP = {
   exempted_supplier: 'secondary',
   initiative_agreement_holder: 'primary'
 }
+
+const renderOrgTypeBadge = (text, color) => (
+  <BCBadge
+    badgeContent={text}
+    color={color}
+    variant="contained"
+    size="lg"
+    sx={{
+      '& .MuiBadge-badge': {
+        minWidth: '140px',
+        fontWeight: 'regular',
+        textTransform: 'capitalize',
+        fontSize: '0.85rem',
+        padding: '0.35em 0.75em',
+        whiteSpace: 'normal',
+        lineHeight: 1.2
+      }
+    }}
+  />
+)
 
 export const OrgTypeRenderer = (props) => {
   const location = useLocation()
@@ -241,23 +287,7 @@ export const OrgTypeRenderer = (props) => {
           justifyContent: 'center'
         }}
       >
-        <BCBadge
-          badgeContent={label}
-          color={badgeColor}
-          variant="contained"
-          size="lg"
-          sx={{
-            '& .MuiBadge-badge': {
-              minWidth: '140px',
-              fontWeight: 'regular',
-              textTransform: 'capitalize',
-              fontSize: '0.85rem',
-              padding: '0.35em 0.75em',
-              whiteSpace: 'normal',
-              lineHeight: 1.2
-            }
-          }}
-        />
+        {renderOrgTypeBadge(label, badgeColor)}
       </BCBox>
     </BCBox>
   )
@@ -274,6 +304,13 @@ export const OrgTypeRenderer = (props) => {
       {badge}
     </Link>
   )
+}
+
+OrgTypeRenderer.filterPillRenderer = ({ rawValue }) => {
+  if (!rawValue) return null
+  const color = ORG_TYPE_COLOR_MAP[rawValue] || 'dark'
+  const display = getOrgTypeDisplayLabel({ orgType: rawValue }) || rawValue
+  return renderOrgTypeBadge(display, color)
 }
 
 export const YesNoTextRenderer = (props) => (
@@ -363,6 +400,23 @@ const TRANSFER_STATUS_TO_COLOR_MAP = {
 }
 
 export const TransactionStatusRenderer = (props) => {
+  const buildBadge = (status) => (
+    <BCBadge
+      badgeContent={status}
+      color={TRANSFER_STATUS_TO_COLOR_MAP[status]}
+      variant="contained"
+      size="lg"
+      sx={{
+        '& .MuiBadge-badge': {
+          minWidth: '120px',
+          fontWeight: 'regular',
+          fontSize: '0.875rem',
+          padding: '0.4em 0.6em'
+        }
+      }}
+    />
+  )
+
   const component = (
     <BCBox
       m={1}
@@ -371,20 +425,7 @@ export const TransactionStatusRenderer = (props) => {
         justifyContent: 'center'
       }}
     >
-      <BCBadge
-        badgeContent={props.data.status}
-        color={TRANSFER_STATUS_TO_COLOR_MAP[props.data.status]}
-        variant="contained"
-        size="lg"
-        sx={{
-          '& .MuiBadge-badge': {
-            minWidth: '120px',
-            fontWeight: 'regular',
-            fontSize: '0.875rem',
-            padding: '0.4em 0.6em'
-          }
-        }}
-      />
+      {buildBadge(props.data.status)}
     </BCBox>
   )
   if (props.url) {
@@ -401,6 +442,26 @@ export const TransactionStatusRenderer = (props) => {
   } else {
     return component
   }
+}
+
+TransactionStatusRenderer.filterPillRenderer = ({ rawValue }) => {
+  if (!rawValue) return null
+  return (
+    <BCBadge
+      badgeContent={rawValue}
+      color={TRANSFER_STATUS_TO_COLOR_MAP[rawValue]}
+      variant="contained"
+      size="lg"
+      sx={{
+        '& .MuiBadge-badge': {
+          minWidth: '120px',
+          fontWeight: 'regular',
+          fontSize: '0.875rem',
+          padding: '0.4em 0.6em'
+        }
+      }}
+    />
+  )
 }
 
 const STATUS_TO_COLOR_MAP = {
@@ -445,6 +506,33 @@ export const ReportsStatusRenderer = (props) => {
         />
       </BCBox>
     </Link>
+  )
+}
+
+ReportsStatusRenderer.filterPillRenderer = ({ rawValue }) => {
+  if (!rawValue) return null
+  const rawString = String(rawValue)
+  const displayValue = rawString.replaceAll('_', ' ')
+  const color =
+    STATUS_TO_COLOR_MAP[rawString] ||
+    STATUS_TO_COLOR_MAP[rawString.replaceAll(' ', '_')] ||
+    'info'
+
+  return (
+    <BCBadge
+      badgeContent={displayValue}
+      color={color}
+      variant="contained"
+      size="lg"
+      sx={{
+        '& .MuiBadge-badge': {
+          minWidth: '120px',
+          fontWeight: 'regular',
+          fontSize: '0.875rem',
+          padding: '0.4em 0.6em'
+        }
+      }}
+    />
   )
 }
 
@@ -853,7 +941,34 @@ export const createStatusRenderer = (
     urlGenerator = null
   } = options
 
-  return (props) => {
+  const buildBadge = (statusValue) => {
+    if (!statusValue) return null
+    let displayText = statusValue
+    if (replaceUnderscores && typeof displayText === 'string') {
+      displayText = displayText.replaceAll('_', ' ')
+    }
+    const badgeColor = colorMap[statusValue] || defaultColor
+
+    return (
+      <BCBadge
+        badgeContent={displayText}
+        color={badgeColor}
+        variant={variant}
+        size={size}
+        sx={{
+          '& .MuiBadge-badge': {
+            minWidth,
+            fontWeight,
+            fontSize,
+            padding,
+            ...(textTransform && { textTransform })
+          }
+        }}
+      />
+    )
+  }
+
+  const StatusRendererComponent = (props) => {
     const { data, node } = props
     const location = useLocation()
 
@@ -873,13 +988,7 @@ export const createStatusRenderer = (
       statusValue = value
     }
     // Get the display text
-    let displayText = statusValue
-    if (replaceUnderscores && typeof displayText === 'string') {
-      displayText = displayText.replaceAll('_', ' ')
-    }
-
-    const badgeColor = colorMap[statusValue] || defaultColor
-
+    const badgeNode = buildBadge(statusValue)
     const component = (
       <BCBox
         m={margin}
@@ -889,21 +998,7 @@ export const createStatusRenderer = (
         }}
         component="span"
       >
-        <BCBadge
-          badgeContent={displayText}
-          color={badgeColor}
-          variant={variant}
-          size={size}
-          sx={{
-            '& .MuiBadge-badge': {
-              minWidth,
-              fontWeight,
-              fontSize,
-              padding,
-              ...(textTransform && { textTransform })
-            }
-          }}
-        />
+        {badgeNode}
       </BCBox>
     )
 
@@ -922,6 +1017,16 @@ export const createStatusRenderer = (
 
     return component
   }
+
+  StatusRendererComponent.filterPillRenderer = ({ rawValue, value: pillValue }) => {
+    const pillStatusValue = rawValue || pillValue
+    if (!pillStatusValue) {
+      return null
+    }
+    return buildBadge(pillStatusValue)
+  }
+
+  return StatusRendererComponent
 }
 
 export const ChargingSiteStatusRenderer = createStatusRenderer(

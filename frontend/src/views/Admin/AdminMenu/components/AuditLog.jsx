@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
@@ -61,9 +60,6 @@ export const AuditLog = () => {
       <BCTypography variant="h5" color="primary" mb={2}>
         {t('admin:AuditLog')}
       </BCTypography>
-      <BCBox mb={2}>
-        <ClearFiltersButton onClick={handleClearFilters} />
-      </BCBox>
       <BCGridViewer
         gridRef={gridRef}
         queryData={queryData}

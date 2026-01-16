@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock BCButton component
 vi.mock('@/components/BCButton', () => ({
-  default: vi.fn().mockImplementation(({ children, onClick, onKeyDown, disabled, startIcon, size, color, variant, sx, ...props }) => {
+  default: vi.fn().mockImplementation(({ children, onClick, onKeyDown, disabled, startIcon, endIcon, size, color, variant, sx, ...props }) => {
     const handleClick = disabled ? undefined : onClick
     const handleKeyDown = disabled ? undefined : onKeyDown
     const buttonProps = {
@@ -41,22 +41,19 @@ vi.mock('@/components/BCButton', () => ({
       <button {...buttonProps}>
         {startIcon && <span data-test="start-icon">{startIcon}</span>}
         {children}
+        {endIcon && <span data-test="end-icon">{endIcon}</span>}
       </button>
     )
   })
 }))
 
-// Mock FontAwesome components
-vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: vi.fn(({ icon, className }) => (
-    <span data-test="font-awesome-icon" className={className}>
-      {icon.iconName || 'filter-clear-icon'}
+// Mock MUI FilterListOffIcon
+vi.mock('@mui/icons-material/FilterListOff', () => ({
+  default: vi.fn(({ className }) => (
+    <span data-test="filter-list-off-icon" className={className}>
+      filter-list-off
     </span>
   ))
-}))
-
-vi.mock('@fortawesome/free-solid-svg-icons', () => ({
-  faFilterCircleXmark: { iconName: 'filter-circle-xmark' }
 }))
 
 describe('ClearFiltersButton', () => {
@@ -86,10 +83,10 @@ describe('ClearFiltersButton', () => {
     it('renders with filter clear icon', () => {
       render(<ClearFiltersButton {...defaultProps} />)
       
-      const icon = screen.getByTestId('font-awesome-icon')
+      const icon = screen.getByTestId('filter-list-off-icon')
       expect(icon).toBeInTheDocument()
       expect(icon).toHaveClass('small-icon')
-      expect(icon).toHaveTextContent('filter-circle-xmark')
+      expect(icon).toHaveTextContent('filter-list-off')
     })
 
     it('renders with default button properties', () => {
@@ -335,7 +332,7 @@ describe('ClearFiltersButton', () => {
     it('includes icon for visual users', () => {
       render(<ClearFiltersButton {...defaultProps} />)
       
-      const icon = screen.getByTestId('font-awesome-icon')
+      const icon = screen.getByTestId('filter-list-off-icon')
       expect(icon).toBeInTheDocument()
       expect(icon).toHaveClass('small-icon')
     })

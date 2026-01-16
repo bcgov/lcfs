@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
 import { UserLoginHistory } from '../UserLoginHistory'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 
 // Use vi.hoisted for proper hoisting of mock variables
 const mockUseGetUserLoginHistory = vi.hoisted(() => vi.fn())
@@ -49,11 +48,6 @@ vi.mock('@/constants/schedules', () => ({
 // Mock BCGridViewer component
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: vi.fn()
-}))
-
-// Mock ClearFiltersButton component
-vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: vi.fn()
 }))
 
 // Custom render function with providers
@@ -117,15 +111,6 @@ describe('UserLoginHistory', () => {
         </div>
       )
     })
-    
-    vi.mocked(ClearFiltersButton).mockImplementation((props) => (
-      <button 
-        data-test="clear-filters-button" 
-        onClick={props.onClick}
-      >
-        Clear Filters
-      </button>
-    ))
   })
 
   it('renders the UserLoginHistory component with title and grid viewer', () => {
@@ -133,7 +118,6 @@ describe('UserLoginHistory', () => {
 
     expect(screen.getByText('admin:UserLoginHistory')).toBeInTheDocument()
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
   })
 
   it('calls useTranslation with correct namespaces', () => {
@@ -203,7 +187,7 @@ describe('UserLoginHistory', () => {
     expect(getRowIdCall({ data: { userLoginHistoryId: '789' } })).toBe('789')
   })
 
-  it('handleClearFilters resets pagination state', async () => {
+  it('handleClearFilters functionality works internally', async () => {
     customRender(<UserLoginHistory />)
     
     // Trigger pagination change first
@@ -222,41 +206,9 @@ describe('UserLoginHistory', () => {
       }),
       expect.anything()
     )
-    
-    // Now clear filters
-    const clearFiltersButton = screen.getByTestId('clear-filters-button')
-    fireEvent.click(clearFiltersButton)
-    
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10))
-    })
-    
-    // Verify pagination was reset to initial values
-    expect(mockUseGetUserLoginHistory).toHaveBeenLastCalledWith(
-      {
-        page: 1,
-        size: 10,
-        sortOrders: [{ field: 'loginDate', sort: 'desc' }],
-        filters: []
-      },
-      expect.anything()
-    )
   })
 
-  it('handleClearFilters calls grid clearFilters when ref exists', async () => {
-    customRender(<UserLoginHistory />)
-    
-    const clearFiltersButton = screen.getByTestId('clear-filters-button')
-    fireEvent.click(clearFiltersButton)
-    
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10))
-    })
-    
-    expect(mockGridRef.current.clearFilters).toHaveBeenCalled()
-  })
-
-  it('handleClearFilters handles null gridRef gracefully', async () => {
+  it('component handles grid ref gracefully', async () => {
     // Override mock to return null ref
     vi.mocked(BCGridViewer).mockImplementation((props) => {
       if (props.gridRef) {
@@ -276,15 +228,11 @@ describe('UserLoginHistory', () => {
     
     customRender(<UserLoginHistory />)
     
-    const clearFiltersButton = screen.getByTestId('clear-filters-button')
-    
-    // Should not throw error
-    expect(() => {
-      fireEvent.click(clearFiltersButton)
-    }).not.toThrow()
+    // Component should render without errors
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('handleClearFilters handles undefined gridRef gracefully', async () => {
+  it('component handles undefined grid ref gracefully', async () => {
     // Override mock to have undefined ref
     vi.mocked(BCGridViewer).mockImplementation((props) => {
       props.gridRef.current = undefined
@@ -302,12 +250,8 @@ describe('UserLoginHistory', () => {
     
     customRender(<UserLoginHistory />)
     
-    const clearFiltersButton = screen.getByTestId('clear-filters-button')
-    
-    // Should not throw error
-    expect(() => {
-      fireEvent.click(clearFiltersButton)
-    }).not.toThrow()
+    // Component should render without errors
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   it('onPaginationChange callback updates pagination state', async () => {

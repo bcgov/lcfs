@@ -134,12 +134,6 @@ vi.mock('@/components/Role', () => ({
   }
 }))
 
-vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: (props) => (
-    <button onClick={props.onClick}>clearFilters</button>
-  )
-}))
-
 describe('ComplianceReports - Comprehensive Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -178,18 +172,6 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(gridViewer).toBeInTheDocument()
   })
 
-  it('handles clear filters with sessionStorage', async () => {
-    render(<ComplianceReports />, { wrapper })
-
-    const clearFiltersButton = screen.getByText('clearFilters')
-    fireEvent.click(clearFiltersButton)
-
-    await waitFor(() => {
-      expect(window.sessionStorage.removeItem).toHaveBeenCalledWith(
-        'compliance-reports-grid-filter'
-      )
-    })
-  })
 
   it('handles new compliance report creation', async () => {
     render(<ComplianceReports />, { wrapper })
@@ -250,7 +232,6 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(
       screen.getByTestId('new-compliance-report-button')
     ).toBeInTheDocument()
-    expect(screen.getByText('clearFilters')).toBeInTheDocument()
     expect(screen.getByTestId('credit-calculator')).toBeInTheDocument()
   })
 
@@ -297,7 +278,6 @@ describe('ComplianceReports - Comprehensive Tests', () => {
     expect(
       screen.getByTestId('new-compliance-report-button')
     ).toBeInTheDocument()
-    expect(screen.getByText('clearFilters')).toBeInTheDocument()
     expect(screen.getByTestId('credit-calculator')).toBeInTheDocument()
   })
 

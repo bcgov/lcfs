@@ -6,7 +6,6 @@ import {
   userActivityColDefs,
   defaultSortModel
 } from '@/views/Admin/AdminMenu/components/_schema'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserActivities } from '@/hooks/useUser'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
@@ -64,21 +63,24 @@ export const UserActivity = () => {
     []
   )
 
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    if (gridRef && gridRef.current) {
-      gridRef.current.clearFilters()
+  const handleClearFilters = useCallback(() => {
+    setPaginationOptions({ ...initialPaginationOptions })
+
+    try {
+      sessionStorage.removeItem('all-user-activities-grid-filter')
+      sessionStorage.removeItem('all-user-activities-grid-column')
+    } catch (error) {
+      // no-op if sessionStorage is unavailable
     }
-  }
+
+    gridRef?.current?.clearFilters?.()
+  }, [])
 
   return (
     <BCBox>
       <BCTypography variant="h5" color="primary" mb={2}>
         {t('admin:UserActivity')}
       </BCTypography>
-      <BCBox mb={2}>
-        <ClearFiltersButton onClick={handleClearFilters} />
-      </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}
@@ -96,6 +98,7 @@ export const UserActivity = () => {
               ...newPagination
             }))
           }
+          onClearFilters={handleClearFilters}
         />
       </BCBox>
     </BCBox>

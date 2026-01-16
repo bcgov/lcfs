@@ -54,6 +54,7 @@ class FilterModel(BaseSchema):
     filter_type: str = Field(default="text", alias="filterType")
     type: str = Field(default="contains", alias="type")
     filter: Optional[Any] = None
+    values: Optional[List[Any]] = Field(default=None, alias="values")
     field: str = Field(default="", alias="field")
     date_from: Optional[str] = Field(default="", alias="dateFrom")
     date_to: Optional[str] = Field(default="", alias="dateTo")

@@ -214,14 +214,6 @@ vi.mock('@/components/DownloadButton', () => {
   }
 })
 
-vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick }) => (
-    <button data-test="clear-filters-button" onClick={onClick}>
-      Clear Filters
-    </button>
-  )
-}))
-
 vi.mock('@/components/Role', () => ({
   Role: ({ children, roles }) => (
     <div data-test="role-component" data-roles={roles?.join(',')}>
@@ -259,7 +251,6 @@ describe('Organizations Component', () => {
       expect(screen.getByText('Add Organization')).toBeInTheDocument()
       expect(screen.getByText('Download Organizations')).toBeInTheDocument()
       expect(screen.getByText('Download Users')).toBeInTheDocument()
-      expect(screen.getByTestId('clear-filters-button')).toBeInTheDocument()
       expect(screen.getByTestId('role-component')).toBeInTheDocument()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
     })
@@ -345,25 +336,6 @@ describe('Organizations Component', () => {
           'Failed to download user information.'
         )
       })
-    })
-  })
-
-  describe('Clear Filters Function', () => {
-    it('renders clear filters button', () => {
-      render(<Organizations />, { wrapper })
-
-      const clearFiltersButton = screen.getByTestId('clear-filters-button')
-      expect(clearFiltersButton).toBeInTheDocument()
-      expect(clearFiltersButton.textContent).toBe('Clear Filters')
-    })
-
-    it('handles clear filters button click', () => {
-      render(<Organizations />, { wrapper })
-
-      const clearFiltersButton = screen.getByTestId('clear-filters-button')
-      fireEvent.click(clearFiltersButton)
-
-      expect(clearFiltersButton).toBeInTheDocument()
     })
   })
 

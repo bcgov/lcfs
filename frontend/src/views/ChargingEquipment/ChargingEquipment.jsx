@@ -2,17 +2,15 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
 import {
   faCirclePlus,
   faCheck,
   faBan,
-  faSquareCheck,
-  faFilterCircleXmark
+  faSquareCheck
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Grid, Stack, Autocomplete, TextField } from '@mui/material'
+import { Box, Grid, Stack } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Outlet,
@@ -36,7 +34,6 @@ const defaultColDef = {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
-import { Role } from '@/components/Role'
 import Loading from '@/components/Loading'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { BCAlert2 } from '@/components/BCAlert'
@@ -120,7 +117,7 @@ export const ChargingEquipment = () => {
     }
   }, [filteredOrgNames, selectedOrg.id])
 
-  const renderOrganizationOption = (props, option) => {
+  const renderOrganizationOption = useCallback((props, option) => {
     const orgTypeLabel = option?.orgType || option?.org_type
     const formattedOrgType = orgTypeLabel
       ? orgTypeLabel
@@ -141,7 +138,7 @@ export const ChargingEquipment = () => {
         </Box>
       </li>
     )
-  }
+  }, [])
 
   // Enhanced organization change handler with caching
   const handleOrganizationChange = useCallback((event, option) => {
@@ -175,6 +172,57 @@ export const ChargingEquipment = () => {
       null
     )
   }, [selectedOrg.id, filteredOrgNames])
+
+  const filterToolbarConfig = useMemo(() => {
+    if (!isIDIR) return null
+    const selectFilters = [
+      {
+        id: 'organization',
+        label: t('chargingEquipment:showFSEFor', 'Show FSE for:'),
+        placeholder: t(
+          'chargingEquipment:selectOrganization',
+          'Select organization'
+        ),
+        value: selectedOrgOption,
+        options: filteredOrgNames,
+        onChange: (option) => handleOrganizationChange(null, option),
+        getOptionLabel: (option) => option?.name || '',
+        renderOption: renderOrganizationOption,
+        isLoading: orgLoading,
+        width: 320,
+        isOptionEqualToValue: (option, value) =>
+          option?.organizationId === value?.organizationId
+      }
+    ]
+
+    const additionalPills =
+      selectedOrg.id && selectedOrg.label
+        ? [
+            {
+              id: `organization-${selectedOrg.id}`,
+              label: t('common:Organization', 'Organization'),
+              value: selectedOrg.label,
+              type: 'select',
+              onRemove: () => handleOrganizationChange(null, null)
+            }
+          ]
+        : []
+
+    return {
+      selectFilters,
+      additionalPills
+    }
+  }, [
+    isIDIR,
+    t,
+    selectedOrgOption,
+    filteredOrgNames,
+    handleOrganizationChange,
+    renderOrganizationOption,
+    orgLoading,
+    selectedOrg.id,
+    selectedOrg.label
+  ])
 
   // Include organization filter in pagination options for IDIR users
   const enhancedPaginationOptions = useMemo(() => {
@@ -231,6 +279,17 @@ export const ChargingEquipment = () => {
       sortable: true
     }),
     []
+  )
+
+  const columnDefs = useMemo(
+    () =>
+      chargingEquipmentColDefs(t, isIDIR, {
+        enableSelection: !isIDIR,
+        showDateColumns: true,
+        showIntendedUsers: true,
+        showOrganizationColumn: isIDIR
+      }),
+    [t, isIDIR]
   )
 
   const handleNewFSE = () => {
@@ -438,14 +497,12 @@ export const ChargingEquipment = () => {
     }
   }
 
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    gridRef.current?.api?.setFilterModel(null)
-    // Clear organization filter for IDIR users
+  const handleClearFilters = useCallback(() => {
+    setPaginationOptions({ ...initialPaginationOptions })
     if (isIDIR) {
       handleOrganizationChange(null, null)
     }
-  }
+  }, [isIDIR, handleOrganizationChange])
 
   const canSubmit = selectedRows.some(
     (row) => row.status === 'Draft' || row.status === 'Updated'
@@ -505,58 +562,8 @@ export const ChargingEquipment = () => {
                     </BCTypography>
                   </BCButton>
                 )}
-                <ClearFiltersButton onClick={handleClearFilters} />
               </Stack>
             </Grid>
-            {isIDIR && (
-              <Grid
-                item
-                xs={12}
-                lg={5}
-                sx={{
-                  display: 'flex',
-                  justifyContent: { xs: 'flex-start', lg: 'flex-end' },
-                  alignItems: 'center'
-                }}
-              >
-                <Role roles={govRoles}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <BCTypography variant="body2" color="primary">
-                      Show FSE for:
-                    </BCTypography>
-                    <Autocomplete
-                      disablePortal
-                      id="fse-orgs"
-                      loading={orgLoading}
-                      options={filteredOrgNames}
-                      value={selectedOrgOption}
-                      getOptionLabel={(option) => option?.name || ''}
-                      isOptionEqualToValue={(option, value) =>
-                        option.organizationId === value.organizationId
-                      }
-                      onChange={handleOrganizationChange}
-                      renderOption={renderOrganizationOption}
-                      sx={({ functions: { pxToRem } }) => ({
-                        width: 300,
-                        '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
-                      })}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="Select organization"
-                          slotProps={{
-                            htmlInput: {
-                              ...params.inputProps,
-                              style: { fontSize: 16, padding: '8px' }
-                            }
-                          }}
-                        />
-                      )}
-                    />
-                  </Box>
-                </Role>
-              </Grid>
-            )}
           </Grid>
 
           <BCBox sx={{ width: '100%', minHeight: 600, mt: 2 }}>
@@ -616,12 +623,7 @@ export const ChargingEquipment = () => {
               <BCGridViewer
                 gridRef={gridRef}
                 alertRef={alertRef}
-                columnDefs={chargingEquipmentColDefs(t, isIDIR, {
-                  enableSelection: true && !isIDIR,
-                  showDateColumns: true,
-                  showIntendedUsers: true,
-                  showOrganizationColumn: isIDIR
-                })}
+                columnDefs={columnDefs}
                 defaultColDef={defaultColDef}
                 getRowId={getRowId}
                 overlayLoadingTemplate="Loading FSE data..."
@@ -636,6 +638,8 @@ export const ChargingEquipment = () => {
                 suppressRowClickSelection={true}
                 rowMultiSelectWithClick={false}
                 highlightedRowId={highlightedId}
+                filterToolbarConfig={filterToolbarConfig || undefined}
+                onClearFilters={handleClearFilters}
               />
             </BCBox>
           </BCBox>
