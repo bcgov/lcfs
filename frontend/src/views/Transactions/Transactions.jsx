@@ -112,6 +112,10 @@ export const Transactions = () => {
   }, [])
 
   const shouldRenderLink = (props) => {
+    // Legacy/Standalone transactions have no detail view page
+    if (props.data.transactionType === 'StandaloneTransaction') {
+      return false
+    }
     return (
       props.data.transactionType !== 'ComplianceReport' ||
       hasAnyRole(
