@@ -630,9 +630,7 @@ export const BCGridViewer = forwardRef(
         }
 
         const gridFilters = grid.api.getFilterModel()
-        console.log('Grid filters:', gridFilters)
         const filterArr = convertFilterModelToArray(gridFilters)
-        console.log('Converted filters:', filterArr)
         setActiveFilters(filterArr)
 
         const updatedOptions = {
@@ -640,7 +638,6 @@ export const BCGridViewer = forwardRef(
           page: 1, // Always reset to page 1 when filters change
           filters: filterArr
         }
-        console.log('Updated pagination options:', updatedOptions)
         onPaginationChange(updatedOptions)
         if (enablePageCaching) {
           cachePaginationOptions(updatedOptions)
