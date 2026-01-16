@@ -34,17 +34,18 @@ def start_scheduler(app: FastAPI):
         #     id="check_overdue_supplemental_reports_startup",
         #     args=[app]
         # )
-        # Add the job to the scheduler to run every day at midnight
-        scheduler.add_job(
-            check_overdue_supplemental_reports,
-            'cron',
-            hour=0,
-            minute=8,
-            id="check_overdue_supplemental_reports",
-            replace_existing=True,
-            args=[app]
-        )
-        logger.info("Added job: 'check_overdue_supplemental_reports' to run daily at midnight.")
+        # DISABLED: Auto-submit job disabled per ticket #3752
+        # Future development will implement in-app notification for overdue drafts
+        # scheduler.add_job(
+        #     check_overdue_supplemental_reports,
+        #     'cron',
+        #     hour=0,
+        #     minute=8,
+        #     id="check_overdue_supplemental_reports",
+        #     replace_existing=True,
+        #     args=[app]
+        # )
+        # logger.info("Added job: 'check_overdue_supplemental_reports' to run daily at midnight.")
 
 def shutdown_scheduler():
     """

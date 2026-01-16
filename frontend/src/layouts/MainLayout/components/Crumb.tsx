@@ -5,6 +5,7 @@ import { emphasize, styled } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
 import { isNumeric } from '@/utils/formatters'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 type RouteTitleResolver = (args: {
   params: Record<string, string | undefined>
@@ -78,9 +79,19 @@ const Crumb = () => {
   const activeTabLabel = useOrganizationPageStore(
     (state) => state.activeTabLabel
   )
+
+  // Get the actual compliance period from the cached report data (not the URL)
+  // This prevents URL manipulation from showing incorrect year in breadcrumbs
+  const reportData = useComplianceReportStore((state) =>
+    complianceReportId ? state.getCachedReport(complianceReportId) : undefined
+  )
+  const reportCompliancePeriod =
+    (reportData?.report?.compliancePeriod as { description?: string })
+      ?.description || compliancePeriod
+
   const path = location.pathname.replace(
     `/compliance-reporting/${compliancePeriod}/${complianceReportId}`,
-    `/compliance-reporting/${compliancePeriod}-Compliance-report`
+    `/compliance-reporting/${reportCompliancePeriod}-Compliance-report`
   )
   const pathnames = path.split('/').filter((x) => x)
   const currentMatch = matches[matches.length - 1] as
@@ -167,7 +178,7 @@ const Crumb = () => {
           let routeTo =
             customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
           if (reportPathRegex.test(name)) {
-            routeTo = `compliance-reporting/${compliancePeriod}/${complianceReportId}`
+            routeTo = `compliance-reporting/${reportCompliancePeriod}/${complianceReportId}`
           }
           const displayName =
             customCrumb.label ||

@@ -30,13 +30,17 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 const mockUseCurrentGovernmentNotification = vi.fn()
 const mockMutate = vi.fn()
+const mockDeleteMutate = vi.fn()
 const mockUseUpdateGovernmentNotification = vi.fn()
+const mockUseDeleteGovernmentNotification = vi.fn()
 
 vi.mock('@/hooks/useGovernmentNotification', () => ({
   useCurrentGovernmentNotification: () =>
     mockUseCurrentGovernmentNotification(),
   useUpdateGovernmentNotification: (callbacks) =>
-    mockUseUpdateGovernmentNotification(callbacks)
+    mockUseUpdateGovernmentNotification(callbacks),
+  useDeleteGovernmentNotification: (callbacks) =>
+    mockUseDeleteGovernmentNotification(callbacks)
 }))
 
 // Mock ReactQuill
@@ -81,6 +85,10 @@ describe('GovernmentNotificationsCard', () => {
     })
     mockUseUpdateGovernmentNotification.mockReturnValue({
       mutate: mockMutate,
+      isPending: false
+    })
+    mockUseDeleteGovernmentNotification.mockReturnValue({
+      mutate: mockDeleteMutate,
       isPending: false
     })
   })
@@ -914,6 +922,279 @@ describe('GovernmentNotificationsCard', () => {
         expect(
           screen.queryByPlaceholderText('Enter notification title')
         ).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Delete Functionality', () => {
+    beforeEach(() => {
+      mockHasAnyRole.mockReturnValue(true)
+    })
+
+    it('should show delete button when user can edit and notification exists', () => {
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      expect(
+        screen.getByRole('button', { name: /delete notification/i })
+      ).toBeInTheDocument()
+    })
+
+    it('should not show delete button when user cannot edit', () => {
+      mockHasAnyRole.mockReturnValue(false)
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      expect(
+        screen.queryByRole('button', { name: /delete notification/i })
+      ).not.toBeInTheDocument()
+    })
+
+    it('should not show delete button when no notification exists', () => {
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: null,
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      expect(
+        screen.queryByRole('button', { name: /delete notification/i })
+      ).not.toBeInTheDocument()
+    })
+
+    it('should show delete confirmation dialog when delete button is clicked', async () => {
+      const user = userEvent.setup()
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      const deleteButton = screen.getByRole('button', {
+        name: /delete notification/i
+      })
+      await user.click(deleteButton)
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText('Delete notification')).toBeInTheDocument()
+      expect(
+        screen.getByText(/Are you sure you want to delete this government notification/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Delete' })
+      ).toBeInTheDocument()
+    })
+
+    it('should call delete mutation when delete is confirmed', async () => {
+      const user = userEvent.setup()
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      const deleteButton = screen.getByRole('button', {
+        name: /delete notification/i
+      })
+      await user.click(deleteButton)
+
+      const confirmDeleteButton = screen.getByRole('button', { name: 'Delete' })
+      await user.click(confirmDeleteButton)
+
+      expect(mockDeleteMutate).toHaveBeenCalled()
+    })
+
+    it('should close delete dialog when cancel is clicked', async () => {
+      const user = userEvent.setup()
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      const deleteButton = screen.getByRole('button', {
+        name: /delete notification/i
+      })
+      await user.click(deleteButton)
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+      // Find the Cancel button inside the dialog
+      const dialog = screen.getByRole('dialog')
+      const cancelButton = within(dialog).getByRole('button', { name: 'Cancel' })
+      await user.click(cancelButton)
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should show success snackbar on successful delete', async () => {
+      const user = userEvent.setup()
+      let onSuccessCallback
+
+      mockUseDeleteGovernmentNotification.mockImplementation((callbacks) => {
+        onSuccessCallback = callbacks?.onSuccess
+        return {
+          mutate: mockDeleteMutate,
+          isPending: false
+        }
+      })
+
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      const deleteButton = screen.getByRole('button', {
+        name: /delete notification/i
+      })
+      await user.click(deleteButton)
+
+      const confirmDeleteButton = screen.getByRole('button', { name: 'Delete' })
+      await user.click(confirmDeleteButton)
+
+      // Simulate successful delete
+      if (onSuccessCallback) {
+        onSuccessCallback()
+      }
+
+      await waitFor(() => {
+        expect(mockEnqueueSnackbar).toHaveBeenCalledWith(
+          'Government notification deleted successfully',
+          { variant: 'success' }
+        )
+      })
+    })
+
+    it('should show error snackbar on failed delete', async () => {
+      const user = userEvent.setup()
+      let onErrorCallback
+
+      mockUseDeleteGovernmentNotification.mockImplementation((callbacks) => {
+        onErrorCallback = callbacks?.onError
+        return {
+          mutate: mockDeleteMutate,
+          isPending: false
+        }
+      })
+
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      const deleteButton = screen.getByRole('button', {
+        name: /delete notification/i
+      })
+      await user.click(deleteButton)
+
+      const confirmDeleteButton = screen.getByRole('button', { name: 'Delete' })
+      await user.click(confirmDeleteButton)
+
+      // Simulate failed delete
+      if (onErrorCallback) {
+        onErrorCallback({
+          response: {
+            data: {
+              message: 'Delete failed'
+            }
+          }
+        })
+      }
+
+      await waitFor(() => {
+        expect(mockEnqueueSnackbar).toHaveBeenCalledWith('Delete failed', {
+          variant: 'error'
+        })
+      })
+    })
+
+    it('should show default error message when delete error has no message', async () => {
+      const user = userEvent.setup()
+      let onErrorCallback
+
+      mockUseDeleteGovernmentNotification.mockImplementation((callbacks) => {
+        onErrorCallback = callbacks?.onError
+        return {
+          mutate: mockDeleteMutate,
+          isPending: false
+        }
+      })
+
+      mockUseCurrentGovernmentNotification.mockReturnValue({
+        data: {
+          notificationTitle: 'Test Notification',
+          notificationText: '<p>Test content</p>',
+          notificationType: 'General'
+        },
+        isLoading: false
+      })
+
+      render(<GovernmentNotificationsCard />, { wrapper: createWrapper() })
+
+      const deleteButton = screen.getByRole('button', {
+        name: /delete notification/i
+      })
+      await user.click(deleteButton)
+
+      const confirmDeleteButton = screen.getByRole('button', { name: 'Delete' })
+      await user.click(confirmDeleteButton)
+
+      // Simulate failed delete with no error message
+      if (onErrorCallback) {
+        onErrorCallback({})
+      }
+
+      await waitFor(() => {
+        expect(mockEnqueueSnackbar).toHaveBeenCalledWith(
+          'Failed to delete government notification',
+          { variant: 'error' }
+        )
       })
     })
   })

@@ -473,19 +473,29 @@ const ChargingSiteMarker = ({ site, isFullscreen }) => {
           )}
 
           {/* Dates */}
-          <BCTypography
-            variant="caption"
-            component="div"
-            sx={{ mt: 2, color: '#666' }}
-          >
-            {t('cardLabels.created')}:{' '}
-            {new Date(site.createDate).toLocaleDateString()} by{' '}
-            {site.createUser}
-            <br />
-            {t('cardLabels.updated')}:{' '}
-            {new Date(site.updateDate).toLocaleDateString()} by{' '}
-            {site.updateUser}
-          </BCTypography>
+          {(site.createDate || site.updateDate) && (
+            <BCTypography
+              variant="caption"
+              component="div"
+              sx={{ mt: 2, color: '#666' }}
+            >
+              {site.createDate && (
+                <>
+                  {t('cardLabels.created')}:{' '}
+                  {new Date(site.createDate).toLocaleDateString()}
+                  {site.createUser && ` by ${site.createUser}`}
+                  <br />
+                </>
+              )}
+              {site.updateDate && (
+                <>
+                  {t('cardLabels.updated')}:{' '}
+                  {new Date(site.updateDate).toLocaleDateString()}
+                  {site.updateUser && ` by ${site.updateUser}`}
+                </>
+              )}
+            </BCTypography>
+          )}
 
           {/* Link to site info */}
           <Box

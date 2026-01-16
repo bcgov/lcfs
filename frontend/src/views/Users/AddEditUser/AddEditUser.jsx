@@ -229,7 +229,7 @@ export const AddEditUser = ({
       lastName: data.lastName,
       keycloakUsername: data.userName,
       keycloakEmail: data.keycloakEmail,
-      email: data.altEmail === '' ? null : data.altEmail,
+      email: data.altEmail,
       phone: data.phone,
       mobilePhone: data.mobile,
       isActive: data.status === 'Active',

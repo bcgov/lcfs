@@ -1,3 +1,6 @@
+# Generated geocoding output files
+org_snapshot_coordinates.sql
+
 ### Python template
 
 .idea/

@@ -1,6 +1,5 @@
 export interface FeatureFlagsConfig {
   supplementalReporting?: boolean
-  fullLegacyReports?: boolean
   fseImportExport?: boolean
   allocationAgreementImportExport?: boolean
   governmentAdjustment?: boolean
@@ -67,7 +66,6 @@ export function getApiBaseUrl(): string {
 
 export const FEATURE_FLAGS = {
   SUPPLEMENTAL_REPORTING: 'supplementalReporting',
-  LEGACY_REPORT_DETAILS: 'fullLegacyReports',
   FSE_IMPORT_EXPORT: 'fseImportExport',
   ALLOCATION_AGREEMENT_IMPORT_EXPORT: 'allocationAgreementImportExport',
   GOVERNMENT_ADJUSTMENT: 'governmentAdjustment',
@@ -114,8 +112,6 @@ export const CONFIG: AppConfig = {
   feature_flags: {
     supplementalReporting:
       window.lcfs_config.feature_flags.supplementalReporting ?? false,
-    fullLegacyReports:
-      window.lcfs_config.feature_flags.fullLegacyReports ?? false,
     fseImportExport: window.lcfs_config.feature_flags.fseImportExport ?? false,
     allocationAgreementImportExport:
       window.lcfs_config.feature_flags.allocationAgreementImportExport ?? false,

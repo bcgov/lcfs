@@ -1,8 +1,34 @@
 import { create } from 'zustand'
 
-const useComplianceReportStore = create((set, get) => ({
+export type ReportId = number | string
+
+export type ComplianceReport = {
+  report: {
+    id?: ReportId
+    [key: string]: unknown
+  }
+  metadata?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+type ComplianceReportStore = {
+  currentReport: ComplianceReport | null
+  reportCache: Map<ReportId, ComplianceReport>
+  setCurrentReport: (reportData: ComplianceReport | null) => void
+  cacheReport: (reportId: ReportId, reportData: ComplianceReport) => void
+  getCachedReport: (reportId: ReportId) => ComplianceReport | undefined
+  shouldFetchReport: (reportId: ReportId) => boolean
+  clearCurrentReport: () => void
+  removeReport: (reportId: ReportId) => void
+  getCurrentReportId: () => ReportId | undefined
+  isReportCached: (reportId: ReportId) => boolean
+  getAllCachedReports: () => ComplianceReport[]
+  getReportByIdOrCurrent: (reportId: ReportId) => ComplianceReport | null
+}
+
+const useComplianceReportStore = create<ComplianceReportStore>((set, get) => ({
   currentReport: null,
-  reportCache: new Map(),
+  reportCache: new Map<ReportId, ComplianceReport>(),
 
   setCurrentReport: (reportData) => set({ currentReport: reportData }),
 
@@ -20,10 +46,9 @@ const useComplianceReportStore = create((set, get) => ({
       newCache.delete(reportId)
 
       // If the current report is the one being removed, clear it too
+      const currentReportId = state.currentReport?.report?.id
       const newCurrentReport =
-        state.currentReport?.report?.id === reportId
-          ? null
-          : state.currentReport
+        currentReportId === reportId ? null : state.currentReport
 
       return {
         reportCache: newCache,

@@ -3,7 +3,7 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
-import useComplianceReportStore from '@/stores/useComplianceReportStore.js'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes

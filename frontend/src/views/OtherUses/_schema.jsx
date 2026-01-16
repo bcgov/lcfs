@@ -215,8 +215,13 @@ export const otherUsesColDefs = (
             params.data.isCanadaProduced =
               matchingFuelCode?.fuelProductionFacilityCountry === 'Canada'
           }
+          params.data.isQ1Supplied = false
+        } else {
+          // If user clears the value
           params.data.isCanadaProduced = false
           params.data.isQ1Supplied = false
+          params.data.fuelCode = undefined
+          params.data.fuelCodeId = undefined
         }
         return true
       }

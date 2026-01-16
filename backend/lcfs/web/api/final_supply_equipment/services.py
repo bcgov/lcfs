@@ -466,6 +466,12 @@ class FinalSupplyEquipmentServices:
                     filter=report.compliance_report_group_uuid,
                 )
             )
+        
+        # Check if organization has any charging equipment
+        has_equipment = await self.repo.has_charging_equipment_for_organization(
+            organization_id
+        )
+        
         data, total = await self.repo.get_fse_reporting_list_paginated(
             organization_id, pagination, report.compliance_report_group_uuid, mode
         )
@@ -507,6 +513,7 @@ class FinalSupplyEquipmentServices:
                 total=total,
                 total_pages=math.ceil(total / pagination.size),
             ),
+            "hasChargingEquipment": has_equipment,
         }
 
     def _calculate_capacity_utilization(self, row: dict, power_value: float | None) -> int | None:

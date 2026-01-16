@@ -464,8 +464,8 @@ export const ChargingEquipment = () => {
             {t('chargingEquipment:errorLoadingEquipment')}
             <br />
             <small>
-              Please check if the backend charging equipment service is running
-              properly.
+              Please try refreshing the page. If the problem persists, contact
+              support.
             </small>
           </BCAlert>
         </Grid>

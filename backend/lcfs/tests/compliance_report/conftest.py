@@ -211,7 +211,6 @@ def mock_compliance_data_service():
     mock_service = MagicMock(spec=ComplianceDataService)
     mock_service.get_period.return_value = 2024
     mock_service.get_nickname.return_value = "Test Report"
-    mock_service.is_legacy_year.return_value = False
     return mock_service
 
 

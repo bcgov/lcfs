@@ -91,12 +91,6 @@ export const ActivityLinksList = ({
   const secondaryList = useMemo(
     () => [
       createActivity(
-        'report:activityLists.finalSupplyEquipment',
-        'report:activityLabels.finalSupplyEquipment',
-        ROUTES.REPORTS.ADD.FSE_REPORTING,
-        true
-      ),
-      createActivity(
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
         ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS,

@@ -10,8 +10,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider
+  Divider,
+  IconButton,
+  Tooltip
 } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 import { GlobalStyles } from '@mui/system'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -22,7 +25,8 @@ import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useCurrentGovernmentNotification,
-  useUpdateGovernmentNotification
+  useUpdateGovernmentNotification,
+  useDeleteGovernmentNotification
 } from '@/hooks/useGovernmentNotification'
 import { roles } from '@/constants/roles'
 import { useSnackbar } from 'notistack'
@@ -83,9 +87,26 @@ const GovernmentNotificationsCard = () => {
     }
   })
 
+  const deleteMutation = useDeleteGovernmentNotification({
+    onSuccess: () => {
+      enqueueSnackbar('Government notification deleted successfully', {
+        variant: 'success'
+      })
+      setShowDeleteDialog(false)
+    },
+    onError: (error) => {
+      enqueueSnackbar(
+        error?.response?.data?.message ||
+          'Failed to delete government notification',
+        { variant: 'error' }
+      )
+    }
+  })
+
   const [isEditing, setIsEditing] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [formData, setFormData] = useState({
     notification_title: '',
     notification_text: '',
@@ -142,6 +163,18 @@ const GovernmentNotificationsCard = () => {
 
   const handleCancel = () => {
     setIsEditing(false)
+  }
+
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = () => {
+    deleteMutation.mutate()
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false)
   }
 
   // Check if notification text is empty (ReactQuill returns HTML tags even when empty)
@@ -394,7 +427,30 @@ const GovernmentNotificationsCard = () => {
         : notificationText
 
     return (
-      <Box p={2}>
+      <Box p={2} sx={{ position: 'relative' }}>
+        {/* Delete button in top-right corner */}
+        {canEdit && (
+          <Tooltip title="Delete notification">
+            <IconButton
+              aria-label="delete notification"
+              onClick={handleDeleteClick}
+              size="small"
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                color: 'text.secondary',
+                '&:hover': {
+                  color: 'error.main',
+                  backgroundColor: 'error.lighter'
+                }
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+
         {/* Title with optional link */}
         {linkUrl ? (
           <MuiLink
@@ -408,6 +464,7 @@ const GovernmentNotificationsCard = () => {
               display: 'inline-block',
               mb: 1,
               color: 'primary.main',
+              pr: canEdit ? 4 : 0, // Add padding to avoid overlap with delete button
               '&:link': {
                 textDecoration: 'underline !important'
               }
@@ -416,7 +473,11 @@ const GovernmentNotificationsCard = () => {
             {notificationTitle}
           </MuiLink>
         ) : (
-          <BCTypography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
+          <BCTypography
+            variant="h6"
+            fontWeight="bold"
+            sx={{ mb: 1, pr: canEdit ? 4 : 0 }}
+          >
             {notificationTitle}
           </BCTypography>
         )}
@@ -538,6 +599,52 @@ const GovernmentNotificationsCard = () => {
             color="primary"
             onClick={handleCancelConfirm}
             disabled={updateMutation.isPending}
+          >
+            Cancel
+          </BCButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={showDeleteDialog}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: '#003366',
+            color: 'white',
+            py: 2
+          }}
+        >
+          Delete notification
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, pb: 2, mt: 2 }}>
+          <BCTypography variant="body1">
+            Are you sure you want to delete this government notification? This
+            action cannot be undone.
+          </BCTypography>
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <BCButton
+            size="small"
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDelete}
+            disabled={deleteMutation.isPending}
+            isLoading={deleteMutation.isPending}
+          >
+            Delete
+          </BCButton>
+          <BCButton
+            size="small"
+            variant="outlined"
+            color="primary"
+            onClick={handleCancelDelete}
+            disabled={deleteMutation.isPending}
           >
             Cancel
           </BCButton>

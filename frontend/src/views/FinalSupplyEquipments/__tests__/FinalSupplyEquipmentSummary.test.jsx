@@ -357,9 +357,7 @@ describe('FinalSupplyEquipmentSummary', () => {
       expect(defaultColDef.floatingFilter).toBe(false)
       expect(defaultColDef.filter).toBe(false)
       expect(defaultColDef.cellRenderer).toBeDefined()
-      expect(defaultColDef.cellRendererParams.url()).toBe(
-        'final-supply-equipments'
-      )
+      expect(defaultColDef.cellRendererParams.url()).toBe('fse-reporting')
     })
 
     it('generates defaultColDef for non-DRAFT status', () => {

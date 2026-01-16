@@ -50,3 +50,23 @@ async def update_notification(
     If no notification exists, it will be created.
     """
     return await service.update_notification(notification_data)
+
+
+@router.delete(
+    "/",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+async def delete_notification(
+    request: Request,
+    service: GovernmentNotificationService = Depends(),
+):
+    """
+    Deletes the government notification.
+    Only Compliance Manager and Director IDIR users can perform this action.
+    Returns a message indicating success or if no notification existed.
+    """
+    deleted = await service.delete_notification()
+    if deleted:
+        return {"message": "Government notification deleted successfully"}
+    return {"message": "No government notification exists to delete"}

@@ -529,6 +529,7 @@ async def test_bulk_update_reporting_dates(repo, fake_db):
     fake_db.execute.assert_called_once()
     fake_db.flush.assert_called_once()
 
+
 @pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fake_db):
     """Ensure mode='all' prioritizes rows matching provided compliance_report_group_uuid"""
@@ -547,3 +548,39 @@ async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fak
 
     assert "CASE" in compiled_sql
     assert group_uuid in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_has_charging_equipment_for_organization_with_equipment(repo, fake_db):
+    """Test has_charging_equipment_for_organization returns True when equipment exists."""
+    # Simulate database returning count > 0
+    fake_db.execute.return_value = FakeResult([5])
+
+    result = await repo.has_charging_equipment_for_organization(1)
+
+    assert result is True
+    fake_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_has_charging_equipment_for_organization_without_equipment(repo, fake_db):
+    """Test has_charging_equipment_for_organization returns False when no equipment exists."""
+    # Simulate database returning count = 0
+    fake_db.execute.return_value = FakeResult([0])
+
+    result = await repo.has_charging_equipment_for_organization(1)
+
+    assert result is False
+    fake_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_has_charging_equipment_for_organization_with_none_count(repo, fake_db):
+    """Test has_charging_equipment_for_organization handles None result."""
+    # Simulate database returning None
+    fake_db.execute.return_value = FakeResult([None])
+
+    result = await repo.has_charging_equipment_for_organization(1)
+
+    assert result is False
+    fake_db.execute.assert_called_once()
