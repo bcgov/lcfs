@@ -46,3 +46,16 @@ class GovernmentNotificationRepository:
         await self.db.flush()
         await self.db.refresh(notification)
         return notification
+
+    @repo_handler
+    async def delete_notification(self) -> bool:
+        """
+        Deletes the current government notification.
+        Returns True if a notification was deleted, False if none existed.
+        """
+        notification = await self.get_current_notification()
+        if notification:
+            await self.db.delete(notification)
+            await self.db.flush()
+            return True
+        return False

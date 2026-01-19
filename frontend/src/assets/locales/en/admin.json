@@ -66,6 +66,7 @@
     "email": "Email address",
     "bceidEmail": "Email address associated with the BCeID user account",
     "bceidAltEmail": "Alternate email for notifications",
+    "idirAltEmail": "Alternate email for notifications",
     "phone": "Phone",
     "mobilePhone": "Mobile phone",
     "status": "status",

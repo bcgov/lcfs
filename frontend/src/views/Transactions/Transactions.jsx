@@ -3,7 +3,6 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { DownloadButton } from '@/components/DownloadButton'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { apiRoutes } from '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
@@ -88,7 +87,7 @@ export const Transactions = () => {
         console.warn('Failed to parse saved organization filter:', error)
       }
     }
-    return { id: null, label: null }
+    return { id: null, label: null, name: null }
   })
 
   const queryData = useGetTransactionList(
@@ -113,6 +112,10 @@ export const Transactions = () => {
   }, [])
 
   const shouldRenderLink = (props) => {
+    // Legacy/Standalone transactions have no detail view page
+    if (props.data.transactionType === 'StandaloneTransaction') {
+      return false
+    }
     return (
       props.data.transactionType !== 'ComplianceReport' ||
       hasAnyRole(
@@ -280,7 +283,7 @@ export const Transactions = () => {
   }
 
   // Function to update organization filter with session storage persistence
-  const updateOrgFilter = (orgData) => {
+  const updateOrgFilter = useCallback((orgData) => {
     setSelectedOrg(orgData)
 
     try {
@@ -298,20 +301,42 @@ export const Transactions = () => {
         error
       )
     }
-  }
+  }, [])
 
-  const handleClearFilters = () => {
+  const resetGridFiltersState = useCallback(() => {
     setPaginationOptions(initialPaginationOptions)
-    updateOrgFilter({ id: null, label: null })
+    updateOrgFilter({ id: null, label: null, name: null })
     try {
       sessionStorage.removeItem('transactions-grid-filter')
+      sessionStorage.removeItem('transactions-grid-column')
     } catch (error) {
-      console.warn('Failed to clear grid filter from session storage:', error)
+      console.warn('Failed to clear transactions grid cache:', error)
     }
-    if (gridRef && gridRef.current) {
+  }, [updateOrgFilter])
+
+  const handleClearFilters = () => {
+    if (gridRef?.current?.clearFilters) {
       gridRef.current.clearFilters()
     }
+    resetGridFiltersState()
   }
+
+  const filterToolbarConfig = useMemo(() => {
+    if (!selectedOrg.id || !selectedOrg.label) {
+      return { additionalPills: [] }
+    }
+    return {
+      additionalPills: [
+        {
+          id: `organization-${selectedOrg.id}`,
+          label: t('common:Organization', 'Organization'),
+          value: selectedOrg.name,
+          type: 'select',
+          onRemove: () => updateOrgFilter({ id: null, label: null, name: null })
+        }
+      ]
+    }
+  }, [selectedOrg.id, selectedOrg.label, t, updateOrgFilter])
 
   if (!currentUser) {
     return <Loading />
@@ -403,7 +428,6 @@ export const Transactions = () => {
                   downloadLabel={t('txn:downloadingTxnInfo')}
                   dataTest="download-transactions-button"
                 />
-                <ClearFiltersButton onClick={handleClearFilters} />
               </Box>
             </Grid>
             <Grid
@@ -420,8 +444,8 @@ export const Transactions = () => {
               <Role roles={govRoles}>
                 <OrganizationList
                   selectedOrg={selectedOrg}
-                  onOrgChange={({ id, label }) => {
-                    updateOrgFilter({ id, label })
+                  onOrgChange={({ id, label, name }) => {
+                    updateOrgFilter({ id, label, name })
                   }}
                   onlyRegistered={false}
                 />
@@ -429,7 +453,7 @@ export const Transactions = () => {
             </Grid>
           </Grid>
           <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-            <BCGridViewer
+          <BCGridViewer
               gridRef={gridRef}
               gridKey="transactions-grid"
               columnDefs={transactionsColDefs(t)}
@@ -446,6 +470,8 @@ export const Transactions = () => {
                 }))
               }
               highlightedRowId={highlightedId}
+              filterToolbarConfig={filterToolbarConfig}
+              onClearFilters={resetGridFiltersState}
             />
           </BCBox>
         </>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
@@ -11,9 +11,6 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
-import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
-import LegacyReportSummary from './legacy/LegacyReportSummary'
-import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
 const iconStyle = {
@@ -33,7 +30,6 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
-  const { compliancePeriod, complianceReportId } = useParams()
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
       window.scrollTo({
@@ -139,15 +135,6 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             chain={reportData.chain}
           />
         </Stack>
-        {isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS) && (
-          <>
-            <LegacyReportDetails currentStatus={currentStatus} />
-            <LegacyReportSummary
-              reportID={complianceReportId}
-              alertRef={alertRef}
-            />
-          </>
-        )}
 
         <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
           {t('report:questions')}

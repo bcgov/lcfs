@@ -300,6 +300,45 @@ export const useGetOrgComplianceReportReportedYears = (orgID, options = {}) => {
   })
 }
 
+/**
+ * Hook to check if the current organization has early issuance enabled for a specific compliance year.
+ * Used to determine if an organization can create compliance reports for future years (e.g., 2026).
+ *
+ * TEMPORARY SOLUTION - Issue #3730
+ * This hook is part of a temporary approach to gate 2026 compliance year access.
+ * A more robust long-term solution should be implemented to support future years
+ * dynamically (e.g., backend-driven configuration per compliance period).
+ */
+export const useOrgEarlyIssuance = (complianceYear, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['org-early-issuance', complianceYear],
+    queryFn: async () => {
+      if (!complianceYear) {
+        throw new Error('Compliance year is required')
+      }
+      const response = await client.get(
+        `/organizations/current/early-issuance/${complianceYear}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!complianceYear,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 // Mutation hooks for updating organization data
 export const useUpdateOrganization = (orgID, options = {}) => {
   const client = useApiService()

@@ -62,7 +62,7 @@ export const FinalSupplyEquipmentSummary = ({
       cellRenderer:
         status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
       cellRendererParams: {
-        url: () => 'final-supply-equipments'
+        url: () => 'fse-reporting'
       }
     }),
     [status]
