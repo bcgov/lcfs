@@ -1,7 +1,7 @@
 """Backfill email field for IDIR users where email is NULL
 
-Revision ID: a1b2c3d4e5f8
-Revises: 5897848af3c9
+Revision ID: a1b2c3d4e5f1
+Revises: 46948662543b
 Create Date: 2026-01-19 20:00:00.000000
 
 """
@@ -9,8 +9,8 @@ Create Date: 2026-01-19 20:00:00.000000
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "a1b2c3d4e5f8"
-down_revision = "5897848af3c9"
+revision = "a1b2c3d4e5f1"
+down_revision = "46948662543b"
 branch_labels = None
 depends_on = None
 
