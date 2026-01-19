@@ -93,3 +93,61 @@ export const useUpdateGovernmentNotification = ({ onSuccess, onError } = {}) => 
     }
   })
 }
+
+/**
+ * Hook to delete the government notification
+ * Only available to Compliance Manager and Director IDIR users
+ */
+export const useDeleteGovernmentNotification = ({ onSuccess, onError } = {}) => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiService.delete(
+        apiRoutes.deleteGovernmentNotification
+      )
+      return response.data
+    },
+    onMutate: async () => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries(['current-government-notification'])
+
+      // Snapshot the previous value
+      const previousNotification = queryClient.getQueryData([
+        'current-government-notification'
+      ])
+
+      // Optimistically set to null (deleted)
+      queryClient.setQueryData(['current-government-notification'], null)
+
+      // Return context with the snapshotted value
+      return { previousNotification }
+    },
+    onSuccess: (data, variables, context) => {
+      // Ensure the cache is set to null
+      queryClient.setQueryData(['current-government-notification'], null)
+      if (onSuccess) {
+        onSuccess(data)
+      }
+    },
+    onError: (error, variables, context) => {
+      // Rollback to the previous value on error
+      if (context?.previousNotification) {
+        queryClient.setQueryData(
+          ['current-government-notification'],
+          context.previousNotification
+        )
+      }
+      if (onError) {
+        onError(error)
+      }
+    },
+    onSettled: (data, error) => {
+      // Only invalidate on error to trigger a refetch
+      if (error) {
+        queryClient.invalidateQueries(['current-government-notification'])
+      }
+    }
+  })
+}

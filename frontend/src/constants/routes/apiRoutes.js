@@ -210,6 +210,7 @@ export const apiRoutes = {
   // government notifications
   currentGovernmentNotification: '/government-notifications/current',
   updateGovernmentNotification: '/government-notifications/',
+  deleteGovernmentNotification: '/government-notifications/',
 
   // calculator endpoints
   getCalculatorCompliancePeriods: '/calculator/compliance-periods',
