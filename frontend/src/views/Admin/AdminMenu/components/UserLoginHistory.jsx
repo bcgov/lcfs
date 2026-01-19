@@ -6,7 +6,6 @@ import {
   userLoginHistoryColDefs,
   defaultSortModel
 } from '@/views/Admin/AdminMenu/components/_schema'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserLoginHistory } from '@/hooks/useUser'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
@@ -46,9 +45,6 @@ export const UserLoginHistory = () => {
       <BCTypography variant="h5" color="primary" mb={2}>
         {t('admin:UserLoginHistory')}
       </BCTypography>
-      <BCBox mb={2}>
-        <ClearFiltersButton onClick={handleClearFilters} />
-      </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}
