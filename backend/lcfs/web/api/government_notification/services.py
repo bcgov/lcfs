@@ -104,3 +104,12 @@ class GovernmentNotificationService:
                 )
             except Exception as e:
                 logger.error(f"Failed to send email for {notification_type.value}: {e}")
+
+    @service_handler
+    async def delete_notification(self) -> bool:
+        """
+        Delete the current government notification.
+        Only compliance managers and directors can perform this action.
+        Returns True if deleted, False if no notification existed.
+        """
+        return await self.repo.delete_notification()

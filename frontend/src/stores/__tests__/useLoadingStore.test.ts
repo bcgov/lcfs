@@ -1,12 +1,25 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useLoadingStore } from '../useLoadingStore'
+import {
+  useLoadingStore,
+  type LoadingDetails,
+  type LoadingState
+} from '../useLoadingStore'
+
+const getLoadingDetails = (loading: LoadingState): LoadingDetails => {
+  if (typeof loading === 'boolean') {
+    throw new Error('Expected loading details object')
+  }
+  return loading
+}
 
 describe('useLoadingStore', () => {
   beforeEach(() => {
     // Reset store state before each test
     act(() => {
-      useLoadingStore.setState({ loading: false })
+      useLoadingStore.setState({
+        loading: false
+      })
     })
   })
 
@@ -86,61 +99,50 @@ describe('useLoadingStore', () => {
     })
   })
 
-  describe('edge cases and type handling', () => {
-    it('should handle truthy values as true', () => {
+  describe('structured loading states', () => {
+    it('should accept loading detail objects', () => {
       const { result } = renderHook(() => useLoadingStore())
-      
-      const truthyValues = [1, 'loading', {}, [], 'true']
 
-      truthyValues.forEach(value => {
-        act(() => {
-          result.current.setLoading(value)
-        })
-        expect(result.current.loading).toBe(value)
+      const loadingDetails = {
+        isLoading: true,
+        operations: ['fetchUser', 'fetchReports'],
+        completed: 1,
+        total: 2
+      }
+
+      act(() => {
+        result.current.setLoading(loadingDetails)
       })
+
+      const state = getLoadingDetails(result.current.loading)
+      expect(state.isLoading).toBe(true)
+      expect(state.operations).toEqual(['fetchUser', 'fetchReports'])
+      expect(state.completed).toBe(1)
+      expect(state.total).toBe(2)
     })
 
-    it('should handle falsy values as provided', () => {
-      const { result } = renderHook(() => useLoadingStore())
-      
-      const falsyValues = [0, '', null, undefined, false]
-
-      falsyValues.forEach(value => {
-        act(() => {
-          result.current.setLoading(value)
-        })
-        expect(result.current.loading).toBe(value)
-      })
-    })
-
-    it('should handle non-boolean values', () => {
+    it('should preserve extra metadata on loading detail objects', () => {
       const { result } = renderHook(() => useLoadingStore())
 
-      // String
-      act(() => {
-        result.current.setLoading('loading')
-      })
-      expect(result.current.loading).toBe('loading')
+      const loadingDetails = {
+        isLoading: true,
+        progress: {
+          total: 100,
+          completed: 45
+        },
+        metadata: {
+          startTime: 1
+        }
+      }
 
-      // Number
       act(() => {
-        result.current.setLoading(1)
+        result.current.setLoading(loadingDetails)
       })
-      expect(result.current.loading).toBe(1)
 
-      // Object
-      const loadingObj = { status: 'loading', progress: 50 }
-      act(() => {
-        result.current.setLoading(loadingObj)
-      })
-      expect(result.current.loading).toEqual(loadingObj)
-
-      // Array
-      const loadingArray = ['step1', 'step2']
-      act(() => {
-        result.current.setLoading(loadingArray)
-      })
-      expect(result.current.loading).toEqual(loadingArray)
+      const state = getLoadingDetails(result.current.loading)
+      expect(state.isLoading).toBe(true)
+      expect(state.progress).toEqual({ total: 100, completed: 45 })
+      expect(state.metadata).toEqual({ startTime: 1 })
     })
   })
 
@@ -294,11 +296,7 @@ describe('useLoadingStore', () => {
       
       const complexLoadingState = {
         isLoading: true,
-        operations: {
-          fetchUser: true,
-          fetchReports: false,
-          saveData: true
-        },
+        operations: ['fetchUser', 'fetchReports', 'saveData'],
         progress: {
           total: 100,
           completed: 45,
@@ -318,9 +316,10 @@ describe('useLoadingStore', () => {
       
       const endTime = performance.now()
       const duration = endTime - startTime
-      
+
       expect(duration).toBeLessThan(10)
-      expect(result.current.loading).toEqual(complexLoadingState)
+      const state = getLoadingDetails(result.current.loading)
+      expect(state).toEqual(complexLoadingState)
     })
   })
 })

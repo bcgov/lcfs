@@ -290,10 +290,11 @@ export const FSEProcessing = () => {
             FSE Processing
           </BCTypography>
           <BCAlert severity="error">
-            Error loading FSE processing data
+            Unable to load equipment data.
             <br />
             <small>
-              Please check if the backend service is running properly.
+              Please try refreshing the page. If the problem persists, contact
+              support.
             </small>
           </BCAlert>
         </Grid>

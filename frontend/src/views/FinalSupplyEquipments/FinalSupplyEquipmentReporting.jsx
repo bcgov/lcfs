@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditorPaginated } from '@/components/BCDataGrid/BCGridEditorPaginated'
 import BCTypography from '@/components/BCTypography'
-import { Stack, TextField, Autocomplete } from '@mui/material'
+import { Stack, TextField, Autocomplete, Alert } from '@mui/material'
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
@@ -381,7 +381,7 @@ export const FinalSupplyEquipmentReporting = () => {
         params.data.chargingEquipmentId +
         '-' +
         params.data.chargingEquipmentVersion,
-      stopEditingWhenCellsLoseFocus: false
+      stopEditingWhenCellsLoseFocus: true
     }),
     [handleSelectionChanged]
   )
@@ -537,6 +537,14 @@ export const FinalSupplyEquipmentReporting = () => {
     return new Date(defaultFromDate) <= new Date(defaultToDate)
   }, [defaultFromDate, defaultToDate])
 
+  // Check if we should show the instructional message
+  const shouldShowInstructionalMessage = useMemo(() => {
+    return (
+      data?.hasChargingEquipment === false &&
+      (data?.pagination?.total || 0) === 0
+    )
+  }, [data])
+
   return (
     <Stack className="fse-reporting-container" spacing={6}>
       <BCBox component="header" className="fse-header-container">
@@ -553,17 +561,26 @@ export const FinalSupplyEquipmentReporting = () => {
         </BCTypography>
       </BCBox>
 
-      <BCBox
-        component="section"
-        className="fse-controls-container"
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 3,
-          flexWrap: { xs: 'wrap', lg: 'nowrap' }
-        }}
-      >
+      {shouldShowInstructionalMessage && (
+        <Alert severity="info">
+          <BCTypography variant="body2">
+            {t('finalSupplyEquipment:noChargingEquipmentMessage')}
+          </BCTypography>
+        </Alert>
+      )}
+
+      {!shouldShowInstructionalMessage && (
+        <BCBox
+          component="section"
+          className="fse-controls-container"
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 3,
+            flexWrap: { xs: 'wrap', lg: 'nowrap' }
+          }}
+        >
         {/* Left side: Date fields and buttons */}
         <BCBox
           sx={{
@@ -691,8 +708,10 @@ export const FinalSupplyEquipmentReporting = () => {
           />
         </BCBox>
       </BCBox>
+      )}
 
-      <BCGridEditorPaginated
+      {!shouldShowInstructionalMessage && (
+        <BCGridEditorPaginated
         gridRef={fseGridRef}
         alertRef={fseGridAlertRef}
         gridKey="fse-reporting-grid"
@@ -729,6 +748,7 @@ export const FinalSupplyEquipmentReporting = () => {
           defaultMaxWidth: 600
         }}
       />
+      )}
     </Stack>
   )
 }

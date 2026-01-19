@@ -17,7 +17,7 @@ import {
 } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-import { timezoneFormatter, numberFormatter } from '@/utils/formatters'
+import { timezoneFormatter, numberFormatter, spacesFormatter } from '@/utils/formatters'
 
 export const CreditLedger = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
@@ -169,6 +169,10 @@ export const CreditLedger = ({ organizationId }) => {
     {
       field: 'transactionType',
       headerName: t('org:ledger.transactionType'),
+      valueFormatter: (params) =>
+        params.value === 'StandaloneTransaction'
+          ? 'Legacy Transaction'
+          : spacesFormatter(params),
       minWidth: 160
     },
     {
