@@ -194,10 +194,12 @@ class ComplianceReportExporter:
         if has_total_row:
             # Add empty row
             ws.append(empty_row)
-            
+
             # Add total row
             ws.append(total_row)
-            total_row_idx = len(data_rows) + 3  # +3 because headers are row 1, then data, then empty row
+            total_row_idx = (
+                len(data_rows) + 3
+            )  # +3 because headers are row 1, then data, then empty row
             # Format total row with bold text
             for col_idx, val in enumerate(total_row, start=1):
                 cell = ws.cell(row=total_row_idx, column=col_idx)
@@ -505,8 +507,8 @@ class ComplianceReportExporter:
                 )
 
         # Calculate total compliance units using the summary service
-        total_compliance_units = await self.summary_service.calculate_fuel_supply_compliance_units(
-            report
+        total_compliance_units = (
+            await self.summary_service.calculate_fuel_supply_compliance_units(report)
         )
 
         # Add empty row before total, then total row
@@ -541,7 +543,11 @@ class ComplianceReportExporter:
                 v for i, v in enumerate(total_row) if i not in indices_to_remove
             ]
 
-            return [filtered_headers] + filtered_rows + [filtered_empty_row, filtered_total_row]
+            return (
+                [filtered_headers]
+                + filtered_rows
+                + [filtered_empty_row, filtered_total_row]
+            )
 
         return [headers] + rows + [empty_row, total_row]
 
@@ -703,8 +709,8 @@ class ComplianceReportExporter:
 
         # Get the compliance report and calculate total compliance units
         report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
-        total_compliance_units = await self.summary_service.calculate_fuel_export_compliance_units(
-            report
+        total_compliance_units = (
+            await self.summary_service.calculate_fuel_export_compliance_units(report)
         )
 
         # Add empty row before total, then total row
@@ -794,9 +800,11 @@ class ComplianceReportExporter:
         organization_id = (
             report.organization_id
             if report and getattr(report, "organization_id", None)
-            else report.organization.organization_id
-            if report and report.organization
-            else None
+            else (
+                report.organization.organization_id
+                if report and report.organization
+                else None
+            )
         )
         if not organization_id:
             return [headers]

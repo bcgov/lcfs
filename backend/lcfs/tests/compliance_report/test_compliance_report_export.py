@@ -382,7 +382,7 @@ class TestComplianceReportExporter:
         # Check that empty row is present before total
         empty_row = result[2]
         assert all(v is None for v in empty_row)
-        
+
         # Check that total row is present
         total_row = result[3]
         assert total_row[0] == 1000  # Total in Compliance Units column
@@ -426,7 +426,7 @@ class TestComplianceReportExporter:
         # Check that empty row is present before total
         empty_row = result[2]
         assert all(v is None for v in empty_row)
-        
+
         # Check that total row is present
         total_row = result[3]
         assert total_row[0] == 1000  # Total in Compliance Units column
@@ -540,7 +540,7 @@ class TestComplianceReportExporter:
     ):
         """Test loading export fuel data with total compliance units."""
         exporter = compliance_report_exporter
-        
+
         # Mock export fuel data
         ef1 = Mock()
         ef1.compliance_units = -500.0
@@ -565,30 +565,32 @@ class TestComplianceReportExporter:
         ef1.energy_density = 35.0
         ef1.eer = 1.0
         ef1.energy = 175000
-        
+
         exporter.ef_repo.get_effective_fuel_exports.return_value = [ef1]
-        
+
         # Mock the calculate_fuel_export_compliance_units method
         exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
             return_value=-500
         )
-        
+
         result = await exporter._load_export_fuel_data("uuid", 1, 0, False)
-        
+
         # Check headers match export fuel columns
         expected_headers = [col.label for col in EXPORT_FUEL_COLUMNS]
         assert result[0] == expected_headers
-        
+
         # Check data row
         data_row = result[1]
         assert data_row[0] == -500  # compliance_units
-        assert data_row[1] == "Diesel"  # fuel_type (position 2 in 1-based, 1 in 0-based)
+        assert (
+            data_row[1] == "Diesel"
+        )  # fuel_type (position 2 in 1-based, 1 in 0-based)
         assert len(data_row) == len(expected_headers)
-        
+
         # Check that empty row is present before total
         empty_row = result[2]
         assert all(v is None for v in empty_row)
-        
+
         # Check that total row is present
         total_row = result[3]
         assert total_row[0] == -500  # Total in Compliance Units column
@@ -680,7 +682,7 @@ class TestComplianceReportExporter:
         assert "Q3 Quantity" in aa_labels
         assert "Q4 Quantity" in aa_labels
         assert "Total Quantity" in aa_labels
-        
+
         # Test other uses columns (annual only, but includes new fields for 2025+)
         ou_labels = [col.label for col in OTHER_USES_COLUMNS]
         assert "Fuel produced in Canada" in ou_labels
