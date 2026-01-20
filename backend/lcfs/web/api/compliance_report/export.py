@@ -1,4 +1,3 @@
-import asyncio
 import decimal
 import io
 from datetime import datetime
@@ -38,7 +37,6 @@ from lcfs.web.api.compliance_report.schema import (
     TABLE_STYLE,
     SHOW_ROW_STRIPES,
     SHOW_COL_STRIPES,
-    ExportColumn,
 )
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -134,8 +132,6 @@ class ComplianceReportExporter:
             else:
                 data = await loader(uuid, cid, report.version, is_quarterly)
 
-            row_count = len(data) - 1 if data else 0
-
             # Process each result
             if data:
                 await self._add_sheet(wb, sheet_name, data)
@@ -173,15 +169,40 @@ class ComplianceReportExporter:
         # Add headers
         ws.append(headers)
 
+        # Check if last row is a total row (second column is "Total")
+        # The row before total should be empty
+        has_total_row = False
+        if rows and len(rows) >= 2 and len(rows[-1]) > 1 and rows[-1][1] == "Total":
+            has_total_row = True
+            data_rows = rows[:-2]  # Exclude both empty row and total row
+            empty_row = rows[-2]
+            total_row = rows[-1]
+        else:
+            data_rows = rows
+
         # Add and format data rows
-        for row_idx, row in enumerate(rows, start=2):
+        for row_idx, row in enumerate(data_rows, start=2):
             ws.append(row)
             for col_idx, val in enumerate(row, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 self._format_cell(cell, val)
 
-        # Add excel table formatting
-        self._add_table(ws, title, len(headers), len(rows))
+        # Add excel table formatting (only for data rows, not including total row)
+        self._add_table(ws, title, len(headers), len(data_rows))
+
+        # Add empty row and total row after the table if they exist
+        if has_total_row:
+            # Add empty row
+            ws.append(empty_row)
+            
+            # Add total row
+            ws.append(total_row)
+            total_row_idx = len(data_rows) + 3  # +3 because headers are row 1, then data, then empty row
+            # Format total row with bold text
+            for col_idx, val in enumerate(total_row, start=1):
+                cell = ws.cell(row=total_row_idx, column=col_idx)
+                cell.font = Font(bold=True)
+                self._format_cell(cell, val)
 
         # Auto-size columns
         self._auto_size_columns(ws)
@@ -433,7 +454,6 @@ class ComplianceReportExporter:
                     [
                         round(fs.compliance_units) if fs.compliance_units else None,
                         fs.fuel_type.fuel_type if fs.fuel_type else None,
-                        fs.fuel_type_other,
                         fs.fuel_category.category if fs.fuel_category else None,
                         fs.end_use_type.type if fs.end_use_type else None,
                         (
@@ -464,7 +484,6 @@ class ComplianceReportExporter:
                     [
                         round(fs.compliance_units) if fs.compliance_units else None,
                         fs.fuel_type.fuel_type if fs.fuel_type else None,
-                        fs.fuel_type_other,
                         fs.fuel_category.category if fs.fuel_category else None,
                         fs.end_use_type.type if fs.end_use_type else None,
                         (
@@ -484,6 +503,15 @@ class ComplianceReportExporter:
                         fs.energy,
                     ]
                 )
+
+        # Calculate total compliance units using the summary service
+        total_compliance_units = await self.summary_service.calculate_fuel_supply_compliance_units(
+            report
+        )
+
+        # Add empty row before total, then total row
+        empty_row = [None] * len(headers)
+        total_row = [total_compliance_units, "Total"] + [None] * (len(headers) - 2)
 
         # Filter out columns with None values for pre-2025 reports
         if compliance_year < 2025:
@@ -505,9 +533,17 @@ class ComplianceReportExporter:
                 for row in rows
             ]
 
-            return [filtered_headers] + filtered_rows
+            # Remove corresponding values from empty row and total row
+            filtered_empty_row = [
+                v for i, v in enumerate(empty_row) if i not in indices_to_remove
+            ]
+            filtered_total_row = [
+                v for i, v in enumerate(total_row) if i not in indices_to_remove
+            ]
 
-        return [headers] + rows
+            return [filtered_headers] + filtered_rows + [filtered_empty_row, filtered_total_row]
+
+        return [headers] + rows + [empty_row, total_row]
 
     async def _load_notional_transfer_data(
         self, uuid, cid, version, is_quarterly
@@ -648,13 +684,12 @@ class ComplianceReportExporter:
             rows.append(
                 [
                     round(ef.compliance_units),
-                    self._format_date(ef.export_date),
                     ef.fuel_type.fuel_type if ef.fuel_type else None,
-                    ef.fuel_type_other,
                     ef.fuel_category.category if ef.fuel_category else None,
                     ef.end_use_type.type if ef.end_use_type else None,
                     ef.provision_of_the_act.name if ef.provision_of_the_act else None,
                     ef.fuel_code.fuel_code if ef.fuel_code else None,
+                    self._format_date(ef.export_date),
                     ef.quantity,
                     ef.units.value if ef.units else None,
                     ef.target_ci,
@@ -666,7 +701,17 @@ class ComplianceReportExporter:
                 ]
             )
 
-        return [headers] + rows
+        # Get the compliance report and calculate total compliance units
+        report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
+        total_compliance_units = await self.summary_service.calculate_fuel_export_compliance_units(
+            report
+        )
+
+        # Add empty row before total, then total row
+        empty_row = [None] * len(headers)
+        total_row = [total_compliance_units, "Total"] + [None] * (len(headers) - 2)
+
+        return [headers] + rows + [empty_row, total_row]
 
     async def _load_allocation_agreement_data(
         self, cid, is_quarterly

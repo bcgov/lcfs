@@ -307,6 +307,13 @@ class TestComplianceReportExporter:
         """Test that annual reports generate correct filename with CR prefix."""
         exporter = compliance_report_exporter
         exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        # Mock the compliance unit calculation methods
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
 
         response = await exporter.export(1)
 
@@ -326,6 +333,13 @@ class TestComplianceReportExporter:
         exporter = compliance_report_exporter
         exporter.cr_repo.get_compliance_report_by_id.return_value = (
             mock_quarterly_report
+        )
+        # Mock the compliance unit calculation methods
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
         )
 
         response = await exporter.export(2)
@@ -347,6 +361,10 @@ class TestComplianceReportExporter:
         exporter.fs_repo.get_effective_fuel_supplies.return_value = (
             mock_fuel_supply_data
         )
+        # Mock the calculate_fuel_supply_compliance_units method
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
 
         result = await exporter._load_fuel_supply_data("uuid", 1, 0, False)
 
@@ -355,11 +373,21 @@ class TestComplianceReportExporter:
         assert result[0] == expected_headers
 
         # Check data row contains annual quantity field
-        # Position shifted due to "Fuel produced in Canada" column added at position 7
+        # Position shifted due to "Fuel produced in Canada" column added at position 6
         data_row = result[1]
-        assert data_row[7] == "Yes"  # is_canada_produced field (2025 report)
-        assert data_row[8] == 10000  # quantity field
+        assert data_row[6] == "Yes"  # is_canada_produced field (2025 report)
+        assert data_row[7] == 10000  # quantity field
         assert len(data_row) == len(expected_headers)
+
+        # Check that empty row is present before total
+        empty_row = result[2]
+        assert all(v is None for v in empty_row)
+        
+        # Check that total row is present
+        total_row = result[3]
+        assert total_row[0] == 1000  # Total in Compliance Units column
+        assert total_row[1] == "Total"  # "Total" label in Fuel type column
+        assert len(total_row) == len(expected_headers)
 
     @pytest.mark.anyio
     async def test_load_fuel_supply_data_quarterly(
@@ -372,6 +400,10 @@ class TestComplianceReportExporter:
         exporter.fs_repo.get_effective_fuel_supplies.return_value = (
             mock_fuel_supply_data
         )
+        # Mock the calculate_fuel_supply_compliance_units method
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
 
         result = await exporter._load_fuel_supply_data("uuid", 1, 0, True)
 
@@ -382,14 +414,24 @@ class TestComplianceReportExporter:
         # Check data row contains quarterly fields and total
         # Positions shifted due to "Fuel produced in Canada" and "Supplied in Q1" columns added
         data_row = result[1]
-        assert data_row[7] == "Yes"  # is_canada_produced field (2025 report)
-        assert data_row[8] == ""  # is_q1_supplied field (2025 report, False = "")
-        assert data_row[9] == 2500  # Q1 quantity
-        assert data_row[10] == 3000  # Q2 quantity
-        assert data_row[11] == 2000  # Q3 quantity
-        assert data_row[12] == 2500  # Q4 quantity
-        assert data_row[13] == 10000  # Total quantity (sum of quarters)
+        assert data_row[6] == "Yes"  # is_canada_produced field (2025 report)
+        assert data_row[7] == ""  # is_q1_supplied field (2025 report, False = "")
+        assert data_row[8] == 2500  # Q1 quantity
+        assert data_row[9] == 3000  # Q2 quantity
+        assert data_row[10] == 2000  # Q3 quantity
+        assert data_row[11] == 2500  # Q4 quantity
+        assert data_row[12] == 10000  # Total quantity (sum of quarters)
         assert len(data_row) == len(expected_headers)
+
+        # Check that empty row is present before total
+        empty_row = result[2]
+        assert all(v is None for v in empty_row)
+        
+        # Check that total row is present
+        total_row = result[3]
+        assert total_row[0] == 1000  # Total in Compliance Units column
+        assert total_row[1] == "Total"  # "Total" label in Fuel type column
+        assert len(total_row) == len(expected_headers)
 
     @pytest.mark.anyio
     async def test_load_notional_transfer_data_annual(
@@ -492,6 +534,68 @@ class TestComplianceReportExporter:
         assert len(data_row) == len(expected_headers)
 
     @pytest.mark.anyio
+    async def test_load_export_fuel_data(
+        self,
+        compliance_report_exporter,
+    ):
+        """Test loading export fuel data with total compliance units."""
+        exporter = compliance_report_exporter
+        
+        # Mock export fuel data
+        ef1 = Mock()
+        ef1.compliance_units = -500.0
+        ef1.export_date = Mock()
+        ef1.fuel_type = Mock()
+        ef1.fuel_type.fuel_type = "Diesel"
+        ef1.fuel_type_other = None
+        ef1.fuel_category = Mock()
+        ef1.fuel_category.category = "Diesel"
+        ef1.end_use_type = Mock()
+        ef1.end_use_type.type = "Transport"
+        ef1.provision_of_the_act = Mock()
+        ef1.provision_of_the_act.name = "Section 19(b)(i)"
+        ef1.fuel_code = Mock()
+        ef1.fuel_code.fuel_code = "FC001"
+        ef1.quantity = 5000
+        ef1.units = Mock()
+        ef1.units.value = "L"
+        ef1.target_ci = 85.5
+        ef1.ci_of_fuel = 25.3
+        ef1.uci = 15.2
+        ef1.energy_density = 35.0
+        ef1.eer = 1.0
+        ef1.energy = 175000
+        
+        exporter.ef_repo.get_effective_fuel_exports.return_value = [ef1]
+        
+        # Mock the calculate_fuel_export_compliance_units method
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+        
+        result = await exporter._load_export_fuel_data("uuid", 1, 0, False)
+        
+        # Check headers match export fuel columns
+        expected_headers = [col.label for col in EXPORT_FUEL_COLUMNS]
+        assert result[0] == expected_headers
+        
+        # Check data row
+        data_row = result[1]
+        assert data_row[0] == -500  # compliance_units
+        assert data_row[1] == "Diesel"  # fuel_type (position 2 in 1-based, 1 in 0-based)
+        assert len(data_row) == len(expected_headers)
+        
+        # Check that empty row is present before total
+        empty_row = result[2]
+        assert all(v is None for v in empty_row)
+        
+        # Check that total row is present
+        total_row = result[3]
+        assert total_row[0] == -500  # Total in Compliance Units column
+        assert total_row[1] == "Total"  # "Total" label in Fuel type column
+        assert len(total_row) == len(expected_headers)
+
+    @pytest.mark.anyio
     async def test_load_other_uses_data_no_quarterly_support(
         self,
         compliance_report_exporter,
@@ -533,8 +637,8 @@ class TestComplianceReportExporter:
     def test_column_count_consistency(self):
         """Test that quarterly columns have the correct number of additional columns."""
         # Fuel supply: should have 5 extra columns (Supplied in Q1, Q1, Q2, Q3, Q4, Total) replacing 1 (Quantity)
-        # Annual has "Fuel produced in Canada" + Quantity = 16 total
-        # Quarterly has "Fuel produced in Canada" + "Supplied in Q1" + Q1-Q4 + Total = 21 total
+        # Annual has "Fuel produced in Canada" + Quantity = 15 total (removed Fuel type Other)
+        # Quarterly has "Fuel produced in Canada" + "Supplied in Q1" + Q1-Q4 + Total = 20 total (removed Fuel type Other)
         annual_fs_count = len(FUEL_SUPPLY_COLUMNS)
         quarterly_fs_count = len(FUEL_SUPPLY_QUARTERLY_COLUMNS)
         assert quarterly_fs_count == annual_fs_count + 5
