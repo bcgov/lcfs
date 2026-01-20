@@ -383,8 +383,9 @@ class ComplianceSummaryUpdater:
             line11_diesel = safe_decimal(summary_lines.get("22", 0))
 
             # Extract other summary data with enhanced calculations
-            # FIXED: Line 25 is the net compliance unit balance (used for Line 20)
-            net_compliance_units = safe_decimal(summary_lines.get("25", 0))
+            # TFRS Line 25 = Net compliance units from fuel supply (Line 23 credits - Line 24 debits)
+            # This maps to LCFS Line 18 (compliance units being issued for supply of fuel)
+            net_fuel_supply_units = safe_decimal(summary_lines.get("25", 0))
             line28_non_compliance = safe_decimal(summary_lines.get("28", 0))
 
             # Calculate fossil fuel totals
@@ -401,8 +402,8 @@ class ComplianceSummaryUpdater:
             if has_line_29b:
                 balance_chg_from_assessment = safe_decimal(line_29b_raw)
             else:
-                # Fall back to Line 25 (net compliance unit balance)
-                balance_chg_from_assessment = net_compliance_units
+                # Fall back to Line 25 (net fuel supply units) for older reports without 29B
+                balance_chg_from_assessment = net_fuel_supply_units
 
             # FIXED: Get Line 22 (closing balance) from TFRS snapshot line 29C
             # Line 29C = Available compliance unit balance after assessment
@@ -487,8 +488,10 @@ class ComplianceSummaryUpdater:
                 "line_15_banked_units_used": line_15_prev_issued,
                 "line_16_banked_units_remaining": Decimal("0.0"),  # Not tracked in TFRS
                 "line_17_non_banked_units_used": line_17_decimal,
-                "line_18_units_to_be_banked": issued_compliance_units,
-                "line_19_units_to_be_exported": Decimal("0.0"),  # Not tracked in TFRS
+                # TFRS Line 25 = Net compliance units from fuel supply → LCFS Line 18
+                # This is the net compliance units being issued for supply of fuel
+                "line_18_units_to_be_banked": net_fuel_supply_units,
+                "line_19_units_to_be_exported": Decimal("0.0"),  # No equivalent in TFRS
                 "line_20_surplus_deficit_units": balance_chg_from_assessment,
                 "line_21_surplus_deficit_ratio": line28_non_compliance,
                 "line_22_compliance_units_issued": available_balance_at_period_end,
