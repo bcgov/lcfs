@@ -228,7 +228,8 @@ export const AddEditNotionalTransfers = () => {
         setRowData,
         {
           complianceReportId
-        }
+        },
+        'legalName' // First editable column for focus after clearing
       )
     }
   }
