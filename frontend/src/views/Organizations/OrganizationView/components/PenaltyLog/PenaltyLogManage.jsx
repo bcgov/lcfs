@@ -197,7 +197,8 @@ export const PenaltyLogManage = () => {
         savePenaltyLog,
         alertRef,
         setRowData,
-        defaultRow
+        defaultRow,
+        'compliancePeriodId' // First editable column for focus after clearing
       )
 
       if (success) {
