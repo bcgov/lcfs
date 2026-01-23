@@ -420,6 +420,8 @@ class ComplianceReportRepository:
                 "report_status": report.report_status,
                 "update_date": report.update_date,
                 "is_latest": report.is_latest,
+                "latest_supplemental_create_date": report.latest_supplemental_create_date,
+                "latest_status": report.latest_status,
                 "assigned_analyst_id": report.assigned_analyst_id,
                 "assigned_analyst_first_name": report.assigned_analyst_first_name,
                 "assigned_analyst_last_name": report.assigned_analyst_last_name,
