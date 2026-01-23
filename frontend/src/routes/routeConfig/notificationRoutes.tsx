@@ -1,7 +1,8 @@
 import ROUTES from '../routes'
 import { NotificationMenu } from '@/views/Notifications/NotificationMenu'
+import { AppRouteObject } from '../types'
 
-export const notificationRoutes = [
+export const notificationRoutes: AppRouteObject[] = [
   {
     path: ROUTES.NOTIFICATIONS.LIST,
     element: <NotificationMenu tabIndex={0} />,

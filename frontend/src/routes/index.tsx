@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, RouteObject } from 'react-router-dom'
 import { publicRoutes } from './routeConfig/publicRoutes'
 import { adminRoutes } from './routeConfig/adminRoutes'
 import { organizationRoutes } from './routeConfig/organizationRoutes'
@@ -34,15 +34,15 @@ const allRoutes = [
 export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
-    children: publicRoutes
+    children: publicRoutes as RouteObject[]
   },
   {
     element: <PublicPageLayout />,
-    children: publicPageRoutes
+    children: publicPageRoutes as RouteObject[]
   },
   {
     element: <MainLayout />,
-    children: allRoutes
+    children: allRoutes as RouteObject[]
   },
   {
     path: ROUTES.API_DOCS,
