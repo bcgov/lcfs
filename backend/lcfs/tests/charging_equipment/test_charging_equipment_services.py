@@ -373,6 +373,37 @@ async def test_bulk_actions_government_user_forbidden(
 
 
 @pytest.mark.anyio
+async def test_auto_submit_equipment_for_report_updates_sites(service, mock_repo):
+    mock_repo.auto_submit_draft_updated_fse_for_report.return_value = (2, [1, 2])
+    with patch.object(
+        service, "_update_charging_sites_status", new=AsyncMock()
+    ) as mock_update_sites:
+        count = await service.auto_submit_equipment_for_report(99, 7)
+
+    assert count == 2
+    mock_repo.auto_submit_draft_updated_fse_for_report.assert_called_once_with(99)
+    mock_update_sites.assert_called_once_with(
+        [1, 2], ["Draft", "Updated"], "Submitted", 7
+    )
+
+
+@pytest.mark.anyio
+async def test_auto_validate_equipment_for_report_updates_sites(service, mock_repo):
+    mock_repo.auto_validate_submitted_fse_for_report.return_value = (1, [10])
+    with patch.object(
+        service, "_update_charging_sites_status", new=AsyncMock()
+    ) as mock_update_sites:
+        count = await service.auto_validate_equipment_for_report(55, 3)
+
+    assert count == 1
+    mock_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(55)
+    mock_update_sites.assert_called_once_with(
+        [10], ["Submitted", "Draft", "Updated"], "Validated", 3
+    )
+
+
+
+@pytest.mark.anyio
 @patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_delete_charging_equipment_success(
     mock_notification, service, mock_repo, mock_user

@@ -66,6 +66,7 @@ class ComplianceReportUpdateService:
         self.notfn_service = notfn_service
         self.org_snapshot_repo = org_snapshot_repo
         self._charging_equipment_repo = None
+        self._charging_equipment_service = None
 
     @property
     def charging_equipment_repo(self) -> "ChargingEquipmentRepository":
@@ -77,6 +78,19 @@ class ComplianceReportUpdateService:
 
             self._charging_equipment_repo = ChargingEquipmentRepository(db=self.repo.db)
         return self._charging_equipment_repo
+
+    @property
+    def charging_equipment_service(self):
+        """Lazy-load charging equipment service for equipment/site synchronization."""
+        if self._charging_equipment_service is None:
+            from lcfs.web.api.charging_equipment.services import ChargingEquipmentServices
+
+            repo = self.charging_equipment_repo
+            # Reuse the same DB session so operations share a transaction context
+            self._charging_equipment_service = ChargingEquipmentServices(
+                repo=repo, session=self.repo.db
+            )
+        return self._charging_equipment_service
 
     async def update_compliance_report(
         self,
@@ -252,8 +266,8 @@ class ComplianceReportUpdateService:
         )
 
         # Auto-submit all FSE records in Draft or Updated status to Submitted status
-        await self.charging_equipment_repo.auto_submit_draft_updated_fse_for_report(
-            report.compliance_report_id
+        await self.charging_equipment_service.auto_submit_equipment_for_report(
+            report.compliance_report_id, report.organization_id
         )
 
         # Ensure summary exists and snapshot user-entered lines before transaction creation
@@ -305,8 +319,8 @@ class ComplianceReportUpdateService:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         # Auto-validate all submitted FSE records associated with this report
-        await self.charging_equipment_repo.auto_validate_submitted_fse_for_report(
-            report.compliance_report_id
+        await self.charging_equipment_service.auto_validate_equipment_for_report(
+            report.compliance_report_id, report.organization_id
         )
 
         # Lock the summary when report is recommended by analyst - this is the snapshot point

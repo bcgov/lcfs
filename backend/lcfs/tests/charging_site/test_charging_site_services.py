@@ -598,6 +598,9 @@ class TestChargingSiteService:
             MagicMock(status="Validated", charging_site_status_id=3),
         ]
         mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
+        mock_site = MagicMock()
+        mock_site.status = MagicMock(status="Submitted")
+        mock_repo.get_charging_site_by_id.return_value = mock_site
 
         mock_repo.bulk_update_equipment_status.return_value = [1, 2]
         mock_repo.update_charging_site_status.return_value = None
@@ -608,7 +611,42 @@ class TestChargingSiteService:
 
         assert result is True
         mock_repo.bulk_update_equipment_status.assert_called_once()
+        mock_repo.get_charging_site_by_id.assert_called_once_with(1)
         mock_repo.update_charging_site_status.assert_called_once_with(1, 3)
+
+    @pytest.mark.anyio
+    async def test_bulk_update_equipment_status_site_not_updated_when_disallowed(
+        self, charging_site_service, mock_repo, mock_user
+    ):
+        """Site status should remain unchanged when already validated."""
+        bulk_update = BulkEquipmentStatusUpdateSchema(
+            equipment_ids=[1, 2], new_status="Validated"
+        )
+
+        mock_statuses = [
+            MagicMock(status="Draft", charging_equipment_status_id=1),
+            MagicMock(status="Submitted", charging_equipment_status_id=2),
+            MagicMock(status="Validated", charging_equipment_status_id=3),
+        ]
+        mock_repo.get_charging_equipment_statuses.return_value = mock_statuses
+
+        mock_site_statuses = [
+            MagicMock(status="Draft", charging_site_status_id=1),
+            MagicMock(status="Submitted", charging_site_status_id=2),
+            MagicMock(status="Validated", charging_site_status_id=3),
+        ]
+        mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
+        mock_site = MagicMock()
+        mock_site.status = MagicMock(status="Validated")
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+        mock_repo.bulk_update_equipment_status.return_value = [1, 2]
+
+        result = await charging_site_service.bulk_update_equipment_status(
+            bulk_update, 1, mock_user
+        )
+
+        assert result is True
+        mock_repo.update_charging_site_status.assert_not_called()
 
     @pytest.mark.anyio
     async def test_bulk_update_equipment_status_invalid_transition(

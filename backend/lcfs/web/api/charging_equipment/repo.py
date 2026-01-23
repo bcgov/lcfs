@@ -3,7 +3,7 @@
 from datetime import date
 
 import structlog
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from fastapi import Depends
 from sqlalchemy import select, func, and_, or_, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -279,15 +279,11 @@ class ChargingEquipmentRepository:
         if equipment.status.status not in ["Draft", "Updated"]:
             # If Validated, create a new version
             if equipment.status.status == "Validated":
-                equipment.version += 1
-
-                # Get Updated status ID
-                status_query = select(ChargingEquipmentStatus).where(
-                    ChargingEquipmentStatus.status == "Updated"
+                return await self._create_validated_equipment_version(
+                    equipment, equipment_data
                 )
-                status_result = await self.db.execute(status_query)
-                updated_status = status_result.scalar_one()
-                equipment.status_id = updated_status.charging_equipment_status_id
+            else:
+                return equipment
 
         # Update fields
         for field, value in equipment_data.items():
@@ -321,6 +317,81 @@ class ChargingEquipmentRepository:
         await self.db.refresh(equipment, attribute_names=["charging_site"])
 
         return equipment
+
+    async def _create_validated_equipment_version(
+        self, equipment: ChargingEquipment, equipment_data: Dict[str, Any]
+    ) -> ChargingEquipment:
+        """Create a new equipment record when editing a validated version."""
+        status_query = select(ChargingEquipmentStatus).where(
+            ChargingEquipmentStatus.status == "Updated"
+        )
+        status_result = await self.db.execute(status_query)
+        updated_status = status_result.scalar_one()
+
+        new_equipment = ChargingEquipment(
+            charging_site_id=equipment.charging_site_id,
+            status_id=updated_status.charging_equipment_status_id,
+            equipment_number=equipment.equipment_number,
+            serial_number=equipment_data.get("serial_number", equipment.serial_number),
+            manufacturer=equipment_data.get("manufacturer", equipment.manufacturer),
+            model=equipment_data.get("model", equipment.model),
+            level_of_equipment_id=equipment_data.get(
+                "level_of_equipment_id", equipment.level_of_equipment_id
+            ),
+            ports=equipment_data.get("ports", equipment.ports),
+            latitude=equipment_data.get("latitude", equipment.latitude),
+            longitude=equipment_data.get("longitude", equipment.longitude),
+            notes=equipment_data.get("notes", equipment.notes),
+            version=equipment.version + 1,
+            group_uuid=equipment.group_uuid,
+            action_type=ActionTypeEnum.UPDATE,
+        )
+        new_equipment.charging_site = equipment.charging_site
+        new_equipment.status = updated_status
+
+        self.db.add(new_equipment)
+        await self.db.flush()
+
+        await self._assign_intended_relationships(
+            new_equipment, equipment, equipment_data
+        )
+
+        await self.db.refresh(new_equipment)
+        await self.db.refresh(new_equipment, attribute_names=["charging_site"])
+        return new_equipment
+
+    async def _assign_intended_relationships(
+        self,
+        target_equipment: ChargingEquipment,
+        source_equipment: ChargingEquipment,
+        equipment_data: Dict[str, Any],
+    ) -> None:
+        """Copy or update intended uses/users for a cloned record."""
+        if (
+            "intended_use_ids" in equipment_data
+            and equipment_data["intended_use_ids"] is not None
+        ):
+            intended_uses_query = select(EndUseType).where(
+                EndUseType.end_use_type_id.in_(equipment_data["intended_use_ids"])
+            )
+            intended_uses_result = await self.db.execute(intended_uses_query)
+            target_equipment.intended_uses = intended_uses_result.scalars().all()
+        else:
+            target_equipment.intended_uses = list(source_equipment.intended_uses)
+
+        if (
+            "intended_user_ids" in equipment_data
+            and equipment_data["intended_user_ids"] is not None
+        ):
+            intended_users_query = select(EndUserType).where(
+                EndUserType.end_user_type_id.in_(
+                    equipment_data["intended_user_ids"]
+                )
+            )
+            intended_users_result = await self.db.execute(intended_users_query)
+            target_equipment.intended_users = intended_users_result.scalars().all()
+        else:
+            target_equipment.intended_users = list(source_equipment.intended_users)
 
     @repo_handler
     async def bulk_update_status(
@@ -581,7 +652,7 @@ class ChargingEquipmentRepository:
 
     @repo_handler
     async def get_charging_site_ids_from_equipment(
-        self, equipment_ids: List[int], organization_id: int
+        self, equipment_ids: List[int], organization_id: Optional[int] = None
     ) -> List[int]:
         """Get unique charging site IDs from equipment list."""
         query = (
@@ -589,14 +660,37 @@ class ChargingEquipmentRepository:
             .distinct()
             .join(ChargingSite)
             .where(
-                and_(
-                    ChargingEquipment.charging_equipment_id.in_(equipment_ids),
-                    ChargingSite.organization_id == organization_id,
-                )
+                ChargingEquipment.charging_equipment_id.in_(equipment_ids)
             )
         )
+        if organization_id is not None:
+            query = query.where(ChargingSite.organization_id == organization_id)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def update_charging_sites_for_equipment(
+        self,
+        equipment_ids: List[int],
+        current_statuses: List[str],
+        new_status: str,
+        organization_id: Optional[int] = None,
+    ) -> int:
+        """
+        Update parent charging site statuses for the provided equipment IDs.
+        """
+        if not equipment_ids:
+            return 0
+
+        site_ids = await self.get_charging_site_ids_from_equipment(
+            equipment_ids, organization_id
+        )
+        if not site_ids:
+            return 0
+
+        return await self.update_charging_sites_status(
+            site_ids, current_statuses, new_status
+        )
 
     @repo_handler
     async def update_charging_sites_status(
@@ -691,7 +785,7 @@ class ChargingEquipmentRepository:
     @repo_handler
     async def auto_validate_submitted_fse_for_report(
         self, compliance_report_id: int
-    ) -> int:
+    ) -> Tuple[int, List[int]]:
         """
         Auto-validate all charging equipment (FSE) records in 'Submitted' status
         that are associated with the given compliance report.
@@ -700,7 +794,7 @@ class ChargingEquipmentRepository:
             compliance_report_id: The ID of the compliance report being recommended
 
         Returns:
-            int: The number of equipment records that were updated to Validated status
+            Tuple[int, List[int]]: The number of equipment records updated and their IDs.
         """
         from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
             ComplianceReportChargingEquipment,
@@ -720,7 +814,7 @@ class ChargingEquipmentRepository:
         validated_status_id = statuses.get("Validated")
 
         if not submitted_status_id or not validated_status_id:
-            return 0
+            return 0, []
 
         # Get all charging equipment IDs associated with this compliance report
         # that are currently in Submitted status
@@ -744,7 +838,7 @@ class ChargingEquipmentRepository:
         equipment_ids = [row[0] for row in equipment_result.all()]
 
         if not equipment_ids:
-            return 0
+            return 0, []
 
         # Update the status to Validated
         update_stmt = (
@@ -758,12 +852,12 @@ class ChargingEquipmentRepository:
 
         updated_count = result.rowcount or 0
 
-        return updated_count
+        return updated_count, equipment_ids
 
     @repo_handler
     async def auto_submit_draft_updated_fse_for_report(
         self, compliance_report_id: int
-    ) -> int:
+    ) -> Tuple[int, List[int]]:
         """
         Auto-submit all charging equipment (FSE) records in 'Draft' or 'Updated' status
         that are associated with the given compliance report.
@@ -772,7 +866,7 @@ class ChargingEquipmentRepository:
             compliance_report_id: The ID of the compliance report being submitted
 
         Returns:
-            int: The number of equipment records that were updated to Submitted status
+            Tuple[int, List[int]]: The number of equipment records updated and their IDs.
         """
         from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
             ComplianceReportChargingEquipment,
@@ -793,7 +887,7 @@ class ChargingEquipmentRepository:
         submitted_status_id = statuses.get("Submitted")
 
         if not draft_status_id or not updated_status_id or not submitted_status_id:
-            return 0
+            return 0, []
 
         # Get all charging equipment IDs associated with this compliance report
         # that are currently in Draft or Updated status
@@ -819,7 +913,7 @@ class ChargingEquipmentRepository:
         equipment_ids = [row[0] for row in equipment_result.all()]
 
         if not equipment_ids:
-            return 0
+            return 0, []
 
         # Update the status to Submitted
         update_stmt = (
@@ -833,4 +927,4 @@ class ChargingEquipmentRepository:
 
         updated_count = result.rowcount or 0
 
-        return updated_count
+        return updated_count, equipment_ids

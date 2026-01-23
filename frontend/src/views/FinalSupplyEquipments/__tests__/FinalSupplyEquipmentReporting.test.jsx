@@ -23,8 +23,8 @@ vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
   useSetFSEReportingDefaultDates: vi.fn()
 }))
 
-vi.mock('@/stores/useComplianceReportStore', () => ({
-  default: vi.fn()
+vi.mock('@/hooks/useComplianceReports', () => ({
+  useComplianceReportWithCache: vi.fn()
 }))
 
 vi.mock('./_schema', () => ({
@@ -57,7 +57,7 @@ import {
   useDeleteFSEReportingBatch,
   useSetFSEReportingDefaultDates
 } from '@/hooks/useFinalSupplyEquipment'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
 
 describe('FinalSupplyEquipmentReporting', () => {
@@ -91,7 +91,8 @@ describe('FinalSupplyEquipmentReporting', () => {
   const mockReportData = {
     report: {
       organizationId: 456,
-      compliancePeriodId: 789
+      compliancePeriodId: 789,
+      complianceReportGroupUuid: 'group-uuid'
     }
   }
 
@@ -128,8 +129,11 @@ describe('FinalSupplyEquipmentReporting', () => {
       mutateAsync: vi.fn().mockResolvedValue({ data: {} })
     })
 
-    // Mock useComplianceReportStore
-    vi.mocked(useComplianceReportStore).mockReturnValue(mockReportData)
+    // Mock useComplianceReportWithCache
+    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      data: mockReportData,
+      isLoading: false
+    })
     handleScheduleSave.mockResolvedValue({
       validationStatus: 'success',
       modified: false
@@ -138,6 +142,16 @@ describe('FinalSupplyEquipmentReporting', () => {
   })
 
   describe('Component Rendering', () => {
+    it('renders loading state when compliance report is loading', () => {
+      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+        data: null,
+        isLoading: true
+      })
+
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+      expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    })
+
     it('renders the component with title and description', () => {
       render(<FinalSupplyEquipmentReporting />, { wrapper })
 
