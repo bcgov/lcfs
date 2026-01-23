@@ -306,15 +306,26 @@ class ChargingSiteService:
                 f"be in the required status."
             )
 
-        # Update charging site status if equipment status is Submitted or Validated
-        if bulk_update.new_status in ["Submitted", "Validated"]:
-            # Get charging site statuses and find the corresponding status ID
-            site_statuses = await self.repo.get_charging_site_statuses()
-            site_status_ids = self._get_site_status_ids(site_statuses)
+        # Update charging site status based on equipment status changes
+        # Get charging site statuses and find the corresponding status ID
+        site_statuses = await self.repo.get_charging_site_statuses()
+        site_status_ids = self._get_site_status_ids(site_statuses)
 
+        if bulk_update.new_status in ["Submitted", "Validated"]:
+            # When equipment is Submitted or Validated, update site status to match
             await self.repo.update_charging_site_status(
                 charging_site_id, site_status_ids[bulk_update.new_status]
             )
+        elif bulk_update.new_status == "Draft":
+            # When returning equipment to Draft, recalculate site status
+            # based on the highest status of all remaining equipment
+            new_site_status = await self.repo.calculate_site_status_from_equipment(
+                charging_site_id
+            )
+            if new_site_status:
+                await self.repo.update_charging_site_status(
+                    charging_site_id, site_status_ids[new_site_status]
+                )
         return True
 
     @service_handler
