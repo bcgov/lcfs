@@ -1,8 +1,9 @@
 import { Login } from '@/components/Login'
 import ROUTES from '../routes'
 import { Unauthorized } from '@/components/Unauthorized'
+import { AppRouteObject } from '../types'
 
-export const publicRoutes = [
+export const publicRoutes: AppRouteObject[] = [
   {
     name: 'Login',
     key: 'login',

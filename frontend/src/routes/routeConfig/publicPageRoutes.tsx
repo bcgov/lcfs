@@ -1,8 +1,9 @@
 import ROUTES from '../routes'
 import { CreditCalculator } from '@/views/ComplianceReports/CreditCalculator'
 import FormView from '@/views/Forms/FormView'
+import { AppRouteObject } from '../types'
 
-export const publicPageRoutes = [
+export const publicPageRoutes: AppRouteObject[] = [
   {
     name: 'Compliance unit calculator',
     key: 'credit-calculator',
