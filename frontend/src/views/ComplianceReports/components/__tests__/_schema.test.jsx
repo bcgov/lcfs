@@ -373,25 +373,25 @@ describe('ComplianceReports Schema', () => {
       expect(tooltip).toHaveAttribute('title', 'Supplemental draft over 30 days old')
     })
 
-    it('should show flag on older version when latest version is old submitted supplemental', () => {
+    it('should NOT show flag on original report even when there is an old supplemental in the group', () => {
       const fortyDaysAgo = new Date()
       fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
       
-      // This is v0 (older version), but v1 (latest) is old and submitted
+      // This is an original report in a group that has an old supplemental
       const data = {
-        reportType: 'Original report',
+        reportType: 'Original Report',
         compliancePeriod: '2024',
         complianceReportId: 1,
-        isLatest: false, // This is the older version
+        isLatest: false,
         latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
-        latestStatus: 'Submitted' // Latest version status
+        latestStatus: 'Submitted'
       }
 
       const { container } = renderTypeCell(data, false) // IDIR user
       
       const warningIcon = container.querySelector('[data-testid="warning-icon"]')
-      expect(warningIcon).toBeInTheDocument()
-      expect(screen.getByText('Original report')).toBeInTheDocument()
+      expect(warningIcon).not.toBeInTheDocument()
+      expect(screen.getByText('Original Report')).toBeInTheDocument()
     })
 
     it('should render report type with link', () => {
@@ -412,7 +412,7 @@ describe('ComplianceReports Schema', () => {
       expect(link.getAttribute('href')).toContain('2024/1')
     })
 
-    it('should handle empty reportType gracefully', () => {
+    it('should NOT display flag when reportType is empty (cannot determine if supplemental)', () => {
       const fortyDaysAgo = new Date()
       fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
       
@@ -428,7 +428,7 @@ describe('ComplianceReports Schema', () => {
       const { container } = renderTypeCell(data, false) // IDIR user
       
       const warningIcon = container.querySelector('[data-testid="warning-icon"]')
-      expect(warningIcon).toBeInTheDocument()
+      expect(warningIcon).not.toBeInTheDocument()
     })
   })
 })
