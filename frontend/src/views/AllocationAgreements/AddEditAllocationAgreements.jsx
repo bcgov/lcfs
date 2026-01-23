@@ -423,7 +423,8 @@ export const AddEditAllocationAgreements = () => {
         {
           complianceReportId,
           compliancePeriod
-        }
+        },
+        'allocationTransactionType' // First editable column for focus after clearing
       )
     }
   }

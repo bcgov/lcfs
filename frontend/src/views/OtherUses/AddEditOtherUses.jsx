@@ -236,7 +236,8 @@ export const AddEditOtherUses = () => {
           saveRow,
           alertRef,
           setRowData,
-          { complianceReportId: numericComplianceReportId }
+          { complianceReportId: numericComplianceReportId },
+          'fuelType' // First editable column for focus after clearing
         )
       }
     },
