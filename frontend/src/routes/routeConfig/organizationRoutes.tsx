@@ -1,9 +1,9 @@
+import { ReactNode } from 'react'
+import { NavigateFunction } from 'react-router-dom'
 import {
   Organizations,
-  AddEditOrg,
   OrganizationView
 } from '@/views/Organizations'
-import { AddEditUser } from '@/views/Users'
 import ROUTES from '../routes'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 import i18n from '@/i18n'
@@ -15,8 +15,15 @@ import { PenaltyLog } from '@/views/Organizations/OrganizationView/components/Pe
 import CompanyOverview from '@/views/Organizations/OrganizationView/components/CompanyOverview'
 import { CreditLedger } from '@/views/Organizations/OrganizationView/CreditLedger'
 import { OrganizationUsers } from '@/views/Organizations/OrganizationView/OrganizationUsers'
+import { AppRouteObject } from '../types'
 
-export const organizationRoutes = [
+export interface DashboardTab {
+  path: string
+  match: (pathname: string) => boolean
+  label: string
+}
+
+export const organizationRoutes: AppRouteObject[] = [
   // IDIR routes
   {
     path: ROUTES.ORGANIZATIONS.LIST,
@@ -109,45 +116,48 @@ export const organizationRoutes = [
   }
 ]
 
-export const orgDashboardRoutes = (orgID, isGovernment) => {
+export const orgDashboardRoutes = (
+  orgID: string | undefined,
+  isGovernment: boolean
+): DashboardTab[] => {
   const idirBasePath = ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID || '')
   const bceidBasePath = ROUTES.ORGANIZATION.ORG
 
-  const bceidTabs = [
+  const bceidTabs: DashboardTab[] = [
     {
       path: bceidBasePath,
-      match: (pathname) =>
+      match: (pathname: string) =>
         pathname === bceidBasePath || pathname === `${bceidBasePath}/`,
       label: i18n.t('org:tabs.dashboard')
     },
     {
       path: ROUTES.ORGANIZATION.USERS,
-      match: (pathname) => pathname.startsWith(ROUTES.ORGANIZATION.USERS),
+      match: (pathname: string) => pathname.startsWith(ROUTES.ORGANIZATION.USERS),
       label: i18n.t('org:tabs.users')
     },
     {
       path: ROUTES.ORGANIZATION.CREDIT_LEDGER,
-      match: (pathname) =>
+      match: (pathname: string) =>
         pathname.startsWith(ROUTES.ORGANIZATION.CREDIT_LEDGER),
       label: i18n.t('org:tabs.creditLedger')
     }
   ]
 
-  const idirTabs = [
+  const idirTabs: DashboardTab[] = [
     {
       path: idirBasePath,
-      match: (pathname) =>
+      match: (pathname: string) =>
         pathname === idirBasePath || pathname === `${idirBasePath}/`,
       label: i18n.t('org:tabs.dashboard')
     },
     {
       path: ROUTES.ORGANIZATIONS.USERS.replace(':orgID', orgID || ''),
-      match: (pathname) => pathname.includes('/users'),
+      match: (pathname: string) => pathname.includes('/users'),
       label: i18n.t('org:tabs.users')
     },
     {
       path: ROUTES.ORGANIZATIONS.CREDIT_LEDGER.replace(':orgID', orgID || ''),
-      match: (pathname) => pathname.includes('/credit-ledger'),
+      match: (pathname: string) => pathname.includes('/credit-ledger'),
       label: i18n.t('org:tabs.creditLedger')
     },
     {
@@ -155,18 +165,18 @@ export const orgDashboardRoutes = (orgID, isGovernment) => {
         ':orgID',
         orgID || ''
       ),
-      match: (pathname) => pathname.includes('/company-overview'),
+      match: (pathname: string) => pathname.includes('/company-overview'),
       label: i18n.t('org:tabs.companyOverview')
     },
     {
       path: ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID || ''),
-      match: (pathname) =>
+      match: (pathname: string) =>
         pathname.includes('/penalty-log') && !pathname.includes('/manage'),
       label: i18n.t('org:tabs.penaltyLog')
     },
     {
       path: ROUTES.ORGANIZATIONS.SUPPLY_HISTORY.replace(':orgID', orgID || ''),
-      match: (pathname) => pathname.includes('/supply-history'),
+      match: (pathname: string) => pathname.includes('/supply-history'),
       label: i18n.t('org:tabs.supplyHistory')
     },
     {
@@ -174,7 +184,7 @@ export const orgDashboardRoutes = (orgID, isGovernment) => {
         ':orgID',
         orgID || ''
       ),
-      match: (pathname) => pathname.includes('/compliance-tracking'),
+      match: (pathname: string) => pathname.includes('/compliance-tracking'),
       label: i18n.t('org:tabs.complianceTracking')
     }
   ]
@@ -186,12 +196,12 @@ export const orgDashboardRoutes = (orgID, isGovernment) => {
 }
 
 export const orgDashboardRenderers = (
-  isGovernment,
-  currentPath,
-  orgID,
-  addMode,
-  navigate
-) => {
+  isGovernment: boolean,
+  currentPath: string,
+  orgID: string | undefined,
+  addMode: boolean,
+  navigate: NavigateFunction
+): ReactNode => {
   if (!isGovernment) {
     const bceidBasePath = ROUTES.ORGANIZATION.ORG
     if (currentPath.startsWith(ROUTES.ORGANIZATION.USERS)) {

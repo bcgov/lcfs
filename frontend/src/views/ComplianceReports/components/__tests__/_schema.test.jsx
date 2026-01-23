@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { reportsColDefs } from '../_schema'
+import { BrowserRouter } from 'react-router-dom'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -31,6 +33,18 @@ vi.mock('@/utils/formatters', () => ({
 vi.mock('@/components/BCDataGrid/components', () => ({
   BCDateFloatingFilter: 'BCDateFloatingFilter',
   BCSelectFloatingFilter: 'BCSelectFloatingFilter'
+}))
+
+vi.mock('@mui/material', () => ({
+  Tooltip: ({ children, title }) => (
+    <div data-testid="tooltip" title={title}>
+      {children}
+    </div>
+  )
+}))
+
+vi.mock('@mui/icons-material/Warning', () => ({
+  default: () => <div data-testid="warning-icon">⚠️</div>
 }))
 
 describe('ComplianceReports Schema', () => {
@@ -197,6 +211,224 @@ describe('ComplianceReports Schema', () => {
       
       expect(assignedAnalystCol.headerName).toBe('report:reportColLabels.assignedAnalyst')
       expect(typeof assignedAnalystCol.headerName).toBe('string')
+    })
+  })
+
+  describe('TypeCellRenderer - 30-day supplemental flag', () => {
+    // Mock useLocation
+    vi.mock('react-router-dom', async () => {
+      const actual = await vi.importActual('react-router-dom')
+      return {
+        ...actual,
+        useLocation: () => ({ pathname: '/compliance-reports' })
+      }
+    })
+
+    // Helper to render cell renderer
+    const renderTypeCell = (data, isSupplier = false) => {
+      const colDefs = reportsColDefs(mockT, isSupplier, mockOnRefresh)
+      const typeCol = colDefs.find(col => col.field === 'type')
+      const TypeRenderer = typeCol.cellRenderer
+      
+      return render(
+        <BrowserRouter>
+          <TypeRenderer data={data} />
+        </BrowserRouter>
+      )
+    }
+
+    it('should display warning icon for submitted supplemental older than 30 days (IDIR user)', () => {
+      const thirtyOneDaysAgo = new Date()
+      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31)
+      
+      const data = {
+        reportType: 'Supplemental report 1',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: thirtyOneDaysAgo.toISOString(),
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).toBeInTheDocument()
+      expect(screen.getByText('Supplemental report 1')).toBeInTheDocument()
+    })
+
+    it('should NOT display warning icon for submitted supplemental exactly 30 days old', () => {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      
+      const data = {
+        reportType: 'Supplemental report 1',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: thirtyDaysAgo.toISOString(),
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).not.toBeInTheDocument()
+      expect(screen.getByText('Supplemental report 1')).toBeInTheDocument()
+    })
+
+    it('should NOT display warning icon for submitted supplemental less than 30 days old', () => {
+      const twentyDaysAgo = new Date()
+      twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20)
+      
+      const data = {
+        reportType: 'Supplemental report 1',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: twentyDaysAgo.toISOString(),
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).not.toBeInTheDocument()
+      expect(screen.getByText('Supplemental report 1')).toBeInTheDocument()
+    })
+
+    it('should NOT display warning icon for assessed supplemental older than 30 days', () => {
+      const fortyDaysAgo = new Date()
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
+      
+      const data = {
+        reportType: 'Supplemental report 1',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
+        latestStatus: 'Assessed',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).not.toBeInTheDocument()
+      expect(screen.getByText('Supplemental report 1')).toBeInTheDocument()
+    })
+
+    it('should NOT display warning icon when latestSupplementalCreateDate is missing', () => {
+      const data = {
+        reportType: 'Original report',
+        compliancePeriod: '2024',
+        complianceReportId: 1,
+        latestSupplementalCreateDate: null,
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).not.toBeInTheDocument()
+      expect(screen.getByText('Original report')).toBeInTheDocument()
+    })
+
+    it('should NOT display warning icon for supplier users regardless of status', () => {
+      const fortyDaysAgo = new Date()
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
+      
+      const data = {
+        reportType: 'Supplemental report 1',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, true) // Supplier user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).not.toBeInTheDocument()
+      expect(screen.getByText('Supplemental report 1')).toBeInTheDocument()
+    })
+
+    it('should display tooltip with correct message', () => {
+      const fortyDaysAgo = new Date()
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
+      
+      const data = {
+        reportType: 'Supplemental report 1',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const tooltip = container.querySelector('[data-testid="tooltip"]')
+      expect(tooltip).toHaveAttribute('title', 'Supplemental draft over 30 days old')
+    })
+
+    it('should show flag on older version when latest version is old submitted supplemental', () => {
+      const fortyDaysAgo = new Date()
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
+      
+      // This is v0 (older version), but v1 (latest) is old and submitted
+      const data = {
+        reportType: 'Original report',
+        compliancePeriod: '2024',
+        complianceReportId: 1,
+        isLatest: false, // This is the older version
+        latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
+        latestStatus: 'Submitted' // Latest version status
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).toBeInTheDocument()
+      expect(screen.getByText('Original report')).toBeInTheDocument()
+    })
+
+    it('should render report type with link', () => {
+      const data = {
+        reportType: 'Original report',
+        compliancePeriod: '2024',
+        complianceReportId: 1,
+        latestSupplementalCreateDate: null,
+        latestStatus: 'Draft',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false)
+      
+      const link = container.querySelector('a')
+      expect(link).toBeInTheDocument()
+      // The href will be relative, constructed from location.pathname
+      expect(link.getAttribute('href')).toContain('2024/1')
+    })
+
+    it('should handle empty reportType gracefully', () => {
+      const fortyDaysAgo = new Date()
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40)
+      
+      const data = {
+        reportType: '',
+        compliancePeriod: '2024',
+        complianceReportId: 2,
+        latestSupplementalCreateDate: fortyDaysAgo.toISOString(),
+        latestStatus: 'Submitted',
+        isLatest: true
+      }
+
+      const { container } = renderTypeCell(data, false) // IDIR user
+      
+      const warningIcon = container.querySelector('[data-testid="warning-icon"]')
+      expect(warningIcon).toBeInTheDocument()
     })
   })
 })
