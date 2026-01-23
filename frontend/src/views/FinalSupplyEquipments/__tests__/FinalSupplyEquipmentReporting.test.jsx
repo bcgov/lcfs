@@ -241,8 +241,10 @@ describe('FinalSupplyEquipmentReporting', () => {
 
       expect(useGetFSEReportingList).toHaveBeenCalledWith(
         '123',
-        expect.any(Object),
-        {},
+        expect.objectContaining({
+          defaultInitialPagination: expect.any(Object)
+        }),
+        expect.objectContaining({ enabled: true }),
         456,
         'all'
       )
@@ -410,7 +412,7 @@ describe('FinalSupplyEquipmentReporting', () => {
     it('retrieves report data from store', () => {
       render(<FinalSupplyEquipmentReporting />, { wrapper })
 
-      expect(useComplianceReportStore).toHaveBeenCalled()
+      expect(useComplianceReportWithCache).toHaveBeenCalled()
     })
 
     it('uses organization ID from store in queries', () => {
@@ -418,8 +420,10 @@ describe('FinalSupplyEquipmentReporting', () => {
 
       expect(useGetFSEReportingList).toHaveBeenCalledWith(
         '123',
-        expect.any(Object),
-        {},
+        expect.objectContaining({
+          defaultInitialPagination: expect.any(Object)
+        }),
+        expect.objectContaining({ enabled: true }),
         456,
         'all'
       )
@@ -435,7 +439,7 @@ describe('FinalSupplyEquipmentReporting', () => {
         expect.objectContaining({
           defaultInitialPagination: expect.any(Object)
         }),
-        {},
+        expect.objectContaining({ enabled: true }),
         456,
         'all'
       )

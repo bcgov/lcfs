@@ -281,9 +281,9 @@ async def test_update_charging_equipment_creates_new_version_for_validated(
     valid_charging_equipment.version = 1
     valid_charging_equipment.group_uuid = "group-123"
 
-    mock_updated_status = MagicMock(spec=ChargingEquipmentStatus)
-    mock_updated_status.status = "Updated"
-    mock_updated_status.charging_equipment_status_id = 10
+    mock_updated_status = ChargingEquipmentStatus(
+        charging_equipment_status_id=10, status="Updated"
+    )
     mock_status_result = MagicMock()
     mock_status_result.scalar_one.return_value = mock_updated_status
 
