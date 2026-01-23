@@ -22,46 +22,63 @@ const TypeCellRenderer = (isSupplier) => (props) => {
   const location = useLocation()
   const { data } = props
   const reportType = data.reportType || ''
-  
+
   // Check if there's a supplemental report (Draft or Submitted) older than 30 days
   const hasDraftSupplementalOverThirtyDays = () => {
     // Only show flag for IDIR users (government users)
     if (isSupplier) {
       return false
     }
-    
+
+    // Only show flag on supplemental report rows
+    if (!reportType.includes('Supplemental')) {
+      return false
+    }
+
     // Must have the necessary data fields
     if (!data.latestSupplementalCreateDate) {
       return false
     }
-    
-    if (data.latestStatus !== 'Submitted') {
+
+    if (data.latestStatus !== 'Draft' && data.latestStatus !== 'Submitted') {
       return false
     }
-    
+
     // Calculate days difference
     const createDate = new Date(data.latestSupplementalCreateDate)
     const now = new Date()
     const daysDiff = Math.floor((now - createDate) / (1000 * 60 * 60 * 24))
-    
+
     // Only show flag if supplemental is older than 30 days
     return daysDiff > 30
   }
-  
+
   const showFlag = hasDraftSupplementalOverThirtyDays()
-  
+
   const targetUrl = `${location.pathname}/${data.compliancePeriod}/${data.complianceReportId}`
-  
+
   return (
     <Link to={targetUrl} style={{ color: '#000', textDecoration: 'none' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', height: '100%' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          width: '100%',
+          height: '100%'
+        }}
+      >
         {showFlag && (
-          <Tooltip title="Supplemental draft over 30 days old" arrow placement="top">
-            <WarningIcon 
+          <Tooltip
+            title="Supplemental draft over 30 days old"
+            arrow
+            placement="top"
+          >
+            <WarningIcon
               fontSize="medium"
-              sx={{ 
+              sx={{
                 color: '#ff0000'
-              }} 
+              }}
             />
           </Tooltip>
         )}
@@ -295,28 +312,40 @@ export const renewableFuelColumns = (
   }
 
   const unlockedLineSevenConstraint = (constraint) =>
-    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+    lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 }
 
   const unlockedLineNineConstraint = (constraint) =>
-    lines7And9Locked ? constraint ?? { min: 0 } : { min: 0 }
+    lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 }
 
   // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
   const line6Caps = {
     gasoline: safeRound(
       Math.min(
-        Math.max(0, (data[SUMMARY.LINE_2]?.gasoline || 0) - (data[SUMMARY.LINE_4]?.gasoline || 0)), // excess
+        Math.max(
+          0,
+          (data[SUMMARY.LINE_2]?.gasoline || 0) -
+            (data[SUMMARY.LINE_4]?.gasoline || 0)
+        ), // excess
         0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
       )
     ),
     diesel: safeRound(
       Math.min(
-        Math.max(0, (data[SUMMARY.LINE_2]?.diesel || 0) - (data[SUMMARY.LINE_4]?.diesel || 0)),
+        Math.max(
+          0,
+          (data[SUMMARY.LINE_2]?.diesel || 0) -
+            (data[SUMMARY.LINE_4]?.diesel || 0)
+        ),
         0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
       )
     ),
     jetFuel: safeRound(
       Math.min(
-        Math.max(0, (data[SUMMARY.LINE_2]?.jetFuel || 0) - (data[SUMMARY.LINE_4]?.jetFuel || 0)),
+        Math.max(
+          0,
+          (data[SUMMARY.LINE_2]?.jetFuel || 0) -
+            (data[SUMMARY.LINE_4]?.jetFuel || 0)
+        ),
         0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
       )
     )
@@ -326,19 +355,31 @@ export const renewableFuelColumns = (
   const line8Caps = {
     gasoline: safeRound(
       Math.min(
-        Math.max(0, (data[SUMMARY.LINE_4]?.gasoline || 0) - (data[SUMMARY.LINE_2]?.gasoline || 0)), // deficiency
+        Math.max(
+          0,
+          (data[SUMMARY.LINE_4]?.gasoline || 0) -
+            (data[SUMMARY.LINE_2]?.gasoline || 0)
+        ), // deficiency
         0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
       )
     ),
     diesel: safeRound(
       Math.min(
-        Math.max(0, (data[SUMMARY.LINE_4]?.diesel || 0) - (data[SUMMARY.LINE_2]?.diesel || 0)),
+        Math.max(
+          0,
+          (data[SUMMARY.LINE_4]?.diesel || 0) -
+            (data[SUMMARY.LINE_2]?.diesel || 0)
+        ),
         0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
       )
     ),
     jetFuel: safeRound(
       Math.min(
-        Math.max(0, (data[SUMMARY.LINE_4]?.jetFuel || 0) - (data[SUMMARY.LINE_2]?.jetFuel || 0)),
+        Math.max(
+          0,
+          (data[SUMMARY.LINE_4]?.jetFuel || 0) -
+            (data[SUMMARY.LINE_2]?.jetFuel || 0)
+        ),
         0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
       )
     )
@@ -390,15 +431,31 @@ export const renewableFuelColumns = (
       // Line 7 and Line 9 are editable when not locked
       // Note: Line 7 represents "Volume of eligible renewable fuel previously retained"
       // The locking is controlled by lines7And9Locked prop, not by current values
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      gasolineEditableCells = [
+        ...gasolineEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
+      dieselEditableCells = [
+        ...dieselEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
     }
   } else if (parseInt(compliancePeriodYear) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
-      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      gasolineEditableCells = [
+        ...gasolineEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
+      dieselEditableCells = [
+        ...dieselEditableCells,
+        SUMMARY.LINE_7,
+        SUMMARY.LINE_9
+      ]
     }
   }
   if (parseInt(compliancePeriodYear) < 2029) {
@@ -408,9 +465,7 @@ export const renewableFuelColumns = (
 
   if (lines6And8Locked) {
     const stripLocked = (cells) =>
-      cells.filter(
-        (cell) => cell !== SUMMARY.LINE_6 && cell !== SUMMARY.LINE_8
-      )
+      cells.filter((cell) => cell !== SUMMARY.LINE_6 && cell !== SUMMARY.LINE_8)
     gasolineEditableCells = stripLocked(gasolineEditableCells)
     dieselEditableCells = stripLocked(dieselEditableCells)
     jetFuelEditableCells = stripLocked(jetFuelEditableCells)
@@ -438,7 +493,9 @@ export const renewableFuelColumns = (
       editableCells: gasolineEditableCells,
       cellConstraints: {
         [SUMMARY.LINE_6]: { min: 0, max: line6Caps.gasoline },
-        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(line7Constraints.gasoline),
+        [SUMMARY.LINE_7]: unlockedLineSevenConstraint(
+          line7Constraints.gasoline
+        ),
         [SUMMARY.LINE_8]: { min: 0, max: line8Caps.gasoline },
         [SUMMARY.LINE_9]: unlockedLineNineConstraint(line9Constraints.gasoline)
       }
