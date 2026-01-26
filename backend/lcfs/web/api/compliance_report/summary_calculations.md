@@ -220,12 +220,16 @@ When a supplier fails to meet either the renewable fuel target or the low carbon
 
 2. **Low Carbon Fuel Target Penalty:**
    ```
-   Penalty = (Required Units - Supplied Units) × Penalty Rate
+   Penalty = Net Debit Units × Penalty Rate
    ```
 
-   For the carbon intensity target, the penalty is based on the shortfall in compliance units, with each unit representing a fixed amount of carbon reduction.
+   For the carbon intensity target, the penalty is based on the shortfall in compliance units (net debit), with each unit representing a fixed amount of carbon reduction.
 
-The penalty rates are defined by regulation and may change over time. Penalties serve both as a compliance enforcement mechanism and as a price ceiling on the cost of compliance units in the market.
+   **Penalty Rates by Compliance Period:**
+   - **Compliance periods 2022 and prior:** $200 CAD per unit
+   - **Compliance periods 2023 and onward:** $600 CAD per unit
+
+The penalty rates are defined by regulation. Penalties serve both as a compliance enforcement mechanism and as a price ceiling on the cost of compliance units in the market.
 
 ## Supplemental Reports and Version Tracking
 

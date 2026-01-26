@@ -85,7 +85,7 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
         "field": "surplus_deficit_units",
     },
     21: {
-        "description": "Non-compliance penalty payable ({} units * $600 CAD per unit)",
+        "description": "Non-compliance penalty payable ({units} units * ${rate} CAD per unit)",
         "field": "surplus_deficit_ratio",
     },
     22: {
@@ -110,6 +110,23 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
 }
 
 PRESCRIBED_PENALTY_RATE = {"gasoline": 0.3, "diesel": 0.45, "jet_fuel": 0.5}
+
+# Low carbon fuel target non-compliance penalty rates ($ CAD per unit)
+# $200/unit for compliance periods 2022 and prior
+# $600/unit for compliance periods 2023 and onward
+LOW_CARBON_PENALTY_RATE_PRE_2023 = 200
+LOW_CARBON_PENALTY_RATE_2023_ONWARD = 600
+
+
+def get_low_carbon_penalty_rate(compliance_year: int) -> int:
+    """
+    Get the low carbon fuel target non-compliance penalty rate based on compliance year.
+    - $200 per unit for compliance periods 2022 and prior
+    - $600 per unit for compliance periods 2023 and onward
+    """
+    if compliance_year <= 2022:
+        return LOW_CARBON_PENALTY_RATE_PRE_2023
+    return LOW_CARBON_PENALTY_RATE_2023_ONWARD
 
 
 class FORMATS(enum.Enum):

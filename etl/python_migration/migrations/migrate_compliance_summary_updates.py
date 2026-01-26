@@ -386,6 +386,8 @@ class ComplianceSummaryUpdater:
             # TFRS Line 25 = Net compliance units from fuel supply (Line 23 credits - Line 24 debits)
             # This maps to LCFS Line 18 (compliance units being issued for supply of fuel)
             net_fuel_supply_units = safe_decimal(summary_lines.get("25", 0))
+            # TFRS Line 26 = Total banked credits used to offset outstanding debits
+            line_26_banked_credits_offset = safe_decimal(summary_lines.get("26", 0))
             line28_non_compliance = safe_decimal(summary_lines.get("28", 0))
 
             # Calculate fossil fuel totals
@@ -404,6 +406,21 @@ class ComplianceSummaryUpdater:
             else:
                 # Fall back to Line 25 (net fuel supply units) for older reports without 29B
                 balance_chg_from_assessment = net_fuel_supply_units
+
+            # Calculate Line 21 non-compliance penalty with correct rate based on year
+            # $200/unit for compliance periods 2022 and prior
+            # $600/unit for compliance periods 2023 and onward
+            low_carbon_penalty_rate = Decimal("200") if compliance_period_year <= 2022 else Decimal("600")
+
+            # Penalty is based on Line 27 (Outstanding debit balance after banked credits offset)
+            # Line 27 = Line 25 + Line 26 (where Line 26 is banked credits used to offset)
+            # Always calculate from Line 25 + Line 26 since Line 27 can be incorrect in some snapshots
+            # (e.g., some 2023 reports show Line 27 = 0 when it should be negative)
+            outstanding_debit_balance = net_fuel_supply_units + line_26_banked_credits_offset
+
+            # Penalty units are the absolute value of outstanding debit (only if negative)
+            penalty_units = abs(min(outstanding_debit_balance, Decimal("0")))
+            line_21_non_compliance_penalty = penalty_units * low_carbon_penalty_rate
 
             # FIXED: Get Line 22 (closing balance) from TFRS snapshot line 29C
             # Line 29C = Available compliance unit balance after assessment
@@ -439,7 +456,8 @@ class ComplianceSummaryUpdater:
                 # For supplementals, we would need to look up previous assessed report
                 # But for TFRS migration, this is complex - use 0 for now and handle supplementals separately
                 line_15_prev_issued = Decimal("0")
-            total_payable = line11_gas + line11_diesel + line28_non_compliance
+            # Use calculated penalty with correct rate based on compliance year
+            total_payable = line11_gas + line11_diesel + line_21_non_compliance_penalty
 
             return {
                 # Gasoline class data
@@ -493,15 +511,17 @@ class ComplianceSummaryUpdater:
                 "line_18_units_to_be_banked": net_fuel_supply_units,
                 "line_19_units_to_be_exported": Decimal("0.0"),  # No equivalent in TFRS
                 "line_20_surplus_deficit_units": balance_chg_from_assessment,
-                "line_21_surplus_deficit_ratio": line28_non_compliance,
+                # Note: line_21_surplus_deficit_ratio stores the penalty amount (legacy column name)
+                "line_21_surplus_deficit_ratio": line_21_non_compliance_penalty,
                 "line_22_compliance_units_issued": available_balance_at_period_end,
                 # Fossil derived base fuel (aggregate)
                 "line_11_fossil_derived_base_fuel_gasoline": fossil_gas,
                 "line_11_fossil_derived_base_fuel_diesel": fossil_diesel,
                 "line_11_fossil_derived_base_fuel_jet_fuel": Decimal("0.0"),
                 "line_11_fossil_derived_base_fuel_total": fossil_total,
-                # Non-compliance penalty fields
-                "line_21_non_compliance_penalty_payable": line28_non_compliance,
+                # Non-compliance penalty fields - calculated with correct rate based on year
+                # ($200/unit for <=2022, $600/unit for >=2023)
+                "line_21_non_compliance_penalty_payable": line_21_non_compliance_penalty,
                 "total_non_compliance_penalty_payable": total_payable,
             }
 

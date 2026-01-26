@@ -24,6 +24,7 @@ from lcfs.web.api.compliance_report.constants import (
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
     FORMATS,
+    get_low_carbon_penalty_rate,
 )
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
@@ -438,13 +439,24 @@ class ComplianceReportSummaryService:
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
         """
-        For line 21, format with summary_obj.line_21_non_compliance_penalty_payable / 600
+        For line 21, format with summary_obj.line_21_non_compliance_penalty_payable / penalty_rate
+        Penalty rate is $200 for compliance years <=2022, $600 for >=2023
         """
         base_desc = descriptions_dict[line].get("description")
         penalty_value = getattr(summary_obj, "line_21_non_compliance_penalty_payable", 0) or 0
 
+        # Get compliance year to determine correct penalty rate
+        compliance_year = (
+            int(summary_obj.compliance_report.compliance_period.description)
+            if summary_obj.compliance_report
+            and summary_obj.compliance_report.compliance_period
+            else 2024  # fallback year
+        )
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
+
         return base_desc.format(
-            "{:,}".format(int(penalty_value / 600))
+            units="{:,}".format(int(penalty_value / penalty_rate)),
+            rate=penalty_rate,
         )
 
     @service_handler
@@ -839,7 +851,9 @@ class ComplianceReportSummaryService:
             )
         )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary(
-            non_compliance_penalty_payable_units, renewable_fuel_target_summary
+            non_compliance_penalty_payable_units,
+            renewable_fuel_target_summary,
+            compliance_period_start.year,
         )
 
         existing_summary = self.convert_summary_to_dict(summary_model)
@@ -1441,11 +1455,13 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable_units = (
             calculated_penalty_units if (calculated_penalty_units < 0) else 0
         )
+        # Get penalty rate based on compliance year ($200 for <=2022, $600 for >=2023)
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
         non_compliance_penalty_payable = (
             int(
                 (
                     Decimal(str(non_compliance_penalty_payable_units))
-                    * Decimal("-600.0")
+                    * Decimal(str(-penalty_rate))
                 ).max(Decimal("0"))
             )
             if non_compliance_penalty_payable_units < 0
@@ -1478,7 +1494,8 @@ class ComplianceReportSummaryService:
                 line=line,
                 description=(
                     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(non_compliance_penalty_payable_units * -1)
+                        units="{:,}".format(non_compliance_penalty_payable_units * -1),
+                        rate=penalty_rate,
                     )
                     if (line == 21)
                     else (
@@ -1505,9 +1522,12 @@ class ComplianceReportSummaryService:
         self,
         non_compliance_penalty_payable_units: int,
         renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema],
+        compliance_year: int,
     ) -> List[ComplianceReportSummaryRowSchema]:
+        # Get penalty rate based on compliance year ($200 for <=2022, $600 for >=2023)
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
         non_compliance_penalty_payable = (
-            Decimal(str(non_compliance_penalty_payable_units)) * Decimal("-600.0")
+            Decimal(str(non_compliance_penalty_payable_units)) * Decimal(str(-penalty_rate))
         ).max(Decimal("0"))
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == 11)
         # Convert line 11 total value to Decimal for accurate addition
