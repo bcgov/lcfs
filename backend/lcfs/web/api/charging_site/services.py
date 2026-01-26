@@ -311,20 +311,18 @@ class ChargingSiteService:
         site_statuses = await self.repo.get_charging_site_statuses()
         site_status_ids = self._get_site_status_ids(site_statuses)
 
-        current_site = await self.repo.get_charging_site_by_id(charging_site_id)
+        if bulk_update.new_status in ["Submitted", "Validated"]:
+            current_site = await self.repo.get_charging_site_by_id(charging_site_id)
 
-        if (
-            bulk_update.new_status in ["Submitted", "Validated"]
-            and not (
+            if not (
                 current_site
                 and current_site.status
                 and current_site.status.status == bulk_update.new_status
-            )
-        ):
-            # When equipment is Submitted or Validated, update site status to match
-            await self.repo.update_charging_site_status(
-                charging_site_id, site_status_ids[bulk_update.new_status]
-            )
+            ):
+                # When equipment is Submitted or Validated, update site status to match
+                await self.repo.update_charging_site_status(
+                    charging_site_id, site_status_ids[bulk_update.new_status]
+                )
         elif bulk_update.new_status == "Draft":
             # When returning equipment to Draft, recalculate site status
             # based on the highest status of all remaining equipment
