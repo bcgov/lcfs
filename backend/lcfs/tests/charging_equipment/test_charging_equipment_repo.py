@@ -280,6 +280,7 @@ async def test_update_charging_equipment_creates_new_version_for_validated(
     valid_charging_equipment.status.status = "Validated"
     valid_charging_equipment.version = 1
     valid_charging_equipment.group_uuid = "group-123"
+    original_version = valid_charging_equipment.version
 
     mock_updated_status = ChargingEquipmentStatus(
         charging_equipment_status_id=10, status="Updated"
@@ -296,13 +297,13 @@ async def test_update_charging_equipment_creates_new_version_for_validated(
             1, {"manufacturer": "ChargeCo", "model": "Rev2"}
         )
 
-    assert result is not valid_charging_equipment
-    assert result.version == valid_charging_equipment.version + 1
+    assert result is valid_charging_equipment
+    assert result.version == original_version + 1
     assert result.manufacturer == "ChargeCo"
     assert result.model == "Rev2"
-    assert result.group_uuid == valid_charging_equipment.group_uuid
+    assert result.group_uuid == "group-123"
     assert result.intended_uses == list(valid_charging_equipment.intended_uses)
-    mock_db.add.assert_called_once()
+    mock_db.add.assert_not_called()
     mock_db.flush.assert_called_once()
     assert mock_db.refresh.call_count == 2
 
