@@ -1149,8 +1149,9 @@ async def test_calculate_non_compliance_penalty_summary_parametrized(
             line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
+    # Use compliance year 2023+ for $600/unit rate
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        penalty_payable, mock_compliance_report_summary
+        penalty_payable, mock_compliance_report_summary, compliance_year=2023
     )
     assert len(result) == 3
     assert result[0].total_value == exp_row1
@@ -2710,8 +2711,9 @@ async def test_calculate_non_compliance_penalty_with_override_scenarios(
     ]
 
     penalty_payable_units = -2  # Should result in penalty
+    # Use compliance year 2023+ for $600/unit rate
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        penalty_payable_units, mock_renewable_summary
+        penalty_payable_units, mock_renewable_summary, compliance_year=2023
     )
 
     assert len(result) == 3
@@ -2728,7 +2730,7 @@ async def test_calculate_non_compliance_penalty_with_override_scenarios(
     # Test scenario 2: Zero penalty units
     penalty_payable_units = 0
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        penalty_payable_units, mock_renewable_summary
+        penalty_payable_units, mock_renewable_summary, compliance_year=2023
     )
 
     assert len(result) == 3
