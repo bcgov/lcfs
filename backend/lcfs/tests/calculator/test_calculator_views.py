@@ -16,6 +16,7 @@ def mock_calculator_service():
     service.get_fuel_type_options = AsyncMock()
     service.get_calculated_data = AsyncMock()
     service.get_quantity_from_compliance_units = AsyncMock()
+    service.get_lookup_table_data = AsyncMock()
     return service
 
 
@@ -598,3 +599,54 @@ async def test_get_quantity_from_compliance_units_missing_required_params(
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     mock_calculator_service.get_quantity_from_compliance_units.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_lookup_table_data(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_calculator_service,
+):
+    mock_lookup_table_data = {
+        "compliance_year": 2025,
+        "data": [
+            {
+                "fuel_category": "Diesel",
+                "fuel_type": "Fossil-derived diesel",
+                "end_use": "Any",
+                "determining_carbon_intensity": "Default carbon intensity",
+                "target_ci": 79.28,
+                "ci_of_fuel": 94.38,
+                "uci": None,
+                "energy_density": 38.65,
+                "energy_density_unit": "MJ/L",
+                "eer": 1.0,
+            }
+        ],
+    }
+    mock_calculator_service.get_lookup_table_data.return_value = (
+        mock_lookup_table_data
+    )
+
+    fastapi_app.dependency_overrides[CalculatorService] = (
+        lambda: mock_calculator_service
+    )
+
+    compliance_year = 2025
+    url = fastapi_app.url_path_for(
+        "get_lookup_table_data", compliance_year=compliance_year
+    )
+    response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["complianceYear"] == 2025
+    assert len(data["data"]) == 1
+    assert data["data"][0]["fuelCategory"] == "Diesel"
+    assert data["data"][0]["fuelType"] == "Fossil-derived diesel"
+    assert data["data"][0]["endUse"] == "Any"
+    assert data["data"][0]["energyDensityUnit"] == "MJ/L"
+
+    mock_calculator_service.get_lookup_table_data.assert_called_once_with(
+        compliance_year
+    )
