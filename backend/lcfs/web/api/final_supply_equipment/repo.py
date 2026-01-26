@@ -37,7 +37,10 @@ from lcfs.db.models.compliance.ChargingEquipment import (
     charging_equipment_intended_use_association,
     charging_equipment_intended_user_association,
 )
-from lcfs.db.models.compliance.ChargingSite import ChargingSite
+from lcfs.db.models.compliance.ChargingSite import (
+    ChargingSite,
+    latest_charging_site_version_subquery,
+)
 from lcfs.web.api.base import apply_filter_conditions, get_field_for_filter
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
@@ -58,6 +61,19 @@ logger = structlog.get_logger(__name__)
 class FinalSupplyEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def _apply_latest_site_filter(self, stmt):
+        """
+        Constrains statements involving ChargingSite to only include the most recent version.
+        """
+        latest_sites = latest_charging_site_version_subquery()
+        return stmt.join(
+            latest_sites,
+            and_(
+                ChargingSite.charging_site_id == latest_sites.c.charging_site_id,
+                ChargingSite.version == latest_sites.c.latest_version,
+            ),
+        )
 
     @repo_handler
     async def get_fse_options(self, organization) -> tuple[
@@ -565,7 +581,7 @@ class FinalSupplyEquipmentRepository:
             ChargingEquipmentStatus.status != "Decommissioned",
         ]
 
-        return (
+        stmt = (
             select(
                 ChargingEquipment.charging_equipment_id,
                 ChargingEquipment.serial_number,
@@ -626,6 +642,7 @@ class FinalSupplyEquipmentRepository:
             )
             .where(*common_conditions, *filter_conditions)
         )
+        return self._apply_latest_site_filter(stmt)
 
     def _apply_filters(self, filter_conditions, filters):
         for f in filters:
@@ -693,6 +710,7 @@ class FinalSupplyEquipmentRepository:
             )
             .group_by(ChargingEquipment.charging_equipment_id)
         )
+        stmt = self._apply_latest_site_filter(stmt)
         result = await self.db.execute(stmt)
         return result.all()
 
@@ -743,6 +761,7 @@ class FinalSupplyEquipmentRepository:
                 )
             )
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         count = result.scalar() or 0
         return count > 0
