@@ -222,6 +222,13 @@ export const AddEditUser = ({
 
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
+    // For IDIR users, use keycloakEmail for both email fields
+    // For BCeID users, use altEmail if provided
+    const isIDIRUser = !orgID && !hasRoles(roles.supplier)
+    const emailValue = isIDIRUser 
+      ? data.keycloakEmail 
+      : (data.altEmail === '' ? null : data.altEmail)
+
     const payload = {
       userProfileId: userID,
       title: data.jobTitle,
@@ -229,7 +236,7 @@ export const AddEditUser = ({
       lastName: data.lastName,
       keycloakUsername: data.userName,
       keycloakEmail: data.keycloakEmail,
-      email: data.altEmail,
+      email: emailValue,
       phone: data.phone,
       mobilePhone: data.mobile,
       isActive: data.status === 'Active',

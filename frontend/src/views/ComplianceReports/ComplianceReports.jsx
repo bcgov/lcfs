@@ -16,7 +16,6 @@ import {
 import { reportsColDefs, defaultSortModel } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
@@ -175,13 +174,6 @@ export const ComplianceReports = () => {
             setIsButtonLoading={setIsButtonLoading}
           />
         </Role>
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-          sx={{
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        />
         <BCButton
           data-test="credit-calculator"
           sx={{ '& .MuiSvgIcon-root': { fontSize: '1.2rem !important' } }}

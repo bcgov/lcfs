@@ -420,6 +420,8 @@ class ComplianceReportRepository:
                 "report_status": report.report_status,
                 "update_date": report.update_date,
                 "is_latest": report.is_latest,
+                "latest_supplemental_create_date": report.latest_supplemental_create_date,
+                "latest_status": report.latest_status,
                 "assigned_analyst_id": report.assigned_analyst_id,
                 "assigned_analyst_first_name": report.assigned_analyst_first_name,
                 "assigned_analyst_last_name": report.assigned_analyst_last_name,
@@ -485,17 +487,32 @@ class ComplianceReportRepository:
     def _apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
+
+            if (
+                filter.filter_type == "set"
+                and (not filter_value or filter_value == [])
+                and filter.values
+            ):
+                filter_value = filter.values
             logger.info(
                 f"Processing filter: field={filter.field}, value={filter_value}"
             )
 
             # check if the date string is selected for filter
             if filter.filter is None:
-                filter_value = [
-                    datetime.strptime(filter.date_from, "%Y-%m-%d %H:%M:%S").strftime(
-                        "%Y-%m-%d"
+                if not filter.date_from and not filter.date_to:
+                    logger.info(
+                        "Skipping date filter because both 'date_from' and 'date_to' are empty"
                     )
-                ]
+                    continue
+
+                filter_value = []
+                if filter.date_from:
+                    filter_value.append(
+                        datetime.strptime(
+                            filter.date_from, "%Y-%m-%d %H:%M:%S"
+                        ).strftime("%Y-%m-%d")
+                    )
                 if filter.date_to:
                     filter_value.append(
                         datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
@@ -511,7 +528,9 @@ class ComplianceReportRepository:
                 )
                 # Check if filter_value is a comma-separated string
                 if isinstance(filter_value, str) and "," in filter_value:
-                    filter_value = filter_value.split(",")  # Convert to list
+                    filter_value = [
+                        val.strip() for val in filter_value.split(",") if val.strip()
+                    ]  # Convert to clean list
 
                 if isinstance(filter_value, list):
 

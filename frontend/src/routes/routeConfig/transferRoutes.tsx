@@ -1,11 +1,12 @@
 import { Navigate } from 'react-router-dom'
 import ROUTES from '../routes'
 import { AddEditViewTransfer } from '@/views/Transfers'
+import { AppRouteObject } from '../types'
 
-export const transferRoutes = [
+export const transferRoutes: AppRouteObject[] = [
   {
     path: ROUTES.TRANSFERS.LIST,
-    element: <Navigate to={ROUTES.TRANSACTIONS} replace />,
+    element: <Navigate to={ROUTES.TRANSACTIONS.LIST} replace />,
     handle: { title: 'Transfers' }
   },
   {

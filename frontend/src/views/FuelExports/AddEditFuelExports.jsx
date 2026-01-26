@@ -298,7 +298,8 @@ export const AddEditFuelExports = () => {
         {
           complianceReportId,
           compliancePeriod
-        }
+        },
+        'fuelTypeId' // First editable column for focus after clearing
       )
     }
   }

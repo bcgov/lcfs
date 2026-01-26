@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditorPaginated } from '@/components/BCDataGrid/BCGridEditorPaginated'
 import BCTypography from '@/components/BCTypography'
-import { Stack, TextField, Autocomplete, Alert } from '@mui/material'
+import { Stack, TextField, Autocomplete, Alert, CircularProgress } from '@mui/material'
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
@@ -15,7 +15,7 @@ import {
   useDeleteFSEReportingBatch,
   useSetFSEReportingDefaultDates
 } from '@/hooks/useFinalSupplyEquipment'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
 import { defaultInitialPagination } from '@/constants/schedules'
 import ROUTES from '@/routes/routes'
@@ -44,11 +44,11 @@ export const FinalSupplyEquipmentReporting = () => {
   const minDate = `${compliancePeriod}-01-01`
   const maxDate = `${compliancePeriod}-12-31`
   // Get report data from store
-  const reportData = useComplianceReportStore((state) =>
-    state.getCachedReport(complianceReportId)
-  )
+  const { data: reportData, isLoading: isReportLoading } =
+    useComplianceReportWithCache(complianceReportId)
+  const organizationId = reportData?.report?.organizationId
   const { data: siteNames = [], isLoading: siteLoading } = useSiteNames(
-    reportData?.report?.organizationId
+    organizationId
   )
 
   const { control, watch } = useForm({
@@ -65,27 +65,40 @@ export const FinalSupplyEquipmentReporting = () => {
   const queryData = useGetFSEReportingList(
     complianceReportId,
     paginationOptions,
-    {},
-    reportData?.report?.organizationId,
+    { enabled: !!organizationId },
+    organizationId,
     'all' // 'all' to fetch all equipments data.
   )
   const { data, isLoading, isError, refetch } = queryData
 
   // Mutation hook for saving changes
   const { mutateAsync: saveRow } = useSaveFSEReporting(
-    reportData?.report?.organizationId,
+    organizationId,
     complianceReportId
   )
 
   // Mutation hook for batch delete
   const { mutateAsync: deleteBatch } = useDeleteFSEReportingBatch(
     complianceReportId,
-    reportData?.report?.organizationId
+    organizationId
   )
 
   // Mutation hook for set defaults
   const { mutateAsync: setDefaults } =
     useSetFSEReportingDefaultDates(complianceReportId)
+
+  if (isReportLoading || !organizationId) {
+    return (
+      <Stack
+        data-test="fse-reporting-loading"
+        alignItems="center"
+        justifyContent="center"
+        sx={{ width: '100%', minHeight: 200 }}
+      >
+        <CircularProgress />
+      </Stack>
+    )
+  }
 
   // Initialize global selection from all data when component loads
   useEffect(() => {
@@ -257,7 +270,7 @@ export const FinalSupplyEquipmentReporting = () => {
             complianceNotes: null,
             chargingEquipmentId: node.data.chargingEquipmentId,
             chargingEquipmentVersion: node.data.chargingEquipmentVersion,
-            organizationId: reportData?.report?.organizationId,
+            organizationId,
             complianceReportId,
             complianceReportGroupUuid:
               reportData?.report?.complianceReportGroupUuid
@@ -315,7 +328,7 @@ export const FinalSupplyEquipmentReporting = () => {
               complianceNotes: null,
               chargingEquipmentId: node.data.chargingEquipmentId,
               chargingEquipmentVersion: node.data.chargingEquipmentVersion,
-              organizationId: reportData?.report?.organizationId,
+              organizationId,
               complianceReportId: null,
               complianceReportGroupUuid: null
             })
@@ -430,7 +443,7 @@ export const FinalSupplyEquipmentReporting = () => {
         complianceReportId: parseInt(complianceReportId),
         complianceReportGroupUuid:
           reportData?.report?.complianceReportGroupUuid,
-        organizationId: reportData?.report?.organizationId
+        organizationId
       }
 
       const responseData = await handleScheduleSave({
@@ -509,7 +522,7 @@ export const FinalSupplyEquipmentReporting = () => {
         complianceReportId: parseInt(complianceReportId),
         complianceReportGroupUuid:
           reportData?.report?.complianceReportGroupUuid,
-        organizationId: reportData?.report?.organizationId
+        organizationId
       })
       fseGridAlertRef.current?.triggerAlert({
         message: t('finalSupplyEquipment:defaultValuesSet'),

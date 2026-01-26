@@ -133,18 +133,23 @@ export const ROUTES = {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'
   }
-}
+} as const
+
+export type RoutesType = typeof ROUTES
 
 /**
  * Generates a path by replacing :key placeholders with param values.
  *
- * @param {string} route - The base route with placeholders.
- * @param {Object} [params={}] - Key-value pairs for replacements.
- * @returns {string} Modified route.
+ * @param route - The base route with placeholders.
+ * @param params - Key-value pairs for replacements.
+ * @returns Modified route.
  */
-export function buildPath(route, params = {}) {
+export function buildPath(
+  route: string,
+  params: Record<string, string | number> = {}
+): string {
   return Object.entries(params).reduce((result, [key, value]) => {
-    return result.replace(`:${key}`, value)
+    return result.replace(`:${key}`, String(value))
   }, route)
 }
 

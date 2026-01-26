@@ -199,7 +199,8 @@ export const AddEditChargingSite = ({
         setRowData,
         {
           organizationId
-        }
+        },
+        'siteName' // First editable column for focus after clearing
       )
 
       if (

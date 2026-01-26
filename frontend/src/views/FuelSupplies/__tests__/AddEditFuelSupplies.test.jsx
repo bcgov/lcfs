@@ -623,7 +623,8 @@ describe('AddEditFuelSupplies', () => {
         mockSaveRow,
         expect.any(Object),
         expect.any(Function),
-        { complianceReportId: 'testReportId', compliancePeriod: '2024' }
+        { complianceReportId: 'testReportId', compliancePeriod: '2024' },
+        'fuelType' // First editable column for focus after clearing
       )
     })
 

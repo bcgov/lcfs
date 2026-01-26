@@ -1,8 +1,7 @@
 import { forwardRef, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
-import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import FilterListOffIcon from '@mui/icons-material/FilterListOff'
 
 interface ClearFiltersButtonProps {
   onClick?: () => void
@@ -46,8 +45,8 @@ export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButt
       onClick={onClick}
       onKeyDown={handleKeyDown}
       onKeyUp={handleKeyUp}
-      startIcon={<FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />}
-      sx={{ ...sx }}
+      endIcon={<FilterListOffIcon className="small-icon" />}
+      sx={{...sx}}
       {...props}
     >
       {t('common:ClearFilters')}
