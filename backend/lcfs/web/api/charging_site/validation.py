@@ -84,10 +84,10 @@ class ChargingSiteValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
-        if delete and charging_site.status.status != "Draft":
+        if delete and charging_site.status.status not in ["Draft", "Submitted"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only charging sites with 'Draft' status can be deleted.",
+                detail="Only charging sites with 'Draft' or 'Submitted' status can be deleted.",
             )
         # Validate duplicate site name on update
         if data and data.site_name:

@@ -11,6 +11,7 @@ from sqlalchemy import (
     select,
     event,
     Double,
+    func,
 )
 from sqlalchemy.orm import relationship, Session
 
@@ -190,3 +191,18 @@ def generate_site_code(mapper, connection, target):
         target.site_code = next_base36(max_code, width=5)
     finally:
         session.close()
+
+
+def latest_charging_site_version_subquery():
+    """
+    Helper subquery that returns the latest version number for each charging site ID.
+    Used to ensure queries only work with the most recent version of a site.
+    """
+    return (
+        select(
+            ChargingSite.charging_site_id.label("charging_site_id"),
+            func.max(ChargingSite.version).label("latest_version"),
+        )
+        .group_by(ChargingSite.charging_site_id)
+        .subquery()
+    )

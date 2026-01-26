@@ -306,23 +306,26 @@ class ChargingSiteService:
                 f"be in the required status."
             )
 
-        # Update charging site status if equipment status is Submitted or Validated
+        # Update charging site status based on equipment status changes
+        # Get charging site statuses and find the corresponding status ID
+        site_statuses = await self.repo.get_charging_site_statuses()
+        site_status_ids = self._get_site_status_ids(site_statuses)
+
         if bulk_update.new_status in ["Submitted", "Validated"]:
-            site_statuses = await self.repo.get_charging_site_statuses()
-            site_status_ids = self._get_site_status_ids(site_statuses)
-            site = await self.repo.get_charging_site_by_id(charging_site_id)
-
-            current_status = getattr(getattr(site, "status", None), "status", None)
-            if current_status:
-                if bulk_update.new_status == "Submitted":
-                    allowed_site_statuses = ["Draft", "Updated"]
-                else:
-                    allowed_site_statuses = ["Submitted", "Draft", "Updated"]
-
-                if current_status in allowed_site_statuses:
-                    await self.repo.update_charging_site_status(
-                        charging_site_id, site_status_ids[bulk_update.new_status]
-                    )
+            # When equipment is Submitted or Validated, update site status to match
+            await self.repo.update_charging_site_status(
+                charging_site_id, site_status_ids[bulk_update.new_status]
+            )
+        elif bulk_update.new_status == "Draft":
+            # When returning equipment to Draft, recalculate site status
+            # based on the highest status of all remaining equipment
+            new_site_status = await self.repo.calculate_site_status_from_equipment(
+                charging_site_id
+            )
+            if new_site_status:
+                await self.repo.update_charging_site_status(
+                    charging_site_id, site_status_ids[new_site_status]
+                )
         return True
 
     @service_handler
@@ -492,10 +495,33 @@ class ChargingSiteService:
         )
         if not existing_charging_site:
             raise HTTPException(status_code=404, detail="Charging site not found")
-        if existing_charging_site.status.status != ChargingSiteStatusEnum.DRAFT:
+
+        existing_status_name = (
+            existing_charging_site.status.status
+            if existing_charging_site.status
+            else None
+        )
+        allowed_statuses = {
+            ChargingSiteStatusEnum.DRAFT,
+            ChargingSiteStatusEnum.UPDATED,
+            ChargingSiteStatusEnum.VALIDATED,
+        }
+        if existing_status_name not in allowed_statuses:
             raise HTTPException(
                 status_code=400, detail="Charging site is not in draft state"
             )
+
+        if existing_status_name == ChargingSiteStatusEnum.VALIDATED:
+            existing_charging_site.version = (
+                (existing_charging_site.version or 0) + 1
+            )
+            target_status_name = ChargingSiteStatusEnum.UPDATED
+        else:
+            target_status_name = (
+                charging_site_data.current_status
+                if charging_site_data.current_status
+                else existing_status_name
+            ) or ChargingSiteStatusEnum.DRAFT
 
         new_site_name = (
             charging_site_data.site_name or existing_charging_site.site_name
@@ -517,11 +543,7 @@ class ChargingSiteService:
                     detail="A charging site with this name already exists for the organization.",
                 )
 
-        status = await self.repo.get_charging_site_status_by_name(
-            charging_site_data.current_status
-            if charging_site_data.current_status
-            else ChargingSiteStatusEnum.DRAFT
-        )
+        status = await self.repo.get_charging_site_status_by_name(target_status_name)
 
         try:
             # Update basic fields on the existing object

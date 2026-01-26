@@ -14,7 +14,10 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
-from lcfs.db.models.compliance.ChargingSite import ChargingSite
+from lcfs.db.models.compliance.ChargingSite import (
+    ChargingSite,
+    latest_charging_site_version_subquery,
+)
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -38,6 +41,20 @@ logger = structlog.get_logger(__name__)
 class ChargingEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def _apply_latest_site_filter(self, stmt):
+        """
+        Join the statement to the latest charging site versions to ensure we only use
+        the most recent site record for any joins involving ChargingSite.
+        """
+        latest_sites = latest_charging_site_version_subquery()
+        return stmt.join(
+            latest_sites,
+            and_(
+                ChargingSite.charging_site_id == latest_sites.c.charging_site_id,
+                ChargingSite.version == latest_sites.c.latest_version,
+            ),
+        )
 
     @repo_handler
     async def get_charging_equipment_by_id(
@@ -101,6 +118,7 @@ class ChargingEquipmentRepository:
                 ChargingSite.action_type != ActionTypeEnum.DELETE,
             )
         )
+        query = self._apply_latest_site_filter(query)
 
         # Apply organization scoping when either the caller or filters set it
         if organization_id is not None:
@@ -191,6 +209,7 @@ class ChargingEquipmentRepository:
             )
             .order_by(ChargingEquipment.update_date.desc())
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -202,6 +221,7 @@ class ChargingEquipmentRepository:
             .join(ChargingSite)
             .where(ChargingSite.organization_id == organization_id)
         )
+        subq = self._apply_latest_site_filter(subq)
         del_stmt = delete(ChargingEquipment).where(
             ChargingEquipment.charging_equipment_id.in_(subq)
         )
@@ -279,11 +299,15 @@ class ChargingEquipmentRepository:
         if equipment.status.status not in ["Draft", "Updated"]:
             # If Validated, create a new version
             if equipment.status.status == "Validated":
-                return await self._create_validated_equipment_version(
-                    equipment, equipment_data
+                equipment.version += 1
+
+                # Get Updated status ID
+                status_query = select(ChargingEquipmentStatus).where(
+                    ChargingEquipmentStatus.status == "Updated"
                 )
-            else:
-                return equipment
+                status_result = await self.db.execute(status_query)
+                updated_status = status_result.scalar_one()
+                equipment.status_id = updated_status.charging_equipment_status_id
 
         # Update fields
         for field, value in equipment_data.items():
@@ -317,81 +341,6 @@ class ChargingEquipmentRepository:
         await self.db.refresh(equipment, attribute_names=["charging_site"])
 
         return equipment
-
-    async def _create_validated_equipment_version(
-        self, equipment: ChargingEquipment, equipment_data: Dict[str, Any]
-    ) -> ChargingEquipment:
-        """Create a new equipment record when editing a validated version."""
-        status_query = select(ChargingEquipmentStatus).where(
-            ChargingEquipmentStatus.status == "Updated"
-        )
-        status_result = await self.db.execute(status_query)
-        updated_status = status_result.scalar_one()
-
-        new_equipment = ChargingEquipment(
-            charging_site_id=equipment.charging_site_id,
-            status_id=updated_status.charging_equipment_status_id,
-            equipment_number=equipment.equipment_number,
-            serial_number=equipment_data.get("serial_number", equipment.serial_number),
-            manufacturer=equipment_data.get("manufacturer", equipment.manufacturer),
-            model=equipment_data.get("model", equipment.model),
-            level_of_equipment_id=equipment_data.get(
-                "level_of_equipment_id", equipment.level_of_equipment_id
-            ),
-            ports=equipment_data.get("ports", equipment.ports),
-            latitude=equipment_data.get("latitude", equipment.latitude),
-            longitude=equipment_data.get("longitude", equipment.longitude),
-            notes=equipment_data.get("notes", equipment.notes),
-            version=equipment.version + 1,
-            group_uuid=equipment.group_uuid,
-            action_type=ActionTypeEnum.UPDATE,
-        )
-        new_equipment.charging_site = equipment.charging_site
-        new_equipment.status = updated_status
-
-        self.db.add(new_equipment)
-        await self.db.flush()
-
-        await self._assign_intended_relationships(
-            new_equipment, equipment, equipment_data
-        )
-
-        await self.db.refresh(new_equipment)
-        await self.db.refresh(new_equipment, attribute_names=["charging_site"])
-        return new_equipment
-
-    async def _assign_intended_relationships(
-        self,
-        target_equipment: ChargingEquipment,
-        source_equipment: ChargingEquipment,
-        equipment_data: Dict[str, Any],
-    ) -> None:
-        """Copy or update intended uses/users for a cloned record."""
-        if (
-            "intended_use_ids" in equipment_data
-            and equipment_data["intended_use_ids"] is not None
-        ):
-            intended_uses_query = select(EndUseType).where(
-                EndUseType.end_use_type_id.in_(equipment_data["intended_use_ids"])
-            )
-            intended_uses_result = await self.db.execute(intended_uses_query)
-            target_equipment.intended_uses = intended_uses_result.scalars().all()
-        else:
-            target_equipment.intended_uses = list(source_equipment.intended_uses)
-
-        if (
-            "intended_user_ids" in equipment_data
-            and equipment_data["intended_user_ids"] is not None
-        ):
-            intended_users_query = select(EndUserType).where(
-                EndUserType.end_user_type_id.in_(
-                    equipment_data["intended_user_ids"]
-                )
-            )
-            intended_users_result = await self.db.execute(intended_users_query)
-            target_equipment.intended_users = intended_users_result.scalars().all()
-        else:
-            target_equipment.intended_users = list(source_equipment.intended_users)
 
     @repo_handler
     async def bulk_update_status(
@@ -619,6 +568,7 @@ class ChargingEquipmentRepository:
             )
             .order_by(ChargingSite.site_name)
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -660,11 +610,14 @@ class ChargingEquipmentRepository:
             .distinct()
             .join(ChargingSite)
             .where(
-                ChargingEquipment.charging_equipment_id.in_(equipment_ids)
+                and_(
+                    ChargingEquipment.charging_equipment_id.in_(equipment_ids)
+                )
             )
         )
         if organization_id is not None:
             query = query.where(ChargingSite.organization_id == organization_id)
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -749,6 +702,7 @@ class ChargingEquipmentRepository:
             )
             .where(ChargingSite.charging_site_id == site_id)
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
