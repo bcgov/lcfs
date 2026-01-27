@@ -20,7 +20,7 @@ depends_on = None
 
 
 class SupplementalReportAccessRoleEnum(str, Enum):
-    BCEID = "BCeID"
+    BCeID = "BCeID"
     IDIR = "IDIR"
 
 
@@ -33,9 +33,8 @@ enum_for_column = sa.Enum(
 
 def upgrade() -> None:
     op.execute("DROP TYPE IF EXISTS supplemental_report_access_role_enum")
-    op.execute("CREATE TYPE supplemental_report_access_role_enum AS ENUM ('BCeID', 'IDIR')")
 
-    report_opening_table = op.create_table(
+    op.create_table(
         "report_opening",
         sa.Column(
             "report_opening_id",
@@ -108,13 +107,13 @@ def upgrade() -> None:
         comment="Stores per-year configuration for compliance reporting availability and permissions.",
     )
     op.execute('commit;')
-    # report_opening_table = sa.table(
-    #     "report_opening",
-    #     sa.column("compliance_year", sa.Integer()),
-    #     sa.column("compliance_reporting_enabled", sa.Boolean()),
-    #     sa.column("early_issuance_enabled", sa.Boolean()),
-    #     sa.column("supplemental_report_role", enum_for_column),
-    # )
+    report_opening_table = sa.table(
+        "report_opening",
+        sa.column("compliance_year", sa.Integer()),
+        sa.column("compliance_reporting_enabled", sa.Boolean()),
+        sa.column("early_issuance_enabled", sa.Boolean()),
+        sa.column("supplemental_report_role", enum_for_column),
+    )
 
     current_year = datetime.utcnow().year
     op.bulk_insert(
@@ -124,9 +123,9 @@ def upgrade() -> None:
                 "compliance_year": year,
                 "compliance_reporting_enabled": year <= current_year,
                 "early_issuance_enabled": False,
-                "supplemental_report_role": SupplementalReportAccessRoleEnum.BCEID.value,
+                "supplemental_report_role": SupplementalReportAccessRoleEnum.BCeID,
             }
-            for year in range(2013, 2031)
+            for year in range(2019, 2031)
         ],
     )
 

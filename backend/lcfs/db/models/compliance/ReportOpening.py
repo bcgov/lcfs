@@ -8,7 +8,7 @@ from lcfs.db.base import Auditable, BaseModel
 class SupplementalReportAccessRole(str, PyEnum):
     """Enumerates which user role may create supplemental reports for a year."""
 
-    BCEID = "BCeID"
+    BCeID = "BCeID"
     IDIR = "IDIR"
 
 
@@ -54,7 +54,7 @@ class ReportOpening(BaseModel, Auditable):
             name="supplemental_report_access_role_enum",
         ),
         nullable=False,
-        default=SupplementalReportAccessRole.BCEID,
+        default=SupplementalReportAccessRole.BCeID,
         server_default=text("'BCeID'"),
         comment="Which role (BCeID or IDIR) may create supplemental reports for the year",
     )

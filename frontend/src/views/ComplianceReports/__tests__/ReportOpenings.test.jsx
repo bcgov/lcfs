@@ -17,12 +17,17 @@ describe('ReportOpenings', () => {
       expect(screen.getByText('2020')).toBeInTheDocument()
     })
 
-    const checkboxes = screen.getAllByRole('checkbox')
     const saveButton = screen.getByRole('button', { name: /Save/i })
 
     expect(saveButton).toBeDisabled()
 
-    await userEvent.click(checkboxes[1])
+    const complianceToggle2020 = screen.getByLabelText(/compliance reporting availability.*2020/i)
+    await userEvent.click(complianceToggle2020)
+
+    expect(saveButton).not.toBeDisabled()
+
+    const idirRadios = screen.getAllByRole('radio', { name: /IDIR/i })
+    await userEvent.click(idirRadios[0])
 
     expect(saveButton).not.toBeDisabled()
   })

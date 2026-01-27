@@ -44,6 +44,8 @@ class ReportOpeningService:
             await self.repo.upsert_year(
                 update.compliance_year,
                 compliance_reporting_enabled=update.compliance_reporting_enabled,
+                early_issuance_enabled=update.early_issuance_enabled,
+                supplemental_report_role=update.supplemental_report_role,
             )
 
         records = await self.repo.sync_configured_years()

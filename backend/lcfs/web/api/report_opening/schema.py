@@ -19,7 +19,9 @@ class ReportOpeningSchema(BaseSchema):
 
 class ReportOpeningUpdateSchema(BaseSchema):
     compliance_year: int
-    compliance_reporting_enabled: bool
+    compliance_reporting_enabled: bool | None = None
+    early_issuance_enabled: bool | None = None
+    supplemental_report_role: SupplementalReportAccessRole | None = None
 
 
 class ReportOpeningUpdateRequest(BaseSchema):

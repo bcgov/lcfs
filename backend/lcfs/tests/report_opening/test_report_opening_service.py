@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from lcfs.db.models.compliance.ReportOpening import SupplementalReportAccessRole
 from lcfs.web.api.report_opening.schema import (
     ReportOpeningUpdateRequest,
     ReportOpeningUpdateSchema,
@@ -60,14 +61,22 @@ async def test_update_report_openings_updates_each_year(mock_report_opening_repo
     payload = ReportOpeningUpdateRequest(
         report_openings=[
             ReportOpeningUpdateSchema(
-                compliance_year=2019, compliance_reporting_enabled=False
+                compliance_year=2019,
+                compliance_reporting_enabled=False,
+                early_issuance_enabled=True,
+                supplemental_report_role="IDIR",
             )
         ]
     )
 
     results = await service.update_report_openings(payload)
 
-    mock_report_opening_repo.upsert_year.assert_awaited_once()
+    mock_report_opening_repo.upsert_year.assert_awaited_once_with(
+        2019,
+        compliance_reporting_enabled=False,
+        early_issuance_enabled=True,
+        supplemental_report_role=SupplementalReportAccessRole.IDIR,
+    )
     assert any(result.compliance_year == 2019 for result in results)
 
 

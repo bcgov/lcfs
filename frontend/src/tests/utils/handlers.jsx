@@ -74,9 +74,18 @@ export const handlers = [
       const override = updatedYears.find(
         (item) => item.complianceYear === entry.complianceYear
       )
-      return override
-        ? { ...entry, complianceReportingEnabled: override.complianceReportingEnabled }
-        : entry
+      if (!override) {
+        return entry
+      }
+      return {
+        ...entry,
+        complianceReportingEnabled:
+          override.complianceReportingEnabled ?? entry.complianceReportingEnabled,
+        earlyIssuanceEnabled:
+          override.earlyIssuanceEnabled ?? entry.earlyIssuanceEnabled,
+        supplementalReportRole:
+          override.supplementalReportRole ?? entry.supplementalReportRole
+      }
     })
     return HttpResponse.json(updated)
   }),
