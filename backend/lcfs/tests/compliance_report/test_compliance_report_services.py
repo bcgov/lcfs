@@ -1,5 +1,6 @@
 from datetime import datetime
 import copy
+from types import SimpleNamespace
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
@@ -39,12 +40,30 @@ from lcfs.tests.compliance_report.conftest import mock_summary_repo
 
 # get_all_compliance_periods
 @pytest.mark.anyio
-async def test_get_all_compliance_periods_success(compliance_report_service, mock_repo):
+async def test_get_all_compliance_periods_success(
+    compliance_report_service, mock_repo, mock_report_opening_repo
+):
     mock_periods = [
         {"compliance_period_id": 1, "description": "2024 Compliance Period"},
         {"compliance_period_id": 2, "description": "2025 Compliance Period"},
     ]
     mock_repo.get_all_compliance_periods.return_value = mock_periods
+    mock_report_opening_repo.sync_configured_years.return_value = [
+        SimpleNamespace(
+            compliance_year=2024,
+            compliance_reporting_enabled=True,
+            early_issuance_enabled=False,
+            supplemental_report_role="BCeID",
+            report_opening_id=1,
+        ),
+        SimpleNamespace(
+            compliance_year=2025,
+            compliance_reporting_enabled=True,
+            early_issuance_enabled=False,
+            supplemental_report_role="BCeID",
+            report_opening_id=2,
+        ),
+    ]
 
     result = await compliance_report_service.get_all_compliance_periods()
 
@@ -52,6 +71,39 @@ async def test_get_all_compliance_periods_success(compliance_report_service, moc
     assert result[0].compliance_period_id == 1
     assert result[0].description == "2024 Compliance Period"
     mock_repo.get_all_compliance_periods.assert_called_once()
+    mock_report_opening_repo.sync_configured_years.assert_called()
+
+
+@pytest.mark.anyio
+async def test_get_all_compliance_periods_filters_disabled_years(
+    compliance_report_service, mock_repo, mock_report_opening_repo
+):
+    mock_periods = [
+        {"compliance_period_id": 1, "description": "2024"},
+        {"compliance_period_id": 2, "description": "2025"},
+    ]
+    mock_repo.get_all_compliance_periods.return_value = mock_periods
+    mock_report_opening_repo.sync_configured_years.return_value = [
+        SimpleNamespace(
+            compliance_year=2024,
+            compliance_reporting_enabled=True,
+            early_issuance_enabled=False,
+            supplemental_report_role="BCeID",
+            report_opening_id=1,
+        ),
+        SimpleNamespace(
+            compliance_year=2025,
+            compliance_reporting_enabled=False,
+            early_issuance_enabled=False,
+            supplemental_report_role="BCeID",
+            report_opening_id=2,
+        ),
+    ]
+
+    result = await compliance_report_service.get_all_compliance_periods()
+
+    assert len(result) == 1
+    assert result[0].description == "2024"
 
 
 @pytest.mark.anyio

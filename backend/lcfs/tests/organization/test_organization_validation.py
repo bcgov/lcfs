@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
+from fastapi import HTTPException
 
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
@@ -96,3 +97,57 @@ async def test_create_compliance_report_success(
     # Assertions
     mock_report_repo.get_compliance_period.assert_called_once_with("2024")
     mock_report_repo.get_compliance_report_by_period.assert_called_once_with(1, "2024")
+    organization_validation.report_opening_repo.ensure_year.assert_awaited_once_with(2024)
+
+
+@pytest.mark.anyio
+async def test_create_compliance_report_disabled_year(organization_validation, mock_report_repo):
+    mock_request = MagicMock()
+    mock_request.user.organization.organization_id = 1
+    organization_validation.request = mock_request
+    mock_period = MagicMock()
+    mock_period.description = "2025"
+    mock_report_repo.get_compliance_period.return_value = mock_period
+    mock_report_repo.get_compliance_report_by_period.return_value = False
+
+    disabled_config = MagicMock()
+    disabled_config.compliance_reporting_enabled = False
+    organization_validation.report_opening_repo.ensure_year.return_value = disabled_config
+
+    with pytest.raises(HTTPException) as exc:
+        await organization_validation.create_compliance_report(
+            1,
+            ComplianceReportCreateSchema(
+                compliance_period="2025", organization_id=1, status="Draft"
+            ),
+        )
+
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_create_compliance_report_requires_early_issuance_for_2026(
+    organization_validation, mock_report_repo
+):
+    mock_request = MagicMock()
+    mock_request.user.organization.organization_id = 1
+    organization_validation.request = mock_request
+    mock_period = MagicMock()
+    mock_period.description = "2026"
+    mock_report_repo.get_compliance_period.return_value = mock_period
+    mock_report_repo.get_compliance_report_by_period.return_value = False
+
+    enabled_config = MagicMock()
+    enabled_config.compliance_reporting_enabled = True
+    organization_validation.report_opening_repo.ensure_year.return_value = enabled_config
+    organization_validation.org_repo.get_early_issuance_by_year = AsyncMock(return_value=None)
+
+    with pytest.raises(HTTPException) as exc:
+        await organization_validation.create_compliance_report(
+            1,
+            ComplianceReportCreateSchema(
+                compliance_period="2026", organization_id=1, status="Draft"
+            ),
+        )
+
+    assert exc.value.status_code == 403

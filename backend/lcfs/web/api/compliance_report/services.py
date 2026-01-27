@@ -52,6 +52,7 @@ from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.services.s3.client import DocumentService
+from lcfs.web.api.report_opening.repo import ReportOpeningRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -66,6 +67,7 @@ class ComplianceReportServices:
         document_service: DocumentService = Depends(),
         transaction_repo: TransactionRepository = Depends(),
         internal_comment_service: InternalCommentService = Depends(),
+        report_opening_repo: ReportOpeningRepository = Depends(),
     ) -> None:
         self.fse_service = fse_service
         self.org_repo = org_repo
@@ -74,6 +76,17 @@ class ComplianceReportServices:
         self.document_service = document_service
         self.transaction_repo = transaction_repo
         self.internal_comment_service = internal_comment_service
+        self.report_opening_repo = report_opening_repo
+
+    def _extract_compliance_year(self, description: str) -> int | None:
+        if not description:
+            return None
+
+        try:
+            return int(description)
+        except (TypeError, ValueError):
+            digits = "".join(filter(str.isdigit, str(description)))
+            return int(digits) if digits else None
 
     async def _validate_analyst_eligibility(self, assigned_analyst_id: int) -> None:
         """
@@ -104,7 +117,26 @@ class ComplianceReportServices:
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
         """Fetches all compliance periods and converts them to Pydantic models."""
         periods = await self.repo.get_all_compliance_periods()
-        return [CompliancePeriodBaseSchema.model_validate(period) for period in periods]
+        configs = await self.report_opening_repo.sync_configured_years()
+        enabled_years = {
+            config.compliance_year
+            for config in configs
+            if config.compliance_reporting_enabled
+        }
+
+        visible_periods = []
+        for period in periods:
+            description = (
+                period["description"] if isinstance(period, dict) else period.description
+            )
+            year = self._extract_compliance_year(description)
+            if year is None or year in enabled_years:
+                visible_periods.append(period)
+
+        return [
+            CompliancePeriodBaseSchema.model_validate(period)
+            for period in visible_periods
+        ]
 
     @service_handler
     async def create_compliance_report(

@@ -304,12 +304,24 @@
   "notSubjectToAssessmentHistoryMessage": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance.",
   "assignAnalyst": "Assign Analyst",
   "unassign": "Unassign",
+  "reportOpenings": {
+    "title": "Report openings",
+    "description": "Choose which compliance years are available for report creation.",
+    "year": "Year",
+    "complianceReporting": "Compliance reporting",
+    "complianceReportingToggle": "Toggle compliance reporting availability for {{year}}",
+    "save": "Save",
+    "saveSuccess": "Report availability updated",
+    "saveError": "Unable to update report availability. Please try again.",
+    "loading": "Loading report openings..."
+  },
   "tabs": {
     "complianceReporting": "Compliance reporting",
     "manageChargingSites": "Manage charging sites",
     "manageFSE": "Manage FSE",
     "fseMap": "FSE map",
     "chargingSites": "Charging sites",
-    "fseIndex": "FSE index"
+    "fseIndex": "FSE index",
+    "reportOpenings": "Report openings"
   }
 }

@@ -25,11 +25,12 @@ export function ReportsMenu() {
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
   const location = useLocation()
-  const { hasAnyRole } = useCurrentUser()
+  const { hasAnyRole, hasRoles } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
   const canAccessChargingSitesTab =
     isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_CHARGING_SITES)
   const canAccessFseTab = isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_FSE)
+  const isAdministrator = hasRoles(roles.administrator)
 
   const tabs = useMemo(() => {
     const baseTabs = [
@@ -61,8 +62,16 @@ export function ReportsMenu() {
       })
     }
 
+    if (isAdministrator) {
+      baseTabs.push({
+        key: 'reportOpenings',
+        label: t('tabs.reportOpenings'),
+        path: ROUTES.REPORTS.REPORT_OPENINGS
+      })
+    }
+
     return baseTabs
-  }, [canAccessChargingSitesTab, canAccessFseTab, isIDIR, t])
+  }, [canAccessChargingSitesTab, canAccessFseTab, isAdministrator, isIDIR, t])
 
   const tabIndex = useMemo(() => {
     // Only select tab when on the exact index route, not on detail/nested pages
@@ -108,6 +117,14 @@ export function ReportsMenu() {
       return (
         <Role roles={[...govRoles, roles.supplier]}>
           <Outlet context={{ alertRef }} />
+        </Role>
+      )
+    }
+
+    if (location.pathname.includes('/report-openings')) {
+      return (
+        <Role roles={[roles.administrator]}>
+          <Outlet />
         </Role>
       )
     }
