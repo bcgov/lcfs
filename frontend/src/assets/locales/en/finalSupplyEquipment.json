@@ -29,6 +29,7 @@
   ],
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
+  "noFseLinkedToReport": "No final supply equipment has been added to this report yet. Click here to add validated FSE.",
   "noChargingEquipmentMessage": "Charging sites and final supply equipment must first be created in the FSE maintenance system to report them.",
   "defaultFromDate": "Default from",
   "defaultToDate": "Default to",
