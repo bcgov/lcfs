@@ -309,13 +309,16 @@ const BUTTON_RULES = {
     [USER_TYPES.BCEID_USER]: [
       'createFSE',
       'selectAllDraft',
+      'selectAllSubmitted',
       'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.BCEID_MANAGER]: [
       'createFSE',
       'selectAllDraft',
+      'selectAllSubmitted',
       'setSelectedAsSubmitted',
+      'returnSelectedToDraft',
       'selectAllValidated',
       'setToDecommission',
       'clearFilters'
@@ -356,8 +359,8 @@ function shouldShowButton(buttonName, context) {
       // Only show for non-government users (BCeID)
       return !context.isGovernmentUser
     case 'selectAllSubmitted':
-      // Only show if there are submitted equipment
-      return context.isGovernmentUser
+      // Show for all users if there are submitted equipment
+      return true
     case 'selectAllDraft':
     case 'selectAllValidated':
       if (!context.isGovernmentUser) {
@@ -381,10 +384,8 @@ function shouldShowButton(buttonName, context) {
       )
 
     case 'returnSelectedToDraft':
-      // BCeID users can only modify their own organization's equipment
-      if (!context.isGovernmentUser) {
-        return false
-      }
+      // Both BCeID and government users can return equipment to Draft
+      // BCeID users can modify their own organization's equipment
       return (
         (context.selectedRows.length > 0 && context.canReturnToDraft) ||
         context.isGovernmentUser
