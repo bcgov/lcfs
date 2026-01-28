@@ -7,6 +7,7 @@ from lcfs.web.api.calculator.schema import (
     CalculatorQueryParams,
     CalculatorQuantityQueryParams,
     CreditsResultSchema,
+    LookupTableResponseSchema,
 )
 from lcfs.web.api.calculator.services import CalculatorService
 
@@ -118,3 +119,21 @@ async def get_quantity_from_compliance_units(
         query.use_custom_ci,
         query.custom_ci_value,
     )
+
+
+@router.get(
+    "/{compliance_year}/lookup-table/",
+    tags=["public"],
+    response_model=LookupTableResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_lookup_table_data(
+    request: Request,
+    compliance_year: int,
+    service: CalculatorService = Depends(),
+) -> LookupTableResponseSchema:
+    """
+    Get lookup table data for a given compliance year.
+    Returns all fuel type combinations with their associated carbon intensity data.
+    """
+    return await service.get_lookup_table_data(compliance_year)

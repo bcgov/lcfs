@@ -6,6 +6,7 @@ export const ROUTES = {
   DASHBOARD: '/',
   API_DOCS: '/docs',
   CREDIT_CALCULATOR: '/credit-calculator',
+  CALCULATION_DATA: '/calculation-data',
   FILE_SUBMISSION: '/file-submissions',
 
   AUTH: {
