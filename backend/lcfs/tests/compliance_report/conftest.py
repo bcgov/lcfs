@@ -345,6 +345,7 @@ def compliance_report_service(
     mock_report_opening_repo,
 ):
     service = ComplianceReportServices(
+        request=None,
         repo=mock_repo,
         org_repo=mock_org_repo,
         snapshot_services=mock_snapshot_service,

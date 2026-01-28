@@ -7,8 +7,7 @@ from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
 from fastapi import Depends, Request
-from typing import List, Literal
-from typing import Union
+from typing import List, Literal, Union
 
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReport import (
@@ -122,9 +121,10 @@ class ComplianceReportServices:
         configs = await self.report_opening_repo.sync_configured_years()
         early_issuance = None
         current_year = datetime.now().year
-        if self.request.user and not self.request.user.is_government:
+        request_user = getattr(self.request, "user", None)
+        if request_user and not getattr(request_user, "is_government", False):
             early_issuance = await self.org_repo.get_early_issuance_by_year(
-                self.request.user.organization_id, str(current_year)
+                request_user.organization_id, str(current_year)
             )
         enabled_years = {
             config.compliance_year

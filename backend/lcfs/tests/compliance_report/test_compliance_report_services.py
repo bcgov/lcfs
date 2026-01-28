@@ -1997,6 +1997,7 @@ class TestMaskReportStatusForHistory:
         # The _mask_report_status_for_history method is pure Python logic on its inputs,
         # so it doesn't need real dependencies for these tests.
         return ComplianceReportServices(
+            request=None,
             repo=MagicMock(),
             org_repo=MagicMock(),
             snapshot_services=MagicMock(),
@@ -2434,6 +2435,7 @@ class TestIsSupplementalRequestedByGovUser:
     def service(self) -> ComplianceReportServices:
         """Provides a simple instance of ComplianceReportServices for testing this method."""
         return ComplianceReportServices(
+            request=None,
             repo=MagicMock(),
             org_repo=MagicMock(),
             snapshot_services=MagicMock(),
