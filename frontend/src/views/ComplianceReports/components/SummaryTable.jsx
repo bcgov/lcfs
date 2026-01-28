@@ -474,10 +474,12 @@ const SummaryTable = ({
                               ? rawValue
                               : Number(rawValue)
 
+                          const maxDecimals = row.format === 'currency' ? 2 : 0
+
                           return rowFormatters[row.format](
                             Number.isFinite(numericValue) ? numericValue : 0,
                             useParenthesis,
-                            0
+                            maxDecimals
                           )
                         }
 

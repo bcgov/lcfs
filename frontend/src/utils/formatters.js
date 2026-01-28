@@ -41,9 +41,11 @@ export const numberFormatter = (
  * Formats a number as currency in CAD.
  *
  * @param {Object|number|string|null} params - The input parameter which can be an object with a `value` property, a number, or a string.
+ * @param {boolean} [useParentheses=false] - Whether to use parentheses for negative numbers (for compatibility with numberFormatter).
+ * @param {number} [maxDecimals=2] - Maximum number of decimal places to display.
  * @returns {string} - The formatted currency string, or the original value if it cannot be parsed as a number.
  */
-export const currencyFormatter = (params, options = {}) => {
+export const currencyFormatter = (params, useParentheses = false, maxDecimals = 2) => {
   const cellValue =
     params && Object.hasOwn(params, 'value') ? params.value : params
 
@@ -51,11 +53,21 @@ export const currencyFormatter = (params, options = {}) => {
     cellValue !== null &&
     (typeof cellValue === 'number' || !isNaN(Number(cellValue)))
   ) {
-    return Number(cellValue).toLocaleString('en-CA', {
+    const numValue = Number(cellValue)
+    const absValue = Math.abs(numValue)
+
+    const formatted = absValue.toLocaleString('en-CA', {
       style: 'currency',
       currency: 'CAD',
-      ...options
+      minimumFractionDigits: maxDecimals,
+      maximumFractionDigits: maxDecimals
     })
+
+    if (numValue < 0) {
+      return useParentheses ? `(${formatted})` : `-${formatted}`
+    }
+
+    return formatted
   }
   return cellValue
 }

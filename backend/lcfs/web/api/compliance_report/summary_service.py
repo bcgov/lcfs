@@ -319,8 +319,8 @@ class ComplianceReportSummaryService:
             ),
         )
 
-        # Summary lines only report total_value
-        value = int(getattr(summary_obj, column_key) or 0)
+        # Summary lines only report total_value - use float to preserve decimal places for penalties
+        value = float(getattr(summary_obj, column_key) or 0)
         existing_element.total_value += value
 
     def _get_or_create_summary_row(
