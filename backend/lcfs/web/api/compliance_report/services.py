@@ -6,7 +6,7 @@ import math
 from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
-from fastapi import Depends
+from fastapi import Depends, Request
 from typing import List, Literal
 from typing import Union
 
@@ -60,6 +60,7 @@ logger = structlog.get_logger(__name__)
 class ComplianceReportServices:
     def __init__(
         self,
+        request: Request,
         repo: ComplianceReportRepository = Depends(),
         org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
@@ -69,6 +70,7 @@ class ComplianceReportServices:
         internal_comment_service: InternalCommentService = Depends(),
         report_opening_repo: ReportOpeningRepository = Depends(),
     ) -> None:
+        self.request = request
         self.fse_service = fse_service
         self.org_repo = org_repo
         self.repo = repo
@@ -118,16 +120,29 @@ class ComplianceReportServices:
         """Fetches all compliance periods and converts them to Pydantic models."""
         periods = await self.repo.get_all_compliance_periods()
         configs = await self.report_opening_repo.sync_configured_years()
+        early_issuance = None
+        current_year = datetime.now().year
+        if self.request.user and not self.request.user.is_government:
+            early_issuance = await self.org_repo.get_early_issuance_by_year(
+                self.request.user.organization_id, str(current_year)
+            )
         enabled_years = {
             config.compliance_year
             for config in configs
             if config.compliance_reporting_enabled
+            or (
+                early_issuance
+                and early_issuance.has_early_issuance
+                and config.compliance_year == int(current_year)
+            )
         }
 
         visible_periods = []
         for period in periods:
             description = (
-                period["description"] if isinstance(period, dict) else period.description
+                period["description"]
+                if isinstance(period, dict)
+                else period.description
             )
             year = self._extract_compliance_year(description)
             if year is None or year in enabled_years:
@@ -463,7 +478,7 @@ class ComplianceReportServices:
         # 5. Copy summary data from the current submitted report, focusing on user-input lines 6-9
         if current_report.summary:
             # Handle both SQLAlchemy model and schema objects
-            if hasattr(current_report.summary, '__table__'):
+            if hasattr(current_report.summary, "__table__"):
                 # SQLAlchemy model - use table columns
                 summary_data = {
                     column: getattr(current_report.summary, column)
@@ -474,22 +489,32 @@ class ComplianceReportServices:
                 # Pydantic schema or other object - copy specific line fields manually
                 summary_data = {}
                 for line_num in range(6, 10):
-                    for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
+                    for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                         if line_num == 6:
-                            field_name = f"line_{line_num}_renewable_fuel_retained_{fuel_type}"
+                            field_name = (
+                                f"line_{line_num}_renewable_fuel_retained_{fuel_type}"
+                            )
                         elif line_num == 7:
-                            field_name = f"line_{line_num}_previously_retained_{fuel_type}"
+                            field_name = (
+                                f"line_{line_num}_previously_retained_{fuel_type}"
+                            )
                         elif line_num == 8:
-                            field_name = f"line_{line_num}_obligation_deferred_{fuel_type}"
+                            field_name = (
+                                f"line_{line_num}_obligation_deferred_{fuel_type}"
+                            )
                         elif line_num == 9:
                             field_name = f"line_{line_num}_obligation_added_{fuel_type}"
 
                         if hasattr(current_report.summary, field_name):
-                            summary_data[field_name] = getattr(current_report.summary, field_name)
+                            summary_data[field_name] = getattr(
+                                current_report.summary, field_name
+                            )
 
             new_summary = ComplianceReportSummary(**summary_data)
         else:
-            new_summary = ComplianceReportSummary()  # Fallback to empty if no summary exists
+            new_summary = (
+                ComplianceReportSummary()
+            )  # Fallback to empty if no summary exists
 
         # Create the new supplemental report object
         new_report = ComplianceReport(
@@ -1117,6 +1142,7 @@ class ComplianceReportServices:
                         diff = []
                         for key, value in data_copy.__dict__.items():
                             prev_value = getattr(prev, key, None)
+
                             # Handle object comparisons, especially relations
                             def get_comparable_value(val):
                                 if val is None:
@@ -1124,20 +1150,27 @@ class ComplianceReportServices:
                                 if isinstance(val, (str, int, float, bool)):
                                     return val
                                 # For relations, try to get the ID
-                                if hasattr(val, 'id'):
+                                if hasattr(val, "id"):
                                     return val.id
                                 # Try foreign key pattern (e.g., fuel_type_id)
-                                if hasattr(val, f'{key}_id'):
-                                    return getattr(val, f'{key}_id')
+                                if hasattr(val, f"{key}_id"):
+                                    return getattr(val, f"{key}_id")
                                 return str(val)
-                            
-                            if get_comparable_value(prev_value) != get_comparable_value(value):
+
+                            if get_comparable_value(prev_value) != get_comparable_value(
+                                value
+                            ):
                                 camel_case_key = key.split("_")[0] + "".join(
                                     x.capitalize() for x in key.split("_")[1:]
                                 )
                                 diff.append(camel_case_key)
                         # if the diff contains q1Quantity, q2Quantity, q3Quantity, or q4Quantity, ensure totalQuantity is also included
-                        quantity_fields = {"q1Quantity", "q2Quantity", "q3Quantity", "q4Quantity"}
+                        quantity_fields = {
+                            "q1Quantity",
+                            "q2Quantity",
+                            "q3Quantity",
+                            "q4Quantity",
+                        }
                         if any(field in diff for field in quantity_fields):
                             diff.append("totalQuantity")
                         prev.diff = diff

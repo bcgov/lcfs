@@ -121,9 +121,9 @@ def upgrade() -> None:
         [
             {
                 "compliance_year": year,
-                "compliance_reporting_enabled": year <= current_year,
+                "compliance_reporting_enabled": year == 2025,
                 "early_issuance_enabled": False,
-                "supplemental_report_role": SupplementalReportAccessRoleEnum.BCeID,
+                "supplemental_report_role": SupplementalReportAccessRoleEnum.BCeID if year >= current_year else SupplementalReportAccessRoleEnum.IDIR,
             }
             for year in range(2019, 2031)
         ],

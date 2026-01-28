@@ -1,14 +1,56 @@
+import React, { forwardRef } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ReportOpenings } from '../ReportOpenings/ReportOpenings'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+import {
+  useReportOpenings,
+  useUpdateReportOpenings
+} from '@/hooks/useReportOpenings'
 
-vi.mock('notistack', () => ({
-  useSnackbar: () => ({ enqueueSnackbar: vi.fn() })
+vi.mock('@/hooks/useReportOpenings', () => ({
+  useReportOpenings: vi.fn(),
+  useUpdateReportOpenings: vi.fn()
 }))
 
+vi.mock('@/components/BCAlert', () => ({
+  FloatingAlert: forwardRef((props, ref) => (
+    <div ref={ref} data-test="floating-alert" {...props} />
+  ))
+}))
+
+const useReportOpeningsMock = useReportOpenings
+const useUpdateReportOpeningsMock = useUpdateReportOpenings
+
 describe('ReportOpenings', () => {
+  const mockData = [
+    {
+      complianceYear: 2019,
+      complianceReportingEnabled: false,
+      earlyIssuanceEnabled: false,
+      supplementalReportRole: 'BCeID'
+    },
+    {
+      complianceYear: 2020,
+      complianceReportingEnabled: true,
+      earlyIssuanceEnabled: false,
+      supplementalReportRole: 'IDIR'
+    }
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useReportOpeningsMock.mockReturnValue({
+      data: mockData,
+      isLoading: false
+    })
+    useUpdateReportOpeningsMock.mockReturnValue({
+      isPending: false,
+      mutate: vi.fn()
+    })
+  })
+
   it('renders years from the API and enables save on change', async () => {
     render(<ReportOpenings />, { wrapper })
 

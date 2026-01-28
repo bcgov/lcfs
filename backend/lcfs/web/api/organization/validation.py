@@ -1,3 +1,4 @@
+import datetime
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
@@ -18,9 +19,7 @@ class OrganizationValidation:
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
         report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
-        report_opening_repo: ReportOpeningRepository = Depends(
-            ReportOpeningRepository
-        ),
+        report_opening_repo: ReportOpeningRepository = Depends(ReportOpeningRepository),
     ):
         self.org_repo = org_repo
         self.request = request
@@ -47,22 +46,21 @@ class OrganizationValidation:
                 "adjusted": True,
                 "available_balance": available_balance,
                 "original_quantity": quantity,
-                "adjusted_quantity": available_balance
+                "adjusted_quantity": available_balance,
             }
 
         return {
             "adjusted": False,
             "available_balance": available_balance,
             "original_quantity": quantity,
-            "adjusted_quantity": quantity
+            "adjusted_quantity": quantity,
         }
 
     async def create_transfer(
         self, organization_id, transfer_create: TransferCreateSchema
     ):
         balance_check = await self.check_available_balance(
-        organization_id,
-        transfer_create.quantity
+            organization_id, transfer_create.quantity
         )
 
         if balance_check["adjusted"]:
@@ -128,24 +126,26 @@ class OrganizationValidation:
 
         compliance_year = self._extract_compliance_year(period.description)
         if compliance_year is not None:
-            year_config = await self.report_opening_repo.ensure_year(
-                compliance_year
-            )
+            year_config = await self.report_opening_repo.ensure_year(compliance_year)
+            # Check for early issuance eligibility if the reporting window is not open
+            if (
+                compliance_year == datetime.datetime.now().year
+                and not year_config.compliance_reporting_enabled
+                and year_config.early_issuance_enabled
+            ):
+                early_issuance = await self.org_repo.get_early_issuance_by_year(
+                    organization_id, str(compliance_year)
+                )
+                if not early_issuance or not early_issuance.has_early_issuance:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"{compliance_year} reporting is only available to early issuance suppliers.",
+                    )
+                return
             if not year_config.compliance_reporting_enabled:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"{compliance_year} reporting is not currently available.",
-                )
-
-        # 2026 continues to require early issuance regardless of the configuration table
-        if compliance_year == 2026:
-            early_issuance = await self.org_repo.get_early_issuance_by_year(
-                organization_id, "2026"
-            )
-            if not early_issuance or not early_issuance.has_early_issuance:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="2026 reporting is only available to early issuance suppliers.",
                 )
 
         is_report_present = await self.report_repo.get_compliance_report_by_period(
@@ -157,12 +157,3 @@ class OrganizationValidation:
                 detail="Duplicate report for the compliance period",
             )
         return
-
-    # async def save_final_supply_equipment_rows(
-    #     self, organization_id, report_id, fse_list
-    # ):
-    #     report = await self.report_repo.get_compliance_report_by_id(report_id)
-    #     if not report:
-    #         raise HTTPException(status_code=404, detail="Report not found")
-    #     # TODO: validate each row data
-    #     return

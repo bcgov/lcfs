@@ -140,7 +140,7 @@ export function ReportsMenu() {
           <Tabs
             sx={{
               background: 'rgb(0, 0, 0, 0.08)',
-              width: { xs: '100%', md: '50%' }
+              width: { xs: '100%', md: '60%' }
             }}
             orientation={tabsOrientation}
             value={tabIndex}

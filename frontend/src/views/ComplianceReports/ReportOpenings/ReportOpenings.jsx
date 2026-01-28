@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box,
   Checkbox,
-  Paper,
   Radio,
   RadioGroup,
   Table,
@@ -10,18 +9,17 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
-  FormControlLabel
+  TableRow
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
-import { useSnackbar } from 'notistack'
 import { useTranslation } from 'react-i18next'
 import {
   useReportOpenings,
   useUpdateReportOpenings
 } from '@/hooks/useReportOpenings'
+import { FloatingAlert } from '@/components/BCAlert'
 
 const buildRowState = (records = []) => ({
   rows: records
@@ -58,7 +56,7 @@ const CustomTableCell = ({ children, ...props }) => {
 
 export const ReportOpenings = () => {
   const { t } = useTranslation(['reports'])
-  const { enqueueSnackbar } = useSnackbar()
+  const alertRef = useRef(null)
   const { data, isLoading } = useReportOpenings()
   const updateMutation = useUpdateReportOpenings()
   const [rowState, setRowState] = useState({ rows: [], lookup: {} })
@@ -155,13 +153,15 @@ export const ReportOpenings = () => {
       {
         onSuccess: (response) => {
           setRowState(buildRowState(response))
-          enqueueSnackbar(t('reportOpenings.saveSuccess'), {
-            variant: 'success'
+          alertRef.current?.triggerAlert({
+            message: t('reportOpenings.saveSuccess'),
+            severity: 'success'
           })
         },
         onError: () => {
-          enqueueSnackbar(t('reportOpenings.saveError'), {
-            variant: 'error'
+          alertRef.current?.triggerAlert({
+            message: t('reportOpenings.saveError'),
+            severity: 'error'
           })
         }
       }
@@ -173,7 +173,9 @@ export const ReportOpenings = () => {
   }
 
   return (
-    <Box>
+    <>
+      <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
+      <Box>
       <BCTypography variant="h5" color="primary" gutterBottom>
         {t('reportOpenings.title')}
       </BCTypography>
@@ -273,16 +275,30 @@ export const ReportOpenings = () => {
                       display: 'flex',
                       flexDirection: 'row',
                       justifyContent: 'center',
-                      gap: 10
+                      alignItems: 'center',
+                      gap: 10,
+                      '& .MuiRadio-root': {
+                        p: 0
+                      }
                     }}
                   >
-                    <FormControlLabel
+                    <Radio
                       value="BCeID"
-                      control={<Radio color="primary" />}
+                      color="primary"
+                      inputProps={{
+                        'aria-label': `${t(
+                          'reportOpenings.bceid'
+                        )} ${row.complianceYear}`
+                      }}
                     />
-                    <FormControlLabel
+                    <Radio
                       value="IDIR"
-                      control={<Radio color="primary" />}
+                      color="primary"
+                      inputProps={{
+                        'aria-label': `${t(
+                          'reportOpenings.idir'
+                        )} ${row.complianceYear}`
+                      }}
                     />
                   </RadioGroup>
                 </CustomTableCell>
@@ -302,6 +318,7 @@ export const ReportOpenings = () => {
           </BCButton>
         </Box>
       </Box>
-    </Box>
+      </Box>
+    </>
   )
 }
