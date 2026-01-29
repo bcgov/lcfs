@@ -34,7 +34,7 @@ export const ChargingSiteProfile = ({ alertRef = useRef(null), data }) => {
                 Updated: 'info',
                 Submitted: 'warning',
                 Validated: 'success',
-                Decommissioned: 'smoky'
+                Decommissioned: 'error'
               },
               {},
               data?.status?.status || ''
