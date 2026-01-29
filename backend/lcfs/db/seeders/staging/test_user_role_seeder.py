@@ -163,23 +163,56 @@ async def seed_test_user_roles(session):
         {"user_profile_id": 54, "role_id": 3},  # Wesley Hawley - ADMINISTRATOR
         {"user_profile_id": 55, "role_id": 1},  # Alex Zorkin - GOVERNMENT
         {"user_profile_id": 55, "role_id": 3},  # Alex Zorkin - ADMINISTRATOR
+        {"user_profile_id": 56, "role_id": 1},  # Amanda Berg - GOVERNMENT
+        {"user_profile_id": 57, "role_id": 1},  # Ann Chan - GOVERNMENT
+        {"user_profile_id": 58, "role_id": 1},  # Annie Wang - GOVERNMENT
+        {"user_profile_id": 59, "role_id": 1},  # Benjamin Lee - GOVERNMENT
+        {"user_profile_id": 60, "role_id": 1},  # Charles Brown - GOVERNMENT
+        {"user_profile_id": 61, "role_id": 1},  # Claus Davies - GOVERNMENT
+        {"user_profile_id": 62, "role_id": 1},  # Dale Young - GOVERNMENT
+        {"user_profile_id": 63, "role_id": 1},  # Dora Wang - GOVERNMENT
+        {"user_profile_id": 64, "role_id": 1},  # Emma Brown - GOVERNMENT
+        {"user_profile_id": 65, "role_id": 1},  # Gloria Miller - GOVERNMENT
+        {"user_profile_id": 66, "role_id": 1},  # Hannah Roberts - GOVERNMENT
+        {"user_profile_id": 67, "role_id": 1},  # Henry Wang - GOVERNMENT
+        {"user_profile_id": 68, "role_id": 1},  # Jasmine Zhang - GOVERNMENT
+        {"user_profile_id": 69, "role_id": 1},  # Jessica Jiang - GOVERNMENT
+        {"user_profile_id": 70, "role_id": 1},  # Jonathan Bell - GOVERNMENT
+        {"user_profile_id": 71, "role_id": 1},  # Kevin Liu - GOVERNMENT
+        {"user_profile_id": 72, "role_id": 1},  # Leonard Wang - GOVERNMENT
+        {"user_profile_id": 73, "role_id": 1},  # Madeline Wilson - GOVERNMENT
+        {"user_profile_id": 74, "role_id": 1},  # Melanie Anderson - GOVERNMENT
+        {"user_profile_id": 75, "role_id": 1},  # Michelle Lee - GOVERNMENT
+        {"user_profile_id": 76, "role_id": 1},  # Nia Clark - GOVERNMENT
+        {"user_profile_id": 77, "role_id": 1},  # Nate Jones - GOVERNMENT
+        {"user_profile_id": 78, "role_id": 1},  # Owen Liu - GOVERNMENT
+        {"user_profile_id": 79, "role_id": 1},  # Paul Sullivan - GOVERNMENT
+        {"user_profile_id": 80, "role_id": 1},  # Peter Park - GOVERNMENT
+        {"user_profile_id": 81, "role_id": 1},  # Rachel Moore - GOVERNMENT
     ]
 
     try:
-        for user_role_data in user_roles_to_seed:
-            # Check if the UserRole already exists based on user_profile_id and role_id
-            exists = await session.execute(
-                select(UserRole).where(
-                    UserRole.user_profile_id == user_role_data["user_profile_id"],
-                    UserRole.role_id == user_role_data["role_id"],
-                )
-            )
-            if not exists.scalars().first():
-                user_role = UserRole(**user_role_data)
-                session.add(user_role)
+        # Query all existing user roles at once to avoid autoflush issues
+        result = await session.execute(select(UserRole))
+        existing_roles = result.scalars().all()
+        existing_pairs = {
+            (role.user_profile_id, role.role_id) for role in existing_roles
+        }
 
-        await session.flush()
-        logger.info(f"Seeded {len(user_roles_to_seed)} user role assignments.")
+        # Filter out user roles that already exist
+        roles_to_add = []
+        for user_role_data in user_roles_to_seed:
+            pair = (user_role_data["user_profile_id"], user_role_data["role_id"])
+            if pair not in existing_pairs:
+                roles_to_add.append(UserRole(**user_role_data))
+
+        # Add all new user roles at once
+        if roles_to_add:
+            session.add_all(roles_to_add)
+            await session.flush()
+            logger.info(f"Seeded {len(roles_to_add)} new user role assignments.")
+        else:
+            logger.info("All user role assignments already exist, skipping.")
 
     except Exception as e:
         context = {

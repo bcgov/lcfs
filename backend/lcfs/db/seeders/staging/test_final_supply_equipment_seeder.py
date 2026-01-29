@@ -1,7 +1,8 @@
 import structlog
+import pandas as pd
+from pathlib import Path
 from datetime import date
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 from lcfs.db.models.compliance.FinalSupplyEquipment import FinalSupplyEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.compliance.EndUserType import EndUserType
@@ -11,348 +12,109 @@ logger = structlog.get_logger(__name__)
 
 async def seed_test_final_supply_equipment(session):
     """
-    Seeds the final supply equipment (FSE) records into the database with comprehensive test data,
+    Seeds final supply equipment (FSE) records into the database from CSV file,
     if they do not already exist.
+    
+    This seeder reads from data/final_supply_equipment.csv containing production-like FSE data.
 
     Args:
         session: The database session for committing the new records.
     """
-
-    # Define the FSE records to seed based on actual compliance report data
-    fse_records_to_seed = [
-        {
-            "final_supply_equipment_id": 1,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,  # 600,000 kWh / 10 stations = 60,000 each
-            "registration_nbr": "293J92719",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 2,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "291hed012",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 3,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "201918jdnd",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 4,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "12910jswjms",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 5,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "1219313ikand",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 6,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "1212jwsw",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 7,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "12gddsww",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 8,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "13qwew4",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 9,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "142342rfer",
-            "serial_nbr": "ChargeCo",
-            "manufacturer": "Company A",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Single port",
-            "street_address": "123 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 90.0,
-            "longitude": -123.0,
-            "notes": "Battery bus charging station",
-            "organization_name": "Company A",
-        },
-        {
-            "final_supply_equipment_id": 10,
-            "compliance_report_id": 4,
-            "supply_from_date": date(2024, 1, 1),
-            "supply_to_date": date(2024, 12, 31),
-            "kwh_usage": 60000.0,
-            "registration_nbr": "12132edwsass",
-            "serial_nbr": "Chargeco",
-            "manufacturer": "Company B",
-            "model": "Level 2 - High voltage, operating above level 1",
-            "level_of_equipment_id": 2,  # Level 2
-            "ports": "Dual port",
-            "street_address": "222 Street",
-            "city": "Victoria",
-            "postal_code": "V1V 1V1",
-            "latitude": 80.0,
-            "longitude": -122.0,
-            "notes": "Trolley bus charging station",
-            "organization_name": "Company B",
-        },
-    ]
-
-    # Create FSE records first
-    for fse_data in fse_records_to_seed:
-        # Check if the FSE record already exists
-        existing_fse = await session.execute(
-            select(FinalSupplyEquipment).where(
-                FinalSupplyEquipment.final_supply_equipment_id
-                == fse_data["final_supply_equipment_id"]
-            )
-        )
-        if existing_fse.scalar():
-            logger.info(
-                f"FSE record with ID {fse_data['final_supply_equipment_id']} already exists, skipping."
-            )
+    
+    # Load CSV file
+    csv_path = Path(__file__).parent / "data" / "final_supply_equipment.csv"
+    
+    if not csv_path.exists():
+        logger.warning(f"FSE CSV not found at {csv_path}, skipping seed.")
+        return
+    
+    df = pd.read_csv(csv_path)
+    logger.info(f"Loading {len(df)} final supply equipment records from CSV...")
+    
+    # Mapping for level of equipment
+    level_map = {
+        'Level 2 - High voltage, operating above level 1': 2,
+        'Level 3 - Direct current fast charging': 3
+    }
+    
+    def clean_str(val, default=''):
+        """Clean string values from CSV"""
+        if pd.isna(val) or val == 'nan':
+            return default
+        return str(val).strip()
+    
+    # Query all existing FSE records at once to avoid autoflush issues
+    result = await session.execute(select(FinalSupplyEquipment))
+    existing_fse = result.scalars().all()
+    existing_ids = {fse.final_supply_equipment_id for fse in existing_fse}
+    
+    # Query all end use types and end user types once
+    use_types_result = await session.execute(select(EndUseType))
+    use_types_map = {ut.type: ut for ut in use_types_result.scalars().all()}
+    
+    user_types_result = await session.execute(select(EndUserType))
+    user_types_map = {ut.type: ut for ut in user_types_result.scalars().all()}
+    
+    # Prepare all FSE records to add
+    fse_to_add = []
+    
+    for idx, row in df.iterrows():
+        fse_id = idx + 1  # Start from 1
+        
+        # Skip if already exists
+        if fse_id in existing_ids:
             continue
-
-        # Create and add the new FSE record
-        fse_record = FinalSupplyEquipment(**fse_data)
-        session.add(fse_record)
-
-    await session.flush()
-
-    # Now add the relationships for intended use types and intended user types
-    await _seed_fse_relationships(session)
-
-    logger.info(f"Seeded {len(fse_records_to_seed)} final supply equipment records.")
-
-
-async def _seed_fse_relationships(session):
-    """
-    Seeds the relationships between FSE records and their intended use types and user types.
-    """
-
-    # Get the end use types and user types we need
-    battery_bus_use_type = await session.execute(
-        select(EndUseType).where(EndUseType.type == "Battery bus")
-    )
-    battery_bus_use_type = battery_bus_use_type.scalar_one()
-
-    trolley_bus_use_type = await session.execute(
-        select(EndUseType).where(EndUseType.type == "Trolley bus")
-    )
-    trolley_bus_use_type = trolley_bus_use_type.scalar_one()
-
-    multi_unit_user_type = await session.execute(
-        select(EndUserType).where(
-            EndUserType.type_name == "Multi-unit residential building"
-        )
-    )
-    multi_unit_user_type = multi_unit_user_type.scalar_one()
-
-    # Define the relationships for each FSE record
-    fse_relationships = [
-        # FSE 1-9: Battery bus use, Multi-unit residential users
-        {
-            "fse_id": 1,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 2,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 3,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 4,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 5,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 6,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 7,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 8,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        {
-            "fse_id": 9,
-            "use_type": battery_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-        # FSE 10: Trolley bus use, Multi-unit residential users
-        {
-            "fse_id": 10,
-            "use_type": trolley_bus_use_type,
-            "user_type": multi_unit_user_type,
-        },
-    ]
-
-    # Apply the relationships
-    for relationship in fse_relationships:
-        # Get the FSE record with eager loading of relationships
-        fse_result = await session.execute(
-            select(FinalSupplyEquipment)
-            .options(
-                joinedload(FinalSupplyEquipment.intended_use_types),
-                joinedload(FinalSupplyEquipment.intended_user_types),
-            )
-            .where(
-                FinalSupplyEquipment.final_supply_equipment_id == relationship["fse_id"]
-            )
-        )
-        fse_record = fse_result.unique().scalar_one_or_none()
-
-        if fse_record:
-            # Add intended use type if not already present
-            use_type = relationship["use_type"]
-            if use_type not in fse_record.intended_use_types:
-                fse_record.intended_use_types.append(use_type)
-
-            # Add intended user type if not already present
-            user_type = relationship["user_type"]
-            if user_type not in fse_record.intended_user_types:
-                fse_record.intended_user_types.append(user_type)
-
-    await session.flush()
-    logger.info("Seeded FSE intended use and user type relationships.")
+        
+        # Assign to different compliance reports (cycle through reports 1-6)
+        compliance_report_id = (idx % 6) + 1
+        
+        # Generate location data
+        charging_site = clean_str(row['Charging Site'], f'Site #{idx+1}')
+        street_address = charging_site.split('#')[0].strip() + ' Street'
+        city = 'Victoria'
+        postal_code = f'V{(idx % 9 + 1)}V {(idx % 9 + 1)}V{(idx % 9 + 1)}'
+        
+        fse_data = {
+            "final_supply_equipment_id": fse_id,
+            "compliance_report_id": compliance_report_id,
+            "supply_from_date": date(2024, 1, 1),
+            "supply_to_date": date(2024, 12, 31),
+            "kwh_usage": 60000.0 + (idx * 100.0),
+            "registration_nbr": f"FSE-{fse_id:04d}",
+            "serial_nbr": clean_str(row['Serial Number'], f'SERIAL-{fse_id}'),
+            "manufacturer": clean_str(row['Manufacturer'], 'Manufacturer'),
+            "model": clean_str(row['Model'], 'Model'),
+            "level_of_equipment_id": level_map.get(row['Level of Equipment'], 2),
+            "ports": clean_str(row['Ports'], 'Single port'),
+            "street_address": street_address,
+            "city": city,
+            "postal_code": postal_code,
+            "latitude": float(row['Latitude']) if pd.notna(row['Latitude']) else 48.4284,
+            "longitude": float(row['Longitude']) if pd.notna(row['Longitude']) else -123.3656,
+            "notes": clean_str(row['Notes'], None) if pd.notna(row['Notes']) else None,
+            "organization_name": clean_str(row['Manufacturer'], 'Manufacturer'),
+        }
+        
+        fse = FinalSupplyEquipment(**fse_data)
+        
+        # Add intended use types
+        intended_use = clean_str(row['Intended Uses'], 'Light duty motor vehicles')
+        use_type = use_types_map.get(intended_use)
+        if use_type:
+            fse.intended_use_types.append(use_type)
+        
+        # Add intended user types
+        intended_user = clean_str(row['Intended Users'], 'Public')
+        user_type = user_types_map.get(intended_user)
+        if user_type:
+            fse.intended_user_types.append(user_type)
+        
+        fse_to_add.append(fse)
+    
+    # Add all new FSE records at once
+    if fse_to_add:
+        session.add_all(fse_to_add)
+        await session.flush()
+        logger.info(f"Seeded {len(fse_to_add)} final supply equipment records from CSV.")
+    else:
+        logger.info("All final supply equipment records already exist, skipping.")
