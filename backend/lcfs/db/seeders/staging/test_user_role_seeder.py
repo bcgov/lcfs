@@ -15,10 +15,11 @@ async def seed_test_user_roles(session):
     """
 
     user_roles_to_seed = [
-        # Government users (1-6) with administrative roles
+        # System user (1)
         {"user_profile_id": 1, "role_id": 1},  # System User - GOVERNMENT
         {"user_profile_id": 1, "role_id": 3},  # System User - ADMINISTRATOR
         {"user_profile_id": 1, "role_id": 4},  # System User - ANALYST
+        # Government users (2-6)
         {"user_profile_id": 2, "role_id": 1},  # Hamed Bayeki - GOVERNMENT
         {"user_profile_id": 2, "role_id": 3},  # Hamed Bayeki - ADMINISTRATOR
         {"user_profile_id": 3, "role_id": 1},  # Kevin Hashimoto - GOVERNMENT
@@ -30,7 +31,7 @@ async def seed_test_user_roles(session):
         {"user_profile_id": 6, "role_id": 1},  # Lindsy Grunert - GOVERNMENT
         {"user_profile_id": 6, "role_id": 3},  # Lindsy Grunert - ADMINISTRATOR
         {"user_profile_id": 6, "role_id": 4},  # Lindsy Grunert - ANALYST
-        # Organization users (7-16) with supplier roles
+        # Organization users (7-16)
         {"user_profile_id": 7, "role_id": 2},  # Jane Doe - SUPPLIER
         {"user_profile_id": 7, "role_id": 7},  # Jane Doe - MANAGE_USERS
         {"user_profile_id": 7, "role_id": 8},  # Jane Doe - TRANSFER
@@ -81,8 +82,9 @@ async def seed_test_user_roles(session):
         {"user_profile_id": 16, "role_id": 8},  # Noah Thomas - TRANSFER
         {"user_profile_id": 16, "role_id": 9},  # Noah Thomas - COMPLIANCE_REPORTING
         {"user_profile_id": 16, "role_id": 10},  # Noah Thomas - SIGNING_AUTHORITY
-        # Additional government users (17-22)
+        # Government users (17-22)
         {"user_profile_id": 17, "role_id": 1},  # Kailee Douglas - GOVERNMENT
+        {"user_profile_id": 17, "role_id": 4},  # Kailee Douglas - ANALYST
         {"user_profile_id": 18, "role_id": 1},  # Al Ring - GOVERNMENT
         {"user_profile_id": 18, "role_id": 3},  # Al Ring - ADMINISTRATOR
         {"user_profile_id": 18, "role_id": 4},  # Al Ring - ANALYST
@@ -96,13 +98,13 @@ async def seed_test_user_roles(session):
         {"user_profile_id": 22, "role_id": 1},  # Jackie Duys - GOVERNMENT
         {"user_profile_id": 22, "role_id": 3},  # Jackie Duys - ADMINISTRATOR
         {"user_profile_id": 22, "role_id": 4},  # Jackie Duys - ANALYST
-        # Additional test users from bulk insert (23-54) with roles 1 and 3
+        # Government test users (23-54)
         {"user_profile_id": 23, "role_id": 1},  # Alexander LePage - GOVERNMENT
         {"user_profile_id": 23, "role_id": 3},  # Alexander LePage - ADMINISTRATOR
         {"user_profile_id": 24, "role_id": 1},  # Arthur Wong - GOVERNMENT
         {"user_profile_id": 24, "role_id": 3},  # Arthur Wong - ADMINISTRATOR
-        {"user_profile_id": 25, "role_id": 1},  # Behzad Bahtooi - GOVERNMENT
-        {"user_profile_id": 25, "role_id": 3},  # Behzad Bahtooi - ADMINISTRATOR
+        {"user_profile_id": 25, "role_id": 1},  # Behzad Bantool - GOVERNMENT
+        {"user_profile_id": 25, "role_id": 3},  # Behzad Bantool - ADMINISTRATOR
         {"user_profile_id": 26, "role_id": 1},  # Binaipal Gill - GOVERNMENT
         {"user_profile_id": 26, "role_id": 3},  # Binaipal Gill - ADMINISTRATOR
         {"user_profile_id": 27, "role_id": 1},  # Brodie Nicholls - GOVERNMENT
@@ -161,34 +163,64 @@ async def seed_test_user_roles(session):
         {"user_profile_id": 53, "role_id": 3},  # Victoria Gagnon - ADMINISTRATOR
         {"user_profile_id": 54, "role_id": 1},  # Wesley Hawley - GOVERNMENT
         {"user_profile_id": 54, "role_id": 3},  # Wesley Hawley - ADMINISTRATOR
+        # Government users (55-82)
         {"user_profile_id": 55, "role_id": 1},  # Alex Zorkin - GOVERNMENT
         {"user_profile_id": 55, "role_id": 3},  # Alex Zorkin - ADMINISTRATOR
-        {"user_profile_id": 56, "role_id": 1},  # Amanda Berg - GOVERNMENT
-        {"user_profile_id": 57, "role_id": 1},  # Ann Chan - GOVERNMENT
-        {"user_profile_id": 58, "role_id": 1},  # Annie Wang - GOVERNMENT
-        {"user_profile_id": 59, "role_id": 1},  # Benjamin Lee - GOVERNMENT
-        {"user_profile_id": 60, "role_id": 1},  # Charles Brown - GOVERNMENT
-        {"user_profile_id": 61, "role_id": 1},  # Claus Davies - GOVERNMENT
-        {"user_profile_id": 62, "role_id": 1},  # Dale Young - GOVERNMENT
-        {"user_profile_id": 63, "role_id": 1},  # Dora Wang - GOVERNMENT
-        {"user_profile_id": 64, "role_id": 1},  # Emma Brown - GOVERNMENT
-        {"user_profile_id": 65, "role_id": 1},  # Gloria Miller - GOVERNMENT
-        {"user_profile_id": 66, "role_id": 1},  # Hannah Roberts - GOVERNMENT
-        {"user_profile_id": 67, "role_id": 1},  # Henry Wang - GOVERNMENT
-        {"user_profile_id": 68, "role_id": 1},  # Jasmine Zhang - GOVERNMENT
-        {"user_profile_id": 69, "role_id": 1},  # Jessica Jiang - GOVERNMENT
-        {"user_profile_id": 70, "role_id": 1},  # Jonathan Bell - GOVERNMENT
-        {"user_profile_id": 71, "role_id": 1},  # Kevin Liu - GOVERNMENT
-        {"user_profile_id": 72, "role_id": 1},  # Leonard Wang - GOVERNMENT
-        {"user_profile_id": 73, "role_id": 1},  # Madeline Wilson - GOVERNMENT
-        {"user_profile_id": 74, "role_id": 1},  # Melanie Anderson - GOVERNMENT
-        {"user_profile_id": 75, "role_id": 1},  # Michelle Lee - GOVERNMENT
-        {"user_profile_id": 76, "role_id": 1},  # Nia Clark - GOVERNMENT
-        {"user_profile_id": 77, "role_id": 1},  # Nate Jones - GOVERNMENT
-        {"user_profile_id": 78, "role_id": 1},  # Owen Liu - GOVERNMENT
-        {"user_profile_id": 79, "role_id": 1},  # Paul Sullivan - GOVERNMENT
-        {"user_profile_id": 80, "role_id": 1},  # Peter Park - GOVERNMENT
-        {"user_profile_id": 81, "role_id": 1},  # Rachel Moore - GOVERNMENT
+        {"user_profile_id": 56, "role_id": 1},  # Cindy Sonne - GOVERNMENT
+        {"user_profile_id": 56, "role_id": 3},  # Cindy Sonne - ADMINISTRATOR
+        {"user_profile_id": 57, "role_id": 1},  # Jasmine Zhang - GOVERNMENT
+        {"user_profile_id": 57, "role_id": 3},  # Jasmine Zhang - ADMINISTRATOR
+        {"user_profile_id": 58, "role_id": 1},  # Kuan Fan - GOVERNMENT
+        {"user_profile_id": 58, "role_id": 3},  # Kuan Fan - ADMINISTRATOR
+        {"user_profile_id": 59, "role_id": 1},  # Sean LeRoy - GOVERNMENT
+        {"user_profile_id": 59, "role_id": 3},  # Sean LeRoy - ADMINISTRATOR
+        {"user_profile_id": 60, "role_id": 1},  # Alisa Holtz - GOVERNMENT
+        {"user_profile_id": 60, "role_id": 3},  # Alisa Holtz - ADMINISTRATOR
+        {"user_profile_id": 61, "role_id": 1},  # Amy Teucher - GOVERNMENT
+        {"user_profile_id": 61, "role_id": 3},  # Amy Teucher - ADMINISTRATOR
+        {"user_profile_id": 62, "role_id": 1},  # Anna Ringsred - GOVERNMENT
+        {"user_profile_id": 62, "role_id": 3},  # Anna Ringsred - ADMINISTRATOR
+        {"user_profile_id": 63, "role_id": 1},  # Caitlin Moran - GOVERNMENT
+        {"user_profile_id": 63, "role_id": 3},  # Caitlin Moran - ADMINISTRATOR
+        {"user_profile_id": 64, "role_id": 1},  # Victor Rizov - GOVERNMENT
+        {"user_profile_id": 64, "role_id": 3},  # Victor Rizov - ADMINISTRATOR
+        {"user_profile_id": 65, "role_id": 1},  # Cindy Sonne - GOVERNMENT
+        {"user_profile_id": 65, "role_id": 3},  # Cindy Sonne - ADMINISTRATOR
+        {"user_profile_id": 66, "role_id": 1},  # Debbie Oyebanji - GOVERNMENT
+        {"user_profile_id": 66, "role_id": 3},  # Debbie Oyebanji - ADMINISTRATOR
+        {"user_profile_id": 67, "role_id": 1},  # Devon Willey-Pichette - GOVERNMENT
+        {"user_profile_id": 67, "role_id": 3},  # Devon Willey-Pichette - ADMINISTRATOR
+        {"user_profile_id": 68, "role_id": 1},  # Richard Tan - GOVERNMENT
+        {"user_profile_id": 68, "role_id": 3},  # Richard Tan - ADMINISTRATOR
+        {"user_profile_id": 69, "role_id": 1},  # Michael Rensing - GOVERNMENT
+        {"user_profile_id": 69, "role_id": 3},  # Michael Rensing - ADMINISTRATOR
+        {"user_profile_id": 70, "role_id": 1},  # Daniel Green - GOVERNMENT
+        {"user_profile_id": 70, "role_id": 3},  # Daniel Green - ADMINISTRATOR
+        {"user_profile_id": 71, "role_id": 1},  # Jasmin Gabriel - GOVERNMENT
+        {"user_profile_id": 71, "role_id": 3},  # Jasmin Gabriel - ADMINISTRATOR
+        {"user_profile_id": 72, "role_id": 1},  # Jordan Kummerfield - GOVERNMENT
+        {"user_profile_id": 72, "role_id": 3},  # Jordan Kummerfield - ADMINISTRATOR
+        {"user_profile_id": 73, "role_id": 1},  # Mehdi Bagheri - GOVERNMENT
+        {"user_profile_id": 73, "role_id": 3},  # Mehdi Bagheri - ADMINISTRATOR
+        {"user_profile_id": 74, "role_id": 1},  # Magdalena Gronowska - GOVERNMENT
+        {"user_profile_id": 74, "role_id": 3},  # Magdalena Gronowska - ADMINISTRATOR
+        {"user_profile_id": 75, "role_id": 1},  # Nick Clark - GOVERNMENT
+        {"user_profile_id": 75, "role_id": 3},  # Nick Clark - ADMINISTRATOR
+        {
+            "user_profile_id": 76,
+            "role_id": 1,
+        },  # Pravallikha Samuthirarajan - GOVERNMENT
+        {"user_profile_id": 76, "role_id": 3},  # Pravallikha Samuthirarajan - ADMINISTRATOR
+        {"user_profile_id": 77, "role_id": 1},  # Ryan Foxall - GOVERNMENT
+        {"user_profile_id": 77, "role_id": 3},  # Ryan Foxall - ADMINISTRATOR
+        {"user_profile_id": 78, "role_id": 1},  # Sunny Singh - GOVERNMENT
+        {"user_profile_id": 78, "role_id": 3},  # Sunny Singh - ADMINISTRATOR
+        {"user_profile_id": 79, "role_id": 1},  # Taylor Lorenzen - GOVERNMENT
+        {"user_profile_id": 79, "role_id": 3},  # Taylor Lorenzen - ADMINISTRATOR
+        {"user_profile_id": 80, "role_id": 1},  # Taylor Reiger - GOVERNMENT
+        {"user_profile_id": 80, "role_id": 3},  # Taylor Reiger - ADMINISTRATOR
+        {"user_profile_id": 81, "role_id": 1},  # Veronika Fremlin - GOVERNMENT
+        {"user_profile_id": 81, "role_id": 3},  # Veronika Fremlin - ADMINISTRATOR
     ]
 
     try:

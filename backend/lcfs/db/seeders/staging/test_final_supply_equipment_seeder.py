@@ -53,7 +53,7 @@ async def seed_test_final_supply_equipment(session):
     use_types_map = {ut.type: ut for ut in use_types_result.scalars().all()}
     
     user_types_result = await session.execute(select(EndUserType))
-    user_types_map = {ut.type: ut for ut in user_types_result.scalars().all()}
+    user_types_map = {ut.type_name: ut for ut in user_types_result.scalars().all()}
     
     # Prepare all FSE records to add
     fse_to_add = []

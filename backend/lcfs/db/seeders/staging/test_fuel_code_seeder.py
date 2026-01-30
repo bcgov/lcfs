@@ -4,6 +4,9 @@ from pathlib import Path
 from datetime import datetime, date
 from sqlalchemy import select
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.TransportMode import TransportMode
+from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
+from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 
 logger = structlog.get_logger(__name__)
 
@@ -77,8 +80,16 @@ async def seed_test_fuel_codes(session):
     existing_codes = result.scalars().all()
     existing_ids = {code.fuel_code_id for code in existing_codes}
     
+    # Query all transport modes and create a mapping
+    transport_modes_result = await session.execute(select(TransportMode))
+    transport_modes = transport_modes_result.scalars().all()
+    transport_mode_map = {tm.transport_mode: tm for tm in transport_modes}
+    
+    logger.info(f"Found {len(transport_mode_map)} transport modes")
+    
     # Prepare all fuel codes to add
     fuel_codes_to_add = []
+    transport_mode_associations = []
     
     for idx, row in df.iterrows():
         fuel_code_id = idx + 1  # Start from 1
@@ -90,6 +101,17 @@ async def seed_test_fuel_codes(session):
         # Prepare data
         fuel_suffix = clean_str(row['random fuel code'], f"{idx+1}.0")
         carbon_intensity = float(row['Carbon intensity']) if pd.notna(row['Carbon intensity']) else 0.0
+        
+        # Parse facility nameplate capacity (cap at int32 max: 2,147,483,647)
+        facility_capacity = None
+        if pd.notna(row.get('Facility nameplate capacity random')):
+            try:
+                capacity_value = int(float(row['Facility nameplate capacity random']))
+                # Cap at PostgreSQL INTEGER (int32) maximum
+                max_int32 = 2147483647
+                facility_capacity = min(capacity_value, max_int32)
+            except (ValueError, TypeError):
+                facility_capacity = None
         
         fuel_code_data = {
             "fuel_code_id": fuel_code_id,
@@ -106,22 +128,79 @@ async def seed_test_fuel_codes(session):
             "edrms": clean_str(row['EDRMS#'], 'EDRMS'),
             # last_updated will be set automatically by server_default
             "application_date": parse_date(row['Application date']),
+            "approval_date": parse_date(row.get('Approval date')) if pd.notna(row.get('Approval date')) else None,
             "feedstock": clean_str(row['Feedstock'], 'Feedstock'),
             "feedstock_location": clean_str(row['Feedstock location'], 'Location'),
             "feedstock_misc": clean_str(row['Misc'], ''),
             "fuel_production_facility_city": clean_str(row['Fuel production facility city'], 'City'),
             "fuel_production_facility_province_state": clean_str(row['Fuel production facility province/state'], 'Province'),
             "fuel_production_facility_country": clean_str(row['Fuel production facility country'], 'Country'),
+            "facility_nameplate_capacity": facility_capacity,
+            "facility_nameplate_capacity_unit": clean_str(row.get('Unit'), None) if pd.notna(row.get('Unit')) else None,
             "former_company": clean_str(row['Former company'], ''),
             "notes": clean_str(row['Notes'], ''),
         }
         
         fuel_codes_to_add.append(FuelCode(**fuel_code_data))
+        
+        # Store transport mode info for later association
+        feedstock_transport = clean_str(row.get('Feedstock transport mode'), '')
+        finished_transport = clean_str(row.get('Finished fuel transport mode'), '')
+        
+        if feedstock_transport or finished_transport:
+            transport_mode_associations.append({
+                'fuel_code_id': fuel_code_id,
+                'feedstock_modes': feedstock_transport,
+                'finished_modes': finished_transport
+            })
     
     # Add all new fuel codes at once
     if fuel_codes_to_add:
         session.add_all(fuel_codes_to_add)
         await session.flush()
         logger.info(f"Seeded {len(fuel_codes_to_add)} fuel codes from CSV.")
+        
+        # Now add transport mode associations
+        feedstock_associations = []
+        finished_associations = []
+        
+        for assoc in transport_mode_associations:
+            fuel_code_id = assoc['fuel_code_id']
+            
+            # Parse feedstock transport modes (comma-separated)
+            if assoc['feedstock_modes']:
+                modes = [m.strip() for m in assoc['feedstock_modes'].split(',')]
+                for mode_name in modes:
+                    transport_mode = transport_mode_map.get(mode_name)
+                    if transport_mode:
+                        feedstock_associations.append(
+                            FeedstockFuelTransportMode(
+                                fuel_code_id=fuel_code_id,
+                                transport_mode_id=transport_mode.transport_mode_id
+                            )
+                        )
+            
+            # Parse finished fuel transport modes (comma-separated)
+            if assoc['finished_modes']:
+                modes = [m.strip() for m in assoc['finished_modes'].split(',')]
+                for mode_name in modes:
+                    transport_mode = transport_mode_map.get(mode_name)
+                    if transport_mode:
+                        finished_associations.append(
+                            FinishedFuelTransportMode(
+                                fuel_code_id=fuel_code_id,
+                                transport_mode_id=transport_mode.transport_mode_id
+                            )
+                        )
+        
+        if feedstock_associations:
+            session.add_all(feedstock_associations)
+            logger.info(f"Seeded {len(feedstock_associations)} feedstock transport mode associations.")
+        
+        if finished_associations:
+            session.add_all(finished_associations)
+            logger.info(f"Seeded {len(finished_associations)} finished fuel transport mode associations.")
+        
+        await session.flush()
     else:
         logger.info("All fuel codes already exist, skipping.")

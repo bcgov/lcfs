@@ -47,6 +47,9 @@ from lcfs.db.seeders.staging.test_final_supply_equipment_seeder import (
 from lcfs.db.seeders.staging.test_charging_site_seeder import (
     seed_test_charging_sites,
 )
+from lcfs.db.seeders.staging.test_charging_equipment_seeder import (
+    seed_test_charging_equipment,
+)
 from lcfs.db.seeders.staging.test_document_seeder import (
     seed_test_documents,
 )
@@ -82,6 +85,7 @@ async def update_sequences(session: AsyncSession):
         "other_uses": "other_uses_id",
         "allocation_agreement": "allocation_agreement_id",
         "charging_site": "charging_site_id",
+        "charging_equipment": "charging_equipment_id",
         "final_supply_equipment": "final_supply_equipment_id",
         "document": "document_id",
         "government_notification": "government_notification_id",
@@ -137,6 +141,7 @@ async def seed_staging(session: AsyncSession):
     await seed_test_other_uses(session)
     await seed_test_allocation_agreements(session)
     await seed_test_charging_sites(session)
+    await seed_test_charging_equipment(session)
     await seed_test_final_supply_equipment(session)
 
     # Seed documents after compliance reports (dependency)
