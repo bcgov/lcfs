@@ -69,6 +69,23 @@ async def test_get_charging_equipment_by_id_not_found(repo, mock_db):
 
 
 @pytest.mark.anyio
+async def test_get_serial_numbers_for_organization(repo, mock_db):
+    """Serial numbers for org should be normalized and deduplicated."""
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [
+        "SER-1",
+        " ser-2 ",
+        None,
+    ]
+    mock_db.execute.return_value = mock_result
+
+    serials = await repo.get_serial_numbers_for_organization(5)
+
+    assert serials == {"SER-1", "SER-2"}
+    mock_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
 async def test_get_charging_equipment_list_success(
     repo, mock_db, valid_charging_equipment
 ):
