@@ -43,3 +43,23 @@ class CreditsResultSchema(BaseSchema):
     quantity: float
     energy_content: float
     compliance_units: int
+
+
+class LookupTableRowSchema(BaseSchema):
+    """Schema for a single row in the lookup table display"""
+    fuel_category: str
+    fuel_type: str
+    end_use: Optional[str] = None
+    determining_carbon_intensity: str
+    target_ci: Optional[float] = None
+    ci_of_fuel: Optional[float] = None
+    uci: Optional[float] = None
+    energy_density: Optional[float] = None
+    energy_density_unit: Optional[str] = None
+    eer: Optional[float] = None
+
+
+class LookupTableResponseSchema(BaseSchema):
+    """Schema for the complete lookup table response"""
+    compliance_year: int
+    data: list[LookupTableRowSchema]

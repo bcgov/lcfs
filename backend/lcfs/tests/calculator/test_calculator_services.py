@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, AsyncMock, patch
 
 from lcfs.utils.constants import LCFS_Constants
@@ -15,6 +16,7 @@ def mock_repo():
     mock.get_compliance_periods = AsyncMock()
     mock.get_fuel_types = AsyncMock()
     mock.get_fuel_type_options = AsyncMock()
+    mock.get_lookup_table_data = AsyncMock()
     return mock
 
 
@@ -537,3 +539,64 @@ async def test_get_quantity_from_compliance_units_with_custom_ci(
                 compliance_units=200,
                 ED=38.5,
             )
+
+
+@pytest.mark.anyio
+async def test_get_lookup_table_data_builds_rows(calculator_service, mock_repo):
+    row_1 = SimpleNamespace(
+        fuel_category="Diesel",
+        fuel_type="Fossil-derived diesel",
+        end_use_type="Any",
+        provision_of_the_act="Default carbon intensity",
+        target_carbon_intensity=79.281,
+        default_carbon_intensity=94.389,
+        category_carbon_intensity=88.8,
+        energy_density=38.654,
+        energy_density_unit="MJ/L",
+        eer=1.234,
+        fuel_type_id=1,
+        end_use_type_id=2,
+    )
+    row_1_duplicate = SimpleNamespace(**row_1.__dict__)
+    row_2 = SimpleNamespace(
+        fuel_category="Gasoline",
+        fuel_type="Renewable gasoline",
+        end_use_type=None,
+        provision_of_the_act=None,
+        target_carbon_intensity=78.681,
+        default_carbon_intensity=None,
+        category_carbon_intensity=93.671,
+        energy_density=34.691,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=3,
+        end_use_type_id=None,
+    )
+
+    mock_repo.get_lookup_table_data.return_value = {
+        "data": [row_1, row_1_duplicate, row_2],
+        "uci_map": {(1, 2): 10.555},
+    }
+
+    result = await calculator_service.get_lookup_table_data(2025)
+
+    assert result.compliance_year == 2025
+    assert len(result.data) == 2
+
+    first = result.data[0]
+    assert first.fuel_category == "Diesel"
+    assert first.fuel_type == "Fossil-derived diesel"
+    assert first.end_use == "Any"
+    assert first.determining_carbon_intensity == "Default carbon intensity"
+    assert first.target_ci == 79.28
+    assert first.ci_of_fuel == 94.39
+    assert first.uci == 10.55
+    assert first.energy_density == 38.65
+    assert first.energy_density_unit == "MJ/L"
+    assert first.eer == 1.23
+
+    second = result.data[1]
+    assert second.fuel_category == "Gasoline"
+    assert second.determining_carbon_intensity == "N/A"
+    assert second.ci_of_fuel == 93.67
+    assert second.uci is None

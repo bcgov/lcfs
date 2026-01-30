@@ -23,7 +23,7 @@ const TypeCellRenderer = (isSupplier) => (props) => {
   const { data } = props
   const reportType = data.reportType || ''
 
-  // Check if there's a supplemental report (Draft or Submitted) older than 30 days
+  // Check if there's a supplemental report (Submitted) older than 30 days
   const hasDraftSupplementalOverThirtyDays = () => {
     // Only show flag for IDIR users (government users)
     if (isSupplier) {
@@ -40,7 +40,7 @@ const TypeCellRenderer = (isSupplier) => (props) => {
       return false
     }
 
-    if (data.latestStatus !== 'Draft' && data.latestStatus !== 'Submitted') {
+    if (data.latestStatus !== 'Submitted') {
       return false
     }
 
