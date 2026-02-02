@@ -87,7 +87,12 @@ export const ExcelUpload = ({ organizationId, onImportComplete }) => {
           getJobStatusHook={useChargingEquipmentImportJobStatus}
           onComplete={(summary) => {
             onImportComplete?.(summary)
-            setIsImportDialogOpen(false)
+            const hasRejections =
+              Number(summary?.rejected || 0) > 0 ||
+              (Array.isArray(summary?.errors) && summary.errors.length > 0)
+            if (!hasRejections) {
+              setIsImportDialogOpen(false)
+            }
           }}
         />
       )}
