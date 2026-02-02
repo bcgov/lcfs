@@ -1,7 +1,9 @@
 import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { ThemeProvider } from '@mui/material/styles'
 import { ExcelUpload } from '../ExcelUpload'
+import theme from '@/themes'
 
 const mockOnImportComplete = vi.fn()
 let latestOnComplete = null
@@ -23,7 +25,7 @@ vi.mock('@/components/ImportDialog', () => ({
     if (!props.open) {
       return null
     }
-    return <div data-testid="import-dialog" />
+    return <div data-test="import-dialog" />
   }
 }))
 
@@ -35,10 +37,12 @@ describe('ExcelUpload import dialog behaviour', () => {
 
   const openDialog = () => {
     render(
-      <ExcelUpload
-        organizationId={123}
-        onImportComplete={mockOnImportComplete}
-      />
+      <ThemeProvider theme={theme}>
+        <ExcelUpload
+          organizationId={123}
+          onImportComplete={mockOnImportComplete}
+        />
+      </ThemeProvider>
     )
 
     fireEvent.click(screen.getByText('chargingEquipment:importBtn'))
