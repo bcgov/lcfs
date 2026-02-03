@@ -404,6 +404,7 @@ async def test_get_fse_reporting_list_paginated_success(
             "level_of_equipment_id": 22,
             "intended_uses": ["LDV"],
             "intended_users": ["Residential"],
+            "status": "Submitted",
         }
     ]
     mock_repo.get_fse_reporting_list_paginated.return_value = (mock_data, 1)
@@ -419,6 +420,7 @@ async def test_get_fse_reporting_list_paginated_success(
     assert "finalSupplyEquipments" in result
     assert "pagination" in result
     assert result["pagination"].total == 1
+    assert result["finalSupplyEquipments"][0].status == "Submitted"
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
         1, pagination, "uuid-1234", "current"
     )
