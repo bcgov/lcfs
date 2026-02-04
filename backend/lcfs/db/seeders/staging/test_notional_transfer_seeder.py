@@ -68,26 +68,30 @@ async def seed_test_notional_transfers(session):
         {"notional_transfer_id": 114, "compliance_report_id": 113, "legal_name": "LCFS Org 2", "address_for_service": "Addr AD", "fuel_category_id": 1, "received_or_transferred": "Transferred", "quantity": 12, "group_uuid": "nt-114", "version": 0},
     ]
 
-    for notional_transfer_data in notional_transfers_to_seed:
-        # Check if the notional transfer already exists
-        existing_notional_transfer = await session.execute(
-            select(NotionalTransfer).where(
-                NotionalTransfer.notional_transfer_id
-                == notional_transfer_data["notional_transfer_id"]
-            )
-        )
-        existing_notional_transfer = existing_notional_transfer.scalar()
-        if existing_notional_transfer:
-            for key, value in notional_transfer_data.items():
-                setattr(existing_notional_transfer, key, value)
-            logger.info(
-                f"Notional transfer with ID {notional_transfer_data['notional_transfer_id']} updated with latest seeded values."
-            )
-            continue
+    # Query all existing notional transfers at once to avoid autoflush issues
+    result = await session.execute(select(NotionalTransfer))
+    existing_transfers = result.scalars().all()
+    existing_map = {t.notional_transfer_id: t for t in existing_transfers}
 
-        # Create and add the new notional transfer
-        notional_transfer = NotionalTransfer(**notional_transfer_data)
-        session.add(notional_transfer)
+    # Update existing or prepare new transfers
+    transfers_to_add = []
+    updated_count = 0
+    for notional_transfer_data in notional_transfers_to_seed:
+        transfer_id = notional_transfer_data["notional_transfer_id"]
+        if transfer_id in existing_map:
+            # Update existing
+            for key, value in notional_transfer_data.items():
+                setattr(existing_map[transfer_id], key, value)
+            updated_count += 1
+        else:
+            # Prepare new transfer
+            transfers_to_add.append(NotionalTransfer(**notional_transfer_data))
+
+    # Add all new transfers at once
+    if transfers_to_add:
+        session.add_all(transfers_to_add)
 
     await session.flush()
-    logger.info(f"Seeded {len(notional_transfers_to_seed)} notional transfers.")
+    logger.info(
+        f"Seeded {len(transfers_to_add)} new notional transfers, updated {updated_count} existing."
+    )
