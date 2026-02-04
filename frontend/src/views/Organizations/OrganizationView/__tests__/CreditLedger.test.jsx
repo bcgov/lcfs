@@ -19,7 +19,10 @@ vi.mock('react-i18next', () => ({
 // Mock formatters
 vi.mock('@/utils/formatters', () => ({
   timezoneFormatter: vi.fn((value) => value),
-  numberFormatter: vi.fn((value) => value)
+  numberFormatter: vi.fn((value) => value),
+  spacesFormatter: vi.fn(({ value }) =>
+    value ? value.replace(/([a-z])([A-Z])/g, '$1 $2') : value
+  )
 }))
 
 // Mock components
@@ -86,6 +89,8 @@ vi.mock('@/components/DownloadButton', () => ({
   }
 }))
 
+let lastGridProps = null
+
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   const React = require('react')
   return {
@@ -106,6 +111,18 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
         },
         ref
       ) => {
+        lastGridProps = {
+          queryData,
+          onPaginationChange,
+          getRowId,
+          gridKey,
+          dataKey,
+          columnDefs,
+          suppressPagination,
+          paginationOptions,
+          defaultColDef,
+          autoSizeStrategy
+        }
         const domProps = {}
         // Only pass through standard DOM attributes
         Object.keys(props).forEach((key) => {
@@ -201,6 +218,7 @@ const renderComponent = (props = {}) => {
 describe('CreditLedger Component Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    lastGridProps = null
 
     // Default mock implementations
     mockUseCurrentUser.mockReturnValue({
@@ -342,6 +360,39 @@ describe('CreditLedger Component Tests', () => {
   })
 
   describe('Data Processing', () => {
+    it('formats compliance report transaction type with description', () => {
+      const ledgerData = [
+        {
+          compliancePeriod: '2023',
+          availableBalance: '1000',
+          complianceUnits: '500',
+          transactionType: 'ComplianceReport',
+          description: 'Supplemental 2',
+          updateDate: '2023-01-01'
+        }
+      ]
+
+      mockUseCreditLedger.mockReturnValue({
+        data: {
+          ledger: ledgerData,
+          pagination: { page: 1, size: 10, total: 1, totalPages: 1 }
+        },
+        isLoading: false
+      })
+
+      renderComponent()
+
+      const transactionTypeCol = lastGridProps.columnDefs.find(
+        (col) => col.field === 'transactionType'
+      )
+
+      const formatted = transactionTypeCol.valueFormatter({
+        data: ledgerData[0]
+      })
+
+      expect(formatted).toBe('Compliance Report – Supplemental 2')
+    })
+
     it('transforms ledger data correctly', () => {
       const ledgerData = [
         {
