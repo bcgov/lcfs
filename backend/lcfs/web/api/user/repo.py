@@ -327,6 +327,16 @@ class UserRepository:
         db_user_profile = UserProfile(**user_create.model_dump(exclude={"roles"}))
         user_data = user_create.model_dump()
         roles = user_data.pop("roles", {})
+
+        # For IDIR users (no organization), ensure email field matches keycloak_email
+        # This is critical for notification delivery
+        if not db_user_profile.organization_id:
+            if (
+                not db_user_profile.email
+                or db_user_profile.email != db_user_profile.keycloak_email
+            ):
+                db_user_profile.email = db_user_profile.keycloak_email
+
         # Find the RoleEnum member corresponding to each role
         role_enum_members = [
             role_enum for role_enum in RoleEnum if role_enum.value.lower() in roles
@@ -375,6 +385,12 @@ class UserRepository:
         user.keycloak_username = user_update.keycloak_username
         user.phone = user_update.phone
         user.mobile_phone = user_update.mobile_phone
+
+        # For IDIR users (no organization), ensure email field matches keycloak_email
+        # This is critical for notification delivery
+        if not user.organization_id:
+            if not user.email or user.email != user.keycloak_email:
+                user.email = user.keycloak_email
 
         # Find the RoleEnum member corresponding to each role
         new_role_enums = []
