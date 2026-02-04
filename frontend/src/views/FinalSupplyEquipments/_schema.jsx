@@ -14,13 +14,28 @@ import dayjs from 'dayjs'
 import {
   CommonArrayRenderer,
   MultiSelectRenderer,
-  SelectRenderer
+  SelectRenderer,
+  createStatusRenderer
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { sortMixedStrings } from './components/utils'
+
+// Custom status renderer for FSE that handles flat status field
+const FSEStatusRenderer = createStatusRenderer(
+  {
+    Draft: 'info', // Grey
+    Submitted: 'warning', // Blue
+    Validated: 'success', // Green
+    Updated: 'warning', // Orange
+    Decommissioned: 'error' // Red
+  },
+  {
+    statusField: 'status'
+  }
+)
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -490,8 +505,24 @@ export const finalSupplyEquipmentSummaryColDefs = (
   status,
   isIDIR = false
 ) => [
+  ...(isIDIR
+    ? [
+        {
+          headerName: t(
+            'finalSupplyEquipment:finalSupplyEquipmentColLabels.status'
+          ),
+          minWidth: 150,
+          field: 'status',
+          cellRenderer: FSEStatusRenderer,
+          filter: false,
+          sortable: false
+        }
+      ]
+    : []),
   {
-    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyDateRange'),
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyDateRange'
+    ),
     minWidth: 300,
     field: 'supplyDateRange',
     valueGetter: (params) => {

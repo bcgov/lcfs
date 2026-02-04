@@ -306,3 +306,153 @@ class CalculatorRepository:
         return {
             "fuel_types": fuel_type_results,
         }
+
+    @repo_handler
+    async def get_lookup_table_data(self, compliance_year: int):
+        """
+        Get all lookup table data for a given compliance year.
+        """
+        from lcfs.db.models.fuel import AdditionalCarbonIntensity
+
+        subquery_compliance_period_id = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == str(compliance_year))
+            .scalar_subquery()
+        )
+
+        # Build query to get all fuel type combinations with their data
+        query = (
+            select(
+                FuelCategory.category.label("fuel_category"),
+                FuelType.fuel_type,
+                EndUseType.type.label("end_use_type"),
+                ProvisionOfTheAct.name.label("provision_of_the_act"),
+                TargetCarbonIntensity.target_carbon_intensity,
+                DefaultCarbonIntensity.default_carbon_intensity,
+                CategoryCarbonIntensity.category_carbon_intensity,
+                EnergyDensity.density.label("energy_density"),
+                UnitOfMeasure.name.label("energy_density_unit"),
+                func.coalesce(EnergyEffectivenessRatio.ratio, 1).label("eer"),
+                FuelType.fuel_type_id,
+                FuelCategory.fuel_category_id,
+                EndUseType.end_use_type_id,
+                FuelType.fossil_derived,
+            )
+            .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
+            .join(
+                FuelCategory,
+                FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
+            )
+            .outerjoin(
+                DefaultCarbonIntensity,
+                and_(
+                    DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
+                    DefaultCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
+                CategoryCarbonIntensity,
+                and_(
+                    CategoryCarbonIntensity.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    CategoryCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
+                EnergyDensity,
+                and_(
+                    EnergyDensity.fuel_type_id == FuelType.fuel_type_id,
+                    EnergyDensity.compliance_period_id == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(UnitOfMeasure, EnergyDensity.uom_id == UnitOfMeasure.uom_id)
+            .outerjoin(
+                EnergyEffectivenessRatio,
+                and_(
+                    EnergyEffectivenessRatio.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
+                    EnergyEffectivenessRatio.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
+                EndUseType,
+                EndUseType.end_use_type_id
+                == EnergyEffectivenessRatio.end_use_type_id,
+            )
+            .outerjoin(
+                TargetCarbonIntensity,
+                and_(
+                    TargetCarbonIntensity.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    TargetCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
+                ProvisionOfTheAct,
+                and_(
+                    ProvisionOfTheAct.name != "Unknown",
+                    or_(
+                        and_(
+                            FuelType.fossil_derived == True,
+                            ProvisionOfTheAct.provision_of_the_act_id == 1,
+                        ),
+                        and_(
+                            FuelType.fossil_derived == False,
+                            or_(
+                                and_(
+                                    ProvisionOfTheAct.provision_of_the_act_id.notin_(
+                                        [1, 8]
+                                    ),
+                                    compliance_year
+                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                ),
+                                and_(
+                                    ProvisionOfTheAct.provision_of_the_act_id != 1,
+                                    compliance_year
+                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            )
+        )
+
+        # Filter based on whether it's legacy or not
+        include_legacy = compliance_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+        if not include_legacy:
+            query = query.where(
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+            )
+        else:
+            query = query.where(ProvisionOfTheAct.is_legacy == True)
+
+        results = (await self.db.execute(query)).all()
+
+        # Now get UCI data for each combination
+        uci_query = (
+            select(
+                AdditionalCarbonIntensity.fuel_type_id,
+                AdditionalCarbonIntensity.end_use_type_id,
+                AdditionalCarbonIntensity.intensity.label("uci"),
+            )
+            .where(
+                AdditionalCarbonIntensity.compliance_period_id
+                == subquery_compliance_period_id
+            )
+        )
+
+        uci_results = (await self.db.execute(uci_query)).all()
+
+        # Create a lookup map for UCI values
+        uci_map = {}
+        for uci_row in uci_results:
+            key = (uci_row.fuel_type_id, uci_row.end_use_type_id)
+            uci_map[key] = uci_row.uci
+
+        return {"data": results, "uci_map": uci_map}

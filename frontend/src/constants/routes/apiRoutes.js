@@ -221,6 +221,7 @@ export const apiRoutes = {
   getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
   getCalculatorQuantityFromComplianceUnits:
     '/calculator/:complianceYear/calculate/quantity/',
+  getLookupTableData: '/calculator/:complianceYear/lookup-table/',
 
   // geocoder endpoints
   geocoderValidate: '/geocoder/validate',

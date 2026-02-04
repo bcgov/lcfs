@@ -573,6 +573,36 @@ class ChargingEquipmentRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_serial_numbers_for_organization(
+        self, organization_id: int
+    ) -> set[str]:
+        """
+        Retrieve serial numbers for all charging equipment owned by the organization.
+        Limited to non-deleted equipment and latest site versions.
+        """
+        stmt = (
+            select(ChargingEquipment.serial_number)
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipment.action_type != ActionTypeEnum.DELETE,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
+        )
+        stmt = self._apply_latest_site_filter(stmt)
+        result = await self.db.execute(stmt)
+        normalized = set()
+        for serial in result.scalars().all():
+            if isinstance(serial, str):
+                clean = serial.strip()
+                if clean:
+                    normalized.add(clean.upper())
+        return normalized
+
+    @repo_handler
     async def get_organizations(self) -> List[Organization]:
         """Get all organizations for allocating organization dropdown."""
         query = select(Organization).order_by(Organization.name)
