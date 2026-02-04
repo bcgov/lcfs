@@ -34,7 +34,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 102603.18240,
             "fuel_category_id": 1,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2 (matches original DEV seeder)
             "fuel_type_id": 4,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -57,7 +57,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 56837.67360,
             "fuel_category_id": 2,
-            "fuel_code_id": 15,
+            "fuel_code_id": 504,  # Biodiesel 232.3 (CI: -1.00, matches original 362.1)
             "fuel_type_id": 1,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -69,7 +69,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 66770.91360,
             "fuel_category_id": 2,
-            "fuel_code_id": 8,
+            "fuel_code_id": 504,  # Biodiesel 232.3
             "fuel_type_id": 1,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -92,7 +92,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 351917.77320,
             "fuel_category_id": 2,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (representative, CI: 10.05)
             "fuel_type_id": 5,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -104,7 +104,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 362659.58820,
             "fuel_category_id": 2,
-            "fuel_code_id": 17,
+            "fuel_code_id": 17,  # HDRD 302.1
             "fuel_type_id": 5,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -138,7 +138,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 10260.31824,
             "fuel_category_id": 1,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2 (matches fuel_type_id 4)
             "fuel_type_id": 4,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -150,7 +150,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 28418.83680,
             "fuel_category_id": 2,
-            "fuel_code_id": 15,
+            "fuel_code_id": 504,  # Biodiesel 232.3 (matches fuel_type_id 1)
             "fuel_type_id": 1,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -162,7 +162,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 33385.45680,
             "fuel_category_id": 2,
-            "fuel_code_id": 8,
+            "fuel_code_id": 504,  # Biodiesel 232.3 (matches fuel_type_id 1)
             "fuel_type_id": 1,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -174,7 +174,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 305.97551,
             "fuel_category_id": 1,
-            "fuel_code_id": 19,
+            "fuel_code_id": 918,  # Renewable gasoline 398.2 (matches fuel_type_id 14)
             "fuel_type_id": 14,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -186,7 +186,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 23.46118,
             "fuel_category_id": 2,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "fuel_type_id": 5,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -201,7 +201,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 20.0,
             "fuel_category_id": 2,  # renewable
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -214,7 +214,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 16.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -227,7 +227,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 12.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -240,7 +240,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 14.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -253,7 +253,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 10.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -266,7 +266,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 18.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -279,7 +279,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 8.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -292,7 +292,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 6.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -305,7 +305,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 13.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -318,7 +318,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 7.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -331,7 +331,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 9.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -343,7 +343,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 11.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -355,7 +355,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 10.0,
             "fuel_category_id": 2,
             "fuel_type_id": 5,
-            "fuel_code_id": 11,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
@@ -366,7 +366,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 24.17731,
             "fuel_category_id": 2,
-            "fuel_code_id": 17,
+            "fuel_code_id": 17,  # HDRD 302.1 (matches fuel_type_id 5)
             "fuel_type_id": 5,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -378,7 +378,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 20123.74728,
             "fuel_category_id": 1,
-            "fuel_code_id": 16,
+            "fuel_code_id": 202,  # Renewable naphtha 585.1 (matches fuel_type_id 15)
             "fuel_type_id": 15,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -412,7 +412,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 174.45600,
             "fuel_category_id": 3,
-            "fuel_code_id": 18,
+            "fuel_code_id": 495,  # Alternative jet fuel 234.2 (matches fuel_type_id 11)
             "fuel_type_id": 11,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -424,7 +424,7 @@ async def seed_test_fuel_supplies(session):
             "units": "Cubic_metres",
             "compliance_units": 1949.52271,
             "fuel_category_id": 2,
-            "fuel_code_id": 7,
+            "fuel_code_id": 848,  # CNG 678.1 (matches fuel_type_id 2)
             "fuel_type_id": 2,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
@@ -437,6 +437,7 @@ async def seed_test_fuel_supplies(session):
             "compliance_units": 284.77771,
             "fuel_category_id": 2,
             "fuel_type_id": 2,
+            "fuel_code_id": 848,  # CNG 678.1 (matches fuel_type_id 2)
             "provision_of_the_act_id": 3,
             "end_use_id": 24,
         },
@@ -458,29 +459,28 @@ async def seed_test_fuel_supplies(session):
             "units": "Litres",
             "compliance_units": 333.85457,
             "fuel_category_id": 2,
-            "fuel_code_id": 8,
+            "fuel_code_id": 504,  # Biodiesel 232.3 (matches fuel_type_id 1)
             "fuel_type_id": 1,
             "provision_of_the_act_id": 2,
             "end_use_id": 24,
         },
     ]
 
+    # Query all existing fuel supplies at once to avoid autoflush issues
+    result = await session.execute(select(FuelSupply))
+    existing_supplies = result.scalars().all()
+    existing_ids = {supply.fuel_supply_id for supply in existing_supplies}
+
+    # Filter out fuel supplies that already exist
+    supplies_to_add = []
     for fuel_supply_data in fuel_supplies_to_seed:
-        # Check if the fuel supply already exists
-        existing_fuel_supply = await session.execute(
-            select(FuelSupply).where(
-                FuelSupply.fuel_supply_id == fuel_supply_data["fuel_supply_id"]
-            )
-        )
-        if existing_fuel_supply.scalar():
-            logger.info(
-                f"Fuel supply with ID {fuel_supply_data['fuel_supply_id']} already exists, skipping."
-            )
-            continue
+        if fuel_supply_data["fuel_supply_id"] not in existing_ids:
+            supplies_to_add.append(FuelSupply(**fuel_supply_data))
 
-        # Create and add the new fuel supply
-        fuel_supply = FuelSupply(**fuel_supply_data)
-        session.add(fuel_supply)
-
-    await session.flush()
-    logger.info(f"Seeded {len(fuel_supplies_to_seed)} fuel supplies.")
+    # Add all new fuel supplies at once
+    if supplies_to_add:
+        session.add_all(supplies_to_add)
+        await session.flush()
+        logger.info(f"Seeded {len(supplies_to_add)} fuel supplies.")
+    else:
+        logger.info("All fuel supplies already exist, skipping.")

@@ -513,9 +513,9 @@ class FinalSupplyEquipmentRepository:
         Search for manufacturers based on the provided query.
         """
         result = await self.db.execute(
-            select(distinct(ChargingEquipment.manufacturer)).where(
-                ChargingEquipment.manufacturer.ilike(f"%{query}%")
-            ).limit(10)
+            select(distinct(ChargingEquipment.manufacturer))
+            .where(ChargingEquipment.manufacturer.ilike(f"%{query}%"))
+            .limit(10)
         )
         return result.scalars().all()
 
@@ -614,6 +614,7 @@ class FinalSupplyEquipmentRepository:
                 ChargingEquipment.ports,
                 intended_uses_subquery.label("intended_uses"),
                 intended_users_subquery.label("intended_users"),
+                ChargingEquipmentStatus.status.label("status"),
                 literal(source_priority).label("source_priority"),
             )
             .select_from(ChargingEquipment)

@@ -463,6 +463,7 @@ async def test_get_fse_reporting_list_success(
                     "manufacturer": "TestMfg",
                     "supply_from_date": "2024-01-01",
                     "supply_to_date": "2024-12-31",
+                    "status": "Validated",
                 }
             ],
             "pagination": {"page": 1, "size": 10, "total": 1, "total_pages": 1},
@@ -476,6 +477,7 @@ async def test_get_fse_reporting_list_success(
 
         assert response.status_code == 200
         assert "finalSupplyEquipments" in response.json()
+        assert response.json()["finalSupplyEquipments"][0]["status"] == "Validated"
         # The payload gets converted to PaginationRequestSchema, so we check the call differently
         mock_get_reporting.assert_called_once()
         args = mock_get_reporting.call_args[0]

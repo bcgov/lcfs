@@ -20,7 +20,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 1,
             "organization_id": 1,
             "compliance_period_id": 15,
-            "current_status_id": 1,
+            "current_status_id": 5,  # Assessed (2024 report)
             "compliance_report_group_uuid": "ad7eef66-3c42-4188-8ff0-534527a90b8c",
             "version": 0,
             "reporting_frequency": "ANNUAL",
@@ -30,7 +30,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 2,
             "organization_id": 6,
             "compliance_period_id": 15,
-            "current_status_id": 1,
+            "current_status_id": 5,  # Assessed (2024 report)
             "compliance_report_group_uuid": "b536659c-0435-467f-9f38-f6791a94004b",
             "version": 0,
             "reporting_frequency": "ANNUAL",
@@ -40,7 +40,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 3,
             "organization_id": 3,
             "compliance_period_id": 15,
-            "current_status_id": 2,
+            "current_status_id": 5,  # Assessed (2024 report)
             "transaction_id": 17,
             "compliance_report_group_uuid": "9a2ac61c-6c97-42f2-babd-83d02d6358d0",
             "version": 0,
@@ -51,7 +51,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 4,
             "organization_id": 2,
             "compliance_period_id": 15,
-            "current_status_id": 2,
+            "current_status_id": 5,  # Assessed (2024 report)
             "transaction_id": 18,
             "compliance_report_group_uuid": "d0d75700-48ca-40db-8c28-5b0d1a3a7d44",
             "version": 0,
@@ -62,7 +62,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 5,
             "organization_id": 4,
             "compliance_period_id": 15,
-            "current_status_id": 1,
+            "current_status_id": 5,  # Assessed (2024 report)
             "compliance_report_group_uuid": "ece314c1-94ca-4e64-81ad-c89d2dba5a99",
             "version": 0,
             "reporting_frequency": "QUARTERLY",
@@ -72,7 +72,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 6,
             "organization_id": 5,
             "compliance_period_id": 15,
-            "current_status_id": 1,
+            "current_status_id": 5,  # Assessed (2024 report)
             "compliance_report_group_uuid": "1122a80e-99a3-447b-a62e-4c758dd83700",
             "version": 0,
             "reporting_frequency": "ANNUAL",
@@ -85,7 +85,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 101,
             "organization_id": 1,
             "compliance_period_id": 15,  # 2024
-            "current_status_id": 2,  # Submitted
+            "current_status_id": 5,  # Assessed (2024 report)
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111101",
             "version": 0,
             "reporting_frequency": "ANNUAL",
@@ -96,7 +96,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 102,
             "organization_id": 2,
             "compliance_period_id": 15,
-            "current_status_id": 2,  # Submitted
+            "current_status_id": 5,  # Assessed (2024 report)
             "transaction_id": 101,
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111102",
             "version": 0,
@@ -108,7 +108,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 103,
             "organization_id": 3,
             "compliance_period_id": 15,
-            "current_status_id": 2,  # Submitted
+            "current_status_id": 5,  # Assessed (2024 report)
             "transaction_id": 104,
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111103",
             "version": 0,
@@ -120,7 +120,7 @@ async def seed_test_compliance_reports(session):
             "compliance_report_id": 104,
             "organization_id": 4,
             "compliance_period_id": 15,
-            "current_status_id": 2,  # Submitted
+            "current_status_id": 5,  # Assessed (2024 report)
             "transaction_id": 102,
             "compliance_report_group_uuid": "11111111-1111-1111-1111-111111111104",
             "version": 0,
@@ -234,23 +234,21 @@ async def seed_test_compliance_reports(session):
         },
     ]
 
+    # Query all existing compliance reports at once to avoid autoflush issues
+    result = await session.execute(select(ComplianceReport))
+    existing_reports = result.scalars().all()
+    existing_ids = {report.compliance_report_id for report in existing_reports}
+    
+    # Filter out compliance reports that already exist
+    reports_to_add = []
     for compliance_report_data in compliance_reports_to_seed:
-        # Check if the compliance report already exists
-        existing_compliance_report = await session.execute(
-            select(ComplianceReport).where(
-                ComplianceReport.compliance_report_id
-                == compliance_report_data["compliance_report_id"]
-            )
-        )
-        if existing_compliance_report.scalar():
-            logger.info(
-                f"Compliance report with ID {compliance_report_data['compliance_report_id']} already exists, skipping."
-            )
-            continue
+        if compliance_report_data["compliance_report_id"] not in existing_ids:
+            reports_to_add.append(ComplianceReport(**compliance_report_data))
 
-        # Create and add the new compliance report
-        compliance_report = ComplianceReport(**compliance_report_data)
-        session.add(compliance_report)
-
-    await session.flush()
-    logger.info(f"Seeded {len(compliance_reports_to_seed)} compliance reports.")
+    # Add all new compliance reports at once
+    if reports_to_add:
+        session.add_all(reports_to_add)
+        await session.flush()
+        logger.info(f"Seeded {len(reports_to_add)} compliance reports.")
+    else:
+        logger.info("All compliance reports already exist, skipping.")
