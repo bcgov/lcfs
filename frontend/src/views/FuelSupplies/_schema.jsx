@@ -919,7 +919,7 @@ export const fuelSupplySummaryColDef = (
       minWidth: 170,
       hide: complianceYear < NEW_REGULATION_YEAR,
       valueGetter: (params) => {
-        const showCanadianProduced = canEditCanadianProduced(
+        const isCanadaProducedEditable = canEditCanadianProduced(
           params.data,
           complianceYear,
           optionsData
@@ -928,7 +928,7 @@ export const fuelSupplySummaryColDef = (
           (canEditQ1Supplied(
             params.data,
             optionsData,
-            compliancePeriod,
+            complianceYear,
             PROVISION_APPROVED_FUEL_CODE
           ) &&
             !params.data.isCanadaProduced)
@@ -1141,7 +1141,7 @@ export const changelogCommonColDefs = (
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'fuelCode'),
       valueGetter: (params) => {
-        const showCanadianProduced = canEditCanadianProduced(
+        const isCanadaProducedEditable = canEditCanadianProduced(
           params.data,
           complianceYear,
           optionsData
