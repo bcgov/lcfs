@@ -1,7 +1,7 @@
 """Deduplicate charging equipment per report group/serial combination
 
 Revision ID: 3d7b65a9d2ef
-Revises: 46948662543b
+Revises: a1b2c3d4e5f1
 Create Date: 2026-02-01 09:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import logging
 
 # revision identifiers, used by Alembic.
 revision = "3d7b65a9d2ef"
-down_revision = "46948662543b"
+down_revision = "a1b2c3d4e5f1"
 branch_labels = None
 depends_on = None
 
