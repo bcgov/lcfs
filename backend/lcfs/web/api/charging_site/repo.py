@@ -571,6 +571,49 @@ class ChargingSiteRepository:
         await self.db.execute(stmt)
 
     @repo_handler
+    async def calculate_site_status_from_equipment(
+        self,
+        charging_site_id: int,
+    ) -> str | None:
+        """
+        Calculate the appropriate charging site status based on the highest
+        status of all non-decommissioned equipment at the site.
+
+        Status priority (highest to lowest): Validated > Submitted > Draft
+        Returns None if no non-decommissioned equipment exists.
+        """
+        # Get all non-decommissioned equipment statuses for this site
+        stmt = (
+            select(ChargingEquipmentStatus.status)
+            .select_from(ChargingEquipment)
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(
+                and_(
+                    ChargingEquipment.charging_site_id == charging_site_id,
+                    ChargingEquipmentStatus.status != "Decommissioned",
+                )
+            )
+        )
+        result = await self.db.execute(stmt)
+        statuses = [row[0] for row in result.fetchall()]
+
+        if not statuses:
+            return None
+
+        # Priority: Validated > Submitted > Draft
+        # Return the highest priority status found
+        if "Validated" in statuses:
+            return "Validated"
+        elif "Submitted" in statuses:
+            return "Submitted"
+        else:
+            return "Draft"
+
+    @repo_handler
     async def get_charging_site_options(self, organization):
         """
         Get options for charging site dropdowns (statuses only)
