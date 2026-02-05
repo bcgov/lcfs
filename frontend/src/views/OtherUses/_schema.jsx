@@ -508,7 +508,7 @@ export const otherUsesSummaryColDefs = (complianceYear, optionsData) => [
     valueGetter: (params) => {
       const isCanadaProducedEditable = canEditCanadianProduced(
         params.data,
-        compliancePeriod,
+        complianceYear,
         optionsData
       )
       // For fuels using Default carbon intensity that are not produced in Canada, an active selection
@@ -517,7 +517,7 @@ export const otherUsesSummaryColDefs = (complianceYear, optionsData) => [
         (canEditQ1Supplied(
           params.data,
           optionsData,
-          compliancePeriod,
+          complianceYear,
           PROVISION_APPROVED_FUEL_CODE
         ) &&
           !params.data.isCanadaProduced)
@@ -643,7 +643,7 @@ export const changelogCommonColDefs = (
     valueGetter: (params) => {
       const isCanadaProducedEditable = canEditCanadianProduced(
         params.data,
-        compliancePeriod,
+        complianceYear,
         optionsData
       )
       // For fuels using Default carbon intensity that are not produced in Canada, an active selection
@@ -652,7 +652,7 @@ export const changelogCommonColDefs = (
         (canEditQ1Supplied(
           params.data,
           optionsData,
-          compliancePeriod,
+          complianceYear,
           PROVISION_APPROVED_FUEL_CODE
         ) &&
           !params.data.isCanadaProduced)
