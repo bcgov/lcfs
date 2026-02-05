@@ -902,13 +902,7 @@ export const fuelSupplySummaryColDef = (
           return 'Yes'
         }
         if (!isDefaultCI && showCanadianProduced) {
-          // Check if fuel code is Canadian
-          const isCanadian = isFuelCodeCanadian(
-            params.data.fuelType,
-            params.data.fuelCode,
-            optionsData
-          )
-          return isCanadian ? 'Yes' : 'No'
+          return ''
         }
         // When the “Fuel produced in Canada” field is not editable, then no text
         // value should be displayed in the cell or form field.
@@ -924,7 +918,23 @@ export const fuelSupplySummaryColDef = (
       field: 'isQ1Supplied',
       minWidth: 170,
       hide: complianceYear < NEW_REGULATION_YEAR,
-      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
+      valueGetter: (params) => {
+        const showCanadianProduced = canEditCanadianProduced(
+          params.data,
+          complianceYear,
+          optionsData
+        )
+        return (isCanadaProducedEditable && !params.data.isCanadaProduced) ||
+          (canEditQ1Supplied(
+            params.data,
+            optionsData,
+            compliancePeriod,
+            PROVISION_APPROVED_FUEL_CODE
+          ) &&
+            !params.data.isCanadaProduced)
+          ? 'Yes'
+          : 'No'
+      }
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
@@ -1112,13 +1122,7 @@ export const changelogCommonColDefs = (
           return 'Yes'
         }
         if (!isDefaultCI && showCanadianProduced) {
-          // Check if fuel code is Canadian
-          const isCanadian = isFuelCodeCanadian(
-            params.data.fuelType,
-            params.data.fuelCode,
-            optionsData
-          )
-          return isCanadian ? 'Yes' : 'No'
+          return ''
         }
         // When the “Fuel produced in Canada” field is not editable, then no text
         // value should be displayed in the cell or form field.
@@ -1134,8 +1138,25 @@ export const changelogCommonColDefs = (
       field: 'isQ1Supplied',
       minWidth: 170,
       hide: complianceYear < NEW_REGULATION_YEAR,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode'),
-      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
+      cellStyle: (params) =>
+        highlight && changelogCellStyle(params, 'fuelCode'),
+      valueGetter: (params) => {
+        const showCanadianProduced = canEditCanadianProduced(
+          params.data,
+          complianceYear,
+          optionsData
+        )
+        return (isCanadaProducedEditable && !params.data.isCanadaProduced) ||
+          (canEditQ1Supplied(
+            params.data,
+            optionsData,
+            compliancePeriod,
+            PROVISION_APPROVED_FUEL_CODE
+          ) &&
+            !params.data.isCanadaProduced)
+          ? 'Yes'
+          : 'No'
+      }
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
