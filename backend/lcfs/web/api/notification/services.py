@@ -1,7 +1,6 @@
 import math
 import json
 from typing import List, Optional
-import json
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
@@ -216,7 +215,6 @@ class NotificationService:
         created_subscription = await self.repo.create_notification_channel_subscription(
             subscription
         )
-        x = 1
         return SubscriptionSchema.model_validate(created_subscription)
 
     @service_handler
@@ -265,12 +263,17 @@ class NotificationService:
         await self.repo.delete_notification_channel_subscription(subscription_id)
         logger.info(f"Deleted notification channel subscription {subscription_id}.")
 
-    def determine_audience_type(self, notification_type: NotificationTypeEnum) -> AudienceType:
+    def determine_audience_type(
+        self, notification_type: NotificationTypeEnum
+    ) -> AudienceType:
         """
         Determine the target audience type based on the notification type.
         Business logic for notification audience determination is centralized here.
         """
-        if notification_type == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
+        if (
+            notification_type
+            == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE
+        ):
             # For credit market notifications, notify OTHER organizations (not the posting org)
             # Exclude government users for this notification type
             return AudienceType.OTHER_ORGANIZATIONS
@@ -313,7 +316,7 @@ class NotificationService:
         for notification_type in notification.notification_types:
             # Determine audience type based on notification type
             audience_type = self.determine_audience_type(notification_type)
-            
+
             in_app_subscribed_users = await self.repo.get_subscribed_users_by_channel(
                 notification_type,
                 ChannelEnum.IN_APP,
@@ -373,11 +376,34 @@ class NotificationService:
         await self.repo.delete_subscriptions_for_user_role(user_profile_id, role_id)
 
     @service_handler
-    async def add_subscriptions_for_user_role(self, user_profile_id: int, role_id: int):
+    async def add_subscriptions_for_user_role(
+        self, user_profile_id: int, role_id: int, is_enabled: bool = True
+    ):
         """
         Adds subscriptions for a user based on their role.
+
+        Args:
+            user_profile_id: The user to create subscriptions for.
+            role_id: The role whose notification types to subscribe to.
+            is_enabled: Whether the subscriptions should be enabled by default.
         """
-        await self.repo.add_subscriptions_for_user_role(user_profile_id, role_id)
+        await self.repo.add_subscriptions_for_user_role(
+            user_profile_id, role_id, is_enabled=is_enabled
+        )
+
+    @service_handler
+    async def add_subscriptions_for_notification_types(
+        self,
+        user_profile_id: int,
+        notification_types: List[NotificationTypeEnum],
+        is_enabled: bool = True,
+    ):
+        """
+        Adds subscriptions for a user based on specific notification types.
+        """
+        await self.repo.add_subscriptions_for_notification_types(
+            user_profile_id, notification_types, is_enabled=is_enabled
+        )
 
     @service_handler
     async def remove_subscriptions_for_user(self, user_profile_id: int) -> None:
