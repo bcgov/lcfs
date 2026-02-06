@@ -297,7 +297,7 @@ export const otherUsesColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
+    hide: parseInt(compliancePeriod, 10) !== NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: (params) => {
@@ -500,7 +500,7 @@ export const otherUsesSummaryColDefs = (complianceYear, optionsData) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
     field: 'isQ1Supplied',
-    hide: complianceYear < NEW_REGULATION_YEAR,
+    hide: complianceYear !== NEW_REGULATION_YEAR,
     floatingFilter: false,
     valueGetter: (params) => {
       const showCanadianProduced = canEditCanadianProduced(
@@ -638,7 +638,7 @@ export const changelogCommonColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
     field: 'isQ1Supplied',
     minWidth: 180,
-    hide: complianceYear < NEW_REGULATION_YEAR,
+    hide: complianceYear !== NEW_REGULATION_YEAR,
     valueGetter: (params) => {
       const showCanadianProduced = canEditCanadianProduced(
         params.data,

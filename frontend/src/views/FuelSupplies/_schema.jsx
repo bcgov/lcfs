@@ -540,7 +540,7 @@ export const fuelSupplyColDefs = (
       field: 'isQ1Supplied',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
-      hide: parseInt(compliancePeriod, 10) < NEW_REGULATION_YEAR,
+      hide: parseInt(compliancePeriod, 10) !== NEW_REGULATION_YEAR,
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
       cellEditorParams: {
@@ -914,7 +914,7 @@ export const fuelSupplySummaryColDef = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
       minWidth: 170,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: complianceYear !== NEW_REGULATION_YEAR,
       valueGetter: (params) => {
         const showCanadianProduced = canEditCanadianProduced(
           params.data,
@@ -1135,7 +1135,7 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       field: 'isQ1Supplied',
       minWidth: 170,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: complianceYear !== NEW_REGULATION_YEAR,
       cellStyle: (params) =>
         highlight && changelogCellStyle(params, 'fuelCode'),
       valueGetter: (params) => {
