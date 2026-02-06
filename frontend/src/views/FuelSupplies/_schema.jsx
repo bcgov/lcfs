@@ -944,7 +944,7 @@ export const fuelSupplySummaryColDef = (
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
-      minWidth: 80,
+      minWidth: 100,
       field: 'units'
     },
     {
@@ -1169,7 +1169,7 @@ export const changelogCommonColDefs = (
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
       field: 'units',
-      minWidth: 80,
+      minWidth: 100,
       cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
     },
     {
