@@ -78,7 +78,7 @@ describe('renewableClaimEligibility utilities', () => {
       })
     })
 
-    it('shows Canada column for default CI or Canadian production in 2025', () => {
+    it('always shows both columns in 2025 irrespective of row data', () => {
       const result = calculateRenewableClaimColumnVisibility(
         [
           {
@@ -94,10 +94,10 @@ describe('renewableClaimEligibility utilities', () => {
       )
 
       expect(result.shouldShowIsCanadaProduced).toBe(true)
-      expect(result.shouldShowIsQ1Supplied).toBe(false)
+      expect(result.shouldShowIsQ1Supplied).toBe(true)
     })
 
-    it('shows Q1 column for approved fuel code supplied outside Canada in 2025', () => {
+    it('keeps Canada column visible and hides Q1 outside 2025', () => {
       const result = calculateRenewableClaimColumnVisibility(
         [
           {
@@ -108,12 +108,12 @@ describe('renewableClaimEligibility utilities', () => {
           }
         ],
         mockOptionsData,
-        '2025',
+        '2026',
         APPROVED_FUEL_CODE
       )
 
-      expect(result.shouldShowIsCanadaProduced).toBe(false)
-      expect(result.shouldShowIsQ1Supplied).toBe(true)
+      expect(result.shouldShowIsCanadaProduced).toBe(true)
+      expect(result.shouldShowIsQ1Supplied).toBe(false)
     })
   })
 
