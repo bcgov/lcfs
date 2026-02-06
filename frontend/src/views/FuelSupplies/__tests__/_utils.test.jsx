@@ -22,7 +22,7 @@ vi.mock('@/constants/common', () => ({
     Category2: 90.0
   },
   DEFAULT_CI_FUEL_CODE: 'DEFAULT_CODE',
-  NEW_REGULATION_YEAR: 2023
+  NEW_REGULATION_YEAR: 2025
 }))
 
 // Mock formatters
@@ -187,7 +187,7 @@ describe('fuelSupplyUtils', () => {
       const result = actualUtils.calculateColumnVisibility(
         rowData,
         mockOptionsData,
-        '2024'
+        '2025'
       )
       expect(result.shouldShowIsCanadaProduced).toBe(true)
     })
@@ -220,7 +220,7 @@ describe('fuelSupplyUtils', () => {
       const result = actualUtils.calculateColumnVisibility(
         rowData,
         optionsWithNonCanadian,
-        '2023'
+        '2025'
       )
       expect(result.shouldShowIsQ1Supplied).toBe(true)
     })
@@ -270,7 +270,7 @@ describe('fuelSupplyUtils', () => {
       const result = actualUtils.calculateColumnVisibility(
         rowData,
         complexOptionsData,
-        '2023'
+        '2025'
       )
       expect(result.shouldShowIsCanadaProduced).toBe(true)
       expect(result.shouldShowIsQ1Supplied).toBe(true)

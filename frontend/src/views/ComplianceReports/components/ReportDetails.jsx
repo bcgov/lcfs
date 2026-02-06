@@ -437,7 +437,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       // FSE was deleted and recreated after the original report.
       const hasFSECapability =
         activity.key === 'finalSupplyEquipments' &&
-        dataResult?.data?.hasChargingEquipment === true
+        dataResult?.data?.hasChargingEquipment === true &&
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
       // Show if has data OR if in editing mode OR if it was recently edited
       // OR (for FSE) if organization has charging equipment
