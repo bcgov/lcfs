@@ -250,18 +250,18 @@ export const AddEditOtherUses = () => {
     }
   }, [])
 
-  const updateGridColumnsVisibility = useCallback(() => {
-    if (!gridRef.current?.api) return
+  // const updateGridColumnsVisibility = useCallback(() => {
+  //   if (!gridRef.current?.api) return
 
-    const columnVisibility = calculateRenewableClaimColumnVisibility(
-      rowData,
-      optionsData,
-      compliancePeriod,
-      PROVISION_APPROVED_FUEL_CODE
-    )
+  //   const columnVisibility = calculateRenewableClaimColumnVisibility(
+  //     rowData,
+  //     optionsData,
+  //     compliancePeriod,
+  //     PROVISION_APPROVED_FUEL_CODE
+  //   )
 
-    applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
-  }, [rowData, optionsData, compliancePeriod])
+  //   applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
+  // }, [rowData, optionsData, compliancePeriod])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -316,11 +316,11 @@ export const AddEditOtherUses = () => {
       }
       updateNodeData(params.node, 'isCanadaProduced', false)
       updateNodeData(params.node, 'isQ1Supplied', false)
-      setTimeout(() => {
-        updateGridColumnsVisibility()
-      }, 0)
+      // setTimeout(() => {
+      //   updateGridColumnsVisibility()
+      // }, 0)
     },
-    [optionsData, findCiOfFuel, updateNodeData, updateGridColumnsVisibility]
+    [optionsData, findCiOfFuel, updateNodeData]
   )
 
   const onCellEditingStopped = useCallback(
@@ -420,9 +420,9 @@ export const AddEditOtherUses = () => {
     []
   )
   // Call this function whenever relevant data changes
-  useEffect(() => {
-    updateGridColumnsVisibility()
-  }, [rowData, optionsData, updateGridColumnsVisibility])
+  // useEffect(() => {
+  //   updateGridColumnsVisibility()
+  // }, [rowData, optionsData, updateGridColumnsVisibility])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()

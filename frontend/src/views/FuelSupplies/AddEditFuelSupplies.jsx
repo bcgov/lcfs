@@ -114,14 +114,14 @@ export const AddEditFuelSupplies = () => {
     ]
   )
 
-  const columnVisibility = useMemo(
-    () => calculateColumnVisibility(rowData, optionsData, compliancePeriod),
-    [rowData, optionsData, compliancePeriod]
-  )
+  // const columnVisibility = useMemo(
+  //   () => calculateColumnVisibility(rowData, optionsData, compliancePeriod),
+  //   [rowData, optionsData, compliancePeriod]
+  // )
 
-  const updateColumnsVisibility = useCallback(() => {
-    updateGridColumnsVisibility(gridRef, columnVisibility)
-  }, [columnVisibility])
+  // const updateColumnsVisibility = useCallback(() => {
+  //   updateGridColumnsVisibility(gridRef, columnVisibility)
+  // }, [columnVisibility])
 
   // Alert handling
   useEffect(() => {
@@ -139,10 +139,10 @@ export const AddEditFuelSupplies = () => {
   }, [processedRowData])
 
   // Update column visibility
-  useEffect(() => {
-    const timeoutId = setTimeout(updateColumnsVisibility, 100)
-    return () => clearTimeout(timeoutId)
-  }, [updateColumnsVisibility])
+  // useEffect(() => {
+  //   const timeoutId = setTimeout(updateColumnsVisibility, 100)
+  //   return () => clearTimeout(timeoutId)
+  // }, [updateColumnsVisibility])
 
   // Grid event handlers
   const onGridReady = useCallback(async (params) => {
@@ -184,12 +184,12 @@ export const AddEditFuelSupplies = () => {
       }
 
       // Trigger column visibility update and auto-size
-      setTimeout(() => {
-        updateColumnsVisibility()
-        params.api?.autoSizeAllColumns?.()
-      }, 0)
+      // setTimeout(() => {
+      //   updateColumnsVisibility()
+      //   params.api?.autoSizeAllColumns?.()
+      // }, 0)
     },
-    [optionsData, updateColumnsVisibility, updateRowDataValues]
+    [optionsData, updateRowDataValues]
   )
 
   const onCellEditingStopped = useCallback(
