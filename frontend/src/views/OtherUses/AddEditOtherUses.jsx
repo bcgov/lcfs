@@ -250,18 +250,18 @@ export const AddEditOtherUses = () => {
     }
   }, [])
 
-  // const updateGridColumnsVisibility = useCallback(() => {
-  //   if (!gridRef.current?.api) return
+  const updateGridColumnsVisibility = useCallback(() => {
+    if (!gridRef.current?.api) return
 
-  //   const columnVisibility = calculateRenewableClaimColumnVisibility(
-  //     rowData,
-  //     optionsData,
-  //     compliancePeriod,
-  //     PROVISION_APPROVED_FUEL_CODE
-  //   )
+    const columnVisibility = calculateRenewableClaimColumnVisibility(
+      rowData,
+      optionsData,
+      compliancePeriod,
+      PROVISION_APPROVED_FUEL_CODE
+    )
 
-  //   applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
-  // }, [rowData, optionsData, compliancePeriod])
+    applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
+  }, [rowData, optionsData, compliancePeriod])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -316,11 +316,11 @@ export const AddEditOtherUses = () => {
       }
       updateNodeData(params.node, 'isCanadaProduced', false)
       updateNodeData(params.node, 'isQ1Supplied', false)
-      // setTimeout(() => {
-      //   updateGridColumnsVisibility()
-      // }, 0)
+      setTimeout(() => {
+        updateGridColumnsVisibility()
+      }, 0)
     },
-    [optionsData, findCiOfFuel, updateNodeData]
+    [optionsData, findCiOfFuel, updateNodeData, updateGridColumnsVisibility]
   )
 
   const onCellEditingStopped = useCallback(
