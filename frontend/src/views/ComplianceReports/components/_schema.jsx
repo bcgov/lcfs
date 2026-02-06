@@ -23,33 +23,28 @@ const TypeCellRenderer = (isSupplier) => (props) => {
   const { data } = props
   const reportType = data.reportType || ''
 
-  // Check if there's a supplemental report (Submitted) older than 30 days
+  // Show a flag on existing rows (Original Report, Supplemental, Early Issuance, etc.)
+  // to alert IDIR that the organization has a draft supplemental sitting > 30 days.
   const hasDraftSupplementalOverThirtyDays = () => {
     // Only show flag for IDIR users (government users)
     if (isSupplier) {
       return false
     }
 
-    // Only show flag on supplemental report rows
-    if (!reportType.includes('Supplemental')) {
-      return false
-    }
-
-    // Must have the necessary data fields
+    // Need the draft's create date to calculate age
     if (!data.latestSupplementalCreateDate) {
       return false
     }
 
-    if (data.latestStatus !== 'Submitted') {
+    if (data.isLatest !== false || data.latestStatus !== 'Draft') {
       return false
     }
 
-    // Calculate days difference
+    // Calculate how long the draft supplemental has been sitting
     const createDate = new Date(data.latestSupplementalCreateDate)
     const now = new Date()
     const daysDiff = Math.floor((now - createDate) / (1000 * 60 * 60 * 24))
 
-    // Only show flag if supplemental is older than 30 days
     return daysDiff > 30
   }
 
