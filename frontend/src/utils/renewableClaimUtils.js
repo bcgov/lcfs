@@ -81,53 +81,17 @@ export const calculateRenewableClaimColumnVisibility = (
   approvedFuelCodeValue = 'Fuel code - section 19 (b) (i)'
 ) => {
   const complianceYear = parseInt(compliancePeriod, 10)
-  if (
-    !optionsData?.fuelTypes ||
-    !Array.isArray(rowData) ||
-    rowData.length === 0 ||
-    Number.isNaN(complianceYear) ||
-    complianceYear < NEW_REGULATION_YEAR
-  ) {
+  if (Number.isNaN(complianceYear) || complianceYear < NEW_REGULATION_YEAR) {
     return {
       shouldShowIsCanadaProduced: false,
       shouldShowIsQ1Supplied: false
     }
   }
-  let shouldShowIsCanadaProduced = false
-  let shouldShowIsQ1Supplied = false
-  for (const row of rowData) {
-    if (!row?.fuelType) continue
-    const isEligible = isEligibleRenewableFuel(
-      row.fuelType,
-      row.fuelCategory,
-      optionsData,
-      complianceYear
-    )
-    if (!isEligible) continue
-    const isCanadian = isFuelCodeCanadian(
-      row.fuelType,
-      row.fuelCode,
-      optionsData
-    )
-    if (row.provisionOfTheAct === DEFAULT_CI_FUEL_CODE || isCanadian) {
-      shouldShowIsCanadaProduced = true
-    }
-    if (
-      complianceYear === NEW_REGULATION_YEAR &&
-      canEditQ1Supplied(
-        row,
-        optionsData,
-        compliancePeriod,
-        approvedFuelCodeValue
-      )
-    ) {
-      shouldShowIsQ1Supplied = true
-    }
-    if (shouldShowIsCanadaProduced && shouldShowIsQ1Supplied) {
-      break
-    }
+
+  return {
+    shouldShowIsCanadaProduced: complianceYear >= NEW_REGULATION_YEAR,
+    shouldShowIsQ1Supplied: complianceYear === NEW_REGULATION_YEAR
   }
-  return { shouldShowIsCanadaProduced, shouldShowIsQ1Supplied }
 }
 export const canEditQ1Supplied = (
   row,
