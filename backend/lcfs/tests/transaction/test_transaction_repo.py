@@ -121,11 +121,20 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
         ComplianceReportStatus,
         ComplianceReportStatusEnum,
     )
+    from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
     from lcfs.db.models import Organization, OrganizationAddress
 
     test_org_id = 1001  # Use high ID to avoid conflicts with seeded data
     test_org_2_id = 1002
     compliance_period = 2024
+
+    # Create test compliance period
+    test_period = CompliancePeriod(
+        compliance_period_id=1,
+        description="2024",
+        display_order=1
+    )
+    dbsession.add(test_period)
 
     # Create test organizations
     test_org_1 = Organization(
@@ -518,6 +527,128 @@ async def test_calculate_line_17_period_boundaries(dbsession, transaction_repo):
     # The future transfer won't be counted as a future debit since its effective date is also future
     # Expected: 1000
     assert balance == 1000
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_supplemental_report_after_period(
+    dbsession, transaction_repo
+):
+    """
+    Test that supplemental reports assessed after the compliance period ended
+    are still counted in the correct period (Issue #3821).
+
+    Scenario: A 2024 supplemental report is assessed on July 15, 2025 (after March 31, 2025).
+    The transaction should still be included in 2024's Line 17 because the report
+    belongs to the 2024 compliance period.
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+    from lcfs.db.models.compliance.ComplianceReportStatus import (
+        ComplianceReportStatus,
+        ComplianceReportStatusEnum,
+    )
+    from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+    from lcfs.db.models import Organization, OrganizationAddress
+
+    test_org_id = 2001  # Use high ID to avoid conflicts
+    compliance_period = 2024
+
+    # Create test compliance period
+    test_period = CompliancePeriod(
+        compliance_period_id=10,
+        description="2024",
+        display_order=10
+    )
+    dbsession.add(test_period)
+
+    # Create test organization
+    test_org = Organization(
+        organization_id=test_org_id,
+        name="Test Company 2001",
+        operating_name="Test Co. 2001",
+        org_address=OrganizationAddress(
+            street_address="123 Supplemental Test St",
+            city="Test City",
+            province_state="Test Province",
+            country="Test Country",
+            postalCode_zipCode="T3ST 2Z1",
+        ),
+    )
+    dbsession.add(test_org)
+
+    # Get or create Assessed status
+    assessed_status = await dbsession.get(ComplianceReportStatus, 5)
+    if not assessed_status:
+        assessed_status = ComplianceReportStatus(
+            compliance_report_status_id=5,
+            status=ComplianceReportStatusEnum.Assessed
+        )
+        dbsession.add(assessed_status)
+
+    # Original compliance report assessed within the period
+    original_report_tx = Transaction(
+        transaction_id=2001,
+        organization_id=test_org_id,
+        compliance_units=50000,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 2, 15),  # Within period (before March 31, 2025)
+    )
+    dbsession.add(original_report_tx)
+
+    original_report = ComplianceReport(
+        compliance_report_id=2001,
+        organization_id=test_org_id,
+        current_status_id=5,  # Assessed
+        compliance_period_id=10,  # 2024 period
+        transaction_id=2001,
+        version=0,  # Original report
+    )
+    dbsession.add(original_report)
+
+    # Supplemental report assessed AFTER the period ended (the bug case)
+    supplemental_tx = Transaction(
+        transaction_id=2002,
+        organization_id=test_org_id,
+        compliance_units=-46467,  # Adjustment from the issue example
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 7, 15),  # AFTER period end (July 15, 2025)
+    )
+    dbsession.add(supplemental_tx)
+
+    supplemental_report = ComplianceReport(
+        compliance_report_id=2002,
+        organization_id=test_org_id,
+        current_status_id=5,  # Assessed
+        compliance_period_id=10,  # 2024 period (same as original)
+        transaction_id=2002,
+        version=1,  # Supplemental report
+    )
+    dbsession.add(supplemental_report)
+
+    await dbsession.commit()
+
+    # Calculate Line 17 for 2024
+    balance = await transaction_repo.calculate_line_17_available_balance_for_period(
+        test_org_id, compliance_period
+    )
+
+    # Expected: Both transactions should be included
+    # Original: +50,000
+    # Supplemental: -46,467
+    # Total: 50,000 - 46,467 = 3,533
+    #
+    # Before the fix, the supplemental would be excluded because:
+    # create_date (2025-07-15) > period_end (2025-03-31)
+    # This would give: 50,000 (incorrect)
+    #
+    # After the fix, supplemental is included because:
+    # report_compliance_period (2024) <= target_period (2024)
+    # This gives: 3,533 (correct)
+    assert balance == 3533, f"Expected 3533 but got {balance}. Supplemental report not counted correctly."
 
 
 @pytest.mark.anyio
