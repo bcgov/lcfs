@@ -420,9 +420,9 @@ export const AddEditOtherUses = () => {
     []
   )
   // Call this function whenever relevant data changes
-  // useEffect(() => {
-  //   updateGridColumnsVisibility()
-  // }, [rowData, optionsData, updateGridColumnsVisibility])
+  useEffect(() => {
+    updateGridColumnsVisibility()
+  }, [rowData, optionsData, updateGridColumnsVisibility])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api?.autoSizeAllColumns?.()
