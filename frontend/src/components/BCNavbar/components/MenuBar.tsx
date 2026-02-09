@@ -1,25 +1,33 @@
 import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
 import { Divider, Toolbar } from '@mui/material'
-import PropTypes from 'prop-types'
 import React from 'react'
+import type {
+  NavbarRoute,
+  NavbarContextData
+} from '@/components/BCNavbar/types'
 
-const MenuBar = (props) => {
-  const { routes, data } = props
+interface MenuBarProps {
+  routes: NavbarRoute[]
+  data: NavbarContextData
+}
+
+const MenuBar = ({ routes, data }: MenuBarProps) => {
   return (
     <Toolbar
       className="nav"
-      sx={({
-        palette: { transparent: transparentColor, white, secondary },
-        functions: { rgba }
-      }) => ({
-        backgroundColor: rgba(secondary.nav, 1),
-        backdropFilter: `saturate(200%) blur(30px)`,
-        color: white.main,
-        maxHeight: '50px',
-        display: { xs: 'none', sm: 'flex' },
-        justifyContent: 'space-between'
-      })}
+      sx={(theme: any) => {
+        const { secondary, white } = theme.palette
+        const { rgba } = theme.functions
+        return {
+          backgroundColor: rgba(secondary.nav, 1),
+          backdropFilter: `saturate(200%) blur(30px)`,
+          color: white.main,
+          maxHeight: '50px',
+          display: { xs: 'none', sm: 'flex' },
+          justifyContent: 'space-between'
+        }
+      }}
       disableGutters
       variant="dense"
     >
@@ -63,14 +71,11 @@ const MenuBar = (props) => {
         py={1}
         flexDirection="row"
       >
-        {data.menuRightPart && React.cloneElement(data.menuRightPart, { data })}
+        {data.menuRightPart &&
+          React.cloneElement(data.menuRightPart, { data })}
       </BCBox>
     </Toolbar>
   )
-}
-
-MenuBar.propTypes = {
-  routes: PropTypes.array
 }
 
 export default MenuBar

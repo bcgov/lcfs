@@ -3,9 +3,9 @@ import {
   useEffect,
   forwardRef,
   useImperativeHandle,
-  useRef
+  useRef,
+  type ForwardedRef
 } from 'react'
-import PropTypes from 'prop-types'
 import Fade from '@mui/material/Fade'
 import {
   Info as InfoIcon,
@@ -16,28 +16,40 @@ import {
   ExpandMore
 } from '@mui/icons-material'
 import BCBox from '@/components/BCBox'
-import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
+import BCAlertRoot, { type AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
 import { CircularProgress } from '@mui/material'
+import type { BoxProps } from '@mui/material/Box'
 
-export const BCAlert = forwardRef(
+type AlertStatus = 'mount' | 'fadeOut' | 'unmount'
+
+export interface BCAlert2Handle {
+  triggerAlert: (payload: { severity: AlertSeverity; message: string }) => void
+  clearAlert: () => void
+}
+
+export interface BCAlert2Props extends Omit<BoxProps, 'color'> {
+  dismissible?: boolean
+  noFade?: boolean
+  delay?: number
+}
+
+export const BCAlert2 = forwardRef(
   (
-    {
-      severity = 'info',
-      dismissible = false,
-      noFade = false,
-      delay = 5000,
-      children,
-      ...rest
-    },
-    ref
+    { dismissible = false, noFade = false, delay = 5000, ...rest }: BCAlert2Props,
+    ref: ForwardedRef<BCAlert2Handle>
   ) => {
-    const [alertStatus, setAlertStatus] = useState('mount')
+    const [alertStatus, setAlertStatus] = useState<AlertStatus>('mount')
     const [triggerCount, setTriggerCount] = useState(0)
     const [isOverflowing, setIsOverflowing] = useState(false)
     const [isExpanded, setIsExpanded] = useState(false)
-    const textContainerRef = useRef(null)
+
+    const [message, setMessage] = useState('')
+    const [severity, setSeverity] = useState<AlertSeverity | null>(null)
+
+    const textContainerRef = useRef<HTMLDivElement | null>(null)
 
     const color = severity
+    const canDismiss = noFade || severity === 'error' ? true : dismissible
 
     const checkOverflow = () => {
       const textContainer = textContainerRef.current
@@ -50,7 +62,7 @@ export const BCAlert = forwardRef(
     }
 
     const toggleText = () => {
-      setIsExpanded(!isExpanded)
+      setIsExpanded((prev) => !prev)
     }
 
     useEffect(() => {
@@ -63,19 +75,30 @@ export const BCAlert = forwardRef(
 
     useEffect(() => {
       setAlertStatus('mount')
-      if (noFade || severity === 'error' || severity === 'pending') return
+      const fadeExemptSeverities: AlertSeverity[] = ['error', 'pending', 'warning']
+      if (noFade || (severity && fadeExemptSeverities.includes(severity))) {
+        return
+      }
       const timer = setTimeout(() => {
         setAlertStatus('fadeOut')
       }, delay)
       return () => clearTimeout(timer)
-    }, [triggerCount, delay, severity])
+    }, [delay, noFade, severity, triggerCount])
 
-    useImperativeHandle(ref, () => ({
-      triggerAlert: () => {
-        // Increment triggerCount to trigger re-render
-        setTriggerCount((prevCount) => prevCount + 1)
-      }
-    }))
+    useImperativeHandle(
+      ref,
+      () => ({
+        triggerAlert: ({ severity: newSeverity, message: newMessage }) => {
+          setSeverity(newSeverity)
+          setMessage(newMessage)
+          setTriggerCount((prevCount) => prevCount + 1)
+        },
+        clearAlert: () => {
+          setAlertStatus('fadeOut')
+        }
+      }),
+      []
+    )
 
     const handleAlertStatus = () => setAlertStatus('fadeOut')
 
@@ -95,7 +118,7 @@ export const BCAlert = forwardRef(
               <CircularProgress size={16} style={{ margin: 5 }} />
             )}
             <BCBox
-              variant={severity}
+              variant={severity === 'pending' ? 'warning' : severity || 'info'}
               ref={textContainerRef}
               className={isExpanded ? 'expanded' : ''}
               style={{
@@ -108,16 +131,16 @@ export const BCAlert = forwardRef(
                 transition: 'max-height 0.3s ease'
               }}
             >
-              {children}
+              {message}
             </BCBox>{' '}
             {isOverflowing && (
               <ExpandMore
                 fontSize="medium"
-                style={{ rotate: isExpanded && '180deg' }}
+                style={{ rotate: isExpanded ? '180deg' : undefined }}
                 onClick={toggleText}
               />
             )}
-            {dismissible && (
+            {canDismiss && (
               <CloseIcon
                 onClick={mount ? handleAlertStatus : undefined}
                 sx={{ cursor: 'pointer' }}
@@ -127,6 +150,8 @@ export const BCAlert = forwardRef(
         </BCAlertRoot>
       </Fade>
     )
+
+    if (!severity) return null
 
     switch (true) {
       case alertStatus === 'mount':
@@ -143,12 +168,4 @@ export const BCAlert = forwardRef(
   }
 )
 
-BCAlert.displayName = 'BCAlert'
-
-BCAlert.propTypes = {
-  severity: PropTypes.oneOf(['info', 'success', 'warning', 'error', 'pending']),
-  dismissible: PropTypes.bool,
-  delay: PropTypes.number,
-  cats: PropTypes.bool,
-  children: PropTypes.node.isRequired
-}
+BCAlert2.displayName = 'BCAlert2'

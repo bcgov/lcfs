@@ -1,28 +1,42 @@
 import { AppBar, Divider, Menu, useMediaQuery, useTheme } from '@mui/material'
 import PopupState, { bindMenu } from 'material-ui-popup-state'
+import type { PopupState as PopupStateType } from 'material-ui-popup-state/hooks'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
-import { PropTypes } from 'prop-types'
 import MenuBar from '@/components/BCNavbar/components/MenuBar'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
 import BCBox from '@/components/BCBox'
+import type {
+  BCNavbarProps,
+  NavbarContextData,
+  NavbarRoute
+} from '@/components/BCNavbar/types'
+
+const defaultRoutes: NavbarRoute[] = [
+  { icon: 'home', name: 'Dashboard', route: '/' }
+]
 
 function BCNavbar({
   title = 'Government of British Columbia',
-  routes = [
-    { icon: 'home', name: 'Dashboard', route: '/' }
-    // Add other routes as needed
-  ],
+  routes = defaultRoutes,
   beta = true,
   headerRightPart = null,
   menuRightPart = null
-}) {
+}: BCNavbarProps) {
   const theme = useTheme()
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
+
+  const navData: NavbarContextData = {
+    title,
+    routes,
+    beta,
+    headerRightPart,
+    menuRightPart
+  }
 
   return (
     <BCBox py={0} className="main-layout-navbar">
       <PopupState variant="popover" popupId="demo-popup-menu">
-        {(popupState) => (
+        {(popupState: PopupStateType) => (
           <AppBar
             position="static"
             data-test="bc-navbar"
@@ -37,8 +51,7 @@ function BCNavbar({
             aria-label="main navigation"
           >
             <HeaderBar
-              data={{ title, routes, beta, headerRightPart, menuRightPart }}
-              beta={beta}
+              data={navData}
               isMobileView={isMobileView}
               popupState={popupState}
             />
@@ -52,7 +65,6 @@ function BCNavbar({
             />
             {isMobileView ? (
               <Menu
-                px={0}
                 {...bindMenu(popupState)}
                 anchorOrigin={{
                   vertical: 'bottom',
@@ -74,17 +86,14 @@ function BCNavbar({
                         icon={link.icon}
                         name={link.name}
                         route={link.route}
-                        light={true}
+                        light
                         isMobileView={isMobileView}
                       />
                     )
                 )}
               </Menu>
             ) : (
-              <MenuBar
-                routes={routes}
-                data={{ title, routes, beta, headerRightPart, menuRightPart }}
-              />
+              <MenuBar routes={routes} data={navData} />
             )}
           </AppBar>
         )}
@@ -93,11 +102,4 @@ function BCNavbar({
   )
 }
 
-BCNavbar.propTypes = {
-  title: PropTypes.string,
-  routes: PropTypes.array.isRequired,
-  beta: PropTypes.bool,
-  headerRightPart: PropTypes.element,
-  menuRightPart: PropTypes.element
-}
 export default BCNavbar
