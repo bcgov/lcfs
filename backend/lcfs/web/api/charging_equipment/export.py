@@ -1,7 +1,8 @@
 import io
-from typing import List
+from typing import List, Tuple
 
 from fastapi import Depends
+from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from starlette.responses import StreamingResponse
 
@@ -52,11 +53,20 @@ class ChargingEquipmentExporter:
 
         builder = SpreadsheetBuilder(file_format=export_format)
 
-        validators = await self._create_validators(organization, builder)
+        validators, charging_site_count = await self._create_validators(
+            organization, builder
+        )
 
         data = []
         if include_data:
             data = await self.load_charging_equipment_data(organization_id)
+        column_formulas = None
+        formula_end_row = None
+        format_max_row = None
+        if not include_data and charging_site_count:
+            column_formulas = self._build_charging_site_formulas(charging_site_count)
+            formula_end_row = 10000
+            format_max_row = 10000
 
         builder.add_sheet(
             sheet_name=CE_EXPORT_SHEETNAME,
@@ -64,6 +74,9 @@ class ChargingEquipmentExporter:
             rows=data,
             styles={"bold_headers": True},
             validators=validators,
+            column_formulas=column_formulas,
+            formula_end_row=formula_end_row,
+            format_max_row=format_max_row,
         )
         file_content = builder.build_spreadsheet()
 
@@ -76,7 +89,9 @@ class ChargingEquipmentExporter:
             headers=headers,
         )
 
-    async def _create_validators(self, organization: Organization, builder):
+    async def _create_validators(
+        self, organization: Organization, builder
+    ) -> Tuple[List[DataValidation], int]:
         validators: List[DataValidation] = []
 
         # Options
@@ -90,16 +105,17 @@ class ChargingEquipmentExporter:
         ports_options = ["Single port", "Dual port"]
 
         site_names = [s.site_name or "" for s in charging_sites]
-        level_names = [l.name for l in levels]
+        level_names = [level.name for level in levels]
         end_use_names = [e.type for e in end_use_types]
         end_user_names = [u.type_name for u in end_user_types]
         site_latitudes = [s.latitude for s in charging_sites]
         site_longitudes = [s.longitude for s in charging_sites]
 
         # Charging Site validator (Column A)
+        charging_site_end_row = len(site_names) + 1
         site_validator = DataValidation(
             type="list",
-            formula1="=VALUES!$A$2:$A$1000",
+            formula1=f"=VALUES!$A$2:$A${charging_site_end_row}",
             showErrorMessage=True,
             error="Please select a valid charging site",
         )
@@ -189,7 +205,39 @@ class ChargingEquipmentExporter:
             position=1,
         )
 
-        return validators
+        return validators, len(site_names)
+
+    def _build_charging_site_formulas(self, charging_site_count: int) -> dict[int, str]:
+        charging_site_column = self._get_column_letter("Charging Site")
+        latitude_column_index = self._get_column_index("Latitude")
+        longitude_column_index = self._get_column_index("Longitude")
+        lookup_end = charging_site_count + 1
+        lookup_range = f"VALUES!$A$2:$G${lookup_end}"
+
+        latitude_formula = (
+            f'=IF(${charging_site_column}{{row}}="","",'
+            f"IFERROR(IF(VLOOKUP(${charging_site_column}{{row}},{lookup_range},6,FALSE)=0,"
+            f'"",VLOOKUP(${charging_site_column}{{row}},{lookup_range},6,FALSE)),""))'
+        )
+        longitude_formula = (
+            f'=IF(${charging_site_column}{{row}}="","",'
+            f"IFERROR(IF(VLOOKUP(${charging_site_column}{{row}},{lookup_range},7,FALSE)=0,"
+            f'"",VLOOKUP(${charging_site_column}{{row}},{lookup_range},7,FALSE)),""))'
+        )
+
+        return {
+            latitude_column_index: latitude_formula,
+            longitude_column_index: longitude_formula,
+        }
+
+    def _get_column_index(self, label: str) -> int:
+        for idx, column in enumerate(CE_EXPORT_COLUMNS, start=1):
+            if column.label == label:
+                return idx
+        raise ValueError(f"Missing column label: {label}")
+
+    def _get_column_letter(self, label: str) -> str:
+        return get_column_letter(self._get_column_index(label))
 
     async def load_charging_equipment_data(self, organization_id: int):
         results = await self.repo.get_all_equipment_by_organization_id(organization_id)
@@ -204,7 +252,9 @@ class ChargingEquipmentExporter:
                     eq.level_of_equipment.name if eq.level_of_equipment else "",
                     (eq.ports.value if getattr(eq, "ports", None) else ""),
                     ", ".join(use.type for use in getattr(eq, "intended_uses", [])),
-                    ", ".join(user.type_name for user in getattr(eq, "intended_users", [])),
+                    ", ".join(
+                        user.type_name for user in getattr(eq, "intended_users", [])
+                    ),
                     eq.notes or "",
                     eq.latitude if getattr(eq, "latitude", None) is not None else "",
                     eq.longitude if getattr(eq, "longitude", None) is not None else "",

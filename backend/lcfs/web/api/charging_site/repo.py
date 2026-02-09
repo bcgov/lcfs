@@ -25,7 +25,6 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
-    get_field_for_filter,
 )
 
 
@@ -242,7 +241,10 @@ class ChargingSiteRepository:
                     filter_condition.field, filter_condition.field
                 )
 
-                field = get_field_for_filter(ranked_equipment, actual_field)
+                # Use getattr on the aliased entity directly to preserve
+                # the subquery alias in WHERE (get_field_for_filter
+                # unwraps to the original table column which breaks here)
+                field = getattr(ranked_equipment, actual_field, None)
                 if field is not None:
                     condition = apply_filter_conditions(
                         field,
@@ -263,7 +265,10 @@ class ChargingSiteRepository:
                 # Map frontend field names to database field names
                 actual_field = field_mappings.get(sort_order.field, sort_order.field)
 
-                field = get_field_for_filter(ranked_equipment, actual_field)
+                # Use getattr on the aliased entity directly to preserve
+                # the subquery alias in ORDER BY (get_field_for_filter
+                # unwraps to the original table column which breaks here)
+                field = getattr(ranked_equipment, actual_field, None)
                 if field is not None:
                     if sort_order.direction.lower() == "desc":
                         query = query.order_by(field.desc())

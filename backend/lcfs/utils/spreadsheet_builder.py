@@ -35,6 +35,10 @@ class SheetData(TypedDict):
     rows: List[Any]
     styles: Dict[str, Any]
     validators: List[DataValidation]
+    column_formulas: Dict[int, str]
+    formula_start_row: int
+    formula_end_row: int
+    format_max_row: int
 
 
 class SpreadsheetBuilder:
@@ -59,6 +63,10 @@ class SpreadsheetBuilder:
         styles: Optional[Dict] = None,
         validators: Optional[List[DataValidation]] = None,
         position: int = 0,
+        column_formulas: Optional[Dict[int, str]] = None,
+        formula_start_row: int = 2,
+        formula_end_row: Optional[int] = None,
+        format_max_row: Optional[int] = None,
     ):
         # Avoid mutable default arguments by setting validators to an empty list if None.
         validators = validators or []
@@ -70,6 +78,10 @@ class SpreadsheetBuilder:
                 "rows": rows,
                 "styles": styles or {},
                 "validators": validators,
+                "column_formulas": column_formulas or {},
+                "formula_start_row": formula_start_row,
+                "formula_end_row": formula_end_row or 0,
+                "format_max_row": format_max_row or 0,
             },
         )
         return self
@@ -147,15 +159,40 @@ class SpreadsheetBuilder:
         for validator in sheet["validators"]:
             worksheet.add_data_validation(validator)
 
+        column_formulas = sheet.get("column_formulas") or {}
+        if column_formulas:
+            formula_start_row = sheet.get("formula_start_row") or 2
+            formula_end_row = sheet.get("formula_end_row") or 0
+            if not formula_end_row:
+                formula_end_row = max(formula_start_row, len(sheet["rows"]) + 1)
+            self._apply_column_formulas(
+                worksheet, column_formulas, formula_start_row, formula_end_row
+            )
+
         # Apply number formatting based on column type.
+        format_max_row = sheet.get("format_max_row") or 2000
         for col_idx, column in enumerate(sheet["columns"]):
             for row in worksheet.iter_rows(
-                min_row=2, max_row=2000, min_col=col_idx + 1, max_col=col_idx + 1
+                min_row=2,
+                max_row=format_max_row,
+                min_col=col_idx + 1,
+                max_col=col_idx + 1,
             ):
                 for cell in row:
                     self._set_cell_format(cell, column.column_type)
 
         self._apply_excel_styling(writer, sheet)
+
+    def _apply_column_formulas(
+        self,
+        worksheet: Worksheet,
+        column_formulas: Dict[int, str],
+        start_row: int,
+        end_row: int,
+    ) -> None:
+        for row in range(start_row, end_row + 1):
+            for col_idx, template in column_formulas.items():
+                worksheet.cell(row=row, column=col_idx, value=template.format(row=row))
 
     def _apply_excel_styling(self, writer, sheet):
         worksheet = writer.sheets[sheet["sheet_name"]]
@@ -224,7 +261,11 @@ class SpreadsheetBuilder:
             # Compute the maximum length among all cells in the column.
             max_length = max(
                 (
-                    len(str(cell.value)) if cell.value is not None else 0
+                    (
+                        0
+                        if cell.data_type == "f"
+                        else (len(str(cell.value)) if cell.value is not None else 0)
+                    )
                     for cell in column
                 ),
                 default=0,
@@ -246,7 +287,13 @@ class SpreadsheetBuilder:
 
             if any(
                 keyword in header_text
-                for keyword in ["name", "description", "address", "organization", "notes"]
+                for keyword in [
+                    "name",
+                    "description",
+                    "address",
+                    "organization",
+                    "notes",
+                ]
             ):
                 min_width = 25  # Wide columns for text content
             elif any(

@@ -159,10 +159,17 @@ class ChargingEquipmentRepository:
                 )
 
         # Apply sorting
+        sort_field_map = {
+            "status": ChargingEquipmentStatus.status,
+            "level_of_equipment": LevelOfEquipment.name,
+            "site_name": ChargingSite.site_name,
+        }
         if pagination.sort_orders:
             for sort in pagination.sort_orders:
-                column = getattr(ChargingEquipment, sort.field, None)
-                if column:
+                column = sort_field_map.get(
+                    sort.field, getattr(ChargingEquipment, sort.field, None)
+                )
+                if column is not None and hasattr(column, "asc"):
                     if sort.direction == "desc":
                         query = query.order_by(column.desc())
                     else:
