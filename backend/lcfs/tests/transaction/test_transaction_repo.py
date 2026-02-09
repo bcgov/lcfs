@@ -128,13 +128,14 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     test_org_2_id = 1002
     compliance_period = 2024
 
-    # Create test compliance period
-    test_period = CompliancePeriod(
-        compliance_period_id=1,
-        description="2024",
-        display_order=1
+    # Use existing seeded compliance period for 2024 (compliance_period_id=15)
+    from sqlalchemy import select
+    result = await dbsession.execute(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
     )
-    dbsession.add(test_period)
+    test_period = result.scalars().first()
+    assert test_period is not None, "Seeded compliance period for 2024 not found"
+    test_period_id = test_period.compliance_period_id
 
     # Create test organizations
     test_org_1 = Organization(
@@ -178,7 +179,7 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
         compliance_report_id=1001,  # Use unique ID
         organization_id=test_org_id,
         current_status_id=5,  # Use Assessed status ID
-        compliance_period_id=1,
+        compliance_period_id=test_period_id,
         transaction_id=1001,  # Use unique ID
     )
     dbsession.add(compliance_report)
@@ -557,13 +558,14 @@ async def test_calculate_line_17_supplemental_report_after_period(
     test_org_id = 2001  # Use high ID to avoid conflicts
     compliance_period = 2024
 
-    # Create test compliance period
-    test_period = CompliancePeriod(
-        compliance_period_id=10,
-        description="2024",
-        display_order=10
+    # Use existing seeded compliance period for 2024
+    from sqlalchemy import select
+    result = await dbsession.execute(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
     )
-    dbsession.add(test_period)
+    test_period = result.scalars().first()
+    assert test_period is not None, "Seeded compliance period for 2024 not found"
+    test_period_id = test_period.compliance_period_id
 
     # Create test organization
     test_org = Organization(
@@ -603,7 +605,7 @@ async def test_calculate_line_17_supplemental_report_after_period(
         compliance_report_id=2001,
         organization_id=test_org_id,
         current_status_id=5,  # Assessed
-        compliance_period_id=10,  # 2024 period
+        compliance_period_id=test_period_id,  # 2024 period
         transaction_id=2001,
         version=0,  # Original report
     )
@@ -623,7 +625,7 @@ async def test_calculate_line_17_supplemental_report_after_period(
         compliance_report_id=2002,
         organization_id=test_org_id,
         current_status_id=5,  # Assessed
-        compliance_period_id=10,  # 2024 period (same as original)
+        compliance_period_id=test_period_id,  # 2024 period (same as original)
         transaction_id=2002,
         version=1,  # Supplemental report
     )
