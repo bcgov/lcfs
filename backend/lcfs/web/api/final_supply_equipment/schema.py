@@ -128,6 +128,7 @@ class FSEReportingSchema(BaseSchema):
     deleted: Optional[bool] = None
     power_output: Optional[float] = 0
     capacity_utilization_percent: Optional[int] = 0
+    status: Optional[str] = None
 
 
 class FSEReportingBaseSchema(BaseSchema):

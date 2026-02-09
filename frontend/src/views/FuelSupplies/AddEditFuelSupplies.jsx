@@ -221,7 +221,8 @@ export const AddEditFuelSupplies = () => {
             saveRow,
             alertRef,
             setRowData,
-            { complianceReportId, compliancePeriod }
+            { complianceReportId, compliancePeriod },
+            'fuelType' // First editable column for focus after clearing
           )
 
           // Clear validation status

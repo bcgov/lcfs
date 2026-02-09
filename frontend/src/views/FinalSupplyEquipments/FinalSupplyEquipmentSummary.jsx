@@ -78,7 +78,11 @@ export const FinalSupplyEquipmentSummary = ({
   }, [])
 
   return (
-    <Grid2 className="final-supply-equipment-container" mx={-1}>
+    <Grid2
+      className="final-supply-equipment-container"
+      data-test="fse-summary-container"
+      mx={-1}
+    >
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey="final-supply-equipments"

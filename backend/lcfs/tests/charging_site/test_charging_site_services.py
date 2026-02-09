@@ -381,6 +381,76 @@ class TestChargingSiteService:
         )
 
     @pytest.mark.anyio
+    async def test_update_charging_site_validated_creates_new_version(
+        self, charging_site_service, mock_repo
+    ):
+        """Validated charging sites should increment version and move to Updated status."""
+        existing_status = MagicMock()
+        existing_status.status = "Validated"
+        mock_existing_site = MagicMock(spec=ChargingSite)
+        mock_existing_site.status = existing_status
+        mock_existing_site.site_name = "Old Site"
+        mock_existing_site.organization_id = 1
+        mock_existing_site.charging_site_id = 1
+        mock_existing_site.version = 1
+        mock_repo.get_charging_site_by_id.return_value = mock_existing_site
+        mock_repo.charging_site_name_exists.return_value = False
+
+        updated_status = MagicMock(spec=ChargingSiteStatus)
+        updated_status.charging_site_status_id = 2
+        updated_status.status = "Updated"
+        mock_repo.get_charging_site_status_by_name.return_value = updated_status
+
+        mock_org = MagicMock()
+        mock_org.organization_id = 1
+        mock_org.name = "Test Org"
+
+        mock_updated_site = MagicMock(spec=ChargingSite)
+        mock_updated_site.charging_site_id = 1
+        mock_updated_site.organization_id = 1
+        mock_updated_site.organization = mock_org
+        mock_updated_site.allocating_organization = None
+        mock_updated_site.allocating_organization_name = None
+        mock_updated_site.status = updated_status
+        mock_updated_site.status_id = updated_status.charging_site_status_id
+        mock_updated_site.version = 2
+        mock_updated_site.site_code = "SITE001"
+        mock_updated_site.site_name = "Updated Site"
+        mock_updated_site.street_address = "123 Main St"
+        mock_updated_site.city = "Vancouver"
+        mock_updated_site.postal_code = "V6B 1A1"
+        mock_updated_site.latitude = 49.2827
+        mock_updated_site.longitude = -123.1207
+        mock_updated_site.intended_users = []
+        mock_updated_site.documents = []
+        mock_updated_site.notes = "Test notes"
+        mock_updated_site.create_date = None
+        mock_updated_site.update_date = None
+        mock_updated_site.create_user = "testuser"
+        mock_updated_site.update_user = "testuser"
+
+        mock_repo.update_charging_site.return_value = mock_updated_site
+
+        update_data = ChargingSiteCreateSchema(
+            charging_site_id=1,
+            organization_id=1,
+            site_name="Updated Site",
+            street_address="123 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.2827,
+            longitude=-123.1207,
+            intended_users=[],
+        )
+
+        result = await charging_site_service.update_charging_site(update_data)
+
+        assert isinstance(result, ChargingSiteSchema)
+        assert mock_existing_site.version == 2
+        mock_repo.get_charging_site_status_by_name.assert_called_once_with("Updated")
+        mock_repo.update_charging_site.assert_called_once_with(mock_existing_site)
+
+    @pytest.mark.anyio
     async def test_update_charging_site_duplicate_name(
         self, charging_site_service, mock_repo
     ):
@@ -598,6 +668,9 @@ class TestChargingSiteService:
             MagicMock(status="Validated", charging_site_status_id=3),
         ]
         mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
+        mock_site = MagicMock()
+        mock_site.status = MagicMock(status="Submitted")
+        mock_repo.get_charging_site_by_id.return_value = mock_site
 
         mock_repo.bulk_update_equipment_status.return_value = [1, 2]
         mock_repo.update_charging_site_status.return_value = None
@@ -608,7 +681,42 @@ class TestChargingSiteService:
 
         assert result is True
         mock_repo.bulk_update_equipment_status.assert_called_once()
+        mock_repo.get_charging_site_by_id.assert_called_once_with(1)
         mock_repo.update_charging_site_status.assert_called_once_with(1, 3)
+
+    @pytest.mark.anyio
+    async def test_bulk_update_equipment_status_site_not_updated_when_disallowed(
+        self, charging_site_service, mock_repo, mock_user
+    ):
+        """Site status should remain unchanged when already validated."""
+        bulk_update = BulkEquipmentStatusUpdateSchema(
+            equipment_ids=[1, 2], new_status="Validated"
+        )
+
+        mock_statuses = [
+            MagicMock(status="Draft", charging_equipment_status_id=1),
+            MagicMock(status="Submitted", charging_equipment_status_id=2),
+            MagicMock(status="Validated", charging_equipment_status_id=3),
+        ]
+        mock_repo.get_charging_equipment_statuses.return_value = mock_statuses
+
+        mock_site_statuses = [
+            MagicMock(status="Draft", charging_site_status_id=1),
+            MagicMock(status="Submitted", charging_site_status_id=2),
+            MagicMock(status="Validated", charging_site_status_id=3),
+        ]
+        mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
+        mock_site = MagicMock()
+        mock_site.status = MagicMock(status="Validated")
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+        mock_repo.bulk_update_equipment_status.return_value = [1, 2]
+
+        result = await charging_site_service.bulk_update_equipment_status(
+            bulk_update, 1, mock_user
+        )
+
+        assert result is True
+        mock_repo.update_charging_site_status.assert_not_called()
 
     @pytest.mark.anyio
     async def test_bulk_update_equipment_status_invalid_transition(

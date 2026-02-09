@@ -255,7 +255,8 @@ export const AddEditFinalSupplyEquipments = () => {
           supplyFromDate: defaultDates.from,
           supplyToDate: defaultDates.to,
           organizationName: defaultOrgName
-        }
+        },
+        'organizationName' // First editable column for focus after clearing
       )
     }
     if (action === 'duplicate') {

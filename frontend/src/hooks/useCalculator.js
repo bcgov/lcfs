@@ -169,3 +169,21 @@ export const useCalculateQuantityFromComplianceUnits = ({
       !!complianceUnits
   })
 }
+
+export const useGetLookupTableData = (complianceYear, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['lookup-table-data', complianceYear],
+    queryFn: () =>
+      client.get(
+        apiRoutes.getLookupTableData.replace(
+          ':complianceYear',
+          complianceYear
+        )
+      ),
+    staleTime: 60 * 60 * 1000, // 1 hour
+    cacheTime: 60 * 60 * 1000,
+    enabled: !!complianceYear,
+    ...options
+  })
+}

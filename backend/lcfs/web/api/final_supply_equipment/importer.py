@@ -231,6 +231,9 @@ async def import_async(
                     valid_user_type_names = {
                         obj.type_name for obj in valid_intended_user_types
                     }
+                    organization_id = await _get_organization_id(
+                        org_repo, cr_repo, org_code, compliance_report_id
+                    )
 
                     # Iterate through all data rows, skipping the header
                     for row_idx, row in enumerate(
@@ -259,7 +262,6 @@ async def import_async(
                         row = list(row)
                         row[9] = [row[9]] if row[9] is not None else []
                         row[10] = [row[10]] if row[10] is not None else []
-                       
 
                         # Validate row
                         error = _validate_row(
@@ -273,11 +275,6 @@ async def import_async(
                         # Parse row data and insert into DB
                         try:
                             fse_data = _parse_row(row, compliance_report_id)
-
-                            # Get the organization ID using helper function
-                            organization_id = await _get_organization_id(
-                                org_repo, cr_repo, org_code, compliance_report_id
-                            )
 
                             await fse_service.create_final_supply_equipment(
                                 fse_data, organization_id

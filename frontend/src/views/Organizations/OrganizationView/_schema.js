@@ -28,7 +28,7 @@ export const organizationsColDefs = (t) => [
   {
     colId: 'status',
     field: 'status',
-    headerName: t('org:orgColLabels.status'),
+    headerName: t('org:orgColLabels.registrationStatus'),
     minWidth: 140,
     valueGetter: (params) => params.data.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
@@ -68,35 +68,6 @@ export const organizationsColDefs = (t) => [
     cellRenderer: LinkRenderer,
     minWidth: 400,
     flex: 1
-  },
-  {
-    colId: 'registrationStatus',
-    field: 'registrationStatus',
-    headerName: t('org:orgColLabels.registrationStatus'),
-    minWidth: 200,
-    valueGetter: (params) => params.data.orgStatus.status === 'Registered',
-    cellRenderer: YesNoTextRenderer,
-    cellClass: 'vertical-middle',
-    filter: true,
-    sortable: true,
-    filterParams: {
-      textMatcher: () => {
-        return true
-      }
-    },
-    floatingFilterComponent: BCSelectFloatingFilter,
-    floatingFilterComponentParams: {
-      valueKey: 'value',
-      labelKey: 'label',
-      optionsQuery: () => ({
-        data: [
-          { value: true, label: 'Yes' },
-          { value: false, label: 'No' }
-        ],
-        isLoading: false
-      })
-    },
-    suppressFloatingFilterButton: true
   },
   {
     colId: 'hasEarlyIssuance',
