@@ -94,7 +94,7 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
         SELECT
             ia.initiative_agreement_id AS transaction_id,
             'InitiativeAgreement' AS transaction_type,
-            ia.description,
+            NULL AS description,
             NULL AS from_organization_id,
             NULL AS from_organization,
             org.organization_id AS to_organization_id,
@@ -130,7 +130,7 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
         SELECT
             aa.admin_adjustment_id AS transaction_id,
             'AdminAdjustment' AS transaction_type,
-            aa.description,
+            NULL AS description,
             NULL AS from_organization_id,
             NULL AS from_organization,
             org.organization_id AS to_organization_id,
