@@ -166,12 +166,12 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
         SELECT
             cr.compliance_report_id AS transaction_id,
             'ComplianceReport' AS transaction_type,
-            NULL AS description,
+            cr.nickname AS description,
             NULL AS from_organization_id,
             NULL AS from_organization,
             org.organization_id AS to_organization_id,
             org.name AS to_organization,
-            cr.compliance_units AS quantity,
+            tr.compliance_units AS quantity,
             NULL AS price_per_unit,
             crs.status::text AS status,
             cp.description AS compliance_period,
@@ -191,6 +191,10 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ON cr.current_status_id = crs.compliance_report_status_id
         JOIN compliance_period cp
             ON cr.compliance_period_id = cp.compliance_period_id
+        JOIN "transaction" tr
+            ON cr.transaction_id = tr.transaction_id
+        AND cr.transaction_id IS NOT NULL
+        WHERE crs.status IN ('Assessed', 'Reassessed')
         UNION ALL
         ------------------------------------------------------------------------
         -- Standalone Transactions (legacy / unassociated)
@@ -198,7 +202,7 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
         SELECT
             t.transaction_id,
             'StandaloneTransaction' AS transaction_type,
-            t.description,
+            NULL AS description,
             NULL AS from_organization_id,
             NULL AS from_organization,
             org.organization_id AS to_organization_id,
@@ -236,10 +240,19 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
           AND tf_to.to_transaction_id IS NULL
           AND COALESCE(t.effective_status, TRUE) = TRUE
     )
-    SELECT * FROM all_transactions;
+    , deduped AS (
+        SELECT
+            *,
+            ROW_NUMBER() OVER (
+                PARTITION BY transaction_id, transaction_type
+                ORDER BY update_date DESC NULLS LAST, create_date DESC NULLS LAST
+            ) AS rn
+        FROM all_transactions
+    )
+    SELECT * FROM deduped WHERE rn = 1;
 
-CREATE INDEX idx_mv_transaction_aggregate_from_org ON mv_transaction_aggregate(from_organization_id);
-CREATE INDEX idx_mv_transaction_aggregate_to_org ON mv_transaction_aggregate(to_organization_id);
+CREATE UNIQUE INDEX mv_transaction_aggregate_unique_idx
+    ON mv_transaction_aggregate (transaction_id, transaction_type);
 
 -- ==========================================
 -- mv_credit_ledger
@@ -248,44 +261,113 @@ CREATE INDEX idx_mv_transaction_aggregate_to_org ON mv_transaction_aggregate(to_
 -- ==========================================
 CREATE MATERIALIZED VIEW mv_credit_ledger AS
 WITH base AS (
+    -- Transfers: from_org loses units
     SELECT
         t.transaction_id,
         t.transaction_type,
         t.compliance_period,
-        t.quantity AS compliance_units,
-        CASE
-            WHEN t.to_organization_id IS NOT NULL THEN t.to_organization_id
-            WHEN t.from_organization_id IS NOT NULL THEN t.from_organization_id
-        END AS organization_id,
+        t.from_organization_id                       AS organization_id,
+        -ABS(t.quantity)                             AS compliance_units,
         t.create_date,
-        t.update_date,
-        CASE
-            WHEN t.to_organization_id IS NOT NULL THEN t.quantity
-            WHEN t.from_organization_id IS NOT NULL THEN -t.quantity
-            ELSE 0
-        END AS unit_change
-    FROM mv_transaction_aggregate t
-    WHERE t.status IN ('Recorded', 'Assessed')
-),
-cumulative AS (
-    SELECT
-        b.transaction_id,
-        b.transaction_type,
-        b.organization_id,
-        b.compliance_period,
-        b.compliance_units,
-        b.create_date,
-        b.update_date,
-        SUM(b.unit_change) OVER (
-            PARTITION BY b.organization_id
-            ORDER BY b.update_date, b.transaction_id
-        ) AS available_balance
-    FROM base b
-)
-SELECT * FROM cumulative;
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'Transfer'
+    AND    t.status           = 'Recorded'
 
-CREATE INDEX idx_mv_credit_ledger_org ON mv_credit_ledger(organization_id);
-CREATE INDEX idx_mv_credit_ledger_period ON mv_credit_ledger(compliance_period);
+    UNION ALL
+
+    -- Transfers: to_org gains units
+    SELECT
+        t.transaction_id,
+        t.transaction_type,
+        t.compliance_period,
+        t.to_organization_id,
+        ABS(t.quantity),
+        t.create_date,
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'Transfer'
+    AND    t.status           = 'Recorded'
+
+    UNION ALL
+
+    -- Admin Adjustments
+    SELECT
+        t.transaction_id,
+        t.transaction_type,
+        t.compliance_period,
+        t.to_organization_id                       AS organization_id,
+        t.quantity,
+        t.create_date,
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'AdminAdjustment'
+    AND    t.status           = 'Approved'
+
+    UNION ALL
+
+    -- Initiative Agreements
+    SELECT
+        t.transaction_id,
+        t.transaction_type,
+        t.compliance_period,
+        t.to_organization_id                       AS organization_id,
+        t.quantity,
+        t.create_date,
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'InitiativeAgreement'
+    AND    t.status           = 'Approved'
+
+    UNION ALL
+
+    -- Compliance Reports
+    SELECT
+        t.transaction_id,
+        t.transaction_type,
+        t.compliance_period,
+        t.to_organization_id                       AS organization_id,
+        t.quantity,
+        t.create_date,
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'ComplianceReport'
+    AND    t.status           = 'Assessed'
+
+    UNION ALL
+
+    -- Standalone Transactions
+    SELECT
+        t.transaction_id,
+        t.transaction_type,
+        t.compliance_period,
+        t.to_organization_id                       AS organization_id,
+        t.quantity,
+        t.create_date,
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'StandaloneTransaction'
+    AND    t.status           = 'Recorded'
+)
+
+SELECT
+    transaction_id,
+    transaction_type,
+    compliance_period,
+    organization_id,
+    compliance_units,
+    SUM(compliance_units) OVER (
+        PARTITION BY organization_id
+        ORDER BY update_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS available_balance,
+    create_date,
+    update_date
+FROM base;
+
+CREATE INDEX mv_credit_ledger_org_year_idx ON mv_credit_ledger (organization_id, compliance_period);
+CREATE INDEX mv_credit_ledger_org_date_idx ON mv_credit_ledger (organization_id, update_date DESC);
+CREATE UNIQUE INDEX mv_credit_ledger_tx_org_idx ON mv_credit_ledger (transaction_id, transaction_type, organization_id);
 
 -- ==========================================
 -- mv_transaction_count
