@@ -273,13 +273,17 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.finalSupplyEquipments,
         useFetch: useGetFSEReportingList,
         component: (data) =>
-          data.finalSupplyEquipments.length > 0 && (
+          data.finalSupplyEquipments.length > 0 ? (
             <FinalSupplyEquipmentSummary
               status={currentStatus}
               data={data}
               organizationId={complianceReportData?.report?.organizationId}
             />
-          )
+          ) : data.hasChargingEquipment ? (
+            <BCTypography variant="body4" color="text">
+              {t('finalSupplyEquipment:noFseLinkedToReport')}
+            </BCTypography>
+          ) : null
       },
       {
         name: t('report:activityLists.allocationAgreements'),
@@ -427,15 +431,26 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
 
       const hasRealData = !isArrayEmpty(scheduleData)
 
+      // For FSE section: show if organization has any charging equipment,
+      // not just if there's FSE linked to the current report group.
+      // This ensures users can add FSE to supplemental reports even when
+      // FSE was deleted and recreated after the original report.
+      const hasFSECapability =
+        activity.key === 'finalSupplyEquipments' &&
+        dataResult?.data?.hasChargingEquipment === true &&
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+
       // Show if has data OR if in editing mode OR if it was recently edited
+      // OR (for FSE) if organization has charging equipment
       const shouldShow =
         hasRealData ||
+        hasFSECapability ||
         activity.key === 'supportingDocs' ||
         expandedSchedule === activity.key
 
       accordionsData.set(panelId, {
         shouldShow,
-        hasData: hasRealData,
+        hasData: hasRealData || hasFSECapability,
         activity,
         data: dataResult?.data,
         isLoading: dataResult?.isLoading,

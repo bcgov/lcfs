@@ -66,6 +66,7 @@ async def test_update_compliance_report_status_change(
     report_id = 1
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
     mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
     mock_report.compliance_period = MagicMock()
@@ -255,13 +256,13 @@ async def test_handle_submitted_status_auto_submits_fse_records(
         return_value=calculated_summary
     )
 
-    # Mock the charging equipment repo
-    mock_charging_equipment_repo = AsyncMock()
-    mock_charging_equipment_repo.auto_submit_draft_updated_fse_for_report = AsyncMock(
+    # Mock the charging equipment service
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_submit_equipment_for_report = AsyncMock(
         return_value=3  # 3 FSE records were auto-submitted
     )
-    compliance_report_update_service._charging_equipment_repo = (
-        mock_charging_equipment_repo
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
     )
 
     # Inject the mocked org_service
@@ -279,9 +280,9 @@ async def test_handle_submitted_status_auto_submits_fse_records(
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
     )
 
-    # Verify that auto_submit_draft_updated_fse_for_report was called
-    mock_charging_equipment_repo.auto_submit_draft_updated_fse_for_report.assert_called_once_with(
-        report_id
+    # Verify that auto_submit_equipment_for_report was called
+    mock_charging_equipment_service.auto_submit_equipment_for_report.assert_called_once_with(
+        report_id, mock_report.organization_id
     )
 
     # Summary service should be called to recalculate
@@ -876,13 +877,13 @@ async def test_handle_recommended_by_analyst_status_not_superseded(
 ):
     # Arrange
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
-    # Mock the charging equipment repo
-    mock_charging_equipment_repo = AsyncMock()
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+    # Mock the charging equipment service
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
         return_value=0
     )
-    compliance_report_update_service._charging_equipment_repo = (
-        mock_charging_equipment_repo
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
     )
 
     # Patch user_has_roles directly for this test
@@ -899,9 +900,10 @@ async def test_handle_recommended_by_analyst_status_not_superseded(
         mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
             mock_compliance_report_recommended_analyst.compliance_report_group_uuid
         )
-        # Verify that auto_validate_submitted_fse_for_report was called
-        mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
-            mock_compliance_report_recommended_analyst.compliance_report_id
+        # Verify that auto_validate_equipment_for_report was called
+        mock_charging_equipment_service.auto_validate_equipment_for_report.assert_called_once_with(
+            mock_compliance_report_recommended_analyst.compliance_report_id,
+            mock_compliance_report_recommended_analyst.organization_id,
         )
 
 
@@ -1403,6 +1405,7 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
     mock_report.compliance_report_id = 123
+    mock_report.organization_id = 77
     mock_report.version = 1
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
@@ -1412,13 +1415,13 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
-    # Mock the charging equipment repo
-    mock_charging_equipment_repo = AsyncMock()
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+    # Mock the charging equipment service
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
         return_value=0
     )
-    compliance_report_update_service._charging_equipment_repo = (
-        mock_charging_equipment_repo
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
     )
 
     # Mock the _calculate_and_lock_summary method (should be called)
@@ -1444,8 +1447,8 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
         mock_report, mock_user_profile_analyst, skip_can_sign_check=True
     )
     # Verify FSE auto-validation was called
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
-        123
+    mock_charging_equipment_service.auto_validate_equipment_for_report.assert_called_once_with(
+        123, mock_report.organization_id
     )
 
 
@@ -1460,18 +1463,19 @@ async def test_handle_recommended_by_analyst_auto_validates_fse(
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
     mock_report.compliance_report_id = 456
+    mock_report.organization_id = 91
     mock_report.version = 0
     mock_report.summary = None
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
-    # Mock the charging equipment repo to return 3 updated records
-    mock_charging_equipment_repo = AsyncMock()
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+    # Mock the charging equipment service to return 3 updated records
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
         return_value=3
     )
-    compliance_report_update_service._charging_equipment_repo = (
-        mock_charging_equipment_repo
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
     )
 
     # Mock the _calculate_and_lock_summary method
@@ -1491,8 +1495,8 @@ async def test_handle_recommended_by_analyst_auto_validates_fse(
         )
 
     # Assert FSE auto-validation was called with correct report ID
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
-        456
+    mock_charging_equipment_service.auto_validate_equipment_for_report.assert_called_once_with(
+        456, mock_report.organization_id
     )
 
 
@@ -1507,6 +1511,7 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_group_uuid = "test-group-uuid"
     mock_report.compliance_report_id = 789
+    mock_report.organization_id = 65
     mock_report.version = 1
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
@@ -1514,13 +1519,13 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
-    # Mock the charging equipment repo
-    mock_charging_equipment_repo = AsyncMock()
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report = AsyncMock(
+    # Mock the charging equipment service
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
         return_value=0
     )
-    compliance_report_update_service._charging_equipment_repo = (
-        mock_charging_equipment_repo
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
     )
 
     # Mock the _calculate_and_lock_summary method
@@ -1544,8 +1549,8 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
         mock_report, mock_user_profile_analyst, skip_can_sign_check=True
     )
     # Assert that FSE auto-validation was called
-    mock_charging_equipment_repo.auto_validate_submitted_fse_for_report.assert_called_once_with(
-        789
+    mock_charging_equipment_service.auto_validate_equipment_for_report.assert_called_once_with(
+        789, mock_report.organization_id
     )
 
 
@@ -1738,7 +1743,7 @@ async def test_director_can_recommend_by_analyst(
     mock_user_has_roles.side_effect = user_has_roles_side_effect
 
     # Mock dependencies
-    compliance_report_update_service.charging_equipment_repo.auto_validate_submitted_fse_for_report = (
+    compliance_report_update_service._charging_equipment_service.auto_validate_equipment_for_report = (
         AsyncMock()
     )
     compliance_report_update_service._calculate_and_lock_summary = AsyncMock()

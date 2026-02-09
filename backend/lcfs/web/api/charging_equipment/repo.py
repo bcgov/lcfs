@@ -3,7 +3,7 @@
 from datetime import date
 
 import structlog
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from fastapi import Depends
 from sqlalchemy import select, func, and_, or_, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,10 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
 from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
-from lcfs.db.models.compliance.ChargingSite import ChargingSite
+from lcfs.db.models.compliance.ChargingSite import (
+    ChargingSite,
+    latest_charging_site_version_subquery,
+)
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -38,6 +41,20 @@ logger = structlog.get_logger(__name__)
 class ChargingEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def _apply_latest_site_filter(self, stmt):
+        """
+        Join the statement to the latest charging site versions to ensure we only use
+        the most recent site record for any joins involving ChargingSite.
+        """
+        latest_sites = latest_charging_site_version_subquery()
+        return stmt.join(
+            latest_sites,
+            and_(
+                ChargingSite.charging_site_id == latest_sites.c.charging_site_id,
+                ChargingSite.version == latest_sites.c.latest_version,
+            ),
+        )
 
     @repo_handler
     async def get_charging_equipment_by_id(
@@ -101,6 +118,7 @@ class ChargingEquipmentRepository:
                 ChargingSite.action_type != ActionTypeEnum.DELETE,
             )
         )
+        query = self._apply_latest_site_filter(query)
 
         # Apply organization scoping when either the caller or filters set it
         if organization_id is not None:
@@ -141,10 +159,17 @@ class ChargingEquipmentRepository:
                 )
 
         # Apply sorting
+        sort_field_map = {
+            "status": ChargingEquipmentStatus.status,
+            "level_of_equipment": LevelOfEquipment.name,
+            "site_name": ChargingSite.site_name,
+        }
         if pagination.sort_orders:
             for sort in pagination.sort_orders:
-                column = getattr(ChargingEquipment, sort.field, None)
-                if column:
+                column = sort_field_map.get(
+                    sort.field, getattr(ChargingEquipment, sort.field, None)
+                )
+                if column is not None and hasattr(column, "asc"):
                     if sort.direction == "desc":
                         query = query.order_by(column.desc())
                     else:
@@ -191,6 +216,7 @@ class ChargingEquipmentRepository:
             )
             .order_by(ChargingEquipment.update_date.desc())
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -202,6 +228,7 @@ class ChargingEquipmentRepository:
             .join(ChargingSite)
             .where(ChargingSite.organization_id == organization_id)
         )
+        subq = self._apply_latest_site_filter(subq)
         del_stmt = delete(ChargingEquipment).where(
             ChargingEquipment.charging_equipment_id.in_(subq)
         )
@@ -548,8 +575,39 @@ class ChargingEquipmentRepository:
             )
             .order_by(ChargingSite.site_name)
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def get_serial_numbers_for_organization(
+        self, organization_id: int
+    ) -> set[str]:
+        """
+        Retrieve serial numbers for all charging equipment owned by the organization.
+        Limited to non-deleted equipment and latest site versions.
+        """
+        stmt = (
+            select(ChargingEquipment.serial_number)
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipment.action_type != ActionTypeEnum.DELETE,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
+        )
+        stmt = self._apply_latest_site_filter(stmt)
+        result = await self.db.execute(stmt)
+        normalized = set()
+        for serial in result.scalars().all():
+            if isinstance(serial, str):
+                clean = serial.strip()
+                if clean:
+                    normalized.add(clean.upper())
+        return normalized
 
     @repo_handler
     async def get_organizations(self) -> List[Organization]:
@@ -581,7 +639,7 @@ class ChargingEquipmentRepository:
 
     @repo_handler
     async def get_charging_site_ids_from_equipment(
-        self, equipment_ids: List[int], organization_id: int
+        self, equipment_ids: List[int], organization_id: Optional[int] = None
     ) -> List[int]:
         """Get unique charging site IDs from equipment list."""
         query = (
@@ -590,13 +648,39 @@ class ChargingEquipmentRepository:
             .join(ChargingSite)
             .where(
                 and_(
-                    ChargingEquipment.charging_equipment_id.in_(equipment_ids),
-                    ChargingSite.organization_id == organization_id,
+                    ChargingEquipment.charging_equipment_id.in_(equipment_ids)
                 )
             )
         )
+        if organization_id is not None:
+            query = query.where(ChargingSite.organization_id == organization_id)
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def update_charging_sites_for_equipment(
+        self,
+        equipment_ids: List[int],
+        current_statuses: List[str],
+        new_status: str,
+        organization_id: Optional[int] = None,
+    ) -> int:
+        """
+        Update parent charging site statuses for the provided equipment IDs.
+        """
+        if not equipment_ids:
+            return 0
+
+        site_ids = await self.get_charging_site_ids_from_equipment(
+            equipment_ids, organization_id
+        )
+        if not site_ids:
+            return 0
+
+        return await self.update_charging_sites_status(
+            site_ids, current_statuses, new_status
+        )
 
     @repo_handler
     async def update_charging_sites_status(
@@ -655,6 +739,7 @@ class ChargingEquipmentRepository:
             )
             .where(ChargingSite.charging_site_id == site_id)
         )
+        query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -691,7 +776,7 @@ class ChargingEquipmentRepository:
     @repo_handler
     async def auto_validate_submitted_fse_for_report(
         self, compliance_report_id: int
-    ) -> int:
+    ) -> Tuple[int, List[int]]:
         """
         Auto-validate all charging equipment (FSE) records in 'Submitted' status
         that are associated with the given compliance report.
@@ -700,7 +785,7 @@ class ChargingEquipmentRepository:
             compliance_report_id: The ID of the compliance report being recommended
 
         Returns:
-            int: The number of equipment records that were updated to Validated status
+            Tuple[int, List[int]]: The number of equipment records updated and their IDs.
         """
         from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
             ComplianceReportChargingEquipment,
@@ -720,7 +805,7 @@ class ChargingEquipmentRepository:
         validated_status_id = statuses.get("Validated")
 
         if not submitted_status_id or not validated_status_id:
-            return 0
+            return 0, []
 
         # Get all charging equipment IDs associated with this compliance report
         # that are currently in Submitted status
@@ -744,7 +829,7 @@ class ChargingEquipmentRepository:
         equipment_ids = [row[0] for row in equipment_result.all()]
 
         if not equipment_ids:
-            return 0
+            return 0, []
 
         # Update the status to Validated
         update_stmt = (
@@ -758,12 +843,12 @@ class ChargingEquipmentRepository:
 
         updated_count = result.rowcount or 0
 
-        return updated_count
+        return updated_count, equipment_ids
 
     @repo_handler
     async def auto_submit_draft_updated_fse_for_report(
         self, compliance_report_id: int
-    ) -> int:
+    ) -> Tuple[int, List[int]]:
         """
         Auto-submit all charging equipment (FSE) records in 'Draft' or 'Updated' status
         that are associated with the given compliance report.
@@ -772,7 +857,7 @@ class ChargingEquipmentRepository:
             compliance_report_id: The ID of the compliance report being submitted
 
         Returns:
-            int: The number of equipment records that were updated to Submitted status
+            Tuple[int, List[int]]: The number of equipment records updated and their IDs.
         """
         from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
             ComplianceReportChargingEquipment,
@@ -793,7 +878,7 @@ class ChargingEquipmentRepository:
         submitted_status_id = statuses.get("Submitted")
 
         if not draft_status_id or not updated_status_id or not submitted_status_id:
-            return 0
+            return 0, []
 
         # Get all charging equipment IDs associated with this compliance report
         # that are currently in Draft or Updated status
@@ -819,7 +904,7 @@ class ChargingEquipmentRepository:
         equipment_ids = [row[0] for row in equipment_result.all()]
 
         if not equipment_ids:
-            return 0
+            return 0, []
 
         # Update the status to Submitted
         update_stmt = (
@@ -833,4 +918,4 @@ class ChargingEquipmentRepository:
 
         updated_count = result.rowcount or 0
 
-        return updated_count
+        return updated_count, equipment_ids

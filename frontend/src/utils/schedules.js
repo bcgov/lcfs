@@ -127,10 +127,14 @@ export const handleScheduleDelete = async (
   saveRow,
   alertRef,
   setRowData,
-  defaultRowData
+  defaultRowData,
+  firstEditableColumn = null
 ) => {
   const updatedRow = { ...params.node.data, deleted: true }
+
+  // Check if row has been saved (has an ID)
   if (updatedRow[idField]) {
+    // Existing behavior: delete saved row via API
     try {
       await saveRow(updatedRow)
       params.api.applyTransaction({ remove: [params.node.data] })
@@ -158,6 +162,29 @@ export const handleScheduleDelete = async (
         })
       }
       return false
+    }
+  } else {
+    // New behavior: clear unsaved/incomplete row
+    // Keep the same row id but reset all other values to defaults
+    const currentRowId = params.node.data.id
+    const clearedRowData = {
+      ...defaultRowData,
+      id: currentRowId,
+      validationStatus: undefined
+    }
+
+    // Update the row with cleared data
+    params.node.updateData(clearedRowData)
+
+    // Set focus to the first editable field if specified
+    if (firstEditableColumn) {
+      setTimeout(() => {
+        const rowIndex = params.node.rowIndex
+        params.api.startEditingCell({
+          rowIndex,
+          colKey: firstEditableColumn
+        })
+      }, 50)
     }
   }
 

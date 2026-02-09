@@ -1,8 +1,9 @@
 import ROUTES from '../routes'
 import { Dashboard } from '@/views/Dashboard'
 import FormView from '@/views/Forms/FormView'
+import { AppRouteObject } from '../types'
 
-export const miscRoutes = [
+export const miscRoutes: AppRouteObject[] = [
   {
     path: ROUTES.DASHBOARD,
     children: [

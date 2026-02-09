@@ -63,6 +63,10 @@ export const PublicBreadcrumb = ({
       label: 'Compliance unit calculator',
       route: '/credit-calculator'
     },
+    'calculation-data': {
+      label: 'Calculation data',
+      route: '/calculation-data'
+    },
     ...customBreadcrumbs
   }
 

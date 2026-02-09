@@ -7,7 +7,6 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import BCButton from '@/components/BCButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
@@ -95,10 +94,6 @@ export const CreditTradingMarket = () => {
         mb={3}
         flexWrap="wrap"
       >
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-          sx={{ minWidth: 'fit-content', whiteSpace: 'nowrap' }}
-        />
         {isGovernmentUser && (
           <BCButton
             variant="outlined"

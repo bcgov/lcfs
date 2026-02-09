@@ -4,7 +4,7 @@ import io
 import json
 import structlog
 import uuid
-from typing import List
+from typing import Iterable, List
 
 from fastapi import Depends, HTTPException, status, UploadFile
 from openpyxl import load_workbook
@@ -249,6 +249,10 @@ async def import_async(
                     end_user_name_to_id = {
                         u.type_name: u.end_user_type_id for u in end_user_types
                     }
+                    existing_serials = await ce_repo.get_serial_numbers_for_organization(
+                        organization_id
+                    )
+                    duplicate_tracker = _DuplicateSerialTracker(existing_serials)
 
                     # Iterate through all data rows, skipping the header
                     for row_idx, row in enumerate(
@@ -372,6 +376,10 @@ async def import_async(
                                         f"Row {row_idx}: Intended User '{clean}' not found; skipping this value"
                                     )
 
+                        if duplicate_tracker.is_duplicate(serial_number):
+                            rejected += 1
+                            continue
+
                         try:
                             ce_data = ChargingEquipmentCreateSchema(
                                 charging_site_id=charging_site_id,
@@ -400,6 +408,10 @@ async def import_async(
                             logger.error(str(ex))
                             errors.append(f"Row {row_idx}: {ex}")
                             rejected += 1
+
+                    duplicate_summary = duplicate_tracker.summary_message()
+                    if duplicate_summary:
+                        errors.append(duplicate_summary)
 
                     # Final update at 100%
                     await _update_progress(
@@ -469,3 +481,52 @@ async def _update_progress(
         "successes": successes or [],
     }
     await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=60)
+
+
+class _DuplicateSerialTracker:
+    """
+    Tracks duplicate serial numbers within a single upload while
+    considering existing records for an organization.
+    """
+
+    def __init__(self, existing_serials: Iterable[str] | None = None) -> None:
+        normalized_existing: set[str] = set()
+        for serial in existing_serials or []:
+            normalized = _normalize_serial(serial)
+            if normalized:
+                normalized_existing.add(normalized)
+        self._existing_serials = normalized_existing
+        self._current_upload_serials: set[str] = set()
+        self._duplicate_count = 0
+
+    def is_duplicate(self, serial_number) -> bool:
+        normalized = _normalize_serial(serial_number)
+        if not normalized:
+            return False
+        if (
+            normalized in self._existing_serials
+            or normalized in self._current_upload_serials
+        ):
+            self._duplicate_count += 1
+            return True
+        self._current_upload_serials.add(normalized)
+        return False
+
+    def summary_message(self) -> str | None:
+        if not self._duplicate_count:
+            return None
+        record_label = "record" if self._duplicate_count == 1 else "records"
+        verb = "was" if self._duplicate_count == 1 else "were"
+        return (
+            f"{self._duplicate_count} {record_label} "
+            f"with duplicate serial numbers {verb} not uploaded."
+        )
+
+
+def _normalize_serial(serial_number) -> str:
+    """
+    Normalizes serial numbers for duplicate comparisons.
+    """
+    if serial_number is None:
+        return ""
+    return str(serial_number).strip().upper()

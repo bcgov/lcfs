@@ -29,7 +29,9 @@ class CreditLedgerService:
     def __init__(self, repo: CreditLedgerRepository = Depends()) -> None:
         self.repo = repo
 
-    def _apply_filters(self, pagination: PaginationRequestSchema, conditions: List[any]) -> None:
+    def _apply_filters(
+        self, pagination: PaginationRequestSchema, conditions: List[any]
+    ) -> None:
         for f in pagination.filters:
             field = get_field_for_filter(CreditLedgerView, f.field)
             filter_val = f.filter
@@ -62,8 +64,26 @@ class CreditLedgerService:
             sort_orders=pagination.sort_orders,
         )
 
+        # Transform rows with compliance report version (e.g., "Original", "Supplemental 1")
+        ledger_items = []
+        for row in rows:
+            ledger_view, version = row
+            # Create schema from the ledger view
+            item = CreditLedgerTxnSchema.model_validate(ledger_view)
+
+            # Add formatted description for compliance reports
+            if (
+                ledger_view.transaction_type == "ComplianceReport"
+                and version is not None
+            ):
+                item.description = (
+                    "Original" if version == 0 else f"Supplemental {version}"
+                )
+
+            ledger_items.append(item)
+
         return CreditLedgerListSchema(
-            ledger=[CreditLedgerTxnSchema.model_validate(r) for r in rows],
+            ledger=ledger_items,
             pagination=PaginationResponseSchema(
                 total=total,
                 page=pagination.page,
@@ -113,16 +133,33 @@ class CreditLedgerService:
             sort_orders=sort_orders,
         )
 
-        sheet_rows = [
-            [
-                int(r.compliance_period),
-                int(r.available_balance or 0),
-                int(r.compliance_units or 0),
-                r.transaction_type,
-                r.update_date.strftime("%Y-%m-%d"),
-            ]
-            for r in rows
-        ]
+        sheet_rows = []
+        for row in rows:
+            ledger_view, version = row
+
+            # Format transaction type with version for compliance reports
+            transaction_type = ledger_view.transaction_type
+            if transaction_type == "ComplianceReport" and version is not None:
+                # Format as "Original", "Supplemental 1", etc.
+                description = "Original" if version == 0 else f"Supplemental {version}"
+                transaction_type = f"Compliance Report – {description}"
+            elif transaction_type == "StandaloneTransaction":
+                transaction_type = "Legacy Transaction"
+            else:
+                # Add spaces to camelCase
+                transaction_type = "".join(
+                    [" " + c if c.isupper() else c for c in transaction_type]
+                ).strip()
+
+            sheet_rows.append(
+                [
+                    int(ledger_view.compliance_period),
+                    int(ledger_view.available_balance or 0),
+                    int(ledger_view.compliance_units or 0),
+                    transaction_type,
+                    ledger_view.update_date.strftime("%Y-%m-%d"),
+                ]
+            )
 
         builder = SpreadsheetBuilder(file_format=export_format)
         builder.add_sheet(

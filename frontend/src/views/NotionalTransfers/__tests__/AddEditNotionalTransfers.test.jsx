@@ -778,7 +778,8 @@ describe('AddEditNotionalTransfers', () => {
           mockSaveRow,
           expect.anything(), // alertRef
           expect.any(Function), // setRowData
-          { complianceReportId: 'testReportId' }
+          { complianceReportId: 'testReportId' },
+          'legalName' // First editable column for focus after clearing
         )
       }
     })
@@ -788,7 +789,7 @@ describe('AddEditNotionalTransfers', () => {
 
       if (mockOnAction) {
         const params = { node: { data: { id: 'test-id' } } }
-        
+
         await act(async () => {
           mockOnAction('undo', params)
         })
@@ -799,7 +800,8 @@ describe('AddEditNotionalTransfers', () => {
           mockSaveRow,
           expect.anything(),
           expect.any(Function),
-          { complianceReportId: 'testReportId' }
+          { complianceReportId: 'testReportId' },
+          'legalName' // First editable column for focus after clearing
         )
       }
     })

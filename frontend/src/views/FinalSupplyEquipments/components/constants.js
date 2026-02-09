@@ -97,7 +97,7 @@ export const STATUS_CONFIG = {
     color: theme.colors.error,
     bg: theme.colors.errorBg,
     icon: BlockIcon,
-    labelKey: 'map.retired',
+    labelKey: 'map.decommissioned',
     markerColor: 'red'
   }
 }

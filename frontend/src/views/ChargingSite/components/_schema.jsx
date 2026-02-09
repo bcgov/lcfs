@@ -319,7 +319,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
         Updated: 'info',
         Submitted: 'warning',
         Validated: 'success',
-        Decommissioned: enableSelection ? 'smoky' : 'error'
+        Decommissioned: 'error'
       },
       { statusField: 'status', replaceUnderscores: false }
     ),
