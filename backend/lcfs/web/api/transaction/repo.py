@@ -39,6 +39,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.web.core.decorators import repo_handler
 
 
@@ -428,6 +429,8 @@ class TransactionRepository:
                 ComplianceReport.compliance_report_id.isnot(None).label(
                     "is_compliance_report"
                 ),
+                # Get the compliance period year for the report
+                CompliancePeriod.description.label("report_compliance_period"),
                 # Check if transaction is from a transfer (as sender)
                 case(
                     (
@@ -477,6 +480,12 @@ class TransactionRepository:
                 ComplianceReportStatus,
                 ComplianceReport.current_status_id
                 == ComplianceReportStatus.compliance_report_status_id,
+            )
+            # Left join to compliance period to get the period year
+            .outerjoin(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
             )
             # Left join to transfers (as sender)
             .outerjoin(
@@ -537,8 +546,18 @@ class TransactionRepository:
                 row.is_compliance_report
                 and row.compliance_status == ComplianceReportStatusEnum.Assessed
             ):
-                if create_date <= compliance_period_end_local:
-                    count_as_past = True
+                # For compliance reports, check if the report's compliance period
+                # is <= the target period (not the transaction create date)
+                # This ensures supplemental reports assessed after the period ended
+                # are still counted in the correct period
+                if row.report_compliance_period is not None:
+                    report_period_year = int(row.report_compliance_period)
+                    if report_period_year <= compliance_period:
+                        count_as_past = True
+                else:
+                    # Fallback for historical data without period info
+                    if create_date <= compliance_period_end_local:
+                        count_as_past = True
 
             # 2. Transfer transactions (from)
             elif (
