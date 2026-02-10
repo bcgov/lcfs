@@ -24,7 +24,7 @@ class ReportOpeningRepository:
             compliance_year=year,
             compliance_reporting_enabled=year <= current_year,
             early_issuance_enabled=False,
-            supplemental_report_role=SupplementalReportAccessRole.BCEID,
+            supplemental_report_role=SupplementalReportAccessRole.BCeID,
         )
 
     @repo_handler

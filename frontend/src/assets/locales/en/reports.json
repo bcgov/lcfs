@@ -317,7 +317,10 @@
     "save": "Save",
     "saveSuccess": "Report availability updated",
     "saveError": "Unable to update report availability. Please try again.",
-    "loading": "Loading report openings..."
+    "loading": "Loading report openings...",
+    "saveConfirmTitle": "Confirm report availability changes",
+    "saveConfirmMessage": "Toggling a year's availability affects all suppliers. Do you want to save these changes?",
+    "saveConfirmAction": "Save changes"
   },
   "tabs": {
     "complianceReporting": "Compliance reporting",

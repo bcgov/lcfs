@@ -28,16 +28,16 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
     const periodsArray = periods?.data || periods || []
 
     return periodsArray.filter((period) => {
+      if (period?.description?.trim()) {
+        return true
+      }
+
       if (!period?.effectiveDate) {
         return false
       }
 
-      const effectiveYear = new Date(period.effectiveDate).getFullYear()
-      if (Number.isNaN(effectiveYear)) {
-        return false
-      }
-
-      return true
+      const effectiveYear = new Date(period.effectiveDate).getUTCFullYear()
+      return !Number.isNaN(effectiveYear)
     })
   }, [periods])
 
@@ -106,7 +106,14 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
           }}
         >
           {availablePeriods.map((period) => {
-            const effectiveYear = new Date(period.effectiveDate).getFullYear()
+            const effectiveYear = period?.effectiveDate
+              ? new Date(period.effectiveDate).getUTCFullYear()
+              : null
+            const periodLabel =
+              period?.description?.trim() ||
+              (!Number.isNaN(effectiveYear) && effectiveYear
+                ? effectiveYear
+                : '')
             const isAlreadyReported = reportedPeriodIDs?.includes(
               period.compliancePeriodId
             )
@@ -116,9 +123,13 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
                 key={period.compliancePeriodId}
                 onClick={() => handleComplianceOptionClick(period)}
                 disabled={isAlreadyReported}
-                className={`compliance-period-${effectiveYear}`}
+                className={`compliance-period-${
+                  !Number.isNaN(effectiveYear) && effectiveYear
+                    ? effectiveYear
+                    : period.compliancePeriodId
+                }`}
               >
-                {effectiveYear}
+                {periodLabel}
               </MenuItem>
             )
           })}

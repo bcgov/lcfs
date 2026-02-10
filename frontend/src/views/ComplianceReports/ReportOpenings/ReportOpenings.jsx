@@ -7,7 +7,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow
 } from '@mui/material'
@@ -20,6 +19,7 @@ import {
   useUpdateReportOpenings
 } from '@/hooks/useReportOpenings'
 import { FloatingAlert } from '@/components/BCAlert'
+import BCModal from '@/components/BCModal'
 
 const buildRowState = (records = []) => ({
   rows: records
@@ -60,6 +60,7 @@ export const ReportOpenings = () => {
   const { data, isLoading } = useReportOpenings()
   const updateMutation = useUpdateReportOpenings()
   const [rowState, setRowState] = useState({ rows: [], lookup: {} })
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false)
   const currentYear = new Date().getFullYear()
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export const ReportOpenings = () => {
     }))
   }
 
-  const handleSave = () => {
+  const executeSave = () => {
     if (!hasChanges) {
       return
     }
@@ -168,8 +169,45 @@ export const ReportOpenings = () => {
     )
   }
 
+  const handleSaveClick = () => {
+    if (!hasChanges || saving) {
+      return
+    }
+    setConfirmSaveOpen(true)
+  }
+
+  const handleConfirmSave = () => {
+    setConfirmSaveOpen(false)
+    executeSave()
+  }
+
+  const handleCancelConfirm = () => {
+    setConfirmSaveOpen(false)
+  }
+
+  const handleCancelChanges = () => {
+    if (!hasChanges || saving) {
+      return
+    }
+
+    setRowState((prev) => buildRowState(Object.values(prev.lookup)))
+  }
+
   if (isLoading && rows.length === 0) {
     return <Loading message={t('reportOpenings.loading')} />
+  }
+
+  const confirmModalData = {
+    title: t('reportOpenings.saveConfirmTitle'),
+    content: (
+      <BCTypography component="p" variant="body2">
+        {t('reportOpenings.saveConfirmMessage')}
+      </BCTypography>
+    ),
+    primaryButtonText: t('reportOpenings.saveConfirmAction'),
+    primaryButtonAction: handleConfirmSave,
+    secondaryButtonText: t('common:cancelBtn'),
+    secondaryButtonAction: handleCancelConfirm
   }
 
   return (
@@ -306,19 +344,28 @@ export const ReportOpenings = () => {
             ))}
           </TableBody>
         </Table>
-        <Box mt={3} display="flex" justifyContent="flex-start" pl={2}>
+        <Box mt={3} display="flex" justifyContent="flex-start" pl={2} gap={2}>
           <BCButton
             variant="contained"
             color="primary"
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={!hasChanges || saving}
             isLoading={saving}
           >
             {t('reportOpenings.save')}
           </BCButton>
+          <BCButton
+            variant="outlined"
+            color="primary"
+            onClick={handleCancelChanges}
+            disabled={!hasChanges || saving}
+          >
+            {t('common:cancelBtn')}
+          </BCButton>
         </Box>
       </Box>
       </Box>
+      <BCModal open={confirmSaveOpen} onClose={handleCancelConfirm} data={confirmModalData} />
     </>
   )
 }

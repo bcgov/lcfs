@@ -141,7 +141,6 @@ class OrganizationValidation:
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail=f"{compliance_year} reporting is only available to early issuance suppliers.",
                     )
-                return
             if not year_config.compliance_reporting_enabled:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

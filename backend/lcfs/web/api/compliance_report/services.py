@@ -133,7 +133,7 @@ class ComplianceReportServices:
             or (
                 early_issuance
                 and early_issuance.has_early_issuance
-                and config.compliance_year == int(current_year)
+                and config.compliance_year == current_year
             )
         }
 

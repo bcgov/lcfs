@@ -1,7 +1,7 @@
 """Create report_opening configuration table
 
 Revision ID: f3b1b9f03c9a
-Revises: a1b2c3d4e5f1
+Revises: 3d7b65a9d2ef
 Create Date: 2026-01-25 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f3b1b9f03c9a"
-down_revision = "a1b2c3d4e5f1"
+down_revision = "3d7b65a9d2ef"
 branch_labels = None
 depends_on = None
 
@@ -106,7 +106,6 @@ def upgrade() -> None:
         ),
         comment="Stores per-year configuration for compliance reporting availability and permissions.",
     )
-    op.execute('commit;')
     report_opening_table = sa.table(
         "report_opening",
         sa.column("compliance_year", sa.Integer()),
