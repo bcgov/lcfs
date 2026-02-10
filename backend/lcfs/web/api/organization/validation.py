@@ -127,21 +127,26 @@ class OrganizationValidation:
         compliance_year = self._extract_compliance_year(period.description)
         if compliance_year is not None:
             year_config = await self.report_opening_repo.ensure_year(compliance_year)
+            reporting_available = year_config.compliance_reporting_enabled
+
             # Check for early issuance eligibility if the reporting window is not open
             if (
                 compliance_year == datetime.datetime.now().year
-                and not year_config.compliance_reporting_enabled
+                and not reporting_available
                 and year_config.early_issuance_enabled
             ):
                 early_issuance = await self.org_repo.get_early_issuance_by_year(
                     organization_id, str(compliance_year)
                 )
-                if not early_issuance or not early_issuance.has_early_issuance:
+                if early_issuance and early_issuance.has_early_issuance:
+                    reporting_available = True
+                else:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail=f"{compliance_year} reporting is only available to early issuance suppliers.",
                     )
-            if not year_config.compliance_reporting_enabled:
+
+            if not reporting_available:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"{compliance_year} reporting is not currently available.",
