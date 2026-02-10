@@ -1,20 +1,50 @@
-import PropTypes from 'prop-types'
-import { Card, CardContent, Divider } from '@mui/material'
+import { Card, CardContent, Divider, type CardProps } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useNavigate } from 'react-router-dom'
 import { Edit } from '@mui/icons-material'
 import BCButton from '@/components/BCButton'
+import type { ReactNode } from 'react'
+import type { SxProps, Theme } from '@mui/material/styles'
 
-function BCWidgetCard({
+type WidgetColor =
+  | 'primary'
+  | 'secondary'
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'light'
+  | 'nav'
+  | 'dark'
+
+type EditButtonConfig = {
+  id?: string
+  text: ReactNode
+  route?: string
+  onClick?: () => void
+}
+
+export interface BCWidgetCardProps
+  extends Omit<CardProps, 'title' | 'content'> {
+  color?: WidgetColor
+  title?: ReactNode
+  content: ReactNode
+  editButton?: EditButtonConfig | null
+  editButtonStyles?: Record<string, unknown>
+  headerSx?: Record<string, unknown>
+}
+
+const BCWidgetCard = ({
   color = 'nav',
   title = 'Title',
   content,
   style,
   editButton = null,
   editButtonStyles = {},
-  headerSx = {}
-}) {
+  headerSx = {},
+  ...cardProps
+}: BCWidgetCardProps) => {
   const navigate = useNavigate()
 
   const handleButtonClick = () => {
@@ -26,14 +56,29 @@ function BCWidgetCard({
     }
   }
 
+  const cardStyles: SxProps<Theme> = {
+    border: '1px solid #8c8c8c',
+    mb: 5,
+    ...(style || {})
+  }
+
+  const defaultButtonStyles: SxProps<Theme> = {
+    borderColor: 'rgba(255, 255, 255 , 1)',
+    color: 'rgba(255, 255, 255 , 1)',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+      color: 'rgba(0, 0, 0, 0.9)',
+      borderColor: 'rgba(0, 0, 0, 0.8)'
+    }
+  }
+
+  const buttonSx: SxProps<Theme> = {
+    ...defaultButtonStyles,
+    ...(editButtonStyles || {})
+  }
+
   return (
-    <Card
-      sx={{
-        border: '1px solid #8c8c8c',
-        mb: 5,
-        ...style
-      }}
-    >
+    <Card sx={cardStyles} {...cardProps}>
       <BCBox display="flex" justifyContent="center" pt={1} py={1.5}>
         <BCBox
           variant="contained"
@@ -68,17 +113,7 @@ function BCWidgetCard({
               color="light"
               onClick={handleButtonClick}
               startIcon={<Edit sx={{ width: '16px', height: '16px' }} />}
-              sx={{
-                borderColor: 'rgba(255, 255, 255 , 1)',
-                color: 'rgba(255, 255, 255 , 1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  color: 'rgba(0, 0, 0, 0.9)',
-                  borderColor: 'rgba(0, 0, 0, 0.8)'
-                },
-                ...editButtonStyles
-              }
-            }
+              sx={buttonSx}
             >
               {editButton.text}
             </BCButton>
@@ -93,27 +128,6 @@ function BCWidgetCard({
       <CardContent>{content}</CardContent>
     </Card>
   )
-}
-
-// Typechecking props for the BCWidgetCard
-BCWidgetCard.propTypes = {
-  color: PropTypes.oneOf([
-    'primary',
-    'secondary',
-    'info',
-    'success',
-    'warning',
-    'error',
-    'light',
-    'nav',
-    'dark'
-  ]),
-  title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
-  content: PropTypes.node.isRequired,
-  subHeader: PropTypes.node,
-  editButton: PropTypes.oneOfType([PropTypes.object, PropTypes.bool]),
-  editButtonStyles: PropTypes.object,
-  headerSx: PropTypes.object
 }
 
 export default BCWidgetCard
