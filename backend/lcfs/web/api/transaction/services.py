@@ -1,4 +1,5 @@
 import io
+import logging
 from datetime import datetime
 from typing import List, Dict, Union
 from fastapi import Depends
@@ -33,6 +34,9 @@ from lcfs.utils.constants import (
     id_prefix_to_transaction_type_map,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionsService:
@@ -233,9 +237,22 @@ class TransactionsService:
                 else result.status
             )
 
-            data.append(
-                [
-                    f"{transaction_type_to_id_prefix_map[result.transaction_type]}{result.transaction_id}",
+            prefix = transaction_type_to_id_prefix_map.get(result.transaction_type)
+            if not prefix:
+                logger.warning(
+                    "No prefix configured for transaction type '%s'; using fallback",
+                    result.transaction_type,
+                )
+                prefix = (
+                    result.transaction_type[:2].upper()
+                    if result.transaction_type
+                    else "NA"
+                )
+
+            row_data = None
+            try:
+                row_data = [
+                    f"{prefix}{result.transaction_id}",
                     result.compliance_period,
                     result.transaction_type,
                     result.from_organization,
@@ -263,7 +280,15 @@ class TransactionsService:
                     result.to_org_comment,
                     result.government_comment,
                 ]
-            )
+                data.append(row_data)
+            except Exception as exc:
+                logger.error(
+                    "Failed to append transaction %s to export data: %s | data=%s",
+                    result.transaction_id,
+                    exc,
+                    row_data if row_data is not None else vars(result),
+                )
+                continue
 
         # Create a spreadsheet
         builder = SpreadsheetBuilder(file_format=export_format)
