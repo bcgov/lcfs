@@ -672,8 +672,6 @@ class FinalSupplyEquipmentRepository:
                 "compliance_report_id",
                 "compliance_notes",
             ]:
-                if f.field == "compliance_notes":
-                    f.field = "notes"
                 field = get_field_for_filter(ComplianceReportChargingEquipment, f.field)
             else:
                 continue
