@@ -1,26 +1,48 @@
-import PropTypes from 'prop-types'
 import { Link } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { GitHub } from '@mui/icons-material'
 import typography from '@/themes/base/typography'
 
+type FooterLink = {
+  href: string
+  name: string
+  id: string
+  label: string
+}
+
+type RepoDetails = {
+  href: string
+  name: string
+  id: string
+  label: string
+}
+
+export interface BCFooterProps {
+  repoDetails?: RepoDetails
+  links?: FooterLink[]
+}
+
+const defaultRepoDetails: RepoDetails = {
+  href: 'https://github.com/bcgov/lcfs/releases/tag/v1.2.1',
+  name: 'v1.2.1',
+  id: 'footer-about-version',
+  label: 'LCFS repository changelog'
+}
+
+const defaultLinks: FooterLink[] = [
+  {
+    href: '/',
+    name: 'Home',
+    id: 'footer-home',
+    label: 'Home page of LCFS'
+  }
+]
+
 function Footer({
-  repoDetails = {
-    href: 'https://github.com/bcgov/lcfs/releases/tag/v1.2.1',
-    name: 'v1.2.1',
-    id: 'footer-about-version',
-    label: 'LCFS repository changelog'
-  },
-  links = [
-    {
-      href: '/',
-      name: 'Home',
-      id: 'footer-home',
-      label: 'Home page of LCFS'
-    }
-  ]
-}) {
+  repoDetails = defaultRepoDetails,
+  links = defaultLinks
+}: BCFooterProps) {
   const { size } = typography
 
   const renderLinks = () =>
@@ -29,17 +51,22 @@ function Footer({
         key={link.name}
         component="li"
         px={2}
-        sx={({ functions: { pxToRem }, palette: { borderDivider } }) => ({
-          lineHeight: 1,
-          borderRight: `2px solid ${borderDivider.main}`,
-          '&:hover': {
-            textDecoration: 'underline'
-          },
-          '&:focus': {
-            outline: `4px solid ${borderDivider.focus}`,
-            outlineOffset: pxToRem(2)
+        sx={(theme: any) => {
+          const typedTheme = theme as any
+          const { pxToRem } = typedTheme.functions
+          const { borderDivider } = typedTheme.palette
+          return {
+            lineHeight: 1,
+            borderRight: `2px solid ${borderDivider.main}`,
+            '&:hover': {
+              textDecoration: 'underline'
+            },
+            '&:focus': {
+              outline: `4px solid ${borderDivider.focus}`,
+              outlineOffset: pxToRem(2)
+            }
           }
-        })}
+        }}
       >
         <Link
           href={link.href}
@@ -61,24 +88,26 @@ function Footer({
       component="footer"
       width="100%"
       px={1.5}
-      sx={({
-        functions: { pxToRem },
-        palette: { primary, secondary, white }
-      }) => ({
-        display: 'flex',
-        flexDirection: { xs: 'column', lg: 'row' },
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: primary.nav,
-        borderTop: `2px solid ${secondary.main}`,
-        color: white.main,
-        minHeight: pxToRem(46),
-        position: 'relative'
-      })}
+      sx={(theme: any) => {
+        const typedTheme = theme as any
+        const { pxToRem } = typedTheme.functions
+        const { primary, secondary, white } = typedTheme.palette
+        return {
+          display: 'flex',
+          flexDirection: { xs: 'column', lg: 'row' },
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: primary.nav,
+          borderTop: `2px solid ${secondary.main}`,
+          color: white.main,
+          minHeight: pxToRem(46),
+          position: 'relative'
+        }
+      }}
     >
       <BCBox
         component="ul"
-        sx={({ breakpoints }) => ({
+        sx={(theme: any) => ({
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
@@ -88,8 +117,7 @@ function Footer({
           mt: 3,
           mb: 0,
           p: 0,
-
-          [breakpoints.up('lg')]: {
+          [theme.breakpoints.up('lg')]: {
             mt: 0
           }
         })}
@@ -128,10 +156,4 @@ function Footer({
     </BCBox>
   )
 }
-
-Footer.propTypes = {
-  repoDetails: PropTypes.objectOf(PropTypes.string),
-  links: PropTypes.arrayOf(PropTypes.object)
-}
-
 export default Footer
