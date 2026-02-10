@@ -70,6 +70,7 @@ export const ROUTES = {
     LIST: '/compliance-reporting',
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
+    REPORT_OPENINGS: '/compliance-reporting/report-openings',
     CHARGING_SITE: {
       INDEX: '/compliance-reporting/charging-sites',
       VIEW: '/compliance-reporting/charging-sites/:siteId',

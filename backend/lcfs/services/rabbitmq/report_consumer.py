@@ -156,6 +156,7 @@ class ReportConsumer(BaseConsumer):
                     db=session, fuel_supply_repo=fuel_supply_repo
                 )
                 compliance_report_service = ComplianceReportServices(
+                    request=None,
                     repo=compliance_report_repo
                 )
                 user = await UserRepository(db=session).get_user_by_id(user_id)
