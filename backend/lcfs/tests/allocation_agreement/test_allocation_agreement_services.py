@@ -73,6 +73,7 @@ def service(mock_repo_full, mock_fuel_repo_full):
 @pytest.fixture
 def compliance_service(mock_compliance_repo, mock_snapshot_services):
     return ComplianceReportServices(
+        request=None,
         repo=mock_compliance_repo,
         snapshot_services=mock_snapshot_services,
     )

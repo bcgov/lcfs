@@ -2,9 +2,39 @@
 import Badge from '@mui/material/Badge'
 import { styled } from '@mui/material/styles'
 import shadows from '@mui/material/styles/shadows'
+import type { ReactNode } from 'react'
 
-const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
-  const { palette, typography, borders, functions } = theme
+export type BCBadgeColor =
+  | 'primary'
+  | 'secondary'
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'light'
+  | 'dark'
+  | 'smoky'
+
+export type BCBadgeVariant = 'gradient' | 'contained' | 'outlined'
+export type BCBadgeSize = 'xs' | 'sm' | 'md' | 'lg'
+
+interface BCBadgeOwnerState {
+  color: BCBadgeColor
+  variant: BCBadgeVariant
+  size: BCBadgeSize
+  circular: boolean
+  indicator: boolean
+  border: boolean
+  container: boolean
+  children?: ReactNode
+}
+
+const defaultShadows = shadows as unknown as Record<string, string>
+
+const BCBadgeRoot = styled(Badge, {
+  shouldForwardProp: (prop) => prop !== 'ownerState'
+})<{ ownerState: BCBadgeOwnerState }>(({ theme, ownerState }) => {
+  const { palette, typography, borders, functions } = theme as any
   const {
     color,
     circular,
@@ -16,13 +46,13 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
     children
   } = ownerState
 
-  const { white, dark, gradients, badgeColors, transparent } = palette
+  const { white, dark, gradients, badgeColors, transparent } = palette as any
   const { size: fontSize, fontWeightBold } = typography
-  const { borderRadius, borderWidth } = borders
-  const { pxToRem, linearGradient } = functions
+  const { borderRadius, borderWidth } = borders as any
+  const { pxToRem, linearGradient } = functions as any
 
   // padding values
-  const paddings = {
+  const paddings: Record<BCBadgeSize, string> = {
     xs: '0.45em 0.775em',
     sm: '0.55em 0.9em',
     md: '0.65em 1em',
@@ -39,7 +69,7 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
   const borderRadiusValue = circular ? borderRadius.section : borderRadius.md
 
   // styles for the badge with indicator={true}
-  const indicatorStyles = (sizeProp) => {
+  const indicatorStyles = (sizeProp: string) => {
     let widthValue = pxToRem(20)
     let heightValue = pxToRem(20)
 
@@ -64,11 +94,11 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
   }
 
   // styles for the badge with variant="gradient"
-  const gradientStyles = (colorProp) => {
-    const backgroundValue = gradients[colorProp]
-      ? linearGradient(gradients[colorProp].main, gradients[colorProp].state)
+  const gradientStyles = () => {
+    const backgroundValue = gradients[color]
+      ? linearGradient(gradients[color].main, gradients[color].state)
       : linearGradient(gradients.info.main, gradients.info.state)
-    const colorValue = colorProp === 'light' ? dark.main : white.main
+    const colorValue = color === 'light' ? dark.main : white.main
 
     return {
       background: backgroundValue,
@@ -77,15 +107,15 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
   }
 
   // styles for the badge with variant="contained"
-  const containedStyles = (colorProp) => {
-    const backgroundValue = badgeColors[colorProp]
-      ? badgeColors[colorProp].background
+  const containedStyles = () => {
+    const backgroundValue = badgeColors[color]
+      ? badgeColors[color].background
       : badgeColors.info.background
-    let colorValue = badgeColors[colorProp]
-      ? badgeColors[colorProp].text
+    let colorValue = badgeColors[color]
+      ? badgeColors[color].text
       : badgeColors.info.text
 
-    if (colorProp === 'light') {
+    if (color === 'light') {
       colorValue = dark.main
     }
     return {
@@ -94,24 +124,20 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
     }
   }
 
-  const outlinedStyles = (colorProp) => {
-    return {
-      backgroundValue: transparent.main,
-      color: 'inherit',
-      border: `${borderWidth[2]} solid ${badgeColors[colorProp].background}`,
-      borderRadius: borderRadius.md,
-      boxShadow: shadows.sm
-    }
-  }
-  // styles for the badge with no children and container={false}
+  const outlinedStyles = () => ({
+    backgroundValue: transparent.main,
+    color: 'inherit',
+    border: `${borderWidth[2]} solid ${badgeColors[color].background}`,
+    borderRadius: borderRadius.md,
+    boxShadow: defaultShadows.sm
+  })
+
   const standAloneStyles = () => ({
     position: 'static',
-    // marginLeft: pxToRem(8),
     transform: 'none',
     fontSize: pxToRem(9)
   })
 
-  // styles for the badge with container={true}
   const containerStyles = () => ({
     position: 'relative',
     transform: 'none'
@@ -131,11 +157,11 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
       border: borderValue,
       borderRadius: borderRadiusValue,
       ...(indicator && indicatorStyles(size)),
-      ...(variant === 'gradient' && gradientStyles(color)),
-      ...(variant === 'contained' && containedStyles(color)),
-      ...(variant === 'outlined' && outlinedStyles(color)),
-      ...(!children && !container && standAloneStyles(color)),
-      ...(container && containerStyles(color))
+      ...(variant === 'gradient' && gradientStyles()),
+      ...(variant === 'contained' && containedStyles()),
+      ...(variant === 'outlined' && outlinedStyles()),
+      ...(!children && !container && standAloneStyles()),
+      ...(container && containerStyles())
     }
   }
 })

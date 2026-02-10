@@ -2,8 +2,43 @@
 import Box from '@mui/material/Box'
 import { styled } from '@mui/material/styles'
 
-const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
-  const { palette, functions, borders, boxShadows } = theme
+export type BCBoxVariant =
+  | 'contained'
+  | 'outlined'
+  | 'bordered'
+  | 'gradient'
+  | 'success'
+  | 'warning'
+  | 'info'
+  | 'error'
+  | 'pending'
+
+export type BCBoxColoredShadow =
+  | 'primary'
+  | 'secondary'
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'light'
+  | 'dark'
+  | 'nav'
+  | 'none'
+
+interface BCBoxOwnerState {
+  variant: BCBoxVariant
+  bgColor: string
+  color: string
+  opacity: number
+  borderRadius: string | number
+  shadow: string
+  coloredShadow: BCBoxColoredShadow
+}
+
+const BCBoxRoot = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'ownerState'
+})<{ ownerState: BCBoxOwnerState }>(({ theme, ownerState }) => {
+  const { palette, functions, borders, boxShadows } = theme as any
   const {
     variant,
     bgColor,
@@ -19,7 +54,7 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
   const { borderRadius: radius } = borders
   const { colored } = boxShadows
 
-  const greyColors = {
+  const greyColors: Record<string, string> = {
     'grey-100': grey[100],
     'grey-200': grey[200],
     'grey-300': grey[300],
@@ -70,37 +105,36 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
 
   const validBorderRadius = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'section']
   const validBoxShadows = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'inset']
-  const variants = ['success', 'info', 'warning', 'error']
-  // boxShadow value
+  const alertVariants = ['success', 'info', 'warning', 'error', 'pending'] as const
+
   let boxShadowValue = 'none'
 
-  if (validBoxShadows.find((el) => el === shadow)) {
+  if (validBoxShadows.includes(shadow)) {
     boxShadowValue = boxShadows[shadow]
-  } else if (coloredShadow) {
-    boxShadowValue = colored[coloredShadow] ? colored[coloredShadow] : 'none'
+  } else if (coloredShadow && colored[coloredShadow]) {
+    boxShadowValue = colored[coloredShadow]
   }
 
-  // color value
   let colorValue = color
 
-  if (validColors.find((el) => el === color)) {
+  if (validColors.includes(color)) {
     colorValue = palette[color] ? palette[color].main : greyColors[color]
   }
 
-  // borderRadius value
-  let borderRadiusValue = borderRadius
+  let borderRadiusValue: string | number = borderRadius
 
-  if (validBorderRadius.find((el) => el === borderRadius)) {
+  if (
+    typeof borderRadius === 'string' &&
+    validBorderRadius.includes(borderRadius)
+  ) {
     borderRadiusValue = radius[borderRadius]
   }
 
-  // background value
   let backgroundValue = bgColor
-  // border value
   let borderValue = 'none'
 
   if (variant === 'gradient') {
-    backgroundValue = validGradients.find((el) => el === bgColor)
+    backgroundValue = validGradients.includes(bgColor)
       ? linearGradient(gradients[bgColor].main, gradients[bgColor].state)
       : white.main
   } else if (variant === 'outlined') {
@@ -110,15 +144,18 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
     backgroundValue = transparent.main
     borderValue = `1.3px solid ${grey[400]}`
     borderRadiusValue = '2px'
-  } else if (variants.includes(variant)) {
+  } else if (
+    alertVariants.includes(variant as (typeof alertVariants)[number])
+  ) {
+    const alertVariant = variant as keyof typeof alerts
     return {
       opacity,
-      background: alerts[variant].background,
-      color: alerts[variant].color,
+      background: alerts[alertVariant].background,
+      color: alerts[alertVariant].color,
       borderRadius: borderRadiusValue,
       boxShadow: boxShadowValue
     }
-  } else if (validColors.find((el) => el === bgColor)) {
+  } else if (validColors.includes(bgColor)) {
     backgroundValue = palette[bgColor]
       ? palette[bgColor].main
       : greyColors[bgColor]

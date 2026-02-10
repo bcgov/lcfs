@@ -1,25 +1,35 @@
 import React from 'react'
-import PropTypes from 'prop-types'
-
 import { Icon, Toolbar } from '@mui/material'
 import { bindTrigger } from 'material-ui-popup-state'
+import type { PopupState } from 'material-ui-popup-state/hooks'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-// Images & Icons
 import logoDark from '@/assets/images/logo-banner.svg'
+import type { NavbarContextData } from '@/components/BCNavbar/types'
 
-const HeaderBar = ({ isMobileView = false, popupState = {}, data = {} }) => {
+interface HeaderBarProps {
+  isMobileView?: boolean
+  popupState: PopupState
+  data: NavbarContextData
+}
+
+const HeaderBar = ({
+  isMobileView = false,
+  popupState,
+  data
+}: HeaderBarProps) => {
   return (
     <Toolbar
-      sx={({
-        palette: { transparent: transparentColor, white, primary },
-        functions: { rgba }
-      }) => ({
-        backgroundColor: rgba(primary.nav, 1),
-        backdropFilter: `saturate(200%) blur(30px)`,
-        color: white.main,
-        width: '100%'
-      })}
+      sx={(theme: any) => {
+        const { white, primary } = theme.palette
+        const { rgba } = theme.functions
+        return {
+          backgroundColor: rgba(primary.nav, 1),
+          backdropFilter: `saturate(200%) blur(30px)`,
+          color: white.main,
+          width: '100%'
+        }
+      }}
     >
       <BCBox sx={{ flexGrow: 1 }} component="div">
         <BCBox sx={{ display: 'flex', alignItems: 'center' }} className="logo">
@@ -35,7 +45,6 @@ const HeaderBar = ({ isMobileView = false, popupState = {}, data = {} }) => {
             sx={{ display: 'flex', alignItems: 'center' }}
           >
             {data.title}
-            {/* Remove "Beta" tag once the application is deployed to prod */}
             {data.beta && (
               <BCTypography
                 component="span"
@@ -71,16 +80,12 @@ const HeaderBar = ({ isMobileView = false, popupState = {}, data = {} }) => {
         sx={{ cursor: 'pointer' }}
         {...bindTrigger(popupState)}
       >
-        <Icon fontSize="default">{popupState.isOpen ? 'close' : 'menu'}</Icon>
+        <Icon fontSize="inherit">
+          {popupState.isOpen ? 'close' : 'menu'}
+        </Icon>
       </BCBox>
     </Toolbar>
   )
-}
-
-HeaderBar.propTypes = {
-  isMobileView: PropTypes.bool,
-  popupState: PropTypes.object,
-  data: PropTypes.object
 }
 
 export default HeaderBar
