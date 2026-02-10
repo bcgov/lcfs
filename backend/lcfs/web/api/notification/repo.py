@@ -18,10 +18,7 @@ from lcfs.web.api.base import (
 )
 import structlog
 
-from typing import List, Optional, Sequence, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from lcfs.db.models.user.UserProfile import UserProfile as UserProfileType
+from typing import List, Optional, Sequence
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -270,7 +267,7 @@ class NotificationRepository:
         """
         query = select(func.count(NotificationMessage.notification_message_id)).where(
             NotificationMessage.related_user_profile_id == user_id,
-            NotificationMessage.is_read == False,
+            NotificationMessage.is_read.is_(False),
         )
 
         result = await self.db.execute(query)
@@ -533,7 +530,7 @@ class NotificationRepository:
             )
             .filter(
                 NotificationType.name == notification_type.value,
-                NotificationChannelSubscription.is_enabled == True,
+                NotificationChannelSubscription.is_enabled.is_(True),
                 NotificationChannel.channel_name == channel.value,
             )
         )
@@ -604,10 +601,15 @@ class NotificationRepository:
 
     @repo_handler
     async def add_subscriptions_for_user_role(
-        self, user_profile_id: int, role: RoleEnum
+        self, user_profile_id: int, role: RoleEnum, is_enabled: bool = True
     ) -> None:
         """
         Adds subscriptions for a user based on the role provided.
+
+        Args:
+            user_profile_id: The user to create subscriptions for.
+            role: The role whose notification types to subscribe to.
+            is_enabled: Whether the subscriptions should be enabled by default.
         """
         # Get the role id
         role_obj_stmt = select(Role).where(Role.name == role)
@@ -622,8 +624,8 @@ class NotificationRepository:
 
         # Get all channels that are enabled & set to subscribe by default
         channels_stmt = select(NotificationChannel.notification_channel_id).where(
-            NotificationChannel.enabled == True,
-            NotificationChannel.subscribe_by_default == True,
+            NotificationChannel.enabled.is_(True),
+            NotificationChannel.subscribe_by_default.is_(True),
         )
         channels_result = await self.db.execute(channels_stmt)
         channel_ids = channels_result.scalars().all()
@@ -661,7 +663,68 @@ class NotificationRepository:
                         user_profile_id=user_profile_id,
                         notification_type_id=nt.notification_type_id,
                         notification_channel_id=ch_id,
-                        is_enabled=True,
+                        is_enabled=is_enabled,
+                    )
+                    self.db.add(new_sub)
+
+        await self.db.flush()
+
+    @repo_handler
+    async def add_subscriptions_for_notification_types(
+        self,
+        user_profile_id: int,
+        notification_types: List[NotificationTypeEnum],
+        is_enabled: bool = True,
+    ) -> None:
+        """
+        Adds subscriptions for a user based on specific notification types.
+        """
+        if not notification_types:
+            return
+
+        type_names = [
+            nt.value if isinstance(nt, NotificationTypeEnum) else str(nt)
+            for nt in notification_types
+        ]
+
+        channels_stmt = select(NotificationChannel.notification_channel_id).where(
+            NotificationChannel.enabled.is_(True),
+            NotificationChannel.subscribe_by_default.is_(True),
+        )
+        channels_result = await self.db.execute(channels_stmt)
+        channel_ids = channels_result.scalars().all()
+
+        if not channel_ids:
+            logger.info("No enabled notification channels found.")
+            return
+
+        notif_type_stmt = select(NotificationType).where(
+            NotificationType.name.in_(type_names)
+        )
+        types_result = await self.db.execute(notif_type_stmt)
+        matching_types = types_result.scalars().all()
+
+        if not matching_types:
+            logger.info("No notification types found for names=%s", type_names)
+            return
+
+        for nt in matching_types:
+            for ch_id in channel_ids:
+                sub_exists_query = select(NotificationChannelSubscription).where(
+                    NotificationChannelSubscription.user_profile_id == user_profile_id,
+                    NotificationChannelSubscription.notification_type_id
+                    == nt.notification_type_id,
+                    NotificationChannelSubscription.notification_channel_id == ch_id,
+                )
+                existing_sub_result = await self.db.execute(sub_exists_query)
+                existing_sub = existing_sub_result.scalar_one_or_none()
+
+                if not existing_sub:
+                    new_sub = NotificationChannelSubscription(
+                        user_profile_id=user_profile_id,
+                        notification_type_id=nt.notification_type_id,
+                        notification_channel_id=ch_id,
+                        is_enabled=is_enabled,
                     )
                     self.db.add(new_sub)
 
