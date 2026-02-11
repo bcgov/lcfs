@@ -505,7 +505,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
   status,
   isIDIR = false
 ) => [
-  ...(isIDIR
+  ...(isIDIR && status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
     ? [
         {
           headerName: t(

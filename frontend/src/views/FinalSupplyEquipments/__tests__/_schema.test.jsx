@@ -12,10 +12,10 @@ vi.mock('@/i18n', () => ({
 describe('FinalSupplyEquipment _schema', () => {
   const t = (key) => key
 
-  it('adds status column first for IDIR users', () => {
+  it('adds status column first for IDIR users when report is submitted', () => {
     const colDefs = finalSupplyEquipmentSummaryColDefs(
       t,
-      COMPLIANCE_REPORT_STATUSES.DRAFT,
+      COMPLIANCE_REPORT_STATUSES.SUBMITTED,
       true
     )
 
@@ -31,6 +31,18 @@ describe('FinalSupplyEquipment _schema', () => {
       t,
       COMPLIANCE_REPORT_STATUSES.DRAFT,
       false
+    )
+
+    const fields = colDefs.map((col) => col.field)
+    expect(fields).not.toContain('status')
+    expect(colDefs[0].field).toBe('supplyDateRange')
+  })
+
+  it('omits status column for IDIR users when report is not submitted', () => {
+    const colDefs = finalSupplyEquipmentSummaryColDefs(
+      t,
+      COMPLIANCE_REPORT_STATUSES.ASSESSED,
+      true
     )
 
     const fields = colDefs.map((col) => col.field)
