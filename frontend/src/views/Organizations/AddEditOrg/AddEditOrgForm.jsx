@@ -417,6 +417,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         'orgHeadOfficePostalCodeZipCode',
         watch('orgPostalCodeZipCode')
       )
+      setValueAndTriggerValidation('orgHeadOfficeProvince', watch('orgProvince'))
+      setValueAndTriggerValidation('orgHeadOfficeCountry', watch('orgCountry'))
     } else {
       if (watch('orgHeadOfficeStreetAddress') === orgStreetAddress) {
         clearFields(['orgHeadOfficeStreetAddress'])

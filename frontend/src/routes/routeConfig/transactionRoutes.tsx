@@ -4,8 +4,9 @@ import {
   ViewOrgTransaction
 } from '@/views/Transactions'
 import ROUTES from '../routes'
+import { AppRouteObject } from '../types'
 
-export const transactionRoutes = [
+export const transactionRoutes: AppRouteObject[] = [
   {
     path: ROUTES.TRANSACTIONS.LIST,
     element: <Transactions />,

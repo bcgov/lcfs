@@ -13,7 +13,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { DownloadButton } from '@/components/DownloadButton'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useApiService } from '@/services/useApiService'
 import { useOrganizationsList } from '@/hooks/useOrganizations'
 import { roles } from '@/constants/roles'
@@ -50,6 +49,8 @@ export const Organizations = () => {
     []
   )
 
+  const columnDefs = useMemo(() => organizationsColDefs(t), [t])
+
   // For alert messages
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -64,11 +65,6 @@ export const Organizations = () => {
 
   // Clear filters using gridRef exposed API and reset pagination filters
   const handleClearFilters = useCallback(() => {
-    try {
-      gridRef.current?.clearFilters?.()
-    } catch (e) {
-      // no-op
-    }
     setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
   }, [])
 
@@ -163,19 +159,12 @@ export const Organizations = () => {
           downloadLabel={`${t('org:userDownloadBtn')}...`}
           dataTest="download-user-button"
         />
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-          sx={{
-            minWidth: 'fit-content',
-            whiteSpace: 'nowrap'
-          }}
-        />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}
           gridKey={gridKey}
-          columnDefs={organizationsColDefs(t)}
+          columnDefs={columnDefs}
           queryData={queryData}
           dataKey="organizations"
           autoSizeStrategy={{
@@ -188,6 +177,7 @@ export const Organizations = () => {
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
+          onClearFilters={handleClearFilters}
         />
       </BCBox>
     </BCBox>

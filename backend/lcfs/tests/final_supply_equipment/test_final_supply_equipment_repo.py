@@ -426,6 +426,7 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
             "manufacturer": "TestMfg",
             "supply_from_date": "2024-01-01",
             "supply_to_date": "2024-12-31",
+            "status": "Submitted",
         },
         {
             "charging_equipment_id": 2,
@@ -434,6 +435,7 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
             "manufacturer": "TestMfg2",
             "supply_from_date": "2024-01-01",
             "supply_to_date": "2024-12-31",
+            "status": "Validated",
         },
     ]
 
@@ -448,6 +450,7 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
     assert total == 5
     assert len(data) == 2
     assert data[0]["charging_equipment_id"] == 1
+    assert data[0]["status"] == "Submitted"
 
 
 @pytest.mark.anyio

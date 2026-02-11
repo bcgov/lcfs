@@ -1,0 +1,501 @@
+Charging Site,Serial Number,Manufacturer,Model,Level of Equipment,Ports,Intended Uses,Intended Users,Notes,Latitude,Longitude
+Pioneer Charging Hub #001,FSE-001-01-RCQ3F,BTC Power,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,49.317184,-128.486639
+Pioneer Charging Hub #001,FSE-001-02-1TGS4,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,In construction – energization pending,49.317184,-128.486639
+Pioneer Charging Hub #001,FSE-001-03-YAQZI,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Smart charging enabled,49.317184,-128.486639
+Pioneer Charging Hub #001,FSE-001-04-H3NSX,FLO,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Marine,Public,"Networked, RFID access",49.317184,-128.486639
+Pioneer Charging Hub #001,FSE-001-05-WMGJR,Siemens,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,In construction – energization pending,49.317184,-128.486639
+Lighthouse Charging Hub #002,FSE-002-01-A4L22,Enel X,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,51.554831,-117.275334
+Lighthouse Charging Hub #002,FSE-002-02-NJOVJ,Enel X,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Employee,"Networked, RFID access",51.554831,-117.275334
+Lighthouse Charging Hub #002,FSE-002-03-WI3AM,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Multi-unit residential building,In construction – energization pending,51.554831,-117.275334
+Lighthouse Charging Hub #002,FSE-002-04-TN6YG,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Battery truck,Multi-unit residential building,Cable management system,51.554831,-117.275334
+Lighthouse Charging Hub #002,FSE-002-05-8A80G,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",51.554831,-117.275334
+Evergreen ChargePoint #003,FSE-003-01-W6936,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",52.500059,-130.44047
+Evergreen ChargePoint #003,FSE-003-02-AHWEM,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Employee,In construction – energization pending,52.500059,-130.44047
+Evergreen ChargePoint #003,FSE-003-03-YNJ6Q,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Public,"Networked, RFID access",52.500059,-130.44047
+Evergreen ChargePoint #003,FSE-003-04-K6X5C,ABB,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,52.500059,-130.44047
+Evergreen ChargePoint #003,FSE-003-05-AU065,Tritium,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",52.500059,-130.44047
+Maple EV Station #004,FSE-004-01-QK0KM,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Cable management system,58.659785,-129.997426
+Maple EV Station #004,FSE-004-02-DWDQC,BTC Power,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Public,Installed Q2 2025,58.659785,-129.997426
+Maple EV Station #004,FSE-004-03-WFGOG,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,24/7 access,58.659785,-129.997426
+Maple EV Station #004,FSE-004-04-YRCF6,ChargePoint,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,58.659785,-129.997426
+Maple EV Station #004,FSE-004-05-ZO2W6,Enel X,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,58.659785,-129.997426
+Lighthouse Energy Plaza #005,FSE-005-01-Q5IVL,FLO,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Employee,Cable management system,55.737508,-129.917306
+Lighthouse Energy Plaza #005,FSE-005-02-91OZY,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",55.737508,-129.917306
+Lighthouse Energy Plaza #005,FSE-005-03-83B0D,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,55.737508,-129.917306
+Lighthouse Energy Plaza #005,FSE-005-04-BNTMT,Delta,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",55.737508,-129.917306
+Lighthouse Energy Plaza #005,FSE-005-05-VN1RW,Tritium,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,55.737508,-129.917306
+Evergreen EV Station #006,FSE-006-01-CBKC3,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Public,Smart charging enabled,52.739629,-114.262545
+Evergreen EV Station #006,FSE-006-02-X38LT,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Installed Q2 2025,52.739629,-114.262545
+Evergreen EV Station #006,FSE-006-03-FZP12,ChargePoint,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,"Networked, RFID access",52.739629,-114.262545
+Evergreen EV Station #006,FSE-006-04-QXLH8,ABB,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,52.739629,-114.262545
+Evergreen EV Station #006,FSE-006-05-GUQLF,BTC Power,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Solar canopy on site,52.739629,-114.262545
+Lighthouse Charging Hub #007,FSE-007-01-35GA7,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Fleet,Smart charging enabled,58.553501,-131.174172
+Lighthouse Charging Hub #007,FSE-007-02-NTZ6Z,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,58.553501,-131.174172
+Lighthouse Charging Hub #007,FSE-007-03-5G45N,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Smart charging enabled,58.553501,-131.174172
+Lighthouse Charging Hub #007,FSE-007-04-X9CO7,Delta,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",58.553501,-131.174172
+Lighthouse Charging Hub #007,FSE-007-05-6IQUI,Siemens,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",58.553501,-131.174172
+River ChargePoint #008,FSE-008-01-X1I8Y,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,53.312676,-124.436665
+River ChargePoint #008,FSE-008-02-5KIWU,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Public,In construction – energization pending,53.312676,-124.436665
+River ChargePoint #008,FSE-008-03-SXQAQ,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Installed Q2 2025,53.312676,-124.436665
+River ChargePoint #008,FSE-008-04-KGXYX,BTC Power,Terra 54,Level 3 - Direct current fast charging,Single port,Battery bus,Multi-unit residential building,Smart charging enabled,53.312676,-124.436665
+River ChargePoint #008,FSE-008-05-BZZSE,Delta,RTM75,Level 3 - Direct current fast charging,Single port,Battery truck,Fleet,"OCPP 1.6J, tap-to-pay",53.312676,-124.436665
+Willow Charge Depot #009,FSE-009-01-JXHV5,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",49.043274,-129.496621
+Willow Charge Depot #009,FSE-009-02-WJN07,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,Installed Q2 2025,49.043274,-129.496621
+Willow Charge Depot #009,FSE-009-03-GDXJR,ABB,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Public,Installed Q2 2025,49.043274,-129.496621
+Willow Charge Depot #009,FSE-009-04-B4LL0,ABB,Terra 184,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,"OCPP 1.6J, tap-to-pay",49.043274,-129.496621
+Willow Charge Depot #009,FSE-009-05-5MII0,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Cable management system,49.043274,-129.496621
+Maple Charging Hub #010,FSE-010-01-9AD2L,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,In construction – energization pending,51.733952,-135.096567
+Maple Charging Hub #010,FSE-010-02-U6WUA,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Smart charging enabled,51.733952,-135.096567
+Maple Charging Hub #010,FSE-010-03-XCE1E,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,24/7 access,51.733952,-135.096567
+Maple Charging Hub #010,FSE-010-04-POFPO,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",51.733952,-135.096567
+Maple Charging Hub #010,FSE-010-05-DSHF5,BTC Power,RTM75,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,Solar canopy on site,51.733952,-135.096567
+Summit EV Station #011,FSE-011-01-88KO3,FLO,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Smart charging enabled,52.674792,-135.011581
+Summit EV Station #011,FSE-011-02-WMTPU,Enel X,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,52.674792,-135.011581
+Summit EV Station #011,FSE-011-03-PPD36,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,52.674792,-135.011581
+Summit EV Station #011,FSE-011-04-8KAQU,Tritium,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,52.674792,-135.011581
+Summit EV Station #011,FSE-011-05-VM72L,ABB,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,52.674792,-135.011581
+Forest Charging Hub #012,FSE-012-01-XCP89,Enel X,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,In construction – energization pending,59.379309,-136.913524
+Forest Charging Hub #012,FSE-012-02-N4WTT,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Employee,24/7 access,59.379309,-136.913524
+Forest Charging Hub #012,FSE-012-03-SYBZV,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Marine,Public,"Networked, RFID access",59.379309,-136.913524
+Forest Charging Hub #012,FSE-012-04-GF7XY,BTC Power,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",59.379309,-136.913524
+Forest Charging Hub #012,FSE-012-05-IXSY3,Tritium,RT50,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,Installed Q2 2025,59.379309,-136.913524
+Raven ChargePoint #013,FSE-013-01-KCDJU,Enel X,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,24/7 access,53.250714,-133.752337
+Raven ChargePoint #013,FSE-013-02-ARIPI,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Multi-unit residential building,Cable management system,53.250714,-133.752337
+Raven ChargePoint #013,FSE-013-03-5UYZ7,FLO,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,24/7 access,53.250714,-133.752337
+Raven ChargePoint #013,FSE-013-04-EDXM4,BTC Power,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery truck,Public,In construction – energization pending,53.250714,-133.752337
+Raven ChargePoint #013,FSE-013-05-GVWR7,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,53.250714,-133.752337
+Cascade Charge Depot #014,FSE-014-01-M7A2P,ChargePoint,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",52.255601,-124.316984
+Cascade Charge Depot #014,FSE-014-02-QOP8W,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Other,"Networked, RFID access",52.255601,-124.316984
+Cascade Charge Depot #014,FSE-014-03-3JBC4,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,In construction – energization pending,52.255601,-124.316984
+Cascade Charge Depot #014,FSE-014-04-20W5W,BTC Power,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,52.255601,-124.316984
+Cascade Charge Depot #014,FSE-014-05-9P2HP,FLO,Terra 184,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,Smart charging enabled,52.255601,-124.316984
+Harbour EV Station #015,FSE-015-01-PYUMQ,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Marine,Fleet,Installed Q2 2025,49.129031,-133.095604
+Harbour EV Station #015,FSE-015-02-UB5FM,FLO,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Employee,"OCPP 1.6J, tap-to-pay",49.129031,-133.095604
+Harbour EV Station #015,FSE-015-03-JOLLP,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Fleet,"OCPP 1.6J, tap-to-pay",49.129031,-133.095604
+Harbour EV Station #015,FSE-015-04-V23H0,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",49.129031,-133.095604
+Harbour EV Station #015,FSE-015-05-Q5I8Z,Siemens,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,49.129031,-133.095604
+Raven Charge Depot #016,FSE-016-01-MTR4H,Delta,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,24/7 access,56.010098,-130.181303
+Raven Charge Depot #016,FSE-016-02-0EJ1K,ABB,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,56.010098,-130.181303
+Raven Charge Depot #016,FSE-016-03-8L2RX,FLO,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",56.010098,-130.181303
+Raven Charge Depot #016,FSE-016-04-R555Z,BTC Power,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,56.010098,-130.181303
+Raven Charge Depot #016,FSE-016-05-RO0KQ,Delta,Terra 54,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Solar canopy on site,56.010098,-130.181303
+Pioneer Charging Hub #017,FSE-017-01-2SUXY,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,54.574543,-135.547032
+Pioneer Charging Hub #017,FSE-017-02-2MPHU,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",54.574543,-135.547032
+Pioneer Charging Hub #017,FSE-017-03-A087W,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,54.574543,-135.547032
+Pioneer Charging Hub #017,FSE-017-04-N2JL8,Enel X,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery bus,Public,Smart charging enabled,54.574543,-135.547032
+Pioneer Charging Hub #017,FSE-017-05-5HFVQ,ChargePoint,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Marine,Public,"Networked, RFID access",54.574543,-135.547032
+Lighthouse EV Station #018,FSE-018-01-I0OTR,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Installed Q2 2025,59.637256,-115.845243
+Lighthouse EV Station #018,FSE-018-02-H9KRQ,BTC Power,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Cable management system,59.637256,-115.845243
+Lighthouse EV Station #018,FSE-018-03-3JXJZ,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",59.637256,-115.845243
+Lighthouse EV Station #018,FSE-018-04-K8TU4,BTC Power,RTM75,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Cable management system,59.637256,-115.845243
+Lighthouse EV Station #018,FSE-018-05-LRJU2,Tritium,RTM75,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Solar canopy on site,59.637256,-115.845243
+Forest Charge Depot #019,FSE-019-01-RTVA7,Enel X,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,59.828113,-132.414011
+Forest Charge Depot #019,FSE-019-02-8MBW9,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,59.828113,-132.414011
+Forest Charge Depot #019,FSE-019-03-9H95C,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Public,"Networked, RFID access",59.828113,-132.414011
+Forest Charge Depot #019,FSE-019-04-FDWP9,ABB,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",59.828113,-132.414011
+Forest Charge Depot #019,FSE-019-05-GYCBO,Enel X,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Smart charging enabled,59.828113,-132.414011
+Maple Charge Depot #020,FSE-020-01-IENO1,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,57.051314,-137.627438
+Maple Charge Depot #020,FSE-020-02-TR5PT,Enel X,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Solar canopy on site,57.051314,-137.627438
+Maple Charge Depot #020,FSE-020-03-681BA,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Public,Solar canopy on site,57.051314,-137.627438
+Maple Charge Depot #020,FSE-020-04-8FU4D,ABB,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,57.051314,-137.627438
+Maple Charge Depot #020,FSE-020-05-JAF8C,FLO,Express 250,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,"OCPP 1.6J, tap-to-pay",57.051314,-137.627438
+Summit Charging Hub #021,FSE-021-01-UF6B1,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,53.024174,-115.463601
+Summit Charging Hub #021,FSE-021-02-6ERO8,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Smart charging enabled,53.024174,-115.463601
+Summit Charging Hub #021,FSE-021-03-4QGJC,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",53.024174,-115.463601
+Summit Charging Hub #021,FSE-021-04-VAQ5W,Delta,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",53.024174,-115.463601
+Summit Charging Hub #021,FSE-021-05-L0CAO,ABB,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,53.024174,-115.463601
+Cedar EV Station #022,FSE-022-01-WL0XG,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Smart charging enabled,56.135794,-131.186552
+Cedar EV Station #022,FSE-022-02-EZ87M,ABB,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",56.135794,-131.186552
+Cedar EV Station #022,FSE-022-03-K28XL,Enel X,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Cable management system,56.135794,-131.186552
+Cedar EV Station #022,FSE-022-04-W2L9H,FLO,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,56.135794,-131.186552
+Cedar EV Station #022,FSE-022-05-ZKNLO,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,In construction – energization pending,56.135794,-131.186552
+Seaside Charge Depot #023,FSE-023-01-F7M3I,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,54.590323,-126.38253
+Seaside Charge Depot #023,FSE-023-02-W9ZP8,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Employee,"OCPP 1.6J, tap-to-pay",54.590323,-126.38253
+Seaside Charge Depot #023,FSE-023-03-1MZBP,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,Cable management system,54.590323,-126.38253
+Seaside Charge Depot #023,FSE-023-04-Q39VF,Enel X,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,54.590323,-126.38253
+Seaside Charge Depot #023,FSE-023-05-M6STB,BTC Power,RTM75,Level 3 - Direct current fast charging,Single port,Battery bus,Public,24/7 access,54.590323,-126.38253
+Lighthouse Supercharge #024,FSE-024-01-6O34Q,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Multi-unit residential building,Smart charging enabled,56.113999,-125.161667
+Lighthouse Supercharge #024,FSE-024-02-3QIHF,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Fleet,"Networked, RFID access",56.113999,-125.161667
+Lighthouse Supercharge #024,FSE-024-03-FJDIP,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Public,In construction – energization pending,56.113999,-125.161667
+Lighthouse Supercharge #024,FSE-024-04-DDXF7,ChargePoint,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,56.113999,-125.161667
+Lighthouse Supercharge #024,FSE-024-05-5HXRH,Tritium,Express 250,Level 3 - Direct current fast charging,Single port,Ground support equipment,Employee,24/7 access,56.113999,-125.161667
+Pioneer EV Station #025,FSE-025-01-YMGU4,FLO,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Multi-unit residential building,Cable management system,50.682089,-123.165997
+Pioneer EV Station #025,FSE-025-02-CAXI6,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,50.682089,-123.165997
+Pioneer EV Station #025,FSE-025-03-TOS06,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,Smart charging enabled,50.682089,-123.165997
+Pioneer EV Station #025,FSE-025-04-J8UZH,Siemens,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,50.682089,-123.165997
+Pioneer EV Station #025,FSE-025-05-4DW62,Enel X,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,24/7 access,50.682089,-123.165997
+Evergreen Charging Hub #026,FSE-026-01-G2TTY,ChargePoint,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Multi-unit residential building,Installed Q2 2025,55.754227,-132.495401
+Evergreen Charging Hub #026,FSE-026-02-I52HC,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,55.754227,-132.495401
+Evergreen Charging Hub #026,FSE-026-03-H3W0U,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Employee,Solar canopy on site,55.754227,-132.495401
+Evergreen Charging Hub #026,FSE-026-04-OSNXB,BTC Power,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",55.754227,-132.495401
+Evergreen Charging Hub #026,FSE-026-05-RW7Y9,Delta,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Battery truck,Public,In construction – energization pending,55.754227,-132.495401
+Maple Charging Hub #027,FSE-027-01-SH9F3,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,In construction – energization pending,54.764544,-128.289545
+Maple Charging Hub #027,FSE-027-02-JYI6L,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,54.764544,-128.289545
+Maple Charging Hub #027,FSE-027-03-STI92,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Employee,24/7 access,54.764544,-128.289545
+Maple Charging Hub #027,FSE-027-04-4L2YC,BTC Power,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,In construction – energization pending,54.764544,-128.289545
+Maple Charging Hub #027,FSE-027-05-U18R9,Tritium,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,In construction – energization pending,54.764544,-128.289545
+Cedar Supercharge #028,FSE-028-01-86VT4,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Public,"Networked, RFID access",59.693893,-120.278091
+Cedar Supercharge #028,FSE-028-02-PFMIZ,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Fleet,"Networked, RFID access",59.693893,-120.278091
+Cedar Supercharge #028,FSE-028-03-S2UIY,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,24/7 access,59.693893,-120.278091
+Cedar Supercharge #028,FSE-028-04-Q71ST,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Smart charging enabled,59.693893,-120.278091
+Cedar Supercharge #028,FSE-028-05-9JZLS,Delta,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Public,"Networked, RFID access",59.693893,-120.278091
+Sunrise Charging Hub #029,FSE-029-01-W2KFQ,BTC Power,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Employee,Installed Q2 2025,57.512282,-136.351124
+Sunrise Charging Hub #029,FSE-029-02-PLAW7,ABB,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Installed Q2 2025,57.512282,-136.351124
+Sunrise Charging Hub #029,FSE-029-03-XRO1P,FLO,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,57.512282,-136.351124
+Sunrise Charging Hub #029,FSE-029-04-O8E2G,ABB,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,"Networked, RFID access",57.512282,-136.351124
+Sunrise Charging Hub #029,FSE-029-05-RVBFH,Delta,RTM75,Level 3 - Direct current fast charging,Single port,Battery bus,Public,"Networked, RFID access",57.512282,-136.351124
+Orchard Charge Depot #030,FSE-030-01-15CAX,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,24/7 access,52.140665,-117.399315
+Orchard Charge Depot #030,FSE-030-02-WY117,BTC Power,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,52.140665,-117.399315
+Orchard Charge Depot #030,FSE-030-03-221BE,ABB,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Public,Installed Q2 2025,52.140665,-117.399315
+Orchard Charge Depot #030,FSE-030-04-S54PS,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,52.140665,-117.399315
+Orchard Charge Depot #030,FSE-030-05-INZD8,ABB,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,52.140665,-117.399315
+Willow Power Stop #031,FSE-031-01-KOR7U,ABB,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Smart charging enabled,50.389243,-114.93889
+Willow Power Stop #031,FSE-031-02-ULDG7,FLO,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,50.389243,-114.93889
+Willow Power Stop #031,FSE-031-03-MDAGM,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,50.389243,-114.93889
+Willow Power Stop #031,FSE-031-04-NQO5S,Tritium,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,Smart charging enabled,50.389243,-114.93889
+Willow Power Stop #031,FSE-031-05-GPAP0,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,50.389243,-114.93889
+Discovery Power Stop #032,FSE-032-01-20CX5,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,52.806787,-124.610704
+Discovery Power Stop #032,FSE-032-02-44B8X,FLO,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,52.806787,-124.610704
+Discovery Power Stop #032,FSE-032-03-HKCHT,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,52.806787,-124.610704
+Discovery Power Stop #032,FSE-032-04-F99U3,ABB,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Solar canopy on site,52.806787,-124.610704
+Discovery Power Stop #032,FSE-032-05-A86JQ,Delta,RTM75,Level 3 - Direct current fast charging,Single port,Ground support equipment,Public,In construction – energization pending,52.806787,-124.610704
+Harbour Fast Charge #033,FSE-033-01-ZQIZY,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"Networked, RFID access",56.721125,-131.533924
+Harbour Fast Charge #033,FSE-033-02-KJ9N5,ChargePoint,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",56.721125,-131.533924
+Harbour Fast Charge #033,FSE-033-03-O722H,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",56.721125,-131.533924
+Harbour Fast Charge #033,FSE-033-04-CH7YK,FLO,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery bus,Public,In construction – energization pending,56.721125,-131.533924
+Harbour Fast Charge #033,FSE-033-05-AOGP3,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Battery truck,Employee,"Networked, RFID access",56.721125,-131.533924
+Lakeview Energy Plaza #034,FSE-034-01-ZH6FS,Enel X,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",54.958531,-128.883756
+Lakeview Energy Plaza #034,FSE-034-02-SRDEG,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Fleet,Installed Q2 2025,54.958531,-128.883756
+Lakeview Energy Plaza #034,FSE-034-03-91Z2V,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",54.958531,-128.883756
+Lakeview Energy Plaza #034,FSE-034-04-D4MKP,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,54.958531,-128.883756
+Lakeview Energy Plaza #034,FSE-034-05-5G17B,Tritium,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Battery bus,Public,In construction – energization pending,54.958531,-128.883756
+Orchard Power Stop #035,FSE-035-01-6RREK,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",56.204839,-126.24998
+Orchard Power Stop #035,FSE-035-02-3GIQ4,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,56.204839,-126.24998
+Orchard Power Stop #035,FSE-035-03-XCZ1U,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,56.204839,-126.24998
+Orchard Power Stop #035,FSE-035-04-WT5J1,Tritium,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",56.204839,-126.24998
+Orchard Power Stop #035,FSE-035-05-V1WDN,Siemens,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,56.204839,-126.24998
+Willow Supercharge #036,FSE-036-01-Z0CY1,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Ground support equipment,Fleet,"OCPP 1.6J, tap-to-pay",48.585777,-132.924246
+Willow Supercharge #036,FSE-036-02-EPKDA,Enel X,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,48.585777,-132.924246
+Willow Supercharge #036,FSE-036-03-EFIFH,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,48.585777,-132.924246
+Willow Supercharge #036,FSE-036-04-SKS06,Siemens,Express 250,Level 3 - Direct current fast charging,Single port,Ground support equipment,Public,Solar canopy on site,48.585777,-132.924246
+Willow Supercharge #036,FSE-036-05-5BHRK,Enel X,Terra 184,Level 3 - Direct current fast charging,Single port,Ground support equipment,Employee,Cable management system,48.585777,-132.924246
+River Power Stop #037,FSE-037-01-HDJUL,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,51.154618,-122.619186
+River Power Stop #037,FSE-037-02-BL9J1,Delta,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,51.154618,-122.619186
+River Power Stop #037,FSE-037-03-H7OHN,Siemens,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Smart charging enabled,51.154618,-122.619186
+River Power Stop #037,FSE-037-04-NV7QI,Delta,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,Cable management system,51.154618,-122.619186
+River Power Stop #037,FSE-037-05-VGHGR,ABB,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",51.154618,-122.619186
+Lighthouse ChargePoint #038,FSE-038-01-EOW6Y,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",59.034399,-136.018754
+Lighthouse ChargePoint #038,FSE-038-02-CNLBT,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,In construction – energization pending,59.034399,-136.018754
+Lighthouse ChargePoint #038,FSE-038-03-44XWT,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,59.034399,-136.018754
+Lighthouse ChargePoint #038,FSE-038-04-EHIHM,Delta,Terra 54,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Fleet,Cable management system,59.034399,-136.018754
+Lighthouse ChargePoint #038,FSE-038-05-2YZ8K,Enel X,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,59.034399,-136.018754
+Willow Supercharge #039,FSE-039-01-OB5ZI,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,58.797335,-120.423995
+Willow Supercharge #039,FSE-039-02-AQFI0,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Public,"OCPP 1.6J, tap-to-pay",58.797335,-120.423995
+Willow Supercharge #039,FSE-039-03-85GR8,ChargePoint,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,58.797335,-120.423995
+Willow Supercharge #039,FSE-039-04-MKGEJ,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,Installed Q2 2025,58.797335,-120.423995
+Willow Supercharge #039,FSE-039-05-EAURJ,BTC Power,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,58.797335,-120.423995
+Lighthouse Energy Plaza #040,FSE-040-01-LJJLT,Siemens,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Cable management system,49.206555,-131.899653
+Lighthouse Energy Plaza #040,FSE-040-02-SW54K,FLO,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Fleet,"OCPP 1.6J, tap-to-pay",49.206555,-131.899653
+Lighthouse Energy Plaza #040,FSE-040-03-60K3U,Siemens,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",49.206555,-131.899653
+Lighthouse Energy Plaza #040,FSE-040-04-ONKJV,Tritium,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,Solar canopy on site,49.206555,-131.899653
+Lighthouse Energy Plaza #040,FSE-040-05-4EWR4,Delta,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Solar canopy on site,49.206555,-131.899653
+Maple EV Station #041,FSE-041-01-FL2GV,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,In construction – energization pending,53.068913,-125.462165
+Maple EV Station #041,FSE-041-02-BCGWU,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Smart charging enabled,53.068913,-125.462165
+Maple EV Station #041,FSE-041-03-6HR25,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,24/7 access,53.068913,-125.462165
+Maple EV Station #041,FSE-041-04-IEPOS,Tritium,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery bus,Public,Solar canopy on site,53.068913,-125.462165
+Maple EV Station #041,FSE-041-05-COA2N,FLO,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,53.068913,-125.462165
+Sunrise Power Stop #042,FSE-042-01-5544H,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,48.368984,-130.244924
+Sunrise Power Stop #042,FSE-042-02-VDZ25,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,48.368984,-130.244924
+Sunrise Power Stop #042,FSE-042-03-TG6PN,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,In construction – energization pending,48.368984,-130.244924
+Sunrise Power Stop #042,FSE-042-04-VMZWY,ChargePoint,RTM75,Level 3 - Direct current fast charging,Single port,Battery truck,Fleet,In construction – energization pending,48.368984,-130.244924
+Sunrise Power Stop #042,FSE-042-05-5WQR6,FLO,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",48.368984,-130.244924
+Maple Fast Charge #043,FSE-043-01-CQN01,ABB,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Public,"Networked, RFID access",52.232716,-122.040704
+Maple Fast Charge #043,FSE-043-02-Y1HGS,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",52.232716,-122.040704
+Maple Fast Charge #043,FSE-043-03-IXKAY,ChargePoint,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,52.232716,-122.040704
+Maple Fast Charge #043,FSE-043-04-BEWCD,Siemens,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Ground support equipment,Multi-unit residential building,Smart charging enabled,52.232716,-122.040704
+Maple Fast Charge #043,FSE-043-05-FT7GP,BTC Power,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",52.232716,-122.040704
+Raven Charging Hub #044,FSE-044-01-P9S92,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Solar canopy on site,58.442161,-134.505871
+Raven Charging Hub #044,FSE-044-02-M301T,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,58.442161,-134.505871
+Raven Charging Hub #044,FSE-044-03-D6E0C,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Public,Cable management system,58.442161,-134.505871
+Raven Charging Hub #044,FSE-044-04-HBF7H,ABB,Terra 184,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Public,24/7 access,58.442161,-134.505871
+Raven Charging Hub #044,FSE-044-05-8A568,Tritium,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,58.442161,-134.505871
+Orchard Charge Depot #045,FSE-045-01-3KANK,FLO,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",53.80259,-120.289452
+Orchard Charge Depot #045,FSE-045-02-8V7NM,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",53.80259,-120.289452
+Orchard Charge Depot #045,FSE-045-03-3CMEJ,Delta,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",53.80259,-120.289452
+Orchard Charge Depot #045,FSE-045-04-N3J3P,FLO,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",53.80259,-120.289452
+Orchard Charge Depot #045,FSE-045-05-CV94B,ABB,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Ground support equipment,Employee,Solar canopy on site,53.80259,-120.289452
+Pacific Charging Hub #046,FSE-046-01-7X4H5,BTC Power,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Employee,Cable management system,49.776785,-122.283361
+Pacific Charging Hub #046,FSE-046-02-LNY0Y,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",49.776785,-122.283361
+Pacific Charging Hub #046,FSE-046-03-66C5U,ABB,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",49.776785,-122.283361
+Pacific Charging Hub #046,FSE-046-04-YT3P7,Enel X,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",49.776785,-122.283361
+Pacific Charging Hub #046,FSE-046-05-GDLTN,Enel X,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Public,"OCPP 1.6J, tap-to-pay",49.776785,-122.283361
+Evergreen Supercharge #047,FSE-047-01-OANMF,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,55.070611,-115.782088
+Evergreen Supercharge #047,FSE-047-02-PDFST,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,55.070611,-115.782088
+Evergreen Supercharge #047,FSE-047-03-IKGFF,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,55.070611,-115.782088
+Evergreen Supercharge #047,FSE-047-04-EUQUA,FLO,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,55.070611,-115.782088
+Evergreen Supercharge #047,FSE-047-05-SXBOJ,Tritium,Terra 184,Level 3 - Direct current fast charging,Single port,Battery bus,Employee,Solar canopy on site,55.070611,-115.782088
+Pacific Fast Charge #048,FSE-048-01-ZOJLT,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,54.533119,-122.482275
+Pacific Fast Charge #048,FSE-048-02-2F7CY,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,54.533119,-122.482275
+Pacific Fast Charge #048,FSE-048-03-GLMGX,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"Networked, RFID access",54.533119,-122.482275
+Pacific Fast Charge #048,FSE-048-04-ZDA13,BTC Power,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,"OCPP 1.6J, tap-to-pay",54.533119,-122.482275
+Pacific Fast Charge #048,FSE-048-05-8C4K0,Delta,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Public,"Networked, RFID access",54.533119,-122.482275
+Mountain Charging Hub #049,FSE-049-01-HZ1AR,Enel X,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Public,In construction – energization pending,56.575511,-128.146692
+Mountain Charging Hub #049,FSE-049-02-BAC25,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,56.575511,-128.146692
+Mountain Charging Hub #049,FSE-049-03-JL3GQ,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Cable management system,56.575511,-128.146692
+Mountain Charging Hub #049,FSE-049-04-KTWYD,BTC Power,Express 250,Level 3 - Direct current fast charging,Single port,Battery bus,Public,Solar canopy on site,56.575511,-128.146692
+Mountain Charging Hub #049,FSE-049-05-K97W9,Delta,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Other,"Networked, RFID access",56.575511,-128.146692
+Forest Charge Depot #050,FSE-050-01-TSR7I,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,51.563461,-127.762902
+Forest Charge Depot #050,FSE-050-02-92BPQ,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,51.563461,-127.762902
+Forest Charge Depot #050,FSE-050-03-0PLEF,BTC Power,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,51.563461,-127.762902
+Forest Charge Depot #050,FSE-050-04-MM71G,ChargePoint,Express 250,Level 3 - Direct current fast charging,Single port,Battery bus,Public,In construction – energization pending,51.563461,-127.762902
+Forest Charge Depot #050,FSE-050-05-3MG7A,Delta,Terra 184,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,24/7 access,51.563461,-127.762902
+Lakeview Supercharge #051,FSE-051-01-P4411,Delta,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Fleet,Installed Q2 2025,57.634639,-130.531109
+Lakeview Supercharge #051,FSE-051-02-QNPTE,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,57.634639,-130.531109
+Lakeview Supercharge #051,FSE-051-03-AUWW2,ChargePoint,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,Smart charging enabled,57.634639,-130.531109
+Lakeview Supercharge #051,FSE-051-04-PPXZB,Enel X,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,"Networked, RFID access",57.634639,-130.531109
+Lakeview Supercharge #051,FSE-051-05-XK0L6,Delta,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,57.634639,-130.531109
+Willow Fast Charge #052,FSE-052-01-3ZXPM,Delta,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Public,Smart charging enabled,55.857064,-126.760017
+Willow Fast Charge #052,FSE-052-02-J1OS9,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,55.857064,-126.760017
+Willow Fast Charge #052,FSE-052-03-6F8BF,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",55.857064,-126.760017
+Willow Fast Charge #052,FSE-052-04-U556N,Delta,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,55.857064,-126.760017
+Willow Fast Charge #052,FSE-052-05-NTMGD,Delta,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",55.857064,-126.760017
+Lighthouse Power Stop #053,FSE-053-01-T2R31,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",52.321962,-114.084416
+Lighthouse Power Stop #053,FSE-053-02-RS6BG,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,52.321962,-114.084416
+Lighthouse Power Stop #053,FSE-053-03-04P1E,ChargePoint,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,52.321962,-114.084416
+Lighthouse Power Stop #053,FSE-053-04-X954D,Delta,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",52.321962,-114.084416
+Lighthouse Power Stop #053,FSE-053-05-IFTOZ,Tritium,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",52.321962,-114.084416
+River Energy Plaza #054,FSE-054-01-NWT1K,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Cable management system,56.991708,-115.231008
+River Energy Plaza #054,FSE-054-02-M35VA,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,56.991708,-115.231008
+River Energy Plaza #054,FSE-054-03-PV2RV,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Multi-unit residential building,Cable management system,56.991708,-115.231008
+River Energy Plaza #054,FSE-054-04-JD4ME,ChargePoint,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,Solar canopy on site,56.991708,-115.231008
+River Energy Plaza #054,FSE-054-05-E65M5,ChargePoint,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Smart charging enabled,56.991708,-115.231008
+Forest Energy Plaza #055,FSE-055-01-M746D,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,In construction – energization pending,50.961553,-134.563195
+Forest Energy Plaza #055,FSE-055-02-DYHHN,BTC Power,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,50.961553,-134.563195
+Forest Energy Plaza #055,FSE-055-03-43YGS,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Installed Q2 2025,50.961553,-134.563195
+Forest Energy Plaza #055,FSE-055-04-V6JWN,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,50.961553,-134.563195
+Forest Energy Plaza #055,FSE-055-05-A70D7,Delta,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,50.961553,-134.563195
+Evergreen Charging Hub #056,FSE-056-01-YBK4S,Tritium,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",58.510821,-124.673951
+Evergreen Charging Hub #056,FSE-056-02-OOAIW,Enel X,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Multi-unit residential building,In construction – energization pending,58.510821,-124.673951
+Evergreen Charging Hub #056,FSE-056-03-NKGSI,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,58.510821,-124.673951
+Evergreen Charging Hub #056,FSE-056-04-V4J0Y,Tritium,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",58.510821,-124.673951
+Evergreen Charging Hub #056,FSE-056-05-VS7QE,BTC Power,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,58.510821,-124.673951
+Mountain ChargePoint #057,FSE-057-01-8EYNC,ChargePoint,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Cable management system,54.053435,-124.59985
+Mountain ChargePoint #057,FSE-057-02-KHYKG,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,24/7 access,54.053435,-124.59985
+Mountain ChargePoint #057,FSE-057-03-JJYJM,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Employee,Smart charging enabled,54.053435,-124.59985
+Mountain ChargePoint #057,FSE-057-04-K1Y0Z,FLO,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",54.053435,-124.59985
+Mountain ChargePoint #057,FSE-057-05-UEHFD,Delta,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,54.053435,-124.59985
+Bayview Energy Plaza #058,FSE-058-01-HY0IB,ChargePoint,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,24/7 access,52.750423,-116.29288
+Bayview Energy Plaza #058,FSE-058-02-3F9YN,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Fleet,Solar canopy on site,52.750423,-116.29288
+Bayview Energy Plaza #058,FSE-058-03-PBSSW,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Smart charging enabled,52.750423,-116.29288
+Bayview Energy Plaza #058,FSE-058-04-97O4V,BTC Power,Express 250,Level 3 - Direct current fast charging,Single port,Battery truck,Fleet,In construction – energization pending,52.750423,-116.29288
+Bayview Energy Plaza #058,FSE-058-05-KT9WX,ABB,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Battery truck,Multi-unit residential building,Cable management system,52.750423,-116.29288
+Seaside Charging Hub #059,FSE-059-01-F765J,Tritium,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,In construction – energization pending,50.137568,-134.704232
+Seaside Charging Hub #059,FSE-059-02-RE7EO,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Public,24/7 access,50.137568,-134.704232
+Seaside Charging Hub #059,FSE-059-03-QSSI9,BTC Power,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Multi-unit residential building,Solar canopy on site,50.137568,-134.704232
+Seaside Charging Hub #059,FSE-059-04-CCZCB,Siemens,RT50,Level 3 - Direct current fast charging,Single port,Battery bus,Public,24/7 access,50.137568,-134.704232
+Seaside Charging Hub #059,FSE-059-05-T4ROW,Siemens,Terra 54,Level 3 - Direct current fast charging,Single port,Marine,Public,"OCPP 1.6J, tap-to-pay",50.137568,-134.704232
+Sunrise Charge Depot #060,FSE-060-01-UHFD3,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,24/7 access,56.571383,-121.443132
+Sunrise Charge Depot #060,FSE-060-02-97RK5,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",56.571383,-121.443132
+Sunrise Charge Depot #060,FSE-060-03-FMJJ2,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Marine,Fleet,Smart charging enabled,56.571383,-121.443132
+Sunrise Charge Depot #060,FSE-060-04-LKHLY,BTC Power,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,Solar canopy on site,56.571383,-121.443132
+Sunrise Charge Depot #060,FSE-060-05-0JKO7,Delta,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,56.571383,-121.443132
+Lighthouse Energy Plaza #061,FSE-061-01-YG0TG,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Public,Solar canopy on site,50.930271,-135.326326
+Lighthouse Energy Plaza #061,FSE-061-02-LB0C7,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Cable management system,50.930271,-135.326326
+Lighthouse Energy Plaza #061,FSE-061-03-2OMOW,ABB,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,In construction – energization pending,50.930271,-135.326326
+Lighthouse Energy Plaza #061,FSE-061-04-HC5LE,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",50.930271,-135.326326
+Lighthouse Energy Plaza #061,FSE-061-05-K9BAP,ChargePoint,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Solar canopy on site,50.930271,-135.326326
+Cedar ChargePoint #062,FSE-062-01-H50FE,ChargePoint,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",56.357532,-121.524674
+Cedar ChargePoint #062,FSE-062-02-GBDXA,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,56.357532,-121.524674
+Cedar ChargePoint #062,FSE-062-03-L4L2O,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,In construction – energization pending,56.357532,-121.524674
+Cedar ChargePoint #062,FSE-062-04-4CQGN,BTC Power,RTM75,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Public,Smart charging enabled,56.357532,-121.524674
+Cedar ChargePoint #062,FSE-062-05-1HSXZ,Enel X,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,24/7 access,56.357532,-121.524674
+Forest Charge Depot #063,FSE-063-01-EGFJU,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Cable management system,49.368525,-114.954508
+Forest Charge Depot #063,FSE-063-02-8RLSR,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Smart charging enabled,49.368525,-114.954508
+Forest Charge Depot #063,FSE-063-03-OL1CG,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,49.368525,-114.954508
+Forest Charge Depot #063,FSE-063-04-9JF50,Enel X,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",49.368525,-114.954508
+Forest Charge Depot #063,FSE-063-05-EN5AY,Siemens,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,49.368525,-114.954508
+Cedar ChargePoint #064,FSE-064-01-91Y3D,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Public,"OCPP 1.6J, tap-to-pay",59.637946,-127.28154
+Cedar ChargePoint #064,FSE-064-02-J32S5,FLO,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Solar canopy on site,59.637946,-127.28154
+Cedar ChargePoint #064,FSE-064-03-IJMN5,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",59.637946,-127.28154
+Cedar ChargePoint #064,FSE-064-04-UF026,Delta,RT50,Level 3 - Direct current fast charging,Single port,Battery bus,Fleet,Smart charging enabled,59.637946,-127.28154
+Cedar ChargePoint #064,FSE-064-05-33EKP,BTC Power,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,59.637946,-127.28154
+Pioneer ChargePoint #065,FSE-065-01-XPUKU,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,53.621463,-131.1782
+Pioneer ChargePoint #065,FSE-065-02-5KEWJ,Enel X,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,53.621463,-131.1782
+Pioneer ChargePoint #065,FSE-065-03-FRTQB,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,53.621463,-131.1782
+Pioneer ChargePoint #065,FSE-065-04-3HJXL,ChargePoint,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,53.621463,-131.1782
+Pioneer ChargePoint #065,FSE-065-05-DL02N,Delta,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Marine,Fleet,"Networked, RFID access",53.621463,-131.1782
+Willow Charging Hub #066,FSE-066-01-80G66,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,54.365741,-123.456795
+Willow Charging Hub #066,FSE-066-02-8SJQW,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Public,Cable management system,54.365741,-123.456795
+Willow Charging Hub #066,FSE-066-03-WHUS4,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",54.365741,-123.456795
+Willow Charging Hub #066,FSE-066-04-4CMMF,FLO,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery truck,Employee,In construction – energization pending,54.365741,-123.456795
+Willow Charging Hub #066,FSE-066-05-HSATX,Siemens,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Battery bus,Employee,In construction – energization pending,54.365741,-123.456795
+Orchard Energy Plaza #067,FSE-067-01-YWRQ9,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Other,"Networked, RFID access",59.685818,-123.801676
+Orchard Energy Plaza #067,FSE-067-02-PQ31J,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Public,Installed Q2 2025,59.685818,-123.801676
+Orchard Energy Plaza #067,FSE-067-03-T23MN,Siemens,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Fleet,Solar canopy on site,59.685818,-123.801676
+Orchard Energy Plaza #067,FSE-067-04-TNVQ3,ChargePoint,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,59.685818,-123.801676
+Orchard Energy Plaza #067,FSE-067-05-V9CVH,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Ground support equipment,Fleet,In construction – energization pending,59.685818,-123.801676
+Maple Charging Hub #068,FSE-068-01-C53J0,Delta,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",55.878203,-135.201484
+Maple Charging Hub #068,FSE-068-02-B2YG9,Siemens,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,55.878203,-135.201484
+Maple Charging Hub #068,FSE-068-03-N0P69,Enel X,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,In construction – energization pending,55.878203,-135.201484
+Maple Charging Hub #068,FSE-068-04-62Z35,Siemens,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,55.878203,-135.201484
+Maple Charging Hub #068,FSE-068-05-EVC71,ChargePoint,Terra 184,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Fleet,Installed Q2 2025,55.878203,-135.201484
+Sunrise Charge Depot #069,FSE-069-01-C4HE8,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",50.530141,-124.039597
+Sunrise Charge Depot #069,FSE-069-02-COQDB,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,In construction – energization pending,50.530141,-124.039597
+Sunrise Charge Depot #069,FSE-069-03-8NAG2,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,50.530141,-124.039597
+Sunrise Charge Depot #069,FSE-069-04-RDG0O,Enel X,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Battery bus,Public,Solar canopy on site,50.530141,-124.039597
+Sunrise Charge Depot #069,FSE-069-05-L4ZET,FLO,RT50,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Solar canopy on site,50.530141,-124.039597
+Sunrise Supercharge #070,FSE-070-01-1SYKL,ChargePoint,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,In construction – energization pending,58.098468,-124.52712
+Sunrise Supercharge #070,FSE-070-02-5UA4C,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,Solar canopy on site,58.098468,-124.52712
+Sunrise Supercharge #070,FSE-070-03-M520V,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Public,24/7 access,58.098468,-124.52712
+Sunrise Supercharge #070,FSE-070-04-W41UT,Tritium,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Other,Installed Q2 2025,58.098468,-124.52712
+Sunrise Supercharge #070,FSE-070-05-3KH5U,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",58.098468,-124.52712
+Maple Charge Depot #071,FSE-071-01-RTKCK,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Solar canopy on site,58.47434,-114.481788
+Maple Charge Depot #071,FSE-071-02-A4C28,Enel X,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Public,In construction – energization pending,58.47434,-114.481788
+Maple Charge Depot #071,FSE-071-03-349VM,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",58.47434,-114.481788
+Maple Charge Depot #071,FSE-071-04-ZZYBD,ABB,Terra 54,Level 3 - Direct current fast charging,Single port,Ground support equipment,Public,In construction – energization pending,58.47434,-114.481788
+Maple Charge Depot #071,FSE-071-05-DD62P,Tritium,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,58.47434,-114.481788
+Lighthouse Power Stop #072,FSE-072-01-KKD3G,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",59.588446,-135.896268
+Lighthouse Power Stop #072,FSE-072-02-JDYHU,ChargePoint,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,59.588446,-135.896268
+Lighthouse Power Stop #072,FSE-072-03-M9L4F,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,59.588446,-135.896268
+Lighthouse Power Stop #072,FSE-072-04-7RRGD,ChargePoint,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,59.588446,-135.896268
+Lighthouse Power Stop #072,FSE-072-05-5QDC7,FLO,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,59.588446,-135.896268
+Pioneer Charge Depot #073,FSE-073-01-LOLXL,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,24/7 access,52.261166,-121.700823
+Pioneer Charge Depot #073,FSE-073-02-BR8DL,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Cable management system,52.261166,-121.700823
+Pioneer Charge Depot #073,FSE-073-03-G7T92,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Fleet,"OCPP 1.6J, tap-to-pay",52.261166,-121.700823
+Pioneer Charge Depot #073,FSE-073-04-CJRZO,Tritium,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Other,24/7 access,52.261166,-121.700823
+Pioneer Charge Depot #073,FSE-073-05-9SG1S,FLO,Terra 184,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Smart charging enabled,52.261166,-121.700823
+Maple Power Stop #074,FSE-074-01-D106X,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Public,"Networked, RFID access",55.684584,-115.981517
+Maple Power Stop #074,FSE-074-02-I21NC,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",55.684584,-115.981517
+Maple Power Stop #074,FSE-074-03-J3511,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Public,Installed Q2 2025,55.684584,-115.981517
+Maple Power Stop #074,FSE-074-04-DNJYE,ChargePoint,RTM75,Level 3 - Direct current fast charging,Single port,Marine,Public,"Networked, RFID access",55.684584,-115.981517
+Maple Power Stop #074,FSE-074-05-P8X1U,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Solar canopy on site,55.684584,-115.981517
+Pioneer EV Station #075,FSE-075-01-WIJUL,Siemens,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Multi-unit residential building,Cable management system,51.732403,-129.666482
+Pioneer EV Station #075,FSE-075-02-G8IP6,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",51.732403,-129.666482
+Pioneer EV Station #075,FSE-075-03-5QSVB,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Public,Installed Q2 2025,51.732403,-129.666482
+Pioneer EV Station #075,FSE-075-04-QHYWB,BTC Power,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",51.732403,-129.666482
+Pioneer EV Station #075,FSE-075-05-QNCOO,Tritium,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",51.732403,-129.666482
+Sunrise ChargePoint #076,FSE-076-01-B1PPR,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,24/7 access,58.980099,-135.47347
+Sunrise ChargePoint #076,FSE-076-02-Q84IZ,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,Cable management system,58.980099,-135.47347
+Sunrise ChargePoint #076,FSE-076-03-OYT6Y,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Cargo handling equipment,Public,Smart charging enabled,58.980099,-135.47347
+Sunrise ChargePoint #076,FSE-076-04-6SYEM,Enel X,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",58.980099,-135.47347
+Sunrise ChargePoint #076,FSE-076-05-9KFHN,Siemens,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,58.980099,-135.47347
+Evergreen Charging Hub #077,FSE-077-01-4PK5Y,Enel X,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,53.468238,-130.400125
+Evergreen Charging Hub #077,FSE-077-02-KR0PW,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Multi-unit residential building,"Networked, RFID access",53.468238,-130.400125
+Evergreen Charging Hub #077,FSE-077-03-AM7K1,FLO,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,53.468238,-130.400125
+Evergreen Charging Hub #077,FSE-077-04-QFT4O,Enel X,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,53.468238,-130.400125
+Evergreen Charging Hub #077,FSE-077-05-4HOKE,Siemens,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",53.468238,-130.400125
+Evergreen Charge Depot #078,FSE-078-01-M8X1I,ChargePoint,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,In construction – energization pending,52.761962,-130.064484
+Evergreen Charge Depot #078,FSE-078-02-GZDPO,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,52.761962,-130.064484
+Evergreen Charge Depot #078,FSE-078-03-KPXVL,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Cable management system,52.761962,-130.064484
+Evergreen Charge Depot #078,FSE-078-04-AQ7OE,ABB,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,52.761962,-130.064484
+Evergreen Charge Depot #078,FSE-078-05-P1AL6,Tritium,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"Networked, RFID access",52.761962,-130.064484
+Lakeview Energy Plaza #079,FSE-079-01-95SQM,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",57.682604,-133.571746
+Lakeview Energy Plaza #079,FSE-079-02-IB5AV,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Multi-unit residential building,Installed Q2 2025,57.682604,-133.571746
+Lakeview Energy Plaza #079,FSE-079-03-VW1JI,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,Installed Q2 2025,57.682604,-133.571746
+Lakeview Energy Plaza #079,FSE-079-04-7G2YW,Tritium,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Cable management system,57.682604,-133.571746
+Lakeview Energy Plaza #079,FSE-079-05-W6DUM,BTC Power,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,57.682604,-133.571746
+Raven EV Station #080,FSE-080-01-5FAXT,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",52.568876,-135.76682
+Raven EV Station #080,FSE-080-02-H0K0Y,ChargePoint,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,52.568876,-135.76682
+Raven EV Station #080,FSE-080-03-5VFFC,Delta,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,24/7 access,52.568876,-135.76682
+Raven EV Station #080,FSE-080-04-A1D0L,FLO,Terra 184,Level 3 - Direct current fast charging,Single port,Battery truck,Public,24/7 access,52.568876,-135.76682
+Raven EV Station #080,FSE-080-05-RUTL3,Tritium,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,52.568876,-135.76682
+Summit Fast Charge #081,FSE-081-01-58YR3,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",51.30655,-118.393273
+Summit Fast Charge #081,FSE-081-02-HA29Z,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,51.30655,-118.393273
+Summit Fast Charge #081,FSE-081-03-M8SE3,Delta,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",51.30655,-118.393273
+Summit Fast Charge #081,FSE-081-04-JV56R,Delta,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Cable management system,51.30655,-118.393273
+Summit Fast Charge #081,FSE-081-05-NHVAB,Enel X,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,51.30655,-118.393273
+Pioneer Charge Depot #082,FSE-082-01-L8XCS,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",49.356544,-129.171962
+Pioneer Charge Depot #082,FSE-082-02-ZCZZ6,ChargePoint,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",49.356544,-129.171962
+Pioneer Charge Depot #082,FSE-082-03-AG1XU,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Solar canopy on site,49.356544,-129.171962
+Pioneer Charge Depot #082,FSE-082-04-95039,Tritium,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",49.356544,-129.171962
+Pioneer Charge Depot #082,FSE-082-05-VLWOW,Enel X,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Fleet,Cable management system,49.356544,-129.171962
+River Supercharge #083,FSE-083-01-A525Y,ChargePoint,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,24/7 access,53.816279,-123.534156
+River Supercharge #083,FSE-083-02-MXZJ3,Delta,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Cable management system,53.816279,-123.534156
+River Supercharge #083,FSE-083-03-JYE0O,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,53.816279,-123.534156
+River Supercharge #083,FSE-083-04-JLPWN,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Installed Q2 2025,53.816279,-123.534156
+River Supercharge #083,FSE-083-05-6K3OT,Delta,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,53.816279,-123.534156
+Pacific Charge Depot #084,FSE-084-01-K286C,FLO,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Cable management system,59.37126,-131.432624
+Pacific Charge Depot #084,FSE-084-02-CNJKZ,Enel X,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",59.37126,-131.432624
+Pacific Charge Depot #084,FSE-084-03-YMXPP,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Marine,Public,In construction – energization pending,59.37126,-131.432624
+Pacific Charge Depot #084,FSE-084-04-WPKZT,Enel X,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",59.37126,-131.432624
+Pacific Charge Depot #084,FSE-084-05-IKXRY,Tritium,RT50,Level 3 - Direct current fast charging,Single port,Battery bus,Employee,Solar canopy on site,59.37126,-131.432624
+Lighthouse ChargePoint #085,FSE-085-01-TAMTX,ABB,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Battery truck,Employee,Cable management system,55.962586,-118.167651
+Lighthouse ChargePoint #085,FSE-085-02-1JOA9,Tritium,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,55.962586,-118.167651
+Lighthouse ChargePoint #085,FSE-085-03-NBMKV,ChargePoint,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,55.962586,-118.167651
+Lighthouse ChargePoint #085,FSE-085-04-K55SZ,ABB,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",55.962586,-118.167651
+Lighthouse ChargePoint #085,FSE-085-05-4AQWB,Tritium,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",55.962586,-118.167651
+Cascade Fast Charge #086,FSE-086-01-LL3FP,FLO,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,24/7 access,58.849846,-122.90064
+Cascade Fast Charge #086,FSE-086-02-PND5P,Tritium,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Marine,Public,Solar canopy on site,58.849846,-122.90064
+Cascade Fast Charge #086,FSE-086-03-JR7W6,BTC Power,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Multi-unit residential building,24/7 access,58.849846,-122.90064
+Cascade Fast Charge #086,FSE-086-04-NQA50,Delta,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,58.849846,-122.90064
+Cascade Fast Charge #086,FSE-086-05-KKTUU,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Solar canopy on site,58.849846,-122.90064
+Orchard EV Station #087,FSE-087-01-XM5BV,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Public,24/7 access,57.505497,-132.956163
+Orchard EV Station #087,FSE-087-02-VJ4BG,Siemens,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,24/7 access,57.505497,-132.956163
+Orchard EV Station #087,FSE-087-03-0IP72,ChargePoint,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",57.505497,-132.956163
+Orchard EV Station #087,FSE-087-04-TFS88,ABB,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",57.505497,-132.956163
+Orchard EV Station #087,FSE-087-05-W0YF2,Enel X,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",57.505497,-132.956163
+Pacific Fast Charge #088,FSE-088-01-72MWG,Siemens,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Ground support equipment,Public,Solar canopy on site,58.343352,-135.434119
+Pacific Fast Charge #088,FSE-088-02-XB89V,Siemens,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Public,Solar canopy on site,58.343352,-135.434119
+Pacific Fast Charge #088,FSE-088-03-OMS80,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,Solar canopy on site,58.343352,-135.434119
+Pacific Fast Charge #088,FSE-088-04-Z9WC7,ABB,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,58.343352,-135.434119
+Pacific Fast Charge #088,FSE-088-05-I8XCS,Delta,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,58.343352,-135.434119
+Summit EV Station #089,FSE-089-01-2UK61,ChargePoint,CP6000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,55.189579,-138.664526
+Summit EV Station #089,FSE-089-02-EFOS9,Siemens,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Ground support equipment,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",55.189579,-138.664526
+Summit EV Station #089,FSE-089-03-4FUK2,Siemens,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Installed Q2 2025,55.189579,-138.664526
+Summit EV Station #089,FSE-089-04-KOPSM,BTC Power,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,"Networked, RFID access",55.189579,-138.664526
+Summit EV Station #089,FSE-089-05-VEM7Y,FLO,Terra 184,Level 3 - Direct current fast charging,Single port,Battery truck,Public,Cable management system,55.189579,-138.664526
+Sunrise EV Station #090,FSE-090-01-T82XC,ChargePoint,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Smart charging enabled,49.575932,-126.433802
+Sunrise EV Station #090,FSE-090-02-GL25D,BTC Power,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Employee,Solar canopy on site,49.575932,-126.433802
+Sunrise EV Station #090,FSE-090-03-DQ139,Delta,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Multi-unit residential building,Installed Q2 2025,49.575932,-126.433802
+Sunrise EV Station #090,FSE-090-04-L8OU5,FLO,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,49.575932,-126.433802
+Sunrise EV Station #090,FSE-090-05-VDFO7,FLO,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,49.575932,-126.433802
+River Charging Hub #091,FSE-091-01-0FH2G,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Smart charging enabled,49.159841,-137.035391
+River Charging Hub #091,FSE-091-02-NADGZ,Delta,CT4000,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,49.159841,-137.035391
+River Charging Hub #091,FSE-091-03-0GYSE,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,"OCPP 1.6J, tap-to-pay",49.159841,-137.035391
+River Charging Hub #091,FSE-091-04-GG3JO,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",49.159841,-137.035391
+River Charging Hub #091,FSE-091-05-WTTU3,Delta,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Employee,Cable management system,49.159841,-137.035391
+Evergreen Supercharge #092,FSE-092-01-PDBUL,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,24/7 access,55.383493,-136.574588
+Evergreen Supercharge #092,FSE-092-02-VY1HY,FLO,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,In construction – energization pending,55.383493,-136.574588
+Evergreen Supercharge #092,FSE-092-03-LW36U,BTC Power,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Battery bus,Fleet,Installed Q2 2025,55.383493,-136.574588
+Evergreen Supercharge #092,FSE-092-04-LIGJQ,Siemens,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,55.383493,-136.574588
+Evergreen Supercharge #092,FSE-092-05-JB208,FLO,Express 250,Level 3 - Direct current fast charging,Single port,Cargo handling equipment,Multi-unit residential building,In construction – energization pending,55.383493,-136.574588
+Sunrise Charge Depot #093,FSE-093-01-T3FOL,ABB,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Employee,In construction – energization pending,56.836466,-131.227538
+Sunrise Charge Depot #093,FSE-093-02-AWKGJ,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,In construction – energization pending,56.836466,-131.227538
+Sunrise Charge Depot #093,FSE-093-03-BNPPA,ABB,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Employee,Solar canopy on site,56.836466,-131.227538
+Sunrise Charge Depot #093,FSE-093-04-Q8SHU,Siemens,Express 250,Level 3 - Direct current fast charging,Single port,Marine,Public,"Networked, RFID access",56.836466,-131.227538
+Sunrise Charge Depot #093,FSE-093-05-XKRN3,Enel X,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,"OCPP 1.6J, tap-to-pay",56.836466,-131.227538
+Raven Charge Depot #094,FSE-094-01-DU99D,ABB,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Ground support equipment,Public,Cable management system,57.797701,-125.117349
+Raven Charge Depot #094,FSE-094-02-IIUJ6,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,Installed Q2 2025,57.797701,-125.117349
+Raven Charge Depot #094,FSE-094-03-71Y14,Tritium,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,57.797701,-125.117349
+Raven Charge Depot #094,FSE-094-04-KA0KQ,BTC Power,Terra 54,Level 3 - Direct current fast charging,Single port,Marine,Public,"Networked, RFID access",57.797701,-125.117349
+Raven Charge Depot #094,FSE-094-05-CUX8O,FLO,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",57.797701,-125.117349
+Cascade Power Stop #095,FSE-095-01-N9U7F,ABB,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"OCPP 1.6J, tap-to-pay",49.512127,-126.344242
+Cascade Power Stop #095,FSE-095-02-Z8XRO,Tritium,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Cargo handling equipment,Public,Installed Q2 2025,49.512127,-126.344242
+Cascade Power Stop #095,FSE-095-03-T7QZW,Tritium,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",49.512127,-126.344242
+Cascade Power Stop #095,FSE-095-04-VF6RE,Delta,Express 250,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,In construction – energization pending,49.512127,-126.344242
+Cascade Power Stop #095,FSE-095-05-NWKKS,FLO,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Multi-unit residential building,In construction – energization pending,49.512127,-126.344242
+Pioneer Supercharge #096,FSE-096-01-K92ZP,Tritium,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,24/7 access,58.188315,-114.637862
+Pioneer Supercharge #096,FSE-096-02-GH16X,ABB,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Fleet,24/7 access,58.188315,-114.637862
+Pioneer Supercharge #096,FSE-096-03-RCVUI,Tritium,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",58.188315,-114.637862
+Pioneer Supercharge #096,FSE-096-04-8S7NC,ABB,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Smart charging enabled,58.188315,-114.637862
+Pioneer Supercharge #096,FSE-096-05-DA19S,Delta,Terra 184,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,Smart charging enabled,58.188315,-114.637862
+Evergreen Charging Hub #097,FSE-097-01-HLW5F,Enel X,FLO SmartTwo,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,Installed Q2 2025,58.477394,-124.867993
+Evergreen Charging Hub #097,FSE-097-02-SBHLI,FLO,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Fleet,Installed Q2 2025,58.477394,-124.867993
+Evergreen Charging Hub #097,FSE-097-03-J86BT,Tritium,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Marine,Fleet,Solar canopy on site,58.477394,-124.867993
+Evergreen Charging Hub #097,FSE-097-04-J931Z,Enel X,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,58.477394,-124.867993
+Evergreen Charging Hub #097,FSE-097-05-GKCZ3,ABB,Terra 54,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",58.477394,-124.867993
+Harbour EV Station #098,FSE-098-01-E7MPV,Siemens,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Employee,"OCPP 1.6J, tap-to-pay",50.141689,-131.250368
+Harbour EV Station #098,FSE-098-02-Q0Q0Y,ChargePoint,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,"Networked, RFID access",50.141689,-131.250368
+Harbour EV Station #098,FSE-098-03-9K9CF,BTC Power,Siemens VersiCharge,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Public,Smart charging enabled,50.141689,-131.250368
+Harbour EV Station #098,FSE-098-04-MGJXC,Tritium,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,50.141689,-131.250368
+Harbour EV Station #098,FSE-098-05-N2ER0,ChargePoint,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Fleet,24/7 access,50.141689,-131.250368
+Pacific Charging Hub #099,FSE-099-01-CHPX5,Tritium,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Employee,In construction – energization pending,56.044683,-126.889318
+Pacific Charging Hub #099,FSE-099-02-5J8JU,ChargePoint,ABB Terra AC,"Level 2 - High voltage, operating above level 1",Dual port,Light duty motor vehicles,Public,"Networked, RFID access",56.044683,-126.889318
+Pacific Charging Hub #099,FSE-099-03-6CR8B,Enel X,CP6000,"Level 2 - High voltage, operating above level 1",Dual port,Battery bus,Public,"OCPP 1.6J, tap-to-pay",56.044683,-126.889318
+Pacific Charging Hub #099,FSE-099-04-DMDHM,Delta,RT50,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,In construction – energization pending,56.044683,-126.889318
+Pacific Charging Hub #099,FSE-099-05-VX4O7,ABB,RTM75,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,Installed Q2 2025,56.044683,-126.889318
+Orchard EV Station #100,FSE-100-01-90JVC,Siemens,CT4000,"Level 2 - High voltage, operating above level 1",Dual port,Battery truck,Public,Solar canopy on site,56.105451,-137.921841
+Orchard EV Station #100,FSE-100-02-QD87T,FLO,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Light duty motor vehicles,Public,Solar canopy on site,56.105451,-137.921841
+Orchard EV Station #100,FSE-100-03-YETZ6,Delta,JuicePedestal L2,"Level 2 - High voltage, operating above level 1",Single port,Ground support equipment,Public,In construction – energization pending,56.105451,-137.921841
+Orchard EV Station #100,FSE-100-04-BIMCI,ChargePoint,Tritium PKM150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,24/7 access,56.105451,-137.921841
+Orchard EV Station #100,FSE-100-05-O58QO,Delta,Delta UFC 150,Level 3 - Direct current fast charging,Single port,Light duty motor vehicles,Public,"Networked, RFID access",56.105451,-137.921841

@@ -9,7 +9,7 @@ from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
     ComplianceReportChargingEquipment,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, SortOrder
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentFilterSchema,
@@ -65,6 +65,23 @@ async def test_get_charging_equipment_by_id_not_found(repo, mock_db):
 
     # Verify the result
     assert result is None
+    mock_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_serial_numbers_for_organization(repo, mock_db):
+    """Serial numbers for org should be normalized and deduplicated."""
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [
+        "SER-1",
+        " ser-2 ",
+        None,
+    ]
+    mock_db.execute.return_value = mock_result
+
+    serials = await repo.get_serial_numbers_for_organization(5)
+
+    assert serials == {"SER-1", "SER-2"}
     mock_db.execute.assert_called_once()
 
 
@@ -273,6 +290,42 @@ async def test_update_charging_equipment_success(
 
 
 @pytest.mark.anyio
+async def test_update_charging_equipment_creates_new_version_for_validated(
+    repo, mock_db, valid_charging_equipment
+):
+    """Updating validated equipment should create a new version record."""
+    valid_charging_equipment.status.status = "Validated"
+    valid_charging_equipment.version = 1
+    valid_charging_equipment.group_uuid = "group-123"
+    original_version = valid_charging_equipment.version
+
+    mock_updated_status = ChargingEquipmentStatus(
+        charging_equipment_status_id=10, status="Updated"
+    )
+    mock_status_result = MagicMock()
+    mock_status_result.scalar_one.return_value = mock_updated_status
+
+    mock_db.execute.side_effect = [mock_status_result]
+
+    with patch.object(
+        repo, "get_charging_equipment_by_id", return_value=valid_charging_equipment
+    ):
+        result = await repo.update_charging_equipment(
+            1, {"manufacturer": "ChargeCo", "model": "Rev2"}
+        )
+
+    assert result is valid_charging_equipment
+    assert result.version == original_version + 1
+    assert result.manufacturer == "ChargeCo"
+    assert result.model == "Rev2"
+    assert result.group_uuid == "group-123"
+    assert result.intended_uses == list(valid_charging_equipment.intended_uses)
+    mock_db.add.assert_not_called()
+    mock_db.flush.assert_called_once()
+    assert mock_db.refresh.call_count == 2
+
+
+@pytest.mark.anyio
 async def test_bulk_update_status_success(repo, mock_db, mock_equipment_status):
     """Test bulk updating status of multiple equipment."""
     # Mock the status query
@@ -453,7 +506,7 @@ async def test_auto_validate_submitted_fse_for_report_success(repo, mock_db):
     result = await repo.auto_validate_submitted_fse_for_report(compliance_report_id=1)
 
     # Verify the result
-    assert result == 2
+    assert result == (2, [101, 102])
     assert mock_db.execute.call_count == 3
     mock_db.flush.assert_called_once()
 
@@ -487,7 +540,7 @@ async def test_auto_validate_submitted_fse_for_report_no_equipment_found(repo, m
     result = await repo.auto_validate_submitted_fse_for_report(compliance_report_id=1)
 
     # Verify the result
-    assert result == 0
+    assert result == (0, [])
     assert mock_db.execute.call_count == 2
     # flush should not be called since no updates were made
     mock_db.flush.assert_not_called()
@@ -535,7 +588,7 @@ async def test_auto_submit_draft_updated_fse_for_report_success(repo, mock_db):
     result = await repo.auto_submit_draft_updated_fse_for_report(compliance_report_id=1)
 
     # Verify the result
-    assert result == 2
+    assert result == (2, [101, 102])
     assert mock_db.execute.call_count == 3
     mock_db.flush.assert_called_once()
 
@@ -576,7 +629,7 @@ async def test_auto_submit_draft_updated_fse_for_report_no_equipment_found(
     result = await repo.auto_submit_draft_updated_fse_for_report(compliance_report_id=1)
 
     # Verify the result
-    assert result == 0
+    assert result == (0, [])
     assert mock_db.execute.call_count == 2
     # flush should not be called since no updates were made
     mock_db.flush.assert_not_called()
@@ -600,7 +653,7 @@ async def test_auto_submit_draft_updated_fse_for_report_missing_status(repo, moc
     result = await repo.auto_submit_draft_updated_fse_for_report(compliance_report_id=1)
 
     # Verify the result - should return 0 since required statuses are missing
-    assert result == 0
+    assert result == (0, [])
     assert mock_db.execute.call_count == 1
     # flush should not be called since no updates were made
     mock_db.flush.assert_not_called()
@@ -744,3 +797,119 @@ class TestChargingEquipmentRepositoryDeletedFiltering:
         # Verify results
         assert len(result) == 0
         mock_db.execute.assert_called_once()
+
+
+class TestChargingEquipmentSorting:
+    """Tests for sorting in get_charging_equipment_list, including relationship fields."""
+
+    @pytest.fixture
+    def setup_repo(self, valid_charging_equipment):
+        """Common setup: mock db, repo, and standard mock results."""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+
+        mock_items_result = MagicMock()
+        mock_items_result.scalars.return_value.all.return_value = [
+            valid_charging_equipment
+        ]
+
+        mock_db.execute.side_effect = [mock_count_result, mock_items_result]
+
+        repo = ChargingEquipmentRepository(mock_db)
+        return repo, mock_db
+
+    @pytest.mark.anyio
+    async def test_sort_by_status_asc(self, setup_repo):
+        """Sorting by 'status' should use ChargingEquipmentStatus.status, not the relationship."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="status", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+        assert mock_db.execute.call_count == 2
+
+    @pytest.mark.anyio
+    async def test_sort_by_status_desc(self, setup_repo):
+        """Sorting by 'status' desc should not raise."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="status", direction="desc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_level_of_equipment(self, setup_repo):
+        """Sorting by 'level_of_equipment' should use LevelOfEquipment.name."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="level_of_equipment", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_site_name(self, setup_repo):
+        """Sorting by 'site_name' should use ChargingSite.site_name."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="site_name", direction="desc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_direct_column(self, setup_repo):
+        """Sorting by a direct column like 'manufacturer' should work."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="manufacturer", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_invalid_field_ignored(self, setup_repo):
+        """Sorting by a nonexistent field should be safely ignored."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="nonexistent_field", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1

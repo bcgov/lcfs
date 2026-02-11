@@ -2,10 +2,10 @@ import { AdminMenu } from '@/views/Admin/AdminMenu'
 import ROUTES from '../routes'
 import { Navigate } from 'react-router-dom'
 import { ViewAuditLog } from '@/views/Admin/AdminMenu/components/ViewAuditLog'
-import { AddEditUser } from '@/views/Users'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
+import { AppRouteObject } from '../types'
 
-export const adminRoutes = [
+export const adminRoutes: AppRouteObject[] = [
   {
     path: ROUTES.ADMIN.MAIN,
     element: <Navigate to={ROUTES.ADMIN.USERS.LIST} replace />,

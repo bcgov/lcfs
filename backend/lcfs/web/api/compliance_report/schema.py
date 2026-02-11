@@ -402,9 +402,8 @@ FSE_EXPORT_SHEET = "Final supply equipment"
 
 # Column definitions for each sheet
 FUEL_SUPPLY_COLUMNS = [
-    ExportColumn("Compliance Units"),
+    ExportColumn("Compliance units"),
     ExportColumn("Fuel type"),
-    ExportColumn("Fuel type Other"),
     ExportColumn("Fuel category"),
     ExportColumn("End use"),
     ExportColumn("Determining carbon intensity"),
@@ -422,9 +421,8 @@ FUEL_SUPPLY_COLUMNS = [
 
 # Quarterly column definitions for early issuance reports
 FUEL_SUPPLY_QUARTERLY_COLUMNS = [
-    ExportColumn("Compliance Units"),
+    ExportColumn("Compliance units"),
     ExportColumn("Fuel type"),
-    ExportColumn("Fuel type Other"),
     ExportColumn("Fuel category"),
     ExportColumn("End use"),
     ExportColumn("Determining carbon intensity"),
@@ -481,13 +479,12 @@ OTHER_USES_COLUMNS = [
 
 EXPORT_FUEL_COLUMNS = [
     ExportColumn("Compliance units"),
-    ExportColumn("Export date"),
     ExportColumn("Fuel type"),
-    ExportColumn("Fuel type other"),
     ExportColumn("Fuel category"),
     ExportColumn("End use"),
     ExportColumn("Determining carbon intensity"),
     ExportColumn("Fuel code"),
+    ExportColumn("Export date"),
     ExportColumn("Quantity supplied"),
     ExportColumn("Units"),
     ExportColumn("Target CI"),

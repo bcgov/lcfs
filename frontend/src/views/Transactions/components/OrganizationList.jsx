@@ -42,9 +42,9 @@ const OrganizationList = ({
 
   const onInputBoxChanged = (event, input) => {
     if (!input || input.name === t('txn:allOrganizations')) {
-      onOrgChange({ id: null, label: null })
+      onOrgChange({ id: null, label: null, name: null })
     } else {
-      onOrgChange({ id: input.organizationId, label: input.label })
+      onOrgChange({ id: input.organizationId, label: input.label, name: input.name })
     }
   }
 

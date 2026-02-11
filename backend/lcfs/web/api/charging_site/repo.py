@@ -8,12 +8,15 @@ from sqlalchemy.orm import joinedload, selectinload, aliased
 
 from lcfs.db.models.compliance import (
     EndUserType,
-    ChargingSite,
     ChargingEquipment,
     ChargingSiteStatus,
     ChargingEquipmentStatus,
     ComplianceReport,
     AllocationAgreement,
+)
+from lcfs.db.models.compliance.ChargingSite import (
+    ChargingSite,
+    latest_charging_site_version_subquery,
 )
 from lcfs.db.models.organization import Organization
 from lcfs.db.base import ActionTypeEnum
@@ -22,7 +25,6 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
-    get_field_for_filter,
 )
 
 
@@ -60,6 +62,19 @@ def _allocating_organization_display_name_expression():
 class ChargingSiteRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def _apply_latest_version_filter(self, stmt):
+        """
+        Ensure the provided statement only returns the most recent version of each charging site.
+        """
+        latest_versions = latest_charging_site_version_subquery()
+        return stmt.join(
+            latest_versions,
+            and_(
+                ChargingSite.charging_site_id == latest_versions.c.charging_site_id,
+                ChargingSite.version == latest_versions.c.latest_version,
+            ),
+        )
 
     @repo_handler
     async def get_intended_user_types(self) -> Sequence[EndUserType]:
@@ -123,7 +138,7 @@ class ChargingSiteRepository:
         """
         Retrieve a charging site by its ID with related data preloaded
         """
-        result = await self.db.execute(
+        stmt = (
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.status),
@@ -132,9 +147,9 @@ class ChargingSiteRepository:
                 joinedload(ChargingSite.documents),
             )
             .where(ChargingSite.charging_site_id == charging_site_id)
-            .order_by(ChargingSite.version.desc())
-            .limit(1)
         )
+        stmt = self._apply_latest_version_filter(stmt)
+        result = await self.db.execute(stmt)
         return result.scalars().first()
 
     @repo_handler
@@ -226,7 +241,10 @@ class ChargingSiteRepository:
                     filter_condition.field, filter_condition.field
                 )
 
-                field = get_field_for_filter(ranked_equipment, actual_field)
+                # Use getattr on the aliased entity directly to preserve
+                # the subquery alias in WHERE (get_field_for_filter
+                # unwraps to the original table column which breaks here)
+                field = getattr(ranked_equipment, actual_field, None)
                 if field is not None:
                     condition = apply_filter_conditions(
                         field,
@@ -247,7 +265,10 @@ class ChargingSiteRepository:
                 # Map frontend field names to database field names
                 actual_field = field_mappings.get(sort_order.field, sort_order.field)
 
-                field = get_field_for_filter(ranked_equipment, actual_field)
+                # Use getattr on the aliased entity directly to preserve
+                # the subquery alias in ORDER BY (get_field_for_filter
+                # unwraps to the original table column which breaks here)
+                field = getattr(ranked_equipment, actual_field, None)
                 if field is not None:
                     if sort_order.direction.lower() == "desc":
                         query = query.order_by(field.desc())
@@ -308,7 +329,7 @@ class ChargingSiteRepository:
         Retrieve all charging sites, optionally filtered by organization.
         Excludes deleted charging sites.
         """
-        query = (
+        stmt = (
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.organization),
@@ -321,9 +342,10 @@ class ChargingSiteRepository:
         )
 
         if organization_id:
-            query = query.where(ChargingSite.organization_id == organization_id)
+            stmt = stmt.where(ChargingSite.organization_id == organization_id)
 
-        result = await self.db.execute(query)
+        stmt = self._apply_latest_version_filter(stmt)
+        result = await self.db.execute(stmt)
         return result.unique().scalars().all()
 
     @repo_handler
@@ -334,7 +356,7 @@ class ChargingSiteRepository:
         Retrieve all charging sites for a specific organization, ordered by creation date.
         Excludes deleted charging sites.
         """
-        query = (
+        stmt = (
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.status),
@@ -346,7 +368,8 @@ class ChargingSiteRepository:
             )
             .order_by(asc(ChargingSite.create_date))
         )
-        results = await self.db.execute(query)
+        stmt = self._apply_latest_version_filter(stmt)
+        results = await self.db.execute(stmt)
         return results.scalars().all()
 
     @repo_handler
@@ -356,7 +379,7 @@ class ChargingSiteRepository:
         """
         Retrieve charging sites by their IDs, ordered by creation date
         """
-        query = (
+        stmt = (
             select(ChargingSite)
             .options(
                 joinedload(ChargingSite.organization),
@@ -366,7 +389,8 @@ class ChargingSiteRepository:
             .where(ChargingSite.charging_site_id.in_(charging_site_ids))
             .order_by(asc(ChargingSite.create_date))
         )
-        results = await self.db.execute(query)
+        stmt = self._apply_latest_version_filter(stmt)
+        results = await self.db.execute(stmt)
         return results.scalars().all()
 
     @repo_handler
@@ -393,6 +417,8 @@ class ChargingSiteRepository:
             )
             .where(ChargingSite.action_type != ActionTypeEnum.DELETE)
         )
+
+        stmt = self._apply_latest_version_filter(stmt)
 
         # Add condition to exclude draft sites if requested
         if exclude_draft:
@@ -458,12 +484,12 @@ class ChargingSiteRepository:
         """
         Retrieve a charging site by its name within an organization.
         """
-        result = await self.db.execute(
-            select(ChargingSite).where(
-                ChargingSite.organization_id == organization_id,
-                func.lower(ChargingSite.site_name) == func.lower(site_name),
-            )
+        stmt = select(ChargingSite).where(
+            ChargingSite.organization_id == organization_id,
+            func.lower(ChargingSite.site_name) == func.lower(site_name),
         )
+        stmt = self._apply_latest_version_filter(stmt)
+        result = await self.db.execute(stmt)
         return result.scalars().first()
 
     @repo_handler
@@ -483,6 +509,7 @@ class ChargingSiteRepository:
         if exclude_site_id:
             query = query.where(ChargingSite.charging_site_id != exclude_site_id)
 
+        query = self._apply_latest_version_filter(query)
         result = await self.db.execute(query)
         return result.scalars().first() is not None
 
@@ -676,7 +703,7 @@ class ChargingSiteRepository:
         Get site names and charging site IDs for the given organization.
         Excludes deleted charging sites.
         """
-        result = await self.db.execute(
+        stmt = (
             select(ChargingSite.site_name, ChargingSite.charging_site_id)
             .where(
                 ChargingSite.organization_id == organization_id,
@@ -684,6 +711,8 @@ class ChargingSiteRepository:
             )
             .order_by(ChargingSite.site_name)
         )
+        stmt = self._apply_latest_version_filter(stmt)
+        result = await self.db.execute(stmt)
         return result.all()
 
     @repo_handler

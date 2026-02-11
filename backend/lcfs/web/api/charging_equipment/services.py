@@ -313,8 +313,13 @@ class ChargingEquipmentServices:
                 ],
             )
 
-        # Update associated charging sites to Submitted if they are in Draft/Updated
-        await self._update_charging_sites_status(eligible_ids, user.organization_id)
+        # Update parent charging sites when equipment is submitted
+        await self._update_charging_sites_status(
+            eligible_ids,
+            ["Draft", "Updated"],
+            "Submitted",
+            user.organization_id,
+        )
 
         await add_notification_msg(
             action_type=ActionTypeEnum.UPDATE,
@@ -518,19 +523,56 @@ class ChargingEquipmentServices:
         ]
 
     async def _update_charging_sites_status(
-        self, equipment_ids: List[int], organization_id: int
+        self,
+        equipment_ids: List[int],
+        allowed_site_statuses: List[str],
+        new_status: str,
+        organization_id: Optional[int] = None,
     ):
-        """Update charging sites to Submitted status when their equipment is submitted."""
-        # Get all unique charging site IDs from the submitted equipment
-        site_ids = await self.repo.get_charging_site_ids_from_equipment(
-            equipment_ids, organization_id
+        """Update parent charging site statuses for the affected equipment."""
+        if not equipment_ids:
+            return
+
+        await self.repo.update_charging_sites_for_equipment(
+            equipment_ids,
+            allowed_site_statuses,
+            new_status,
+            organization_id,
         )
 
-        if site_ids:
-            # Update sites that are in Draft or Updated status to Submitted
-            await self.repo.update_charging_sites_status(
-                site_ids, ["Draft", "Updated"], "Submitted"
+    @service_handler
+    async def auto_submit_equipment_for_report(
+        self, compliance_report_id: int, organization_id: int
+    ) -> int:
+        """Sync equipment and site statuses when a report is submitted."""
+        updated_count, equipment_ids = await self.repo.auto_submit_draft_updated_fse_for_report(
+            compliance_report_id
+        )
+        if equipment_ids:
+            await self._update_charging_sites_status(
+                equipment_ids,
+                ["Draft", "Updated"],
+                "Submitted",
+                organization_id,
             )
+        return updated_count
+
+    @service_handler
+    async def auto_validate_equipment_for_report(
+        self, compliance_report_id: int, organization_id: int
+    ) -> int:
+        """Sync equipment and site statuses when a report is recommended."""
+        updated_count, equipment_ids = await self.repo.auto_validate_submitted_fse_for_report(
+            compliance_report_id
+        )
+        if equipment_ids:
+            await self._update_charging_sites_status(
+                equipment_ids,
+                ["Submitted", "Draft", "Updated"],
+                "Validated",
+                organization_id,
+            )
+        return updated_count
 
     @service_handler
     async def bulk_validate_equipment(
@@ -571,6 +613,13 @@ class ChargingEquipmentServices:
                     *[f"Equipment {eid} not in Submitted status" for eid in ineligible_ids],
                 ],
             )
+
+        # Update parent sites as part of validation workflow
+        await self._update_charging_sites_status(
+            eligible_ids,
+            ["Submitted", "Draft", "Updated"],
+            "Validated",
+        )
 
         await add_notification_msg(
             action_type=ActionTypeEnum.UPDATE,

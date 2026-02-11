@@ -16,8 +16,9 @@ import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
 import { FSEProcessing } from '@/views/FSEProcessing'
 import FSEFullMap from '@/views/FinalSupplyEquipments/FSEFullMap'
+import { AppRouteObject } from '../types'
 
-export const reportRoutes = [
+export const reportRoutes: AppRouteObject[] = [
   {
     path: ROUTES.REPORTS.LIST,
     element: <ReportsMenu />,
@@ -30,11 +31,13 @@ export const reportRoutes = [
         children: [
           {
             path: 'add',
+            // @ts-expect-error - Component handles missing props when used as route element
             element: <AddEditChargingSite isEditMode={false} />,
             handle: { title: 'Add charging site' }
           },
           {
             path: ':siteId/edit',
+            // @ts-expect-error - Component handles missing props when used as route element
             element: <AddEditChargingSite isEditMode={true} />,
             handle: { title: 'Edit charging site' }
           },

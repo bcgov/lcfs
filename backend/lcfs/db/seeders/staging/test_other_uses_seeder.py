@@ -50,7 +50,7 @@ async def seed_test_other_uses(session):
             "fuel_type_id": 16,  # Diesel
             "fuel_category_id": 2,  # Renewable fuel
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 15,  # BCLCF362.1 (Biodiesel)
+            "fuel_code_id": 504,  # Biodiesel 232.3 (CI: -1.00, matches fuel_type_id 1)
             "ci_of_fuel": -1.00,
             "quantity_supplied": 100000,
             "units": "Litres",
@@ -243,22 +243,21 @@ async def seed_test_other_uses(session):
         },
     ]
 
+    # Query all existing other uses records at once to avoid autoflush issues
+    result = await session.execute(select(OtherUses))
+    existing_other_uses = result.scalars().all()
+    existing_ids = {ou.other_uses_id for ou in existing_other_uses}
+
+    # Filter out other uses records that already exist
+    other_uses_to_add = []
     for other_uses_data in other_uses_to_seed:
-        # Check if the other uses record already exists
-        existing_other_uses = await session.execute(
-            select(OtherUses).where(
-                OtherUses.other_uses_id == other_uses_data["other_uses_id"]
-            )
-        )
-        if existing_other_uses.scalar():
-            logger.info(
-                f"Other uses record with ID {other_uses_data['other_uses_id']} already exists, skipping."
-            )
-            continue
+        if other_uses_data["other_uses_id"] not in existing_ids:
+            other_uses_to_add.append(OtherUses(**other_uses_data))
 
-        # Create and add the new other uses record
-        other_uses = OtherUses(**other_uses_data)
-        session.add(other_uses)
-
-    await session.flush()
-    logger.info(f"Seeded {len(other_uses_to_seed)} other uses records.")
+    # Add all new other uses records at once
+    if other_uses_to_add:
+        session.add_all(other_uses_to_add)
+        await session.flush()
+        logger.info(f"Seeded {len(other_uses_to_add)} other uses records.")
+    else:
+        logger.info("All other uses records already exist, skipping.")

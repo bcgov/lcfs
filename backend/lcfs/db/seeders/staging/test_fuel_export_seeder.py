@@ -40,22 +40,21 @@ async def seed_test_fuel_exports(session):
         },
     ]
 
+    # Query all existing fuel exports at once to avoid autoflush issues
+    result = await session.execute(select(FuelExport))
+    existing_exports = result.scalars().all()
+    existing_ids = {export.fuel_export_id for export in existing_exports}
+
+    # Filter out fuel exports that already exist
+    exports_to_add = []
     for fuel_export_data in fuel_exports_to_seed:
-        # Check if the fuel export already exists
-        existing_fuel_export = await session.execute(
-            select(FuelExport).where(
-                FuelExport.fuel_export_id == fuel_export_data["fuel_export_id"]
-            )
-        )
-        if existing_fuel_export.scalar():
-            logger.info(
-                f"Fuel export with ID {fuel_export_data['fuel_export_id']} already exists, skipping."
-            )
-            continue
+        if fuel_export_data["fuel_export_id"] not in existing_ids:
+            exports_to_add.append(FuelExport(**fuel_export_data))
 
-        # Create and add the new fuel export
-        fuel_export = FuelExport(**fuel_export_data)
-        session.add(fuel_export)
-
-    await session.flush()
-    logger.info(f"Seeded {len(fuel_exports_to_seed)} fuel exports.")
+    # Add all new fuel exports at once
+    if exports_to_add:
+        session.add_all(exports_to_add)
+        await session.flush()
+        logger.info(f"Seeded {len(exports_to_add)} fuel exports.")
+    else:
+        logger.info("All fuel exports already exist, skipping.")

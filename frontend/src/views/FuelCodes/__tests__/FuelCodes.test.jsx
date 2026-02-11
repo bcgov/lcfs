@@ -273,13 +273,6 @@ describe('FuelCodes Component Tests', () => {
       expect(newFuelCodeBtn).toHaveTextContent('New fuel code')
     })
 
-    it('should render clear filters button', () => {
-      render(<FuelCodes />, { wrapper })
-      const clearFiltersButton = screen.getByRole('button', {
-        name: /clear filters/i
-      })
-      expect(clearFiltersButton).toBeInTheDocument()
-    })
   })
 
   describe('Alert Message Handling', () => {
@@ -367,18 +360,6 @@ describe('FuelCodes Component Tests', () => {
       })
     })
 
-    it('should handle clear filters button click', async () => {
-      render(<FuelCodes />, { wrapper })
-      const clearFiltersButton = screen.getByRole('button', {
-        name: /clear filters/i
-      })
-
-      await act(async () => {
-        fireEvent.click(clearFiltersButton)
-      })
-
-      expect(clearFiltersButton).toBeInTheDocument()
-    })
   })
 
   describe('Download Functionality', () => {
@@ -658,11 +639,10 @@ describe('FuelCodes Component Tests', () => {
       expect(newFuelCodeBtn).toBeInTheDocument()
     })
 
-    it('should always render download and clear filters buttons', () => {
+    it('should always render download button', () => {
       render(<FuelCodes />, { wrapper })
       
       expect(screen.getByTestId('fuel-code-download-btn')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /clear filters/i })).toBeInTheDocument()
     })
   })
 
@@ -673,7 +653,6 @@ describe('FuelCodes Component Tests', () => {
       expect(screen.getByText('Fuel codes')).toBeInTheDocument()
       expect(screen.getByText('New fuel code')).toBeInTheDocument()
       expect(screen.getByText('Download fuel codes information')).toBeInTheDocument()
-      expect(screen.getByText('Clear filters')).toBeInTheDocument()
     })
   })
 })
