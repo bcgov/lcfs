@@ -3,7 +3,7 @@ import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { timezoneFormatter } from '@/utils/formatters.js'
+import { timezoneFormatter, currencyFormatter } from '@/utils/formatters.js'
 import { ExpandMore } from '@mui/icons-material'
 import { List, ListItemText, styled } from '@mui/material'
 import MuiAccordion from '@mui/material/Accordion'
@@ -97,6 +97,24 @@ export const HistoryCard = ({
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
 
+  const renewablePenaltyAmountRaw =
+    report?.summary?.line11FossilDerivedBaseFuelTotal || 0
+  const lowCarbonPenaltyAmountRaw =
+    report?.summary?.line21NonCompliancePenaltyPayable || 0
+
+  const renewablePenaltyAmount = Math.trunc(
+    Number(renewablePenaltyAmountRaw) || 0
+  )
+  const lowCarbonPenaltyAmount = Math.trunc(
+    Number(lowCarbonPenaltyAmountRaw) || 0
+  )
+
+  const renewableTargetNotMet = renewablePenaltyAmountRaw > 0
+  const lowCarbonTargetNotMet = lowCarbonPenaltyAmountRaw > 0
+
+  const formattedRenewablePenalty = currencyFormatter(renewablePenaltyAmount)
+  const formattedLowCarbonPenalty = currencyFormatter(lowCarbonPenaltyAmount)
+
   /**
    * Helper: build the two assessment list items.
    * We use it twice – once top‑level for gov users (pre‑assessment)
@@ -134,6 +152,20 @@ export const HistoryCard = ({
                     : 'has not met'
               })}
             </ListItemText>
+            {renewableTargetNotMet && (
+              <List sx={{ p: 0, m: 0, width: '100%' }}>
+                <StyledListItem
+                  disablePadding
+                  sx={{ listStyleType: 'circle', marginLeft: '2.4rem' }}
+                >
+                  <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                    {t('report:assessmentPenaltyLn1', {
+                      penaltyAmount: formattedRenewablePenalty
+                    })}
+                  </ListItemText>
+                </StyledListItem>
+              </List>
+            )}
           </StyledListItem>
         )}
         <StyledListItem disablePadding>
@@ -149,6 +181,20 @@ export const HistoryCard = ({
                   : 'has not met'
             })}
           </ListItemText>
+          {lowCarbonTargetNotMet && (
+            <List sx={{ p: 0, m: 0, width: '100%' }}>
+              <StyledListItem
+                disablePadding
+                sx={{ listStyleType: 'circle', marginLeft: '2.4rem' }}
+              >
+                <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                  {t('report:assessmentPenaltyLn2', {
+                    penaltyAmount: formattedLowCarbonPenalty
+                  })}
+                </ListItemText>
+              </StyledListItem>
+            </List>
+          )}
         </StyledListItem>
       </>
     )
