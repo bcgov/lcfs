@@ -317,6 +317,7 @@ const NotificationSettingsForm = ({
                           const renderNotificationCheckbox =
                             (channel) =>
                             ({ field }) => {
+                              const checkboxTestId = `notification-toggle-${notificationTypeKey}-${channel?.toLowerCase?.() || ''}`
                               const toggleSelection = (isChecked) => {
                                 field.onChange(isChecked)
                                 handleCheckboxChange(
@@ -341,6 +342,7 @@ const NotificationSettingsForm = ({
 
                               return (
                                 <Checkbox
+                                  data-test={checkboxTestId}
                                   name={field.name}
                                   inputRef={field.ref}
                                   onBlur={field.onBlur}
@@ -349,7 +351,10 @@ const NotificationSettingsForm = ({
                                     toggleSelection(event.target.checked)
                                   }
                                   onKeyDown={handleKeyDown}
-                                  inputProps={{ onKeyDown: handleKeyDown }}
+                                  inputProps={{
+                                    onKeyDown: handleKeyDown,
+                                    'data-test': checkboxTestId
+                                  }}
                                   color="primary"
                                   disabled={isFormLoading}
                                 />

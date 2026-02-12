@@ -55,6 +55,8 @@ const NOTIFICATION_PILL_TEXT_COLORS = {
   General: '#6fbf73' // medium green
 }
 
+const CARD_TEST_ID = 'dashboard-government-notifications-card'
+
 // Safely extract text content from HTML using DOMParser
 // This avoids regex-based sanitization vulnerabilities (CodeQL: incomplete multi-character sanitization)
 const getTextContent = (html) => {
@@ -221,6 +223,7 @@ const GovernmentNotificationsCard = () => {
     return (
       <BCWidgetCard
         component="div"
+        data-test={CARD_TEST_ID}
         title="General notification"
         content={<Loading message="Loading notification..." />}
       />
@@ -521,6 +524,7 @@ const GovernmentNotificationsCard = () => {
     <>
       <BCWidgetCard
         component="div"
+        data-test={CARD_TEST_ID}
         title={cardTitle}
         content={isEditing ? renderEditForm() : renderNotificationContent()}
         headerSx={headerStyles}
