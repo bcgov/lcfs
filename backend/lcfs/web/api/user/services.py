@@ -15,6 +15,7 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
     FilterModel,
+    NotificationTypeEnum,
     PaginationRequestSchema,
     PaginationResponseSchema,
     validate_pagination,
@@ -37,12 +38,24 @@ from lcfs.web.api.role.services import RoleServices
 
 logger = structlog.get_logger(__name__)
 
+# Set to True to auto-create notification subscriptions on user creation
+# and role changes. Set to False to require users to opt in manually.
+AUTO_SUBSCRIBE_NOTIFICATIONS = False
+
 # For government users, we manage subscriptions for these roles only
 IDIR_NOTIFICATION_ROLES = {
     RoleEnum.ANALYST,
     RoleEnum.COMPLIANCE_MANAGER,
     RoleEnum.DIRECTOR,
 }
+
+# Government notification types to keep enabled for each IDIR role.
+GOV_NOTIFICATION_BY_ROLE = {
+    RoleEnum.ANALYST: NotificationTypeEnum.IDIR_ANALYST__GOVERNMENT_NOTIFICATION,
+    RoleEnum.COMPLIANCE_MANAGER: NotificationTypeEnum.IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION,
+    RoleEnum.DIRECTOR: NotificationTypeEnum.IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION,
+}
+BCEID_GOV_NOTIFICATION = NotificationTypeEnum.BCEID__GOVERNMENT_NOTIFICATION
 
 
 class UserServices:
@@ -180,25 +193,26 @@ class UserServices:
     @service_handler
     async def create_user(self, user_create: UserCreateSchema) -> str:
         """
-        Create a new user. If active:
-          - Government user => add subscriptions for any assigned government roles listed in IDIR_NOTIFICATION_ROLES.
-          - Non-gov user => add subscription for SUPPLIER only (ignore assigned roles).
+        Create a new user. Government notifications are always enabled.
+        Other notifications are only auto-subscribed when
+        AUTO_SUBSCRIBE_NOTIFICATIONS is True.
         """
         user = await self.repo.create_user(user_create)
 
         user = await self.repo.get_user_by_id(user.user_profile_id)
         if user.is_active:
-            if user.is_government:
-                for role_str in user.role_names:
-                    role_enum = RoleEnum(role_str)
-                    if role_enum in IDIR_NOTIFICATION_ROLES:
+            roles = {RoleEnum(r) for r in user.role_names}
+            await self._ensure_government_notification_subscriptions(user, roles)
+            if AUTO_SUBSCRIBE_NOTIFICATIONS:
+                if user.is_government:
+                    for role_enum in roles.intersection(IDIR_NOTIFICATION_ROLES):
                         await self.notification_service.add_subscriptions_for_user_role(
                             user.user_profile_id, role_enum
                         )
-            else:
-                await self.notification_service.add_subscriptions_for_user_role(
-                    user.user_profile_id, RoleEnum.SUPPLIER
-                )
+                else:
+                    await self.notification_service.add_subscriptions_for_user_role(
+                        user.user_profile_id, RoleEnum.SUPPLIER
+                    )
 
         await FastAPICache.clear(namespace="users")
         return "User created successfully"
@@ -209,6 +223,8 @@ class UserServices:
     ) -> UserProfile:
         """
         Update user info along with updating subscriptions based on the changes.
+        Subscriptions for removed roles are always deleted. New-role subscriptions
+        are only created when AUTO_SUBSCRIBE_NOTIFICATIONS is True.
         """
         user = await self.repo.get_user_by_id(user_id)
         if not user:
@@ -226,48 +242,52 @@ class UserServices:
 
         # 1) Inactive → Active
         if not was_active and is_active_now:
-            if user.is_government:
-                # Add subscriptions for assigned IDIR roles
-                for role in new_roles.intersection(IDIR_NOTIFICATION_ROLES):
-                    await self.notification_service.add_subscriptions_for_user_role(
-                        user.user_profile_id, role
+            await self._ensure_government_notification_subscriptions(user, new_roles)
+            if AUTO_SUBSCRIBE_NOTIFICATIONS:
+                if user.is_government:
+                    for role in new_roles.intersection(IDIR_NOTIFICATION_ROLES):
+                        await self.notification_service.add_subscriptions_for_user_role(
+                            user.user_profile_id, role
+                        )
+                    logger.info(
+                        "User %s became active (gov) -> subscriptions added.",
+                        user.user_profile_id,
                     )
-                logger.info(
-                    f"User {user.user_profile_id} became active (gov) -> IDIR added."
-                )
+                else:
+                    await self.notification_service.add_subscriptions_for_user_role(
+                        user.user_profile_id, RoleEnum.SUPPLIER
+                    )
+                    logger.info(
+                        "User %s became active (non-gov) -> subscriptions added.",
+                        user.user_profile_id,
+                    )
             else:
-                # Add Supplier for non-gov
-                await self.notification_service.add_subscriptions_for_user_role(
-                    user.user_profile_id, RoleEnum.SUPPLIER
-                )
                 logger.info(
-                    f"User {user.user_profile_id} became active (non-gov) -> Supplier added."
+                    "User %s became active -> auto-subscribe disabled.",
+                    user.user_profile_id,
                 )
 
-        # 2) Active → Inactive
+        # 2) Active → Inactive: always remove existing subscriptions.
         elif was_active and not is_active_now:
             if user.is_government:
-                # Remove IDIR for old roles
                 for role in old_roles.intersection(IDIR_NOTIFICATION_ROLES):
                     await self.notification_service.delete_subscriptions_for_user_role(
                         user.user_profile_id, role
                     )
-                logger.info(
-                    f"User {user.user_profile_id} became inactive (gov) -> IDIR removed."
-                )
             else:
-                # Remove Supplier
                 await self.notification_service.delete_subscriptions_for_user_role(
                     user.user_profile_id, RoleEnum.SUPPLIER
                 )
-                logger.info(
-                    f"User {user.user_profile_id} became inactive (non-gov) -> Supplier removed."
-                )
+            logger.info(
+                "User %s became inactive -> subscriptions removed.",
+                user.user_profile_id,
+            )
 
-        # 3) Remains Active
-        else:
+        # 3) Remains Active: always delete removed-role subs;
+        #    always keep government notifications enabled for added roles.
+        #    only add other new-role subs when AUTO_SUBSCRIBE_NOTIFICATIONS is True.
+        elif is_active_now:
             if user.is_government:
-                # Adjust subscriptions for IDIR role changes
                 removed_roles = old_roles - new_roles
                 added_roles = new_roles - old_roles
 
@@ -276,23 +296,54 @@ class UserServices:
                         user.user_profile_id, role
                     )
                     logger.info(
-                        f"User {user.user_profile_id} unsubscribed from {role.value}."
+                        "User %s lost role %s -> subscriptions removed.",
+                        user.user_profile_id,
+                        role.value,
                     )
 
-                for role in added_roles.intersection(IDIR_NOTIFICATION_ROLES):
-                    await self.notification_service.add_subscriptions_for_user_role(
-                        user.user_profile_id, role
+                if added_roles:
+                    await self._ensure_government_notification_subscriptions(
+                        user, added_roles
                     )
-                    logger.info(
-                        f"User {user.user_profile_id} subscribed to {role.value}."
-                    )
-            else:
-                # Non-gov, remains active => no role changes.
-                # (We ignore assigned roles for non-gov.)
-                pass
+
+                if AUTO_SUBSCRIBE_NOTIFICATIONS:
+                    for role in added_roles.intersection(IDIR_NOTIFICATION_ROLES):
+                        await self.notification_service.add_subscriptions_for_user_role(
+                            user.user_profile_id, role
+                        )
+                        logger.info(
+                            "User %s gained role %s -> subscriptions added.",
+                            user.user_profile_id,
+                            role.value,
+                        )
 
         await FastAPICache.clear(namespace="users")
         return user
+
+    def _get_government_notification_types(
+        self, roles: set[RoleEnum], is_government: bool
+    ) -> list[NotificationTypeEnum]:
+        if is_government:
+            return [
+                GOV_NOTIFICATION_BY_ROLE[role]
+                for role in sorted(roles, key=lambda r: r.value)
+                if role in GOV_NOTIFICATION_BY_ROLE
+            ]
+        return [BCEID_GOV_NOTIFICATION]
+
+    async def _ensure_government_notification_subscriptions(
+        self, user: UserProfile, roles: set[RoleEnum]
+    ) -> None:
+        notification_types = self._get_government_notification_types(
+            roles, user.is_government
+        )
+        if not notification_types:
+            return
+        await self.notification_service.add_subscriptions_for_notification_types(
+            user.user_profile_id,
+            notification_types,
+            is_enabled=True,
+        )
 
     @service_handler
     async def get_user_roles(self, user_id: int) -> List[dict]:

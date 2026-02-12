@@ -103,7 +103,7 @@ CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
     transfer_status.status,
-    coalesce(transfer.transaction_effective_date, transfer_history.update_date) calculated_effective_date,
+    (coalesce(transfer.transaction_effective_date, transfer_history.update_date) AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date calculated_effective_date,
     from_organization.name AS from_organization,
     to_organization.name AS to_organization,
     price_per_unit,

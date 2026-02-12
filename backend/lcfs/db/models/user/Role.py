@@ -17,7 +17,6 @@ class RoleEnum(enum.Enum):
     COMPLIANCE_REPORTING = "Compliance Reporting"
     SIGNING_AUTHORITY = "Signing Authority"
     READ_ONLY = "Read Only"
-    BETA_TESTER = "Beta Tester"
 
 
 class Role(BaseModel, Auditable):

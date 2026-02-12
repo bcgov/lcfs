@@ -9,8 +9,7 @@ export const roles = {
   transfers: 'Transfer',
   compliance_reporting: 'Compliance Reporting',
   signing_authority: 'Signing Authority',
-  read_only: 'Read Only',
-  beta_tester: 'Beta Tester'
+  read_only: 'Read Only'
 } as const
 
 export type RoleName = (typeof roles)[keyof typeof roles]

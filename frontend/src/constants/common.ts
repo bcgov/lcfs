@@ -27,8 +27,7 @@ export const ROLES_BADGE_SIZE: RoleBadgeSizes = {
   [roles.analyst]: 71,
   [roles.director]: 77,
   [roles.supplier]: 0,
-  [roles.government]: 0,
-  [roles.beta_tester]: 95
+  [roles.government]: 0
 }
 
 export const SUMMARY = {

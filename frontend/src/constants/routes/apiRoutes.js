@@ -88,6 +88,7 @@ export const apiRoutes = {
   getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
   getAvailableAnalysts: '/reports/analysts',
   assignAnalyst: '/reports/:reportId/assign',
+  reportOpenings: '/report-openings',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',
@@ -220,6 +221,7 @@ export const apiRoutes = {
   getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
   getCalculatorQuantityFromComplianceUnits:
     '/calculator/:complianceYear/calculate/quantity/',
+  getLookupTableData: '/calculator/:complianceYear/lookup-table/',
 
   // geocoder endpoints
   geocoderValidate: '/geocoder/validate',

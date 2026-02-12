@@ -17,7 +17,11 @@ import {
 } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-import { timezoneFormatter, numberFormatter, spacesFormatter } from '@/utils/formatters'
+import {
+  timezoneFormatter,
+  numberFormatter,
+  spacesFormatter
+} from '@/utils/formatters'
 
 export const CreditLedger = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
@@ -118,6 +122,7 @@ export const CreditLedger = ({ organizationId }) => {
     availableBalance: r.availableBalance,
     complianceUnits: r.complianceUnits,
     transactionType: r.transactionType,
+    description: r.description,
     updateDate: r.updateDate
   }))
 
@@ -152,38 +157,57 @@ export const CreditLedger = ({ organizationId }) => {
     {
       field: 'compliancePeriod',
       headerName: t('org:ledger.complianceYear'),
-      minWidth: 130
+      minWidth: 130,
+      sortable: false
     },
     {
       field: 'availableBalance',
       headerName: t('org:ledger.availableBalance'),
       valueFormatter: numberFormatter,
-      minWidth: 170
+      minWidth: 170,
+      sortable: false
     },
     {
       field: 'complianceUnits',
       headerName: t('org:ledger.complianceUnits'),
       valueFormatter: numberFormatter,
-      minWidth: 150
+      minWidth: 150,
+      sortable: false
     },
     {
       field: 'transactionType',
       headerName: t('org:ledger.transactionType'),
-      valueFormatter: (params) =>
-        params.value === 'StandaloneTransaction'
-          ? 'Legacy Transaction'
-          : spacesFormatter(params),
-      minWidth: 160
+      valueFormatter: (params) => {
+        const transactionType = params.data.transactionType
+        const description = params.data.description
+
+        // Map StandaloneTransaction to Legacy Transaction for display
+        const displayType =
+          transactionType === 'StandaloneTransaction'
+            ? 'Legacy Transaction'
+            : spacesFormatter({ value: transactionType })
+
+        // Append description for Compliance Reports (e.g., "Compliance Report - Original")
+        if (transactionType === 'ComplianceReport' && description) {
+          return `${displayType} – ${description}`
+        }
+
+        return displayType
+      },
+      minWidth: 300,
+      sortable: false
     },
     {
       field: 'updateDate',
       headerName: t('org:ledger.transactionDate'),
       valueFormatter: timezoneFormatter,
-      minWidth: 180
+      minWidth: 180,
+      sortable: false,
+      sort: 'desc'
     }
   ]
   const getRowId = (p) =>
-    `${p.data.updateDate}-${p.data.transactionType}-${p.data.complianceUnits}`
+    `${p.data.updateDate}-${p.data.transactionType}-${p.data.complianceUnits}-${p.data.description || ''}`
 
   return (
     <BCBox mt={1}>
@@ -266,7 +290,7 @@ export const CreditLedger = ({ organizationId }) => {
           onPaginationChange={onPaginationChange}
           defaultColDef={{
             filter: false,
-            sortable: true,
+            sortable: false,
             floatingFilter: false
           }}
         />

@@ -33,6 +33,7 @@ from lcfs.web.api.organization_snapshot.repo import OrganizationSnapshotReposito
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.report_opening.repo import ReportOpeningRepository
 from lcfs.services.s3.client import DocumentService
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -130,6 +131,15 @@ def mock_repo():
 @pytest.fixture
 def mock_org_repo():
     repo = AsyncMock(spec=OrganizationsRepository)
+    return repo
+
+
+@pytest.fixture
+def mock_report_opening_repo():
+    repo = AsyncMock(spec=ReportOpeningRepository)
+    repo.sync_configured_years = AsyncMock(return_value=[])
+    repo.ensure_year = AsyncMock()
+    repo.upsert_year = AsyncMock()
     return repo
 
 
@@ -332,8 +342,10 @@ def compliance_report_service(
     mock_document_service,
     mock_internal_comment_service,
     mock_trxn_repo,
+    mock_report_opening_repo,
 ):
     service = ComplianceReportServices(
+        request=None,
         repo=mock_repo,
         org_repo=mock_org_repo,
         snapshot_services=mock_snapshot_service,
@@ -341,6 +353,7 @@ def compliance_report_service(
         document_service=mock_document_service,
         transaction_repo=mock_trxn_repo,
         internal_comment_service=mock_internal_comment_service,
+        report_opening_repo=mock_report_opening_repo,
     )
     service.request = MagicMock()
     service.request.user = mock_user_profile

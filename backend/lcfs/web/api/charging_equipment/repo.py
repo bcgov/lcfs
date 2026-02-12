@@ -159,10 +159,17 @@ class ChargingEquipmentRepository:
                 )
 
         # Apply sorting
+        sort_field_map = {
+            "status": ChargingEquipmentStatus.status,
+            "level_of_equipment": LevelOfEquipment.name,
+            "site_name": ChargingSite.site_name,
+        }
         if pagination.sort_orders:
             for sort in pagination.sort_orders:
-                column = getattr(ChargingEquipment, sort.field, None)
-                if column:
+                column = sort_field_map.get(
+                    sort.field, getattr(ChargingEquipment, sort.field, None)
+                )
+                if column is not None and hasattr(column, "asc"):
                     if sort.direction == "desc":
                         query = query.order_by(column.desc())
                     else:
@@ -571,6 +578,36 @@ class ChargingEquipmentRepository:
         query = self._apply_latest_site_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def get_serial_numbers_for_organization(
+        self, organization_id: int
+    ) -> set[str]:
+        """
+        Retrieve serial numbers for all charging equipment owned by the organization.
+        Limited to non-deleted equipment and latest site versions.
+        """
+        stmt = (
+            select(ChargingEquipment.serial_number)
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .where(
+                ChargingSite.organization_id == organization_id,
+                ChargingEquipment.action_type != ActionTypeEnum.DELETE,
+                ChargingSite.action_type != ActionTypeEnum.DELETE,
+            )
+        )
+        stmt = self._apply_latest_site_filter(stmt)
+        result = await self.db.execute(stmt)
+        normalized = set()
+        for serial in result.scalars().all():
+            if isinstance(serial, str):
+                clean = serial.strip()
+                if clean:
+                    normalized.add(clean.upper())
+        return normalized
 
     @repo_handler
     async def get_organizations(self) -> List[Organization]:

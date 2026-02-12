@@ -9,7 +9,7 @@ from lcfs.db.models.compliance.ChargingSite import ChargingSite
 from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
     ComplianceReportChargingEquipment,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, SortOrder
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentFilterSchema,
@@ -65,6 +65,23 @@ async def test_get_charging_equipment_by_id_not_found(repo, mock_db):
 
     # Verify the result
     assert result is None
+    mock_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_serial_numbers_for_organization(repo, mock_db):
+    """Serial numbers for org should be normalized and deduplicated."""
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [
+        "SER-1",
+        " ser-2 ",
+        None,
+    ]
+    mock_db.execute.return_value = mock_result
+
+    serials = await repo.get_serial_numbers_for_organization(5)
+
+    assert serials == {"SER-1", "SER-2"}
     mock_db.execute.assert_called_once()
 
 
@@ -780,3 +797,119 @@ class TestChargingEquipmentRepositoryDeletedFiltering:
         # Verify results
         assert len(result) == 0
         mock_db.execute.assert_called_once()
+
+
+class TestChargingEquipmentSorting:
+    """Tests for sorting in get_charging_equipment_list, including relationship fields."""
+
+    @pytest.fixture
+    def setup_repo(self, valid_charging_equipment):
+        """Common setup: mock db, repo, and standard mock results."""
+        mock_db = AsyncMock()
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+
+        mock_items_result = MagicMock()
+        mock_items_result.scalars.return_value.all.return_value = [
+            valid_charging_equipment
+        ]
+
+        mock_db.execute.side_effect = [mock_count_result, mock_items_result]
+
+        repo = ChargingEquipmentRepository(mock_db)
+        return repo, mock_db
+
+    @pytest.mark.anyio
+    async def test_sort_by_status_asc(self, setup_repo):
+        """Sorting by 'status' should use ChargingEquipmentStatus.status, not the relationship."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="status", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+        assert mock_db.execute.call_count == 2
+
+    @pytest.mark.anyio
+    async def test_sort_by_status_desc(self, setup_repo):
+        """Sorting by 'status' desc should not raise."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="status", direction="desc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_level_of_equipment(self, setup_repo):
+        """Sorting by 'level_of_equipment' should use LevelOfEquipment.name."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="level_of_equipment", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_site_name(self, setup_repo):
+        """Sorting by 'site_name' should use ChargingSite.site_name."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="site_name", direction="desc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_direct_column(self, setup_repo):
+        """Sorting by a direct column like 'manufacturer' should work."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="manufacturer", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1
+
+    @pytest.mark.anyio
+    async def test_sort_by_invalid_field_ignored(self, setup_repo):
+        """Sorting by a nonexistent field should be safely ignored."""
+        repo, mock_db = setup_repo
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[SortOrder(field="nonexistent_field", direction="asc")],
+        )
+
+        items, total_count = await repo.get_charging_equipment_list(1, pagination)
+
+        assert total_count == 1
+        assert len(items) == 1

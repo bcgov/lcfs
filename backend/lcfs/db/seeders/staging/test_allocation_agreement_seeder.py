@@ -29,7 +29,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,  # Gasoline
             "fuel_category_id": 1,  # Renewable fuel (Ethanol)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 9,  # BCLCF286.2 (Ethanol)
+            "fuel_code_id": 634,  # Ethanol 286.2 (matches original DEV seeder)
             "ci_of_fuel": 35.17,
             "quantity": 300000,
             "units": "Litres",
@@ -49,7 +49,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 16,  # Diesel
             "fuel_category_id": 2,  # Renewable fuel (HDRD)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 11,  # BCLCF317.2 (HDRD)
+            "fuel_code_id": 17,  # HDRD 302.1 (representative, CI: 10.05)
             "ci_of_fuel": 17.36,
             "quantity": 1000000,
             "units": "Litres",
@@ -69,7 +69,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 16,  # Diesel
             "fuel_category_id": 2,  # Renewable fuel (Biodiesel)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 15,  # BCLCF362.1 (Biodiesel)
+            "fuel_code_id": 504,  # Biodiesel 232.3 (CI: -1.00, matches original 362.1)
             "ci_of_fuel": -1.00,
             "quantity": 3000000,
             "units": "Litres",
@@ -89,7 +89,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,  # Gasoline
             "fuel_category_id": 1,  # Renewable fuel (Ethanol)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 9,  # BCLCF286.2 (Ethanol)
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.17,
             "quantity": 100000,
             "units": "Litres",
@@ -109,7 +109,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 16,  # Diesel
             "fuel_category_id": 2,  # Renewable fuel (Biodiesel)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 15,  # BCLCF362.1 (Biodiesel)
+            "fuel_code_id": 504,  # Biodiesel 232.3
             "ci_of_fuel": -1.00,
             "quantity": 100000,
             "units": "Litres",
@@ -130,7 +130,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,  # Gasoline
             "fuel_category_id": 1,  # Renewable fuel (Ethanol)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 9,  # BCLCF286.2 (Ethanol)
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.17,
             "quantity": 100000,
             "units": "Litres",
@@ -150,7 +150,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 16,  # Diesel
             "fuel_category_id": 2,  # Renewable fuel (Biodiesel)
             "provision_of_the_act_id": 2,  # Fuel code provision
-            "fuel_code_id": 15,  # BCLCF362.1 (Biodiesel)
+            "fuel_code_id": 504,  # Biodiesel 232.3
             "ci_of_fuel": -1.00,
             "quantity": 100000,
             "units": "Litres",
@@ -171,7 +171,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 50,
             "units": "Litres",
@@ -191,7 +191,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 40,
             "units": "Litres",
@@ -211,7 +211,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 30,
             "units": "Litres",
@@ -231,7 +231,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 35,
             "units": "Litres",
@@ -251,7 +251,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 25,
             "units": "Litres",
@@ -271,7 +271,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 45,
             "units": "Litres",
@@ -291,7 +291,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 20,
             "units": "Litres",
@@ -311,7 +311,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 15,
             "units": "Litres",
@@ -331,7 +331,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 32,
             "units": "Litres",
@@ -351,7 +351,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 18,
             "units": "Litres",
@@ -371,7 +371,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 22,
             "units": "Litres",
@@ -391,7 +391,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 26,
             "units": "Litres",
@@ -411,7 +411,7 @@ async def seed_test_allocation_agreements(session):
             "fuel_type_id": 17,
             "fuel_category_id": 1,
             "provision_of_the_act_id": 2,
-            "fuel_code_id": 9,
+            "fuel_code_id": 634,  # Ethanol 286.2
             "ci_of_fuel": 35.0,
             "quantity": 24,
             "units": "Litres",
@@ -423,23 +423,21 @@ async def seed_test_allocation_agreements(session):
         },
     ]
 
+    # Query all existing allocation agreements at once to avoid autoflush issues
+    result = await session.execute(select(AllocationAgreement))
+    existing_agreements = result.scalars().all()
+    existing_ids = {ag.allocation_agreement_id for ag in existing_agreements}
+
+    # Filter out allocation agreements that already exist
+    agreements_to_add = []
     for allocation_data in allocation_agreements_to_seed:
-        # Check if the allocation agreement already exists
-        existing_allocation = await session.execute(
-            select(AllocationAgreement).where(
-                AllocationAgreement.allocation_agreement_id
-                == allocation_data["allocation_agreement_id"]
-            )
-        )
-        if existing_allocation.scalar():
-            logger.info(
-                f"Allocation agreement with ID {allocation_data['allocation_agreement_id']} already exists, skipping."
-            )
-            continue
+        if allocation_data["allocation_agreement_id"] not in existing_ids:
+            agreements_to_add.append(AllocationAgreement(**allocation_data))
 
-        # Create and add the new allocation agreement
-        allocation_agreement = AllocationAgreement(**allocation_data)
-        session.add(allocation_agreement)
-
-    await session.flush()
-    logger.info(f"Seeded {len(allocation_agreements_to_seed)} allocation agreements.")
+    # Add all new allocation agreements at once
+    if agreements_to_add:
+        session.add_all(agreements_to_add)
+        await session.flush()
+        logger.info(f"Seeded {len(agreements_to_add)} allocation agreements.")
+    else:
+        logger.info("All allocation agreements already exist, skipping.")

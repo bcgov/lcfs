@@ -1,3 +1,4 @@
+import datetime
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
@@ -7,8 +8,8 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transfer.schema import TransferCreateSchema
 from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.report_opening.repo import ReportOpeningRepository
 from lcfs.utils.constants import LCFS_Constants
-from lcfs.settings import settings
 
 
 class OrganizationValidation:
@@ -18,11 +19,23 @@ class OrganizationValidation:
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
         report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
+        report_opening_repo: ReportOpeningRepository = Depends(ReportOpeningRepository),
     ):
         self.org_repo = org_repo
         self.request = request
         self.transaction_repo = transaction_repo
         self.report_repo = report_repo
+        self.report_opening_repo = report_opening_repo
+
+    def _extract_compliance_year(self, description: str) -> int | None:
+        if not description:
+            return None
+
+        try:
+            return int(description)
+        except (TypeError, ValueError):
+            digits = "".join(filter(str.isdigit, str(description)))
+            return int(digits) if digits else None
 
     async def check_available_balance(self, organization_id, quantity):
         available_balance = await self.transaction_repo.calculate_available_balance(
@@ -33,22 +46,21 @@ class OrganizationValidation:
                 "adjusted": True,
                 "available_balance": available_balance,
                 "original_quantity": quantity,
-                "adjusted_quantity": available_balance
+                "adjusted_quantity": available_balance,
             }
 
         return {
             "adjusted": False,
             "available_balance": available_balance,
             "original_quantity": quantity,
-            "adjusted_quantity": quantity
+            "adjusted_quantity": quantity,
         }
 
     async def create_transfer(
         self, organization_id, transfer_create: TransferCreateSchema
     ):
         balance_check = await self.check_available_balance(
-        organization_id,
-        transfer_create.quantity
+            organization_id, transfer_create.quantity
         )
 
         if balance_check["adjusted"]:
@@ -112,35 +124,32 @@ class OrganizationValidation:
         if not period:
             raise HTTPException(status_code=404, detail="Compliance period not found")
 
-        # TEMPORARY SOLUTION - Issue #3730
-        # This is a temporary approach to gate compliance year access.
-        # A more robust long-term solution should be implemented to support future years
-        # dynamically (e.g., database-driven configuration per compliance period).
-        #
-        # Compliance year access rules (also enforced in compliance_report/validation.py):
-        # - 2025: Blocked when feature_reporting_2025_enabled is False
-        # - 2026: ALWAYS requires early issuance, regardless of 2025 flag status
+        compliance_year = self._extract_compliance_year(period.description)
+        if compliance_year is not None:
+            year_config = await self.report_opening_repo.ensure_year(compliance_year)
+            reporting_available = year_config.compliance_reporting_enabled
 
-        # Validate access to 2025/2026 compliance periods
-        # 2025: Blocked when feature_reporting_2025_enabled is False
-        if (
-            period.description == "2025"
-            and not settings.feature_reporting_2025_enabled
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="2025 reporting is not yet available.",
-            )
+            # Check for early issuance eligibility if the reporting window is not open
+            if (
+                compliance_year == datetime.datetime.now().year
+                and not reporting_available
+                and year_config.early_issuance_enabled
+            ):
+                early_issuance = await self.org_repo.get_early_issuance_by_year(
+                    organization_id, str(compliance_year)
+                )
+                if early_issuance and early_issuance.has_early_issuance:
+                    reporting_available = True
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"{compliance_year} reporting is only available to early issuance suppliers.",
+                    )
 
-        # 2026: ALWAYS requires early issuance, regardless of 2025 flag status
-        if period.description == "2026":
-            early_issuance = await self.org_repo.get_early_issuance_by_year(
-                organization_id, "2026"
-            )
-            if not early_issuance or not early_issuance.has_early_issuance:
+            if not reporting_available:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="2026 reporting is only available to early issuance suppliers.",
+                    detail=f"{compliance_year} reporting is not currently available.",
                 )
 
         is_report_present = await self.report_repo.get_compliance_report_by_period(
@@ -152,12 +161,3 @@ class OrganizationValidation:
                 detail="Duplicate report for the compliance period",
             )
         return
-
-    # async def save_final_supply_equipment_rows(
-    #     self, organization_id, report_id, fse_list
-    # ):
-    #     report = await self.report_repo.get_compliance_report_by_id(report_id)
-    #     if not report:
-    #         raise HTTPException(status_code=404, detail="Report not found")
-    #     # TODO: validate each row data
-    #     return

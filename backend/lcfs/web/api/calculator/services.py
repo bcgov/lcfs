@@ -6,7 +6,11 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.schema import (
     FuelTypeOptionsSchema,
 )
-from lcfs.web.api.calculator.schema import CreditsResultSchema
+from lcfs.web.api.calculator.schema import (
+    CreditsResultSchema,
+    LookupTableResponseSchema,
+    LookupTableRowSchema,
+)
 from lcfs.web.utils.calculations import (
     calculate_compliance_units,
     calculate_legacy_compliance_units,
@@ -202,3 +206,70 @@ class CalculatorService:
             energy_content=(float(quantity) * energy_density_value),
             compliance_units=round(compliance_units),
         )
+
+    @service_handler
+    async def get_lookup_table_data(
+        self, compliance_year: int
+    ) -> LookupTableResponseSchema:
+        """
+        Get lookup table data for display showing all fuel type combinations
+        with their associated carbon intensity and other calculation parameters.
+        """
+        result = await self.repo.get_lookup_table_data(compliance_year)
+        data = result["data"]
+        uci_map = result["uci_map"]
+
+        rows = []
+        seen_combinations = set()
+
+        for row in data:
+            # Skip rows where determining CI is "Fuel code"
+            # Only show Default CI and Prescribed CI rows
+            if row.provision_of_the_act and row.provision_of_the_act.startswith("Fuel code"):
+                continue
+
+            # Create a unique key for each combination
+            key = (
+                row.fuel_category,
+                row.fuel_type,
+                row.end_use_type,
+                row.provision_of_the_act,
+            )
+
+            # Skip if we've already processed this combination
+            if key in seen_combinations:
+                continue
+            seen_combinations.add(key)
+
+            # Determine CI value based on provision
+            ci_of_fuel = None
+            if row.default_carbon_intensity is not None:
+                ci_of_fuel = row.default_carbon_intensity
+            elif row.category_carbon_intensity is not None:
+                ci_of_fuel = row.category_carbon_intensity
+
+            # Get UCI from the map if available
+            uci = None
+            if row.end_use_type_id is not None:
+                uci = uci_map.get((row.fuel_type_id, row.end_use_type_id))
+
+            rows.append(
+                LookupTableRowSchema(
+                    fuel_category=row.fuel_category,
+                    fuel_type=row.fuel_type,
+                    end_use=row.end_use_type,
+                    determining_carbon_intensity=row.provision_of_the_act or "N/A",
+                    target_ci=round(row.target_carbon_intensity, 2)
+                    if row.target_carbon_intensity
+                    else None,
+                    ci_of_fuel=round(ci_of_fuel, 2) if ci_of_fuel else None,
+                    uci=round(uci, 2) if uci else None,
+                    energy_density=round(row.energy_density, 2)
+                    if row.energy_density
+                    else None,
+                    energy_density_unit=row.energy_density_unit,
+                    eer=round(row.eer, 2) if row.eer else None,
+                )
+            )
+
+        return LookupTableResponseSchema(compliance_year=compliance_year, data=rows)
