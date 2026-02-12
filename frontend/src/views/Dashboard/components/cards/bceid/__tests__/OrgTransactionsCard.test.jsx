@@ -81,7 +81,10 @@ vi.mock('@/utils/withRole', () => ({
 // Mock constants
 vi.mock('@/routes/routes', () => ({
   ROUTES: {
-    TRANSACTIONS: { LIST: '/transactions' },
+    TRANSACTIONS: {
+      LIST: '/transactions',
+      CREDIT_TRADING_MARKET: '/transactions/credit-trading-market'
+    },
     TRANSFERS: { ADD: '/transfers/add' }
   }
 }))
@@ -252,10 +255,9 @@ describe('OrgTransactionsCard', () => {
       const creditMarketButton = screen.getAllByTestId('list-item-button')[1]
       fireEvent.click(creditMarketButton)
 
-      expect(mockNavigate).toHaveBeenCalledWith({
-        pathname: '/transactions',
-        search: '?tab=credit-trading-market'
-      })
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/transactions/credit-trading-market'
+      )
     })
   })
 

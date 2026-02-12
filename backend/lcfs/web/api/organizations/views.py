@@ -34,6 +34,7 @@ from .schema import (
     OrganizationDetailsSchema,
     OrganizationCreditMarketUpdateSchema,
     OrganizationCreditMarketListingSchema,
+    CreditMarketAuditLogListResponseSchema,
     OrganizationCompanyOverviewUpdateSchema,
     OrganizationLinkKeyCreateSchema,
     OrganizationLinkKeysListSchema,
@@ -132,6 +133,23 @@ async def get_credit_market_listings(
     Returns organizations with credit market details for public visibility.
     """
     return await service.get_credit_market_listings()
+
+
+@router.post(
+    "/credit-market-audit-logs/list",
+    response_model=CreditMarketAuditLogListResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
+async def get_credit_market_audit_logs(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: OrganizationsService = Depends(),
+):
+    """
+    Fetch paginated credit trading market audit logs (IDIR/internal visibility).
+    """
+    return await service.get_credit_market_audit_logs_paginated(pagination)
 
 
 @router.get(

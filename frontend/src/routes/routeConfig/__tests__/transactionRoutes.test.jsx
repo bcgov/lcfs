@@ -13,6 +13,9 @@ vi.mock('../routes', () => ({
   default: {
     TRANSACTIONS: {
       LIST: '/transactions',
+      CREDIT_TRADING_MARKET: '/transactions/credit-trading-market',
+      CREDIT_TRADING_MARKET_AUDIT_LOG:
+        '/transactions/credit-trading-market-audit-log',
       ADD: '/transactions/add',
       EDIT: '/transactions/edit/:transactionId',
       VIEW: '/transactions/:transactionId',
@@ -39,16 +42,26 @@ describe('transactionRoutes', () => {
   it('should have correct route structure for transactions list', () => {
     const listRoute = transactionRoutes.find(route => route.path === '/transactions')
     expect(listRoute).toBeDefined()
-    expect(typeof listRoute.handle.title).toBe('function')
-    
-    // Test the dynamic title function
-    const mockLocation = { search: '' }
-    expect(listRoute.handle.title({ params: {}, location: mockLocation })).toBe('Transactions')
-    
-    const mockLocationWithTab = { search: '?tab=credit-trading-market' }
-    expect(listRoute.handle.title({ params: {}, location: mockLocationWithTab })).toBe('Credit trading market')
-    
+    expect(listRoute.handle.title).toBe('Transactions')
     expect(listRoute.handle.crumb()).toBe('Transactions')
+  })
+
+  it('should have route for credit trading market list page', () => {
+    const route = transactionRoutes.find(
+      (item) => item.path === '/transactions/credit-trading-market'
+    )
+    expect(route).toBeDefined()
+    expect(route.handle.title).toBe('Credit trading market')
+    expect(route.handle.crumb()).toBe('Transactions')
+  })
+
+  it('should have route for credit trading market audit log page', () => {
+    const route = transactionRoutes.find(
+      (item) => item.path === '/transactions/credit-trading-market-audit-log'
+    )
+    expect(route).toBeDefined()
+    expect(route.handle.title).toBe('Credit trading market - Audit log')
+    expect(route.handle.crumb()).toBe('Transactions')
   })
 
   it('should have correct route structure for add transaction', () => {

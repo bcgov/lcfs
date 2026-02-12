@@ -21,6 +21,7 @@ import {
   useRegenerateLinkKey,
   useValidateLinkKey,
   useCreditMarketListings,
+  useCreditMarketAuditLogs,
   useUpdateOrganization,
   useUpdateOrganizationUser,
   useUpdateCurrentOrgCreditMarket,
@@ -99,6 +100,32 @@ describe('useOrganization hooks', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith(
       '/organizations/credit-market-listings'
+    )
+  })
+
+  it('useCreditMarketAuditLogs posts paginated request', async () => {
+    mockPost.mockResolvedValue({
+      data: { pagination: { total: 0 }, creditMarketAuditLogs: [] }
+    })
+    const { result } = renderHook(
+      () =>
+        useCreditMarketAuditLogs({
+          page: 2,
+          size: 20,
+          sortOrders: [{ field: 'uploadedDate', direction: 'desc' }],
+          filters: []
+        }),
+      { wrapper }
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockPost).toHaveBeenCalledWith(
+      '/organizations/credit-market-audit-logs/list',
+      {
+        page: 2,
+        size: 20,
+        sortOrders: [{ field: 'uploadedDate', direction: 'desc' }],
+        filters: []
+      }
     )
   })
 
