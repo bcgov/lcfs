@@ -10,7 +10,7 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { AppBar, Box, Grid, Tab, Tabs } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { defaultSortModel, transactionsColDefs } from './_schema'
@@ -32,6 +32,7 @@ import {
 } from '@/hooks/useTransactions'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
+import { CreditMarketAuditLogTable } from './CreditTradingMarket/CreditMarketAuditLogTable'
 
 const initialPaginationOptions = {
   page: 1,
@@ -47,7 +48,7 @@ function TabPanel({ children, value, index }) {
       hidden={value !== index}
       id={`transaction-tabpanel-${index}`}
       aria-labelledby={`transaction-tab-${index}`}
-      sx={{ pt: 3 }}
+      sx={{ pt: 2 }}
     >
       {value === index && children}
     </BCBox>
@@ -63,9 +64,7 @@ export const Transactions = () => {
   const downloadButtonRef = useRef(null)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
-  const [searchParams, setSearchParams] = useSearchParams()
-  const highlightedId = searchParams.get('hid')
-  const currentTab = searchParams.get('tab') || 'transactions'
+  const highlightedId = new URLSearchParams(location.search).get('hid')
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
@@ -251,17 +250,6 @@ export const Transactions = () => {
     }
   }, [location.state])
 
-  // Ensure URL has tab parameter (basic setup)
-  useEffect(() => {
-    const currentTabParam = searchParams.get('tab')
-
-    if (!currentTabParam) {
-      const newSearchParams = new URLSearchParams(searchParams)
-      newSearchParams.set('tab', 'transactions')
-      setSearchParams(newSearchParams, { replace: true })
-    }
-  }, [searchParams, setSearchParams])
-
   useEffect(() => {
     function handleResize() {
       if (window.innerWidth < 500) {
@@ -274,13 +262,6 @@ export const Transactions = () => {
     handleResize()
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
-  const handleChangeTab = (event, newValue) => {
-    const newTab = newValue === 0 ? 'transactions' : 'credit-trading-market'
-    const newSearchParams = new URLSearchParams(searchParams)
-    newSearchParams.set('tab', newTab)
-    setSearchParams(newSearchParams)
-  }
 
   // Function to update organization filter with session storage persistence
   const updateOrgFilter = useCallback((orgData) => {
@@ -350,20 +331,53 @@ export const Transactions = () => {
   const showCreditTradingTab =
     hasRoles(roles.government) || (isBCeIDUser && isRegistered)
 
-  // Validate access to credit trading market tab
+  const normalizedPath = location.pathname.replace(/\/+$/, '')
+  const currentTab =
+    normalizedPath === ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET
+      ? 'credit-trading-market'
+      : normalizedPath === ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET_AUDIT_LOG
+        ? 'credit-trading-market-audit-log'
+        : 'transactions'
+
+  const tabRoutes = [ROUTES.TRANSACTIONS.LIST]
+  if (showCreditTradingTab) {
+    tabRoutes.push(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET)
+  }
+  if (showCreditTradingTab && hasRoles(roles.government)) {
+    tabRoutes.push(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET_AUDIT_LOG)
+  }
+
   useEffect(() => {
-    const currentTabParam = searchParams.get('tab')
-    if (currentTabParam === 'credit-trading-market' && !showCreditTradingTab) {
-      // Redirect to transactions tab if user doesn't have access to credit trading market
-      const newSearchParams = new URLSearchParams(searchParams)
-      newSearchParams.set('tab', 'transactions')
-      setSearchParams(newSearchParams, { replace: true })
+    const onMarketPath =
+      normalizedPath === ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET
+    const onAuditPath =
+      normalizedPath === ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET_AUDIT_LOG
+
+    if ((onMarketPath || onAuditPath) && !showCreditTradingTab) {
+      navigate(ROUTES.TRANSACTIONS.LIST, { replace: true })
+      return
     }
-  }, [searchParams, setSearchParams, showCreditTradingTab])
+
+    if (onAuditPath && !hasRoles(roles.government)) {
+      navigate(ROUTES.TRANSACTIONS.LIST, { replace: true })
+    }
+  }, [normalizedPath, showCreditTradingTab, hasRoles, navigate])
+
+  const handleChangeTab = (event, newValue) => {
+    const nextRoute = tabRoutes[newValue] || ROUTES.TRANSACTIONS.LIST
+    navigate(nextRoute)
+  }
 
   // Convert tab parameter to index
   const getTabIndex = (tab) => {
     if (tab === 'credit-trading-market' && showCreditTradingTab) return 1
+    if (
+      tab === 'credit-trading-market-audit-log' &&
+      showCreditTradingTab &&
+      hasRoles(roles.government)
+    ) {
+      return 2
+    }
     return 0
   }
   const tabIndex = getTabIndex(currentTab)
@@ -484,8 +498,19 @@ export const Transactions = () => {
     tabs.push({
       label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
       content: (
-        <BCBox mt={!hasRoles(roles.government) ? 3 : 0}>
+        <BCBox mt={0}>
           <CreditTradingMarket />
+        </BCBox>
+      )
+    })
+  }
+
+  if (showCreditTradingTab && hasRoles(roles.government)) {
+    tabs.push({
+      label: t('creditMarket:auditLog', 'Audit log'),
+      content: (
+        <BCBox mt={0}>
+          <CreditMarketAuditLogTable />
         </BCBox>
       )
     })
@@ -537,10 +562,17 @@ export const Transactions = () => {
             </Tabs>
           </AppBar>
 
-          <BCTypography variant="h5" mb={2} mt={2} color="primary">
+          <BCTypography
+            variant="h5"
+            mb={tabIndex === 1 ? 1.5 : 1}
+            mt={3}
+            color="primary"
+          >
             {tabIndex === 1
               ? t('txn:creditTradingMarketTitle')
-              : t('txn:title')}
+              : tabIndex === 2
+                ? t('creditMarket:auditLog', 'Audit log')
+                : t('txn:title')}
           </BCTypography>
 
           {tabs.map((tab, idx) => (

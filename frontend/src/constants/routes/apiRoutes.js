@@ -42,6 +42,7 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  creditMarketAuditLogsList: '/organizations/credit-market-audit-logs/list',
 
   // transactions
   transactions: '/transactions/',

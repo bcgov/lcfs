@@ -17,6 +17,9 @@ export const ROUTES = {
 
   TRANSACTIONS: {
     LIST: '/transactions',
+    CREDIT_TRADING_MARKET: '/transactions/credit-trading-market',
+    CREDIT_TRADING_MARKET_AUDIT_LOG:
+      '/transactions/credit-trading-market-audit-log',
     LIST_HIGHLIGHTED: '/transactions/?hid=:hid',
     ADD: '/transactions/add',
     EDIT: '/transactions/edit/:transactionId',
