@@ -1,7 +1,7 @@
 """historical target carbon intensities
 
 Revision ID: 87592f5136b3
-Revises: 5c3de27f158b
+Revises: 54d55e878dad
 Create Date: 2025-04-07 15:25:24.384935
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "87592f5136b3"
-down_revision = "5c3de27f158b"
+down_revision = "54d55e878dad"
 branch_labels = None
 depends_on = None
 
