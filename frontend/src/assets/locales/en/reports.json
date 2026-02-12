@@ -31,6 +31,8 @@
   "assessment": "Assessment",
   "assessmentLn1": "{{name}} {{hasMet}} renewable fuel targets set under section 9 of the Low Carbon Fuels Act.",
   "assessmentLn2": "{{name}} {{hasMet}} the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.",
+  "assessmentPenaltyLn1": "As per section 37(1) of the Low Carbon Fuels Act, an administrative penalty of {{penaltyAmount}} must be paid for failure to meet the renewable fuel target.",
+  "assessmentPenaltyLn2": "As per section 37(2) of the Low Carbon Fuels Act, an administrative penalty of {{penaltyAmount}} must be paid for failure to meet the low carbon fuel target.",
   "supplementalWarning": "If you become aware that this report is incomplete or inaccurate, you must submit a supplemental report within 30 days.",
   "supplementalReport": "Supplemental Report",
   "createSupplementalRptBtn": "Create supplemental report",
