@@ -24,6 +24,7 @@ from lcfs.web.api.compliance_report.constants import (
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
     FORMATS,
+    get_low_carbon_penalty_rate,
 )
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
@@ -285,6 +286,7 @@ class ComplianceReportSummaryService:
             )
         else:
             desc = description
+
         summary.low_carbon_fuel_target_summary.append(
             ComplianceReportSummaryRowSchema(
                 line=line,
@@ -317,8 +319,8 @@ class ComplianceReportSummaryService:
             ),
         )
 
-        # Summary lines only report total_value
-        value = int(getattr(summary_obj, column_key) or 0)
+        # Summary lines only report total_value - use float to preserve decimal places for penalties
+        value = float(getattr(summary_obj, column_key) or 0)
         existing_element.total_value += value
 
     def _get_or_create_summary_row(
@@ -376,7 +378,6 @@ class ComplianceReportSummaryService:
     def _format_description(self, line, descriptions_dict):
         """
         Builds a description string from the dictionary.
-        Optionally handle a special line with dynamic formatting.
         """
         return descriptions_dict[line].get("description")
 
@@ -399,7 +400,7 @@ class ComplianceReportSummaryService:
 
     def _renewable_special_description(self, line, summary_obj, descriptions_dict):
         """
-        For lines 6 and 8, your original code does some .format() with three placeholders
+        For lines 6 and 8, format the description with placeholders
         (line_4_eligible_renewable_fuel_required_* * 0.05).
         """
         base_desc = descriptions_dict[line].get("description")
@@ -438,12 +439,24 @@ class ComplianceReportSummaryService:
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
         """
-        For line 21, your original code does .format(...) with summary_obj.line_21_non_compliance_penalty_payable / 600
+        For line 21, format with summary_obj.line_21_non_compliance_penalty_payable / penalty_rate
+        Penalty rate is $200 for compliance years <=2022, $600 for >=2023
         """
         base_desc = descriptions_dict[line].get("description")
         penalty_value = getattr(summary_obj, "line_21_non_compliance_penalty_payable", 0) or 0
+
+        # Get compliance year to determine correct penalty rate
+        compliance_year = (
+            int(summary_obj.compliance_report.compliance_period.description)
+            if summary_obj.compliance_report
+            and summary_obj.compliance_report.compliance_period
+            else 2024  # fallback year
+        )
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
+
         return base_desc.format(
-            "{:,}".format(int(penalty_value / 600))
+            units="{:,}".format(int(penalty_value / penalty_rate)),
+            rate=penalty_rate,
         )
 
     @service_handler
@@ -838,7 +851,9 @@ class ComplianceReportSummaryService:
             )
         )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary(
-            non_compliance_penalty_payable_units, renewable_fuel_target_summary
+            non_compliance_penalty_payable_units,
+            renewable_fuel_target_summary,
+            compliance_period_start.year,
         )
 
         existing_summary = self.convert_summary_to_dict(summary_model)
@@ -1065,6 +1080,7 @@ class ComplianceReportSummaryService:
             current_required_quantity_dec = (
                 decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
+
             raw_net_supplied = decimal_raw_net_renewable_supplied.get(
                 category, DECIMAL_ZERO
             )
@@ -1439,11 +1455,13 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable_units = (
             calculated_penalty_units if (calculated_penalty_units < 0) else 0
         )
+        # Get penalty rate based on compliance year ($200 for <=2022, $600 for >=2023)
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
         non_compliance_penalty_payable = (
             int(
                 (
                     Decimal(str(non_compliance_penalty_payable_units))
-                    * Decimal("-600.0")
+                    * Decimal(str(-penalty_rate))
                 ).max(Decimal("0"))
             )
             if non_compliance_penalty_payable_units < 0
@@ -1476,7 +1494,8 @@ class ComplianceReportSummaryService:
                 line=line,
                 description=(
                     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(non_compliance_penalty_payable_units * -1)
+                        units="{:,}".format(non_compliance_penalty_payable_units * -1),
+                        rate=penalty_rate,
                     )
                     if (line == 21)
                     else (
@@ -1503,9 +1522,12 @@ class ComplianceReportSummaryService:
         self,
         non_compliance_penalty_payable_units: int,
         renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema],
+        compliance_year: int,
     ) -> List[ComplianceReportSummaryRowSchema]:
+        # Get penalty rate based on compliance year ($200 for <=2022, $600 for >=2023)
+        penalty_rate = get_low_carbon_penalty_rate(compliance_year)
         non_compliance_penalty_payable = (
-            Decimal(str(non_compliance_penalty_payable_units)) * Decimal("-600.0")
+            Decimal(str(non_compliance_penalty_payable_units)) * Decimal(str(-penalty_rate))
         ).max(Decimal("0"))
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == 11)
         # Convert line 11 total value to Decimal for accurate addition
@@ -1556,9 +1578,11 @@ class ComplianceReportSummaryService:
         # Initialize compliance units sum using Decimal for precision
         compliance_units_sum = Decimal("0")
 
+        # Check if this is a historical report (pre-2024)
+        is_historical = int(report.compliance_period.description) < 2024
+
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
-
             TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
@@ -1572,8 +1596,17 @@ class ComplianceReportSummaryService:
             )
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula (returns Decimal)
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            # Apply the appropriate compliance units formula
+            compliance_units = calculate_compliance_units(
+                TCI=TCI,
+                EER=EER,
+                RCI=RCI,
+                UCI=UCI,
+                Q=Q,
+                ED=ED,
+                is_historical=is_historical,
+            )
+
             compliance_units_sum += compliance_units
 
         # Round to integer using ROUND_HALF_UP for consistent rounding
@@ -1641,19 +1674,34 @@ class ComplianceReportSummaryService:
             report.compliance_report_group_uuid, report.compliance_report_id
         )
 
+        # Check if this is a historical report (pre-2024)
+        is_historical = int(report.compliance_period.description) < 2024
+
         # Initialize compliance units sum using Decimal for precision
         compliance_units_sum = Decimal("0")
+
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
-            TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
+            TCI = fuel_export.target_ci or 0  # Target Carbon Intensity / CI class
             EER = fuel_export.eer or 0  # Energy Effectiveness Ratio
-            RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = fuel_export.uci or 0  # Additional Carbon Intensity
+            RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity / CI fuel
+            UCI = (
+                fuel_export.uci or 0
+            )  # Additional Carbon Intensity (only used in new calculation)
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula (returns Decimal)
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            # Apply the appropriate compliance units formula
+            compliance_units = calculate_compliance_units(
+                TCI=TCI,
+                EER=EER,
+                RCI=RCI,
+                UCI=UCI,
+                Q=Q,
+                ED=ED,
+                is_historical=is_historical,
+            )
+
             compliance_units = -compliance_units
             compliance_units = compliance_units if compliance_units < 0 else Decimal("0")
 

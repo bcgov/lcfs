@@ -50,8 +50,8 @@ const season =
 const seasonImages = {
   spring: {
     count: 250,
-    radius: [1, 4],
-    wind: [2, 1],
+    radius: [5, 5],
+    wind: [0, 0],
     image: bgSpringImage
   },
   summer: {

@@ -32,7 +32,11 @@ class FuelSupplyValidation:
             return await self.fs_repo.check_duplicate(prev_fs_data)
         return None
 
-    async def validate_other(self, fuel_supply: FuelSupplyCreateUpdateSchema):
+    async def validate_other(
+        self,
+        fuel_supply: FuelSupplyCreateUpdateSchema,
+        compliance_period_year: int = None,
+    ):
         fuel_type = await self.fc_repo.get_fuel_type_by_id(fuel_supply.fuel_type_id)
 
         if fuel_type.unrecognized:
@@ -57,3 +61,19 @@ class FuelSupplyValidation:
                         }
                     ]
                 )
+
+        # End use is required for 2024 and later compliance periods
+        if (
+            compliance_period_year is not None
+            and compliance_period_year >= 2024
+            and fuel_supply.end_use_id is None
+        ):
+            raise RequestValidationError(
+                [
+                    {
+                        "loc": ("endUseId",),
+                        "msg": "End use is required for compliance periods 2024 and later",
+                        "type": "value_error",
+                    }
+                ]
+            )

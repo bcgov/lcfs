@@ -74,7 +74,7 @@ async def test_save_allocation_agreement_create(
         data = response.json()
         assert "allocationAgreementId" in data
         assert data["quantity"] == 100
-        assert data["fuelType"]["fuelType"] == "Biodiesel"
+        assert data["fuelType"] == "Biodiesel"
 
 
 @pytest.mark.anyio

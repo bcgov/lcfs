@@ -194,3 +194,122 @@ async def test_validate_other_unrecognized_type_zero_energy_density(fuel_supply_
     assert len(errors) == 1
     assert errors[0]["loc"] == ("energyDensity",)
     assert "Energy Density must be greater than zero when using Other fuel type" in errors[0]["msg"]
+
+
+# End use validation tests for pre-2024 vs 2024+ compliance periods
+
+
+@pytest.mark.anyio
+async def test_validate_other_end_use_not_required_pre_2024(fuel_supply_validation):
+    """End use is not required for compliance periods before 2024"""
+    validation, _, mock_fc_repo = fuel_supply_validation
+    mock_fc_repo.get_fuel_type_by_id = AsyncMock(
+        return_value=MagicMock(unrecognized=False)
+    )
+
+    # No end_use_id provided
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=None,  # No end use
+        provision_of_the_act_id=1,
+        quantity=2000,
+        units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
+    )
+
+    # Should not raise error for pre-2024 compliance periods
+    await validation.validate_other(fuel_supply_data, compliance_period_year=2023)
+    await validation.validate_other(fuel_supply_data, compliance_period_year=2020)
+    await validation.validate_other(fuel_supply_data, compliance_period_year=2010)
+
+
+@pytest.mark.anyio
+async def test_validate_other_end_use_required_2024_and_later(fuel_supply_validation):
+    """End use is required for compliance periods 2024 and later"""
+    validation, _, mock_fc_repo = fuel_supply_validation
+    mock_fc_repo.get_fuel_type_by_id = AsyncMock(
+        return_value=MagicMock(unrecognized=False)
+    )
+
+    # No end_use_id provided
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=None,  # No end use - should fail for 2024+
+        provision_of_the_act_id=1,
+        quantity=2000,
+        units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
+    )
+
+    # Should raise RequestValidationError for 2024 compliance period
+    with pytest.raises(RequestValidationError) as exc:
+        await validation.validate_other(fuel_supply_data, compliance_period_year=2024)
+
+    errors = exc.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["loc"] == ("endUseId",)
+    assert "End use is required for compliance periods 2024 and later" in errors[0]["msg"]
+
+
+@pytest.mark.anyio
+async def test_validate_other_end_use_required_2025_and_later(fuel_supply_validation):
+    """End use is required for compliance periods 2025 and beyond"""
+    validation, _, mock_fc_repo = fuel_supply_validation
+    mock_fc_repo.get_fuel_type_by_id = AsyncMock(
+        return_value=MagicMock(unrecognized=False)
+    )
+
+    # No end_use_id provided
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=None,
+        provision_of_the_act_id=1,
+        quantity=2000,
+        units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
+    )
+
+    # Should raise RequestValidationError for 2025 compliance period
+    with pytest.raises(RequestValidationError) as exc:
+        await validation.validate_other(fuel_supply_data, compliance_period_year=2025)
+
+    errors = exc.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["loc"] == ("endUseId",)
+    assert "End use is required for compliance periods 2024 and later" in errors[0]["msg"]
+
+
+@pytest.mark.anyio
+async def test_validate_other_end_use_provided_2024(fuel_supply_validation):
+    """End use validation passes when end_use_id is provided for 2024+"""
+    validation, _, mock_fc_repo = fuel_supply_validation
+    mock_fc_repo.get_fuel_type_by_id = AsyncMock(
+        return_value=MagicMock(unrecognized=False)
+    )
+
+    # end_use_id provided
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=24,  # End use provided
+        provision_of_the_act_id=1,
+        quantity=2000,
+        units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
+    )
+
+    # Should not raise error when end_use_id is provided
+    await validation.validate_other(fuel_supply_data, compliance_period_year=2024)
+    await validation.validate_other(fuel_supply_data, compliance_period_year=2025)
+    await validation.validate_other(fuel_supply_data, compliance_period_year=2030)
