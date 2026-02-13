@@ -911,10 +911,20 @@ class FuelSupplyMigrator:
             elif fuel_code_suffix:
                 fuel_code = fuel_code_suffix
 
+        # Handle fuel_category - snapshots may use "fuel_class" or "fuel_category"
+        fuel_category = str(
+            record.get("fuel_class", "") or record.get("fuel_category", "")
+        ).strip()
+
+        # Handle provision - snapshots may use "provision_of_the_act_description" or "provision_act"
+        provision = str(
+            record.get("provision_of_the_act_description", "") or record.get("provision_act", "")
+        ).strip()
+
         return {
             "fuel_type": str(record.get("fuel_type", "")).strip(),
-            "fuel_category": str(record.get("fuel_category", "")).strip(),
-            "provision_of_the_act": str(record.get("provision_act", "")).strip(),
+            "fuel_category": fuel_category,
+            "provision_of_the_act": provision,
             "fuel_code": fuel_code.strip(),
             "end_use": str(record.get("end_use", "")).strip(),
             "ci_of_fuel": str(record.get("ci_of_fuel", "")).strip(),
@@ -925,6 +935,7 @@ class FuelSupplyMigrator:
             "energy_density": str(record.get("energy_density", "")).strip(),
             "eer": str(record.get("eer", "")).strip(),
             "energy_content": str(record.get("energy_content", "")).strip(),
+            "fuel_type_other": str(record.get("fuel_type_other", "") or "").strip(),
             # Include the full record for processing
             "_full_record": record,
         }
@@ -1291,23 +1302,24 @@ class FuelSupplyMigrator:
 
     def generate_logical_record_key(self, record: Dict) -> str:
         """Generate a stable key that identifies a logical fuel supply record across compliance reports
-        
+
         This key represents the business identity of a fuel supply record, independent of
         which compliance report version it appears in.
-        """
-        # Extract values from the full record if available
-        full_record = record.get("_full_record", record)
 
-        # Use business identifiers that define a unique logical fuel supply record
+        IMPORTANT: Uses normalized record fields (from normalize_tfrs_record) rather than
+        raw _full_record fields. Raw TFRS snapshot data can have inconsistent field names
+        between original and supplemental reports (e.g., fuel_class vs fuel_category,
+        provision_of_the_act_description vs provision_act), which causes the same logical
+        record to get different keys and thus different group_uuids.
+        """
+        # Use normalized fields which are consistent across all snapshot formats
         key_parts = [
-            str(full_record.get("fuel_type", "")).strip(),
-            str(full_record.get("fuel_class", "") or full_record.get("fuel_category", "")).strip(),
-            str(full_record.get("provision_of_the_act_description", "") or full_record.get("provision_act", "")).strip(),
-            str(full_record.get("fuel_code", "")).strip(),  # This is the TFRS numeric ID
-            str(full_record.get("fuel_code_description", "")).strip(),  # This is the actual fuel code string
-            str(full_record.get("end_use", "")).strip(),
-            # Add other business identifiers that make a record unique
-            str(full_record.get("fuel_type_other", "")).strip(),
+            str(record.get("fuel_type", "")).strip(),
+            str(record.get("fuel_category", "")).strip(),
+            str(record.get("provision_of_the_act", "")).strip(),
+            str(record.get("fuel_code", "")).strip(),
+            str(record.get("end_use", "")).strip(),
+            str(record.get("fuel_type_other", "") or "").strip(),
         ]
         return "|".join(key_parts)
 
