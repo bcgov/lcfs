@@ -253,12 +253,17 @@ class ComplianceReportSummaryRepository:
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                 column_name = f"""line_{line_number}_{
                     row.field.lower()}_{fuel_type}"""
-                # Use ROUND_HALF_UP for consistent rounding instead of int() truncation
                 value = getattr(row, fuel_type) or 0
-                rounded_value = int(
-                    Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-                )
-                setattr(summary_obj, column_name, rounded_value)
+                # Line 11 is penalties - preserve decimals; other lines are volumes - round to integers
+                if line_number == 11:
+                    # Keep decimal precision for penalty calculations
+                    setattr(summary_obj, column_name, float(value))
+                else:
+                    # Use ROUND_HALF_UP for consistent rounding instead of int() truncation
+                    rounded_value = int(
+                        Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                    )
+                    setattr(summary_obj, column_name, rounded_value)
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:

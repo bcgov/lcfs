@@ -86,8 +86,9 @@ String INSERT_NOTIONAL_TRANSFER_SQL = """
         received_or_transferred,
         group_uuid,
         version,
-        user_type,
-        action_type
+        action_type,
+        create_user, 
+        update_user
     ) VALUES (
         ?,
         ?,
@@ -97,8 +98,9 @@ String INSERT_NOTIONAL_TRANSFER_SQL = """
         ?::receivedOrTransferredEnum,
         ?,
         ?,
-        'SUPPLIER',
-        ?::actiontypeenum
+        ?::actiontypeenum,
+        ?,
+        ?
     )
 """
 
@@ -193,6 +195,8 @@ def insertVersionRow(Connection destConn, Integer lcfsCRid, Map rowData, String 
     insStmt.setString(7, groupUuid)
     insStmt.setInt(8, nextVer)
     insStmt.setString(9, action)
+    insStmt.setString(10, 'ETL')
+    insStmt.setString(11, 'ETL')
     insStmt.executeUpdate()
     insStmt.close()
 

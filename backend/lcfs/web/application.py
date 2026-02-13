@@ -28,6 +28,7 @@ from lcfs.web.exception.exceptions import ValidationErrorException
 from lcfs.web.exception.exception_handler import (
     validation_error_exception_handler_no_details,
     validation_exception_handler,
+    global_exception_handler,
 )
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
@@ -40,6 +41,13 @@ origins = [
     "https://lcfs.apps.silver.devops.gov.bc.ca",
     "https://lowcarbonfuels.gov.bc.ca",
 ]
+
+# Regex pattern to match dev environment PR subdomains (e.g., lcfs-dev-3006)
+import re
+
+dev_origin_pattern = re.compile(
+    r"^https://lcfs-dev-\d+\.apps\.silver\.devops\.gov\.bc\.ca$"
+)
 
 
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
@@ -56,9 +64,11 @@ class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
                 content={"status": exc.status_code, "detail": exc.detail},
             )
 
-            # Check if the request origin is in the allowed origins
+            # Check if the request origin is in the allowed origins or matches dev pattern
             request_origin = request.headers.get("origin")
-            if request_origin in origins:
+            if request_origin in origins or (
+                request_origin and dev_origin_pattern.match(request_origin)
+            ):
                 response.headers["Access-Control-Allow-Origin"] = request_origin
 
             return response
@@ -150,7 +160,8 @@ def get_app() -> FastAPI:
     # Set up CORS middleware options
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,  # Allows all origins from localhost:3000
+        allow_origins=origins,  # Allows specific origins
+        allow_origin_regex=r"https://lcfs-dev-\d+\.apps\.silver\.devops\.gov\.bc\.ca",  # Allows dev PR subdomains
         allow_credentials=True,
         allow_methods=["*"],  # Allows all methods
         allow_headers=["*"],  # Allows all headers
@@ -183,21 +194,3 @@ def get_app() -> FastAPI:
     app.include_router(router=api_router, prefix="/api")
 
     return app
-
-
-async def global_exception_handler(request: Request, exc: Exception):
-    """Handle uncaught exceptions."""
-    logger = structlog.get_logger(__name__)
-    logger.error(
-        "Unhandled exception",
-        error=str(exc),
-        exc_info=True,
-        request_url=str(request.url),
-        method=request.method,
-        headers=dict(request.headers),
-        correlation_id=correlation_id_var.get(),
-    )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal Server Error"},
-    )
