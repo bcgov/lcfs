@@ -5,7 +5,7 @@ import { Dashboard } from '../Dashboard'
 import { Dashboard as DashboardFromIndex } from '../index'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { roles } from '@/constants/roles'
+import { roles, nonGovRoles } from '@/constants/roles'
 
 // Mock components
 vi.mock('@/components/Role', () => ({
@@ -75,6 +75,8 @@ vi.mock('../components/cards/idir/ComplianceReportCard', () => ({
 vi.mock('@/hooks/useCurrentUser')
 
 describe('Dashboard Component', () => {
+  const nonGovRolesTestId = `role-${nonGovRoles.join('-')}`
+
   beforeEach(() => {
     vi.clearAllMocks()
     // Default to a government user with analyst role
@@ -153,9 +155,7 @@ describe('Dashboard Component', () => {
     // Non-gov role related components
     expect(screen.getByTestId('role-Transfer')).toBeInTheDocument()
     expect(
-      screen.getAllByTestId(
-        'role-Supplier-Manage Users-Transfer-Compliance Reporting-Signing Authority-Read Only'
-      )
+      screen.getAllByTestId(nonGovRolesTestId)
     ).not.toHaveLength(0)
     expect(screen.getByText('Org Balance Card')).toBeInTheDocument()
     expect(screen.getByText('Feedback Card')).toBeInTheDocument()
@@ -191,9 +191,7 @@ describe('Dashboard Component', () => {
 
     // Test nonGovRoles components - using getAllByTestId since there are multiple instances
     expect(
-      screen.getAllByTestId(
-        'role-Supplier-Manage Users-Transfer-Compliance Reporting-Signing Authority-Read Only'
-      )
+      screen.getAllByTestId(nonGovRolesTestId)
     ).toHaveLength(3)
     expect(screen.getByText('Org Balance Card')).toBeInTheDocument()
     expect(screen.getByText('Feedback Card')).toBeInTheDocument()
