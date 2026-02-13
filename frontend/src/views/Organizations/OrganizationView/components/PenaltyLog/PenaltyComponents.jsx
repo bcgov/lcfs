@@ -31,9 +31,7 @@ export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
   <Stack spacing={1} sx={{ width: '100%' }}>
     <BCMetricCard
       title={i18n.t('org:penaltyLog.metrics.totalPenalties')}
-      value={currencyFormatter(penaltyTotals.total, {
-        maximumFractionDigits: 0
-      })}
+      value={currencyFormatter(penaltyTotals.total, false, 0)}
       subtitle={i18n.t('org:penaltyLog.metrics.yearToDate')}
       option={sparklineOptions.total}
       ariaLabel={i18n.t('org:penaltyLog.metrics.totalPenaltiesTrend')}
@@ -41,9 +39,7 @@ export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
     />
     <BCMetricCard
       title={i18n.t('org:penaltyLog.metrics.totalAuto')}
-      value={currencyFormatter(penaltyTotals.totalAutomatic, {
-        maximumFractionDigits: 0
-      })}
+      value={currencyFormatter(penaltyTotals.totalAutomatic, false, 0)}
       subtitle={i18n.t('org:penaltyLog.metrics.totalSubtitle')}
       option={sparklineOptions.automatic}
       ariaLabel={i18n.t('org:penaltyLog.metrics.automaticPenaltiesTrend')}
@@ -51,9 +47,7 @@ export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
     />
     <BCMetricCard
       title={i18n.t('org:penaltyLog.metrics.discretionary')}
-      value={currencyFormatter(penaltyTotals.discretionary, {
-        maximumFractionDigits: 0
-      })}
+      value={currencyFormatter(penaltyTotals.discretionary, false, 0)}
       subtitle={i18n.t('org:penaltyLog.metrics.discretionarySubtitle')}
       option={sparklineOptions.discretionary}
       ariaLabel={i18n.t('org:penaltyLog.metrics.discretionaryPenaltiesTrend')}
@@ -112,19 +106,13 @@ export const PenaltySummaryTable = ({
               <TableRow key={row.year} hover>
                 <TableCell>{row.year}</TableCell>
                 <TableCell>
-                  {currencyFormatter(row.autoRenewable, {
-                    maximumFractionDigits: 0
-                  })}
+                  {currencyFormatter(row.autoRenewable, false, 0)}
                 </TableCell>
                 <TableCell>
-                  {currencyFormatter(row.autoLowCarbon, {
-                    maximumFractionDigits: 0
-                  })}
+                  {currencyFormatter(row.autoLowCarbon, false, 0)}
                 </TableCell>
                 <TableCell>
-                  {currencyFormatter(row.totalAutomatic, {
-                    maximumFractionDigits: 0
-                  })}
+                  {currencyFormatter(row.totalAutomatic, false, 0)}
                 </TableCell>
               </TableRow>
             ))}
@@ -141,9 +129,7 @@ export const PenaltySummaryTable = ({
                 {i18n.t('org:penaltyLog.metrics.autoRenewable')}
               </BCTypography>
               <BCTypography variant="subtitle1" fontWeight="medium">
-                {currencyFormatter(penaltyTotals.autoRenewable, {
-                  maximumFractionDigits: 0
-                })}
+                {currencyFormatter(penaltyTotals.autoRenewable, false, 0)}
               </BCTypography>
             </Stack>
           </Grid>
@@ -153,9 +139,7 @@ export const PenaltySummaryTable = ({
                 {i18n.t('org:penaltyLog.metrics.autoLowCarbon')}
               </BCTypography>
               <BCTypography variant="subtitle1" fontWeight="medium">
-                {currencyFormatter(penaltyTotals.autoLowCarbon, {
-                  maximumFractionDigits: 0
-                })}
+                {currencyFormatter(penaltyTotals.autoLowCarbon, false, 0)}
               </BCTypography>
             </Stack>
           </Grid>

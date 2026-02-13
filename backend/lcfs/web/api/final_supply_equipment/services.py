@@ -8,7 +8,7 @@ from sqlalchemy.exc import ProgrammingError
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
-from lcfs.utils.constants import POSTAL_REGEX
+from lcfs.utils.constants import LCFS_Constants, POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
@@ -395,13 +395,33 @@ class FinalSupplyEquipmentServices:
         For each charging equipment belonging to the organization, use the latest
         non-decommissioned version and create compliance reporting records using the
         compliance period year as the default supply date range.
+
+        Important restrictions:
+        1. FSE data was not received via TFRS for years prior to 2024, so we skip
+           FSE copy entirely for pre-2024 compliance reports.
+        2. Equipment is only copied to reports for compliance periods during or after
+           the equipment was registered. This prevents copying equipment backwards
+           to reports created before the equipment existed.
         """
         compliance_year = int(report.compliance_period.description)
+
+        # FSE data was not received via TFRS for years prior to 2024
+        # Skip FSE copy for pre-2024 compliance reports
+        if compliance_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
+            logger.info(
+                "Skipping FSE copy for pre-2024 compliance report",
+                compliance_year=compliance_year,
+                compliance_report_id=report.compliance_report_id,
+            )
+            return {"created": 0}
+
         supply_from_date = date(compliance_year, 1, 1)
         supply_to_date = date(compliance_year, 12, 31)
 
+        # Only get equipment that existed during this compliance year
+        # (i.e., was created before the end of the compliance year)
         latest_equipments = await self.repo.get_latest_active_equipments(
-            report.organization_id
+            report.organization_id, compliance_year=compliance_year
         )
         if not latest_equipments:
             return {"created": 0}

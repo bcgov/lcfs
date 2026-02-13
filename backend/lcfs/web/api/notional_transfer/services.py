@@ -77,7 +77,9 @@ class NotionalTransferServices:
             q4_quantity=model.q4_quantity,
             legal_name=model.legal_name,
             address_for_service=model.address_for_service,
-            fuel_category=model.fuel_category.category,
+            fuel_category=(
+                model.fuel_category.category if model.fuel_category else None
+            ),
             is_canada_produced=model.is_canada_produced,
             is_q1_supplied=model.is_q1_supplied,
             received_or_transferred=model.received_or_transferred,

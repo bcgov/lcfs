@@ -8,6 +8,7 @@ Create Date: 2025-10-23 00:00:00.000000
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "adee8bc4a278"
@@ -16,73 +17,125 @@ branch_labels = None
 depends_on = None
 
 
+def column_exists(table_name, column_name):
+    """Check if a column exists in a table"""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+    return column_name in columns
+
+
+def table_exists(table_name):
+    """Check if a table exists"""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return table_name in inspector.get_table_names()
+
+
+def index_exists(index_name, table_name):
+    """Check if an index exists"""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    try:
+        indexes = inspector.get_indexes(table_name)
+        return any(idx['name'] == index_name for idx in indexes)
+    except:
+        return False
+
+
 def upgrade() -> None:
-    # Step 1: Add allocating_organization_id FK to charging_site
-    op.add_column(
-        "charging_site",
+    # Step 1: Add allocating_organization_id FK to charging_site (only if it doesn't exist)
+    if not column_exists("charging_site", "allocating_organization_id"):
+        op.add_column(
+            "charging_site",
         sa.Column(
             "allocating_organization_id",
             sa.Integer(),
             sa.ForeignKey("organization.organization_id"),
             nullable=True,
             comment="FK to allocating organization (null if not matched)",
-        ),
-    )
+            ),
+        )
 
-    # Step 2: Add allocating_organization_name to charging_site (hybrid approach)
-    op.add_column(
-        "charging_site",
-        sa.Column(
-            "allocating_organization_name",
-            sa.Text(),
-            nullable=True,
-            comment="Name of the allocating organization (text field, used when ID cannot be matched)",
-        ),
-    )
+    # Step 2: Add allocating_organization_name to charging_site (hybrid approach, only if it doesn't exist)
+    if not column_exists("charging_site", "allocating_organization_name"):
+        op.add_column(
+            "charging_site",
+            sa.Column(
+                "allocating_organization_name",
+                sa.Text(),
+                nullable=True,
+                comment="Name of the allocating organization (text field, used when ID cannot be matched)",
+            ),
+        )
 
-    # Step 3: Create index for allocating_organization_id
-    op.create_index(
-        "ix_charging_site_allocating_org_id",
-        "charging_site",
-        ["allocating_organization_id"],
-    )
+    # Step 3: Create index for allocating_organization_id (only if it doesn't exist)
+    if not index_exists("ix_charging_site_allocating_org_id", "charging_site"):
+        op.create_index(
+            "ix_charging_site_allocating_org_id",
+            "charging_site",
+            ["allocating_organization_id"],
+        )
 
     # Step 4: Migrate organization_name data from charging_equipment before it's dropped
-    # Priority: use organization_name if present, otherwise lookup name from organization_id
+    # Only run if BOTH source columns still exist (the SQL needs both)
     op.execute(
         """
-        UPDATE charging_site cs
-        SET allocating_organization_name = (
-            SELECT COALESCE(
-                ce.organization_name,
-                o.name
-            )
-            FROM charging_equipment ce
-            LEFT JOIN organization o ON ce.allocating_organization_id = o.organization_id
-            WHERE ce.charging_site_id = cs.charging_site_id
-              AND (ce.organization_name IS NOT NULL OR ce.allocating_organization_id IS NOT NULL)
-            ORDER BY ce.charging_equipment_id
-            LIMIT 1
-        )
-        WHERE EXISTS (
-            SELECT 1
-            FROM charging_equipment ce
-            WHERE ce.charging_site_id = cs.charging_site_id
-              AND (ce.organization_name IS NOT NULL OR ce.allocating_organization_id IS NOT NULL)
-        )
-        """
-    )
+        DO $$
+        DECLARE
+            ce_org_name_exists BOOLEAN;
+            ce_allocating_org_id_exists BOOLEAN;
+        BEGIN
+            -- Check if organization_name column exists in charging_equipment
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = 'charging_equipment'
+                AND column_name = 'organization_name'
+            ) INTO ce_org_name_exists;
 
-    # Step 5: Try to match organization names to actual organization IDs and set the FK
-    # This matches exact names (case-insensitive) to organization records
-    op.execute(
-        """
-        UPDATE charging_site cs
-        SET allocating_organization_id = o.organization_id
-        FROM organization o
-        WHERE LOWER(TRIM(cs.allocating_organization_name)) = LOWER(TRIM(o.name))
-          AND cs.allocating_organization_name IS NOT NULL
-          AND cs.allocating_organization_id IS NULL
+            -- Check if allocating_organization_id column exists in charging_equipment
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = 'charging_equipment'
+                AND column_name = 'allocating_organization_id'
+            ) INTO ce_allocating_org_id_exists;
+
+            -- Only migrate data if BOTH source columns exist (the query needs both)
+            IF ce_org_name_exists AND ce_allocating_org_id_exists THEN
+                EXECUTE '
+                    UPDATE charging_site cs
+                    SET allocating_organization_name = (
+                        SELECT COALESCE(
+                            ce.organization_name,
+                            o.name
+                        )
+                        FROM charging_equipment ce
+                        LEFT JOIN organization o ON ce.allocating_organization_id = o.organization_id
+                        WHERE ce.charging_site_id = cs.charging_site_id
+                          AND (ce.organization_name IS NOT NULL OR ce.allocating_organization_id IS NOT NULL)
+                        ORDER BY ce.charging_equipment_id
+                        LIMIT 1
+                    )
+                    WHERE EXISTS (
+                        SELECT 1
+                        FROM charging_equipment ce
+                        WHERE ce.charging_site_id = cs.charging_site_id
+                          AND (ce.organization_name IS NOT NULL OR ce.allocating_organization_id IS NOT NULL)
+                    )
+                ';
+
+                EXECUTE '
+                    UPDATE charging_site cs
+                    SET allocating_organization_id = o.organization_id
+                    FROM organization o
+                    WHERE LOWER(TRIM(cs.allocating_organization_name)) = LOWER(TRIM(o.name))
+                      AND cs.allocating_organization_name IS NOT NULL
+                      AND cs.allocating_organization_id IS NULL
+                ';
+            END IF;
+        END $$;
         """
     )
 

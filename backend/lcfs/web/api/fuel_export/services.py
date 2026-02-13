@@ -70,20 +70,28 @@ class FuelExportServices:
             if row_data["end_use_type_id"]
             else None
         )
-        eer = EnergyEffectivenessRatioSchema(
-            eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
-            fuel_category=fuel_category,
-            end_use_type=end_use_type,
+        eer = (
+            EnergyEffectivenessRatioSchema(
+                eer_id=row_data["eer_id"],
+                energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"] or 0, 2),
+                fuel_category=fuel_category,
+                end_use_type=end_use_type,
+            )
+            if row_data["eer_id"]
+            else None
         )
-        tci = TargetCarbonIntensitySchema(
-            target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(row_data["target_carbon_intensity"], 5),
-            reduction_target_percentage=round(
-                row_data["reduction_target_percentage"], 2
-            ),
-            fuel_category=fuel_category,
-            compliance_period=compliance_period,
+        tci = (
+            TargetCarbonIntensitySchema(
+                target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
+                target_carbon_intensity=round(row_data["target_carbon_intensity"] or 0, 5),
+                reduction_target_percentage=round(
+                    row_data["reduction_target_percentage"] or 0, 2
+                ),
+                fuel_category=fuel_category,
+                compliance_period=compliance_period,
+            )
+            if row_data["target_carbon_intensity_id"]
+            else None
         )
         fuel_code = (
             FuelCodeSchema(
@@ -91,7 +99,7 @@ class FuelExportServices:
                 fuel_code=row_data["fuel_code"],
                 fuel_code_prefix_id=row_data["fuel_code_prefix_id"],
                 fuel_code_carbon_intensity=round(
-                    row_data["fuel_code_carbon_intensity"], 2
+                    row_data["fuel_code_carbon_intensity"] or 0, 2
                 ),
                 fuel_code_effective_date=row_data["fuel_code_effective_date"],
                 fuel_code_expiration_date=row_data["fuel_code_expiration_date"],
@@ -141,7 +149,7 @@ class FuelExportServices:
 
             (
                 existing_fuel_type.eer_ratios.append(eer)
-                if not next(
+                if eer and not next(
                     (
                         e
                         for e in existing_fuel_type.eer_ratios
@@ -153,7 +161,7 @@ class FuelExportServices:
             )
             (
                 existing_fuel_type.target_carbon_intensities.append(tci)
-                if not next(
+                if tci and not next(
                     (
                         t
                         for t in existing_fuel_type.target_carbon_intensities
@@ -216,8 +224,8 @@ class FuelExportServices:
                 ),
                 fuel_categories=[fuel_category],
                 provisions=provisions,
-                eer_ratios=[eer],
-                target_carbon_intensities=[tci],
+                eer_ratios=[eer] if eer else [],
+                target_carbon_intensities=[tci] if tci else [],
                 fuel_codes=[fuel_code] if fuel_code else [],
             )
             fuel_types.append(fuel_type)

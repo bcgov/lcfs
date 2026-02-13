@@ -48,12 +48,13 @@ def upgrade() -> None:
     # PART 2: Add new columns to compliance_report_charging_equipment
     # =========================================================================
 
+    # Add new columns as NULLABLE first (will populate and make NOT NULL later)
     op.add_column(
         "compliance_report_charging_equipment",
         sa.Column(
             "supply_from_date",
             sa.DateTime(),
-            nullable=False,
+            nullable=True,
             comment="Start date of the supply period",
         ),
     )
@@ -62,7 +63,7 @@ def upgrade() -> None:
         sa.Column(
             "supply_to_date",
             sa.DateTime(),
-            nullable=False,
+            nullable=True,
             comment="End date of the supply period",
         ),
     )
@@ -71,10 +72,29 @@ def upgrade() -> None:
         sa.Column(
             "compliance_report_group_uuid",
             sa.String(length=36),
-            nullable=False,
+            nullable=True,
             comment="UUID that groups all versions of a compliance report",
         ),
     )
+
+    # Populate new columns from existing data (from FSE migration)
+    op.execute(
+        """
+        UPDATE compliance_report_charging_equipment crce
+        SET
+            supply_from_date = crce.date_of_supply_from,
+            supply_to_date = crce.date_of_supply_to,
+            compliance_report_group_uuid = cr.compliance_report_group_uuid
+        FROM compliance_report cr
+        WHERE crce.compliance_report_id = cr.compliance_report_id
+        AND crce.supply_from_date IS NULL;
+        """
+    )
+
+    # Now make the columns NOT NULL
+    op.alter_column('compliance_report_charging_equipment', 'supply_from_date', nullable=False)
+    op.alter_column('compliance_report_charging_equipment', 'supply_to_date', nullable=False)
+    op.alter_column('compliance_report_charging_equipment', 'compliance_report_group_uuid', nullable=False)
 
     # =========================================================================
     # PART 3: Add constraints
@@ -114,7 +134,8 @@ def upgrade() -> None:
     # PART 5: Migrate FSE data to compliance_report_charging_equipment
     # =========================================================================
 
-    # Migrate core FSE data
+    # Migrate core FSE data (only if not already migrated by earlier FSE migration)
+    # This handles cases where the FSE migration (c19276038926) didn't run yet
     op.execute(
         """
         INSERT INTO compliance_report_charging_equipment (
@@ -148,6 +169,11 @@ def upgrade() -> None:
         JOIN compliance_report cr ON fse.compliance_report_id = cr.compliance_report_id
         JOIN charging_equipment ce ON ce.charging_equipment_id = fse.final_supply_equipment_id
         WHERE fse.kwh_usage IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1 FROM compliance_report_charging_equipment crce
+            WHERE crce.charging_equipment_id = ce.charging_equipment_id
+            AND crce.compliance_report_id = fse.compliance_report_id
+        )
         ON CONFLICT DO NOTHING;
         """
     )

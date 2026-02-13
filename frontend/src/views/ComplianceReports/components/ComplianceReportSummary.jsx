@@ -336,6 +336,7 @@ const ComplianceReportSummary = ({
                   columns={lowCarbonColumns(t)}
                   data={summaryData?.lowCarbonFuelTargetSummary}
                   width={'80.65%'}
+                  compliancePeriodYear={compliancePeriodYear}
                 />
                 <SummaryTable
                   data-test="non-compliance-summary"

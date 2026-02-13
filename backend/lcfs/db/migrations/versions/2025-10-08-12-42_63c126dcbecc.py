@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from alembic_postgresql_enum import TableReference
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "63c126dcbecc"
@@ -18,12 +19,36 @@ branch_labels = None
 depends_on = None
 
 
+def enum_exists(enum_name):
+    """Check if an enum type exists"""
+    bind = op.get_bind()
+    result = bind.execute(
+        sa.text(
+            "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = :enum_name)"
+        ),
+        {"enum_name": enum_name}
+    )
+    return result.scalar()
+
+
+def table_exists(table_name):
+    """Check if a table exists"""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return table_name in inspector.get_table_names()
+
+
 def upgrade() -> None:
-    sa.Enum(
-        "Single contravention", "Continuous contravention", name="contravention_enum"
-    ).create(op.get_bind())
-    op.create_table(
-        "penalty_log",
+    # Create enum only if it doesn't exist
+    if not enum_exists("contravention_enum"):
+        sa.Enum(
+            "Single contravention", "Continuous contravention", name="contravention_enum"
+        ).create(op.get_bind())
+
+    # Create table only if it doesn't exist
+    if not table_exists("penalty_log"):
+        op.create_table(
+            "penalty_log",
         sa.Column(
             "penalty_log_id",
             sa.Integer(),

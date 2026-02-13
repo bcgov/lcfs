@@ -87,6 +87,9 @@ vi.mock('@/utils/keycloak', () => ({
   logout: vi.fn()
 }))
 
+// Import the mocked logout to verify calls
+import { logout as mockLogout } from '@/utils/keycloak'
+
 // Mock authentication
 vi.mock('@react-keycloak/web')
 vi.mock('@/hooks/useCurrentUser')
@@ -225,12 +228,15 @@ describe('Special Routes', () => {
       expect(logoutRoute.loader).toBeInstanceOf(Function)
     })
 
-    it('should have loader that returns null', () => {
+    it('should have loader that returns null', async () => {
       const logoutRoute = router.routes.find(
         (route) => route.path === '/log-out'
       )
       expect(logoutRoute).toBeDefined()
       expect(logoutRoute.loader).toBeInstanceOf(Function)
+
+      const result = await logoutRoute.loader()
+      expect(result).toBeNull()
     })
 
     it('should call logout even when not authenticated', () => {

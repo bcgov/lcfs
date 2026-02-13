@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 from lcfs.db.base import ActionTypeEnum
 import structlog
@@ -1114,7 +1114,7 @@ class ComplianceReportServices:
                 group_map[data.group_uuid][data.version] = data
                 # Store the create_date for sorting purposes (only for the first time we see this group_uuid)
                 if data.group_uuid not in create_date_map:
-                    create_date_map[data.group_uuid] = data.create_date
+                    create_date_map[data.group_uuid] = data.create_date or datetime.min.replace(tzinfo=timezone.utc)
                     # Track the original order of items based on creation
                     if data.action_type == ActionTypeEnum.CREATE:
                         original_order.append(data.group_uuid)
@@ -1182,7 +1182,7 @@ class ComplianceReportServices:
                         seen_ids.add(getattr(prev, id_field))
 
             # Sort items by their original create_date to maintain initial entry order
-            items.sort(key=lambda x: create_date_map.get(x.group_uuid, datetime.max))
+            items.sort(key=lambda x: create_date_map.get(x.group_uuid, datetime.max.replace(tzinfo=timezone.utc)))
             grouped_fs_reports.append(
                 dto(
                     nickname=report.nickname,
@@ -1211,7 +1211,7 @@ class ComplianceReportServices:
         latest_entries_list = list(latest_entries.values())
         # Convert to list and sort by original create_date
         latest_entries_list.sort(
-            key=lambda x: create_date_map.get(x.group_uuid, datetime.max)
+            key=lambda x: create_date_map.get(x.group_uuid, datetime.max.replace(tzinfo=timezone.utc))
         )
 
         grouped_fs_reports.insert(
