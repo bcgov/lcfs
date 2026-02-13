@@ -393,12 +393,25 @@ class TestChargingSiteService:
         mock_existing_site.organization_id = 1
         mock_existing_site.charging_site_id = 1
         mock_existing_site.version = 1
+        mock_existing_site.allocating_organization_id = None
+        mock_existing_site.allocating_organization_name = None
+        mock_existing_site.site_code = "SITE001"
+        mock_existing_site.street_address = "123 Main St"
+        mock_existing_site.city = "Vancouver"
+        mock_existing_site.postal_code = "V6B 1A1"
+        mock_existing_site.latitude = 49.2827
+        mock_existing_site.longitude = -123.1207
+        mock_existing_site.notes = "Test notes"
+        mock_existing_site.status_id = 1
+        mock_existing_site.group_uuid = "test-uuid"
+        mock_existing_site.documents = []
         mock_repo.get_charging_site_by_id.return_value = mock_existing_site
         mock_repo.charging_site_name_exists.return_value = False
 
         updated_status = MagicMock(spec=ChargingSiteStatus)
         updated_status.charging_site_status_id = 2
         updated_status.status = "Updated"
+        updated_status._sa_instance_state = MagicMock()
         mock_repo.get_charging_site_status_by_name.return_value = updated_status
 
         mock_org = MagicMock()
@@ -429,7 +442,7 @@ class TestChargingSiteService:
         mock_updated_site.create_user = "testuser"
         mock_updated_site.update_user = "testuser"
 
-        mock_repo.update_charging_site.return_value = mock_updated_site
+        mock_repo.create_charging_site.return_value = mock_updated_site
 
         update_data = ChargingSiteCreateSchema(
             charging_site_id=1,
@@ -446,9 +459,9 @@ class TestChargingSiteService:
         result = await charging_site_service.update_charging_site(update_data)
 
         assert isinstance(result, ChargingSiteSchema)
-        assert mock_existing_site.version == 2
+        assert result.version == 2
         mock_repo.get_charging_site_status_by_name.assert_called_once_with("Updated")
-        mock_repo.update_charging_site.assert_called_once_with(mock_existing_site)
+        mock_repo.create_charging_site.assert_called_once()
 
     @pytest.mark.anyio
     async def test_update_charging_site_duplicate_name(

@@ -70,7 +70,7 @@ class FinalSupplyEquipmentRepository:
         return stmt.join(
             latest_sites,
             and_(
-                ChargingSite.charging_site_id == latest_sites.c.charging_site_id,
+                ChargingSite.group_uuid == latest_sites.c.group_uuid,
                 ChargingSite.version == latest_sites.c.latest_version,
             ),
         )
