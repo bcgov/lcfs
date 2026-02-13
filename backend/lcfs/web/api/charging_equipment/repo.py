@@ -5,9 +5,9 @@ from datetime import date
 import structlog
 from typing import List, Optional, Dict, Any, Tuple
 from fastapi import Depends
-from sqlalchemy import select, func, and_, or_, update, delete
+from sqlalchemy import select, func, and_, or_, update, delete, false, case
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload, joinedload, aliased
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
@@ -31,7 +31,11 @@ from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.compliance.EndUserType import EndUserType
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    get_field_for_filter,
+    apply_filter_conditions,
+)
 from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema
 from lcfs.web.core.decorators import repo_handler
 
@@ -51,10 +55,46 @@ class ChargingEquipmentRepository:
         return stmt.join(
             latest_sites,
             and_(
-                ChargingSite.charging_site_id == latest_sites.c.charging_site_id,
+                ChargingSite.group_uuid == latest_sites.c.group_uuid,
                 ChargingSite.version == latest_sites.c.latest_version,
             ),
         )
+
+    def _apply_latest_equipment_version_filter(self, stmt, prefer_validated=False):
+        """
+        Constrain statements to the latest charging equipment record per group_uuid.
+        When prefer_validated is True, prioritize non Draft/Updated statuses.
+        """
+        status_alias = aliased(ChargingEquipmentStatus)
+        order_by = [ChargingEquipment.version.desc()]
+        if prefer_validated:
+            status_priority = case(
+                (status_alias.status.in_(("Draft", "Updated")), 1),
+                else_=0,
+            )
+            order_by = [status_priority.asc(), ChargingEquipment.version.desc()]
+
+        ranked_subquery = (
+            select(
+                ChargingEquipment.charging_equipment_id.label("ce_id"),
+                func.row_number()
+                .over(
+                    partition_by=ChargingEquipment.group_uuid,
+                    order_by=order_by,
+                )
+                .label("rn"),
+            )
+            .join(
+                status_alias,
+                ChargingEquipment.status_id == status_alias.charging_equipment_status_id,
+            )
+            .subquery()
+        )
+
+        return stmt.join(
+            ranked_subquery,
+            ChargingEquipment.charging_equipment_id == ranked_subquery.c.ce_id,
+        ).where(ranked_subquery.c.rn == 1)
 
     @repo_handler
     async def get_charging_equipment_by_id(
@@ -80,7 +120,6 @@ class ChargingEquipmentRepository:
         self,
         organization_id: Optional[int],
         pagination: PaginationRequestSchema,
-        filters: Optional[ChargingEquipmentFilterSchema] = None,
         exclude_draft: bool = False,
     ) -> tuple[List[ChargingEquipment], int]:
         """Get paginated list of charging equipment scoped to an organization when provided.
@@ -119,44 +158,101 @@ class ChargingEquipmentRepository:
             )
         )
         query = self._apply_latest_site_filter(query)
+        query = self._apply_latest_equipment_version_filter(
+            query, prefer_validated=exclude_draft
+        )
 
         # Apply organization scoping when either the caller or filters set it
         if organization_id is not None:
             query = query.where(ChargingSite.organization_id == organization_id)
-        elif filters and filters.organization_id is not None:
-            query = query.where(ChargingSite.organization_id == filters.organization_id)
 
         # Exclude draft equipment for government users
         if exclude_draft:
-            query = query.where(ChargingEquipmentStatus.status != "Draft")
+            query = query.where(
+                ~ChargingEquipmentStatus.status.in_(("Updated", "Draft"))
+            )
 
         # Apply filters
-        if filters:
-            if filters.status:
-                status_names = [s.value for s in filters.status]
-                query = query.where(ChargingEquipmentStatus.status.in_(status_names))
-
-            if filters.charging_site_id:
-                query = query.where(
-                    ChargingEquipment.charging_site_id == filters.charging_site_id
+        filter_columns = {
+            "status": ChargingEquipmentStatus.status,
+            "site_name": ChargingSite.site_name,
+            "serial_nbr": ChargingEquipment.serial_number,
+            "serial_number": ChargingEquipment.serial_number,
+            "manufacturer": ChargingEquipment.manufacturer,
+            "model": ChargingEquipment.model,
+            "level_of_equipment": LevelOfEquipment.name,
+            "ports": ChargingEquipment.ports,
+        }
+        if pagination.filters:
+            for filter_condition in pagination.filters:
+                field_name = filter_condition.field
+                filter_value = (
+                    filter_condition.values
+                    if filter_condition.filter_type == "set"
+                    else filter_condition.filter
                 )
 
-            if filters.manufacturer:
-                query = query.where(
-                    ChargingEquipment.manufacturer.ilike(f"%{filters.manufacturer}%")
-                )
+                if filter_value in (None, [], ""):
+                    continue
 
-            if filters.search_term:
-                search_pattern = f"%{filters.search_term}%"
-                query = query.where(
-                    or_(
-                        ChargingEquipment.equipment_number.ilike(search_pattern),
-                        ChargingEquipment.serial_number.ilike(search_pattern),
-                        ChargingEquipment.manufacturer.ilike(search_pattern),
-                        ChargingEquipment.model.ilike(search_pattern),
-                        ChargingSite.site_name.ilike(search_pattern),
+                if field_name in ("organization_name", "organization"):
+                    org_field = get_field_for_filter(Organization, "name")
+                    condition = apply_filter_conditions(
+                        org_field,
+                        filter_value,
+                        filter_condition.type,
+                        filter_condition.filter_type,
                     )
-                )
+                    if condition is None:
+                        continue
+
+                    org_query = select(Organization.organization_id).where(condition)
+                    org_ids = (await self.db.execute(org_query)).scalars().all()
+
+                    if not org_ids:
+                        query = query.where(false())
+                    else:
+                        query = query.where(ChargingSite.organization_id.in_(org_ids))
+                    continue
+
+                column = filter_columns.get(field_name)
+                if column is not None:
+                    condition = apply_filter_conditions(
+                        column,
+                        filter_value,
+                        filter_condition.type,
+                        filter_condition.filter_type,
+                    )
+                    if condition is not None:
+                        query = query.where(condition)
+                    continue
+
+                if field_name == "intended_use":
+                    end_use_field = get_field_for_filter(EndUseType, "type")
+                    condition = apply_filter_conditions(
+                        end_use_field,
+                        filter_value,
+                        filter_condition.type,
+                        filter_condition.filter_type,
+                    )
+                    if condition is not None:
+                        query = query.where(
+                            ChargingEquipment.intended_uses.any(condition)
+                        )
+                    continue
+
+                if field_name in ("intended_user", "intended_users"):
+                    end_user_field = get_field_for_filter(EndUserType, "type_name")
+                    condition = apply_filter_conditions(
+                        end_user_field,
+                        filter_value,
+                        filter_condition.type,
+                        filter_condition.filter_type,
+                    )
+                    if condition is not None:
+                        query = query.where(
+                            ChargingEquipment.intended_users.any(condition)
+                        )
 
         # Apply sorting
         sort_field_map = {
@@ -217,6 +313,7 @@ class ChargingEquipmentRepository:
             .order_by(ChargingEquipment.update_date.desc())
         )
         query = self._apply_latest_site_filter(query)
+        query = self._apply_latest_equipment_version_filter(query)
         result = await self.db.execute(query)
         return result.scalars().all()
 
@@ -302,21 +399,68 @@ class ChargingEquipmentRepository:
         if not equipment:
             return None
 
-        # Check if status allows editing
-        if equipment.status.status not in ["Draft", "Updated"]:
-            # If Validated, create a new version
-            if equipment.status.status == "Validated":
-                equipment.version += 1
+        create_new_version = equipment.status.status == "Validated"
 
-                # Get Updated status ID
-                status_query = select(ChargingEquipmentStatus).where(
-                    ChargingEquipmentStatus.status == "Updated"
+        if create_new_version:
+            status_query = select(ChargingEquipmentStatus).where(
+                ChargingEquipmentStatus.status == "Updated"
+            )
+            status_result = await self.db.execute(status_query)
+            updated_status = status_result.scalar_one()
+
+            base_payload = {
+                "charging_site_id": equipment.charging_site_id,
+                "status_id": updated_status.charging_equipment_status_id,
+                "equipment_number": equipment.equipment_number,
+                "serial_number": equipment.serial_number,
+                "manufacturer": equipment.manufacturer,
+                "model": equipment.model,
+                "level_of_equipment_id": equipment.level_of_equipment_id,
+                "ports": equipment.ports,
+                "latitude": equipment.latitude,
+                "longitude": equipment.longitude,
+                "notes": equipment.notes,
+            }
+
+            for field, value in equipment_data.items():
+                if field in ["intended_use_ids", "intended_user_ids"]:
+                    continue
+                base_payload[field] = value
+
+            new_equipment = ChargingEquipment(**base_payload)
+            new_equipment.group_uuid = equipment.group_uuid
+            new_equipment.version = (equipment.version or 0) + 1
+            new_equipment.action_type = ActionTypeEnum.UPDATE
+            new_equipment.status = updated_status
+
+            if "intended_use_ids" in equipment_data and equipment_data["intended_use_ids"] is not None:
+                intended_uses_query = select(EndUseType).where(
+                    EndUseType.end_use_type_id.in_(equipment_data["intended_use_ids"])
                 )
-                status_result = await self.db.execute(status_query)
-                updated_status = status_result.scalar_one()
-                equipment.status_id = updated_status.charging_equipment_status_id
+                intended_uses_result = await self.db.execute(intended_uses_query)
+                new_equipment.intended_uses = intended_uses_result.scalars().all()
+            else:
+                new_equipment.intended_uses = list(equipment.intended_uses)
 
-        # Update fields
+            if "intended_user_ids" in equipment_data and equipment_data["intended_user_ids"] is not None:
+                intended_users_query = select(EndUserType).where(
+                    EndUserType.end_user_type_id.in_(
+                        equipment_data["intended_user_ids"]
+                    )
+                )
+                intended_users_result = await self.db.execute(intended_users_query)
+                new_equipment.intended_users = intended_users_result.scalars().all()
+            else:
+                new_equipment.intended_users = list(equipment.intended_users)
+
+            self.db.add(new_equipment)
+            await self.db.flush()
+            await self.db.refresh(new_equipment)
+            await self.db.refresh(new_equipment, attribute_names=["charging_site"])
+
+            return new_equipment
+
+        # Update fields for Draft/Updated statuses
         for field, value in equipment_data.items():
             if field not in ["intended_use_ids", "intended_user_ids"]:
                 setattr(equipment, field, value)
@@ -469,9 +613,7 @@ class ChargingEquipmentRepository:
             return
 
         existing_stmt = (
-            select(
-                ComplianceReportChargingEquipment.charging_equipment_compliance_id
-            )
+            select(ComplianceReportChargingEquipment.charging_equipment_compliance_id)
             .where(
                 and_(
                     ComplianceReportChargingEquipment.compliance_report_group_uuid
@@ -646,11 +788,7 @@ class ChargingEquipmentRepository:
             select(ChargingEquipment.charging_site_id)
             .distinct()
             .join(ChargingSite)
-            .where(
-                and_(
-                    ChargingEquipment.charging_equipment_id.in_(equipment_ids)
-                )
-            )
+            .where(and_(ChargingEquipment.charging_equipment_id.in_(equipment_ids)))
         )
         if organization_id is not None:
             query = query.where(ChargingSite.organization_id == organization_id)
