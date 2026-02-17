@@ -1,7 +1,7 @@
 """Add CI Applicant and IA Proponent BCeID roles
 
 Revision ID: a1b2c3d4e5f9
-Revises: f3b1b9f03c9a
+Revises: a7c9e2f8b3d1
 Create Date: 2026-02-10 12:00:00.000000
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "a1b2c3d4e5f9"
-down_revision = "f3b1b9f03c9a"
+down_revision = "a7c9e2f8b3d1"
 branch_labels = None
 depends_on = None
 
