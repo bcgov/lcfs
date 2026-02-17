@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional, Sequence
 from fastapi import Depends
-from sqlalchemy import asc, desc, func, select, update, and_, or_
+from sqlalchemy import asc, desc, func, select, update, and_, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload, aliased
 
@@ -71,7 +71,7 @@ class ChargingSiteRepository:
         return stmt.join(
             latest_versions,
             and_(
-                ChargingSite.charging_site_id == latest_versions.c.charging_site_id,
+                ChargingSite.group_uuid == latest_versions.c.group_uuid,
                 ChargingSite.version == latest_versions.c.latest_version,
             ),
         )
@@ -198,6 +198,19 @@ class ChargingSiteRepository:
         # Add status conditions to base conditions
         base_conditions.extend(status_conditions)
 
+        # Configure ranking order so that gov users prefer validated/submitted versions
+        status_alias = aliased(ChargingEquipmentStatus)
+        order_by_expressions = [ChargingEquipment.version.desc()]
+        if is_government_user:
+            status_priority = case(
+                (status_alias.status.in_(("Draft", "Updated")), 1),
+                else_=0,
+            )
+            order_by_expressions = [
+                status_priority.asc(),
+                ChargingEquipment.version.desc(),
+            ]
+
         # Base query for equipment with all base conditions
         ranked_subquery = (
             select(
@@ -205,9 +218,14 @@ class ChargingSiteRepository:
                 func.row_number()
                 .over(
                     partition_by=ChargingEquipment.charging_equipment_id,
-                    order_by=ChargingEquipment.version.desc(),
+                    order_by=order_by_expressions,
                 )
                 .label("rn"),
+            )
+            .join(
+                status_alias,
+                ChargingEquipment.status_id
+                == status_alias.charging_equipment_status_id,
             )
             .where(*base_conditions)  # Apply base conditions here
             .subquery()
@@ -423,7 +441,7 @@ class ChargingSiteRepository:
         # Add condition to exclude draft sites if requested
         if exclude_draft:
             stmt = stmt.join(ChargingSite.status).where(
-                ChargingSiteStatus.status != "Draft"
+                ChargingSiteStatus.status.not_in(("Draft","Updated"))
             )
 
         # Apply other conditions

@@ -3,11 +3,20 @@ import { Box } from '@mui/material'
 import colors from '@/themes/base/colors'
 import PropTypes from 'prop-types'
 
-export const ComplianceUnitsTotal = ({ label, value, dataTest }) => {
+export const ComplianceUnitsTotal = ({ label, value, dataTest, isCurrency = false }) => {
   const formattedValue =
     value !== null && value !== undefined
-      ? Math.round(value).toLocaleString('en-US')
-      : '0'
+      ? isCurrency
+        ? value.toLocaleString('en-CA', {
+            style: 'currency',
+            currency: 'CAD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })
+        : Math.round(value).toLocaleString('en-US')
+      : isCurrency
+        ? '$0.00'
+        : '0'
 
   return (
     <Box
@@ -47,12 +56,14 @@ export const ComplianceUnitsTotal = ({ label, value, dataTest }) => {
 ComplianceUnitsTotal.propTypes = {
   label: PropTypes.string.isRequired,
   value: PropTypes.number,
-  dataTest: PropTypes.string
+  dataTest: PropTypes.string,
+  isCurrency: PropTypes.bool
 }
 
 ComplianceUnitsTotal.defaultProps = {
   value: 0,
-  dataTest: 'compliance-units-total'
+  dataTest: 'compliance-units-total',
+  isCurrency: false
 }
 
 ComplianceUnitsTotal.displayName = 'ComplianceUnitsTotal'
