@@ -72,7 +72,8 @@ describe('AsyncSuggestionEditor', () => {
     })
     mockApi = {
       tabToNextCell: vi.fn(),
-      tabToPreviousCell: vi.fn()
+      tabToPreviousCell: vi.fn(),
+      stopEditing: vi.fn()
     }
   })
 
@@ -162,6 +163,30 @@ describe('AsyncSuggestionEditor', () => {
     
     // Should be called with the object value
     expect(mockOnValueChange).toHaveBeenCalled()
+  })
+
+  it('selects the highlighted option when pressing Enter', async () => {
+    renderComponent()
+
+    const input = screen.getByRole('combobox')
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Option' } })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Option 1')).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'ArrowDown' })
+      fireEvent.keyDown(input, { key: 'Enter' })
+    })
+
+    const lastCall =
+      mockOnValueChange.mock.calls[mockOnValueChange.mock.calls.length - 1][0]
+    expect(lastCall).toEqual({ name: 'Option 1', id: 1 })
+    expect(mockApi.stopEditing).toHaveBeenCalled()
   })
 
 
