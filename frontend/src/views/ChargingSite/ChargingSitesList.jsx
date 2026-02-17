@@ -167,8 +167,31 @@ export const ChargingSitesList = () => {
     [orgIdToName]
   )
 
+  const apiPaginationOptions = useMemo(() => {
+    const otherFilters = (paginationOptions?.filters || []).filter(
+      (filter) => filter?.field !== 'organizationId'
+    )
+
+    const orgFilters =
+      isIDIR && selectedOrg.id
+        ? [
+            {
+              field: 'organizationId',
+              filterType: 'number',
+              type: 'equals',
+              filter: selectedOrg.id
+            }
+          ]
+        : []
+
+    return {
+      ...paginationOptions,
+      filters: [...orgFilters, ...otherFilters]
+    }
+  }, [isIDIR, paginationOptions, selectedOrg.id])
+
   const queryData = useGetAllChargingSites(
-    paginationOptions,
+    apiPaginationOptions,
     isIDIR,
     organizationId,
     {
@@ -195,20 +218,10 @@ export const ChargingSitesList = () => {
       sessionStorage.removeItem('selectedOrganization')
     }
 
-    // Update pagination options with new filter
+    // Reset pagination but preserve existing grid filters
     setPaginationOptions((prev) => ({
       ...prev,
-      page: 1,
-      filters: id
-        ? [
-            {
-              field: 'organizationId',
-              filterType: 'number',
-              type: 'equals',
-              filter: id
-            }
-          ]
-        : []
+      page: 1
     }))
   }, [])
 
@@ -283,34 +296,6 @@ export const ChargingSitesList = () => {
     selectedOrgOption,
     t
   ])
-
-  // Apply cached filter when component mounts and org data is loaded
-  useEffect(() => {
-    if (selectedOrg.id && filteredOrgNames.length > 0) {
-      // Verify the cached organization still exists
-      const orgExists = filteredOrgNames.some(
-        (org) => org.organizationId === selectedOrg.id
-      )
-      if (orgExists) {
-        setPaginationOptions((prev) => ({
-          ...prev,
-          page: 1,
-          filters: [
-            {
-              field: 'organizationId',
-              filterType: 'number',
-              type: 'equals',
-              filter: selectedOrg.id
-            }
-          ]
-        }))
-      } else {
-        // Clear invalid cached selection
-        setSelectedOrg({ id: null, label: null })
-        sessionStorage.removeItem('selectedOrganization')
-      }
-    }
-  }, [selectedOrg.id, filteredOrgNames])
 
   // Show nested route component when on nested route
   if (isOnNestedRoute) {

@@ -36,6 +36,22 @@ try {
     log.info("Fetched ${legacyToLcfsIdMap.size()} legacy_id to LCFS compliance_report_id mappings from destination.")
 
     // =========================================
+    // Preload Existing Summary Records from Destination
+    // =========================================
+    log.info("Fetching existing compliance_report_summary records from destination database.")
+    def existingComplianceReportIdSet = new HashSet()  // LCFS compliance_report_id for which a summary exists
+    def existingSummaryIdSet = new HashSet()            // All summary_id values in the destination
+    def fetchSummaryStmt = destinationConn.prepareStatement("SELECT summary_id, compliance_report_id FROM public.compliance_report_summary")
+    ResultSet summaryRs = fetchSummaryStmt.executeQuery()
+    while (summaryRs.next()) {
+        existingSummaryIdSet.add(summaryRs.getInt("summary_id"))
+        existingComplianceReportIdSet.add(summaryRs.getInt("compliance_report_id"))
+    }
+    summaryRs.close()
+    fetchSummaryStmt.close()
+    log.info("Fetched ${existingComplianceReportIdSet.size()} compliance_report_summary records (by compliance_report_id) and ${existingSummaryIdSet.size()} summary_id values from destination.")
+
+    // =========================================
     // Fetch Data from Source Table
     // =========================================
 
@@ -51,10 +67,7 @@ try {
             crs.diesel_class_obligation,
             crs.diesel_class_previously_retained,
             crs.gasoline_class_obligation,
-            crs.gasoline_class_previously_retained,
-            crs.credits_offset_a,
-            crs.credits_offset_b,
-            crs.credits_offset_c
+            crs.gasoline_class_previously_retained
         FROM
             public.compliance_report cr
         JOIN
@@ -72,10 +85,11 @@ try {
     // =========================================
     // Prepare Destination Insert Statement
     // =========================================
-
+    // Note: Ensure that the column list and the corresponding parameters exactly match
+    // your destination table schema. Adjust as necessary so that there are, for example,
+    // 55 columns if that is what your table contains.
     def INSERT_DESTINATION_SUMMARY_SQL = """
         INSERT INTO public.compliance_report_summary (
-            summary_id,
             compliance_report_id,
             quarter,
             is_locked,
@@ -129,15 +143,12 @@ try {
             line_11_fossil_derived_base_fuel_total,
             line_21_non_compliance_penalty_payable,
             total_non_compliance_penalty_payable,
-            credits_offset_a,
-            credits_offset_b,
-            credits_offset_c,
             create_date,
             update_date,
             create_user,
             update_user
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
     """
 
@@ -168,82 +179,87 @@ try {
         def dieselClassPreviouslyRetained = rs.getBigDecimal('diesel_class_previously_retained')
         def gasolineClassObligation = rs.getBigDecimal('gasoline_class_obligation')
         def gasolineClassPreviouslyRetained = rs.getBigDecimal('gasoline_class_previously_retained')
-        def creditsOffsetA = rs.getInt('credits_offset_a')
-        def creditsOffsetB = rs.getInt('credits_offset_b')
-        def creditsOffsetC = rs.getInt('credits_offset_c')
 
         // Map source compliance_report_id (legacy_id) to LCFS compliance_report_id
         def lcfsComplianceReportId = legacyToLcfsIdMap[sourceComplianceReportLegacyId]
-
         if (lcfsComplianceReportId == null) {
-            log.warn("No LCFS compliance_report found with legacy_id ${sourceComplianceReportLegacyId}. Skipping summary_id ${summaryId}.")
+            log.warn("No LCFS compliance_report found with legacy_id ${sourceComplianceReportLegacyId}.")
             totalSkipped++
-            continue // Skip to the next record
+            continue // Skip this record
         }
 
-        // Create a summaryRecord map for the destination table
+        // Check if a summary record already exists
+        if (existingComplianceReportIdSet.contains(lcfsComplianceReportId)) {
+            log.warn("A compliance_report_summary record already exists for LCFS compliance_report_id ${lcfsComplianceReportId}.")
+            totalSkipped++
+            continue
+        }
+        // Additionally, check if this source summary_id already exists in the destination.
+        // if (existingSummaryIdSet.contains(summaryId)) {
+        //     log.warn("A compliance_report_summary record with summary_id ${summaryId} already exists. Skipping.")
+        //     totalSkipped++
+        //     continue
+        // }
+
+        // Build the record data map for insertion.
         def summaryRecord = [
-            summary_id                          : summaryId,
             compliance_report_id                : lcfsComplianceReportId, // Use LCFS ID
             quarter                             : null,
             is_locked                           : true,
-            line_1_fossil_derived_base_fuel_gasoline      : null, // No direct mapping
-            line_1_fossil_derived_base_fuel_diesel        : null, // No direct mapping
-            line_1_fossil_derived_base_fuel_jet_fuel      : null, // No direct mapping
-            line_2_eligible_renewable_fuel_supplied_gasoline : null, // No direct mapping
-            line_2_eligible_renewable_fuel_supplied_diesel   : null, // No direct mapping
-            line_2_eligible_renewable_fuel_supplied_jet_fuel : null, // No direct mapping
-            line_3_total_tracked_fuel_supplied_gasoline      : null, // No direct mapping
-            line_3_total_tracked_fuel_supplied_diesel        : null, // No direct mapping
-            line_3_total_tracked_fuel_supplied_jet_fuel      : null, // No direct mapping
-            line_4_eligible_renewable_fuel_required_gasoline : null, // No direct mapping
-            line_4_eligible_renewable_fuel_required_diesel   : null, // No direct mapping
-            line_4_eligible_renewable_fuel_required_jet_fuel : null, // No direct mapping
-            line_5_net_notionally_transferred_gasoline      : null, // No direct mapping
-            line_5_net_notionally_transferred_diesel        : null, // No direct mapping
-            line_5_net_notionally_transferred_jet_fuel      : null, // No direct mapping
+            line_1_fossil_derived_base_fuel_gasoline      : null,
+            line_1_fossil_derived_base_fuel_diesel        : null,
+            line_1_fossil_derived_base_fuel_jet_fuel      : null,
+            line_2_eligible_renewable_fuel_supplied_gasoline : null,
+            line_2_eligible_renewable_fuel_supplied_diesel   : null,
+            line_2_eligible_renewable_fuel_supplied_jet_fuel : null,
+            line_3_total_tracked_fuel_supplied_gasoline      : null,
+            line_3_total_tracked_fuel_supplied_diesel        : null,
+            line_3_total_tracked_fuel_supplied_jet_fuel      : null,
+            line_4_eligible_renewable_fuel_required_gasoline : null,
+            line_4_eligible_renewable_fuel_required_diesel   : null,
+            line_4_eligible_renewable_fuel_required_jet_fuel : null,
+            line_5_net_notionally_transferred_gasoline      : null,
+            line_5_net_notionally_transferred_diesel        : null,
+            line_5_net_notionally_transferred_jet_fuel      : null,
             line_6_renewable_fuel_retained_gasoline         : gasolineClassRetained,
             line_6_renewable_fuel_retained_diesel           : dieselClassRetained,
-            line_6_renewable_fuel_retained_jet_fuel         : null, // No direct mapping
+            line_6_renewable_fuel_retained_jet_fuel         : null,
             line_7_previously_retained_gasoline             : gasolineClassPreviouslyRetained,
             line_7_previously_retained_diesel               : dieselClassPreviouslyRetained,
-            line_7_previously_retained_jet_fuel             : null, // No direct mapping
-            line_8_obligation_deferred_gasoline            : gasolineClassDeferred,
-            line_8_obligation_deferred_diesel              : dieselClassDeferred,
-            line_8_obligation_deferred_jet_fuel            : null, // No direct mapping
-            line_9_obligation_added_gasoline               : gasolineClassObligation,
-            line_9_obligation_added_diesel                 : dieselClassObligation,
-            line_9_obligation_added_jet_fuel               : null, // No direct mapping
-            line_10_net_renewable_fuel_supplied_gasoline   : null, // No direct mapping
-            line_10_net_renewable_fuel_supplied_diesel     : null, // No direct mapping
-            line_10_net_renewable_fuel_supplied_jet_fuel   : null, // No direct mapping
-            line_11_non_compliance_penalty_gasoline        : null, // No direct mapping
-            line_11_non_compliance_penalty_diesel          : null, // No direct mapping
-            line_11_non_compliance_penalty_jet_fuel        : null, // No direct mapping
-            line_12_low_carbon_fuel_required               : null, // No direct mapping
-            line_13_low_carbon_fuel_supplied               : null, // No direct mapping
-            line_14_low_carbon_fuel_surplus                : null, // No direct mapping
-            line_15_banked_units_used                      : null, // No direct mapping
-            line_16_banked_units_remaining                 : null, // No direct mapping
-            line_17_non_banked_units_used                  : null, // No direct mapping
-            line_18_units_to_be_banked                     : null, // No direct mapping
-            line_19_units_to_be_exported                   : null, // No direct mapping
-            line_20_surplus_deficit_units                  : null, // No direct mapping
-            line_21_surplus_deficit_ratio                  : null, // No direct mapping
-            line_22_compliance_units_issued                : creditsOffset,
+            line_7_previously_retained_jet_fuel             : null,
+            line_8_obligation_deferred_gasoline             : gasolineClassDeferred,
+            line_8_obligation_deferred_diesel               : dieselClassDeferred,
+            line_8_obligation_deferred_jet_fuel             : null,
+            line_9_obligation_added_gasoline                : gasolineClassObligation,
+            line_9_obligation_added_diesel                  : dieselClassObligation,
+            line_9_obligation_added_jet_fuel                : null,
+            line_10_net_renewable_fuel_supplied_gasoline    : null,
+            line_10_net_renewable_fuel_supplied_diesel      : null,
+            line_10_net_renewable_fuel_supplied_jet_fuel    : null,
+            line_11_non_compliance_penalty_gasoline         : null,
+            line_11_non_compliance_penalty_diesel           : null,
+            line_11_non_compliance_penalty_jet_fuel         : null,
+            line_12_low_carbon_fuel_required                : null,
+            line_13_low_carbon_fuel_supplied                : null,
+            line_14_low_carbon_fuel_surplus                 : null,
+            line_15_banked_units_used                       : null,
+            line_16_banked_units_remaining                  : null,
+            line_17_non_banked_units_used                   : null,
+            line_18_units_to_be_banked                      : null,
+            line_19_units_to_be_exported                    : null,
+            line_20_surplus_deficit_units                   : null,
+            line_21_surplus_deficit_ratio                   : null,
+            line_22_compliance_units_issued                 : creditsOffset,
             line_11_fossil_derived_base_fuel_gasoline      : null, // No direct mapping
             line_11_fossil_derived_base_fuel_diesel        : null, // No direct mapping
             line_11_fossil_derived_base_fuel_jet_fuel      : null, // No direct mapping
             line_11_fossil_derived_base_fuel_total         : null, // No direct mapping
             line_21_non_compliance_penalty_payable         : null, // No direct mapping
             total_non_compliance_penalty_payable           : null, // No direct mapping
-            credits_offset_a                                : creditsOffsetA, // Direct mapping
-            credits_offset_b                                : creditsOffsetB, // Direct mapping
-            credits_offset_c                                : creditsOffsetC, // Direct mapping
-            create_date                                 : new Timestamp(System.currentTimeMillis()),
-            update_date                                 : new Timestamp(System.currentTimeMillis()),
-            create_user                                 : "etl_user", // Replace with actual user or mapping
-            update_user                                 : "etl_user"  // Replace with actual user or mapping
+            create_date                                     : new Timestamp(System.currentTimeMillis()),
+            update_date                                     : new Timestamp(System.currentTimeMillis()),
+            create_user                                     : "etl_user",
+            update_user                                     : "etl_user"
         ]
 
         // =========================================
@@ -251,241 +267,99 @@ try {
         // =========================================
 
         try {
-            // 1. summary_id (int4)
-            destinationStmt.setInt(1, summaryRecord.summary_id)
-
-            // 2. compliance_report_id (int4)
-            destinationStmt.setInt(2, summaryRecord.compliance_report_id)
-
-            // 3. quarter (int4)
+            // Bind parameters in the same order as specified in the INSERT statement.
+            destinationStmt.setInt(1, summaryRecord.compliance_report_id)
             if (summaryRecord.quarter != null) {
-                destinationStmt.setInt(3, summaryRecord.quarter)
+                destinationStmt.setInt(2, summaryRecord.quarter)
             } else {
-                destinationStmt.setNull(3, java.sql.Types.INTEGER)
+                destinationStmt.setNull(2, java.sql.Types.INTEGER)
             }
-
-            // 4. is_locked (bool)
-            destinationStmt.setBoolean(4, summaryRecord.is_locked)
-
-            // 5. line_1_fossil_derived_base_fuel_gasoline (float8) NOT NULL
-            if (summaryRecord.line_1_fossil_derived_base_fuel_gasoline != null) {
-                destinationStmt.setDouble(5, summaryRecord.line_1_fossil_derived_base_fuel_gasoline.doubleValue())
-            } else {
-                destinationStmt.setDouble(5, 0.0) // Default value or handle as per business logic
-            }
-
-            // 6. line_1_fossil_derived_base_fuel_diesel (float8) NOT NULL
-            if (summaryRecord.line_1_fossil_derived_base_fuel_diesel != null) {
-                destinationStmt.setDouble(6, summaryRecord.line_1_fossil_derived_base_fuel_diesel.doubleValue())
-            } else {
-                destinationStmt.setDouble(6, 0.0)
-            }
-
-            // 7. line_1_fossil_derived_base_fuel_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(7, 0.0) // No mapping
-
-            // 8. line_2_eligible_renewable_fuel_supplied_gasoline (float8) NOT NULL
-            destinationStmt.setDouble(8, 0.0) // No mapping
-
-            // 9. line_2_eligible_renewable_fuel_supplied_diesel (float8) NOT NULL
-            destinationStmt.setDouble(9, 0.0) // No mapping
-
-            // 10. line_2_eligible_renewable_fuel_supplied_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(10, 0.0) // No mapping
-
-            // 11. line_3_total_tracked_fuel_supplied_gasoline (float8) NOT NULL
-            destinationStmt.setDouble(11, 0.0) // No mapping
-
-            // 12. line_3_total_tracked_fuel_supplied_diesel (float8) NOT NULL
-            destinationStmt.setDouble(12, 0.0) // No mapping
-
-            // 13. line_3_total_tracked_fuel_supplied_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(13, 0.0) // No mapping
-
-            // 14. line_4_eligible_renewable_fuel_required_gasoline (float8) NOT NULL
-            destinationStmt.setDouble(14, 0.0) // No mapping
-
-            // 15. line_4_eligible_renewable_fuel_required_diesel (float8) NOT NULL
-            destinationStmt.setDouble(15, 0.0) // No mapping
-
-            // 16. line_4_eligible_renewable_fuel_required_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(16, 0.0) // No mapping
-
-            // 17. line_5_net_notionally_transferred_gasoline (float8) NOT NULL
-            destinationStmt.setDouble(17, 0.0) // No mapping
-
-            // 18. line_5_net_notionally_transferred_diesel (float8) NOT NULL
-            destinationStmt.setDouble(18, 0.0) // No mapping
-
-            // 19. line_5_net_notionally_transferred_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(19, 0.0) // No mapping
-
-            // 20. line_6_renewable_fuel_retained_gasoline (float8) NOT NULL
-            if (summaryRecord.line_6_renewable_fuel_retained_gasoline != null) {
-                destinationStmt.setDouble(20, summaryRecord.line_6_renewable_fuel_retained_gasoline.doubleValue())
-            } else {
-                destinationStmt.setDouble(20, 0.0)
-            }
-
-            // 21. line_6_renewable_fuel_retained_diesel (float8) NOT NULL
-            if (summaryRecord.line_6_renewable_fuel_retained_diesel != null) {
-                destinationStmt.setDouble(21, summaryRecord.line_6_renewable_fuel_retained_diesel.doubleValue())
-            } else {
-                destinationStmt.setDouble(21, 0.0)
-            }
-
-            // 22. line_6_renewable_fuel_retained_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(22, 0.0) // No mapping
-
-            // 23. line_7_previously_retained_gasoline (float8) NOT NULL
-            if (summaryRecord.line_7_previously_retained_gasoline != null) {
-                destinationStmt.setDouble(23, summaryRecord.line_7_previously_retained_gasoline.doubleValue())
-            } else {
-                destinationStmt.setDouble(23, 0.0)
-            }
-
-            // 24. line_7_previously_retained_diesel (float8) NOT NULL
-            if (summaryRecord.line_7_previously_retained_diesel != null) {
-                destinationStmt.setDouble(24, summaryRecord.line_7_previously_retained_diesel.doubleValue())
-            } else {
-                destinationStmt.setDouble(24, 0.0)
-            }
-
-            // 25. line_7_previously_retained_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(25, 0.0) // No mapping
-
-            // 26. line_8_obligation_deferred_gasoline (float8) NOT NULL
-            if (summaryRecord.line_8_obligation_deferred_gasoline != null) {
-                destinationStmt.setDouble(26, summaryRecord.line_8_obligation_deferred_gasoline.doubleValue())
-            } else {
-                destinationStmt.setDouble(26, 0.0)
-            }
-
-            // 27. line_8_obligation_deferred_diesel (float8) NOT NULL
-            if (summaryRecord.line_8_obligation_deferred_diesel != null) {
-                destinationStmt.setDouble(27, summaryRecord.line_8_obligation_deferred_diesel.doubleValue())
-            } else {
-                destinationStmt.setDouble(27, 0.0)
-            }
-
-            // 28. line_8_obligation_deferred_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(28, 0.0) // No mapping
-
-            // 29. line_9_obligation_added_gasoline (float8) NOT NULL
-            if (summaryRecord.line_9_obligation_added_gasoline != null) {
-                destinationStmt.setDouble(29, summaryRecord.line_9_obligation_added_gasoline.doubleValue())
-            } else {
-                destinationStmt.setDouble(29, 0.0)
-            }
-
-            // 30. line_9_obligation_added_diesel (float8) NOT NULL
-            if (summaryRecord.line_9_obligation_added_diesel != null) {
-                destinationStmt.setDouble(30, summaryRecord.line_9_obligation_added_diesel.doubleValue())
-            } else {
-                destinationStmt.setDouble(30, 0.0)
-            }
-
-            // 31. line_9_obligation_added_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(31, 0.0) // No mapping
-
-            // 32. line_10_net_renewable_fuel_supplied_gasoline (float8) NOT NULL
-            destinationStmt.setDouble(32, 0.0) // No mapping
-
-            // 33. line_10_net_renewable_fuel_supplied_diesel (float8) NOT NULL
-            destinationStmt.setDouble(33, 0.0) // No mapping
-
-            // 34. line_10_net_renewable_fuel_supplied_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(34, 0.0) // No mapping
-
-            // 35. line_11_non_compliance_penalty_gasoline (float8)
-            destinationStmt.setNull(35, java.sql.Types.FLOAT) // No mapping
-
-            // 36. line_11_non_compliance_penalty_diesel (float8)
-            destinationStmt.setNull(36, java.sql.Types.FLOAT) // No mapping
-
-            // 37. line_11_non_compliance_penalty_jet_fuel (float8)
-            destinationStmt.setNull(37, java.sql.Types.FLOAT) // No mapping
-
-            // 38. line_12_low_carbon_fuel_required (float8) NOT NULL
-            destinationStmt.setDouble(38, 0.0) // No mapping
-
-            // 39. line_13_low_carbon_fuel_supplied (float8) NOT NULL
-            destinationStmt.setDouble(39, 0.0) // No mapping
-
-            // 40. line_14_low_carbon_fuel_surplus (float8) NOT NULL
-            destinationStmt.setDouble(40, 0.0) // No mapping
-
-            // 41. line_15_banked_units_used (float8) NOT NULL
-            destinationStmt.setDouble(41, 0.0) // No mapping
-
-            // 42. line_16_banked_units_remaining (float8) NOT NULL
-            destinationStmt.setDouble(42, 0.0) // No mapping
-
-            // 43. line_17_non_banked_units_used (float8) NOT NULL
-            destinationStmt.setDouble(43, 0.0) // No mapping
-
-            // 44. line_18_units_to_be_banked (float8) NOT NULL
-            destinationStmt.setDouble(44, 0.0) // No mapping
-
-            // 45. line_19_units_to_be_exported (float8) NOT NULL
-            destinationStmt.setDouble(45, 0.0) // No mapping
-
-            // 46. line_20_surplus_deficit_units (float8) NOT NULL
-            destinationStmt.setDouble(46, 0.0) // No mapping
-
-            // 47. line_21_surplus_deficit_ratio (float8) NOT NULL
-            destinationStmt.setDouble(47, 0.0) // No mapping
-
-            // 48. line_22_compliance_units_issued (float8) NOT NULL
-            destinationStmt.setDouble(48, summaryRecord.line_22_compliance_units_issued)
-
+            destinationStmt.setBoolean(3, summaryRecord.is_locked)
+            // For columns with no mapping, default to 0.0 (or null if that fits your business logic)
+            destinationStmt.setDouble(4, (summaryRecord.line_1_fossil_derived_base_fuel_gasoline != null) ? summaryRecord.line_1_fossil_derived_base_fuel_gasoline.doubleValue() : 0.0)
+            destinationStmt.setDouble(5, (summaryRecord.line_1_fossil_derived_base_fuel_diesel != null) ? summaryRecord.line_1_fossil_derived_base_fuel_diesel.doubleValue() : 0.0)
+            destinationStmt.setDouble(6, 0.0)
+            destinationStmt.setDouble(7, 0.0)
+            destinationStmt.setDouble(8, 0.0)
+            destinationStmt.setDouble(9, 0.0)
+            destinationStmt.setDouble(10, 0.0)
+            destinationStmt.setDouble(11, 0.0)
+            destinationStmt.setDouble(12, 0.0)
+            destinationStmt.setDouble(13, 0.0)
+            destinationStmt.setDouble(14, 0.0)
+            destinationStmt.setDouble(15, 0.0)
+            destinationStmt.setDouble(16, 0.0)
+            destinationStmt.setDouble(17, 0.0)
+            destinationStmt.setDouble(18, 0.0)
+            destinationStmt.setDouble(19, (summaryRecord.line_6_renewable_fuel_retained_gasoline != null) ? summaryRecord.line_6_renewable_fuel_retained_gasoline.doubleValue() : 0.0)
+            destinationStmt.setDouble(20, (summaryRecord.line_6_renewable_fuel_retained_diesel != null) ? summaryRecord.line_6_renewable_fuel_retained_diesel.doubleValue() : 0.0)
+            destinationStmt.setDouble(21, 0.0)
+            destinationStmt.setDouble(22, (summaryRecord.line_7_previously_retained_gasoline != null) ? summaryRecord.line_7_previously_retained_gasoline.doubleValue() : 0.0)
+            destinationStmt.setDouble(23, (summaryRecord.line_7_previously_retained_diesel != null) ? summaryRecord.line_7_previously_retained_diesel.doubleValue() : 0.0)
+            destinationStmt.setDouble(24, 0.0)
+            destinationStmt.setDouble(25, (summaryRecord.line_8_obligation_deferred_gasoline != null) ? summaryRecord.line_8_obligation_deferred_gasoline.doubleValue() : 0.0)
+            destinationStmt.setDouble(26, (summaryRecord.line_8_obligation_deferred_diesel != null) ? summaryRecord.line_8_obligation_deferred_diesel.doubleValue() : 0.0)
+            destinationStmt.setDouble(27, 0.0)
+            destinationStmt.setDouble(28, (summaryRecord.line_9_obligation_added_gasoline != null) ? summaryRecord.line_9_obligation_added_gasoline.doubleValue() : 0.0)
+            destinationStmt.setDouble(29, (summaryRecord.line_9_obligation_added_diesel != null) ? summaryRecord.line_9_obligation_added_diesel.doubleValue() : 0.0)
+            destinationStmt.setDouble(30, 0.0)
+            destinationStmt.setDouble(31, 0.0)
+            destinationStmt.setDouble(32, 0.0)
+            destinationStmt.setDouble(33, 0.0)
+            destinationStmt.setNull(34, java.sql.Types.FLOAT)
+            destinationStmt.setNull(35, java.sql.Types.FLOAT)
+            destinationStmt.setNull(36, java.sql.Types.FLOAT)
+            destinationStmt.setDouble(37, 0.0)
+            destinationStmt.setDouble(38, 0.0)
+            destinationStmt.setDouble(39, 0.0)
+            destinationStmt.setDouble(40, 0.0)
+            destinationStmt.setDouble(41, 0.0)
+            destinationStmt.setDouble(42, 0.0)
+            destinationStmt.setDouble(43, 0.0)
+            destinationStmt.setDouble(44, 0.0)
+            destinationStmt.setDouble(45, 0.0)
+            destinationStmt.setDouble(46, 0.0)
+            destinationStmt.setDouble(47, summaryRecord.line_22_compliance_units_issued)
+            
             // 49. line_11_fossil_derived_base_fuel_gasoline (float8) NOT NULL
-            destinationStmt.setDouble(49, 0.0) // No mapping
+            destinationStmt.setDouble(48, 0.0) // No mapping
 
             // 50. line_11_fossil_derived_base_fuel_diesel (float8) NOT NULL
-            destinationStmt.setDouble(50, 0.0) // No mapping
+            destinationStmt.setDouble(49, 0.0) // No mapping
 
             // 51. line_11_fossil_derived_base_fuel_jet_fuel (float8) NOT NULL
-            destinationStmt.setDouble(51, 0.0) // No mapping
+            destinationStmt.setDouble(50, 0.0) // No mapping
 
             // 52. line_11_fossil_derived_base_fuel_total (float8) NOT NULL
-            destinationStmt.setDouble(52, 0.0) // No mapping
+            destinationStmt.setDouble(51, 0.0) // No mapping
 
             // 53. line_21_non_compliance_penalty_payable (float8) NOT NULL
-            destinationStmt.setDouble(53, 0.0) // No mapping
+            destinationStmt.setDouble(52, 0.0) // No mapping
 
             // 54. total_non_compliance_penalty_payable (float8) NOT NULL
-            destinationStmt.setDouble(54, 0.0) // No mapping
+            destinationStmt.setDouble(53, 0.0) // No mapping
 
-            // 55. credits_offset_a (int4)
-            destinationStmt.setInt(55, summaryRecord.credits_offset_a)
+            // 54. create_date (timestamptz)
+            destinationStmt.setTimestamp(54, summaryRecord.create_date)
 
-            // 56. credits_offset_b (int4)
-            destinationStmt.setInt(56, summaryRecord.credits_offset_b)
+            // 55. update_date (timestamptz)
+            destinationStmt.setTimestamp(55, summaryRecord.update_date)
 
-            // 57. credits_offset_c (int4)
-            destinationStmt.setInt(57, summaryRecord.credits_offset_c)
+            // 56. create_user (varchar)
+            destinationStmt.setString(56, summaryRecord.create_user)
 
-            // 58. create_date (timestamptz)
-            destinationStmt.setTimestamp(58, summaryRecord.create_date)
-
-            // 59. update_date (timestamptz)
-            destinationStmt.setTimestamp(59, summaryRecord.update_date)
-
-            // 60. create_user (varchar)
-            destinationStmt.setString(60, summaryRecord.create_user)
-
-            // 61. update_user (varchar)
-            destinationStmt.setString(61, summaryRecord.update_user)
+            // 57. update_user (varchar)
+            destinationStmt.setString(57, summaryRecord.update_user)
 
             // Add to batch
             destinationStmt.addBatch()
             totalInserted++
-
+            // Also add the LCFS compliance_report_id and summary_id to our existing sets.
+            existingComplianceReportIdSet.add(lcfsComplianceReportId)
+            existingSummaryIdSet.add(summaryId)
         } catch (Exception e) {
-            log.error("Failed to insert summary_record for LCFS compliance_report_id: ${summaryRecord.compliance_report_id}, summary_id: ${summaryRecord.summary_id}", e)
+            log.error("Failed to insert summary_record for LCFS compliance_report_id: ${summaryRecord.compliance_report_id}", e)
             totalSkipped++
-            // Continue processing other records
             continue
         }
     }
@@ -499,7 +373,7 @@ try {
         destinationConn.commit()
         log.info("Successfully inserted ${totalInserted} records into destination compliance_report_summary.")
         if (totalSkipped > 0) {
-            log.warn("Skipped ${totalSkipped} records due to missing LCFS compliance_report_id in destination or insertion errors.")
+            log.warn("Skipped ${totalSkipped} records due to missing LCFS compliance_report_id, existing summary records, or insertion errors.")
         }
     } catch (Exception e) {
         log.error("Batch insertion failed. Rolling back.", e)
@@ -517,7 +391,6 @@ try {
 
 } catch (Exception e) {
     log.error("An error occurred during the ETL process.", e)
-    // Ensure connections are closed in case of unexpected errors
     if (sourceConn != null && !sourceConn.isClosed()) sourceConn.close()
     if (destinationConn != null && !destinationConn.isClosed()) destinationConn.close()
     throw e

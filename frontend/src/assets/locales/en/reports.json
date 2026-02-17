@@ -232,6 +232,7 @@
     "Not recommended by manager": "Not recommended {{createDate}} by {{displayName}}.",
     "Rejected": "Rejected {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
+    "Supplemental requested": "Supplemental requested {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed",
     "renewableTarget": "Renewable fuel target",

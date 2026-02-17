@@ -225,7 +225,7 @@ class CalculatorService:
         for row in data:
             # Skip rows where determining CI is "Fuel code"
             # Only show Default CI and Prescribed CI rows
-            if row.provision_of_the_act == "Fuel code":
+            if row.provision_of_the_act and row.provision_of_the_act.startswith("Fuel code"):
                 continue
 
             # Create a unique key for each combination
