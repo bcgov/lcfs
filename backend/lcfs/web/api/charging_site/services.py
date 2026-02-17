@@ -10,6 +10,7 @@ from lcfs.db.models.compliance import (
     ChargingSite,
     ChargingSiteStatus,
 )
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.organization import Organization
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -167,6 +168,13 @@ class ChargingSiteService:
         Get all available charging equipment statuses
         """
         statuses = await self.repo.get_charging_equipment_statuses()
+        user = getattr(self.request, "user", None)
+        if getattr(user, "is_government", False):
+            statuses = [
+                status
+                for status in statuses
+                if status.status not in ("Draft", "Updated")
+            ]
         return [
             ChargingEquipmentStatusSchema(
                 charging_equipment_status_id=status.charging_equipment_status_id,
@@ -182,6 +190,12 @@ class ChargingSiteService:
         Get all available charging site statuses
         """
         statuses = await self.repo.get_charging_site_statuses()
+        if user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]):
+            statuses = [
+                status
+                for status in statuses
+                if status.status not in (ChargingSiteStatusEnum.DRAFT,ChargingSiteStatusEnum.UPDATED)
+            ]
         return [
             ChargingSiteStatusSchema(
                 charging_site_status_id=status.charging_site_status_id,
@@ -518,10 +532,8 @@ class ChargingSiteService:
                 status_code=400, detail="Charging site is not in draft state"
             )
 
-        if existing_status_name == ChargingSiteStatusEnum.VALIDATED:
-            existing_charging_site.version = (
-                (existing_charging_site.version or 0) + 1
-            )
+        create_new_version = existing_status_name == ChargingSiteStatusEnum.VALIDATED
+        if create_new_version:
             target_status_name = ChargingSiteStatusEnum.UPDATED
         else:
             target_status_name = (
@@ -553,7 +565,6 @@ class ChargingSiteService:
         status = await self.repo.get_charging_site_status_by_name(target_status_name)
 
         try:
-            # Update basic fields on the existing object
             update_data = charging_site_data.model_dump(
                 exclude={
                     "charging_site_id",
@@ -565,20 +576,52 @@ class ChargingSiteService:
             )
             update_data["site_name"] = new_site_name
 
-            # Update each field on the existing object
-            for field, value in update_data.items():
-                if hasattr(existing_charging_site, field):
-                    setattr(existing_charging_site, field, value)
+            if create_new_version:
+                base_payload = {
+                    "organization_id": existing_charging_site.organization_id,
+                    "allocating_organization_id": existing_charging_site.allocating_organization_id,
+                    "allocating_organization_name": existing_charging_site.allocating_organization_name,
+                    "site_code": existing_charging_site.site_code,
+                    "site_name": existing_charging_site.site_name,
+                    "street_address": existing_charging_site.street_address,
+                    "city": existing_charging_site.city,
+                    "postal_code": existing_charging_site.postal_code,
+                    "latitude": existing_charging_site.latitude,
+                    "longitude": existing_charging_site.longitude,
+                    "notes": existing_charging_site.notes,
+                    "status_id": status.charging_site_status_id
+                    if status
+                    else existing_charging_site.status_id,
+                }
+                base_payload.update(update_data)
+                base_payload["version"] = (existing_charging_site.version or 0) + 1
+                base_payload["group_uuid"] = existing_charging_site.group_uuid
+                base_payload["action_type"] = ActionTypeEnum.UPDATE
 
-            # Update status if provided
-            if status:
-                existing_charging_site.status = status
-                existing_charging_site.status_id = status.charging_site_status_id
+                new_charging_site = ChargingSite(**base_payload)
+                if status:
+                    new_charging_site.status = status
+                if existing_charging_site.documents:
+                    new_charging_site.documents = list(
+                        existing_charging_site.documents
+                    )
+                updated_charging_site = await self.repo.create_charging_site(
+                    new_charging_site
+                )
+            else:
+                for field, value in update_data.items():
+                    if hasattr(existing_charging_site, field):
+                        setattr(existing_charging_site, field, value)
 
-            # Save the updated object
-            updated_charging_site = await self.repo.update_charging_site(
-                existing_charging_site
-            )
+                if status:
+                    existing_charging_site.status = status
+                    existing_charging_site.status_id = (
+                        status.charging_site_status_id
+                    )
+
+                updated_charging_site = await self.repo.update_charging_site(
+                    existing_charging_site
+                )
 
             return ChargingSiteSchema.model_validate(updated_charging_site)
 
