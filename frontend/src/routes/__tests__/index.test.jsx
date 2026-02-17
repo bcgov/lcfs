@@ -206,6 +206,9 @@ vi.mock('@/utils/keycloak', () => ({
   logout: vi.fn()
 }))
 
+// Import the mocked logout to verify calls
+import { logout as mockLogout } from '@/utils/keycloak'
+
 // Mock authorization context and any role-related hooks
 vi.mock('@/contexts/AuthorizationContext', () => ({
   useAuthorization: () => ({

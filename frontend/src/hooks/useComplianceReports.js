@@ -15,8 +15,8 @@ export const useCompliancePeriod = (options = {}) => {
   const client = useApiService()
 
   const {
-    staleTime = STATIC_DATA_STALE_TIME,
-    cacheTime = STATIC_DATA_STALE_TIME,
+    staleTime = 1 * 60 * 1000, // 1 minute
+    cacheTime = DEFAULT_CACHE_TIME,
     enabled = true,
     ...restOptions
   } = options

@@ -865,7 +865,7 @@ export const changelogCommonColDefs = (
         'allocationAgreement:allocationAgreementColLabels.fuelCode'
       ),
       minWidth: 175,
-      field: 'fuelCode.fuel_code',
+      field: 'fuelCode.fuelCode',
       cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
     },
     {

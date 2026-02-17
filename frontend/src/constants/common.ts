@@ -128,3 +128,20 @@ export const CURRENT_COMPLIANCE_YEAR = (
 ).toString()
 export const DEFAULT_CI_FUEL_CODE =
   'Default carbon intensity - section 19 (b) (ii)'
+
+export const isLegacyCompliancePeriod = (compliancePeriod: number | string): boolean => {
+  // If it's already a number, use it directly
+  if (typeof compliancePeriod === 'number') {
+    return compliancePeriod < LEGISLATION_TRANSITION_YEAR
+  }
+
+  // Try to parse it as a number
+  const parsedPeriod = Number(compliancePeriod)
+
+  // If parsing failed or resulted in NaN, return false
+  if (isNaN(parsedPeriod)) {
+    return false
+  }
+
+  return parsedPeriod < LEGISLATION_TRANSITION_YEAR
+}

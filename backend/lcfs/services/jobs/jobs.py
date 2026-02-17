@@ -63,6 +63,7 @@ async def submit_supplemental_report(report_id: int, app: FastAPI):
             internal_comment_service = InternalCommentService(session)
 
             compliance_report_services = ComplianceReportServices(
+                request=None,
                 repo=compliance_report_repo,
                 org_repo=org_repo,
                 snapshot_services=snapshot_service,

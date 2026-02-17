@@ -21,6 +21,7 @@ from .LevelOfEquipment import LevelOfEquipment
 from .ChargingPowerOutput import ChargingPowerOutput
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
+from .ReportOpening import ReportOpening, SupplementalReportAccessRole
 
 __all__ = [
     "AllocationAgreement",
@@ -46,4 +47,6 @@ __all__ = [
     "NotionalTransfer",
     "OtherUses",
     "EndUserType",
+    "ReportOpening",
+    "SupplementalReportAccessRole",
 ]

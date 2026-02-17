@@ -88,6 +88,7 @@ export const apiRoutes = {
   getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
   getAvailableAnalysts: '/reports/analysts',
   assignAnalyst: '/reports/:reportId/assign',
+  reportOpenings: '/report-openings',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',

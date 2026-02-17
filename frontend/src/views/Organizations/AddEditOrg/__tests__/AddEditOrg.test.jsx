@@ -1,3 +1,4 @@
+import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AddEditOrg } from '../AddEditOrg'
@@ -5,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
+import { useMutation } from '@tanstack/react-query'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -16,6 +18,49 @@ vi.mock('react-router-dom', () => ({
   useParams: vi.fn(),
   useNavigate: vi.fn()
 }))
+
+// Mock AddressAutocomplete to prevent network requests
+vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
+  AddressAutocomplete: React.forwardRef(
+    (
+      {
+        name,
+        placeholder = 'Start typing address...',
+        value,
+        onChange,
+        onBlur,
+        error
+      },
+      ref
+    ) => (
+      <input
+        ref={ref}
+        id={name}
+        name={name}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={(e) => onChange && onChange(e.target.value)}
+        onBlur={onBlur}
+        data-testid={`address-autocomplete-${name}`}
+        aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
+      />
+    )
+  )
+}))
+
+// Mock the useMutation hook to properly handle onSuccess callback
+const mockMutate = vi.fn()
+vi.mock('@tanstack/react-query', async () => {
+  const actual = await vi.importActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useMutation: vi.fn(() => ({
+      mutate: mockMutate,
+      isPending: false,
+      isError: false
+    }))
+  }
+})
 
 // Mock hooks
 vi.mock('@/hooks/useOrganization')
@@ -44,6 +89,7 @@ vi.mock('../AddEditOrgForm', () => ({
 describe('AddEditOrg', () => {
   const mockT = vi.fn((key) => `translated-${key}`)
   let mockNavigate
+  let apiSpy
 
   beforeEach(() => {
     mockNavigate = vi.fn()
@@ -78,7 +124,25 @@ describe('AddEditOrg', () => {
       post: vi.fn(),
       put: vi.fn()
     })
+
+    mockNavigate = vi.fn()
+    useNavigate.mockReturnValue(mockNavigate)
+    useParams.mockReturnValue({ orgID: undefined })
+
+    useOrganization.mockReturnValue({
+      data: null,
+      isFetched: true
+    })
+
+    apiSpy = {
+      post: vi.fn().mockResolvedValue({}),
+      put: vi.fn().mockResolvedValue({})
+    }
+    useApiService.mockReturnValue(apiSpy)
   })
+
+  // Note: Tests for AddEditOrgForm component rendering should be in AddEditOrgForm.test.jsx
+  // This test suite tests the AddEditOrg container component only
 
   it('renders in edit mode when orgID is present', () => {
     // Arrange
