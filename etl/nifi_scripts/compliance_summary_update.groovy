@@ -108,9 +108,7 @@ try {
             line_11_fossil_derived_base_fuel_total = ?,
             line_21_non_compliance_penalty_payable = ?,
             total_non_compliance_penalty_payable = ?,
-            credits_offset_a = ?,
-            credits_offset_b = ?,
-            credits_offset_c = ?
+            historical_snapshot = ?::jsonb
         WHERE compliance_report_id = ?
     """
     PreparedStatement updateStmt = destinationConn.prepareStatement(UPDATE_SQL)
@@ -130,6 +128,7 @@ try {
             skipCount++
             continue
         }
+        log.warn("Processing source record with legacy_id: ${legacyComplianceReportId}")
         def snapshotJson = rs.getString("snapshot")
         def summaryJson = jsonSlurper.parseText(snapshotJson)
 
@@ -184,13 +183,6 @@ try {
             // ------------------------------
             def line28NonCompliance = new BigDecimal(summaryJson.summary.lines."28")  // Part 3 penalty
             def totalPayable = new BigDecimal(summaryJson.summary.total_payable)      // Total payable from snapshot
-
-            // ------------------------------
-            // Credits Offset Fields
-            // ------------------------------
-            def creditsOffsetA = summaryJson.summary.lines."26A" as Integer ?: null
-            def creditsOffsetB = summaryJson.summary.lines."26B" as Integer ?: null
-            def creditsOffsetC = summaryJson.summary.lines."26C" as Integer ?: null
 
             // Set parameters using a running index
             int idx = 1
@@ -250,14 +242,13 @@ try {
             // Non-compliance Penalty Fields
             updateStmt.setBigDecimal(idx++, line28NonCompliance) // line_21_non_compliance_penalty_payable
             updateStmt.setBigDecimal(idx++, totalPayable) // total_non_compliance_penalty_payable (from snapshot total_payable)
-            // Credits Offset Fields
-            updateStmt.setObject(idx++, creditsOffsetA)    // credits_offset_a
-            updateStmt.setObject(idx++, creditsOffsetB)    // credits_offset_b
-            updateStmt.setObject(idx++, creditsOffsetC)    // credits_offset_c
+            // Historical Snapshot
+            updateStmt.setString(idx++, snapshotJson) // Store the entire snapshot JSON
             // WHERE clause: compliance_report_id
             updateStmt.setInt(idx++, lcfsComplianceReportId)
 
             updateStmt.addBatch()
+            log.info("Successfully processed legacy id ${legacyComplianceReportId} (LCFS ID: ${lcfsComplianceReportId}), adding to batch.")
             updateCount++
         } catch (Exception e) {
             log.error("Error processing legacy compliance_report_id ${legacyComplianceReportId}", e)

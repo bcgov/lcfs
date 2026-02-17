@@ -1090,11 +1090,11 @@ class ComplianceReportRepository:
         """
         # First, get the group_uuid for the given report_id
         group_uuid_result = await self.db.execute(
-            select(ComplianceReport.compliance_report_group_uuid).where(
-                ComplianceReport.compliance_report_id == report_id
-            )
+            select(ComplianceReport.compliance_report_group_uuid)
+            .where(ComplianceReport.compliance_report_id == report_id)
+            .limit(1)
         )
-        group_uuid = group_uuid_result.scalar_one_or_none()
+        group_uuid = group_uuid_result.scalars().first()
 
         if not group_uuid:
             # Report not found, return empty list

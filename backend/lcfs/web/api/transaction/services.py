@@ -1,6 +1,7 @@
 import io
 import logging
-from datetime import datetime
+import zoneinfo
+from datetime import datetime, timezone
 from typing import List, Dict, Union
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
@@ -44,6 +45,14 @@ class TransactionsService:
         self, repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
+
+    @staticmethod
+    def _to_pacific(dt):
+        """Convert a naive-UTC or aware datetime to America/Vancouver."""
+        pacific = zoneinfo.ZoneInfo("America/Vancouver")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(pacific)
 
     def apply_transaction_filters(self, pagination, conditions):
         """
@@ -267,12 +276,12 @@ class TransactionsService:
                         else None
                     ),
                     (
-                        result.recorded_date.strftime("%Y-%m-%d")
+                        self._to_pacific(result.recorded_date).strftime("%Y-%m-%d")
                         if result.recorded_date
                         else None
                     ),
                     (
-                        result.approved_date.strftime("%Y-%m-%d")
+                        self._to_pacific(result.approved_date).strftime("%Y-%m-%d")
                         if result.approved_date
                         else None
                     ),
