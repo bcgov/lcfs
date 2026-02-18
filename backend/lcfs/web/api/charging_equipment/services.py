@@ -68,7 +68,7 @@ class ChargingEquipmentServices:
 
         # Get equipment list from repository
         equipment_list, total_count = await self.repo.get_charging_equipment_list(
-            organization_id, pagination, filters, exclude_draft
+            organization_id, pagination, exclude_draft
         )
 
         # Transform to schema
