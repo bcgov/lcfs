@@ -84,7 +84,7 @@ async def test_get_charging_equipment_list_supplier_success(
 
     # Verify repo was called with correct organization_id
     mock_repo.get_charging_equipment_list.assert_called_once_with(
-        mock_user.organization_id, pagination, None, False
+        mock_user.organization_id, pagination, False
     )
 
 
@@ -109,7 +109,7 @@ async def test_get_charging_equipment_list_government_with_org_filter(
 
     # Verify repo was called with filtered organization_id and exclude_draft=True for government users
     mock_repo.get_charging_equipment_list.assert_called_once_with(
-        2, pagination, filters, True
+        2, pagination, True
     )
 
 
@@ -131,7 +131,7 @@ async def test_get_charging_equipment_list_government_no_org_filter_success(
 
     # Government users without an org filter should query all organizations (organization_id None) and exclude_draft=True
     mock_repo.get_charging_equipment_list.assert_called_once_with(
-        None, pagination, None, True
+        None, pagination, True
     )
 
 
