@@ -431,7 +431,7 @@ export const notionalTransferSummaryColDefs = (
       ),
       field: 'isCanadaProduced',
       minWidth: 250,
-      hide: true,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
@@ -439,7 +439,7 @@ export const notionalTransferSummaryColDefs = (
         'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
       ),
       field: 'isQ1Supplied',
-      hide: true,
+      hide: complianceYear < NEW_REGULATION_YEAR,
       minWidth: 170,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
