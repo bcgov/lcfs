@@ -178,6 +178,8 @@ class UserRepository:
                 RoleEnum.MANAGE_USERS,
                 RoleEnum.TRANSFER,
                 RoleEnum.SIGNING_AUTHORITY,
+                RoleEnum.CI_APPLICANT,
+                RoleEnum.IA_PROPONENT,
             }:
                 if new_role not in existing_roles_set:
                     # Add missing role
@@ -192,6 +194,8 @@ class UserRepository:
                     RoleEnum.TRANSFER,
                     RoleEnum.SIGNING_AUTHORITY,
                     RoleEnum.READ_ONLY,
+                    RoleEnum.CI_APPLICANT,
+                    RoleEnum.IA_PROPONENT,
                 }
                 and user_role.role.name not in new_roles
             ):

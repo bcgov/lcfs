@@ -280,6 +280,8 @@ class MockAuthenticationBackend(AuthenticationBackend):
             RoleEnum.COMPLIANCE_REPORTING,
             RoleEnum.SIGNING_AUTHORITY,
             RoleEnum.READ_ONLY,
+            RoleEnum.CI_APPLICANT,
+            RoleEnum.IA_PROPONENT,
         ]
         if any(role in supplier_specific_roles for role in self.user_roles_enum):
             if RoleEnum.SUPPLIER not in roles_to_add:

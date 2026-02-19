@@ -43,6 +43,7 @@ const BCWidgetCard = ({
   editButton = null,
   editButtonStyles = {},
   headerSx = {},
+  sx,
   ...cardProps
 }: BCWidgetCardProps) => {
   const navigate = useNavigate()
@@ -77,8 +78,14 @@ const BCWidgetCard = ({
     ...(editButtonStyles || {})
   }
 
+  const combinedCardSx: SxProps<Theme> = Array.isArray(sx)
+    ? [cardStyles, ...sx]
+    : sx
+      ? [cardStyles, sx]
+      : [cardStyles]
+
   return (
-    <Card sx={cardStyles} {...cardProps}>
+    <Card sx={combinedCardSx} {...cardProps}>
       <BCBox display="flex" justifyContent="center" pt={1} py={1.5}>
         <BCBox
           variant="contained"
