@@ -397,6 +397,32 @@ async def export_charging_equipment(
     return await exporter.export(org_id, request.user, organization, True)
 
 
+@router.post(
+    "/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def export_filtered_charging_equipment(
+    request: Request,
+    body: ChargingEquipmentPaginationRequestSchema = Body(...),
+    exporter: ChargingEquipmentExporter = Depends(),
+):
+    """
+    Export filtered charging equipment matching the index/manage grid state.
+    """
+    return await exporter.export_filtered(
+        user=request.user,
+        pagination=PaginationRequestSchema(
+            page=body.page,
+            size=body.size,
+            sort_orders=body.sort_orders,
+            filters=body.filters,
+        ),
+        organization_id=body.organization_id,
+    )
+
+
 @router.get(
     "/template/{organization_id}",
     response_class=StreamingResponse,

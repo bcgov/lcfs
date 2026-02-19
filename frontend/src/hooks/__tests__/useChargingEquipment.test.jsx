@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { 
   useChargingEquipment,
+  useDownloadChargingEquipment,
   useGetChargingEquipment,
   useCreateChargingEquipment,
   useUpdateChargingEquipment,
@@ -15,7 +16,8 @@ const mockApiService = {
   post: vi.fn(),
   get: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn()
+  delete: vi.fn(),
+  download: vi.fn()
 }
 
 vi.mock('@/services/useApiService', () => ({
@@ -32,9 +34,11 @@ vi.mock('@/constants/routes', () => ({
       delete: '/charging-equipment/:id',
       bulkSubmit: '/charging-equipment/bulk/submit',
       bulkDecommission: '/charging-equipment/bulk/decommission',
+      export: '/charging-equipment/export',
       statuses: '/charging-equipment/statuses/list',
       levels: '/charging-equipment/levels/list',
-      endUseTypes: '/charging-equipment/end-use-types/list'
+      endUseTypes: '/charging-equipment/end-use-types/list',
+      endUserTypes: '/charging-equipment/end-user-types/list'
     }
   }
 }))
@@ -199,6 +203,33 @@ describe('useChargingEquipment', () => {
 
       expect(result.current.data).toBeUndefined()
       expect(mockApiService.post).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('useDownloadChargingEquipment', () => {
+    it('downloads filtered charging equipment export', async () => {
+      mockApiService.download.mockResolvedValue(undefined)
+
+      const { result } = renderHook(
+        () => useDownloadChargingEquipment(),
+        { wrapper }
+      )
+
+      const requestBody = {
+        page: 1,
+        size: 1000,
+        sortOrders: [{ field: 'updateDate', direction: 'desc' }],
+        filters: [{ field: 'manufacturer', filterType: 'text', type: 'contains', filter: 'Tesla' }],
+        organization_id: 7
+      }
+
+      await result.current.mutateAsync({ body: requestBody })
+
+      expect(mockApiService.download).toHaveBeenCalledWith({
+        url: '/charging-equipment/export',
+        method: 'post',
+        data: requestBody
+      })
     })
   })
 
