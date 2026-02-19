@@ -5,6 +5,8 @@ import enum
 
 
 class RoleEnum(enum.Enum):
+    SYSTEM_ADMIN = "SYSTEM_ADMIN"
+
     GOVERNMENT = "Government"
     ADMINISTRATOR = "Administrator"
     ANALYST = "Analyst"
