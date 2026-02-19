@@ -73,6 +73,7 @@ def mock_table_options():
         facility_nameplate_capacity_units=[
             FuelTypeQuantityUnitsEnumSchema.Litres,
             FuelTypeQuantityUnitsEnumSchema.Kilowatt_hour,
+            FuelTypeQuantityUnitsEnumSchema.Gigajoules,
         ],
     )
 
@@ -217,6 +218,7 @@ async def test_get_table_options_success(
         assert "transportModes" in result
         assert "fuelCodePrefixes" in result
         assert "facilityNameplateCapacityUnits" in result
+        assert "Gj" in result["facilityNameplateCapacityUnits"]
         mock_get_table_options.assert_called_once()
 
 
