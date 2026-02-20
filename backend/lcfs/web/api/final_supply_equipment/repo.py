@@ -612,6 +612,7 @@ class FinalSupplyEquipmentRepository:
                 LevelOfEquipment.name.label("level_of_equipment"),
                 ChargingEquipment.level_of_equipment_id,
                 ChargingEquipment.ports,
+                ChargingSite.allocating_organization_name,
                 intended_uses_subquery.label("intended_uses"),
                 intended_users_subquery.label("intended_users"),
                 ChargingEquipmentStatus.status.label("status"),
