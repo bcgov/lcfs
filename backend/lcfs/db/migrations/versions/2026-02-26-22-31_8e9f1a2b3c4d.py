@@ -1,7 +1,7 @@
 """Create credit market audit log table
 
 Revision ID: 8e9f1a2b3c4d
-Revises: a1b2c3d4e5f9
+Revises: e3b7a9d4c2f1
 Create Date: 2026-02-11 10:30:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "8e9f1a2b3c4d"
-down_revision = "a1b2c3d4e5f9"
+down_revision = "e3b7a9d4c2f1"
 branch_labels = None
 depends_on = None
 
