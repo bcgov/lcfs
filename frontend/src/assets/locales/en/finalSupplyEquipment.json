@@ -68,6 +68,7 @@
     "model": "Model",
     "levelOfEquipment": "Level of equipment",
     "ports": "Ports",
+    "allocatingOrganization": "Allocating organization",
     "intendedUseTypes": "Intended use",
     "intendedUserTypes": "Intended users",
     "streetAddress": "Street address",
