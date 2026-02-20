@@ -585,7 +585,7 @@ export const ChargingEquipment = () => {
         <Grid item xs={12}>
           <BCBox sx={{ width: '100%', minHeight: 600, mt: 2 }}>
             <Box display="flex" justifyContent="space-between" mb={2} gap={2}>
-              {!isIDIR ? (
+              {!isIDIR && (
                 <Stack
                   data-testid="manage-fse-action-row"
                   direction={{ xs: 'column', sm: 'row' }}
@@ -643,10 +643,21 @@ export const ChargingEquipment = () => {
                     {t('chargingEquipment:setToDecommissioned')}
                   </BCButton>
                 </Stack>
-              ) : (
-                <Box />
               )}
 
+              <DownloadButton
+                onDownload={handleDownloadExcel}
+                isDownloading={isExporting}
+                label={t(
+                  'chargingEquipment:downloadAsExcel',
+                  'Download as Excel'
+                )}
+                downloadLabel={t(
+                  'chargingEquipment:downloadingFSEInfo',
+                  'Downloading FSE info'
+                )}
+                dataTest="download-fse-excel"
+              />
             </Box>
 
             <BCBox sx={{ width: '100%' }}>
