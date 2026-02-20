@@ -11,12 +11,11 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
-    FuelCodeSchema,
     PaginationResponseSchema,
     FuelCodeStatusEnumSchema,
 )
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.api.fuel_code.services import FuelCodeServices
-from lcfs.web.exception.exceptions import ServiceException
 
 
 @pytest.mark.anyio
@@ -444,6 +443,100 @@ async def test_search_company_success():
     # Assert
     assert result == ["ABC Corp", "ABC Energy"]
     repo_mock.get_distinct_company_names.assert_called_once_with(company)
+
+
+@pytest.mark.anyio
+async def test_get_table_options_includes_gigajoules_unit():
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    class MockFuelType:
+        def __init__(self):
+            self.fuel_type_id = 1
+            self.fuel_type = "Hydrogen"
+            self.fossil_derived = False
+            self.provision_1_id = None
+            self.provision_2_id = None
+            self.default_carbon_intensity = None
+            self.provision_1 = None
+            self.provision_2 = None
+            self.units = QuantityUnitsEnum.Kilograms
+
+    class MockTransportMode:
+        def __init__(self):
+            self.transport_mode_id = 1
+            self.transport_mode = "Road"
+
+    class MockPrefix:
+        def __init__(self):
+            self.fuel_code_prefix_id = 1
+            self.prefix = "BCLCF"
+
+    repo_mock.get_fuel_types.return_value = [MockFuelType()]
+    repo_mock.get_transport_modes.return_value = [MockTransportMode()]
+    repo_mock.get_fuel_code_prefixes.return_value = [MockPrefix()]
+    repo_mock.get_latest_fuel_codes.return_value = []
+    repo_mock.get_fuel_code_field_options.return_value = []
+    repo_mock.get_next_available_fuel_code_by_prefix.return_value = "101.0"
+
+    # Act
+    result = await service.get_table_options()
+
+    # Assert
+    assert (
+        FuelTypeQuantityUnitsEnumSchema.Gigajoules
+        in result.facility_nameplate_capacity_units
+    )
+    assert result.facility_nameplate_capacity_units[0] == "L"
+    assert result.facility_nameplate_capacity_units[-1] == "m³"
+
+
+@pytest.mark.anyio
+async def test_convert_to_model_maps_gj_to_quantity_units_enum():
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    input_data = FuelCodeCreateUpdateSchema(
+        fuel_code_id=None,
+        fuel_type_id=1,
+        prefix_id=1001,
+        fuel_suffix="001.0",
+        carbon_intensity=20.5,
+        company="XYZ Corp",
+        application_date=date(2023, 10, 1),
+        approval_date=date(2023, 10, 2),
+        effective_date=date(2023, 10, 3),
+        expiration_date=date(2024, 10, 1),
+        edrms="EDRMS-123",
+        feedstock="Corn oil",
+        feedstock_location="Canada",
+        fuel_production_facility_city="Victoria",
+        fuel_production_facility_country="Canada",
+        fuel_production_facility_province_state="BC",
+        facility_nameplate_capacity=100,
+        facility_nameplate_capacity_unit="Gj",
+        feedstock_fuel_transport_mode=[],
+        finished_fuel_transport_mode=[],
+    )
+
+    mock_prefix = MagicMock()
+    mock_prefix.fuel_code_prefix_id = 1001
+    repo_mock.get_fuel_code_prefix.return_value = mock_prefix
+
+    mock_fuel_type = MagicMock()
+    mock_fuel_type.fuel_type_id = 1
+    repo_mock.get_fuel_type_by_id.return_value = mock_fuel_type
+
+    repo_mock.get_transport_modes.return_value = []
+    repo_mock.get_fuel_status_by_status.return_value = MagicMock()
+
+    # Act
+    fuel_code = await service.convert_to_model(input_data, FuelCodeStatusEnum.Draft)
+
+    # Assert
+    assert fuel_code.facility_nameplate_capacity_unit == QuantityUnitsEnum.Gigajoules
 
 
 @pytest.mark.anyio

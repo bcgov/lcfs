@@ -87,6 +87,7 @@ class ChargingEquipmentServices:
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 ports=equipment.ports.value if equipment.ports else None,
+                allocating_organization_name=equipment.charging_site.allocating_organization_name,
                 latitude=equipment.latitude,
                 longitude=equipment.longitude,
                 site_latitude=equipment.charging_site.latitude,

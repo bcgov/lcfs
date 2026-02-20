@@ -139,6 +139,7 @@ export const apiRoutes = {
     organizations: '/charging-equipment/organizations/list',
     hasAllocationAgreements:
       '/charging-equipment/organizations/has-allocation-agreements',
+    export: '/charging-equipment/export',
     template: '/charging-equipment/template/:organizationId',
     import: '/charging-equipment/import/:organizationId',
     importJobStatus: '/charging-equipment/status/:jobId'
