@@ -4,7 +4,6 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
 import {
-  faCirclePlus,
   faCheck,
   faBan,
   faSquareCheck
@@ -547,33 +546,24 @@ export const ChargingEquipment = () => {
 
       {!isOnNestedRoute && (
         <Grid item xs={12}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} lg={7}>
-              <Stack spacing={1} direction="row">
-                {!isIDIR && (
-                  <BCButton
-                    variant="contained"
-                    size="small"
-                    color="primary"
-                    onClick={handleNewFSE}
-                  >
-                    <BCTypography variant="subtitle2">
-                      {t('chargingEquipment:newFSE')}
-                    </BCTypography>
-                  </BCButton>
-                )}
-              </Stack>
-            </Grid>
-          </Grid>
-
           <BCBox sx={{ width: '100%', minHeight: 600, mt: 2 }}>
             {!isIDIR && (
               <Box display="flex" justifyContent="flex-start" mb={2}>
                 <Stack
+                  data-testid="manage-fse-action-row"
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={2}
                   sx={{ flexWrap: 'wrap' }}
                 >
+                  <BCButton
+                    variant="contained"
+                    color="primary"
+                    size="medium"
+                    onClick={handleNewFSE}
+                  >
+                    {t('chargingEquipment:newFSE')}
+                  </BCButton>
+
                   <BCButton
                     variant="contained"
                     color="primary"
