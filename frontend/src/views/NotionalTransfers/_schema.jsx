@@ -439,7 +439,7 @@ export const notionalTransferSummaryColDefs = (
         'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
       ),
       field: 'isQ1Supplied',
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: complianceYear !== NEW_REGULATION_YEAR,
       minWidth: 170,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
     },
@@ -583,7 +583,7 @@ export const changelogCommonColDefs = (
         'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
       ),
       field: 'isQ1Supplied',
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: complianceYear !== NEW_REGULATION_YEAR,
       minWidth: 165,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
       cellStyle: (params) =>

@@ -312,7 +312,11 @@ export const AddEditNotionalTransfers = () => {
       }
     })
     api.setColumnsVisible(['isCanadaProduced'], showColumns)
-    api.setColumnsVisible(['isQ1Supplied'], showColumns)
+    // Q1 supplied only applies to the 2025 transition year
+    api.setColumnsVisible(
+      ['isQ1Supplied'],
+      showColumns && complianceYear === NEW_REGULATION_YEAR
+    )
     if (showColumns) {
       api?.autoSizeAllColumns?.()
     }
