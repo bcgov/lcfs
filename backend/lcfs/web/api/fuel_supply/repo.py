@@ -107,7 +107,10 @@ class FuelSupplyRepository:
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
                 FuelType.renewable,
-                DefaultCarbonIntensity.default_carbon_intensity,
+                func.coalesce(
+                    DefaultCarbonIntensity.default_carbon_intensity,
+                    FuelType.default_carbon_intensity,
+                ).label("default_carbon_intensity"),
                 CategoryCarbonIntensity.category_carbon_intensity,
                 FuelCategory.category,
                 ProvisionOfTheAct.provision_of_the_act_id,
