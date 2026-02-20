@@ -1,6 +1,7 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
+import { DownloadButton } from '@/components/DownloadButton'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
 import {
@@ -37,7 +38,10 @@ import Loading from '@/components/Loading'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { BCAlert2 } from '@/components/BCAlert'
 import { BulkActionModals } from './components/BulkActionModals'
-import { useChargingEquipment } from '@/hooks/useChargingEquipment'
+import {
+  useChargingEquipment,
+  useDownloadChargingEquipment
+} from '@/hooks/useChargingEquipment'
 
 const initialPaginationOptions = {
   page: 1,
@@ -70,6 +74,7 @@ export const ChargingEquipment = () => {
   const [selectedRows, setSelectedRows] = useState([])
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [showDecommissionModal, setShowDecommissionModal] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [selectMode, setSelectMode] = useState(null) // 'draft-updated' or 'validated'
 
   const [paginationOptions, setPaginationOptions] = useState(
@@ -241,6 +246,7 @@ export const ChargingEquipment = () => {
     error,
     refetch
   } = equipmentQuery
+  const { mutateAsync: downloadChargingEquipment } = useDownloadChargingEquipment()
 
   const {
     submitEquipment,
@@ -503,6 +509,37 @@ export const ChargingEquipment = () => {
     }
   }, [isIDIR, handleOrganizationChange])
 
+  const handleDownloadExcel = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      const requestPayload = {
+        page: 1,
+        size: 1000,
+        sortOrders: paginationOptions?.sortOrders || [],
+        filters: paginationOptions?.filters || []
+      }
+
+      if (isIDIR && selectedOrg.id) {
+        requestPayload.organization_id = selectedOrg.id
+      }
+
+      await downloadChargingEquipment({ body: requestPayload })
+    } catch (error) {
+      alertRef.current?.triggerAlert({
+        message: error?.message || 'Failed to download FSE Excel export.',
+        severity: 'error'
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }, [
+    downloadChargingEquipment,
+    paginationOptions?.sortOrders,
+    paginationOptions?.filters,
+    isIDIR,
+    selectedOrg.id
+  ])
+
   const canSubmit = selectedRows.some(
     (row) => row.status === 'Draft' || row.status === 'Updated'
   )
@@ -547,8 +584,8 @@ export const ChargingEquipment = () => {
       {!isOnNestedRoute && (
         <Grid item xs={12}>
           <BCBox sx={{ width: '100%', minHeight: 600, mt: 2 }}>
-            {!isIDIR && (
-              <Box display="flex" justifyContent="flex-start" mb={2}>
+            <Box display="flex" justifyContent="space-between" mb={2} gap={2}>
+              {!isIDIR ? (
                 <Stack
                   data-testid="manage-fse-action-row"
                   direction={{ xs: 'column', sm: 'row' }}
@@ -606,8 +643,11 @@ export const ChargingEquipment = () => {
                     {t('chargingEquipment:setToDecommissioned')}
                   </BCButton>
                 </Stack>
-              </Box>
-            )}
+              ) : (
+                <Box />
+              )}
+
+            </Box>
 
             <BCBox sx={{ width: '100%' }}>
               <BCGridViewer
