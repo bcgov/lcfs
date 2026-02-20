@@ -114,6 +114,7 @@ class FSEReportingSchema(BaseSchema):
     longitude: float
     level_of_equipment: str
     ports: Optional[PortsEnum] = None
+    allocating_organization_name: Optional[str] = None
     supply_from_date: Optional[date] = None
     supply_to_date: Optional[date] = None
     kwh_usage: Optional[float] = None

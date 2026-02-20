@@ -412,6 +412,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     minWidth: 160,
     sortable: false
   })
+  cols.push({
+    field: 'allocatingOrganizationName',
+    headerName: t('chargingSite:fseColumnLabels.allocatingOrg'),
+    minWidth: 250,
+    sortable: false,
+    valueGetter: (params) =>
+      params.data.chargingSite?.allocatingOrganizationName ||
+      params.data.allocatingOrganizationName ||
+      ''
+  })
 
   // Intended Uses
   cols.push({

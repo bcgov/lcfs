@@ -76,6 +76,21 @@ export const useChargingEquipment = (paginationOptions) => {
   }
 }
 
+export const useDownloadChargingEquipment = (options = {}) => {
+  const apiService = useApiService()
+
+  return useMutation({
+    mutationFn: async ({ body }) => {
+      return await apiService.download({
+        url: apiRoutes.chargingEquipment.export,
+        method: 'post',
+        data: body
+      })
+    },
+    ...options
+  })
+}
+
 // Get single charging equipment
 export const useGetChargingEquipment = (id) => {
   const apiService = useApiService()

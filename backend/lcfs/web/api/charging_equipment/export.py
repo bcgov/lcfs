@@ -1,5 +1,7 @@
 import io
+from datetime import datetime
 from typing import List, Tuple
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends
 from openpyxl.utils import get_column_letter
@@ -9,6 +11,7 @@ from starlette.responses import StreamingResponse
 from lcfs.db.models import Organization, UserProfile
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.core.decorators import service_handler
 
@@ -16,6 +19,9 @@ from lcfs.web.core.decorators import service_handler
 CE_EXPORT_FILENAME = "ChargingEquipment"
 CE_EXPORT_SHEETNAME = "ChargingEquipment"
 VALIDATION_SHEETNAME = "VALUES"
+FSE_FILTERED_EXPORT_SHEETNAME = "FSE"
+FSE_INDEX_EXPORT_FILENAME = "FSE_Index"
+MANAGE_FSE_EXPORT_FILENAME = "Manage_FSE"
 CE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Charging Site", "text"),
     SpreadsheetColumn("Serial Number", "text"),
@@ -30,6 +36,43 @@ CE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Longitude", "text"),
 ]
 
+CE_INDEX_EXPORT_COLUMNS = [
+    SpreadsheetColumn("Status", "text"),
+    SpreadsheetColumn("Site name", "text"),
+    SpreadsheetColumn("Organization", "text"),
+    SpreadsheetColumn("Registration #", "text"),
+    SpreadsheetColumn("Version #", "int"),
+    SpreadsheetColumn("Serial #", "text"),
+    SpreadsheetColumn("Manufacturer", "text"),
+    SpreadsheetColumn("Model", "text"),
+    SpreadsheetColumn("Level of equipment", "text"),
+    SpreadsheetColumn("Ports", "text"),
+    SpreadsheetColumn("Intended use", "text"),
+    SpreadsheetColumn("Intended users", "text"),
+    SpreadsheetColumn("Latitude", "text"),
+    SpreadsheetColumn("Longitude", "text"),
+    SpreadsheetColumn("Created", "date"),
+    SpreadsheetColumn("Last updated", "date"),
+]
+
+CE_MANAGE_EXPORT_COLUMNS = [
+    SpreadsheetColumn("Status", "text"),
+    SpreadsheetColumn("Site name", "text"),
+    SpreadsheetColumn("Registration #", "text"),
+    SpreadsheetColumn("Version #", "int"),
+    SpreadsheetColumn("Serial #", "text"),
+    SpreadsheetColumn("Manufacturer", "text"),
+    SpreadsheetColumn("Model", "text"),
+    SpreadsheetColumn("Level of equipment", "text"),
+    SpreadsheetColumn("Ports", "text"),
+    SpreadsheetColumn("Intended use", "text"),
+    SpreadsheetColumn("Intended users", "text"),
+    SpreadsheetColumn("Latitude", "text"),
+    SpreadsheetColumn("Longitude", "text"),
+    SpreadsheetColumn("Created", "date"),
+    SpreadsheetColumn("Last updated", "date"),
+]
+
 
 class ChargingEquipmentExporter:
     def __init__(
@@ -37,6 +80,10 @@ class ChargingEquipmentExporter:
         repo: ChargingEquipmentRepository = Depends(ChargingEquipmentRepository),
     ) -> None:
         self.repo = repo
+
+    @staticmethod
+    def _current_pacific_date() -> str:
+        return datetime.now(ZoneInfo("America/Vancouver")).strftime("%Y-%m-%d")
 
     @service_handler
     async def export(
@@ -261,3 +308,135 @@ class ChargingEquipmentExporter:
                 ]
             )
         return data
+
+    @service_handler
+    async def export_filtered(
+        self,
+        user: UserProfile,
+        pagination: PaginationRequestSchema,
+        organization_id: int = None,
+    ) -> StreamingResponse:
+        """
+        Export filtered charging equipment list for the index/manage grid.
+        """
+        export_format = "xlsx"
+        is_government = bool(getattr(user, "is_government", False))
+        scoped_organization_id = (
+            organization_id if is_government and organization_id else user.organization_id
+        )
+        exclude_draft = is_government
+
+        export_pagination = PaginationRequestSchema(
+            page=1,
+            size=1000,
+            sort_orders=pagination.sort_orders,
+            filters=pagination.filters,
+        )
+
+        all_rows = []
+        while True:
+            equipment_rows, total_count = await self.repo.get_charging_equipment_list(
+                scoped_organization_id,
+                export_pagination,
+                exclude_draft=exclude_draft,
+            )
+            all_rows.extend(equipment_rows)
+
+            if len(all_rows) >= total_count or len(equipment_rows) == 0:
+                break
+            export_pagination.page += 1
+
+        rows = []
+        for equipment in all_rows:
+            status = equipment.status.status if equipment.status else ""
+            site_name = equipment.charging_site.site_name if equipment.charging_site else ""
+            organization_name = (
+                equipment.charging_site.organization.name
+                if equipment.charging_site and equipment.charging_site.organization
+                else ""
+            )
+            registration_number = equipment.registration_number or (
+                f"{equipment.charging_site.site_code}-{equipment.equipment_number}"
+                if equipment.charging_site
+                else ""
+            )
+            level_name = (
+                equipment.level_of_equipment.name if equipment.level_of_equipment else ""
+            )
+            ports = equipment.ports.value if equipment.ports else ""
+            intended_uses = ", ".join(use.type for use in equipment.intended_uses or [])
+            intended_users = ", ".join(
+                end_user.type_name for end_user in equipment.intended_users or []
+            )
+            created_date = (
+                equipment.create_date.date() if getattr(equipment, "create_date", None) else None
+            )
+            updated_date = (
+                equipment.update_date.date() if getattr(equipment, "update_date", None) else None
+            )
+
+            common_values = [
+                status,
+                site_name,
+                registration_number,
+                equipment.version,
+                equipment.serial_number,
+                equipment.manufacturer,
+                equipment.model or "",
+                level_name,
+                ports,
+                intended_uses,
+                intended_users,
+                equipment.latitude if getattr(equipment, "latitude", None) is not None else "",
+                equipment.longitude if getattr(equipment, "longitude", None) is not None else "",
+                created_date,
+                updated_date,
+            ]
+            if is_government:
+                rows.append(
+                    [
+                        status,
+                        site_name,
+                        organization_name,
+                        registration_number,
+                        equipment.version,
+                        equipment.serial_number,
+                        equipment.manufacturer,
+                        equipment.model or "",
+                        level_name,
+                        ports,
+                        intended_uses,
+                        intended_users,
+                        equipment.latitude if getattr(equipment, "latitude", None) is not None else "",
+                        equipment.longitude if getattr(equipment, "longitude", None) is not None else "",
+                        created_date,
+                        updated_date,
+                    ]
+                )
+            else:
+                rows.append(common_values)
+
+        columns = CE_INDEX_EXPORT_COLUMNS if is_government else CE_MANAGE_EXPORT_COLUMNS
+        sheet_name = FSE_FILTERED_EXPORT_SHEETNAME
+        filename_prefix = (
+            FSE_INDEX_EXPORT_FILENAME if is_government else MANAGE_FSE_EXPORT_FILENAME
+        )
+
+        builder = SpreadsheetBuilder(file_format=export_format)
+        builder.add_sheet(
+            sheet_name=sheet_name,
+            columns=columns,
+            rows=rows,
+            styles={"bold_headers": True},
+        )
+        file_content = builder.build_spreadsheet()
+
+        formatted_date = self._current_pacific_date()
+        filename = f"{filename_prefix}_{formatted_date}.{export_format}"
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type=FILE_MEDIA_TYPE[export_format.upper()].value,
+            headers=headers,
+        )

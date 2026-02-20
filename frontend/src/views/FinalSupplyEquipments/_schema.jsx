@@ -606,6 +606,18 @@ export const finalSupplyEquipmentSummaryColDefs = (
     valueGetter: (params) => params.data.levelOfEquipment
   },
   {
+    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
+    minWidth: 160,
+    field: 'ports'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.allocatingOrganization'
+    ),
+    minWidth: 250,
+    field: 'allocatingOrganizationName'
+  },
+  {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
     ),
@@ -804,6 +816,24 @@ export const getFSEReportingColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 220
+  },
+  {
+    field: 'ports',
+    headerName: i18n.t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 140
+  },
+  {
+    field: 'allocatingOrganizationName',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.allocatingOrganization'
+    ),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    minWidth: 250
   },
   {
     field: 'equipmentNotes',

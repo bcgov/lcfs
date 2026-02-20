@@ -128,6 +128,7 @@ class ChargingEquipmentListItemSchema(BaseSchema):
     model: Optional[str] = None
     level_of_equipment_name: str
     ports: Optional[str] = None
+    allocating_organization_name: Optional[str] = None
     intended_uses: Optional[List[EndUseTypeSchema]] = []
     intended_users: Optional[List[EndUserTypeSchema]] = []
     latitude: float
