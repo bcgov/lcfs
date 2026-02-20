@@ -422,7 +422,8 @@ export const useGetFSEReportingList = (
       'fse-reporting-list',
       complianceReportId,
       organizationId,
-      pagination
+      pagination,
+      mode
     ],
     queryFn: async () => {
       if (!organizationId) {
@@ -616,6 +617,76 @@ export const useDeleteFSEReportingBatch = (
         }
       })
 
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useUpdateFSEReportingActiveStatus = (
+  complianceReportId,
+  organizationId = null,
+  options = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async ({ reportingIds, isActive }) => {
+      if (!Array.isArray(reportingIds) || reportingIds.length === 0) {
+        throw new Error('Reporting IDs array is required')
+      }
+      if (typeof isActive !== 'boolean') {
+        throw new Error('isActive flag is required')
+      }
+
+      return await client.patch(
+        apiRoutes.updateFSEReportingActiveStatus,
+        {
+          reportingIds,
+          isActive,
+          complianceReportId,
+          organizationId
+        }
+      )
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'fse-reporting-list' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report-summary', complianceReportId]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report', complianceReportId]
+        })
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'fse-reporting-list' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
       onError?.(error, variables, context)
     },
     ...restOptions

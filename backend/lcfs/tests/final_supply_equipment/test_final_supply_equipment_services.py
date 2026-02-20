@@ -546,6 +546,22 @@ async def test_delete_fse_reporting_batch_success(service, mock_repo):
 
 
 @pytest.mark.anyio
+async def test_update_fse_reporting_active_status(service, mock_repo):
+    """Test toggling FSE reporting active status"""
+    mock_repo.update_reporting_active_status.return_value = 3
+
+    data = MagicMock(reporting_ids=[1, 2, 3], is_active=False)
+    result = await service.update_fse_reporting_active_status(data)
+
+    assert result["updated"] == 3
+    assert result["is_active"] is False
+    assert "deactivated" in result["message"]
+    mock_repo.update_reporting_active_status.assert_awaited_once_with(
+        [1, 2, 3], False
+    )
+
+
+@pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_success(service, mock_repo):
     """Test successful setting of default dates for FSE reporting"""
     mock_repo.bulk_update_reporting_dates.return_value = 3
