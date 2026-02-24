@@ -1001,13 +1001,23 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def update_reporting_active_status(
-        self, reporting_ids: List[int], is_active: bool
+        self,
+        reporting_ids: List[int],
+        is_active: bool,
+        compliance_report_id: int,
+        organization_id: int,
     ) -> int:
         stmt = (
             update(ComplianceReportChargingEquipment)
             .where(
-                ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
-                    reporting_ids
+                and_(
+                    ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                        reporting_ids
+                    ),
+                    ComplianceReportChargingEquipment.compliance_report_id
+                    == compliance_report_id,
+                    ComplianceReportChargingEquipment.organization_id
+                    == organization_id,
                 )
             )
             .values(is_active=is_active)

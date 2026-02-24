@@ -546,19 +546,127 @@ async def test_delete_fse_reporting_batch_success(service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_update_fse_reporting_active_status(service, mock_repo):
+async def test_update_fse_reporting_active_status(service, mock_repo, mock_comp_report_repo):
     """Test toggling FSE reporting active status"""
     mock_repo.update_reporting_active_status.return_value = 3
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        organization_id=5,
+        current_status=MagicMock(status="Draft"),
+    )
 
-    data = MagicMock(reporting_ids=[1, 2, 3], is_active=False)
-    result = await service.update_fse_reporting_active_status(data)
+    data = MagicMock(
+        reporting_ids=[1, 2, 3],
+        is_active=False,
+        compliance_report_id=10,
+        organization_id=5,
+    )
+    user = MagicMock(role_names=[RoleEnum.SUPPLIER], organization_id=5)
+    result = await service.update_fse_reporting_active_status(data, user)
 
     assert result["updated"] == 3
     assert result["is_active"] is False
     assert "deactivated" in result["message"]
     mock_repo.update_reporting_active_status.assert_awaited_once_with(
-        [1, 2, 3], False
+        reporting_ids=[1, 2, 3],
+        is_active=False,
+        compliance_report_id=10,
+        organization_id=5,
     )
+    mock_comp_report_repo.get_compliance_report_by_id.assert_awaited_once_with(10)
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_active_status_forbidden_for_non_supplier_or_analyst(
+    service, mock_repo, mock_comp_report_repo
+):
+    data = MagicMock(
+        reporting_ids=[1],
+        is_active=False,
+        compliance_report_id=10,
+        organization_id=5,
+    )
+    user = MagicMock(role_names=[RoleEnum.GOVERNMENT], organization_id=5)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting_active_status(data, user)
+
+    assert exc_info.value.status_code == 403
+    mock_repo.update_reporting_active_status.assert_not_awaited()
+    mock_comp_report_repo.get_compliance_report_by_id.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_active_status_forbidden_for_other_org(
+    service, mock_repo, mock_comp_report_repo
+):
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        organization_id=999,
+        current_status=MagicMock(status="Draft"),
+    )
+    data = MagicMock(
+        reporting_ids=[1],
+        is_active=True,
+        compliance_report_id=10,
+        organization_id=999,
+    )
+    user = MagicMock(role_names=[RoleEnum.SUPPLIER], organization_id=5)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting_active_status(data, user)
+
+    assert exc_info.value.status_code == 403
+    mock_repo.update_reporting_active_status.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_active_status_analyst_allowed_in_analyst_adjustment(
+    service, mock_repo, mock_comp_report_repo
+):
+    mock_repo.update_reporting_active_status.return_value = 1
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        organization_id=5,
+        current_status=MagicMock(status="Analyst adjustment"),
+    )
+    data = MagicMock(
+        reporting_ids=[9],
+        is_active=True,
+        compliance_report_id=10,
+        organization_id=5,
+    )
+    user = MagicMock(role_names=[RoleEnum.ANALYST], organization_id=123)
+
+    result = await service.update_fse_reporting_active_status(data, user)
+
+    assert result["updated"] == 1
+    mock_repo.update_reporting_active_status.assert_awaited_once_with(
+        reporting_ids=[9],
+        is_active=True,
+        compliance_report_id=10,
+        organization_id=5,
+    )
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_active_status_analyst_forbidden_outside_analyst_adjustment(
+    service, mock_repo, mock_comp_report_repo
+):
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        organization_id=5,
+        current_status=MagicMock(status="Submitted"),
+    )
+    data = MagicMock(
+        reporting_ids=[9],
+        is_active=True,
+        compliance_report_id=10,
+        organization_id=5,
+    )
+    user = MagicMock(role_names=[RoleEnum.ANALYST], organization_id=123)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting_active_status(data, user)
+
+    assert exc_info.value.status_code == 403
+    mock_repo.update_reporting_active_status.assert_not_awaited()
 
 
 @pytest.mark.anyio

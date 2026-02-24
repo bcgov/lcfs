@@ -8,6 +8,7 @@ from sqlalchemy.exc import ProgrammingError
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.utils.constants import LCFS_Constants, POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
@@ -28,6 +29,8 @@ from lcfs.web.api.final_supply_equipment.schema import (
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.organizations.repo import OrganizationsRepository
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
@@ -624,13 +627,58 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def update_fse_reporting_active_status(
-        self, data: FSEReportingActiveStatusSchema
+        self, data: FSEReportingActiveStatusSchema, user
     ) -> dict:
+        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+
+        if not (is_supplier or is_analyst):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only suppliers or analysts can update FSE reporting active status",
+            )
+
+        report = await self.compliance_report_repo.get_compliance_report_by_id(
+            data.compliance_report_id
+        )
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found",
+            )
+
+        if data.organization_id != report.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Request organization does not match the compliance report organization",
+            )
+
+        if is_supplier and data.organization_id != user.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Suppliers can only update FSE reporting for their organization",
+            )
+
+        if is_analyst:
+            report_status = getattr(getattr(report, "current_status", None), "status", None)
+            allowed_statuses = {
+                ComplianceReportStatusEnum.Analyst_adjustment,
+                ComplianceReportStatusEnum.Analyst_adjustment.value,
+            }
+            if report_status not in allowed_statuses:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Analysts can only update FSE reporting active status when the report is in Analyst_adjustment status",
+                )
+
         if not data.reporting_ids:
             return {"updated": 0, "is_active": data.is_active}
 
         updated_count = await self.repo.update_reporting_active_status(
-            data.reporting_ids, data.is_active
+            reporting_ids=data.reporting_ids,
+            is_active=data.is_active,
+            compliance_report_id=data.compliance_report_id,
+            organization_id=report.organization_id,
         )
         state = "activated" if data.is_active else "deactivated"
         return {

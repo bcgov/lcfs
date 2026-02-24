@@ -425,7 +425,7 @@ async def update_fse_reporting_active_status(
     """
     Activate or deactivate multiple FSE compliance reporting records without deleting data
     """
-    return await service.update_fse_reporting_active_status(request_data)
+    return await service.update_fse_reporting_active_status(request_data, request.user)
 
 
 @router.put(

@@ -540,11 +540,17 @@ async def test_update_reporting_active_status(repo, fake_db):
     mock_result.rowcount = 4
     fake_db.execute.return_value = mock_result
 
-    result = await repo.update_reporting_active_status([1, 2, 3, 4], False)
+    result = await repo.update_reporting_active_status(
+        [1, 2, 3, 4], False, compliance_report_id=10, organization_id=5
+    )
 
     assert result == 4
     fake_db.execute.assert_called_once()
     fake_db.flush.assert_called_once()
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+    assert "compliance_report_id = 10" in compiled_sql
+    assert "organization_id = 5" in compiled_sql
 
 
 @pytest.mark.anyio
