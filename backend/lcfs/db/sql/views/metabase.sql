@@ -241,6 +241,7 @@ WITH time_diff AS (
     SELECT
         cr.compliance_report_id,
         cr.compliance_period_id,
+        cp.description AS compliance_period,
         cr.organization_id,
         crh.status_id,
         LEAD(crh.status_id) OVER (PARTITION BY crh.compliance_report_id ORDER BY crh.create_date) AS next_status_id,
@@ -249,10 +250,12 @@ WITH time_diff AS (
     FROM
         compliance_report_history crh
         JOIN compliance_report cr ON crh.compliance_report_id = cr.compliance_report_id
+        JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
 )
 SELECT
     compliance_report_id,
     compliance_period_id,
+    compliance_period,
     organization_id,
     -- Duration: Draft → Submitted
     MAX(
@@ -292,6 +295,7 @@ FROM
 GROUP BY
     compliance_report_id,
     compliance_period_id,
+    compliance_period,
     organization_id
 ORDER BY
     compliance_report_id;
@@ -1239,7 +1243,477 @@ ORDER BY
       "allocation_agreement"."group_uuid" ASC;
 
 GRANT SELECT ON vw_allocation_agreement_chained TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Status Timeline View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_status_timeline cascade;
+CREATE OR REPLACE VIEW vw_compliance_report_status_timeline AS
+WITH ordered_history AS (
+    SELECT
+        crh.compliance_report_history_id,
+        crh.compliance_report_id,
+        cr.compliance_report_group_uuid,
+        cr.organization_id,
+        cr.compliance_period_id,
+        cp.description AS compliance_period,
+        crh.status_id,
+        crs.status::text AS status_name,
+        crh.create_date AS status_start_date,
+        LEAD(crh.create_date) OVER (
+            PARTITION BY crh.compliance_report_id
+            ORDER BY crh.create_date
+        ) AS next_status_date,
+        LEAD(crh.status_id) OVER (
+            PARTITION BY crh.compliance_report_id
+            ORDER BY crh.create_date
+        ) AS next_status_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY crh.compliance_report_id, crh.status_id
+            ORDER BY crh.create_date
+        ) AS status_sequence
+    FROM
+        compliance_report_history crh
+        JOIN compliance_report cr ON crh.compliance_report_id = cr.compliance_report_id
+        JOIN compliance_report_status crs ON crh.status_id = crs.compliance_report_status_id
+        JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
+)
+SELECT
+    compliance_report_id,
+    compliance_report_group_uuid,
+    organization_id,
+    compliance_period_id,
+    compliance_period,
+    status_id,
+    status_name,
+    status_sequence,
+    status_start_date,
+    next_status_id,
+    next_status_date AS status_end_date,
+    CASE
+        WHEN next_status_date IS NULL THEN
+            NULL
+        ELSE
+            ROUND(
+                (EXTRACT(EPOCH FROM next_status_date - status_start_date) / 86400)::numeric,
+                2
+            )
+    END AS duration_days
+FROM
+    ordered_history;
 
+GRANT SELECT ON vw_compliance_report_status_timeline TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Status Median Durations
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_status_medians;
+CREATE OR REPLACE VIEW vw_compliance_report_status_medians AS
+SELECT
+    compliance_period_id,
+    compliance_period,
+    status_name,
+    percentile_disc(0.5) WITHIN GROUP (ORDER BY duration_days)
+        AS median_days_in_status,
+    ROUND(AVG(duration_days)::numeric, 2) AS average_days_in_status,
+    COUNT(*) AS measured_transitions
+FROM
+    vw_compliance_report_status_timeline
+WHERE
+    duration_days IS NOT NULL
+GROUP BY
+    compliance_period_id,
+    compliance_period,
+    status_name;
+
+GRANT SELECT ON vw_compliance_report_status_medians TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Flow Metrics View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_flow_metrics;
+CREATE OR REPLACE VIEW vw_compliance_report_flow_metrics AS
+WITH status_dates AS (
+    SELECT
+        compliance_report_id,
+        MIN(
+            CASE WHEN status_id = 2
+                AND status_sequence = 1 THEN
+                status_start_date
+            END
+        ) AS submitted_date,
+        MIN(
+            CASE WHEN status_id = 3
+                AND status_sequence = 1 THEN
+                status_start_date
+            END
+        ) AS recommended_by_analyst_date,
+        MIN(
+            CASE WHEN status_id = 4
+                AND status_sequence = 1 THEN
+                status_start_date
+            END
+        ) AS recommended_by_manager_date,
+        MIN(
+            CASE WHEN status_id = ANY (ARRAY [5, 7, 8, 9])
+                AND status_sequence = 1 THEN
+                status_start_date
+            END
+        ) AS final_decision_date
+    FROM
+        vw_compliance_report_status_timeline
+    GROUP BY
+        compliance_report_id
+)
+SELECT
+    vcr.compliance_report_id,
+    vcr.compliance_report_group_uuid,
+    vcr.organization_id,
+    vcr.organization_name,
+    vcr.compliance_period_id,
+    vcr.compliance_period,
+    vcr.report_status,
+    vcr.update_date AS latest_status_update,
+    vcr.assigned_analyst_id,
+    vcr.assigned_analyst_first_name,
+    vcr.assigned_analyst_last_name,
+    sd.submitted_date,
+    sd.recommended_by_analyst_date,
+    sd.recommended_by_manager_date,
+    sd.final_decision_date,
+    CASE
+        WHEN sd.submitted_date IS NOT NULL
+            AND sd.final_decision_date IS NOT NULL THEN
+            ROUND(
+                (
+                    EXTRACT(
+                        EPOCH
+                        FROM sd.final_decision_date - sd.submitted_date
+                    ) / 86400
+                )::numeric,
+                2
+            )
+    END AS lead_time_days,
+    CASE
+        WHEN sd.recommended_by_manager_date IS NOT NULL
+            AND sd.final_decision_date IS NOT NULL THEN
+            ROUND(
+                (
+                    EXTRACT(
+                        EPOCH
+                        FROM sd.final_decision_date - sd.recommended_by_manager_date
+                    ) / 86400
+                )::numeric,
+                2
+            )
+    END AS cycle_time_from_manager_days,
+    CASE
+        WHEN sd.recommended_by_analyst_date IS NOT NULL
+            AND sd.final_decision_date IS NOT NULL THEN
+            ROUND(
+                (
+                    EXTRACT(
+                        EPOCH
+                        FROM sd.final_decision_date - sd.recommended_by_analyst_date
+                    ) / 86400
+                )::numeric,
+                2
+            )
+    END AS cycle_time_from_analyst_days,
+    EXTRACT(YEAR FROM sd.final_decision_date)::int AS completion_year
+FROM
+    v_compliance_report vcr
+    LEFT JOIN status_dates sd ON vcr.compliance_report_id = sd.compliance_report_id;
+
+GRANT SELECT ON vw_compliance_report_flow_metrics TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Throughput View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_throughput;
+CREATE OR REPLACE VIEW vw_compliance_report_throughput AS
+WITH completed AS (
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        final_decision_date::date AS completion_date
+    FROM
+        vw_compliance_report_flow_metrics
+    WHERE
+        final_decision_date IS NOT NULL
+)
+SELECT
+    period_type,
+    period_start,
+    compliance_period_id,
+    compliance_period,
+    COUNT(*) AS completed_reports
+FROM (
+    SELECT
+        'month'::text AS period_type,
+        DATE_TRUNC('month', completion_date)::date AS period_start,
+        compliance_period_id,
+        compliance_period
+    FROM
+        completed
+    UNION ALL
+    SELECT
+        'quarter'::text AS period_type,
+        DATE_TRUNC('quarter', completion_date)::date AS period_start,
+        compliance_period_id,
+        compliance_period
+    FROM
+        completed
+    UNION ALL
+    SELECT
+        'year'::text AS period_type,
+        DATE_TRUNC('year', completion_date)::date AS period_start,
+        compliance_period_id,
+        compliance_period
+    FROM
+        completed
+) periods
+GROUP BY
+    period_type,
+    period_start,
+    compliance_period_id,
+    compliance_period
+ORDER BY
+    period_type,
+    period_start,
+    compliance_period;
+
+GRANT SELECT ON vw_compliance_report_throughput TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report WIP Summary View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_wip_summary;
+CREATE OR REPLACE VIEW vw_compliance_report_wip_summary AS
+WITH categorized AS (
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        report_status,
+        CASE
+            WHEN report_status = ANY (
+                ARRAY [
+                    'Assessed'::compliancereportstatusenum,
+                    'Rejected'::compliancereportstatusenum,
+                    'Not_recommended_by_analyst'::compliancereportstatusenum,
+                    'Not_recommended_by_manager'::compliancereportstatusenum
+                ]
+            ) THEN
+                'Completed'
+            ELSE
+                'In_progress'
+        END AS workflow_state
+    FROM
+        v_compliance_report
+)
+SELECT
+    compliance_period_id,
+    compliance_period,
+    report_status,
+    workflow_state,
+    COUNT(*) AS report_count
+FROM
+    categorized
+GROUP BY
+    compliance_period_id,
+    compliance_period,
+    report_status,
+    workflow_state
+ORDER BY
+    workflow_state,
+    report_status;
+
+GRANT SELECT ON vw_compliance_report_wip_summary TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Service Level View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_service_levels;
+CREATE OR REPLACE VIEW vw_compliance_report_service_levels AS
+WITH completed AS (
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        final_decision_date,
+        lead_time_days
+    FROM
+        vw_compliance_report_flow_metrics
+    WHERE
+        final_decision_date IS NOT NULL
+)
+SELECT
+    'overall'::text AS scope,
+    NULL::int AS completion_year,
+    compliance_period_id,
+    compliance_period,
+    COUNT(*) AS total_completed,
+    COUNT(*) FILTER (WHERE lead_time_days <= 60) AS completed_within_60_days,
+    ROUND(
+        (
+            COUNT(*) FILTER (WHERE lead_time_days <= 60)::numeric
+            / NULLIF(COUNT(*), 0)
+        ) * 100,
+        2
+    ) AS service_level_percent
+FROM
+    completed
+GROUP BY
+    compliance_period_id,
+    compliance_period
+UNION ALL
+SELECT
+    'year'::text AS scope,
+    EXTRACT(YEAR FROM final_decision_date)::int AS completion_year,
+    compliance_period_id,
+    compliance_period,
+    COUNT(*) AS total_completed,
+    COUNT(*) FILTER (WHERE lead_time_days <= 60) AS completed_within_60_days,
+    ROUND(
+        (
+            COUNT(*) FILTER (WHERE lead_time_days <= 60)::numeric
+            / NULLIF(COUNT(*), 0)
+        ) * 100,
+        2
+    ) AS service_level_percent
+FROM
+    completed
+GROUP BY
+    completion_year,
+    compliance_period_id,
+    compliance_period
+ORDER BY
+    scope,
+    completion_year,
+    compliance_period;
+
+GRANT SELECT ON vw_compliance_report_service_levels TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Assignee Breakdown View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_assignee_breakdown;
+CREATE OR REPLACE VIEW vw_compliance_report_assignee_breakdown AS
+SELECT
+    vcr.assigned_analyst_id,
+    vcr.assigned_analyst_first_name,
+    vcr.assigned_analyst_last_name,
+    vcr.compliance_period_id,
+    vcr.compliance_period,
+    COUNT(*) AS total_reports,
+    COUNT(*) FILTER (
+        WHERE vcr.report_status = ANY (
+                ARRAY [
+                    'Assessed'::compliancereportstatusenum,
+                    'Rejected'::compliancereportstatusenum,
+                    'Not_recommended_by_analyst'::compliancereportstatusenum,
+                    'Not_recommended_by_manager'::compliancereportstatusenum
+                ]
+            )
+    ) AS completed_reports,
+    COUNT(*) FILTER (
+        WHERE vcr.report_status <> ALL (
+                ARRAY [
+                    'Assessed'::compliancereportstatusenum,
+                    'Rejected'::compliancereportstatusenum,
+                    'Not_recommended_by_analyst'::compliancereportstatusenum,
+                    'Not_recommended_by_manager'::compliancereportstatusenum
+                ]
+            )
+    ) AS wip_reports,
+    ROUND(
+        AVG(fm.lead_time_days) FILTER (
+            WHERE fm.lead_time_days IS NOT NULL
+        ),
+        2
+    ) AS avg_lead_time_days,
+    ROUND(
+        AVG(fm.cycle_time_from_manager_days) FILTER (
+            WHERE fm.cycle_time_from_manager_days IS NOT NULL
+        ),
+        2
+    ) AS avg_cycle_time_from_manager_days
+FROM
+    v_compliance_report vcr
+    LEFT JOIN vw_compliance_report_flow_metrics fm ON vcr.compliance_report_id = fm.compliance_report_id
+WHERE vcr.report_status <> 'Draft'
+GROUP BY
+    vcr.assigned_analyst_id,
+    vcr.assigned_analyst_first_name,
+    vcr.assigned_analyst_last_name,
+    vcr.compliance_period_id,
+    vcr.compliance_period
+ORDER BY
+    avg_lead_time_days NULLS LAST;
+
+GRANT SELECT ON vw_compliance_report_assignee_breakdown TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Report Queue Flow View
+-- ==========================================
+DROP VIEW IF EXISTS vw_compliance_report_queue_flow;
+CREATE OR REPLACE VIEW vw_compliance_report_queue_flow AS
+WITH submissions AS (
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        DATE_TRUNC('month', submitted_date)::date AS period_start,
+        COUNT(*) AS submissions
+    FROM
+        vw_compliance_report_flow_metrics
+    WHERE
+        submitted_date IS NOT NULL
+    GROUP BY
+        compliance_period_id,
+        compliance_period,
+        DATE_TRUNC('month', submitted_date)
+),
+completions AS (
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        DATE_TRUNC('month', final_decision_date)::date AS period_start,
+        COUNT(*) AS completions
+    FROM
+        vw_compliance_report_flow_metrics
+    WHERE
+        final_decision_date IS NOT NULL
+    GROUP BY
+        compliance_period_id,
+        compliance_period,
+        DATE_TRUNC('month', final_decision_date)
+),
+periods AS (
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        period_start
+    FROM
+        submissions
+    UNION
+    SELECT
+        compliance_period_id,
+        compliance_period,
+        period_start
+    FROM
+        completions
+)
+SELECT
+    periods.period_start,
+    EXTRACT(YEAR FROM periods.period_start)::int AS period_year,
+    EXTRACT(MONTH FROM periods.period_start)::int AS period_month,
+    periods.compliance_period_id,
+    periods.compliance_period,
+    COALESCE(submissions.submissions, 0) AS submissions,
+    COALESCE(completions.completions, 0) AS completions,
+    COALESCE(submissions.submissions, 0) - COALESCE(completions.completions, 0) AS net_delta
+FROM
+    periods
+    LEFT JOIN submissions ON periods.period_start = submissions.period_start
+        AND periods.compliance_period_id = submissions.compliance_period_id
+    LEFT JOIN completions ON periods.period_start = completions.period_start
+        AND periods.compliance_period_id = completions.compliance_period_id
+ORDER BY
+    periods.period_start,
+    periods.compliance_period;
+
+GRANT SELECT ON vw_compliance_report_queue_flow TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Allocation Agreement Base View
 -- ==========================================

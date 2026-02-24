@@ -697,7 +697,8 @@ export const getFSEReportingColDefs = (
       autoOpenLastRow: false
     },
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data.isActive !== false,
     valueGetter: (params) => {
       return params.data.supplyFromDate || minDate
     },
@@ -730,7 +731,8 @@ export const getFSEReportingColDefs = (
       autoOpenLastRow: false
     },
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data.isActive !== false,
     valueGetter: (params) => {
       return params.data.supplyToDate || maxDate
     },
@@ -755,7 +757,8 @@ export const getFSEReportingColDefs = (
       showStepperButtons: false
     },
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data.isActive !== false,
     filter: false,
     sortable: false,
     cellStyle: (params) =>
@@ -769,7 +772,8 @@ export const getFSEReportingColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceNotes'
     ),
     editable: (params) =>
-      params.data.complianceReportGroupUuid === complianceReportGroupUuid,
+      params.data.complianceReportGroupUuid === complianceReportGroupUuid &&
+      params.data.isActive !== false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: 'agTextCellEditor',
