@@ -5,7 +5,9 @@ from unittest.mock import AsyncMock, patch, MagicMock, ANY
 
 from lcfs.web.api.organizations.schema import (
     OrganizationCreditMarketUpdateSchema,
-    OrganizationCreditMarketListingSchema
+    OrganizationCreditMarketListingSchema,
+    CreditMarketAuditLogListResponseSchema,
+    CreditMarketAuditLogItemSchema,
 )
 
 
@@ -398,4 +400,57 @@ class TestCreditMarketViews:
         mock_service_instance.get_credit_market_listings.assert_called_once()
         
         # Clean up
+        fastapi_app.dependency_overrides = {}
+
+    @pytest.mark.anyio
+    async def test_get_credit_market_audit_logs_success(
+        self,
+        client: AsyncClient,
+        mock_user_profile,
+        fastapi_app
+    ):
+        """Test successful retrieval of credit market audit logs."""
+        mock_response = CreditMarketAuditLogListResponseSchema(
+            pagination={
+                "total": 1,
+                "page": 1,
+                "size": 10,
+                "total_pages": 1
+            },
+            credit_market_audit_logs=[
+                CreditMarketAuditLogItemSchema(
+                    credit_market_audit_log_id=1,
+                    organization_name="Org A",
+                    credits_to_sell=2000,
+                    role_in_market="Seller",
+                    contact_person="Jane Doe",
+                    phone="6045551111",
+                    email="jane@example.com",
+                    changed_by="bceid.jane",
+                    uploaded_date=None
+                )
+            ]
+        )
+
+        def mock_service_dependency():
+            mock_service_instance = AsyncMock()
+            mock_service_instance.get_credit_market_audit_logs_paginated.return_value = (
+                mock_response
+            )
+            return mock_service_instance
+
+        from lcfs.web.api.organizations.services import OrganizationsService
+        fastapi_app.dependency_overrides[OrganizationsService] = mock_service_dependency
+
+        response = await client.post(
+            "/api/organizations/credit-market-audit-logs/list",
+            json={"page": 1, "size": 10, "sortOrders": [], "filters": []}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["pagination"]["total"] == 1
+        assert payload["creditMarketAuditLogs"][0]["organizationName"] == "Org A"
+        assert payload["creditMarketAuditLogs"][0]["changedBy"] == "bceid.jane"
+
         fastapi_app.dependency_overrides = {}

@@ -112,21 +112,12 @@ const OrgTransactionsCard = () => {
 
               <ListItemButton
                 component="a"
-                onClick={() =>
-                  navigate({
-                    pathname: ROUTES.TRANSACTIONS.LIST,
-                    search: '?tab=credit-trading-market'
-                  })
-                }
+                onClick={() => navigate(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET)}
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.organizationsRegistered'),
                   null,
-                  () =>
-                    navigate({
-                      pathname: ROUTES.TRANSACTIONS.LIST,
-                      search: '?tab=credit-trading-market'
-                    })
+                  () => navigate(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET)
                 )}
               </ListItemButton>
 
