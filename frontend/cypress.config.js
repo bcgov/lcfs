@@ -26,7 +26,7 @@ export default defineConfig({
     },
     // Timeouts
     defaultCommandTimeout: 20000, // Time in milliseconds
-    pageLoadTimeout: 20000, // Time in milliseconds
+    pageLoadTimeout: 60000, // Generous timeout to accommodate OAuth redirects
 
     // Screenshots for failed tests
     screenshotOnRunFailure: true,
@@ -41,16 +41,6 @@ export default defineConfig({
     // Base URL for tests
     baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:3000',
     async setupNodeEvents(on, config) {
-      // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
-      await addCucumberPreprocessorPlugin(on, config)
-
-      on(
-        'file:preprocessor',
-        createBundler({
-          plugins: [createEsbuildPlugin(config)]
-        })
-      )
-
       on('task', {
         log(message) {
           console.log(message)
@@ -81,6 +71,16 @@ export default defineConfig({
           })
         }
       })
+
+      // Register cucumber plugin after custom tasks so plugin tasks are not overridden.
+      await addCucumberPreprocessorPlugin(on, config)
+
+      on(
+        'file:preprocessor',
+        createBundler({
+          plugins: [createEsbuildPlugin(config)]
+        })
+      )
 
       return config
     }
