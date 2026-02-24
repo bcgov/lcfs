@@ -12,7 +12,7 @@ import { getFSEReportingColDefs } from './_schema'
 import {
   useGetFSEReportingList,
   useSaveFSEReporting,
-  useDeleteFSEReportingBatch,
+  useUpdateFSEReportingActiveStatus,
   useSetFSEReportingDefaultDates
 } from '@/hooks/useFinalSupplyEquipment'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
@@ -77,11 +77,8 @@ export const FinalSupplyEquipmentReporting = () => {
     complianceReportId
   )
 
-  // Mutation hook for batch delete
-  const { mutateAsync: deleteBatch } = useDeleteFSEReportingBatch(
-    complianceReportId,
-    organizationId
-  )
+  const { mutateAsync: updateActiveStatus } =
+    useUpdateFSEReportingActiveStatus(complianceReportId, organizationId)
 
   // Mutation hook for set defaults
   const { mutateAsync: setDefaults } =
@@ -115,7 +112,10 @@ export const FinalSupplyEquipmentReporting = () => {
         (!currentGroupUuid ||
           item.complianceReportGroupUuid === currentGroupUuid)
 
-      if (belongsToCurrentReport || belongsToCurrentGroup) {
+      if (
+        (belongsToCurrentReport || belongsToCurrentGroup) &&
+        item.isActive !== false
+      ) {
         globalSelection.add(item.chargingEquipmentId)
       }
     })
@@ -212,34 +212,46 @@ export const FinalSupplyEquipmentReporting = () => {
     async () => {
       if (isSyncingSelectionRef.current) return
 
-      const selectedNodes = fseGridRef.current?.api.getSelectedNodes() ?? []
+      const gridApi = fseGridRef.current?.api
+      const selectedNodes = gridApi?.getSelectedNodes() ?? []
       const currentSelection = new Set(
         selectedNodes
           .map((node) => node.data.chargingEquipmentId)
           .filter(Boolean)
       )
 
-      // Find newly selected rows (not previously selected)
-      const newlySelected = selectedNodes.filter(
-        (node) =>
-          node.data?.chargingEquipmentId &&
-          !previousSelectionRef.current.has(node.data.chargingEquipmentId) &&
-          !node.data.chargingEquipmentComplianceId
-      )
+      const nodesToCreate = []
+      const nodesToReactivate = []
+      selectedNodes.forEach((node) => {
+        const equipmentId = node.data?.chargingEquipmentId
+        if (
+          equipmentId &&
+          !previousSelectionRef.current.has(equipmentId)
+        ) {
+          if (
+            node.data?.chargingEquipmentComplianceId &&
+            node.data?.isActive === false
+          ) {
+            nodesToReactivate.push(node)
+          } else if (!node.data?.chargingEquipmentComplianceId) {
+            nodesToCreate.push(node)
+          }
+        }
+      })
 
-      // Find newly unselected rows (previously selected but now unselected)
-      const newlyUnselected = []
+      const newlyUnselectedIds = []
       const newlyUnselectedEquipmentIds = []
       const newlyUnselectedNodes = []
-      fseGridRef.current?.api.forEachNode((node) => {
+      gridApi?.forEachNode((node) => {
         const equipmentId = node.data?.chargingEquipmentId
         if (
           equipmentId &&
           previousSelectionRef.current.has(equipmentId) &&
           !currentSelection.has(equipmentId) &&
-          node.data.chargingEquipmentComplianceId
+          node.data.chargingEquipmentComplianceId &&
+          node.data.isActive !== false
         ) {
-          newlyUnselected.push(
+          newlyUnselectedIds.push(
             parseInt(node.data.chargingEquipmentComplianceId)
           )
           newlyUnselectedEquipmentIds.push(equipmentId)
@@ -247,7 +259,11 @@ export const FinalSupplyEquipmentReporting = () => {
         }
       })
 
-      if (newlySelected.length === 0 && newlyUnselected.length === 0) {
+      if (
+        nodesToCreate.length === 0 &&
+        nodesToReactivate.length === 0 &&
+        newlyUnselectedIds.length === 0
+      ) {
         return
       }
 
@@ -260,14 +276,46 @@ export const FinalSupplyEquipmentReporting = () => {
         setHasSelectedRows(selectionResult.size > 0)
       }
 
-      // Handle newly selected rows
-      if (newlySelected.length > 0) {
+      let created = false
+      let reactivated = false
+      let deactivated = false
+
+      if (nodesToReactivate.length > 0) {
         try {
-          const newRows = newlySelected.map((node) => ({
+          await updateActiveStatus({
+            reportingIds: nodesToReactivate.map((node) =>
+              parseInt(node.data.chargingEquipmentComplianceId)
+            ),
+            isActive: true
+          })
+
+          nodesToReactivate.forEach((node) => {
+            const equipmentId = node.data?.chargingEquipmentId
+            selectionResult.add(equipmentId)
+            node.updateData({
+              ...node.data,
+              isActive: true
+            })
+          })
+          reactivated = true
+        } catch (error) {
+          console.error('Error reactivating FSE reporting records:', error)
+          fseGridAlertRef.current?.triggerAlert({
+            message: t('finalSupplyEquipment:errorAddDeleteRows'),
+            severity: 'error'
+          })
+          revertSelection()
+          return
+        }
+      }
+
+      if (nodesToCreate.length > 0) {
+        try {
+          const newRows = nodesToCreate.map((node) => ({
             supplyFromDate: defaultFromDate,
             supplyToDate: defaultToDate,
             kwhUsage: node.data.kwhUsage,
-            complianceNotes: null,
+            complianceNotes: node.data.complianceNotes || null,
             chargingEquipmentId: node.data.chargingEquipmentId,
             chargingEquipmentVersion: node.data.chargingEquipmentVersion,
             organizationId,
@@ -278,8 +326,7 @@ export const FinalSupplyEquipmentReporting = () => {
 
           const response = await saveRow(newRows)
 
-          // Update grid rows with created FSE reporting data
-          newlySelected.forEach((node, index) => {
+          nodesToCreate.forEach((node, index) => {
             const equipmentId = node.data?.chargingEquipmentId
             const createdData = Array.isArray(response.data)
               ? response.data[index]
@@ -293,14 +340,16 @@ export const FinalSupplyEquipmentReporting = () => {
               complianceReportId: parseInt(complianceReportId),
               complianceReportGroupUuid:
                 reportData?.report?.complianceReportGroupUuid,
-              complianceNotes: null
+              complianceNotes: node.data.complianceNotes || null,
+              isActive: true
             })
             if (equipmentId) {
               selectionResult.add(equipmentId)
             }
           })
+          created = true
         } catch (error) {
-          console.error('Error updating FSE reporting records:', error)
+          console.error('Error creating FSE reporting records:', error)
           fseGridAlertRef.current?.triggerAlert({
             message: t('finalSupplyEquipment:errorAddDeleteRows'),
             severity: 'error'
@@ -310,34 +359,26 @@ export const FinalSupplyEquipmentReporting = () => {
         }
       }
 
-      // Handle newly unselected rows
-      if (newlyUnselected.length > 0) {
+      if (newlyUnselectedIds.length > 0) {
         try {
-          await deleteBatch(newlyUnselected)
-          newlyUnselectedEquipmentIds.forEach((id) => {
-            validationStatusCacheRef.current.delete(id)
+          await updateActiveStatus({
+            reportingIds: newlyUnselectedIds,
+            isActive: false
           })
-          // Update grid rows with deleted FSE reporting data
+
           newlyUnselectedNodes.forEach((node) => {
             node.updateData({
               ...node.data,
-              chargingEquipmentComplianceId: null,
-              supplyFromDate: defaultFromDate,
-              supplyToDate: defaultToDate,
-              kwhUsage: node.data.kwhUsage,
-              complianceNotes: null,
-              chargingEquipmentId: node.data.chargingEquipmentId,
-              chargingEquipmentVersion: node.data.chargingEquipmentVersion,
-              organizationId,
-              complianceReportId: null,
-              complianceReportGroupUuid: null
+              isActive: false
             })
           })
           newlyUnselectedEquipmentIds.forEach((id) => {
+            validationStatusCacheRef.current.delete(id)
             selectionResult.delete(id)
           })
+          deactivated = true
         } catch (error) {
-          console.error('Error updating FSE reporting records:', error)
+          console.error('Error deactivating FSE reporting records:', error)
           fseGridAlertRef.current?.triggerAlert({
             message: t('finalSupplyEquipment:errorAddDeleteRows'),
             severity: 'error'
@@ -347,32 +388,37 @@ export const FinalSupplyEquipmentReporting = () => {
         }
       }
 
-      // Update global and previous selection tracking only after successful updates
       globalSelectionRef.current = new Set(selectionResult)
       previousSelectionRef.current = new Set(selectionResult)
       setHasSelectedRows(selectionResult.size > 0)
 
-      if (newlySelected.length > 0) {
+      if (created) {
         fseGridAlertRef.current?.triggerAlert({
           message: t('finalSupplyEquipment:rowsCreatedSuccessfully'),
           severity: 'success'
         })
-      } else if (newlyUnselected.length > 0) {
+      } else if (reactivated) {
         fseGridAlertRef.current?.triggerAlert({
-          message: t('finalSupplyEquipment:rowsDeletedSuccessfully'),
+          message: t('finalSupplyEquipment:rowsReactivatedSuccessfully'),
+          severity: 'success'
+        })
+      } else if (deactivated) {
+        fseGridAlertRef.current?.triggerAlert({
+          message: t('finalSupplyEquipment:rowsExcludedSuccessfully'),
           severity: 'success'
         })
       }
     },
     [
       saveRow,
-      deleteBatch,
+      updateActiveStatus,
       complianceReportId,
       reportData,
       defaultFromDate,
       defaultToDate,
       t,
-      syncGridSelection
+      syncGridSelection,
+      organizationId
     ]
   )
 
@@ -389,12 +435,16 @@ export const FinalSupplyEquipmentReporting = () => {
         suppressHeaderMenuButton: true,
         pinned: 'left'
       },
-      onSelectionChanged: (event) => handleSelectionChanged(event.api),
+      onSelectionChanged: () => handleSelectionChanged(),
       getRowId: (params) =>
         params.data.chargingEquipmentId +
         '-' +
         params.data.chargingEquipmentVersion,
-      stopEditingWhenCellsLoseFocus: true
+      stopEditingWhenCellsLoseFocus: true,
+      getRowStyle: (params) =>
+        params.data?.isActive === false
+          ? { opacity: 0.6, backgroundColor: 'rgba(0,0,0,0.04)' }
+          : undefined
     }),
     [handleSelectionChanged]
   )
@@ -419,9 +469,9 @@ export const FinalSupplyEquipmentReporting = () => {
   // Handle individual cell edits with validation and saving
   const handleCellValueChanged = useCallback(
     async (params) => {
+      if (params.data?.isActive === false) return
       if (params.oldValue === params.newValue) return
 
-      // Update validation status to pending
       params.node.updateData({
         ...params.node.data,
         validationStatus: 'pending'
@@ -430,7 +480,6 @@ export const FinalSupplyEquipmentReporting = () => {
       if (equipmentId) {
         validationStatusCacheRef.current.set(equipmentId, 'pending')
       }
-      // Prepare data for save
       const updatedData = {
         supplyFromDate: params.data.supplyFromDate,
         supplyToDate: params.data.supplyToDate,
@@ -443,7 +492,8 @@ export const FinalSupplyEquipmentReporting = () => {
         complianceReportId: parseInt(complianceReportId),
         complianceReportGroupUuid:
           reportData?.report?.complianceReportGroupUuid,
-        organizationId
+        organizationId,
+        isActive: params.data.isActive !== false
       }
 
       const responseData = await handleScheduleSave({
@@ -503,7 +553,11 @@ export const FinalSupplyEquipmentReporting = () => {
     }
 
     const equipmentIds = selectedNodes
-      .filter((node) => node.data.chargingEquipmentComplianceId)
+      .filter(
+        (node) =>
+          node.data.chargingEquipmentComplianceId &&
+          node.data.isActive !== false
+      )
       .map((node) => node.data.chargingEquipmentId)
 
     if (equipmentIds.length === 0) {
