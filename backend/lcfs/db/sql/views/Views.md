@@ -4,11 +4,14 @@
 
 This document outlines the LCFS database views organized by their dependency levels. Views must be created in the specified order to avoid reference errors.
 
+> **Note:** All compliance-report analytics views include `compliance_period_id` and `compliance_period` columns so Metabase dashboards can apply field filters consistently.
+
 ## Dependency Tree Structure
 
 ```
 Level 1 (Base Tables Only)
 ├── v_compliance_report
+├── vw_compliance_report_status_timeline
 ├── vw_transfer_base
 ├── vw_user_login_analytics_base
 ├── vw_transaction_base
@@ -19,6 +22,13 @@ Level 1 (Base Tables Only)
 
 Level 2 (Depends on Level 1)
 ├── vw_compliance_report_analytics_base (depends on: v_compliance_report)
+├── vw_compliance_report_status_medians (depends on: vw_compliance_report_status_timeline)
+├── vw_compliance_report_flow_metrics (depends on: v_compliance_report, vw_compliance_report_status_timeline)
+├── vw_compliance_report_throughput (depends on: vw_compliance_report_flow_metrics)
+├── vw_compliance_report_wip_summary (depends on: v_compliance_report)
+├── vw_compliance_report_service_levels (depends on: vw_compliance_report_flow_metrics)
+├── vw_compliance_report_assignee_breakdown (depends on: v_compliance_report, vw_compliance_report_flow_metrics)
+├── vw_compliance_report_queue_flow (depends on: vw_compliance_report_flow_metrics)
 ├── vw_bceid_daily_login_summary (depends on: vw_user_login_analytics_base)
 ├── vw_bceid_user_statistics (depends on: vw_user_login_analytics_base)
 ├── vw_login_failures_analysis (depends on: vw_user_login_analytics_base)
@@ -40,7 +50,15 @@ Level 3 (Depends on Level 2)
 ### Core Compliance Views
 
 -   **v_compliance_report**: Main compliance report listing with complex versioning logic
+-   **vw_compliance_report_status_timeline**: Ordered lifecycle history with per-stage durations
 -   **vw_compliance_report_analytics_base**: Analytics foundation for compliance reports
+-   **vw_compliance_report_status_medians**: Median number of days spent in each status, filterable by period
+-   **vw_compliance_report_flow_metrics**: Lead/cycle times with submission/final decision stamps by period
+-   **vw_compliance_report_throughput**: Completed reports per month/quarter/year and compliance period
+-   **vw_compliance_report_wip_summary**: Work-in-progress counts by current status and period
+-   **vw_compliance_report_service_levels**: % completed within 60 days overall and by year per period
+-   **vw_compliance_report_assignee_breakdown**: Assignment workload and average lead times per period
+-   **vw_compliance_report_queue_flow**: Monthly submissions vs. completions trend per period
 -   **vw_compliance_report_base**: Comprehensive report view with summary and transaction data
 -   **vw_reports_waiting_review**: Reports pending review with timing metrics
 -   **vw_compliance_reports_time_per_status**: Process timing analysis

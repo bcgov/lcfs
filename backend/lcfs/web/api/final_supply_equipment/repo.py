@@ -600,6 +600,7 @@ class FinalSupplyEquipmentRepository:
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id,
                 ComplianceReportChargingEquipment.compliance_report_id,
                 ComplianceReportChargingEquipment.compliance_report_group_uuid,
+                ComplianceReportChargingEquipment.is_active,
                 func.coalesce(
                     ComplianceReportChargingEquipment.charging_equipment_version,
                     ChargingEquipment.version,
@@ -791,6 +792,11 @@ class FinalSupplyEquipmentRepository:
             self._apply_filters(filter_conditions, pagination.filters)
         union_queries: list[Any] = []
 
+        if mode == "summary":
+            filter_conditions.append(
+                ComplianceReportChargingEquipment.is_active.is_(True)
+            )
+
         if compliance_report_group_uuid is not None and mode != "all":
             union_queries.append(
                 self._build_base_select(0, organization_id, filter_conditions).where(
@@ -962,6 +968,7 @@ class FinalSupplyEquipmentRepository:
                     == data.compliance_report_id,
                     ComplianceReportChargingEquipment.organization_id
                     == data.organization_id,
+                    ComplianceReportChargingEquipment.is_active.is_(True),
                 )
             )
             .values(
@@ -991,6 +998,33 @@ class FinalSupplyEquipmentRepository:
         await self.db.execute(stmt)
         await self.db.flush()
         return {"id": charging_equipment_compliance_id, **data}
+
+    @repo_handler
+    async def update_reporting_active_status(
+        self,
+        reporting_ids: List[int],
+        is_active: bool,
+        compliance_report_id: int,
+        organization_id: int,
+    ) -> int:
+        stmt = (
+            update(ComplianceReportChargingEquipment)
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                        reporting_ids
+                    ),
+                    ComplianceReportChargingEquipment.compliance_report_id
+                    == compliance_report_id,
+                    ComplianceReportChargingEquipment.organization_id
+                    == organization_id,
+                )
+            )
+            .values(is_active=is_active)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount or 0
 
     @repo_handler
     async def delete_fse_reporting(self, charging_equipment_compliance_id: int) -> None:
