@@ -160,28 +160,33 @@ Cypress.Commands.add(
       // Deselect anything
       cy.get('body').click(50, 50, { force: true })
 
-      cy.get(cellSelector)
+      cy.get(cellSelector, { timeout: 20000 })
         .eq(index)
-        .click()
+        .scrollIntoView()
+        .click({ force: true })
         .then(() => {
           cy.get('body').then(($body) => {
-            // Check if optionSelector exists in the DOM
-            if ($body.find(optionSelector).length > 0) {
-              cy.get(optionSelector).scrollIntoView().click()
+            const hasOption = $body.find(optionSelector).length > 0
+            if (hasOption) {
+              cy.get(optionSelector, { timeout: 10000 })
+                .first()
+                .scrollIntoView()
+                .click({ force: true })
               cy.wait(300)
+              return
+            }
+
+            // If optionSelector not found, start process from cellSelector again
+            cy.log(
+              `Option selector not found. Starting from cell selector again. Attempts left: ${attemptsLeft}`
+            )
+            if (attemptsLeft > 0) {
+              cy.wait(500)
+              attemptSelection(attemptsLeft - 1) // Retry from cellSelector
             } else {
-              // If optionSelector not found, start process from cellSelector again
-              cy.log(
-                `Option selector not found. Starting from cell selector again. Attempts left: ${attemptsLeft}`
+              throw new Error(
+                `Failed to find selector after all attempts ${cellSelector}`
               )
-              if (attemptsLeft > 0) {
-                cy.wait(500)
-                attemptSelection(attemptsLeft - 1) // Retry from cellSelector
-              } else {
-                throw new Error(
-                  `Failed to find selector after all attempts ${cellSelector}`
-                )
-              }
             }
           })
         })
@@ -197,39 +202,124 @@ Cypress.Commands.add(
     let attemptsLeft = attempts
 
     function tryInput() {
-      // Click the body to deselect anything
+      // Click the body to deselect / commit any open editor
       cy.get('body').click(50, 50, { force: true })
 
+      // Single click is enough because singleClickEdit: true is set on the grid
       cy.get(cellSelector, { timeout: 20000 })
         .eq(index)
         .scrollIntoView()
         .click({ force: true })
-        .wait(300)
-        .get(cellSelector)
-        .eq(index)
-        .find('input')
-        .then(($input) => {
-          if ($input.length > 0) {
-            cy.wrap($input)
-              .clear({ force: true })
-              .type(`${inputValue}{enter}`, { force: true })
-          } else if (attemptsLeft > 0) {
-            attemptsLeft--
-            cy.wait(500).then(() => {
-              tryInput() // Retry again safely inside Cypress queue
+
+      // Give React time to mount the cell editor
+      cy.wait(500)
+
+      cy.get('body').then(($body) => {
+        // AsyncSuggestionEditor can be rendered in slightly different DOM shapes
+        // depending on browser/headed mode.
+        const $asyncInput = $body
+          .find(
+            [
+              '[data-testid="ag-grid-editor-select-options"] input',
+              '#async-search-editor input',
+              'input[placeholder*="search a name"]',
+              'input[aria-autocomplete="list"]'
+            ].join(', ')
+          )
+        // Inline editors (NumberEditor, agTextCellEditor) live inside the cell
+        const $inlineInput = $body
+          .find(cellSelector)
+          .eq(index)
+          .find('input, textarea')
+          .filter((_, el) => !el.readOnly)
+        const $activeInput = $body
+          .find(':focus')
+          .filter('input, textarea')
+          .filter((_, el) => !el.readOnly)
+
+        if ($asyncInput.length > 0) {
+          // AsyncSuggestionEditor has no getValue(); commit via Tab which
+          // calls api.tabToNextCell() and persists the typed value.
+          cy.wrap($asyncInput.first())
+            .click({ force: true })
+            .clear({ force: true })
+            .type(inputValue, { force: true })
+            .trigger('keydown', {
+              key: 'Tab',
+              code: 'Tab',
+              which: 9,
+              keyCode: 9,
+              bubbles: true
             })
-          } else {
-            throw new Error(
-              `❌ Failed to find input in selector ${cellSelector} after all attempts`
-            )
-          }
-        })
+        } else if ($inlineInput.length > 0) {
+          // Standard inline editors (NumberEditor, agTextCellEditor) commit on Enter.
+          cy.wrap($inlineInput.first())
+            .clear({ force: true })
+            .type(`${inputValue}{enter}`, { force: true })
+        } else if ($activeInput.length > 0) {
+          // In headed/open mode AG Grid sometimes focuses an editor outside the cell subtree.
+          cy.wrap($activeInput.first())
+            .clear({ force: true })
+            .type(`${inputValue}{enter}`, { force: true })
+        } else if (attemptsLeft > 0) {
+          // Second activation strategy: some AG-Grid editors only mount after dblclick
+          // in interactive/headed runs.
+          cy.get(cellSelector, { timeout: 20000 })
+            .eq(index)
+            .scrollIntoView()
+            .dblclick({ force: true })
+
+          cy.wait(400)
+
+          cy.get('body').then(($retryBody) => {
+            const $retryAsyncInput = $retryBody
+              .find(
+                [
+                  '[data-testid="ag-grid-editor-select-options"] input',
+                  '#async-search-editor input',
+                  'input[placeholder*="search a name"]',
+                  'input[aria-autocomplete="list"]'
+                ].join(', ')
+              )
+
+            const $retryInlineInput = $retryBody
+              .find(cellSelector)
+              .eq(index)
+              .find('input, textarea')
+              .filter((_, el) => !el.readOnly && !el.disabled)
+
+            if ($retryAsyncInput.length > 0) {
+              cy.wrap($retryAsyncInput.first())
+                .click({ force: true })
+                .clear({ force: true })
+                .type(inputValue, { force: true })
+                .trigger('keydown', {
+                  key: 'Tab',
+                  code: 'Tab',
+                  which: 9,
+                  keyCode: 9,
+                  bubbles: true
+                })
+            } else if ($retryInlineInput.length > 0) {
+              cy.wrap($retryInlineInput.first())
+                .clear({ force: true })
+                .type(`${inputValue}{enter}`, { force: true })
+            } else {
+              attemptsLeft--
+              cy.wait(500).then(() => {
+                tryInput()
+              })
+            }
+          })
+        } else {
+          throw new Error(
+            `❌ Failed to find input in selector ${cellSelector} after all attempts`
+          )
+        }
+      })
     }
 
-    // Handle any uncaught exceptions globally (optional)
-    cy.on('uncaught:exception', (_err, runnable) => {
-      return false
-    })
+    cy.on('uncaught:exception', () => false)
 
     tryInput()
   }
