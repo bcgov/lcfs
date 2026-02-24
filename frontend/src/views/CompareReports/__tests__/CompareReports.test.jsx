@@ -202,12 +202,12 @@ describe('CompareReports Component', () => {
     expect(report2Select).toHaveTextContent('Original Report')
   })
 
-  it('does not label supplemental reports as not assessed when original is not selected', async () => {
+  it('does not label reports as not assessed when no assessed report exists in the chain', async () => {
     render(<CompareReports />, { wrapper })
 
     await waitFor(() => {
       expect(
-        screen.queryByText('report:originalReportNotAssessed')
+        screen.queryByText('report:reportNotAssessed')
       ).not.toBeInTheDocument()
     })
   })
@@ -426,7 +426,7 @@ describe('CompareReports Component', () => {
     expect(renewableTable).toBeInTheDocument()
   })
 
-  it('labels the original report column when supplemental exists and original is not assessed', async () => {
+  it('labels non-assessed reports when an assessed report exists in the chain', async () => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [
@@ -442,7 +442,34 @@ describe('CompareReports Component', () => {
             complianceReportId: 2,
             timestamp: '2021-02-01',
             version: 1,
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+          }
+        ],
+        report: { compliancePeriod: '2021', complianceReportId: 2 }
+      }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      // Original Report is not assessed, so it should show the not-assessed label
+      expect(
+        screen.getAllByText('report:reportNotAssessed').length
+      ).toBeGreaterThan(0)
+    })
+  })
+
+  it('does not label a report as not assessed when no report in the chain is assessed', async () => {
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [
+          {
+            ...mockReportChain[0],
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+          },
+          {
+            ...mockReportChain[1],
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
           }
         ],
         report: { compliancePeriod: '2021', complianceReportId: 2 }
@@ -453,35 +480,7 @@ describe('CompareReports Component', () => {
 
     await waitFor(() => {
       expect(
-        screen.getAllByText('report:originalReportNotAssessed').length
-      ).toBeGreaterThan(0)
-    })
-  })
-
-  it('does not label the original report when it has been assessed', async () => {
-    useComplianceReportStore.mockReturnValue({
-      currentReport: {
-        chain: [
-          {
-            ...mockReportChain[0],
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-          },
-          mockReportChain[1],
-          mockReportChain[2]
-        ],
-        report: { compliancePeriod: '2021', complianceReportId: 3 }
-      }
-    })
-
-    render(<CompareReports />, { wrapper })
-
-    const report1Select = screen.getAllByRole('combobox')[0]
-    fireEvent.mouseDown(report1Select)
-    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
-
-    await waitFor(() => {
-      expect(
-        screen.queryByText('report:originalReportNotAssessed')
+        screen.queryByText('report:reportNotAssessed')
       ).not.toBeInTheDocument()
     })
   })
