@@ -958,6 +958,7 @@ class ChargingEquipmentRepository:
                 and_(
                     ComplianceReportChargingEquipment.compliance_report_id
                     == compliance_report_id,
+                    ComplianceReportChargingEquipment.is_active.is_(True),
                     ChargingEquipment.status_id == submitted_status_id,
                 )
             )
@@ -1031,6 +1032,7 @@ class ChargingEquipmentRepository:
                 and_(
                     ComplianceReportChargingEquipment.compliance_report_id
                     == compliance_report_id,
+                    ComplianceReportChargingEquipment.is_active.is_(True),
                     ChargingEquipment.status_id.in_(
                         [draft_status_id, updated_status_id]
                     ),
