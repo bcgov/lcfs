@@ -1,7 +1,7 @@
 """Add active flag to compliance report charging equipment
 
 Revision ID: b1234567890c
-Revises: e3b7a9d4c2f1
+Revises: f5a8c3d7e2b4
 Create Date: 2026-03-01 12:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "b1234567890c"
-down_revision = "e3b7a9d4c2f1"
+down_revision = "f5a8c3d7e2b4"
 branch_labels = None
 depends_on = None
 
