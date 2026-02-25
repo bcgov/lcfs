@@ -59,7 +59,8 @@ export const HistoryCard = ({
 
   // Basic status checks
   const isCurrentAssessed =
-    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED ||
+    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
   const isSupplementalReport = reportVersion > 0
 
   // User permission checks
@@ -206,11 +207,14 @@ export const HistoryCard = ({
     return [...report.history]
       .sort((a, b) => new Date(b.createDate) - new Date(a.createDate))
       .map((item) => {
-        if (
-          item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
-          !isGovernmentUser
-        ) {
-          item.status.status = 'AssessedBy'
+        if (!isGovernmentUser) {
+          if (item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED) {
+            item.status.status = 'AssessedBy'
+          } else if (
+            item.status.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
+          ) {
+            item.status.status = 'ExemptedBy'
+          }
         }
         return item
       })
@@ -261,7 +265,9 @@ export const HistoryCard = ({
             {sortedHistory.map((item, index) => {
               const showNestedAssessment = [
                 COMPLIANCE_REPORT_STATUSES.ASSESSED,
-                'AssessedBy'
+                COMPLIANCE_REPORT_STATUSES.EXEMPTED,
+                'AssessedBy',
+                'ExemptedBy'
               ].includes(item.status.status)
 
               const hideHistoryLine =

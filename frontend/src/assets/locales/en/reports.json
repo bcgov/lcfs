@@ -77,7 +77,8 @@
     "deleteSupplementalReportBtn": "Delete supplemental report",
     "deleteAnalystAdjustmentBtn": "Delete analyst adjustment",
     "createSupplementalReportBtn": "Create Supplemental Report",
-    "nonAssessment": "Non-assessment"
+    "nonAssessment": "Non-assessment",
+    "issueExemptionBtn": "Issue exemption"
   },
   "savedSuccessText": "Compliance report successfully {{status}}",
   "supplementalCreatedSuccessText": "Supplemental report created successfully",
@@ -93,6 +94,7 @@
   "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
   "returnToSupplierConfirmText": "Are you sure you want to return this compliance report back to the supplier?",
   "assessConfirmText": "Are you sure you want to assess this compliance report?",
+  "exemptConfirmText": "Are you sure you want to exempt this compliance report? This will finalize the report without issuing any compliance units.",
   "nonAssessmentConfirmText": "Are you sure you want to mark this compliance report as non-assessment? This will immediately assess the report without issuing any compliance units.",
   "uploadLabel": "Upload supporting documents for your report.",
   "introduction": "Introduction",
@@ -235,8 +237,10 @@
     "Not recommended by manager": "Not recommended {{createDate}} by {{displayName}}.",
     "Rejected": "Rejected {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
+    "Exempted": "Exempted {{createDate}} by {{displayName}}.",
     "Supplemental requested": "Supplemental requested {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
+    "ExemptedBy": "Exempted {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed",
     "renewableTarget": "Renewable fuel target",
     "lowCarbonTarget": "Low carbon fuel target",
@@ -263,6 +267,7 @@
   "addressEdited": " - edited",
   "viewLegacyBtn": "View Full Historical Report in TFRS",
   "reportAssessed": "Compliance report, Assessed",
+  "reportExempted": "Compliance report, Exempted",
   "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):",
   "documents": {
@@ -306,6 +311,9 @@
   "notSubjectToAssessment": "Not Subject to Assessment",
   "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above.",
   "notSubjectToAssessmentHistoryMessage": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance.",
+  "exempted": "Exempted",
+  "renewableFuelExemptionDescription": "Recommend assessment with exemption from the renewable fuel requirement.",
+  "lowCarbonFuelExemptionDescription": "Recommend assessment with exemption from the low carbon fuel requirement.",
   "assignAnalyst": "Assign Analyst",
   "unassign": "Unassign",
   "reportOpenings": {

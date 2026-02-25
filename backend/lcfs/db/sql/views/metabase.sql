@@ -3084,7 +3084,7 @@ FROM
     JOIN organization ON cr.organization_id = organization.organization_id
 WHERE
     lh.rn = 1
-    AND crs.status NOT IN ('Assessed'::compliancereportstatusenum, 'Rejected'::compliancereportstatusenum, 'Not_recommended_by_analyst'::compliancereportstatusenum, 'Not_recommended_by_manager'::compliancereportstatusenum)
+    AND crs.status NOT IN ('Assessed'::compliancereportstatusenum, 'Exempted'::compliancereportstatusenum, 'Rejected'::compliancereportstatusenum, 'Not_recommended_by_analyst'::compliancereportstatusenum, 'Not_recommended_by_manager'::compliancereportstatusenum)
 ORDER BY
     days_in_status DESC NULLS LAST;
 
