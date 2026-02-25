@@ -4,8 +4,8 @@ The energy column was incorrectly defined as BigInteger, causing decimal
 truncation during TFRS data migration (e.g., 35.40 stored as 35).
 
 Revision ID: b4e7f1a2c9d6
-Revises: a7c9e2f8b3d1
-Create Date: 2026-02-13 00:00:00.000000
+Revises: 8e9f1a2b3c4d
+Create Date: 2026-03-01 12:02:00.000000
 
 """
 
@@ -20,7 +20,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "b4e7f1a2c9d6"
-down_revision = "a7c9e2f8b3d1"
+down_revision = "8e9f1a2b3c4d"
 branch_labels = None
 depends_on = None
 
