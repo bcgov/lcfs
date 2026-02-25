@@ -360,6 +360,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     field: 'registrationNumber',
     headerName: t('chargingSite:fseColumnLabels.registrationNumber'),
     sortable: false,
+    filter: false,
     minWidth: 180
   })
 
@@ -368,6 +369,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     field: 'version',
     headerName: t('chargingSite:fseColumnLabels.version'),
     minWidth: 120,
+    filter: false,
     type: enableSelection ? 'numericColumn' : undefined
   })
 
@@ -409,6 +411,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     headerName: t('chargingSite:fseColumnLabels.ports'),
     minWidth: 160,
     sortable: false
+  })
+  cols.push({
+    field: 'allocatingOrganizationName',
+    headerName: t('chargingSite:fseColumnLabels.allocatingOrg'),
+    minWidth: 250,
+    sortable: false,
+    valueGetter: (params) =>
+      params.data.chargingSite?.allocatingOrganizationName ||
+      params.data.allocatingOrganizationName ||
+      ''
   })
 
   // Intended Uses
@@ -457,6 +469,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       {
         field: 'latitude',
         sortable: false,
+        filter: false,
         headerName: t('chargingSite:fseColumnLabels.latitude'),
         minWidth: 150,
         valueGetter: (params) => params.data?.latitude || ''
@@ -464,6 +477,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       {
         field: 'longitude',
         sortable: false,
+        filter: false,
         headerName: t('chargingSite:fseColumnLabels.longitude'),
         minWidth: 150,
         valueGetter: (params) => params.data?.longitude || ''
@@ -478,12 +492,14 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
         headerName: t('chargingSite:fseColumnLabels.created'),
         minWidth: 150,
         type: 'dateColumn',
+        filter: false,
         valueFormatter: dateFormatter
       },
       {
         field: 'updatedDate',
         headerName: t('chargingSite:fseColumnLabels.lastUpdated'),
         minWidth: 150,
+        filter: false,
         type: 'dateColumn',
         valueFormatter: dateFormatter
       }
@@ -495,6 +511,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     cols.push({
       field: 'notes',
       minWidth: 600,
+      filter: false,
       headerName: t('chargingSite:fseColumnLabels.notes')
     })
   }

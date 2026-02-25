@@ -42,6 +42,7 @@ export const apiRoutes = {
   organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
   organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  creditMarketAuditLogsList: '/organizations/credit-market-audit-logs/list',
 
   // transactions
   transactions: '/transactions/',
@@ -115,6 +116,8 @@ export const apiRoutes = {
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
   saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
+  updateFSEReportingActiveStatus:
+    '/final-supply-equipments/reporting/active-status',
   // charging sites
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',
@@ -139,6 +142,7 @@ export const apiRoutes = {
     organizations: '/charging-equipment/organizations/list',
     hasAllocationAgreements:
       '/charging-equipment/organizations/has-allocation-agreements',
+    export: '/charging-equipment/export',
     template: '/charging-equipment/template/:organizationId',
     import: '/charging-equipment/import/:organizationId',
     importJobStatus: '/charging-equipment/status/:jobId'

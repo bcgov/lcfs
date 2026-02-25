@@ -34,6 +34,7 @@ export const AsyncSuggestionEditor = ({
   optionLabel = 'name'
 }) => {
   const [inputValue, setInputValue] = useState('')
+  const [highlightedOption, setHighlightedOption] = useState(null)
   const apiService = useApiService()
 
   const { data: options = [], isLoading } = useQuery({
@@ -67,10 +68,21 @@ export const AsyncSuggestionEditor = ({
     }
   }
 
-  const handleKeyDown = (event, value) => {
+  const handleKeyDown = (event) => {
     if (onKeyDownCapture) {
       onKeyDownCapture(event)
-    } else if (event.key === 'Tab') {
+    }
+
+    if (event.key === 'Enter' && highlightedOption) {
+      event.preventDefault()
+      event.stopPropagation()
+      handleChange(event, highlightedOption)
+      api?.stopEditing?.()
+      setHighlightedOption(null)
+      return
+    }
+
+    if (event.key === 'Tab') {
       event.preventDefault()
       if (event.shiftKey) {
         // Shift + Tab: Move to the previous cell
@@ -106,6 +118,8 @@ export const AsyncSuggestionEditor = ({
           typeof option === 'string' ? option : option[optionLabel]
         }
         options={options || []}
+        onHighlightChange={(_, option) => setHighlightedOption(option)}
+        onClose={() => setHighlightedOption(null)}
         includeInputInList
         value={value}
         onInputChange={handleInputChange}

@@ -9,7 +9,9 @@ export const roles = {
   transfers: 'Transfer',
   compliance_reporting: 'Compliance Reporting',
   signing_authority: 'Signing Authority',
-  read_only: 'Read Only'
+  read_only: 'Read Only',
+  ci_applicant: 'CI Applicant',
+  ia_proponent: 'IA Proponent'
 } as const
 
 export type RoleName = (typeof roles)[keyof typeof roles]
@@ -28,7 +30,9 @@ export const nonGovRoles: RoleName[] = [
   roles.transfers,
   roles.compliance_reporting,
   roles.signing_authority,
-  roles.read_only
+  roles.read_only,
+  roles.ci_applicant,
+  roles.ia_proponent
 ]
 
 export const formatDelegatedRoleLabel = (role: string): string => {

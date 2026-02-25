@@ -974,6 +974,23 @@ class FuelCodeRepository:
         result = await self.db.execute(stmt)
         energy_effectiveness_ratio = result.scalars().first()
 
+        # Fallback: if no match with a specific end_use_type_id, try matching
+        # rows where end_use_type_id IS NULL. Pre-2024 EER data has no end-use
+        # type breakdown, so all rows have end_use_type_id=NULL.
+        if energy_effectiveness_ratio is None and end_use_type_id is not None:
+            fallback_conditions = [
+                EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
+                EnergyEffectivenessRatio.compliance_period_id
+                == compliance_period_id,
+                EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
+                EnergyEffectivenessRatio.end_use_type_id.is_(None),
+            ]
+            fallback_stmt = select(EnergyEffectivenessRatio).where(
+                *fallback_conditions
+            )
+            fallback_result = await self.db.execute(fallback_stmt)
+            energy_effectiveness_ratio = fallback_result.scalars().first()
+
         return energy_effectiveness_ratio
 
     @repo_handler
@@ -1155,7 +1172,11 @@ class FuelCodeRepository:
     async def get_default_carbon_intensity(
         self, fuel_type_id: int, compliance_period: str
     ) -> Optional[float]:
-        """Get default carbon intensity for specified compliance period"""
+        """Get default carbon intensity for specified compliance period.
+
+        Falls back to the fuel_type table's default_carbon_intensity if no
+        period-specific entry exists (common for pre-2024 petroleum-based fuels).
+        """
 
         compliance_period_id_subquery = (
             select(CompliancePeriod.compliance_period_id)
@@ -1171,7 +1192,17 @@ class FuelCodeRepository:
 
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
-        return record.default_carbon_intensity if record else 0.0
+        if record:
+            return record.default_carbon_intensity
+
+        # Fallback: use the fuel_type table's default_carbon_intensity
+        fuel_type = await self.db.execute(
+            select(FuelType.default_carbon_intensity).where(
+                FuelType.fuel_type_id == fuel_type_id
+            )
+        )
+        fallback_ci = fuel_type.scalar_one_or_none()
+        return fallback_ci if fallback_ci is not None else 0.0
 
     @repo_handler
     async def get_category_carbon_intensity(

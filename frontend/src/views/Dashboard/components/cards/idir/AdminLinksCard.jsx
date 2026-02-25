@@ -10,6 +10,10 @@ import { roles } from '@/constants/roles'
 
 const AdminLinksCard = () => {
   const { t } = useTranslation(['dashboard'])
+  const getLinkDataTest = (route) => {
+    const sanitizedRoute = route?.replace(/^\//, '').replace(/\//g, '-') || ''
+    return `admin-link-${sanitizedRoute || 'root'}`
+  }
   const adminLinks = useMemo(
     () => [
       {
@@ -32,6 +36,7 @@ const AdminLinksCard = () => {
   return (
     <BCWidgetCard
       component="div"
+      data-test="dashboard-admin-links-card"
       color="nav"
       icon="admin"
       title={t('dashboard:adminLinks.administration')}
@@ -43,6 +48,7 @@ const AdminLinksCard = () => {
               key={index}
               alignItems="flex-start"
               onClick={() => navigate(link.route)}
+              data-test={getLinkDataTest(link.route)}
             >
               <BCTypography
                 variant="subtitle2"

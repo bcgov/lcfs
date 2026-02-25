@@ -10,6 +10,7 @@ from sqlalchemy import (
     Double,
     DateTime,
     UniqueConstraint,
+    Boolean,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -115,6 +116,13 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
         Text,
         nullable=True,
         comment="Optional notes about compliance for this association",
+    )
+    is_active = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+        comment="Indicates whether the association is active for reporting",
     )
 
     # Relationships

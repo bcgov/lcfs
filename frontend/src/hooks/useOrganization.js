@@ -590,6 +590,27 @@ export const useCreditMarketListings = (options = {}) => {
   })
 }
 
+export const useCreditMarketAuditLogs = (
+  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  options = {}
+) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['credit-market-audit-logs', page, size, sortOrders, filters],
+    queryFn: async () =>
+      (
+        await client.post(apiRoutes.creditMarketAuditLogsList, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data,
+    ...options
+  })
+}
+
 // Link Key Management Hooks
 export const useAvailableFormTypes = (orgID, options = {}) => {
   const client = useApiService()

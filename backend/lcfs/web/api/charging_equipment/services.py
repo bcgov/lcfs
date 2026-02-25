@@ -68,7 +68,7 @@ class ChargingEquipmentServices:
 
         # Get equipment list from repository
         equipment_list, total_count = await self.repo.get_charging_equipment_list(
-            organization_id, pagination, filters, exclude_draft
+            organization_id, pagination, exclude_draft
         )
 
         # Transform to schema
@@ -87,6 +87,7 @@ class ChargingEquipmentServices:
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 ports=equipment.ports.value if equipment.ports else None,
+                allocating_organization_name=equipment.charging_site.allocating_organization_name,
                 latitude=equipment.latitude,
                 longitude=equipment.longitude,
                 site_latitude=equipment.charging_site.latitude,
