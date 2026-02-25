@@ -146,6 +146,18 @@ class ComplianceReport(BaseModel, Auditable):
         default=False,
         comment="Flag indicating if report is not subject to assessment under the Low Carbon Fuels Act",
     )
+    is_renewable_fuel_exempted = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Flag indicating exemption from the renewable fuel requirement",
+    )
+    is_low_carbon_fuel_exempted = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Flag indicating exemption from the low carbon fuel requirement",
+    )
     assigned_analyst_id = Column(
         Integer,
         ForeignKey("user_profile.user_profile_id"),

@@ -433,7 +433,11 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     defaultValues: {
       assessmentStatement: reportData?.report?.assessmentStatement || '',
       supplementalNote: reportData?.report?.supplementalNote || '',
-      isNonAssessment: reportData?.report?.isNonAssessment || false
+      isNonAssessment: reportData?.report?.isNonAssessment || false,
+      isRenewableFuelExempted:
+        reportData?.report?.isRenewableFuelExempted || false,
+      isLowCarbonFuelExempted:
+        reportData?.report?.isLowCarbonFuelExempted || false
     }
   })
 
@@ -450,6 +454,18 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     }
     if (reportData?.report?.isNonAssessment !== undefined) {
       methods.setValue('isNonAssessment', reportData.report.isNonAssessment)
+    }
+    if (reportData?.report?.isRenewableFuelExempted !== undefined) {
+      methods.setValue(
+        'isRenewableFuelExempted',
+        reportData.report.isRenewableFuelExempted
+      )
+    }
+    if (reportData?.report?.isLowCarbonFuelExempted !== undefined) {
+      methods.setValue(
+        'isLowCarbonFuelExempted',
+        reportData.report.isLowCarbonFuelExempted
+      )
     }
   }, [reportData?.report, methods])
 
@@ -554,6 +570,10 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       isAnalystAdjustment:
         currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
       isNonAssessment: reportData?.report?.isNonAssessment || false,
+      isRenewableFuelExempted:
+        reportData?.report?.isRenewableFuelExempted || false,
+      isLowCarbonFuelExempted:
+        reportData?.report?.isLowCarbonFuelExempted || false,
 
       // Conflict detection
       hasDraftSupplemental,

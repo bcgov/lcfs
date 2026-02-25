@@ -146,6 +146,7 @@ export const AssessmentCard = ({
       style={{ height: 'fit-content', flexGrow: 1 }}
       title={
         currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED ||
+        currentStatus === COMPLIANCE_REPORT_STATUSES.EXEMPTED ||
         isGovernmentUser ||
         hasSupplemental
           ? t('report:assessment')

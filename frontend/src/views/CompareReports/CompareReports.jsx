@@ -46,7 +46,10 @@ export const CompareReports = () => {
     if (!originalReport) return false
     if (!hasSupplementalReports) return false
     const originalStatus = originalReport.currentStatus?.status
-    return originalStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+    return (
+      originalStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+      originalStatus !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
+    )
   }, [originalReport, hasSupplementalReports])
 
   useEffect(() => {
