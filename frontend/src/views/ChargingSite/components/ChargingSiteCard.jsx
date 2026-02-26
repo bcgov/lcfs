@@ -25,7 +25,7 @@ export const ChargingSiteCard = ({
   const [isEditMode, setIsEditMode] = useState(addMode)
   const { siteId } = useParams()
 
-  const canEdit = hasRoles(roles.supplier) && data.status.status === 'Draft'
+  const canEdit = hasRoles(roles.supplier) && data.status.status != 'Submitted'
   const editButtonRoute = canEdit
     ? ROUTES.REPORTS.CHARGING_SITE.EDIT.replace(':siteId', siteId)
     : null
