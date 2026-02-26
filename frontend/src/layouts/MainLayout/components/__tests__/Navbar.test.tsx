@@ -119,4 +119,36 @@ describe('Navbar', () => {
     render(<Navbar />, { wrapper })
     expect(screen.getByText('logout')).toBeInTheDocument() // Assuming Logout component has this text
   })
+
+  describe('Initiative agreements tab visibility', () => {
+    const mockNavUser = (roleNames: string[], isGovernmentUser: boolean) => {
+      const userRoles = roleNames.map((name) => ({ name }))
+      mockedUseCurrentUser.mockReturnValue({
+        data: { isGovernmentUser, roles: userRoles },
+        hasRoles: (role: string) => userRoles.some((r) => r.name === role),
+        hasAnyRole: (...roleNames: string[]) =>
+          roleNames.some((name) => userRoles.some((r) => r.name === name))
+      })
+    }
+
+    it.each([
+      ['Director', roles.director, true],
+      ['IA Analyst', roles.ia_analyst, true],
+      ['IA Manager', roles.ia_manager, true],
+      ['IA Proponent (BCeID)', roles.ia_proponent, false]
+    ])('shows tab for %s', (_, role, isGovernmentUser) => {
+      mockNavUser([role], isGovernmentUser)
+      render(<Navbar />, { wrapper })
+      expect(screen.getByText('InitiativeAgreements')).toBeInTheDocument()
+    })
+
+    it.each([
+      ['Analyst (IDIR)', roles.analyst, true],
+      ['Compliance Reporting (BCeID)', roles.compliance_reporting, false]
+    ])('hides tab for %s', (_, role, isGovernmentUser) => {
+      mockNavUser([role], isGovernmentUser)
+      render(<Navbar />, { wrapper })
+      expect(screen.queryByText('InitiativeAgreements')).not.toBeInTheDocument()
+    })
+  })
 })
