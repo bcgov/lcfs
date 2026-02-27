@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Union, Optional, Sequence
 
 from lcfs.db.models.compliance import (
@@ -16,6 +16,8 @@ from sqlalchemy import (
     or_,
     select,
     func,
+    cast,
+    String,
     text,
     update,
     distinct,
@@ -73,6 +75,182 @@ class CarbonIntensityResult:
 class FuelCodeRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def get_fuel_code_bulletin_pagination_params(
+        self, pagination: PaginationRequestSchema
+    ) -> tuple[list, list]:
+        conditions = []
+        filter_field_map = {
+            "fuel_code": func.concat(
+                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            ),
+            "fuel": FuelCodeListView.fuel_type,
+            "company": FuelCodeListView.company,
+            "carbon_intensity": FuelCodeListView.carbon_intensity,
+            "effective_date": FuelCodeListView.effective_date,
+            "expiry_date": FuelCodeListView.expiration_date,
+        }
+
+        for filter in pagination.filters:
+            filter_value = filter.filter
+
+            if filter.filter_type == "set":
+                filter_value = filter.values or []
+            elif filter.filter_type == "date":
+                if filter.type == "inRange":
+                    filter_value = [filter.date_from, filter.date_to]
+                else:
+                    filter_value = filter.date_from
+
+            filter_option = filter.type
+            filter_type = filter.filter_type
+            field = filter_field_map.get(filter.field) or get_field_for_filter(
+                FuelCodeListView, filter.field
+            )
+            conditions.append(
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+            )
+
+        return conditions, pagination.sort_orders or []
+
+    @repo_handler
+    async def get_fuel_code_bulletin_rows(
+        self,
+        compliance_period_start: date,
+        compliance_period_end: date,
+        bulletin_type: str,
+        offset: int,
+        limit: int,
+        conditions: list,
+        sort_orders: list,
+    ):
+        """
+        Returns paginated approved fuel code bulletin rows.
+
+        bulletin_type: 'current' or 'archived'
+        Current:
+          - Approved fuel codes
+          - Effective date in [compliance_period_start, compliance_period_end)
+          - Not expired (expiration_date is null or > today)
+
+        Archived:
+          - Approved fuel codes
+          - Effective date before current period start OR on/after next period start OR already expired
+        """
+        today = date.today()
+
+        query = select(
+            FuelCodeListView.prefix,
+            FuelCodeListView.fuel_suffix,
+            FuelCodeListView.fuel_type,
+            FuelCodeListView.company,
+            FuelCodeListView.carbon_intensity,
+            FuelCodeListView.effective_date,
+            FuelCodeListView.expiration_date,
+        ).where(
+            cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
+        )
+
+        count_query = (
+            select(func.count())
+            .select_from(FuelCodeListView)
+            .where(
+                cast(FuelCodeListView.status, String)
+                == FuelCodeStatusEnum.Approved.value
+            )
+        )
+
+        # Apply bulletin type filter
+        if bulletin_type == "current":
+            type_conditions = and_(
+                FuelCodeListView.effective_date >= compliance_period_start,
+                FuelCodeListView.effective_date < compliance_period_end,
+                or_(
+                    FuelCodeListView.expiration_date.is_(None),
+                    FuelCodeListView.expiration_date > today,
+                ),
+            )
+        else:  # archived
+            type_conditions = or_(
+                FuelCodeListView.effective_date < compliance_period_start,
+                FuelCodeListView.effective_date >= compliance_period_end,
+                and_(
+                    FuelCodeListView.expiration_date.isnot(None),
+                    FuelCodeListView.expiration_date <= today,
+                ),
+            )
+
+        query = query.where(type_conditions)
+        count_query = count_query.where(type_conditions)
+
+        # Apply additional filter conditions
+        if conditions:
+            query = query.where(and_(*conditions))
+            count_query = count_query.where(and_(*conditions))
+
+        # Apply sorting
+        sort_map = {
+            "fuel_code": func.concat(
+                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            ),
+            "fuelCode": func.concat(
+                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            ),
+            "fuel": FuelCodeListView.fuel_type,
+            "company": FuelCodeListView.company,
+            "carbon_intensity": FuelCodeListView.carbon_intensity,
+            "carbonIntensity": FuelCodeListView.carbon_intensity,
+            "effective_date": FuelCodeListView.effective_date,
+            "effectiveDate": FuelCodeListView.effective_date,
+            "expiry_date": FuelCodeListView.expiration_date,
+            "expiryDate": FuelCodeListView.expiration_date,
+        }
+
+        order_by_clauses = []
+        for sort in sort_orders or []:
+            column = sort_map.get(sort.field)
+            if not column:
+                continue
+            order_by_clauses.append(
+                asc(column) if sort.direction == "asc" else desc(column)
+            )
+
+        if not order_by_clauses:
+            order_by_clauses = [
+                asc(FuelCodeListView.prefix),
+                asc(FuelCodeListView.fuel_suffix),
+                desc(FuelCodeListView.effective_date),
+            ]
+
+        query = query.order_by(*order_by_clauses).offset(offset).limit(limit)
+
+        result = await self.db.execute(query)
+        total = await self.db.scalar(count_query)
+        rows = result.all()
+
+        formatted_rows = []
+        for row in rows:
+            r = row._mapping
+            effective_date = r["effective_date"]
+            expiration_date = r["expiration_date"]
+
+            if isinstance(effective_date, datetime):
+                effective_date = effective_date.date()
+            if isinstance(expiration_date, datetime):
+                expiration_date = expiration_date.date()
+
+            formatted_rows.append(
+                {
+                    "fuel_code": f'{r["prefix"]}{r["fuel_suffix"]}',
+                    "fuel": r["fuel_type"],
+                    "company": r["company"],
+                    "carbon_intensity": r["carbon_intensity"],
+                    "effective_date": effective_date,
+                    "expiry_date": expiration_date,
+                }
+            )
+
+        return formatted_rows, (total or 0)
 
     @repo_handler
     async def get_fuel_types(self, include_legacy=False) -> List[FuelType]:
@@ -980,14 +1158,11 @@ class FuelCodeRepository:
         if energy_effectiveness_ratio is None and end_use_type_id is not None:
             fallback_conditions = [
                 EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
-                EnergyEffectivenessRatio.compliance_period_id
-                == compliance_period_id,
+                EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
                 EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
                 EnergyEffectivenessRatio.end_use_type_id.is_(None),
             ]
-            fallback_stmt = select(EnergyEffectivenessRatio).where(
-                *fallback_conditions
-            )
+            fallback_stmt = select(EnergyEffectivenessRatio).where(*fallback_conditions)
             fallback_result = await self.db.execute(fallback_stmt)
             energy_effectiveness_ratio = fallback_result.scalars().first()
 

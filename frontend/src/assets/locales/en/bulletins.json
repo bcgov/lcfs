@@ -1,0 +1,31 @@
+{
+  "tabs": {
+    "current": "Current",
+    "archived": "Archived"
+  },
+  "current": {
+    "bulletinLabel": "Bulletin 12",
+    "title": "Approved carbon intensities - Current",
+    "description": "This table contains carbon intensities that have been approved by the director under section 20(1) of the Low Carbon Fuels Act or the former Greenhouse Gas (Renewable and Low Carbon Fuels Requirements) Act (Repealed) with effective dates after {{cutoffLabel}}.",
+    "cutoffLabel": "March 31, 2025"
+  },
+  "archived": {
+    "bulletinLabel": "Bulletin 12a",
+    "title": "Approved carbon intensities - Archived",
+    "description": "This table is an archive of all carbon intensities that have been approved by the director under section 20(1) of the Low Carbon Fuels Act or the former Greenhouse Gas (Renewable and Low Carbon Fuels Requirements) Act (Repealed)."
+  },
+  "common": {
+    "fuelCodePrefix": "Fuel codes with a 'C-' prefix represent fuels produced in Canada.",
+    "cutoffDateInfo": "Current/archive split uses cutoff date {{date}}.",
+    "noRowsFound": "No bulletin rows found",
+    "errorLoading": "Failed to load fuel code bulletins."
+  },
+  "columns": {
+    "fuelCode": "Fuel Code",
+    "fuel": "Fuel",
+    "company": "Company",
+    "carbonIntensity": "Carbon Intensity (gCO₂e/MJ)",
+    "effectiveDate": "Effective Date",
+    "expiryDate": "Expiry Date"
+  }
+}

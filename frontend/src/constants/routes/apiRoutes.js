@@ -72,6 +72,7 @@ export const apiRoutes = {
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',
   exportFuelCodes: '/fuel-codes/export',
+  fuelCodeBulletins: '/fuel-codes/bulletins',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
