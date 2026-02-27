@@ -38,6 +38,7 @@ def mock_repo():
     """
     repo = AsyncMock()
     repo.get_charging_power_output.return_value = None
+    repo.get_total_kwh_usage_for_report_group.return_value = 0
     return repo
 
 
@@ -418,6 +419,7 @@ async def test_get_fse_reporting_list_paginated_success(
     )
 
     assert "finalSupplyEquipments" in result
+    assert "totalKwhUsage" in result
     assert "pagination" in result
     assert result["pagination"].total == 1
     assert result["finalSupplyEquipments"][0].status == "Submitted"
@@ -428,6 +430,9 @@ async def test_get_fse_reporting_list_paginated_success(
         22,
         ["LDV"],
         ["Residential"],
+    )
+    mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
+        "uuid-1234", only_active=False
     )
 
 
@@ -470,6 +475,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
     }
     mock_repo.get_fse_reporting_list_paginated.return_value = ([mock_row], 1)
     mock_repo.get_charging_power_output.return_value = 50
+    mock_repo.get_total_kwh_usage_for_report_group.return_value = 4800
     mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
         compliance_report_group_uuid="uuid-1234"
     )
@@ -485,6 +491,9 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
         303,
         ["Light duty motor vehicles"],
         ["Residential"],
+    )
+    mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
+        "uuid-1234", only_active=True
     )
 
 
@@ -749,6 +758,7 @@ async def test_get_fse_reporting_list_paginated_includes_has_charging_equipment_
     result = await service.get_fse_reporting_list_paginated(1, pagination, 10, "all")
 
     assert "hasChargingEquipment" in result
+    assert "totalKwhUsage" in result
     assert result["hasChargingEquipment"] is True
     mock_repo.has_charging_equipment_for_organization.assert_awaited_once_with(1)
 
