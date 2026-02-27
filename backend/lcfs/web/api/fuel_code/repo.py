@@ -117,7 +117,6 @@ class FuelCodeRepository:
     async def get_fuel_code_bulletin_rows(
         self,
         compliance_period_start: date,
-        compliance_period_end: date,
         bulletin_type: str,
         offset: int,
         limit: int,
@@ -130,15 +129,12 @@ class FuelCodeRepository:
         bulletin_type: 'current' or 'archived'
         Current:
           - Approved fuel codes
-          - Effective date in [compliance_period_start, compliance_period_end)
-          - Not expired (expiration_date is null or > today)
+          - Effective after compliance period start
+          - Still active beyond compliance period start
 
         Archived:
-          - Approved fuel codes
-          - Effective date before current period start OR on/after next period start OR already expired
+          - Approved fuel codes not in current
         """
-        today = date.today()
-
         query = select(
             FuelCodeListView.prefix,
             FuelCodeListView.fuel_suffix,
@@ -150,7 +146,8 @@ class FuelCodeRepository:
         ).where(
             cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
         )
-
+        # compliance_period end would 31st March of next compliance year, so add 1 year to start and set to 31st March
+        compliance_period_end = date(compliance_period_start.year + 1, 3, 31)
         count_query = (
             select(func.count())
             .select_from(FuelCodeListView)
@@ -160,25 +157,19 @@ class FuelCodeRepository:
             )
         )
 
+        current_conditions = and_(
+            FuelCodeListView.effective_date < compliance_period_end,
+            or_(
+                FuelCodeListView.expiration_date.is_(None),
+                FuelCodeListView.expiration_date > compliance_period_start,
+            ),
+        )
+
         # Apply bulletin type filter
         if bulletin_type == "current":
-            type_conditions = and_(
-                FuelCodeListView.effective_date >= compliance_period_start,
-                FuelCodeListView.effective_date < compliance_period_end,
-                or_(
-                    FuelCodeListView.expiration_date.is_(None),
-                    FuelCodeListView.expiration_date > today,
-                ),
-            )
+            type_conditions = current_conditions
         else:  # archived
-            type_conditions = or_(
-                FuelCodeListView.effective_date < compliance_period_start,
-                FuelCodeListView.effective_date >= compliance_period_end,
-                and_(
-                    FuelCodeListView.expiration_date.isnot(None),
-                    FuelCodeListView.expiration_date <= today,
-                ),
-            )
+            type_conditions = ~current_conditions
 
         query = query.where(type_conditions)
         count_query = count_query.where(type_conditions)

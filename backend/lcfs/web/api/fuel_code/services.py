@@ -70,7 +70,7 @@ class FuelCodeServices:
     async def get_fuel_code_bulletins(
         self, bulletin_type: str, pagination: PaginationRequestSchema
     ) -> FuelCodeBulletinsSchema:
-        period_start, period_end = self._get_compliance_period_bounds(date.today())
+        period_start, _ = self._get_compliance_period_bounds(date.today())
         conditions, sort_orders = self.repo.get_fuel_code_bulletin_pagination_params(
             pagination
         )
@@ -78,7 +78,6 @@ class FuelCodeServices:
 
         rows, total_count = await self.repo.get_fuel_code_bulletin_rows(
             compliance_period_start=period_start,
-            compliance_period_end=period_end,
             bulletin_type=bulletin_type,
             offset=offset,
             limit=pagination.size,

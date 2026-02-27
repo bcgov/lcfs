@@ -6,7 +6,7 @@
   "current": {
     "bulletinLabel": "Bulletin 12",
     "title": "Approved carbon intensities - Current",
-    "description": "This table contains carbon intensities that have been approved by the director under section 20(1) of the Low Carbon Fuels Act or the former Greenhouse Gas (Renewable and Low Carbon Fuels Requirements) Act (Repealed) with effective dates after {{cutoffLabel}}.",
+    "description": "This table contains carbon intensities that have been approved by the director under section 20(1) of the Low Carbon Fuels Act or the former Greenhouse Gas (Renewable and Low Carbon Fuels Requirements) Act (Repealed) with effective dates after {{cutoffLabel}}, and that remain active beyond {{cutoffLabel}}.",
     "cutoffLabel": "March 31, 2025"
   },
   "archived": {

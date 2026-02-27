@@ -32,7 +32,7 @@ import {
 
 // Styles for floating pagination
 const floatingPaginationStyles = {
-  width: '60%',
+  width: 'max-content',
   position: 'fixed',
   bottom: '1rem',
   left: '50%',

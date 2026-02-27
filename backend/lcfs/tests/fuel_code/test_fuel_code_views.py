@@ -944,3 +944,68 @@ async def test_service_error_handling(
 
         # Should return 500 Internal Server Error
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_bulletins_success_with_bulletin_type(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_code_bulletins"
+    ) as mock_service:
+        set_user_role(RoleEnum.SUPPLIER)
+        mock_service.return_value = {
+            "cutoffDate": "2025-03-31",
+            "fuelCodes": [],
+            "pagination": {"total": 0, "page": 1, "size": 25, "totalPages": 0},
+        }
+
+        response = await client.post(
+            "/api/fuel-codes/bulletins?bulletinType=current",
+            json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_service.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_bulletins_success_with_bulletin_type_snake_case(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_code_bulletins"
+    ) as mock_service:
+        set_user_role(RoleEnum.SUPPLIER)
+        mock_service.return_value = {
+            "cutoffDate": "2025-03-31",
+            "fuelCodes": [],
+            "pagination": {"total": 0, "page": 1, "size": 25, "totalPages": 0},
+        }
+
+        response = await client.post(
+            "/api/fuel-codes/bulletins?bulletin_type=archived",
+            json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_service.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_bulletins_rejects_invalid_type(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.SUPPLIER)
+    response = await client.post(
+        "/api/fuel-codes/bulletins?bulletinType=invalid",
+        json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
