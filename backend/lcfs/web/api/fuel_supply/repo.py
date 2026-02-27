@@ -174,7 +174,22 @@ class FuelSupplyRepository:
                     or_(
                         and_(
                             FuelType.fossil_derived == True,
-                            ProvisionOfTheAct.provision_of_the_act_id == 1,
+                            or_(
+                                # 2024+: fossil-derived pairs with Section 19 prescribed (ID 1)
+                                and_(
+                                    ProvisionOfTheAct.provision_of_the_act_id == 1,
+                                    current_year
+                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                ),
+                                # Pre-2024: fossil-derived pairs with Section 6 prescribed (IDs 4, 5)
+                                and_(
+                                    ProvisionOfTheAct.provision_of_the_act_id.in_(
+                                        [4, 5]
+                                    ),
+                                    current_year
+                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                ),
+                            ),
                         ),
                         and_(
                             FuelType.fossil_derived == False,
