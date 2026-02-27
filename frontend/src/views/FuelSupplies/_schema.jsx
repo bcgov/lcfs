@@ -31,8 +31,14 @@ import {
 } from '@/utils/renewableClaimUtils'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
+  'Approved fuel code - Section 6 (5) (c)'
 export const PROVISION_GHGENIUS =
   'GHGenius modelled - Section 6 (5) (d) (ii) (A)'
+
+export const isFuelCodeProvision = (provision) =>
+  provision === PROVISION_APPROVED_FUEL_CODE ||
+  provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const fuelSupplyColDefs = (
   optionsData,
@@ -329,7 +335,7 @@ export const fuelSupplyColDefs = (
                 params.data.ciOfFuel = fuelType.defaultCarbonIntensity || null
               }
             }
-          } else if (params.newValue === PROVISION_APPROVED_FUEL_CODE) {
+          } else if (isFuelCodeProvision(params.newValue)) {
             params.data.fuelCode = null
             params.data.fuelCodeId = null
             // Clear CI values when switching to fuel code - they'll be set when fuel code is selected
@@ -397,7 +403,7 @@ export const fuelSupplyColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         return (
-          params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+          isFuelCodeProvision(params.data.provisionOfTheAct) &&
           fuelType?.fuelCodes?.length > 0
         )
       },
@@ -405,8 +411,9 @@ export const fuelSupplyColDefs = (
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
-        const isFuelCodeScenario =
-          params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+        const isFuelCodeScenario = isFuelCodeProvision(
+          params.data.provisionOfTheAct
+        )
         const fuelCodes =
           fuelType?.fuelCodes?.map((item) => item.fuelCode || item.fuel_code) ||
           []
@@ -446,7 +453,7 @@ export const fuelSupplyColDefs = (
           const fuelType = optionsData?.fuelTypes?.find(
             (obj) => params.data.fuelType === obj.fuelType
           )
-          if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          if (isFuelCodeProvision(params.data.provisionOfTheAct)) {
             const matchingFuelCode = fuelType?.fuelCodes?.find(
               (fuelCode) => originalFuelCode === fuelCode.fuelCode
             )

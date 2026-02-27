@@ -388,7 +388,6 @@ class ComplianceSummaryUpdater:
             net_fuel_supply_units = safe_decimal(summary_lines.get("25", 0))
             # TFRS Line 26 = Total banked credits used to offset outstanding debits
             line_26_banked_credits_offset = safe_decimal(summary_lines.get("26", 0))
-            line28_non_compliance = safe_decimal(summary_lines.get("28", 0))
 
             # Calculate fossil fuel totals
             fossil_gas = line1_gas
@@ -412,15 +411,17 @@ class ComplianceSummaryUpdater:
             # $600/unit for compliance periods 2023 and onward
             low_carbon_penalty_rate = Decimal("200") if compliance_period_year <= 2022 else Decimal("600")
 
-            # Penalty is based on Line 27 (Outstanding debit balance after banked credits offset)
-            # Line 27 = Line 25 + Line 26 (where Line 26 is banked credits used to offset)
-            # Always calculate from Line 25 + Line 26 since Line 27 can be incorrect in some snapshots
-            # (e.g., some 2023 reports show Line 27 = 0 when it should be negative)
-            outstanding_debit_balance = net_fuel_supply_units + line_26_banked_credits_offset
-
-            # Penalty units are the absolute value of outstanding debit (only if negative)
-            penalty_units = abs(min(outstanding_debit_balance, Decimal("0")))
-            line_21_non_compliance_penalty = penalty_units * low_carbon_penalty_rate
+            # Use TFRS Line 28 directly for the non-compliance penalty
+            # Line 28 in TFRS is the actual penalty amount assessed
+            # Only fall back to recalculation if Line 28 is not in the snapshot
+            line28_raw = summary_lines.get("28")
+            if line28_raw is not None:
+                line_21_non_compliance_penalty = safe_decimal(line28_raw) * low_carbon_penalty_rate
+            else:
+                # Fallback: recalculate from outstanding debit balance
+                outstanding_debit_balance = net_fuel_supply_units + line_26_banked_credits_offset
+                penalty_units = abs(min(outstanding_debit_balance, Decimal("0")))
+                line_21_non_compliance_penalty = penalty_units * low_carbon_penalty_rate
 
             # FIXED: Get Line 22 (closing balance) from TFRS snapshot line 29C
             # Line 29C = Available compliance unit balance after assessment

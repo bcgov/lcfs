@@ -77,10 +77,17 @@ class FuelSupplyRepository:
             .scalar_subquery()
         )
 
-        subquery_provision_of_the_act_id = (
-            select(ProvisionOfTheAct.provision_of_the_act_id)
-            .where(ProvisionOfTheAct.name == "Fuel code - section 19 (b) (i)")
-            .scalar_subquery()
+        # Match both new (Section 19) and legacy (Section 6) fuel code provisions
+        # so fuel codes are available for both pre-2024 and 2024+ reports
+        subquery_fuel_code_provision_ids = (
+            select(ProvisionOfTheAct.provision_of_the_act_id).where(
+                ProvisionOfTheAct.name.in_(
+                    [
+                        "Fuel code - section 19 (b) (i)",
+                        "Approved fuel code - Section 6 (5) (c)",
+                    ]
+                )
+            )
         )
 
         try:
@@ -221,8 +228,9 @@ class FuelSupplyRepository:
                 and_(
                     FuelCode.fuel_type_id == FuelType.fuel_type_id,
                     FuelCode.fuel_status_id == subquery_fuel_code_status_id,
-                    ProvisionOfTheAct.provision_of_the_act_id
-                    == subquery_provision_of_the_act_id,
+                    ProvisionOfTheAct.provision_of_the_act_id.in_(
+                        subquery_fuel_code_provision_ids
+                    ),
                     FuelCode.expiration_date >= start_of_compliance_year,
                     FuelCode.effective_date <= end_of_compliance_year,
                 ),
@@ -242,10 +250,12 @@ class FuelSupplyRepository:
             # For pre-2024:
             # - Exclude Jet fuel category (didn't exist before 2024)
             # - Exclude Fossil-derived fuel types (new in 2024, is_legacy=False but fossil_derived=True)
+            # - Only show legacy provisions (Section 6 references, not Section 19)
             query = query.where(
                 and_(
                     FuelCategory.category != "Jet fuel",
                     ~and_(FuelType.is_legacy == False, FuelType.fossil_derived == True),
+                    ProvisionOfTheAct.is_legacy == True,
                 )
             )
 
