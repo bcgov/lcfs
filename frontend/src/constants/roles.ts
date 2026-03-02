@@ -11,7 +11,9 @@ export const roles = {
   signing_authority: 'Signing Authority',
   read_only: 'Read Only',
   ci_applicant: 'CI Applicant',
-  ia_proponent: 'IA Proponent'
+  ia_proponent: 'IA Proponent',
+  ia_analyst: 'IA Analyst',
+  ia_manager: 'IA Manager'
 } as const
 
 export type RoleName = (typeof roles)[keyof typeof roles]
@@ -21,7 +23,9 @@ export const govRoles: RoleName[] = [
   roles.administrator,
   roles.analyst,
   roles.compliance_manager,
-  roles.director
+  roles.director,
+  roles.ia_analyst,
+  roles.ia_manager
 ]
 
 export const nonGovRoles: RoleName[] = [
