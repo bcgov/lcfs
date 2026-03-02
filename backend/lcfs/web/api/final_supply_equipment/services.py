@@ -495,7 +495,14 @@ class FinalSupplyEquipmentServices:
         has_equipment = await self.repo.has_charging_equipment_for_organization(
             organization_id
         )
-        
+
+        total_kwh_usage = 0
+        if report.compliance_report_group_uuid:
+            total_kwh_usage = await self.repo.get_total_kwh_usage_for_report_group(
+                report.compliance_report_group_uuid,
+                only_active=(mode == "summary"),
+            )
+
         data, total = await self.repo.get_fse_reporting_list_paginated(
             organization_id, pagination, report.compliance_report_group_uuid, mode
         )
@@ -531,6 +538,7 @@ class FinalSupplyEquipmentServices:
 
         return {
             "finalSupplyEquipments": processed_data,
+            "totalKwhUsage": total_kwh_usage,
             "pagination": PaginationResponseSchema(
                 page=pagination.page,
                 size=pagination.size,
