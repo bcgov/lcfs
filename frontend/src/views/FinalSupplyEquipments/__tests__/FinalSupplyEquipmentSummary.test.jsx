@@ -126,6 +126,7 @@ const mockEquipmentData = [
 
 const createQueryData = ({
   equipments = mockEquipmentData,
+  totalKwhUsage = 890,
   pagination = {
     total: equipments.length,
     page: 1,
@@ -135,6 +136,7 @@ const createQueryData = ({
 } = {}) => ({
   data: {
     finalSupplyEquipments: equipments,
+    totalKwhUsage,
     pagination
   },
   isLoading: false,
@@ -187,6 +189,10 @@ describe('FinalSupplyEquipmentSummary', () => {
     it('renders with data', () => {
       renderComponent()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+      expect(screen.getByTestId('fse-total-kwh-usage')).toBeInTheDocument()
+      expect(
+        screen.getByText('finalSupplyEquipment:totalKwhUsage')
+      ).toBeInTheDocument()
       expect(mockFinalSupplyEquipmentSummaryColDefs).toHaveBeenCalledWith(
         expect.any(Function),
         COMPLIANCE_REPORT_STATUSES.DRAFT,
