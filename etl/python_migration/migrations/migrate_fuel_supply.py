@@ -483,11 +483,25 @@ class FuelSupplyMigrator:
             if end_use_id:
                 lcfs_cursor.execute(
                     """
-                    SELECT ratio FROM energy_effectiveness_ratio 
-                    WHERE fuel_type_id = %s AND fuel_category_id = %s 
+                    SELECT ratio FROM energy_effectiveness_ratio
+                    WHERE fuel_type_id = %s AND fuel_category_id = %s
                     AND compliance_period_id = %s AND end_use_type_id = %s
                 """,
                     (fuel_type_id, fuel_category_id, compliance_period_id, end_use_id),
+                )
+                eer_row = lcfs_cursor.fetchone()
+                if eer_row:
+                    result["eer"] = float(eer_row[0])
+
+            # Fallback: look up EER with end_use_type_id IS NULL (pre-2024 data)
+            if result["eer"] == 1.0:
+                lcfs_cursor.execute(
+                    """
+                    SELECT ratio FROM energy_effectiveness_ratio
+                    WHERE fuel_type_id = %s AND fuel_category_id = %s
+                    AND compliance_period_id = %s AND end_use_type_id IS NULL
+                """,
+                    (fuel_type_id, fuel_category_id, compliance_period_id),
                 )
                 eer_row = lcfs_cursor.fetchone()
                 if eer_row:

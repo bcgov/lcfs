@@ -9,7 +9,10 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas } from '@/utils/formatters'
+import {
+  formatNumberWithCommas,
+  formatNumberWithDecimals
+} from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -976,11 +979,15 @@ export const fuelSupplySummaryColDef = (
       valueGetter: (params) => {
         if (isFuelTypeOther(params)) {
           return params.data?.energyDensity
-            ? params.data?.energyDensity + ' MJ/' + params.data?.units
+            ? Number(params.data.energyDensity).toFixed(2) +
+                ' MJ/' +
+                params.data?.units
             : 0
         } else {
           return params.data?.energyDensity
-            ? params.data?.energyDensity + ' MJ/' + params.data?.units
+            ? Number(params.data.energyDensity).toFixed(2) +
+                ' MJ/' +
+                params.data?.units
             : ''
         }
       }
@@ -988,13 +995,14 @@ export const fuelSupplySummaryColDef = (
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
       field: 'eer',
-      minWidth: 80
+      minWidth: 80,
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2)
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
       minWidth: 170,
-      valueFormatter: formatNumberWithCommas
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2)
     }
   ]
 
@@ -1208,13 +1216,14 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
       field: 'eer',
       minWidth: 80,
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2),
       cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
       minWidth: 170,
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2),
       cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
     }
   ]
