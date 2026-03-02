@@ -134,6 +134,38 @@ export const HistoryCard = ({
       )
     }
 
+    // Check if the report has exemptions
+    if (report.isRenewableFuelExempted || report.isLowCarbonFuelExempted) {
+      return (
+        <>
+          {report.isRenewableFuelExempted && (
+            <StyledListItem disablePadding>
+              <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                <strong>
+                  {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+                </strong>
+                {t('report:assessmentExemptRenewable', {
+                  name: report.organization.name
+                })}
+              </ListItemText>
+            </StyledListItem>
+          )}
+          {report.isLowCarbonFuelExempted && (
+            <StyledListItem disablePadding>
+              <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                <strong>
+                  {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
+                </strong>
+                {t('report:assessmentExemptLowCarbon', {
+                  name: report.organization.name
+                })}
+              </ListItemText>
+            </StyledListItem>
+          )}
+        </>
+      )
+    }
+
     // Default assessment lines for normal reports
     // Only show renewable fuel target assessment if there is a renewable fuel requirement
     // (any non-zero value in Lines 3 or 9 for any fuel category)

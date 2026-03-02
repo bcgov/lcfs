@@ -60,6 +60,7 @@ export const AssessmentRecommendation = ({
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasRoles(roles.analyst)
   const isDirector = hasRoles(roles.director)
+  const isComplianceManager = hasRoles(roles.compliance_manager)
 
   // Determine if this is an original report (kept for backward compatibility)
   const isOriginalReport = useMemo(() => {
@@ -78,15 +79,24 @@ export const AssessmentRecommendation = ({
     )
   }, [isAnalyst, isDirector, currentStatus])
 
-  // Show non-assessment section for analysts and directors on all report types
+  // Show non-assessment section for analysts, directors, and compliance managers
   const shouldShowNonAssessmentSection = useMemo(() => {
-    return (
-      isGovernmentUser &&
-      (isAnalyst || isDirector) &&
-      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
-      currentStatus !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
-    )
-  }, [isGovernmentUser, isAnalyst, isDirector, currentStatus])
+    if (!isGovernmentUser) return false
+    if (isAnalyst || isDirector) {
+      return (
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
+      )
+    }
+    // Compliance managers can view (read-only) after analyst recommendation
+    if (isComplianceManager) {
+      return (
+        currentStatus === COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST ||
+        currentStatus === COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+      )
+    }
+    return false
+  }, [isGovernmentUser, isAnalyst, isDirector, isComplianceManager, currentStatus])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -132,10 +142,13 @@ export const AssessmentRecommendation = ({
     )
   }
 
-  // Allow editing exemption checkboxes when user is analyst and report is submitted
+  // Allow editing exemption checkboxes when user is analyst or director and report is submitted
   const canEditExemptionStatus = useMemo(() => {
-    return isAnalyst && currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
-  }, [isAnalyst, currentStatus])
+    return (
+      (isAnalyst || isDirector) &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+    )
+  }, [isAnalyst, isDirector, currentStatus])
 
   const handleRenewableFuelExemptionChange = (event) => {
     const newValue = event.target.checked
@@ -255,7 +268,10 @@ export const AssessmentRecommendation = ({
     isAnalyst &&
     !isDirector
 
-  const hasContentToShow = isDirector ? shouldShowNonAssessmentSection : true // Always show for non-Directors
+  const hasContentToShow =
+    isDirector || isComplianceManager
+      ? shouldShowNonAssessmentSection
+      : true
 
   if (
     !hasContentToShow &&
