@@ -16,6 +16,7 @@ import PublicLayout from '@/layouts/PublicLayout'
 import { fuelCodeRoutes } from './routeConfig/fuelCodeRoutes'
 import { publicPageRoutes } from './routeConfig/publicPageRoutes'
 import { PublicPageLayout } from '@/layouts/PublicPageLayout'
+import { initiativeAgreementRoutes } from './routeConfig/initiativeAgreementRoutes'
 
 const allRoutes = [
   ...publicRoutes,
@@ -27,8 +28,8 @@ const allRoutes = [
   ...transferRoutes,
   ...reportRoutes,
   ...notificationRoutes,
-  ...publicPageRoutes
-  // ... other route groups
+  ...publicPageRoutes,
+  ...initiativeAgreementRoutes
 ]
 
 export const router = createBrowserRouter([
