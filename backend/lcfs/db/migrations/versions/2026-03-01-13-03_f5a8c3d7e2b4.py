@@ -1,7 +1,7 @@
 """Add Exempted compliance report status and exemption flag columns.
 
 Revision ID: f5a8c3d7e2b4
-Revises: 8e9f1a2b3c4d
+Revises: f4c8a1b2d3e5
 Create Date: 2026-03-01 13:03:00.000000
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f5a8c3d7e2b4"
-down_revision = "8e9f1a2b3c4d"
+down_revision = "f4c8a1b2d3e5"
 branch_labels = None
 depends_on = None
 

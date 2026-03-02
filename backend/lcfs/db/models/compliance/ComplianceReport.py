@@ -150,12 +150,14 @@ class ComplianceReport(BaseModel, Auditable):
         Boolean,
         nullable=False,
         default=False,
+        server_default="false",
         comment="Flag indicating exemption from the renewable fuel requirement",
     )
     is_low_carbon_fuel_exempted = Column(
         Boolean,
         nullable=False,
         default=False,
+        server_default="false",
         comment="Flag indicating exemption from the low carbon fuel requirement",
     )
     assigned_analyst_id = Column(
