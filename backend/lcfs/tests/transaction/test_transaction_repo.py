@@ -191,6 +191,7 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
         compliance_units=1000,
         transaction_action=TransactionActionEnum.Adjustment,
         create_date=datetime(2024, 12, 1),  # Within compliance period
+        update_date=datetime(2024, 12, 1),  # Assessment time (before deadline)
     )
     dbsession.add(assessment_transaction)
 
@@ -349,7 +350,7 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     )
 
     # Expected calculation:
-    # Assessment: +1000
+    # Assessment: +1000 (create_date 2024-12-01, before deadline March 31, 2025)
     # Transfer purchase: +500
     # Transfer sale: -200
     # Initiative Agreement: +300
@@ -535,12 +536,14 @@ async def test_calculate_line_17_supplemental_report_after_period(
     dbsession, transaction_repo
 ):
     """
-    Test that supplemental reports assessed after the compliance period ended
-    are still counted in the correct period (Issue #3821).
+    Test that compliance report credits assessed after the compliance period deadline
+    are excluded from Line 17 (Issue #3932), while credits assessed before the
+    deadline are included.
 
-    Scenario: A 2024 supplemental report is assessed on July 15, 2025 (after March 31, 2025).
-    The transaction should still be included in 2024's Line 17 because the report
-    belongs to the 2024 compliance period.
+    Scenario: A 2024 original report is assessed on Feb 15, 2025 (before March 31, 2025).
+    A supplemental is assessed on July 15, 2025 (after March 31, 2025).
+    Only the original's credits should be included in Line 17 because the supplemental's
+    credits were not available as at the compliance deadline.
     """
     from datetime import datetime
     from lcfs.db.models.transaction.Transaction import (
@@ -591,13 +594,14 @@ async def test_calculate_line_17_supplemental_report_after_period(
         )
         dbsession.add(assessed_status)
 
-    # Original compliance report assessed within the period
+    # Original compliance report assessed BEFORE the deadline
     original_report_tx = Transaction(
         transaction_id=2001,
         organization_id=test_org_id,
         compliance_units=50000,
         transaction_action=TransactionActionEnum.Adjustment,
-        create_date=datetime(2025, 2, 15),  # Within period (before March 31, 2025)
+        create_date=datetime(2025, 2, 15),  # Before March 31, 2025
+        update_date=datetime(2025, 2, 15),  # Assessment time (before deadline)
     )
     dbsession.add(original_report_tx)
 
@@ -611,13 +615,14 @@ async def test_calculate_line_17_supplemental_report_after_period(
     )
     dbsession.add(original_report)
 
-    # Supplemental report assessed AFTER the period ended (the bug case)
+    # Supplemental report assessed AFTER the deadline
     supplemental_tx = Transaction(
         transaction_id=2002,
         organization_id=test_org_id,
         compliance_units=-46467,  # Adjustment from the issue example
         transaction_action=TransactionActionEnum.Adjustment,
         create_date=datetime(2025, 7, 15),  # AFTER period end (July 15, 2025)
+        update_date=datetime(2025, 7, 15),  # Assessment time (after deadline)
     )
     dbsession.add(supplemental_tx)
 
@@ -638,19 +643,265 @@ async def test_calculate_line_17_supplemental_report_after_period(
         test_org_id, compliance_period
     )
 
-    # Expected: Both transactions should be included
-    # Original: +50,000
-    # Supplemental: -46,467
-    # Total: 50,000 - 46,467 = 3,533
-    #
-    # Before the fix, the supplemental would be excluded because:
-    # create_date (2025-07-15) > period_end (2025-03-31)
-    # This would give: 50,000 (incorrect)
-    #
-    # After the fix, supplemental is included because:
-    # report_compliance_period (2024) <= target_period (2024)
-    # This gives: 3,533 (correct)
-    assert balance == 3533, f"Expected 3533 but got {balance}. Supplemental report not counted correctly."
+    # Only the original's credits should be included because it was assessed
+    # before the March 31, 2025 deadline.
+    # The supplemental's credits are excluded because it was assessed on July 15, 2025
+    # (after the deadline) — those credits were not available during the compliance period.
+    # Expected: 50,000 (original only; supplemental excluded)
+    assert balance == 50000, (
+        f"Expected 50000 but got {balance}. "
+        "Supplemental assessed after deadline should be excluded from Line 17."
+    )
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_excludes_post_deadline_assessment(
+    dbsession, transaction_repo
+):
+    """
+    Test for Issue #3932: Line 17 should exclude credits from compliance report
+    assessments that occurred after the March 31 deadline, while including
+    credits from transfers and other sources that were available before the deadline.
+
+    Scenario:
+    - Organization has a transfer (+200) recorded before March 31, 2025
+    - Supplemental 1 assessed on June 1, 2025 (after deadline) → +500 credits
+    - Line 17 should show only 200 (the transfer), not 700
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.transfer.Transfer import Transfer
+    from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+    from lcfs.db.models.compliance.ComplianceReportStatus import (
+        ComplianceReportStatus,
+        ComplianceReportStatusEnum,
+    )
+    from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+    from lcfs.db.models import Organization, OrganizationAddress
+
+    test_org_id = 3001
+    test_org_2_id = 3002
+    compliance_period = 2024
+
+    # Use existing seeded compliance period for 2024
+    from sqlalchemy import select
+
+    result = await dbsession.execute(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
+    )
+    test_period = result.scalars().first()
+    assert test_period is not None, "Seeded compliance period for 2024 not found"
+    test_period_id = test_period.compliance_period_id
+
+    # Create test organizations
+    test_org_1 = Organization(
+        organization_id=test_org_id,
+        name="Test Company 3001",
+        operating_name="Test Co. 3001",
+        org_address=OrganizationAddress(
+            street_address="123 Issue 3932 St",
+            city="Test City",
+            province_state="Test Province",
+            country="Test Country",
+            postalCode_zipCode="T3ST 3Z1",
+        ),
+    )
+    test_org_2 = Organization(
+        organization_id=test_org_2_id,
+        name="Test Company 3002",
+        operating_name="Test Co. 3002",
+        org_address=OrganizationAddress(
+            street_address="456 Issue 3932 Ave",
+            city="Test City",
+            province_state="Test Province",
+            country="Test Country",
+            postalCode_zipCode="T3ST 3Z2",
+        ),
+    )
+    dbsession.add_all([test_org_1, test_org_2])
+
+    # Get or create Assessed status
+    assessed_status = await dbsession.get(ComplianceReportStatus, 5)
+    if not assessed_status:
+        assessed_status = ComplianceReportStatus(
+            compliance_report_status_id=5,
+            status=ComplianceReportStatusEnum.Assessed,
+        )
+        dbsession.add(assessed_status)
+
+    # 1. Transfer: +200 credits received before the compliance deadline
+    transfer_to_tx = Transaction(
+        transaction_id=3001,
+        organization_id=test_org_id,
+        compliance_units=200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 1, 15),
+    )
+    transfer_from_tx = Transaction(
+        transaction_id=3002,
+        organization_id=test_org_2_id,
+        compliance_units=-200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 1, 15),
+    )
+    dbsession.add_all([transfer_to_tx, transfer_from_tx])
+
+    transfer = Transfer(
+        transfer_id=3001,
+        from_organization_id=test_org_2_id,
+        to_organization_id=test_org_id,
+        from_transaction_id=3002,
+        to_transaction_id=3001,
+        quantity=200,
+        current_status_id=6,  # Recorded
+        transaction_effective_date=datetime(2025, 1, 15).date(),
+    )
+    dbsession.add(transfer)
+
+    # 2. Supplemental 1 assessed AFTER the deadline → +500 credits
+    supp1_tx = Transaction(
+        transaction_id=3003,
+        organization_id=test_org_id,
+        compliance_units=500,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 6, 1),  # After March 31, 2025 deadline
+        update_date=datetime(2025, 6, 1),  # Assessment time (after deadline)
+    )
+    dbsession.add(supp1_tx)
+
+    supp1_report = ComplianceReport(
+        compliance_report_id=3001,
+        organization_id=test_org_id,
+        current_status_id=5,  # Assessed
+        compliance_period_id=test_period_id,
+        transaction_id=3003,
+        version=1,
+    )
+    dbsession.add(supp1_report)
+
+    await dbsession.commit()
+
+    # Line 17 should exclude the supplemental's credits (assessed after deadline)
+    # but include the transfer (effective date before deadline)
+    balance = await transaction_repo.calculate_line_17_available_balance_for_period(
+        test_org_id, compliance_period
+    )
+
+    # Expected: Only the transfer +200 is included
+    # Supp 1's +500 is excluded (assessed after March 31, 2025)
+    assert balance == 200, (
+        f"Expected 200 but got {balance}. "
+        "Line 17 should only include credits available before the deadline."
+    )
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_reserved_before_assessed_after_deadline(
+    dbsession, transaction_repo
+):
+    """
+    Test for Issue #3932 edge case: Transaction was Reserved (created) before the
+    March 31 deadline, but Assessed (finalized) after the deadline.
+
+    The assessment date (update_date) is what matters, not the creation date.
+    Even though the transaction was created before the deadline, the credits were
+    not finalized until after the deadline and should be excluded from Line 17.
+
+    Scenario:
+    - Transaction created (Reserved) on March 15, 2025 (before deadline)
+    - Transaction assessed (Adjustment) on April 15, 2025 (after deadline)
+    - Line 17 should exclude this transaction because assessment happened after deadline
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+    from lcfs.db.models.compliance.ComplianceReportStatus import (
+        ComplianceReportStatus,
+        ComplianceReportStatusEnum,
+    )
+    from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+    from lcfs.db.models import Organization, OrganizationAddress
+
+    test_org_id = 4001
+    compliance_period = 2024
+
+    # Use existing seeded compliance period for 2024
+    from sqlalchemy import select
+
+    result = await dbsession.execute(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
+    )
+    test_period = result.scalars().first()
+    assert test_period is not None, "Seeded compliance period for 2024 not found"
+    test_period_id = test_period.compliance_period_id
+
+    # Create test organization
+    test_org = Organization(
+        organization_id=test_org_id,
+        name="Test Company 4001",
+        operating_name="Test Co. 4001",
+        org_address=OrganizationAddress(
+            street_address="123 Reserved Test St",
+            city="Test City",
+            province_state="Test Province",
+            country="Test Country",
+            postalCode_zipCode="T3ST 4Z1",
+        ),
+    )
+    dbsession.add(test_org)
+
+    # Get or create Assessed status
+    assessed_status = await dbsession.get(ComplianceReportStatus, 5)
+    if not assessed_status:
+        assessed_status = ComplianceReportStatus(
+            compliance_report_status_id=5,
+            status=ComplianceReportStatusEnum.Assessed,
+        )
+        dbsession.add(assessed_status)
+
+    # Transaction was Reserved on March 15, 2025 (before deadline)
+    # but Assessed on April 15, 2025 (after deadline).
+    # create_date = March 15 (Reserved), update_date = April 15 (Assessed)
+    report_tx = Transaction(
+        transaction_id=4001,
+        organization_id=test_org_id,
+        compliance_units=1000,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 3, 15),  # Reserved BEFORE deadline
+        update_date=datetime(2025, 4, 15),  # Assessed AFTER deadline
+    )
+    dbsession.add(report_tx)
+
+    report = ComplianceReport(
+        compliance_report_id=4001,
+        organization_id=test_org_id,
+        current_status_id=5,  # Assessed
+        compliance_period_id=test_period_id,
+        transaction_id=4001,
+        version=0,
+    )
+    dbsession.add(report)
+
+    await dbsession.commit()
+
+    balance = await transaction_repo.calculate_line_17_available_balance_for_period(
+        test_org_id, compliance_period
+    )
+
+    # Even though the transaction was created (Reserved) before the deadline,
+    # it was assessed (finalized) on April 15, 2025, which is after March 31, 2025.
+    # The assessment date (update_date) is what determines availability, not create_date.
+    # So this transaction should be EXCLUDED from Line 17.
+    assert balance == 0, (
+        f"Expected 0 but got {balance}. "
+        "Transaction Reserved before deadline but Assessed after should be excluded."
+    )
 
 
 @pytest.mark.anyio
