@@ -153,13 +153,31 @@ class OtherUsesRepository:
             )
         )
 
-        # Get groups that have any deleted records
+        # Get groups where the latest version is a DELETE.
+        # We check the latest version rather than any version because
+        # ETL-migrated TFRS supplemental chains can have DELETE followed
+        # by UPDATE on the same group_uuid (not possible in modern LCFS).
+        latest_version_per_group = (
+            select(
+                OtherUses.group_uuid,
+                func.max(OtherUses.version).label("max_version"),
+            )
+            .where(OtherUses.compliance_report_id.in_(compliance_reports_select))
+            .group_by(OtherUses.group_uuid)
+        ).subquery()
+
         deleted_groups = (
             select(OtherUses.group_uuid)
-            .where(
-                OtherUses.compliance_report_id.in_(compliance_reports_select),
-                OtherUses.action_type == ActionTypeEnum.DELETE,
+            .join(
+                latest_version_per_group,
+                and_(
+                    OtherUses.group_uuid
+                    == latest_version_per_group.c.group_uuid,
+                    OtherUses.version
+                    == latest_version_per_group.c.max_version,
+                ),
             )
+            .where(OtherUses.action_type == ActionTypeEnum.DELETE)
             .distinct()
         )
 
