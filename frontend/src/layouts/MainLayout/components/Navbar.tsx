@@ -64,6 +64,7 @@ export const Navbar = () => {
         route: ROUTES.FUEL_CODES.BULLETINS,
         hide: !canSeeFuelCodeBulletins
       },
+      {
         name: t('InitiativeAgreements'),
         route: ROUTES.INITIATIVE_AGREEMENTS.LIST,
         hide: !canSeeInitiativeAgreementsBceid
