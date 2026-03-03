@@ -135,6 +135,10 @@ export const ROUTES = {
     EQUIPMENT_PROCESSING: '/charging-sites/:siteId/equipment-processing'
   },
 
+  INITIATIVE_AGREEMENTS: {
+    LIST: '/initiative-agreements'
+  },
+
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'
