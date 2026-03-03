@@ -127,7 +127,8 @@ export const ROUTES = {
     LIST: '/fuel-codes',
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID',
-    EXPORT: '/fuel-codes/export'
+    EXPORT: '/fuel-codes/export',
+    BULLETINS: '/fuel-codes-bulletins'
   },
 
   CHARGING_SITES: {
