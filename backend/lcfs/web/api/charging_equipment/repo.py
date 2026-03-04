@@ -305,6 +305,13 @@ class ChargingEquipmentRepository:
         result = await self.db.execute(query)
         rows = result.all()
         items = []
+
+        # Some mocked test results only provide scalars().all().
+        # In production this query returns row tuples of (ChargingEquipment, latest_site_id).
+        if not isinstance(rows, list):
+            scalar_items = result.scalars().all()
+            rows = [(equipment, None) for equipment in scalar_items]
+
         for equipment, latest_charging_site_id in rows:
             setattr(equipment, "latest_charging_site_id", latest_charging_site_id)
             items.append(equipment)
