@@ -327,6 +327,21 @@ class FuelCodesSchema(BaseSchema):
     pagination: Optional[PaginationResponseSchema] = None
 
 
+class FuelCodeBulletinRowSchema(BaseSchema):
+    fuel_code: str
+    fuel: str
+    company: str
+    carbon_intensity: float
+    effective_date: Optional[date] = None
+    expiry_date: Optional[date] = None
+
+
+class FuelCodeBulletinsSchema(BaseSchema):
+    cutoff_date: date
+    fuel_codes: List[FuelCodeBulletinRowSchema]
+    pagination: Optional[PaginationResponseSchema] = None
+
+
 class FuelCodeCreateUpdateSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     prefix_id: int = None

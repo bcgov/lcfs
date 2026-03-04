@@ -1,8 +1,14 @@
 import { AddEditFuelCode, FuelCodes } from '@/views/FuelCodes'
+import { FuelCodeBulletins } from '@/views/FuelCodeBulletins'
 import ROUTES from '../routes'
 import { AppRouteObject } from '../types'
 
 export const fuelCodeRoutes: AppRouteObject[] = [
+  {
+    path: ROUTES.FUEL_CODES.BULLETINS,
+    element: <FuelCodeBulletins />,
+    handle: { title: 'Fuel codes' }
+  },
   {
     path: ROUTES.FUEL_CODES.LIST,
     element: <FuelCodes />,
