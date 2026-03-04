@@ -22,13 +22,13 @@ def upgrade() -> None:
     op.drop_index(
         op.f("idx_charging_equipment_charging_site_id"), table_name="charging_equipment"
     )
-    op.drop_index(op.f("ix_charging_site_site_code"), table_name="charging_site")
+    op.drop_index(op.f("idx_dcharging_site_site_code"), table_name="charging_site")
     op.drop_constraint(op.f("uq_charging_site_org_name"), "charging_site", type_="unique")
     op.drop_constraint(
         op.f("uq_charging_site_site_code"), "charging_site", type_="unique"
     )
     op.create_index(
-        op.f("ix_charging_site_site_code"), "charging_site", ["site_code"], unique=False
+        op.f("idx_charging_site_site_code"), "charging_site", ["site_code"], unique=False
     )
     op.create_unique_constraint(
         "uq_charging_site_id_version", "charging_site", ["charging_site_id", "version"]
@@ -48,10 +48,10 @@ def downgrade() -> None:
         "uq_charging_site_id_version", "charging_site", type_="unique"
     )
     op.drop_index(
-        op.f("ix_charging_site_site_code"), table_name="charging_site"
+        op.f("idx_charging_site_site_code"), table_name="charging_site"
     )
     op.create_index(
-        op.f("ix_charging_site_site_code"), "charging_site", ["site_code"], unique=False
+        op.f("idx_charging_site_site_code"), "charging_site", ["site_code"], unique=False
     )
     op.create_unique_constraint(
         op.f("uq_charging_site_site_code"), "charging_site", ["site_code"]
