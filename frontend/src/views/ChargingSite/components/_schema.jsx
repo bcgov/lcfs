@@ -543,7 +543,11 @@ export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
       labelKey: 'status',
       optionsQuery: useChargingSiteStatuses
     },
-    cellRenderer: ChargingSiteStatusRenderer
+    cellRenderer: ChargingSiteStatusRenderer,
+    suppressFloatingFilterButton: true,
+    filterParams: {
+      values: ['Draft', 'Updated', 'Submitted', 'Validated', 'Decommissioned']
+    }
   },
   {
     field: 'organization',
