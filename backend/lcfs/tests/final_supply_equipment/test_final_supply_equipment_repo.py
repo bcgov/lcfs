@@ -637,3 +637,154 @@ async def test_has_charging_equipment_for_organization_with_none_count(repo, fak
 
     assert result is False
     fake_db.execute.assert_called_once()
+
+
+# ===========================================================================
+# bulk_update_fse_reporting_record
+# ===========================================================================
+
+
+@pytest.mark.anyio
+async def test_bulk_update_all_fields_executes_update(repo, fake_db):
+    """All four data fields + activate → execute + flush called once each."""
+    from datetime import date
+
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=10,
+        supply_from_date=date(2024, 1, 1),
+        supply_to_date=date(2024, 12, 31),
+        kwh_usage=500.0,
+        compliance_notes="good notes",
+        activate=True,
+    )
+
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_partial_fields_still_executes(repo, fake_db):
+    """Providing only kwh_usage + activate still triggers execute + flush."""
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=10,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=250.0,
+        compliance_notes=None,
+        activate=True,
+    )
+
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_no_fields_skips_execute(repo, fake_db):
+    """All None + activate=False → guard triggers; no DB call made."""
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=10,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=None,
+        compliance_notes=None,
+        activate=False,
+    )
+
+    fake_db.execute.assert_not_called()
+    fake_db.flush.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_activate_only_executes(repo, fake_db):
+    """activate=True with all data fields None → is_active update still runs."""
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=10,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=None,
+        compliance_notes=None,
+        activate=True,
+    )
+
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_without_activate_does_not_set_is_active(repo, fake_db):
+    """activate=False (default) → is_active is NOT included in the UPDATE statement."""
+    from datetime import date
+
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=7,
+        supply_from_date=date(2024, 1, 1),
+        supply_to_date=date(2024, 12, 31),
+        kwh_usage=100.0,
+        compliance_notes=None,
+        activate=False,
+    )
+
+    fake_db.execute.assert_called_once()
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "is_active" not in compiled
+
+
+@pytest.mark.anyio
+async def test_bulk_update_with_activate_includes_is_active(repo, fake_db):
+    """activate=True → the compiled UPDATE statement must contain is_active = true."""
+    from datetime import date
+
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=7,
+        supply_from_date=date(2024, 1, 1),
+        supply_to_date=date(2024, 12, 31),
+        kwh_usage=100.0,
+        compliance_notes=None,
+        activate=True,
+    )
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "is_active" in compiled
+
+
+# ===========================================================================
+# get_fse_reporting_record_for_group
+# ===========================================================================
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_record_for_group_found(repo, fake_db):
+    """Returns the first matching record when found."""
+    mock_record = MagicMock()
+    mock_record.charging_equipment_compliance_id = 99
+
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.first.return_value = mock_record
+    fake_db.execute.return_value = result_mock
+
+    record = await repo.get_fse_reporting_record_for_group(
+        charging_equipment_id=1,
+        charging_equipment_version=0,
+        compliance_report_group_uuid="group-uuid",
+    )
+
+    assert record is mock_record
+    fake_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_record_for_group_not_found(repo, fake_db):
+    """Returns None when no matching record exists."""
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.first.return_value = None
+    fake_db.execute.return_value = result_mock
+
+    record = await repo.get_fse_reporting_record_for_group(
+        charging_equipment_id=1,
+        charging_equipment_version=0,
+        compliance_report_group_uuid="nonexistent-group",
+    )
+
+    assert record is None

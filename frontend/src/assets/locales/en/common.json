@@ -82,6 +82,7 @@
         "uploadStatusStarting": "Starting Import...",
         "uploadStatus": {
           "imported": "Imported:",
+          "skipped": "Skipped (blank kWh):",
           "rejected": "Rejected:"
         },
         "fileError": {
