@@ -20,15 +20,30 @@ depends_on = None
 
 def upgrade() -> None:
     op.drop_index(
-        op.f("idx_charging_equipment_charging_site_id"), table_name="charging_equipment"
+        op.f("idx_charging_equipment_charging_site_id"),
+        table_name="charging_equipment",
+        if_exists=True,
     )
-    op.drop_index(op.f("idx_dcharging_site_site_code"), table_name="charging_site")
-    op.drop_constraint(op.f("uq_charging_site_org_name"), "charging_site", type_="unique")
+    op.drop_index(
+        op.f("idx_charging_site_site_code"), table_name="charging_site", if_exists=True
+    )
     op.drop_constraint(
-        op.f("uq_charging_site_site_code"), "charging_site", type_="unique"
+        op.f("uq_charging_site_org_name"),
+        "charging_site",
+        type_="unique",
+        if_exists=True,
+    )
+    op.drop_constraint(
+        op.f("uq_charging_site_site_code"),
+        "charging_site",
+        type_="unique",
+        if_exists=True,
     )
     op.create_index(
-        op.f("idx_charging_site_site_code"), "charging_site", ["site_code"], unique=False
+        op.f("idx_charging_site_site_code"),
+        "charging_site",
+        ["site_code"],
+        unique=False,
     )
     op.create_unique_constraint(
         "uq_charging_site_id_version", "charging_site", ["charging_site_id", "version"]
@@ -42,16 +57,19 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_constraint(
-        "uq_charging_site_org_name", "charging_site", type_="unique"
+        "uq_charging_site_org_name", "charging_site", type_="unique", if_exists=True
     )
     op.drop_constraint(
-        "uq_charging_site_id_version", "charging_site", type_="unique"
+        "uq_charging_site_id_version", "charging_site", type_="unique", if_exists=True
     )
     op.drop_index(
-        op.f("idx_charging_site_site_code"), table_name="charging_site"
+        op.f("idx_charging_site_site_code"), table_name="charging_site", if_exists=True
     )
     op.create_index(
-        op.f("idx_charging_site_site_code"), "charging_site", ["site_code"], unique=False
+        op.f("idx_charging_site_site_code"),
+        "charging_site",
+        ["site_code"],
+        unique=False,
     )
     op.create_unique_constraint(
         op.f("uq_charging_site_site_code"), "charging_site", ["site_code"]
