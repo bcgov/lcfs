@@ -151,9 +151,12 @@ class ChargingSiteRepository:
         Retrieve the latest charging site record for the group identified by the provided site ID.
         The input ID may point to an older version row; this method always returns the latest version.
         """
-        group_uuid = await self._get_group_uuid_by_site_id(charging_site_id)
-        if not group_uuid:
-            return None
+        group_uuid_subquery = (
+            select(ChargingSite.group_uuid)
+            .where(ChargingSite.charging_site_id == charging_site_id)
+            .limit(1)
+            .scalar_subquery()
+        )
 
         stmt = (
             select(ChargingSite)
@@ -163,11 +166,11 @@ class ChargingSiteRepository:
                 joinedload(ChargingSite.allocating_organization),
                 selectinload(ChargingSite.documents),
             )
-            .where(ChargingSite.group_uuid == group_uuid)
+            .where(ChargingSite.group_uuid == group_uuid_subquery)
         )
         stmt = self._apply_latest_version_filter(stmt)
         result = await self.db.execute(stmt)
-        return result.unique().scalars().first()
+        return result.scalars().first()
 
     @repo_handler
     async def get_equipment_for_charging_site_paginated(
@@ -188,7 +191,12 @@ class ChargingSiteRepository:
             .where(ChargingSite.group_uuid == site_group_uuid)
             .distinct()
         )
-        related_site_ids = [row[0] for row in site_ids_result.fetchall()]
+        site_rows = site_ids_result.fetchall()
+        related_site_ids = (
+            [row[0] for row in site_rows]
+            if isinstance(site_rows, list) and site_rows
+            else [site_id]
+        )
         if not related_site_ids:
             return [], 0
 
@@ -411,7 +419,10 @@ class ChargingSiteRepository:
         )
         stmt = self._apply_latest_version_filter(stmt)
         results = await self.db.execute(stmt)
-        return results.unique().scalars().all()
+        sites = results.unique().scalars().all()
+        if not isinstance(sites, list):
+            sites = results.scalars().all()
+        return sites
 
     @repo_handler
     async def get_charging_sites_by_ids(
@@ -598,7 +609,6 @@ class ChargingSiteRepository:
                 "allocating_organization",
                 "organization",
                 "status",
-                "documents",
                 "update_date",
             ],
         )
