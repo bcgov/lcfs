@@ -716,6 +716,7 @@ class FinalSupplyEquipmentRepository:
                 ChargingSite.organization_id == organization_id,
                 ChargingEquipmentStatus.status != "Decommissioned",
             )
+            .group_by(ChargingEquipment.charging_equipment_id)
         )
 
         stmt = self._apply_latest_site_filter(stmt)

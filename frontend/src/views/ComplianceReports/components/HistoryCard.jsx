@@ -288,7 +288,10 @@ export const HistoryCard = ({
                       {t('report:complianceReportHistory.canBeEdited')}
                     </span>
                   )}
-                  : {assessedMessage}
+                  :{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>
+                    {assessedMessage.replace(/\n{2,}/g, '\n')}
+                  </span>
                 </ListItemText>
               </StyledListItem>
             )}

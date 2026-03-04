@@ -466,23 +466,29 @@ class ComplianceReportUpdateService:
             )
             report.transaction_id = None
 
-        # Blank out summary lines 4, 11, 18, 20, 21
+        # Blank out summary lines based on which exemption applies
         if report.summary:
-            # Line 4: eligible renewable fuel required
-            report.summary.line_4_eligible_renewable_fuel_required_gasoline = 0
-            report.summary.line_4_eligible_renewable_fuel_required_diesel = 0
-            report.summary.line_4_eligible_renewable_fuel_required_jet_fuel = 0
-            # Line 11: non-compliance penalty (renewable fuel target)
-            report.summary.line_11_non_compliance_penalty_gasoline = 0
-            report.summary.line_11_non_compliance_penalty_diesel = 0
-            report.summary.line_11_non_compliance_penalty_jet_fuel = 0
-            # Line 18: units to be banked
-            report.summary.line_18_units_to_be_banked = 0
-            # Line 20: surplus/deficit units
-            report.summary.line_20_surplus_deficit_units = 0
-            # Line 21: surplus/deficit ratio and non-compliance penalty
-            report.summary.line_21_surplus_deficit_ratio = 0
-            report.summary.line_21_non_compliance_penalty_payable = 0
+            if report.is_renewable_fuel_exempted:
+                # Line 4: eligible renewable fuel required
+                report.summary.line_4_eligible_renewable_fuel_required_gasoline = 0
+                report.summary.line_4_eligible_renewable_fuel_required_diesel = 0
+                report.summary.line_4_eligible_renewable_fuel_required_jet_fuel = 0
+                # Line 11: non-compliance penalty (renewable fuel target)
+                report.summary.line_11_non_compliance_penalty_gasoline = 0
+                report.summary.line_11_non_compliance_penalty_diesel = 0
+                report.summary.line_11_non_compliance_penalty_jet_fuel = 0
+            if report.is_low_carbon_fuel_exempted:
+                # Line 18: units to be banked
+                report.summary.line_18_units_to_be_banked = 0
+                # Line 20: surplus/deficit units
+                report.summary.line_20_surplus_deficit_units = 0
+                # Line 21: surplus/deficit ratio and non-compliance penalty
+                report.summary.line_21_surplus_deficit_ratio = 0
+                report.summary.line_21_non_compliance_penalty_payable = 0
+                # Line 22: recalculate since Line 20 is now 0
+                report.summary.line_22_compliance_units_issued = max(
+                    report.summary.line_17_non_banked_units_used, 0
+                )
 
         # Generate dynamic exemption assessment statement
         org_name = (
@@ -491,14 +497,14 @@ class ComplianceReportUpdateService:
         exemption_bullets = []
         if report.is_renewable_fuel_exempted:
             exemption_bullets.append(
-                "exemption from the renewable fuel requirement."
+                "Exemption from the renewable fuel requirement."
             )
         if report.is_low_carbon_fuel_exempted:
             exemption_bullets.append(
-                "exemption from the low carbon fuel requirement."
+                "Exemption from the low carbon fuel requirement."
             )
         if exemption_bullets:
-            bullets_text = "\n".join(f"  \u2022 {b}" for b in exemption_bullets)
+            bullets_text = "\n".join(f"\u00a0\u00a0\u00a0\u00a0\u2022 {b}" for b in exemption_bullets)
             report.assessment_statement = (
                 f"Based on your claim for an exemption, and the information submitted "
                 f"in this compliance report, {org_name} has been granted:\n\n"

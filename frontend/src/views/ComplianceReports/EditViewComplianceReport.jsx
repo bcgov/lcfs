@@ -762,6 +762,12 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     buttonClusterConfig={buttonClusterConfig}
                     methods={methods}
                     alertRef={alertRef}
+                    isRenewableFuelExempted={
+                      methods.watch('isRenewableFuelExempted') || false
+                    }
+                    isLowCarbonFuelExempted={
+                      methods.watch('isLowCarbonFuelExempted') || false
+                    }
                   />
                 )}
               {showEarlyIssuanceSummary &&
