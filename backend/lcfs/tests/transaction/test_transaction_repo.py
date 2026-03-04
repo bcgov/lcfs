@@ -536,14 +536,15 @@ async def test_calculate_line_17_supplemental_report_after_period(
     dbsession, transaction_repo
 ):
     """
-    Test that compliance report credits assessed after the compliance period deadline
-    are excluded from Line 17 (Issue #3932), while credits assessed before the
-    deadline are included.
+    Test FIFO behavior: a negative supplemental assessed after the deadline still
+    reduces the available balance.
 
-    Scenario: A 2024 original report is assessed on Feb 15, 2025 (before March 31, 2025).
-    A supplemental is assessed on July 15, 2025 (after March 31, 2025).
-    Only the original's credits should be included in Line 17 because the supplemental's
-    credits were not available as at the compliance deadline.
+    Scenario: A 2024 original report (+50,000) is assessed on Feb 15, 2025 (before
+    the March 31, 2025 deadline). A supplemental (-46,467) is assessed on July 15, 2025
+    (after the deadline). The positive original is counted in the past balance; the
+    negative supplemental is treated as a future debit (FIFO: credits spent after the
+    period still reduce the available balance for that period).
+    Expected: 50,000 - 46,467 = 3,533
     """
     from datetime import datetime
     from lcfs.db.models.transaction.Transaction import (
@@ -643,14 +644,13 @@ async def test_calculate_line_17_supplemental_report_after_period(
         test_org_id, compliance_period
     )
 
-    # Only the original's credits should be included because it was assessed
-    # before the March 31, 2025 deadline.
-    # The supplemental's credits are excluded because it was assessed on July 15, 2025
-    # (after the deadline) — those credits were not available during the compliance period.
-    # Expected: 50,000 (original only; supplemental excluded)
-    assert balance == 50000, (
-        f"Expected 50000 but got {balance}. "
-        "Supplemental assessed after deadline should be excluded from Line 17."
+    # Original (+50,000): assessed before deadline → counted in past balance
+    # Supplemental (-46,467): assessed after deadline → not in past balance,
+    #   but negative so treated as a future debit (FIFO accounting)
+    # Expected: 50,000 - 46,467 = 3,533
+    assert balance == 3533, (
+        f"Expected 3533 but got {balance}. "
+        "Negative supplemental after deadline should reduce balance via FIFO."
     )
 
 
