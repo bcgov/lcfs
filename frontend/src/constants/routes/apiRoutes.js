@@ -118,6 +118,12 @@ export const apiRoutes = {
   saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
   updateFSEReportingActiveStatus:
     '/final-supply-equipments/reporting/active-status',
+  fseReportingUpdateTemplate:
+    '/final-supply-equipments/reporting/update-template/:reportID',
+  fseReportingBulkUpdate:
+    '/final-supply-equipments/reporting/bulk-update/:reportID',
+  fseReportingBulkUpdateStatus:
+    '/final-supply-equipments/reporting/bulk-update/status/:jobID',
   // charging sites
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',
