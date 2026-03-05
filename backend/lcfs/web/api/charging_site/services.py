@@ -266,10 +266,15 @@ class ChargingSiteService:
         )
 
         # Convert equipment records to schema
-        equipment_list = [
-            ChargingEquipmentForSiteSchema.model_validate(equipment)
-            for equipment in equipment_records
-        ]
+        equipment_list = []
+        for equipment in equipment_records:
+            latest_site = getattr(equipment, "latest_charging_site", None)
+            latest_site_id = getattr(equipment, "latest_charging_site_id", None)
+            if latest_site is not None:
+                equipment.charging_site = latest_site
+            if latest_site_id is not None:
+                equipment.charging_site_id = latest_site_id
+            equipment_list.append(ChargingEquipmentForSiteSchema.model_validate(equipment))
 
         return ChargingEquipmentPaginatedSchema(
             equipments=equipment_list,

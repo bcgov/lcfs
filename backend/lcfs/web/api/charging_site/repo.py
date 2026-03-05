@@ -263,11 +263,32 @@ class ChargingSiteRepository:
 
         # Create an alias for the subquery
         ranked_equipment = aliased(ChargingEquipment, ranked_subquery)
+        source_site = aliased(ChargingSite, name="source_charging_site")
+        latest_sites = latest_charging_site_version_subquery()
+        latest_site_alias = aliased(ChargingSite, name="latest_charging_site")
 
         query = (
-            select(ranked_equipment)
+            select(
+                ranked_equipment,
+                latest_site_alias,
+                latest_site_alias.charging_site_id.label("latest_charging_site_id"),
+            )
+            .join(
+                source_site,
+                ranked_equipment.charging_site_id == source_site.charging_site_id,
+            )
+            .join(
+                latest_sites,
+                source_site.group_uuid == latest_sites.c.group_uuid,
+            )
+            .join(
+                latest_site_alias,
+                and_(
+                    latest_site_alias.group_uuid == latest_sites.c.group_uuid,
+                    latest_site_alias.version == latest_sites.c.latest_version,
+                ),
+            )
             .options(
-                joinedload(ranked_equipment.charging_site),
                 joinedload(ranked_equipment.status),
                 joinedload(ranked_equipment.level_of_equipment),
                 selectinload(ranked_equipment.intended_uses),
@@ -340,7 +361,15 @@ class ChargingSiteRepository:
 
         # Execute query
         result = await self.db.execute(query)
-        equipment = result.unique().scalars().all()
+        rows = result.unique().all()
+        equipment = []
+        for row in rows:
+            ranked_eq = row[0]
+            latest_site = row[1]
+            latest_site_id = row[2]
+            setattr(ranked_eq, "latest_charging_site", latest_site)
+            setattr(ranked_eq, "latest_charging_site_id", latest_site_id)
+            equipment.append(ranked_eq)
 
         return equipment, total_count
 
