@@ -87,20 +87,34 @@ class TestChargingSiteRepository:
         self, charging_site_repo, mock_db_session, mock_equipment_list
     ):
         """Test getting paginated equipment for charging site"""
-        # Create pagination with proper list objects instead of Query objects
         pagination = PaginationRequestSchema(
             page=1, size=10, sort_orders=[], filters=[]
         )
 
-        # Mock count query
-        mock_db_session.scalar.return_value = 2
+        # Mock group_uuid query
+        mock_group_uuid_result = MagicMock()
+        mock_group_uuid_result.scalar_one_or_none.return_value = "test-group-uuid"
+
+        # Mock site_ids query
+        mock_site_ids_result = MagicMock()
+        mock_site_ids_result.fetchall.return_value = [(1,), (2,)]
 
         # Mock equipment query
-        mock_result = MagicMock()
-        mock_result.unique.return_value.scalars.return_value.all.return_value = (
-            mock_equipment_list
-        )
-        mock_db_session.execute.return_value = mock_result
+        mock_equipment_result = MagicMock()
+        mock_equipment_result.unique.return_value.all.return_value = [
+            (mock_equipment_list[0], MagicMock(spec=ChargingSite), 1),
+            (mock_equipment_list[1], MagicMock(spec=ChargingSite), 2),
+        ]
+
+        # Set up execute to return different results for different queries
+        mock_db_session.execute.side_effect = [
+            mock_group_uuid_result,
+            mock_site_ids_result,
+            mock_equipment_result,
+        ]
+
+        # Mock count query
+        mock_db_session.scalar.return_value = 2
 
         equipment, total_count = (
             await charging_site_repo.get_equipment_for_charging_site_paginated(

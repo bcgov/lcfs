@@ -36,7 +36,6 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     apply_filter_conditions,
 )
-from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -60,10 +59,10 @@ class ChargingEquipmentRepository:
             ),
         )
 
-    def _apply_latest_equipment_version_filter(self, stmt, prefer_validated=False):
+    def _apply_latest_equipment_version_filter(self, stmt, prefer_validated: bool = False):
         """
-        Constrain statements to the latest charging equipment record per group_uuid.
-        When prefer_validated is True, prioritize non Draft/Updated statuses.
+        Constrain statements to the latest charging equipment record per group UUID.
+        When prefer_validated is True, prioritize non Draft/Updated statuses for IDIR users.
         """
         status_alias = aliased(ChargingEquipmentStatus)
         order_by = [ChargingEquipment.version.desc()]
@@ -86,15 +85,18 @@ class ChargingEquipmentRepository:
             )
             .join(
                 status_alias,
-                ChargingEquipment.status_id == status_alias.charging_equipment_status_id,
+                ChargingEquipment.status_id
+                == status_alias.charging_equipment_status_id,
             )
             .subquery()
         )
 
-        return stmt.join(
-            ranked_subquery,
-            ChargingEquipment.charging_equipment_id == ranked_subquery.c.ce_id,
-        ).where(ranked_subquery.c.rn == 1)
+        return (
+            stmt.join(
+                ranked_subquery,
+                ChargingEquipment.charging_equipment_id == ranked_subquery.c.ce_id,
+            ).where(ranked_subquery.c.rn == 1)
+        )
 
     @repo_handler
     async def get_charging_equipment_by_id(
@@ -134,6 +136,17 @@ class ChargingEquipmentRepository:
             select(
                 ChargingEquipment,
                 latest_site_alias.charging_site_id.label("latest_charging_site_id"),
+                latest_site_alias.site_name.label("latest_site_name"),
+                latest_site_alias.site_code.label("latest_site_code"),
+                latest_site_alias.street_address.label("latest_street_address"),
+                latest_site_alias.city.label("latest_city"),
+                latest_site_alias.postal_code.label("latest_postal_code"),
+                latest_site_alias.latitude.label("latest_latitude"),
+                latest_site_alias.longitude.label("latest_longitude"),
+                latest_site_alias.allocating_organization_name.label(
+                    "latest_allocating_organization_name"
+                ),
+                Organization.name.label("latest_organization_name"),
             )
             .join(
                 ChargingSite,
@@ -149,6 +162,9 @@ class ChargingEquipmentRepository:
                     latest_site_alias.group_uuid == latest_site_versions.c.group_uuid,
                     latest_site_alias.version == latest_site_versions.c.latest_version,
                 ),
+            )
+            .outerjoin(
+                Organization, latest_site_alias.organization_id == Organization.organization_id
             )
             .join(
                 ChargingEquipmentStatus,
@@ -188,7 +204,7 @@ class ChargingEquipmentRepository:
                 ~ChargingEquipmentStatus.status.in_(("Updated", "Draft"))
             )
 
-        # Apply filters
+        # Apply filters from pagination model
         filter_columns = {
             "status": ChargingEquipmentStatus.status,
             "site_name": latest_site_alias.site_name,
@@ -307,13 +323,41 @@ class ChargingEquipmentRepository:
         items = []
 
         # Some mocked test results only provide scalars().all().
-        # In production this query returns row tuples of (ChargingEquipment, latest_site_id).
+        # In production this query returns row tuples containing equipment + latest site fields.
         if not isinstance(rows, list):
             scalar_items = result.scalars().all()
-            rows = [(equipment, None) for equipment in scalar_items]
+            rows = [
+                (equipment, None, None, None, None, None, None, None, None, None, None)
+                for equipment in scalar_items
+            ]
 
-        for equipment, latest_charging_site_id in rows:
+        for (
+            equipment,
+            latest_charging_site_id,
+            latest_site_name,
+            latest_site_code,
+            latest_street_address,
+            latest_city,
+            latest_postal_code,
+            latest_latitude,
+            latest_longitude,
+            latest_allocating_organization_name,
+            latest_organization_name,
+        ) in rows:
             setattr(equipment, "latest_charging_site_id", latest_charging_site_id)
+            setattr(equipment, "latest_site_name", latest_site_name)
+            setattr(equipment, "latest_site_code", latest_site_code)
+            setattr(equipment, "latest_street_address", latest_street_address)
+            setattr(equipment, "latest_city", latest_city)
+            setattr(equipment, "latest_postal_code", latest_postal_code)
+            setattr(equipment, "latest_latitude", latest_latitude)
+            setattr(equipment, "latest_longitude", latest_longitude)
+            setattr(
+                equipment,
+                "latest_allocating_organization_name",
+                latest_allocating_organization_name,
+            )
+            setattr(equipment, "latest_organization_name", latest_organization_name)
             items.append(equipment)
 
         return items, total_count
@@ -461,7 +505,10 @@ class ChargingEquipmentRepository:
             new_equipment.action_type = ActionTypeEnum.UPDATE
             new_equipment.status = updated_status
 
-            if "intended_use_ids" in equipment_data and equipment_data["intended_use_ids"] is not None:
+            if (
+                "intended_use_ids" in equipment_data
+                and equipment_data["intended_use_ids"] is not None
+            ):
                 intended_uses_query = select(EndUseType).where(
                     EndUseType.end_use_type_id.in_(equipment_data["intended_use_ids"])
                 )
@@ -470,7 +517,10 @@ class ChargingEquipmentRepository:
             else:
                 new_equipment.intended_uses = list(equipment.intended_uses)
 
-            if "intended_user_ids" in equipment_data and equipment_data["intended_user_ids"] is not None:
+            if (
+                "intended_user_ids" in equipment_data
+                and equipment_data["intended_user_ids"] is not None
+            ):
                 intended_users_query = select(EndUserType).where(
                     EndUserType.end_user_type_id.in_(
                         equipment_data["intended_user_ids"]
@@ -641,7 +691,9 @@ class ChargingEquipmentRepository:
             return
 
         existing_stmt = (
-            select(ComplianceReportChargingEquipment.charging_equipment_compliance_id)
+            select(
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id
+            )
             .where(
                 and_(
                     ComplianceReportChargingEquipment.compliance_report_group_uuid
@@ -816,7 +868,11 @@ class ChargingEquipmentRepository:
             select(ChargingEquipment.charging_site_id)
             .distinct()
             .join(ChargingSite)
-            .where(and_(ChargingEquipment.charging_equipment_id.in_(equipment_ids)))
+            .where(
+                and_(
+                    ChargingEquipment.charging_equipment_id.in_(equipment_ids)
+                )
+            )
         )
         if organization_id is not None:
             query = query.where(ChargingSite.organization_id == organization_id)

@@ -1,7 +1,7 @@
 """Add Gigajoules to quantity units enum.
 
 Revision ID: e3b7a9d4c2f1
-Revises: b6f4d2e9c1a0
+Revises: 3d7b65a9d2ef
 Create Date: 2026-02-19 10:00:00.000000
 """
 
@@ -9,7 +9,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "e3b7a9d4c2f1"
-down_revision = "b6f4d2e9c1a0"
+down_revision = "3d7b65a9d2ef"
 branch_labels = None
 depends_on = None
 
