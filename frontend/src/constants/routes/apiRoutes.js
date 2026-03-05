@@ -115,6 +115,8 @@ export const apiRoutes = {
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
   saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
+  updateFSEReportingActiveStatus:
+    '/final-supply-equipments/reporting/active-status',
   // charging sites
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',

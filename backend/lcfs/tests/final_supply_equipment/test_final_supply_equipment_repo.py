@@ -534,6 +534,20 @@ async def test_bulk_update_reporting_dates(repo, fake_db):
 
 
 @pytest.mark.anyio
+async def test_update_reporting_active_status(repo, fake_db):
+    """Test updating reporting active status"""
+    mock_result = MagicMock()
+    mock_result.rowcount = 4
+    fake_db.execute.return_value = mock_result
+
+    result = await repo.update_reporting_active_status([1, 2, 3, 4], False)
+
+    assert result == 4
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fake_db):
     """Ensure mode='all' prioritizes rows matching provided compliance_report_group_uuid"""
     fake_db.scalar.return_value = 0

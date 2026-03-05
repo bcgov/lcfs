@@ -41,11 +41,17 @@ class ChargingSite(BaseModel, Auditable, Versioning):
 
     __tablename__ = "charging_site"
     __table_args__ = (
-        UniqueConstraint("site_code"),
         UniqueConstraint(
             "organization_id",
             "site_name",
+            "site_code",
+            "version",
             name="uq_charging_site_org_name",
+        ),
+        UniqueConstraint(
+            "charging_site_id",
+            "version",
+            name="uq_charging_site_id_version",
         ),
         {"comment": "Charging sites"},
     )
