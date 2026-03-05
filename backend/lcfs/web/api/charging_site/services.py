@@ -194,7 +194,7 @@ class ChargingSiteService:
             statuses = [
                 status
                 for status in statuses
-                if status.status not in (ChargingSiteStatusEnum.DRAFT)
+                if status.status not in (ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED)
             ]
         return [
             ChargingSiteStatusSchema(
@@ -234,7 +234,7 @@ class ChargingSiteService:
             )
         if (
             user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-            and charging_site.status.status == ChargingSiteStatusEnum.DRAFT
+            and charging_site.status.status in [ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED]
         ):
             raise HTTPException(
                 status_code=404,
@@ -266,10 +266,15 @@ class ChargingSiteService:
         )
 
         # Convert equipment records to schema
-        equipment_list = [
-            ChargingEquipmentForSiteSchema.model_validate(equipment)
-            for equipment in equipment_records
-        ]
+        equipment_list = []
+        for equipment in equipment_records:
+            latest_site = getattr(equipment, "latest_charging_site", None)
+            latest_site_id = getattr(equipment, "latest_charging_site_id", None)
+            if latest_site is not None:
+                equipment.charging_site = latest_site
+            if latest_site_id is not None:
+                equipment.charging_site_id = latest_site_id
+            equipment_list.append(ChargingEquipmentForSiteSchema.model_validate(equipment))
 
         return ChargingEquipmentPaginatedSchema(
             equipments=equipment_list,
@@ -299,8 +304,9 @@ class ChargingSiteService:
             "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
+                "Updated",
                 "Validated",
-            ],  # Submit (from Draft) or Undo Validation (from Validated)
+            ],  # Submit (from Draft) or Undo Validation (from Validated) or Updated
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
         }

@@ -67,7 +67,9 @@ export const ChargingSiteFSEGrid = ({
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
-    return selectedEquipment.every((eq) => eq.status.status === 'Draft')
+    return selectedEquipment.every(
+      (eq) => eq.status.status === 'Draft' || eq.status.status === 'Updated'
+    )
   }, [selectedRows, equipmentList])
 
   // Check if selected equipment can be returned to draft (only from Submitted status)
