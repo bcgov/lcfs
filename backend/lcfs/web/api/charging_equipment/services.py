@@ -74,9 +74,12 @@ class ChargingEquipmentServices:
         # Transform to schema
         items = []
         for equipment in equipment_list:
+            latest_site_id = getattr(
+                equipment, "latest_charging_site_id", equipment.charging_site_id
+            )
             item = ChargingEquipmentListItemSchema(
                 charging_equipment_id=equipment.charging_equipment_id,
-                charging_site_id=equipment.charging_site_id,
+                charging_site_id=latest_site_id,
                 status=equipment.status.status,
                 site_name=equipment.charging_site.site_name,
                 organization_name=equipment.charging_site.organization.name if equipment.charging_site.organization else None,
@@ -87,6 +90,7 @@ class ChargingEquipmentServices:
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 ports=equipment.ports.value if equipment.ports else None,
+                allocating_organization_name=equipment.charging_site.allocating_organization_name,
                 latitude=equipment.latitude,
                 longitude=equipment.longitude,
                 site_latitude=equipment.charging_site.latitude,

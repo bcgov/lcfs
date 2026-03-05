@@ -355,7 +355,14 @@ export const ChargingSitesList = () => {
           dataKey="chargingSites"
           paginationOptions={paginationOptions}
           onPaginationChange={setPaginationOptions}
-          getRowId={(p) => String(p.data?.chargingSiteId || p.node?.id)}
+          getRowId={(p) =>
+            String(
+              p.data?.groupUuid ||
+                p.data?.siteCode ||
+                p.data?.chargingSiteId ||
+                p.node?.id
+            )
+          }
           filterToolbarConfig={filterToolbarConfig || undefined}
           onClearFilters={handleClearFilters}
         />

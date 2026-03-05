@@ -23,6 +23,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentSchema,
     FSEReportingBaseSchema,
     FSEReportingDefaultDates,
+    FSEReportingActiveStatusSchema,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
@@ -471,7 +472,14 @@ class FinalSupplyEquipmentServices:
         has_equipment = await self.repo.has_charging_equipment_for_organization(
             organization_id
         )
-        
+
+        total_kwh_usage = 0
+        if report.compliance_report_group_uuid:
+            total_kwh_usage = await self.repo.get_total_kwh_usage_for_report_group(
+                report.compliance_report_group_uuid,
+                only_active=(mode == "summary"),
+            )
+
         data, total = await self.repo.get_fse_reporting_list_paginated(
             organization_id, pagination, report.compliance_report_group_uuid, mode
         )
@@ -507,6 +515,7 @@ class FinalSupplyEquipmentServices:
 
         return {
             "finalSupplyEquipments": processed_data,
+            "totalKwhUsage": total_kwh_usage,
             "pagination": PaginationResponseSchema(
                 page=pagination.page,
                 size=pagination.size,
@@ -599,6 +608,23 @@ class FinalSupplyEquipmentServices:
         deleted_count = await self.repo.delete_fse_reporting_batch(reporting_ids)
         return {
             "message": f"{deleted_count} FSE reporting records deleted successfully"
+        }
+
+    @service_handler
+    async def update_fse_reporting_active_status(
+        self, data: FSEReportingActiveStatusSchema
+    ) -> dict:
+        if not data.reporting_ids:
+            return {"updated": 0, "is_active": data.is_active}
+
+        updated_count = await self.repo.update_reporting_active_status(
+            data.reporting_ids, data.is_active
+        )
+        state = "activated" if data.is_active else "deactivated"
+        return {
+            "message": f"{updated_count} FSE reporting records {state}",
+            "updated": updated_count,
+            "is_active": data.is_active,
         }
 
     @service_handler

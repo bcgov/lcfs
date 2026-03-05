@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
 
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, chargingSiteColDefs } from './components/_schema'
@@ -47,6 +47,7 @@ export const AddEditChargingSite = ({
   const importResultAppliedRef = useRef(false)
   const lastImportSummaryRef = useRef(null)
   const location = useLocation()
+  const { siteId } = useParams()
   const { t } = useTranslation(['common', 'chargingSite'])
 
   const { data: currentUser, hasRoles } = useCurrentUser()
@@ -87,12 +88,7 @@ export const AddEditChargingSite = ({
   useEffect(() => {
     if (!isGridReady) return
 
-    if (
-      isEditMode &&
-      data &&
-      (rowData.length !== 1 ||
-        rowData[0]?.chargingSiteId !== data.chargingSiteId)
-    ) {
+    if (isEditMode && data && rowData.length === 0) {
       setRowData([{ ...data, id: uuid() }])
     } else if (!isEditMode && isArrayEmpty(rowData)) {
       setRowData([
@@ -156,7 +152,10 @@ export const AddEditChargingSite = ({
             acc[key] = value
             return acc
           }, {}),
-        currentStatus: 'Draft',
+        currentStatus:
+          params.node.data?.status?.status ||
+          params.node.data?.currentStatus ||
+          'Draft',
         organizationId
       }
 
@@ -175,14 +174,29 @@ export const AddEditChargingSite = ({
       // Only clear alert and set to valid if the save was successful
       if (responseData.validationStatus === 'success') {
         alertRef.current?.clearAlert()
+        setRowData([responseData])
         params.node.updateData({ ...responseData, validationStatus: 'valid' })
+        if (
+          isEditMode &&
+          siteId &&
+          responseData?.chargingSiteId &&
+          String(responseData.chargingSiteId) !== String(siteId)
+        ) {
+          navigate(
+            ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(
+              ':siteId',
+              responseData.chargingSiteId
+            ),
+            { replace: true }
+          )
+        }
       } else {
         // Update with error/warning status but keep the alert visible
         params.node.updateData({ ...responseData })
       }
       params.api?.autoSizeAllColumns?.()
     },
-    [saveRow, t]
+    [isEditMode, navigate, organizationId, saveRow, siteId, t]
   )
 
   const onAction = useCallback(
@@ -392,12 +406,24 @@ export const AddEditChargingSite = ({
   const handleNavigateBack = useCallback(() => {
     if (isEditMode) {
       setIsEditMode?.(false)
+      const latestSiteId = rowData?.[0]?.chargingSiteId
+      if (
+        latestSiteId &&
+        siteId &&
+        String(latestSiteId) !== String(siteId)
+      ) {
+        navigate(
+          ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', latestSiteId),
+          { replace: true }
+        )
+        return
+      }
       refetch?.()
       return
     }
 
     navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
-  }, [isEditMode, navigate, refetch, setIsEditMode])
+  }, [isEditMode, navigate, refetch, rowData, setIsEditMode, siteId])
 
   const onAddRows = useCallback(
     (numRows) => {

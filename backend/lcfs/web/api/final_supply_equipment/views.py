@@ -36,6 +36,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentSchema,
     FSEReportingBatchSchema,
     FSEReportingBaseSchema,
+    FSEReportingActiveStatusSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.final_supply_equipment.validation import (
@@ -409,6 +410,22 @@ async def delete_fse_reporting_batch(
     Delete multiple FSE compliance reporting records
     """
     return await service.delete_fse_reporting_batch(request_data.reporting_ids)
+
+@router.patch(
+    "/reporting/active-status",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
+async def update_fse_reporting_active_status(
+    request: Request,
+    request_data: FSEReportingActiveStatusSchema = Body(...),
+    service: FinalSupplyEquipmentServices = Depends(),
+) -> dict:
+    """
+    Activate or deactivate multiple FSE compliance reporting records without deleting data
+    """
+    return await service.update_fse_reporting_active_status(request_data)
 
 
 @router.put(

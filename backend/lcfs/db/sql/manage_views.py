@@ -52,6 +52,14 @@ class ViewCreator:
             "BCeID User Statistics View",
             "Login Failures Analysis View",
             "Compliance Report Base View With Early Issuance By Year",
+            "Compliance Report Status Timeline View",
+            "Compliance Report Status Median Durations",
+            "Compliance Report Flow Metrics View",
+            "Compliance Report Throughput View",
+            "Compliance Report WIP Summary View",
+            "Compliance Report Service Level View",
+            "Compliance Report Assignee Breakdown View",
+            "Compliance Report Queue Flow View",
             "Final Supply Equipment Base View",
             "Electricity Allocation FSE Match Query",
             "Allocation Agreement Duplicate Check",
@@ -161,7 +169,13 @@ class ViewCreator:
                 logger.info(f"Available sections: {list(sections.keys())}")
 
         # Execute any remaining sections not in execution_order
-        remaining_sections = set(sections.keys()) - set(self.execution_order)
+        # Preserve file order for sections not explicitly listed. Using a set here
+        # can reorder dependent views and cause undefined-table errors.
+        remaining_sections = [
+            section_name
+            for section_name in sections.keys()
+            if section_name not in self.execution_order
+        ]
         if remaining_sections:
             logger.info(f"Executing {len(remaining_sections)} additional sections...")
             for section_name in remaining_sections:

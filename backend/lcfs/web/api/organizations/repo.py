@@ -28,6 +28,7 @@ from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
     OrganizationEarlyIssuanceByYear,
 )
+from lcfs.db.models.organization.CreditMarketAuditLog import CreditMarketAuditLog
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
@@ -749,6 +750,78 @@ class OrganizationsRepository:
 
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def create_credit_market_audit_log(
+        self, organization: Organization, changed_by: str | None
+    ) -> CreditMarketAuditLog:
+        """
+        Create a credit market audit snapshot entry for the organization.
+        """
+        entry = CreditMarketAuditLog(
+            organization_id=organization.organization_id,
+            credits_to_sell=organization.credits_to_sell or 0,
+            credit_market_is_seller=organization.credit_market_is_seller or False,
+            credit_market_is_buyer=organization.credit_market_is_buyer or False,
+            contact_person=organization.credit_market_contact_name,
+            phone=organization.credit_market_contact_phone,
+            email=organization.credit_market_contact_email,
+            changed_by=changed_by,
+        )
+        self.db.add(entry)
+        await self.db.flush()
+        await self.db.refresh(entry)
+        return entry
+
+    @repo_handler
+    async def get_credit_market_audit_logs_paginated(
+        self, offset: int, limit: int, conditions: list, sort_orders: list
+    ):
+        """
+        Retrieve paginated credit market audit log entries.
+        """
+        query = (
+            select(CreditMarketAuditLog)
+            .outerjoin(Organization, CreditMarketAuditLog.organization_id == Organization.organization_id)
+            .options(joinedload(CreditMarketAuditLog.organization))
+        )
+        count_query = (
+            select(func.count())
+            .select_from(CreditMarketAuditLog)
+            .outerjoin(Organization, CreditMarketAuditLog.organization_id == Organization.organization_id)
+        )
+
+        if conditions:
+            query = query.where(and_(*conditions))
+            count_query = count_query.where(and_(*conditions))
+
+        sort_map = {
+            "organization_name": Organization.name,
+            "credits_to_sell": CreditMarketAuditLog.credits_to_sell,
+            "contact_person": CreditMarketAuditLog.contact_person,
+            "phone": CreditMarketAuditLog.phone,
+            "email": CreditMarketAuditLog.email,
+            "changed_by": CreditMarketAuditLog.changed_by,
+            "uploaded_date": CreditMarketAuditLog.create_date,
+        }
+
+        order_by_clauses = []
+        for sort in sort_orders or []:
+            column = sort_map.get(sort.field)
+            if not column:
+                continue
+            order_by_clauses.append(
+                asc(column) if sort.direction == "asc" else desc(column)
+            )
+
+        if not order_by_clauses:
+            order_by_clauses = [CreditMarketAuditLog.create_date.desc()]
+
+        query = query.order_by(*order_by_clauses).offset(offset).limit(limit)
+
+        result = await self.db.execute(query)
+        total = await self.db.scalar(count_query)
+        return result.scalars().all(), (total or 0)
 
     @repo_handler
     async def get_organization_link_keys(self, organization_id: int):

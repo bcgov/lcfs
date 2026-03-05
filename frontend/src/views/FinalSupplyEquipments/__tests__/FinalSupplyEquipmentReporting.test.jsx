@@ -20,7 +20,8 @@ vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
   useGetFSEReportingList: vi.fn(),
   useSaveFSEReporting: vi.fn(),
   useDeleteFSEReportingBatch: vi.fn(),
-  useSetFSEReportingDefaultDates: vi.fn()
+  useSetFSEReportingDefaultDates: vi.fn(),
+  useUpdateFSEReportingActiveStatus: vi.fn()
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
@@ -55,7 +56,8 @@ import {
   useGetFSEReportingList,
   useSaveFSEReporting,
   useDeleteFSEReportingBatch,
-  useSetFSEReportingDefaultDates
+  useSetFSEReportingDefaultDates,
+  useUpdateFSEReportingActiveStatus
 } from '@/hooks/useFinalSupplyEquipment'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
@@ -126,6 +128,11 @@ describe('FinalSupplyEquipmentReporting', () => {
 
     // Mock useSetFSEReportingDefaultDates
     vi.mocked(useSetFSEReportingDefaultDates).mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ data: {} })
+    })
+
+    // Mock useUpdateFSEReportingActiveStatus
+    vi.mocked(useUpdateFSEReportingActiveStatus).mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ data: {} })
     })
 

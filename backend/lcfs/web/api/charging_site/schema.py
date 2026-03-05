@@ -24,6 +24,7 @@ class ChargingSiteStatusSchema(BaseSchema):
 
 class ChargingSiteSchema(BaseSchema):
     charging_site_id: int
+    group_uuid: Optional[str] = None
     organization_id: int
     organization: Optional[OrganizationSchema] = None
     allocating_organization_id: Optional[int] = None
@@ -66,6 +67,7 @@ class ChargingSitesSchema(BaseSchema):
 
 class ChargingSiteCreateSchema(BaseSchema):
     charging_site_id: Optional[int] = None
+    group_uuid: Optional[str] = None
     organization_id: int
     allocating_organization_id: Optional[int] = None
     allocating_organization_name: Optional[str] = None
