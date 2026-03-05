@@ -196,6 +196,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         back_populates="to_organization",
     )
     compliance_reports = relationship("ComplianceReport", back_populates="organization")
+    credit_market_audit_logs = relationship(
+        "CreditMarketAuditLog", back_populates="organization"
+    )
     notification_messages = relationship(
         "NotificationMessage", back_populates="related_organization"
     )

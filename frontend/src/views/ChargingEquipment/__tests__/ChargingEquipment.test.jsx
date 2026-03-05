@@ -320,10 +320,11 @@ const TestWrapper = ({ children }) => {
 }
 
 describe('ChargingEquipment', () => {
-  let mockCurrentUser, mockChargingEquipment, mockOrganizationNames
+  let mockCurrentUser, mockChargingEquipment, mockOrganizationNames, mockDownloadChargingEquipment
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    sessionStorage.clear()
 
     mockCurrentUser = {
       data: {
@@ -346,6 +347,9 @@ describe('ChargingEquipment', () => {
       isSubmitting: false,
       isDecommissioning: false
     }
+    mockDownloadChargingEquipment = {
+      mutateAsync: vi.fn()
+    }
 
     mockOrganizationNames = {
       data: mockOrgNames,
@@ -358,15 +362,20 @@ describe('ChargingEquipment', () => {
     const { useChargingEquipment } = await import(
       '@/hooks/useChargingEquipment'
     )
+    const { useDownloadChargingEquipment } = await import(
+      '@/hooks/useChargingEquipment'
+    )
     const { useOrganizationNames } = await import('@/hooks/useOrganizations')
 
     useCurrentUser.mockReturnValue(mockCurrentUser)
     useChargingEquipment.mockReturnValue(mockChargingEquipment)
+    useDownloadChargingEquipment.mockReturnValue(mockDownloadChargingEquipment)
     useOrganizationNames.mockReturnValue(mockOrganizationNames)
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
   })
 
   it('renders charging equipment page correctly', async () => {
@@ -568,6 +577,54 @@ describe('ChargingEquipment', () => {
     })
   })
 
+  it('downloads excel using default supplier grid payload', async () => {
+    mockDownloadChargingEquipment.mutateAsync.mockResolvedValue(undefined)
+
+    render(
+      <TestWrapper>
+        <ChargingEquipment />
+      </TestWrapper>
+    )
+
+    const downloadButton = screen.getByTestId('download-fse-excel')
+    fireEvent.click(downloadButton)
+
+    await waitFor(() => {
+      expect(mockDownloadChargingEquipment.mutateAsync).toHaveBeenCalledWith({
+        body: {
+          page: 1,
+          size: 1000,
+          sortOrders: [{ field: 'updateDate', direction: 'desc' }],
+          filters: []
+        }
+      })
+    })
+  })
+
+  it('downloads excel using updated pagination state payload', async () => {
+    mockDownloadChargingEquipment.mutateAsync.mockResolvedValue(undefined)
+
+    render(
+      <TestWrapper>
+        <ChargingEquipment />
+      </TestWrapper>
+    )
+
+    fireEvent.click(screen.getByText('Page 2'))
+    fireEvent.click(screen.getByTestId('download-fse-excel'))
+
+    await waitFor(() => {
+      expect(mockDownloadChargingEquipment.mutateAsync).toHaveBeenCalledWith({
+        body: {
+          page: 1,
+          size: 1000,
+          sortOrders: [],
+          filters: []
+        }
+      })
+    })
+  })
+
   it('shows loading state', async () => {
     mockChargingEquipment.isLoading = true
 
@@ -671,6 +728,34 @@ describe('ChargingEquipment', () => {
       )
 
       expect(screen.queryByText('New FSE')).not.toBeInTheDocument()
+    })
+
+    it('includes organization_id in download payload for IDIR org filter', async () => {
+      mockDownloadChargingEquipment.mutateAsync.mockResolvedValue(undefined)
+      sessionStorage.setItem(
+        'fse-index-orgFilter',
+        JSON.stringify({ id: 2, label: 'Test Organization 2' })
+      )
+
+      render(
+        <TestWrapper>
+          <ChargingEquipment />
+        </TestWrapper>
+      )
+
+      fireEvent.click(screen.getByTestId('download-fse-excel'))
+
+      await waitFor(() => {
+        expect(mockDownloadChargingEquipment.mutateAsync).toHaveBeenCalledWith({
+          body: {
+            page: 1,
+            size: 1000,
+            sortOrders: [{ field: 'updateDate', direction: 'desc' }],
+            filters: [],
+            organization_id: 2
+          }
+        })
+      })
     })
 
     it('shows organization filter functionality for IDIR users', async () => {
