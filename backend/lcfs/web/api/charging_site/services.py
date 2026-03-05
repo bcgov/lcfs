@@ -194,7 +194,7 @@ class ChargingSiteService:
             statuses = [
                 status
                 for status in statuses
-                if status.status not in (ChargingSiteStatusEnum.DRAFT)
+                if status.status not in (ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED)
             ]
         return [
             ChargingSiteStatusSchema(
@@ -234,7 +234,7 @@ class ChargingSiteService:
             )
         if (
             user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-            and charging_site.status.status == ChargingSiteStatusEnum.DRAFT
+            and charging_site.status.status in [ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED]
         ):
             raise HTTPException(
                 status_code=404,

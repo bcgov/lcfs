@@ -506,7 +506,7 @@ class ChargingSiteRepository:
         # Add condition to exclude draft sites if requested
         if exclude_draft:
             stmt = stmt.where(
-                ChargingSiteStatus.status.not_in(["Draft"])
+                ChargingSiteStatus.status.not_in(["Draft", "Updated"])
             )
 
         # Apply other conditions
