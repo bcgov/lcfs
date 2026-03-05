@@ -140,6 +140,7 @@ class TestChargingSiteService:
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
+        mock_site.group_uuid = "site-group-1"
         mock_site.organization_id = 1
         mock_site.organization = mock_org
         mock_site.allocating_organization = mock_allocating_org
@@ -234,6 +235,7 @@ class TestChargingSiteService:
 
         mock_retrieved_site = MagicMock(spec=ChargingSite)
         mock_retrieved_site.charging_site_id = 1
+        mock_retrieved_site.group_uuid = "site-group-1"
         mock_retrieved_site.organization_id = 1
         mock_retrieved_site.organization = mock_org
         mock_retrieved_site.allocating_organization = mock_allocating_org
@@ -336,6 +338,7 @@ class TestChargingSiteService:
 
         mock_updated_site = MagicMock(spec=ChargingSite)
         mock_updated_site.charging_site_id = 1
+        mock_updated_site.group_uuid = "site-group-1"
         mock_updated_site.organization_id = 1
         mock_updated_site.organization = mock_org
         mock_updated_site.allocating_organization = mock_allocating_org
@@ -420,6 +423,7 @@ class TestChargingSiteService:
 
         mock_updated_site = MagicMock(spec=ChargingSite)
         mock_updated_site.charging_site_id = 1
+        mock_updated_site.group_uuid = "test-uuid"
         mock_updated_site.organization_id = 1
         mock_updated_site.organization = mock_org
         mock_updated_site.allocating_organization = None
@@ -572,6 +576,7 @@ class TestChargingSiteService:
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
+        mock_site.group_uuid = "site-group-1"
         mock_site.organization_id = 1
         mock_site.organization = mock_org
         mock_site.allocating_organization = mock_allocating_org
@@ -621,6 +626,7 @@ class TestChargingSiteService:
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
+        mock_site.group_uuid = "site-group-1"
         mock_site.organization_id = 1
         mock_site.organization = mock_org
         mock_site.allocating_organization = mock_allocating_org
@@ -682,6 +688,7 @@ class TestChargingSiteService:
         ]
         mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
         mock_site = MagicMock()
+        mock_site.charging_site_id = 1
         mock_site.status = MagicMock(status="Submitted")
         mock_repo.get_charging_site_by_id.return_value = mock_site
 
@@ -720,6 +727,7 @@ class TestChargingSiteService:
         ]
         mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
         mock_site = MagicMock()
+        mock_site.charging_site_id = 1
         mock_site.status = MagicMock(status="Validated")
         mock_repo.get_charging_site_by_id.return_value = mock_site
         mock_repo.bulk_update_equipment_status.return_value = [1, 2]
@@ -796,6 +804,8 @@ class TestChargingSiteService:
         # Create a proper ChargingSiteCreateSchema-compatible mock with camelCase fields
         mock_charging_site = MagicMock()
         mock_charging_site.charging_site_id = 1
+        mock_charging_site.group_uuid = "site-group-1"
+        mock_charging_site.groupUuid = "site-group-1"
         mock_charging_site.organization_id = 1
         mock_charging_site.allocating_organization_name = "Allocating Org"
         mock_charging_site.allocatingOrganizationName = "Allocating Org"  # camelCase version
@@ -839,6 +849,7 @@ class TestChargingSiteService:
             [mock_equipment],
             1,
         )
+        mock_repo.get_charging_site_by_id.return_value = MagicMock(charging_site_id=1)
 
         pagination = PaginationRequestSchema(
             page=1, size=10, sort_orders=[], filters=[]
@@ -874,6 +885,7 @@ class TestChargingSiteService:
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
+        mock_site.group_uuid = "site-group-1"
         mock_site.organization_id = 1
         mock_site.organization = mock_org
         mock_site.allocating_organization = mock_allocating_org

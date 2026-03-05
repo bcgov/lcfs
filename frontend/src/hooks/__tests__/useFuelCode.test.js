@@ -13,7 +13,8 @@ import {
   useTransportModes,
   useGetFuelCodes,
   useDownloadFuelCodes,
-  useFuelCodeMutation
+  useFuelCodeMutation,
+  useFuelCodeBulletins
 } from '../useFuelCode'
 
 vi.mock('@/services/useApiService')
@@ -224,6 +225,63 @@ describe('useFuelCode', () => {
       })
 
       expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useFuelCodeBulletins', () => {
+    it('should fetch current bulletin rows with pagination payload', async () => {
+      const mockData = {
+        cutoffDate: '2025-03-31',
+        fuelCodes: [{ fuelCode: 'BCLCF101.0' }],
+        pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
+      }
+      mockPost.mockResolvedValue({ data: mockData })
+
+      const pagination = {
+        page: 1,
+        size: 25,
+        sortOrders: [{ field: 'fuelCode', direction: 'asc' }],
+        filters: [{ field: 'company', filterType: 'text', type: 'contains', filter: 'co' }]
+      }
+      const { result } = renderHook(
+        () => useFuelCodeBulletins('current', pagination),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual(mockData)
+      expect(mockPost).toHaveBeenCalledWith(
+        '/fuel-codes/bulletins?bulletinType=current',
+        pagination
+      )
+    })
+
+    it('should use defaults when pagination fields are missing', async () => {
+      mockPost.mockResolvedValue({
+        data: { cutoffDate: '2025-03-31', fuelCodes: [], pagination: { total: 0 } }
+      })
+
+      const { result } = renderHook(
+        () => useFuelCodeBulletins('archived', {}),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/fuel-codes/bulletins?bulletinType=archived',
+        {
+          page: 1,
+          size: 25,
+          sortOrders: [],
+          filters: []
+        }
+      )
     })
   })
 
