@@ -12,6 +12,7 @@ import {
   useGetFSEReportingList,
   useSaveFSEReporting,
   useDeleteFSEReportingBatch,
+  useUpdateFSEReportingActiveStatus,
   useSetFSEReportingDefaultDates
 } from '../useFinalSupplyEquipment'
 
@@ -20,7 +21,8 @@ const mockApiService = {
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn()
+  delete: vi.fn(),
+  patch: vi.fn()
 }
 
 vi.mock('@/services/useApiService', () => ({
@@ -35,7 +37,9 @@ vi.mock('@/constants/routes', () => ({
     importFinalSupplyEquipments: '/final-supply-equipment/import/:reportID',
     getImportFinalSupplyEquipmentsJobStatus:
       '/final-supply-equipment/import-job-status/:jobID',
-    saveFSEReportingBatch: '/final-supply-equipments/reporting/batch'
+    saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
+    updateFSEReportingActiveStatus:
+      '/final-supply-equipments/reporting/active-status'
   }
 }))
 
@@ -638,6 +642,44 @@ describe('useFinalSupplyEquipment', () => {
       })
 
       expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useUpdateFSEReportingActiveStatus', () => {
+    it('should update active status for reporting rows', async () => {
+      const mockResponse = { data: { updated: 2 } }
+      mockApiService.patch.mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(
+        () => useUpdateFSEReportingActiveStatus(123, 456),
+        { wrapper: createWrapper() }
+      )
+
+      await result.current.mutateAsync({
+        reportingIds: [1, 2],
+        isActive: false
+      })
+
+      expect(mockApiService.patch).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/active-status',
+        {
+          reportingIds: [1, 2],
+          isActive: false,
+          complianceReportId: 123,
+          organizationId: 456
+        }
+      )
+    })
+
+    it('should throw when payload is invalid', async () => {
+      const { result } = renderHook(
+        () => useUpdateFSEReportingActiveStatus(123),
+        { wrapper: createWrapper() }
+      )
+
+      await expect(
+        result.current.mutateAsync({ reportingIds: [], isActive: true })
+      ).rejects.toThrow('Reporting IDs array is required')
     })
   })
 
