@@ -542,6 +542,9 @@ class FinalSupplyEquipmentRepository:
         organization_id: int,
         filter_conditions: list[Any] = [],
     ):
+        source_site = aliased(ChargingSite, name="source_charging_site")
+        latest_sites = latest_charging_site_version_subquery()
+
         # Subquery for intended_uses (from charging equipment)
         intended_uses_subquery = (
             select(func.array_agg(EndUseType.type).label("intended_uses"))
@@ -621,8 +624,19 @@ class FinalSupplyEquipmentRepository:
             )
             .select_from(ChargingEquipment)
             .join(
+                source_site,
+                ChargingEquipment.charging_site_id == source_site.charging_site_id,
+            )
+            .join(
+                latest_sites,
+                source_site.group_uuid == latest_sites.c.group_uuid,
+            )
+            .join(
                 ChargingSite,
-                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+                and_(
+                    ChargingSite.group_uuid == latest_sites.c.group_uuid,
+                    ChargingSite.version == latest_sites.c.latest_version,
+                ),
             )
             .join(
                 LevelOfEquipment,
@@ -645,7 +659,7 @@ class FinalSupplyEquipmentRepository:
             )
             .where(*common_conditions, *filter_conditions)
         )
-        return self._apply_latest_site_filter(stmt)
+        return stmt
 
     def _apply_filters(self, filter_conditions, filters):
         for f in filters:
