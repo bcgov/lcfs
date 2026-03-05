@@ -1,7 +1,7 @@
 """Alter unique constraints on Charging site
 
 Revision ID: 84d7cf6d1940
-Revises: b1234567890c
+Revises: 8e9f1a2b3c4d
 Create Date: 2026-03-03 11:30:47.227193
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "84d7cf6d1940"
-down_revision = "b1234567890c"
+down_revision = "8e9f1a2b3c4d"
 branch_labels = None
 depends_on = None
 

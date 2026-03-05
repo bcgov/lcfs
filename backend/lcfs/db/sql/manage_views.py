@@ -52,6 +52,14 @@ class ViewCreator:
             "BCeID User Statistics View",
             "Login Failures Analysis View",
             "Compliance Report Base View With Early Issuance By Year",
+            "Compliance Report Status Timeline View",
+            "Compliance Report Status Median Durations",
+            "Compliance Report Flow Metrics View",
+            "Compliance Report Throughput View",
+            "Compliance Report WIP Summary View",
+            "Compliance Report Service Level View",
+            "Compliance Report Assignee Breakdown View",
+            "Compliance Report Queue Flow View",
             "Final Supply Equipment Base View",
             "Electricity Allocation FSE Match Query",
             "Allocation Agreement Duplicate Check",
@@ -164,7 +172,7 @@ class ViewCreator:
         remaining_sections = set(sections.keys()) - set(self.execution_order)
         if remaining_sections:
             logger.info(f"Executing {len(remaining_sections)} additional sections...")
-            for section_name in remaining_sections:
+            for section_name in sorted(remaining_sections):
                 await self.execute_sql_section(section_name, sections[section_name])
                 executed_count += 1
 
