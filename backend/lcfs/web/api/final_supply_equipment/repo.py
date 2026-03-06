@@ -700,17 +700,10 @@ class FinalSupplyEquipmentRepository:
                     filter_conditions.append(condition)
 
     @repo_handler
-    async def get_latest_active_equipments(
-        self, organization_id: int, compliance_year: int = None
-    ) -> list:
+    async def get_latest_active_equipments(self, organization_id: int) -> list:
         """
         Get the latest non-decommissioned version for each charging equipment
         belonging to the given organization.
-
-        If compliance_year is provided, only returns equipment that was created
-        on or before January 1st of the following year (i.e., equipment that existed
-        during the compliance period). This prevents copying equipment backwards
-        to reports created before the equipment was registered.
         """
         stmt = (
             select(
@@ -730,8 +723,8 @@ class FinalSupplyEquipmentRepository:
                 ChargingSite.organization_id == organization_id,
                 ChargingEquipmentStatus.status != "Decommissioned",
             )
+            .group_by(ChargingEquipment.charging_equipment_id)
         )
-
         stmt = self._apply_latest_site_filter(stmt)
         result = await self.db.execute(stmt)
         return result.all()
@@ -1064,23 +1057,13 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def update_reporting_active_status(
-        self,
-        reporting_ids: List[int],
-        is_active: bool,
-        compliance_report_id: int,
-        organization_id: int,
+        self, reporting_ids: List[int], is_active: bool
     ) -> int:
         stmt = (
             update(ComplianceReportChargingEquipment)
             .where(
-                and_(
-                    ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
-                        reporting_ids
-                    ),
-                    ComplianceReportChargingEquipment.compliance_report_id
-                    == compliance_report_id,
-                    ComplianceReportChargingEquipment.organization_id
-                    == organization_id,
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                    reporting_ids
                 )
             )
             .values(is_active=is_active)

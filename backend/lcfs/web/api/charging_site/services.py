@@ -304,8 +304,8 @@ class ChargingSiteService:
             "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
-                "Updated",
                 "Validated",
+                "Updated",
             ],  # Submit (from Draft) or Undo Validation (from Validated) or Updated
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
@@ -586,6 +586,7 @@ class ChargingSiteService:
         status = await self.repo.get_charging_site_status_by_name(target_status_name)
 
         try:
+            # Update basic fields on the existing object
             update_data = charging_site_data.model_dump(
                 exclude={
                     "charging_site_id",

@@ -203,6 +203,14 @@ class ChargingSiteRepository:
         # Conditions for the base subquery (before ranking)
         base_conditions = [ChargingEquipment.charging_site_id.in_(related_site_ids)]
 
+        # Exclude Decommissioned FSE's in the base query for gov users
+        if is_government_user:
+            base_conditions.append(
+                ~ChargingEquipment.status.has(
+                    ChargingEquipmentStatus.status == "Decommissioned"
+                )
+            )
+
         # Apply status filters to base conditions (before ranking)
         status_conditions = []
         non_status_conditions = []
@@ -228,7 +236,7 @@ class ChargingSiteRepository:
         # Add status conditions to base conditions
         base_conditions.extend(status_conditions)
 
-        # Configure ranking order so that gov users prefer validated/submitted versions
+        # Prefer validated/submitted equipment versions for government users
         status_alias = aliased(ChargingEquipmentStatus)
         order_by_expressions = [ChargingEquipment.version.desc()]
         if is_government_user:
