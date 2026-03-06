@@ -61,7 +61,7 @@ class TestChargingSiteFunctionality:
         # These represent invalid transitions
         invalid_transitions = [
             ("Draft", "Validated"),  # Can't go directly from Draft to Validated
-            ("Validated", "Draft"),  # Can't go directly from Validated to Draft
+            ("Validated", "Submitted"),  # Can't undo validation (Validated -> Submitted)
         ]
 
         for current, target in invalid_transitions:
@@ -69,11 +69,16 @@ class TestChargingSiteFunctionality:
             # Here we just verify the business logic rules
             if target == "Draft":
                 assert (
-                    current != "Submitted"
+                    current not in ["Submitted", "Validated"]
                 ), f"Invalid transition from {current} to {target}"
             elif target == "Validated":
                 assert (
                     current != "Submitted"
+                ), f"Invalid transition from {current} to {target}"
+            elif target == "Submitted":
+                # Submitted can only come from Draft or Updated, not Validated
+                assert (
+                    current != "Validated"
                 ), f"Invalid transition from {current} to {target}"
 
     def test_bulk_update_data_structure(self):

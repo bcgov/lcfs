@@ -32,8 +32,8 @@
   },
   "tooltips": {
     "onlySubmittedCanBeValidated": "Only equipment with Submitted status can be validated",
-    "onlyValidatedCanBeReturned": "Only equipment with Validated status can be returned to Submitted",
-    "onlySubmittedCanBeDraft": "Only equipment with Submitted status can be returned to Draft"
+    "onlySubmittedCanBeDraft": "Only equipment with Submitted or Validated status can be returned to Draft",
+    "onlyValidatedCanBeDecommissioned": "Only equipment with Validated status can be decommissioned"
   },
   "site": {
     "status": "Status",
