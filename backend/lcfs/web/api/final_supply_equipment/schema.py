@@ -114,6 +114,7 @@ class FSEReportingSchema(BaseSchema):
     longitude: float
     level_of_equipment: str
     ports: Optional[PortsEnum] = None
+    allocating_organization_name: Optional[str] = None
     supply_from_date: Optional[date] = None
     supply_to_date: Optional[date] = None
     kwh_usage: Optional[float] = None
@@ -129,6 +130,7 @@ class FSEReportingSchema(BaseSchema):
     power_output: Optional[float] = 0
     capacity_utilization_percent: Optional[int] = 0
     status: Optional[str] = None
+    is_active: Optional[bool] = True
 
 
 class FSEReportingBaseSchema(BaseSchema):
@@ -142,6 +144,7 @@ class FSEReportingBaseSchema(BaseSchema):
     organization_id: int
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str] = None
+    is_active: Optional[bool] = True
 
 
 class FSEReportingBatchSchema(BaseSchema):
@@ -162,6 +165,14 @@ class FSEReportingDefaultDates(BaseSchema):
 
 class FSEReportingBatchDeleteSchema(BaseSchema):
     reporting_ids: List[int]
+    compliance_report_id: int
+    compliance_report_group_uuid: Optional[str] = None
+    organization_id: int
+
+
+class FSEReportingActiveStatusSchema(BaseSchema):
+    reporting_ids: List[int]
+    is_active: bool
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str] = None
     organization_id: int

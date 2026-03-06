@@ -608,6 +608,31 @@ async def test_delete_fse_reporting_batch_success(
 
 
 @pytest.mark.anyio
+async def test_update_fse_reporting_active_status_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test toggling FSE reporting active status"""
+    with patch(
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.update_fse_reporting_active_status"
+    ) as mock_toggle:
+        mock_toggle.return_value = {"updated": 1, "is_active": False}
+
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        url = fastapi_app.url_path_for("update_fse_reporting_active_status")
+        payload = {
+            "reportingIds": [1],
+            "isActive": False,
+            "complianceReportId": 10,
+            "organizationId": 1,
+        }
+        response = await client.patch(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json()["updated"] == 1
+        mock_toggle.assert_called_once()
+
+
+@pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):

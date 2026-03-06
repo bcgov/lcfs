@@ -25,6 +25,7 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
     OrgStatusEnum,
 )
+from lcfs.db.models.organization.CreditMarketAuditLog import CreditMarketAuditLog
 from lcfs.db.models.transaction import Transaction
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.services.tfrs.redis_balance import (
@@ -63,6 +64,8 @@ from .schema import (
     PenaltyLogListResponseSchema,
     PenaltyLogCreateSchema,
     PenaltyLogUpdateSchema,
+    CreditMarketAuditLogItemSchema,
+    CreditMarketAuditLogListResponseSchema,
 )
 
 
@@ -109,6 +112,28 @@ class OrganizationsService:
         """Check if organization type requires BCeID."""
         org_type = await self.repo.get_organization_type(organization_type_id)
         return org_type.is_bceid_user if org_type else True
+
+    @staticmethod
+    def _credit_market_snapshot(organization: Organization) -> Dict[str, object]:
+        """Build a normalized snapshot for credit market change detection."""
+        return {
+            "credit_market_contact_name": organization.credit_market_contact_name,
+            "credit_market_contact_email": organization.credit_market_contact_email,
+            "credit_market_contact_phone": organization.credit_market_contact_phone,
+            "credit_market_is_seller": bool(organization.credit_market_is_seller),
+            "credit_market_is_buyer": bool(organization.credit_market_is_buyer),
+            "credits_to_sell": int(organization.credits_to_sell or 0),
+            "display_in_credit_market": bool(organization.display_in_credit_market),
+        }
+
+    @staticmethod
+    def _role_in_market(is_seller: bool, is_buyer: bool) -> str | None:
+        roles = []
+        if is_seller:
+            roles.append("Seller")
+        if is_buyer:
+            roles.append("Buyer")
+        return ", ".join(roles) if roles else None
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -452,6 +477,8 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
+        before_snapshot = self._credit_market_snapshot(organization)
+
         # Store original values to detect if a new credit listing is being created
         was_displayed_in_market = organization.display_in_credit_market or False
         old_credits_to_sell = organization.credits_to_sell or 0
@@ -490,6 +517,15 @@ class OrganizationsService:
             organization.update_user = user.keycloak_username
 
         updated_organization = await self.repo.update_organization(organization)
+        after_snapshot = self._credit_market_snapshot(updated_organization)
+
+        if before_snapshot != after_snapshot and bool(
+            updated_organization.display_in_credit_market
+        ):
+            changed_by = user.keycloak_username if user else updated_organization.update_user
+            await self.repo.create_credit_market_audit_log(
+                organization=updated_organization, changed_by=changed_by
+            )
 
         # Check if this is a new credit listing that should trigger notifications
         # A new listing is when:
@@ -1112,6 +1148,80 @@ class OrganizationsService:
             )
             for org in organizations
         ]
+
+    @service_handler
+    async def get_credit_market_audit_logs_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> CreditMarketAuditLogListResponseSchema:
+        """
+        Fetch paginated credit market audit logs with filtering and sorting.
+        """
+        conditions = []
+        pagination = validate_pagination(pagination)
+
+        if pagination.filters:
+            for filter_model in pagination.filters:
+                filter_value = filter_model.filter
+                filter_option = filter_model.type
+                filter_type = filter_model.filter_type
+
+                if filter_type == "date":
+                    filter_value = []
+                    if filter_model.date_from:
+                        filter_value.append(filter_model.date_from)
+                    if filter_model.date_to:
+                        filter_value.append(filter_model.date_to)
+                    if not filter_value:
+                        continue
+
+                if filter_model.field == "organization_name":
+                    field = get_field_for_filter(Organization, "name")
+                else:
+                    field = get_field_for_filter(CreditMarketAuditLog, filter_model.field)
+                if field is None:
+                    continue
+
+                condition = apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type
+                )
+                if condition is not None:
+                    conditions.append(condition)
+
+        offset = (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        audit_logs, total_count = await self.repo.get_credit_market_audit_logs_paginated(
+            offset, limit, conditions, pagination.sort_orders
+        )
+
+        rows = [
+            CreditMarketAuditLogItemSchema(
+                credit_market_audit_log_id=entry.credit_market_audit_log_id,
+                organization_name=entry.organization.name if entry.organization else "",
+                credits_to_sell=entry.credits_to_sell or 0,
+                role_in_market=self._role_in_market(
+                    bool(entry.credit_market_is_seller),
+                    bool(entry.credit_market_is_buyer),
+                ),
+                contact_person=entry.contact_person,
+                phone=entry.phone,
+                email=entry.email,
+                changed_by=entry.changed_by,
+                uploaded_date=entry.create_date,
+            )
+            for entry in audit_logs
+        ]
+
+        return CreditMarketAuditLogListResponseSchema(
+            credit_market_audit_logs=rows,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size)
+                if pagination.size
+                else 0,
+            ),
+        )
 
     @service_handler
     async def get_available_forms(self):

@@ -143,6 +143,8 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
       }
     },
     onSuccess: (data, variables, context) => {
+      const responseSiteId = data?.data?.chargingSiteId
+
       // Comprehensive cache invalidation for charging site mutations
       if (clearCache) {
         // Remove all charging site related queries
@@ -171,6 +173,15 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
               'charging-site-equipment-paginated',
               variables.chargingSiteId
             ]
+          })
+        }
+
+        if (responseSiteId && responseSiteId !== variables.chargingSiteId) {
+          queryClient.invalidateQueries({
+            queryKey: ['chargingSite', responseSiteId]
+          })
+          queryClient.invalidateQueries({
+            queryKey: ['charging-site-equipment-paginated', responseSiteId]
           })
         }
       }

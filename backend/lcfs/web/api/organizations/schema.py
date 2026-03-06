@@ -354,6 +354,23 @@ class OrganizationCreditMarketListingSchema(BaseSchema):
     credit_market_contact_phone: Optional[str] = None
 
 
+class CreditMarketAuditLogItemSchema(BaseSchema):
+    credit_market_audit_log_id: int
+    organization_name: str
+    credits_to_sell: int
+    role_in_market: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    changed_by: Optional[str] = None
+    uploaded_date: Optional[datetime] = None
+
+
+class CreditMarketAuditLogListResponseSchema(BaseSchema):
+    pagination: PaginationResponseSchema
+    credit_market_audit_logs: List[CreditMarketAuditLogItemSchema]
+
+
 class OrganizationCompanyOverviewUpdateSchema(BaseSchema):
     """Schema for updating company overview information"""
 

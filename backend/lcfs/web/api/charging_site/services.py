@@ -194,8 +194,7 @@ class ChargingSiteService:
             statuses = [
                 status
                 for status in statuses
-                if status.status
-                not in (ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED)
+                if status.status not in (ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED)
             ]
         return [
             ChargingSiteStatusSchema(
@@ -235,7 +234,7 @@ class ChargingSiteService:
             )
         if (
             user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-            and charging_site.status.status == ChargingSiteStatusEnum.DRAFT
+            and charging_site.status.status in [ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED]
         ):
             raise HTTPException(
                 status_code=404,
@@ -252,18 +251,30 @@ class ChargingSiteService:
         Get paginated charging equipment for a specific site
         """
         pagination = validate_pagination(pagination)
+        charging_site = await self.repo.get_charging_site_by_id(site_id)
+        if not charging_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {site_id} not found",
+            )
+        latest_site_id = charging_site.charging_site_id
 
         equipment_records, total_count = (
             await self.repo.get_equipment_for_charging_site_paginated(
-                site_id, pagination, self.request.user.is_government
+                latest_site_id, pagination, self.request.user.is_government
             )
         )
 
         # Convert equipment records to schema
-        equipment_list = [
-            ChargingEquipmentForSiteSchema.model_validate(equipment)
-            for equipment in equipment_records
-        ]
+        equipment_list = []
+        for equipment in equipment_records:
+            latest_site = getattr(equipment, "latest_charging_site", None)
+            latest_site_id = getattr(equipment, "latest_charging_site_id", None)
+            if latest_site is not None:
+                equipment.charging_site = latest_site
+            if latest_site_id is not None:
+                equipment.charging_site_id = latest_site_id
+            equipment_list.append(ChargingEquipmentForSiteSchema.model_validate(equipment))
 
         return ChargingEquipmentPaginatedSchema(
             equipments=equipment_list,
@@ -294,7 +305,8 @@ class ChargingSiteService:
             "Submitted": [
                 "Draft",
                 "Validated",
-            ],  # Submit (from Draft) or Undo Validation (from Validated)
+                "Updated",
+            ],  # Submit (from Draft) or Undo Validation (from Validated) or Updated
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
         }
@@ -326,8 +338,15 @@ class ChargingSiteService:
         site_statuses = await self.repo.get_charging_site_statuses()
         site_status_ids = self._get_site_status_ids(site_statuses)
 
+        current_site = await self.repo.get_charging_site_by_id(charging_site_id)
+        if not current_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {charging_site_id} not found",
+            )
+        latest_site_id = current_site.charging_site_id
+
         if bulk_update.new_status in ["Submitted", "Validated"]:
-            current_site = await self.repo.get_charging_site_by_id(charging_site_id)
 
             if not (
                 current_site
@@ -336,17 +355,17 @@ class ChargingSiteService:
             ):
                 # When equipment is Submitted or Validated, update site status to match
                 await self.repo.update_charging_site_status(
-                    charging_site_id, site_status_ids[bulk_update.new_status]
+                    latest_site_id, site_status_ids[bulk_update.new_status]
                 )
         elif bulk_update.new_status == "Draft":
             # When returning equipment to Draft, recalculate site status
             # based on the highest status of all remaining equipment
             new_site_status = await self.repo.calculate_site_status_from_equipment(
-                charging_site_id
+                latest_site_id
             )
             if new_site_status:
                 await self.repo.update_charging_site_status(
-                    charging_site_id, site_status_ids[new_site_status]
+                    latest_site_id, site_status_ids[new_site_status]
                 )
         return True
 
@@ -474,6 +493,7 @@ class ChargingSiteService:
             payload = charging_site_data.model_dump(
                 exclude={
                     "site_code",
+                    "group_uuid",
                     "status_id",
                     "current_status",
                     "deleted",
@@ -570,8 +590,10 @@ class ChargingSiteService:
             update_data = charging_site_data.model_dump(
                 exclude={
                     "charging_site_id",
+                    "group_uuid",
                     "status_id",
                     "status",
+                    "current_status",
                     "deleted",
                 },
                 exclude_unset=True,

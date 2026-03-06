@@ -162,6 +162,12 @@ vi.mock('../CreditTradingMarket/CreditTradingMarket', () => ({
   )
 }))
 
+vi.mock('../CreditTradingMarket/CreditMarketAuditLogTable', () => ({
+  CreditMarketAuditLogTable: () => (
+    <div data-test="credit-market-audit-log-table">Audit Log Table</div>
+  )
+}))
+
 vi.mock('../CreditTradingMarket/CreditMarketDetailsCard', () => ({
   CreditMarketDetailsCard: () => (
     <div data-test="credit-market-details">Market Details</div>
@@ -261,6 +267,10 @@ vi.mock('@/routes/routes', () => ({
       EDIT: '/transfers/:transferId/edit'
     },
     TRANSACTIONS: {
+      LIST: '/transactions',
+      CREDIT_TRADING_MARKET: '/transactions/credit-trading-market',
+      CREDIT_TRADING_MARKET_AUDIT_LOG:
+        '/transactions/credit-trading-market-audit-log',
       ADD: '/transactions/add',
       ADMIN_ADJUSTMENT: {
         VIEW: '/transactions/admin-adjustment/:transactionId',
@@ -591,6 +601,9 @@ describe('Transactions Component', () => {
 
       const creditTradingTab = screen.getByText('Credit Trading Market')
       fireEvent.click(creditTradingTab)
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/transactions/credit-trading-market'
+      )
     })
   })
 

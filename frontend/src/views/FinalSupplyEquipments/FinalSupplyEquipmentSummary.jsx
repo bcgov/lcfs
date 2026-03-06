@@ -14,6 +14,7 @@ import Switch from '@mui/material/Switch'
 import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
+import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 
 export const FinalSupplyEquipmentSummary = ({
   data,
@@ -84,6 +85,14 @@ export const FinalSupplyEquipmentSummary = ({
       mx={-1}
     >
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+        {fseData?.totalKwhUsage !== undefined &&
+          fseData?.totalKwhUsage !== null && (
+            <ComplianceUnitsTotal
+              label={t('finalSupplyEquipment:totalKwhUsage')}
+              value={fseData.totalKwhUsage}
+              dataTest="fse-total-kwh-usage"
+            />
+          )}
         <BCGridViewer
           gridKey="final-supply-equipments"
           gridRef={gridRef}
