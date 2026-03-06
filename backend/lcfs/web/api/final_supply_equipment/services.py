@@ -8,8 +8,7 @@ from sqlalchemy.exc import ProgrammingError
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
-from lcfs.utils.constants import LCFS_Constants, POSTAL_REGEX
+from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
@@ -29,8 +28,6 @@ from lcfs.web.api.final_supply_equipment.schema import (
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.organizations.repo import OrganizationsRepository
-from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
@@ -399,33 +396,13 @@ class FinalSupplyEquipmentServices:
         For each charging equipment belonging to the organization, use the latest
         non-decommissioned version and create compliance reporting records using the
         compliance period year as the default supply date range.
-
-        Important restrictions:
-        1. FSE data was not received via TFRS for years prior to 2024, so we skip
-           FSE copy entirely for pre-2024 compliance reports.
-        2. Equipment is only copied to reports for compliance periods during or after
-           the equipment was registered. This prevents copying equipment backwards
-           to reports created before the equipment existed.
         """
         compliance_year = int(report.compliance_period.description)
-
-        # FSE data was not received via TFRS for years prior to 2024
-        # Skip FSE copy for pre-2024 compliance reports
-        if compliance_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR):
-            logger.info(
-                "Skipping FSE copy for pre-2024 compliance report",
-                compliance_year=compliance_year,
-                compliance_report_id=report.compliance_report_id,
-            )
-            return {"created": 0}
-
         supply_from_date = date(compliance_year, 1, 1)
         supply_to_date = date(compliance_year, 12, 31)
 
-        # Only get equipment that existed during this compliance year
-        # (i.e., was created before the end of the compliance year)
         latest_equipments = await self.repo.get_latest_active_equipments(
-            report.organization_id, compliance_year=compliance_year
+            report.organization_id
         )
         if not latest_equipments:
             return {"created": 0}
@@ -635,58 +612,13 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def update_fse_reporting_active_status(
-        self, data: FSEReportingActiveStatusSchema, user
+        self, data: FSEReportingActiveStatusSchema
     ) -> dict:
-        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
-        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
-
-        if not (is_supplier or is_analyst):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only suppliers or analysts can update FSE reporting active status",
-            )
-
-        report = await self.compliance_report_repo.get_compliance_report_by_id(
-            data.compliance_report_id
-        )
-        if not report:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found",
-            )
-
-        if data.organization_id != report.organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Request organization does not match the compliance report organization",
-            )
-
-        if is_supplier and data.organization_id != user.organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Suppliers can only update FSE reporting for their organization",
-            )
-
-        if is_analyst:
-            report_status = getattr(getattr(report, "current_status", None), "status", None)
-            allowed_statuses = {
-                ComplianceReportStatusEnum.Analyst_adjustment,
-                ComplianceReportStatusEnum.Analyst_adjustment.value,
-            }
-            if report_status not in allowed_statuses:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Analysts can only update FSE reporting active status when the report is in Analyst_adjustment status",
-                )
-
         if not data.reporting_ids:
             return {"updated": 0, "is_active": data.is_active}
 
         updated_count = await self.repo.update_reporting_active_status(
-            reporting_ids=data.reporting_ids,
-            is_active=data.is_active,
-            compliance_report_id=data.compliance_report_id,
-            organization_id=report.organization_id,
+            data.reporting_ids, data.is_active
         )
         state = "activated" if data.is_active else "deactivated"
         return {
