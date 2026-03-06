@@ -1,7 +1,7 @@
 """Add IA Analyst and IA Manager IDIR roles
 
 Revision ID: f4c8a1b2d3e5
-Revises: 8e9f1a2b3c4d
+Revises: b6f4d2e9c1a0
 Create Date: 2026-02-26 12:03:00.000000
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f4c8a1b2d3e5"
-down_revision = "8e9f1a2b3c4d"
+down_revision = "b6f4d2e9c1a0"
 branch_labels = None
 depends_on = None
 

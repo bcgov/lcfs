@@ -703,3 +703,30 @@ async def test_update_fuel_code_keeps_notification_when_expiration_date_unchange
 
     # Assert - expiry_notification_sent_at should NOT be cleared
     assert mock_fuel_code.expiry_notification_sent_at == original_notification_time
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_bulletins_wires_cutoff_and_pagination():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    repo_mock.get_fuel_code_bulletin_pagination_params = MagicMock(
+        return_value=([], [])
+    )
+    repo_mock.get_fuel_code_bulletin_rows.return_value = ([], 0)
+
+    pagination = PaginationRequestSchema(page=2, size=25, sort_orders=[], filters=[])
+    result = await service.get_fuel_code_bulletins("current", pagination)
+
+    assert result.pagination.page == 2
+    assert result.pagination.size == 25
+    assert result.pagination.total == 0
+    assert result.cutoff_date.month == 3
+    assert result.cutoff_date.day == 31
+
+    repo_mock.get_fuel_code_bulletin_rows.assert_awaited_once()
+    call_kwargs = repo_mock.get_fuel_code_bulletin_rows.await_args.kwargs
+    assert call_kwargs["bulletin_type"] == "current"
+    assert call_kwargs["offset"] == 25
+    assert call_kwargs["limit"] == 25
+    assert "compliance_period_end" not in call_kwargs

@@ -74,27 +74,66 @@ class ChargingEquipmentServices:
         # Transform to schema
         items = []
         for equipment in equipment_list:
+            latest_site_id = getattr(
+                equipment, "latest_charging_site_id", equipment.charging_site_id
+            )
+            latest_site_name = getattr(
+                equipment, "latest_site_name", equipment.charging_site.site_name
+            )
+            latest_site_code = getattr(
+                equipment, "latest_site_code", equipment.charging_site.site_code
+            )
+            latest_org_name = getattr(
+                equipment,
+                "latest_organization_name",
+                (
+                    equipment.charging_site.organization.name
+                    if equipment.charging_site.organization
+                    else None
+                ),
+            )
+            latest_street_address = getattr(
+                equipment,
+                "latest_street_address",
+                equipment.charging_site.street_address,
+            )
+            latest_city = getattr(equipment, "latest_city", equipment.charging_site.city)
+            latest_postal_code = getattr(
+                equipment, "latest_postal_code", equipment.charging_site.postal_code
+            )
+            latest_site_latitude = getattr(
+                equipment, "latest_latitude", equipment.charging_site.latitude
+            )
+            latest_site_longitude = getattr(
+                equipment, "latest_longitude", equipment.charging_site.longitude
+            )
+            latest_allocating_org_name = getattr(
+                equipment,
+                "latest_allocating_organization_name",
+                equipment.charging_site.allocating_organization_name,
+            )
+
             item = ChargingEquipmentListItemSchema(
                 charging_equipment_id=equipment.charging_equipment_id,
-                charging_site_id=equipment.charging_site_id,
+                charging_site_id=latest_site_id,
                 status=equipment.status.status,
-                site_name=equipment.charging_site.site_name,
-                organization_name=equipment.charging_site.organization.name if equipment.charging_site.organization else None,
+                site_name=latest_site_name,
+                organization_name=latest_org_name,
                 registration_number=equipment.registration_number
-                or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
+                or f"{latest_site_code}-{equipment.equipment_number}",
                 version=equipment.version,
                 serial_number=equipment.serial_number,
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 ports=equipment.ports.value if equipment.ports else None,
-                allocating_organization_name=equipment.charging_site.allocating_organization_name,
+                allocating_organization_name=latest_allocating_org_name,
                 latitude=equipment.latitude,
                 longitude=equipment.longitude,
-                site_latitude=equipment.charging_site.latitude,
-                site_longitude=equipment.charging_site.longitude,
-                street_address=equipment.charging_site.street_address,
-                city=equipment.charging_site.city,
-                postal_code=equipment.charging_site.postal_code,
+                site_latitude=latest_site_latitude,
+                site_longitude=latest_site_longitude,
+                street_address=latest_street_address,
+                city=latest_city,
+                postal_code=latest_postal_code,
                 level_of_equipment_name=equipment.level_of_equipment.name,
                 intended_uses=[
                     {
