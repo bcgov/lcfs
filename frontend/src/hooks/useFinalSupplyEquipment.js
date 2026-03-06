@@ -922,3 +922,66 @@ export const useGetAllFSEForMap = (
     ...restOptions
   })
 }
+
+/**
+ * Mutation hook to upload an FSE bulk-update Excel file.
+ * Matches the calling convention expected by ImportDialog:
+ *   importHook(complianceReportId, { onSuccess, onError })
+ *   importFile({ file, isOverwrite })
+ */
+export const useImportFSEReportingUpdate = (
+  complianceReportId,
+  options = {}
+) => {
+  const client = useApiService()
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ file }) => {
+      if (!complianceReportId) {
+        throw new Error('Compliance report ID is required')
+      }
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const url = apiRoutes.fseReportingBulkUpdate.replace(
+        ':reportID',
+        complianceReportId
+      )
+      const response = await client.post(url, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      return response.data
+    },
+    onSuccess,
+    onError,
+    retry: 0,
+    ...restOptions
+  })
+}
+
+/**
+ * Query hook to poll the progress of an FSE bulk-update import job.
+ * Automatically stops polling when progress reaches 100.
+ */
+export const useGetFSEReportingUpdateJobStatus = (jobId, options = {}) => {
+  const client = useApiService()
+  const { enabled = true, ...restOptions } = options
+
+  return useQuery({
+    queryKey: ['fse-reporting-bulk-update-status', jobId],
+    queryFn: async () => {
+      const url = apiRoutes.fseReportingBulkUpdateStatus.replace(':jobID', jobId)
+      const response = await client.get(url)
+      return response.data
+    },
+    enabled: enabled && !!jobId,
+    refetchInterval: (data) => {
+      if (!data || data.progress >= 100) return false
+      return 300
+    },
+    staleTime: 0,
+    retry: 2,
+    ...restOptions
+  })
+}

@@ -89,6 +89,16 @@
     "isRequired": "{{field}} is required"
   },
   "scheduleUpdated": "Final supply equipment schedule updated successfully",
+  "bulkUpdate": {
+    "downloadTemplate": "Download update template",
+    "uploadTemplate": "Upload update template",
+    "downloadError": "Failed to download template. Please try again.",
+    "dialogTitle": "Upload FSE bulk update template",
+    "updatedCount": "Updated:",
+    "skippedCount": "Skipped (blank kWh):",
+    "successMessage": "FSE reporting data updated successfully.",
+    "skippedMessage": "rows skipped (blank dates)"
+  },
   "map": {
     "title": "FSE map",
     "fullViewTitle": "FSE map — Full view",

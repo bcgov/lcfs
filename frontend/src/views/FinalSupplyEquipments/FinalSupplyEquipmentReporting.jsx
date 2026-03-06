@@ -7,26 +7,37 @@ import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import BCButton from '@/components/BCButton'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
 import { useSiteNames } from '@/hooks/useChargingSite'
 import { getFSEReportingColDefs } from './_schema'
 import {
   useGetFSEReportingList,
   useSaveFSEReporting,
   useUpdateFSEReportingActiveStatus,
-  useSetFSEReportingDefaultDates
+  useSetFSEReportingDefaultDates,
+  useImportFSEReportingUpdate,
+  useGetFSEReportingUpdateJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
 import { defaultInitialPagination } from '@/constants/schedules'
 import ROUTES from '@/routes/routes'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
+import ImportDialog from '@/components/ImportDialog'
 
 export const FinalSupplyEquipmentReporting = () => {
   const { t } = useTranslation()
+  const apiService = useApiService()
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [isGridReady, setGridReady] = useState(false)
   const [selectedSiteOption, setSelectedSiteOption] = useState(null)
   const [hasSelectedRows, setHasSelectedRows] = useState(false)
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+  const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false)
   // Pagination state
   const [paginationOptions, setPaginationOptions] = useState({
     defaultInitialPagination
@@ -523,6 +534,28 @@ export const FinalSupplyEquipmentReporting = () => {
     [saveRow, t, complianceReportId, reportData]
   )
 
+  const handleDownloadTemplate = useCallback(async () => {
+    if (!complianceReportId) return
+    try {
+      setDownloadError('')
+      setIsDownloadingTemplate(true)
+      await apiService.download({
+        url: apiRoutes.fseReportingUpdateTemplate.replace(
+          ':reportID',
+          complianceReportId
+        )
+      })
+    } catch (error) {
+      const detail =
+        error?.response?.data?.detail ||
+        error?.message ||
+        t('finalSupplyEquipment:bulkUpdate.downloadError')
+      setDownloadError(detail)
+    } finally {
+      setIsDownloadingTemplate(false)
+    }
+  }, [complianceReportId, apiService, t])
+
   const handleSiteChange = useCallback((event, newValue) => {
     setSelectedSiteOption(newValue)
     // Update filters in pagination options
@@ -729,6 +762,34 @@ export const FinalSupplyEquipmentReporting = () => {
               {t('finalSupplyEquipment:setDefaultValues')}
             </BCTypography>
           </BCButton>
+
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            startIcon={
+              isDownloadingTemplate ? null : (
+                <FontAwesomeIcon icon={faDownload} />
+              )
+            }
+            onClick={handleDownloadTemplate}
+            isLoading={isDownloadingTemplate}
+            disabled={isDownloadingTemplate}
+            sx={{ height: 40 }}
+          >
+            {t('finalSupplyEquipment:bulkUpdate.downloadTemplate')}
+          </BCButton>
+
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            startIcon={<FontAwesomeIcon icon={faUpload} />}
+            onClick={() => setIsBulkUpdateDialogOpen(true)}
+            sx={{ height: 40 }}
+          >
+            {t('finalSupplyEquipment:bulkUpdate.uploadTemplate')}
+          </BCButton>
         </BCBox>
 
         {/* Right side: Filter dropdown */}
@@ -737,7 +798,7 @@ export const FinalSupplyEquipmentReporting = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 1.5,
-            minWidth: 350
+            marginLeft: 'auto'
           }}
         >
           <BCTypography
@@ -775,6 +836,12 @@ export const FinalSupplyEquipmentReporting = () => {
           />
         </BCBox>
       </BCBox>
+      )}
+
+      {downloadError && (
+        <Alert severity="error" onClose={() => setDownloadError('')}>
+          {downloadError}
+        </Alert>
       )}
 
       {!shouldShowInstructionalMessage && (
@@ -816,6 +883,21 @@ export const FinalSupplyEquipmentReporting = () => {
         }}
       />
       )}
+
+      <ImportDialog
+        open={isBulkUpdateDialogOpen}
+        close={() => setIsBulkUpdateDialogOpen(false)}
+        complianceReportId={complianceReportId}
+        isOverwrite={false}
+        title={t('finalSupplyEquipment:bulkUpdate.dialogTitle')}
+        importedLabel={t('finalSupplyEquipment:bulkUpdate.updatedCount')}
+        skippedLabel={t('finalSupplyEquipment:bulkUpdate.skippedCount')}
+        importHook={useImportFSEReportingUpdate}
+        getJobStatusHook={useGetFSEReportingUpdateJobStatus}
+        onComplete={() => {
+          refetch()
+        }}
+      />
     </Stack>
   )
 }
