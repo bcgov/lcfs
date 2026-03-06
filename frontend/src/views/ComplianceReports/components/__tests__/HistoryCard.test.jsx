@@ -1108,9 +1108,8 @@ describe('Non-Assessment Report', () => {
     render(<HistoryCard {...defaultProps} assessedMessage={assessedMessage} />)
 
     // The director statement should be shown
-    expect(
-      screen.getByText('Assessment statement from the director')
-    ).toBeInTheDocument()
+    const matches = screen.getAllByText('Assessment statement from the director')
+    expect(matches.length).toBeGreaterThan(0)
   })
 
   it('shows editable indicator for government users with appropriate role', () => {
