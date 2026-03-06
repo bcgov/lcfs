@@ -238,7 +238,7 @@ class ChargingSiteRepository:
 
         # Prefer validated/submitted equipment versions for government users
         status_alias = aliased(ChargingEquipmentStatus)
-        order_by_expressions = [ChargingEquipment.version.desc()]
+        order_by_expressions = [ChargingEquipment.version.desc(), ChargingEquipment.create_date.desc()]
         if is_government_user:
             status_priority = case(
                 (status_alias.status.in_(("Draft", "Updated")), 1),
