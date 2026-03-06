@@ -304,8 +304,8 @@ class ChargingSiteService:
             "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
-                "Updated",
                 "Validated",
+                "Updated",
             ],  # Submit (from Draft) or Undo Validation (from Validated) or Updated
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
