@@ -63,6 +63,18 @@ You will also need your LCFS postgres docker container running
 
 Click the Start icon to begin the data flow.
 
+## 8. Anonymize Imported LCFS Data (Local/Test Only):
+
+After importing a production data copy into a non-production database, run:
+
+```bash
+./anonymize-nonprod.sh --env local
+```
+
+Details and full options are documented in:
+
+`etl/ANONYMIZER.md`
+
 ## NiFi Monitoring
 
 To monitor your NiFi data flow:
