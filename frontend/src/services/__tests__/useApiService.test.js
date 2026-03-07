@@ -14,6 +14,8 @@ vi.mock('react', async () => {
 const mockKeycloak = { authenticated: false, token: null }
 const mockEnqueueSnackbar = vi.fn()
 const mockSetForbidden = vi.fn()
+const mockAddErrorRef = vi.fn()
+const mockSetErrorStatus = vi.fn()
 
 vi.mock('axios')
 vi.mock('@react-keycloak/web', () => ({
@@ -23,7 +25,12 @@ vi.mock('notistack', () => ({
   useSnackbar: () => ({ enqueueSnackbar: mockEnqueueSnackbar })
 }))
 vi.mock('@/contexts/AuthorizationContext', () => ({
-  useAuthorization: () => ({ setForbidden: mockSetForbidden })
+  useAuthorization: () => ({
+    setForbidden: mockSetForbidden,
+    addErrorRef: mockAddErrorRef,
+    setErrorStatus: mockSetErrorStatus,
+    serverErrorBlockedRef: { current: false }
+  })
 }))
 vi.mock('@/constants/config', () => ({
   CONFIG: {

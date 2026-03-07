@@ -29,6 +29,7 @@ from lcfs.web.exception.exception_handler import (
     validation_error_exception_handler_no_details,
     validation_exception_handler,
     global_exception_handler,
+    http_exception_handler,
 )
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
@@ -166,8 +167,9 @@ def get_app() -> FastAPI:
         allow_methods=["*"],  # Allows all methods
         allow_headers=["*"],  # Allows all headers
         expose_headers=[
-            "Content-Disposition"
-        ],  # Expose Content-Disposition header to the frontend
+            "Content-Disposition",
+            "X-Correlation-ID",
+        ],  # Expose so frontend can read ref on error responses
     )
 
     # Apply middlewares
@@ -177,6 +179,7 @@ def get_app() -> FastAPI:
     app.add_middleware(ContextMiddleware)
 
     # Register exception handlers
+    app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(
         ValidationErrorException, validation_error_exception_handler_no_details
