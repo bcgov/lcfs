@@ -49,6 +49,7 @@ export const COMPLIANCE_REPORT_STATUSES = {
   RECOMMENDED_BY_MANAGER: 'Recommended by manager',
   SUPPLEMENTAL_REQUESTED: 'Supplemental requested',
   ASSESSED: 'Assessed',
+  EXEMPTED: 'Exempted',
   REJECTED: 'Rejected',
   RETURN_TO_ANALYST: 'Return to analyst',
   RETURN_TO_MANAGER: 'Return to manager',

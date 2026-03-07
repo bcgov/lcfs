@@ -910,6 +910,7 @@ class OrganizationsRepository:
                     [
                         ComplianceReportStatusEnum.Submitted,
                         ComplianceReportStatusEnum.Assessed,
+                        ComplianceReportStatusEnum.Exempted,
                     ]
                 ),
             )

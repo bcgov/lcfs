@@ -84,7 +84,9 @@ const ComplianceReportSummary = ({
   enableCompareMode,
   alertRef,
   hasEligibleRenewableFuel,
-  setHasEligibleRenewableFuel
+  setHasEligibleRenewableFuel,
+  isRenewableFuelExempted = false,
+  isLowCarbonFuelExempted = false
 }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [hasRecords, setHasRecords] = useState(false)
@@ -221,6 +223,25 @@ const ComplianceReportSummary = ({
     })
   }, [summaryData, penaltyOverrideEnabled])
 
+  // When low carbon fuel is exempted, override line 22 to show line 17's value
+  // (no credit change applied) instead of the stale calculated value
+  const lowCarbonDisplayData = useMemo(() => {
+    const data = summaryData?.lowCarbonFuelTargetSummary
+    if (!data || !isLowCarbonFuelExempted) return data
+
+    // Low carbon table: line 12 = index 0, line 17 = index 5, line 22 = index 10
+    const LINE_17_INDEX = 5
+    const LINE_22_INDEX = 10
+    const line17Value = data[LINE_17_INDEX]?.value ?? 0
+
+    return data.map((row, index) => {
+      if (index === LINE_22_INDEX) {
+        return { ...row, value: Math.max(line17Value, 0) }
+      }
+      return row
+    })
+  }, [summaryData?.lowCarbonFuelTargetSummary, isLowCarbonFuelExempted])
+
   const handleCheckboxToggle = useCallback(
     (enabled) => {
       setPenaltyOverrideEnabled(enabled)
@@ -328,15 +349,21 @@ const ComplianceReportSummary = ({
                     lines6And8Locked={summaryData?.lines6And8Locked}
                     savingCellKey={savingCellKey}
                     tableType="renewable"
+                    exemptedLines={
+                      isRenewableFuelExempted ? [4, 11] : []
+                    }
                   />
                 )}
                 <SummaryTable
                   data-test="low-carbon-summary"
                   title={t('report:lowCarbonFuelTargetSummary')}
                   columns={lowCarbonColumns(t)}
-                  data={summaryData?.lowCarbonFuelTargetSummary}
+                  data={lowCarbonDisplayData}
                   width={'80.65%'}
                   compliancePeriodYear={compliancePeriodYear}
+                  exemptedLines={
+                    isLowCarbonFuelExempted ? [18, 20, 21] : []
+                  }
                 />
                 <SummaryTable
                   data-test="non-compliance-summary"
@@ -351,6 +378,10 @@ const ComplianceReportSummary = ({
                   }
                   savingCellKey={savingCellKey}
                   tableType="penalty"
+                  exemptedLines={[
+                    ...(isRenewableFuelExempted ? [11] : []),
+                    ...(isLowCarbonFuelExempted ? [21] : [])
+                  ]}
                 />
                 {hasRoles(roles.director) &&
                   parseInt(compliancePeriodYear) >= 2024 &&

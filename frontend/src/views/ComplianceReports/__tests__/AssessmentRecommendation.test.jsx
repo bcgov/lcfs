@@ -388,17 +388,22 @@ describe('AssessmentRecommendation', () => {
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
-      const checkbox = screen.getByRole('checkbox')
+      const checkbox = screen.getByRole('checkbox', {
+        name: /notSubjectToAssessment/i
+      })
       fireEvent.click(checkbox)
 
       expect(defaultProps.methods.setValue).toHaveBeenCalledWith(
         'isNonAssessment',
         true
       )
-      expect(mockUpdateComplianceReport).toHaveBeenCalledWith({
-        status: COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-        isNonAssessment: true
-      })
+      expect(mockUpdateComplianceReport).toHaveBeenCalledWith(
+        {
+          status: COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+          isNonAssessment: true
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) })
+      )
     })
   })
 
@@ -426,7 +431,9 @@ describe('AssessmentRecommendation', () => {
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
-      const checkbox = screen.getByRole('checkbox')
+      const checkbox = screen.getByRole('checkbox', {
+        name: /notSubjectToAssessment/i
+      })
       const label = checkbox.parentElement
 
       // The label should use the description translation key (which includes instructions)
@@ -554,7 +561,9 @@ describe('AssessmentRecommendation', () => {
 
       render(<AssessmentRecommendation {...defaultProps} />)
 
-      const checkbox = screen.getByRole('checkbox')
+      const checkbox = screen.getByRole('checkbox', {
+        name: /notSubjectToAssessment/i
+      })
 
       // Initially unchecked
       expect(checkbox).not.toBeChecked()
@@ -564,10 +573,13 @@ describe('AssessmentRecommendation', () => {
 
       // Should call the update mutation
       await waitFor(() => {
-        expect(mockUpdateComplianceReport).toHaveBeenCalledWith({
-          status: COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-          isNonAssessment: true
-        })
+        expect(mockUpdateComplianceReport).toHaveBeenCalledWith(
+          {
+            status: COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+            isNonAssessment: true
+          },
+          expect.objectContaining({ onSuccess: expect.any(Function) })
+        )
       })
     })
 
@@ -588,7 +600,9 @@ describe('AssessmentRecommendation', () => {
 
       render(<AssessmentRecommendation {...propsWithNonAssessment} />)
 
-      const checkbox = screen.getByRole('checkbox')
+      const checkbox = screen.getByRole('checkbox', {
+        name: /notSubjectToAssessment/i
+      })
 
       // Should be initially checked
       expect(checkbox).toBeChecked()
