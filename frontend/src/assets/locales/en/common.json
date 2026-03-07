@@ -58,12 +58,24 @@
   "scrollToTop": "Scroll to top",
   "scrollToBottom": "Scroll to bottom",
   "Notifications": "Notifications",
+  "errorPage": {
+    "referenceNumberLabel": "Reference number",
+    "referenceNumbersLabel": "Reference numbers",
+    "referenceNumberHint": "Please quote this number when contacting support so we can investigate your issue.",
+    "contactSupport": "For assistance, contact us at",
+    "genericMessage": "An unexpected error occurred. Please try again or contact support if the issue persists.",
+    "closeAndContinue": "Close and continue"
+  },
   "unauthorized": {
     "title": "403 / Unauthorized",
     "message": "Sorry, you do not have permission to access this page.",
     "contact": "Contact your LCFS or BCeID administrator or contact",
     "email": "lcfs@gov.bc.ca",
     "returnToLogin": "Return to login"
+  },
+  "internalServerError": {
+    "title": "Internal Server Error",
+    "message": "Sorry, something went wrong on our end. We are working to resolve the issue. Please try again later."
   },
   "ClearFilters": "Clear all filters",
   "changelogCurrentState": "Current changes",
