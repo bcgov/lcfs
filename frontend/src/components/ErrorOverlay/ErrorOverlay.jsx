@@ -41,8 +41,8 @@ export const ErrorOverlay = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backdropFilter: 'blur(4px)',
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backdropFilter: 'blur(2px)',
+        backgroundColor: 'rgba(0,0,0,0.24)',
         px: 2
       }}
     >
@@ -50,19 +50,22 @@ export const ErrorOverlay = () => {
         onClick={(e) => e.stopPropagation()}
         sx={{
           position: 'relative',
-          bgcolor: '#fff',
-          borderTop: '4px solid #003366',
+          bgcolor: 'background.paper',
+          border: '1px solid #d9d9d9',
+          borderTop: '3px solid #003366',
+          borderRadius: 1,
           maxWidth: 460,
           width: '100%',
           p: { xs: 3, sm: 4 },
-          boxShadow: '0 2px 16px rgba(0,0,0,0.15)'
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
         }}
       >
         <IconButton
           onClick={handleClose}
           size="small"
           aria-label="close"
-          sx={{ position: 'absolute', top: 10, right: 10, color: '#999' }}
+          sx={{ position: 'absolute', top: 10, right: 10, color: '#777' }}
         >
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
@@ -75,7 +78,7 @@ export const ErrorOverlay = () => {
         </BCTypography>
 
         {titleKey && (
-          <BCTypography variant="h6" sx={{ fontWeight: 600, color: '#002244', mb: 1.5 }}>
+          <BCTypography variant="h6" sx={{ fontWeight: 600, color: '#003366', mb: 1.5 }}>
             {t(titleKey)}
           </BCTypography>
         )}
@@ -85,7 +88,16 @@ export const ErrorOverlay = () => {
         </BCTypography>
 
         {errorRefs.length > 0 && (
-          <Box sx={{ bgcolor: '#f7f8f9', border: '1px solid #e0e0e0', px: 2, py: 1.5, mb: 3 }}>
+          <Box
+            sx={{
+              bgcolor: '#f7f8f9',
+              border: '1px solid #e0e0e0',
+              borderRadius: 1,
+              px: 2,
+              py: 1.5,
+              mb: 3
+            }}
+          >
             <BCTypography
               variant="caption"
               sx={{
