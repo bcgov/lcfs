@@ -64,8 +64,7 @@
     "referenceNumberHint": "Please quote this number when contacting support so we can investigate your issue.",
     "contactSupport": "For assistance, contact us at",
     "genericMessage": "An unexpected error occurred. Please try again or contact support if the issue persists.",
-    "closeAndContinue": "Close",
-    "closeAndContinueHint": "Refresh the page to try again"
+    "closeAndContinue": "Close and continue"
   },
   "unauthorized": {
     "title": "403 / Unauthorized",

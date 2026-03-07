@@ -143,20 +143,15 @@ export const ErrorOverlay = () => {
           </a>
         </BCTypography>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <BCButton
-            variant="contained"
-            color="primary"
-            onClick={handleClose}
-            data-test="error-overlay-close-btn"
-            sx={{ textTransform: 'none', fontWeight: 500, px: 3, py: 0.875 }}
-          >
-            {t('errorPage.closeAndContinue')}
-          </BCButton>
-          <BCTypography variant="caption" sx={{ color: '#999' }}>
-            {t('errorPage.closeAndContinueHint')}
-          </BCTypography>
-        </Box>
+        <BCButton
+          variant="contained"
+          color="primary"
+          onClick={handleClose}
+          data-test="error-overlay-close-btn"
+          sx={{ textTransform: 'none', fontWeight: 500, px: 3, py: 0.875 }}
+        >
+          {t('errorPage.closeAndContinue')}
+        </BCButton>
       </Box>
     </Box>
   )
