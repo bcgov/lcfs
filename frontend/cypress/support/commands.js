@@ -157,9 +157,6 @@ Cypress.Commands.add(
   'selectWithRetry',
   (cellSelector, optionSelector, index, attempts = 3) => {
     function attemptSelection(attemptsLeft) {
-      // Deselect anything
-      cy.get('body').click(50, 50, { force: true })
-
       cy.get(cellSelector, { timeout: 20000 })
         .eq(index)
         .scrollIntoView()
@@ -202,9 +199,6 @@ Cypress.Commands.add(
     let attemptsLeft = attempts
 
     function tryInput() {
-      // Click the body to deselect / commit any open editor
-      cy.get('body').click(50, 50, { force: true })
-
       // Single click is enough because singleClickEdit: true is set on the grid
       cy.get(cellSelector, { timeout: 20000 })
         .eq(index)
