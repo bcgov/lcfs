@@ -44,7 +44,11 @@ export const CompareReports = () => {
     if (!hasAssessedReport) return false
     const report = reportChain.find((r) => r.complianceReportId === reportId)
     if (!report) return false
-    return report.currentStatus?.status !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+    const status = report.currentStatus?.status
+    return (
+      status !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+      status !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
+    )
   }
 
   useEffect(() => {

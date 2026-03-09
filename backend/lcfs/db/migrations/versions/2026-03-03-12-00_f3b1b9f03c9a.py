@@ -1,7 +1,7 @@
 """Create report_opening configuration table
 
 Revision ID: f3b1b9f03c9a
-Revises: 3d7b65a9d2ef
+Revises: 84d7cf6d1940
 Create Date: 2026-01-25 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f3b1b9f03c9a"
-down_revision = "3d7b65a9d2ef"
+down_revision = "84d7cf6d1940"
 branch_labels = None
 depends_on = None
 

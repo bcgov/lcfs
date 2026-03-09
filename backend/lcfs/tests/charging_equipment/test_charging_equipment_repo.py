@@ -11,10 +11,7 @@ from lcfs.db.models.compliance.ComplianceReportChargingEquipment import (
 )
 from lcfs.web.api.base import PaginationRequestSchema, SortOrder
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
-from lcfs.web.api.charging_equipment.schema import (
-    ChargingEquipmentFilterSchema,
-    ChargingEquipmentStatusEnum,
-)
+from lcfs.web.api.charging_equipment.schema import ChargingEquipmentStatusEnum
 
 
 @pytest.fixture
@@ -90,9 +87,8 @@ async def test_get_charging_equipment_list_success(
     repo, mock_db, valid_charging_equipment
 ):
     """Test getting paginated list of charging equipment."""
-    # Setup pagination and filters
+    # Setup pagination
     pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[])
-    filters = ChargingEquipmentFilterSchema(status=[ChargingEquipmentStatusEnum.DRAFT])
 
     # Mock the database query results
     mock_items_result = MagicMock()
@@ -104,7 +100,7 @@ async def test_get_charging_equipment_list_success(
     mock_db.execute.side_effect = [mock_count_result, mock_items_result]
 
     # Call the repository method
-    items, total_count = await repo.get_charging_equipment_list(1, pagination, filters)
+    items, total_count = await repo.get_charging_equipment_list(1, pagination)
 
     # Verify the results
     assert len(items) == 1

@@ -149,6 +149,25 @@ class ComplianceReportUpdateService:
                     report, user, skip_can_sign_check=True
                 )
 
+        # Handle exemption flag changes
+        if report_data.is_renewable_fuel_exempted is not None:
+            report.is_renewable_fuel_exempted = report_data.is_renewable_fuel_exempted
+        if report_data.is_low_carbon_fuel_exempted is not None:
+            report.is_low_carbon_fuel_exempted = report_data.is_low_carbon_fuel_exempted
+
+        # Auto-transition to Exempted when assessed with exemption flags set
+        if (
+            new_status.status == ComplianceReportStatusEnum.Assessed
+            and (
+                report.is_renewable_fuel_exempted
+                or report.is_low_carbon_fuel_exempted
+            )
+        ):
+            new_status = await self.repo.get_compliance_report_status_by_desc(
+                ComplianceReportStatusEnum.Exempted.value
+            )
+            report.current_status = new_status
+
         updated_report = await self.repo.update_compliance_report(report)
 
         # Handle status change related actions
@@ -209,6 +228,7 @@ class ComplianceReportUpdateService:
             ComplianceReportStatusEnum.Recommended_by_analyst: self.handle_recommended_by_analyst_status,
             ComplianceReportStatusEnum.Recommended_by_manager: self.handle_recommended_by_manager_status,
             ComplianceReportStatusEnum.Assessed: self.handle_assessed_status,
+            ComplianceReportStatusEnum.Exempted: self.handle_exempted_status,
         }
 
         handler = status_handlers.get(new_status)
@@ -413,6 +433,86 @@ class ComplianceReportUpdateService:
                     report.transaction_id, report.compliance_report_id
                 )
                 report.transaction_id = None
+
+        await self.repo.update_compliance_report(report)
+
+    async def handle_exempted_status(self, report: ComplianceReport, user: UserProfile):
+        """Handle actions when a report is Exempted.
+
+        Behaves like Assessed (finalized, read-only) but skips all financial
+        processing — no transactions or balance adjustments are created.
+        Summary lines 4, 11, 18, 20, 21 are blanked out.
+        """
+        # Check if a newer draft exists, preventing further action on this report
+        existing_draft = await self.repo.get_draft_report_by_group_uuid(
+            report.compliance_report_group_uuid
+        )
+        if existing_draft and existing_draft.version > report.version:
+            raise HTTPException(
+                status_code=409,
+                detail="This report has been superseded by a draft supplemental report and cannot be exempted.",
+            )
+
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+        # No financial processing for exempted reports — delete any existing transaction
+        if report.transaction_id:
+            await self.trx_service.repo.delete_transaction(
+                report.transaction_id, report.compliance_report_id
+            )
+            report.transaction_id = None
+
+        # Blank out summary lines based on which exemption applies
+        if report.summary:
+            if report.is_renewable_fuel_exempted:
+                # Line 4: eligible renewable fuel required
+                report.summary.line_4_eligible_renewable_fuel_required_gasoline = 0
+                report.summary.line_4_eligible_renewable_fuel_required_diesel = 0
+                report.summary.line_4_eligible_renewable_fuel_required_jet_fuel = 0
+                # Line 11: non-compliance penalty (renewable fuel target)
+                report.summary.line_11_non_compliance_penalty_gasoline = 0
+                report.summary.line_11_non_compliance_penalty_diesel = 0
+                report.summary.line_11_non_compliance_penalty_jet_fuel = 0
+            if report.is_low_carbon_fuel_exempted:
+                # Line 18: units to be banked
+                report.summary.line_18_units_to_be_banked = 0
+                # Line 20: surplus/deficit units
+                report.summary.line_20_surplus_deficit_units = 0
+                # Line 21: surplus/deficit ratio and non-compliance penalty
+                report.summary.line_21_surplus_deficit_ratio = 0
+                report.summary.line_21_non_compliance_penalty_payable = 0
+                # Line 22: recalculate since Line 20 is now 0
+                report.summary.line_22_compliance_units_issued = max(
+                    report.summary.line_17_non_banked_units_used, 0
+                )
+
+        # Generate dynamic exemption assessment statement
+        org_name = (
+            report.organization.name if report.organization else "the organization"
+        )
+        exemption_bullets = []
+        if report.is_renewable_fuel_exempted:
+            exemption_bullets.append(
+                "Exemption from the renewable fuel requirement."
+            )
+        if report.is_low_carbon_fuel_exempted:
+            exemption_bullets.append(
+                "Exemption from the low carbon fuel requirement."
+            )
+        if exemption_bullets:
+            bullets_text = "\n".join(f"\u00a0\u00a0\u00a0\u00a0\u2022 {b}" for b in exemption_bullets)
+            report.assessment_statement = (
+                f"Based on your claim for an exemption, and the information submitted "
+                f"in this compliance report, {org_name} has been granted:\n\n"
+                f"{bullets_text}\n\n"
+                f"Exemptions are based on the accuracy of the information provided by "
+                f"your organization, which is subject to inspection under the Act. "
+                f"Records must be retained in accordance with the Regulation."
+            )
 
         await self.repo.update_compliance_report(report)
 

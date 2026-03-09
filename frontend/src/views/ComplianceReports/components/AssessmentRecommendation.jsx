@@ -32,6 +32,8 @@ export const AssessmentRecommendation = ({
   const [isReassessmentDialogOpen, setIsReassessmentDialogOpen] =
     useState(false)
   const [showSavedConfirmation, setShowSavedConfirmation] = useState(false)
+  const [showExemptionSavedConfirmation, setShowExemptionSavedConfirmation] =
+    useState(false)
 
   const { mutate: createAnalystAdjustment, isLoading } =
     useCreateAnalystAdjustment(complianceReportId, {
@@ -52,19 +54,13 @@ export const AssessmentRecommendation = ({
     })
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
-    complianceReportId,
-    {
-      onSuccess: () => {
-        // Show saved confirmation
-        setShowSavedConfirmation(true)
-        setTimeout(() => setShowSavedConfirmation(false), 3000)
-      }
-    }
+    complianceReportId
   )
 
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasRoles(roles.analyst)
   const isDirector = hasRoles(roles.director)
+  const isComplianceManager = hasRoles(roles.compliance_manager)
 
   // Determine if this is an original report (kept for backward compatibility)
   const isOriginalReport = useMemo(() => {
@@ -83,14 +79,24 @@ export const AssessmentRecommendation = ({
     )
   }, [isAnalyst, isDirector, currentStatus])
 
-  // Show non-assessment section for analysts and directors on all report types
+  // Show non-assessment section for analysts, directors, and compliance managers
   const shouldShowNonAssessmentSection = useMemo(() => {
-    return (
-      isGovernmentUser &&
-      (isAnalyst || isDirector) &&
-      currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
-    )
-  }, [isGovernmentUser, isAnalyst, isDirector, currentStatus])
+    if (!isGovernmentUser) return false
+    if (isAnalyst || isDirector) {
+      return (
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
+      )
+    }
+    // Compliance managers can view (read-only) after analyst recommendation
+    if (isComplianceManager) {
+      return (
+        currentStatus === COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST ||
+        currentStatus === COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+      )
+    }
+    return false
+  }, [isGovernmentUser, isAnalyst, isDirector, isComplianceManager, currentStatus])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -122,16 +128,136 @@ export const AssessmentRecommendation = ({
     methods.setValue('isNonAssessment', newValue)
 
     // Automatically save the change
-    updateComplianceReport({
-      status: currentStatus,
-      isNonAssessment: newValue
-    })
+    updateComplianceReport(
+      {
+        status: currentStatus,
+        isNonAssessment: newValue
+      },
+      {
+        onSuccess: () => {
+          setShowSavedConfirmation(true)
+          setTimeout(() => setShowSavedConfirmation(false), 3000)
+        }
+      }
+    )
   }
+
+  // Allow editing exemption checkboxes when user is analyst or director and report is submitted
+  const canEditExemptionStatus = useMemo(() => {
+    return (
+      (isAnalyst || isDirector) &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+    )
+  }, [isAnalyst, isDirector, currentStatus])
+
+  const handleRenewableFuelExemptionChange = (event) => {
+    const newValue = event.target.checked
+    methods.setValue('isRenewableFuelExempted', newValue)
+
+    updateComplianceReport(
+      {
+        status: currentStatus,
+        isRenewableFuelExempted: newValue
+      },
+      {
+        onSuccess: () => {
+          setShowExemptionSavedConfirmation(true)
+          setTimeout(() => setShowExemptionSavedConfirmation(false), 3000)
+        }
+      }
+    )
+  }
+
+  const handleLowCarbonFuelExemptionChange = (event) => {
+    const newValue = event.target.checked
+    methods.setValue('isLowCarbonFuelExempted', newValue)
+
+    updateComplianceReport(
+      {
+        status: currentStatus,
+        isLowCarbonFuelExempted: newValue
+      },
+      {
+        onSuccess: () => {
+          setShowExemptionSavedConfirmation(true)
+          setTimeout(() => setShowExemptionSavedConfirmation(false), 3000)
+        }
+      }
+    )
+  }
+
+  // Exemption checkboxes - shared between Director and non-Director paths
+  const exemptionCheckboxes = shouldShowNonAssessmentSection && (
+    <BCBox mt={2}>
+      <BCBox display="flex" alignItems="center" mb={2}>
+        <BCTypography variant="h6" color="primary">
+          {t('report:exempted')}
+        </BCTypography>
+        <Fade in={showExemptionSavedConfirmation}>
+          <BCBox display="flex" alignItems="center" ml={2}>
+            <CheckCircle
+              sx={{
+                color: 'success.main',
+                fontSize: '1rem',
+                mr: 0.5
+              }}
+            />
+            <BCTypography variant="body2" color="success.main">
+              Saved
+            </BCTypography>
+          </BCBox>
+        </Fade>
+      </BCBox>
+      <FormControlLabel
+        control={
+          <Checkbox
+            disabled={!canEditExemptionStatus}
+            checked={methods.watch('isRenewableFuelExempted') || false}
+            onChange={handleRenewableFuelExemptionChange}
+          />
+        }
+        label={t('report:renewableFuelExemptionDescription')}
+        sx={{
+          alignItems: 'flex-start',
+          '& .MuiCheckbox-root': {
+            paddingTop: 0,
+            marginTop: '6px'
+          },
+          '& .MuiFormControlLabel-label': {
+            fontSize: '1rem',
+            lineHeight: 1.5
+          }
+        }}
+      />
+      <FormControlLabel
+        control={
+          <Checkbox
+            disabled={!canEditExemptionStatus}
+            checked={methods.watch('isLowCarbonFuelExempted') || false}
+            onChange={handleLowCarbonFuelExemptionChange}
+          />
+        }
+        label={t('report:lowCarbonFuelExemptionDescription')}
+        sx={{
+          alignItems: 'flex-start',
+          '& .MuiCheckbox-root': {
+            paddingTop: 0,
+            marginTop: '6px'
+          },
+          '& .MuiFormControlLabel-label': {
+            fontSize: '1rem',
+            lineHeight: 1.5
+          }
+        }}
+      />
+    </BCBox>
+  )
 
   // Don't show the component if Director on ASSESSED report (no content to display)
   const shouldShowReassessmentButton =
     isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
-    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED ||
+      currentStatus === COMPLIANCE_REPORT_STATUSES.EXEMPTED) &&
     isAnalyst &&
     !isDirector
 
@@ -142,7 +268,10 @@ export const AssessmentRecommendation = ({
     isAnalyst &&
     !isDirector
 
-  const hasContentToShow = isDirector ? shouldShowNonAssessmentSection : true // Always show for non-Directors
+  const hasContentToShow =
+    isDirector || isComplianceManager
+      ? shouldShowNonAssessmentSection
+      : true
 
   if (
     !hasContentToShow &&
@@ -230,6 +359,7 @@ export const AssessmentRecommendation = ({
                   }
                 }}
               />
+              {exemptionCheckboxes}
             </BCBox>
           )}
         </BCBox>
@@ -311,6 +441,7 @@ export const AssessmentRecommendation = ({
                   }
                 }}
               />
+              {exemptionCheckboxes}
             </BCBox>
           )}
         </>

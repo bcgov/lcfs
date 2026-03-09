@@ -242,6 +242,7 @@ class ComplianceReportServices:
         allowed_statuses = [
             ComplianceReportStatusEnum.Submitted,
             ComplianceReportStatusEnum.Assessed,
+            ComplianceReportStatusEnum.Exempted,
         ]
 
         if current_report.current_status.status not in allowed_statuses:
@@ -739,7 +740,11 @@ class ComplianceReportServices:
 
         is_newest = len(compliance_report_chain) - 1 == report.version
         had_been_assessed = any(
-            report.current_status.status == ComplianceReportStatusEnum.Assessed.value
+            report.current_status.status
+            in (
+                ComplianceReportStatusEnum.Assessed.value,
+                ComplianceReportStatusEnum.Exempted.value,
+            )
             for report in compliance_report_chain
         )
 
@@ -861,6 +866,7 @@ class ComplianceReportServices:
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
             ComplianceReportStatusEnum.Assessed.value,
+            ComplianceReportStatusEnum.Exempted.value,
             ComplianceReportStatusEnum.Analyst_adjustment.value,
         }
 

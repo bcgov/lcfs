@@ -1933,7 +1933,9 @@ describe('EditViewComplianceReport', () => {
           defaultValues: {
             assessmentStatement: '',
             supplementalNote: '',
-            isNonAssessment: false
+            isNonAssessment: false,
+            isRenewableFuelExempted: false,
+            isLowCarbonFuelExempted: false
           }
         })
       })
