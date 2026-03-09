@@ -1168,6 +1168,7 @@ class FinalSupplyEquipmentRepository:
                 ComplianceReportChargingEquipment.compliance_notes,
                 ComplianceReportChargingEquipment.organization_id,
                 ComplianceReportChargingEquipment.is_active,
+                ComplianceReportChargingEquipment.compliance_report_group_uuid,
                 func.row_number()
                 .over(
                     partition_by=(
