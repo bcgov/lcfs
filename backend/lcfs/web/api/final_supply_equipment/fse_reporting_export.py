@@ -93,6 +93,19 @@ class FSEReportingExporter:
         )
         rows = []
         for record in records:
+            # Inactive rows: show only registration number, leave other columns blank
+            is_inactive = getattr(record, "is_active", True) is False
+            if is_inactive:
+                rows.append(
+                    [
+                        record.registration_number or "",
+                        None,
+                        None,
+                        None,
+                        None,
+                    ]
+                )
+                continue
             supply_from = record.supply_from_date
             supply_to = record.supply_to_date
             if isinstance(supply_from, datetime.datetime):

@@ -323,6 +323,11 @@ async def _import_async(
                             str(compliance_notes).strip() if compliance_notes else None
                         )
 
+                        # Skip inactive rows — do not update or reactivate them via upload
+                        if existing_record is not None and existing_record.is_active is False:
+                            skipped += 1
+                            continue
+
                         if existing_record is None:
                             # Create new record only when dates are supplied
                             if supply_from_date is None or supply_to_date is None:
