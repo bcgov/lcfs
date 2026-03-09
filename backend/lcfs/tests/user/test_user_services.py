@@ -133,10 +133,15 @@ async def test_update_user_inactive_to_active_adds_government_subscription():
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
     fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
 
+    fake_request = MagicMock()
+    fake_request.user = MagicMock()
+    fake_request.user.is_government = True
+
     with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
         service = UserServices()
         service.repo = fake_repo
         service.notification_service = fake_notification_service
+        service.request = fake_request
 
         await service.update_user(MagicMock(), 30)
 
@@ -170,10 +175,15 @@ async def test_update_user_idir_role_added_adds_government_subscription():
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
     fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
 
+    fake_request = MagicMock()
+    fake_request.user = MagicMock()
+    fake_request.user.is_government = True
+
     with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
         service = UserServices()
         service.repo = fake_repo
         service.notification_service = fake_notification_service
+        service.request = fake_request
 
         await service.update_user(MagicMock(), 40)
 
@@ -208,10 +218,15 @@ async def test_update_user_idir_role_removed_deletes_subscriptions():
     fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
     fake_notification_service.delete_subscriptions_for_user_role = AsyncMock()
 
+    fake_request = MagicMock()
+    fake_request.user = MagicMock()
+    fake_request.user.is_government = True
+
     with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
         service = UserServices()
         service.repo = fake_repo
         service.notification_service = fake_notification_service
+        service.request = fake_request
 
         await service.update_user(MagicMock(), 50)
 
@@ -224,7 +239,6 @@ async def test_update_user_idir_role_removed_deletes_subscriptions():
 
 @pytest.mark.anyio
 async def test_remove_user_not_safe():
-    # Create fake user that is not safe to remove.
     fake_user = MagicMock()
     fake_user.keycloak_username = "unsafeuser"
     fake_user.user_profile_id = 202
@@ -241,3 +255,152 @@ async def test_remove_user_not_safe():
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "User is not safe to remove."
+
+
+# ---------------------------------------------------------------------------
+# IA Signer role guard in update_user
+# ---------------------------------------------------------------------------
+
+
+def _make_update_service(fake_user, updated_user, is_government_caller: bool):
+    """Helper: wire up a UserServices instance for update_user tests."""
+    fake_repo = MagicMock()
+    fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
+    fake_repo.update_user = AsyncMock(return_value=updated_user)
+
+    fake_notification_service = MagicMock()
+    fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
+    fake_notification_service.add_subscriptions_for_user_role = AsyncMock()
+    fake_notification_service.delete_subscriptions_for_user_role = AsyncMock()
+
+    caller = MagicMock()
+    caller.is_government = is_government_caller
+
+    fake_request = MagicMock()
+    fake_request.user = caller
+
+    service = UserServices()
+    service.repo = fake_repo
+    service.notification_service = fake_notification_service
+    service.request = fake_request
+    return service, fake_repo
+
+
+def _bceid_user_with_ia_signer():
+    """A BCeID user who currently has IA Signer."""
+    user = MagicMock()
+    user.organization = MagicMock()
+    user.is_active = True
+    user.is_government = False
+    user.role_names = [RoleEnum.IA_SIGNER, RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER]
+    return user
+
+
+def _bceid_user_without_ia_signer():
+    """A BCeID user who does NOT currently have IA Signer."""
+    user = MagicMock()
+    user.organization = MagicMock()
+    user.is_active = True
+    user.is_government = False
+    user.role_names = [RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER]
+    return user
+
+
+def _updated_user_stub(role_names):
+    u = MagicMock()
+    u.user_profile_id = 99
+    u.is_active = True
+    u.is_government = False
+    u.role_names = role_names
+    return u
+
+
+@pytest.mark.anyio
+async def test_bceid_caller_cannot_remove_ia_signer():
+    """A BCeID caller submitting roles without IA Signer must have it restored."""
+    current_user = _bceid_user_with_ia_signer()
+    updated = _updated_user_stub(
+        [RoleEnum.IA_SIGNER, RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER]
+    )
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=False
+    )
+
+    user_create = MagicMock()
+    # Caller submits IA Proponent but omits IA Signer
+    user_create.roles = [RoleEnum.IA_PROPONENT.value, RoleEnum.SUPPLIER.value]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.update_user(user_create, 99)
+
+    submitted = fake_repo.update_user.call_args[0][1].roles
+    assert RoleEnum.IA_SIGNER.value in submitted
+
+
+@pytest.mark.anyio
+async def test_bceid_caller_cannot_grant_ia_signer():
+    """A BCeID caller who tries to add IA Signer must have it stripped."""
+    current_user = _bceid_user_without_ia_signer()
+    updated = _updated_user_stub([RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER])
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=False
+    )
+
+    user_create = MagicMock()
+    # Caller attempts to add IA Signer
+    user_create.roles = [
+        RoleEnum.IA_SIGNER.value,
+        RoleEnum.IA_PROPONENT.value,
+        RoleEnum.SUPPLIER.value,
+    ]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.update_user(user_create, 99)
+
+    submitted = fake_repo.update_user.call_args[0][1].roles
+    assert RoleEnum.IA_SIGNER.value not in submitted
+
+
+@pytest.mark.anyio
+async def test_government_caller_can_remove_ia_signer():
+    """An IDIR caller who submits without IA Signer must have it removed (no guard)."""
+    current_user = _bceid_user_with_ia_signer()
+    updated = _updated_user_stub([RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER])
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=True
+    )
+
+    user_create = MagicMock()
+    # IDIR caller intentionally removes IA Signer
+    user_create.roles = [RoleEnum.IA_PROPONENT.value, RoleEnum.SUPPLIER.value]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.update_user(user_create, 99)
+
+    submitted = fake_repo.update_user.call_args[0][1].roles
+    assert RoleEnum.IA_SIGNER.value not in submitted
+
+
+@pytest.mark.anyio
+async def test_government_caller_can_grant_ia_signer():
+    """An IDIR caller who adds IA Signer must have it preserved in the payload."""
+    current_user = _bceid_user_without_ia_signer()
+    updated = _updated_user_stub(
+        [RoleEnum.IA_SIGNER, RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER]
+    )
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=True
+    )
+
+    user_create = MagicMock()
+    user_create.roles = [
+        RoleEnum.IA_SIGNER.value,
+        RoleEnum.IA_PROPONENT.value,
+        RoleEnum.SUPPLIER.value,
+    ]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.update_user(user_create, 99)
+
+    submitted = fake_repo.update_user.call_args[0][1].roles
+    assert RoleEnum.IA_SIGNER.value in submitted
