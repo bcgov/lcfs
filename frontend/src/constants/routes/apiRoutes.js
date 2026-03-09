@@ -236,5 +236,12 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache'
+  geocoderClearCache: '/geocoder/cache',
+
+  // login background image endpoints
+  loginBgImages: '/login-bg-images/',
+  loginBgImageActive: '/login-bg-images/active',
+  loginBgImage: '/login-bg-images/:imageId',
+  loginBgImageActivate: '/login-bg-images/:imageId/activate',
+  loginBgImageStream: '/login-bg-images/:imageId/stream'
 }

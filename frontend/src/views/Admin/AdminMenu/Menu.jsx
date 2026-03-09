@@ -7,7 +7,7 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserActivity, UserLoginHistory, AuditLog } from '.'
+import { Users, UserActivity, UserLoginHistory, AuditLog, LoginScreenBackground } from '.'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 
@@ -27,7 +27,8 @@ export function AdminMenu({ tabIndex }) {
       ROUTES.ADMIN.USERS.LIST,
       ROUTES.ADMIN.USER_ACTIVITY,
       ROUTES.ADMIN.USER_LOGIN_HISTORY,
-      ROUTES.ADMIN.AUDIT_LOG.LIST
+      ROUTES.ADMIN.AUDIT_LOG.LIST,
+      ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
     ],
     []
   )
@@ -58,7 +59,7 @@ export function AdminMenu({ tabIndex }) {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: 'auto' }}
           orientation={tabsOrientation}
           value={tabIndex}
           aria-label="Tabs for selection of administration options"
@@ -68,6 +69,7 @@ export function AdminMenu({ tabIndex }) {
           <Tab label={t('UserActivity')} {...a11yProps(1)} />
           <Tab label={t('UserLoginHistory')} {...a11yProps(2)} />
           <Tab label={t('AuditLog')} {...a11yProps(3)} />
+          <Tab label={t('LoginScreenBackground')} {...a11yProps(4)} />
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>
@@ -82,6 +84,9 @@ export function AdminMenu({ tabIndex }) {
         </AdminTabPanel>
         <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
           <AuditLog />
+        </AdminTabPanel>
+        <AdminTabPanel value={tabIndex} index={4} component="div" mx={-3}>
+          <LoginScreenBackground />
         </AdminTabPanel>
       </Role>
     </BCBox>

@@ -120,7 +120,8 @@ export const ROUTES = {
     AUDIT_LOG: {
       LIST: '/admin/audit-log',
       VIEW: '/admin/audit-log/:auditLogId'
-    }
+    },
+    LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background'
   },
 
   FUEL_CODES: {

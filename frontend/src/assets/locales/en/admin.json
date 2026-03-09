@@ -4,6 +4,7 @@
   "UserActivity": "User activity",
   "UserLoginHistory": "User login history",
   "AuditLog": "Audit log",
+  "LoginScreenBackground": "Login screen background",
   "AuditLogDetails": "Audit log details — ID: {{id}}",
   "Field": "Field",
   "OldValue": "Old value",

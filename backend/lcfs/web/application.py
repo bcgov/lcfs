@@ -86,7 +86,12 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         path = request.url.path
 
         # Always skip auth for these paths
-        if path.startswith("/api/calculator") or path == "/api/health":
+        if (
+            path.startswith("/api/calculator")
+            or path == "/api/health"
+            or path == "/api/login-bg-images/active"
+            or re.match(r"^/api/login-bg-images/\d+/stream$", path)
+        ):
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Skip auth for anonymous form access via secure link keys
