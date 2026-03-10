@@ -13,6 +13,8 @@ export const apiRoutes = {
   currentUser: '/users/current',
   exportUsers: '/users/export?format=xlsx',
   listUsers: '/users/list',
+  seededTestUsers: '/users/seeded-test-users',
+  resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
