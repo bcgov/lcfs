@@ -175,6 +175,8 @@ class ComplianceReportBaseSchema(BaseSchema):
     legacy_id: Optional[int] = None
     assessment_statement: Optional[str] = None
     is_non_assessment: Optional[bool] = False
+    is_renewable_fuel_exempted: Optional[bool] = False
+    is_low_carbon_fuel_exempted: Optional[bool] = False
     assigned_analyst: Optional[AssignedAnalystSchema] = None
 
     @classmethod
@@ -370,6 +372,8 @@ class ComplianceReportUpdateSchema(BaseSchema):
     supplemental_note: Optional[str] = None
     assessment_statement: Optional[str] = None
     is_non_assessment: Optional[bool] = None
+    is_renewable_fuel_exempted: Optional[bool] = None
+    is_low_carbon_fuel_exempted: Optional[bool] = None
 
 
 class AssignAnalystSchema(BaseSchema):

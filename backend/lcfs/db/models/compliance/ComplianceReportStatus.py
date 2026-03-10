@@ -12,6 +12,7 @@ class ComplianceReportStatusEnum(enum.Enum):
     Recommended_by_analyst = "Recommended by analyst"
     Recommended_by_manager = "Recommended by manager"
     Assessed = "Assessed"
+    Exempted = "Exempted"
 
     # Historical (TFRS)
     Not_recommended_by_analyst = "Not recommended by analyst"
