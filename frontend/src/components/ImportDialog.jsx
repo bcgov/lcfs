@@ -63,6 +63,7 @@ const DIALOG_STATES = {
  * - importHook: A hook that returns the import mutation (e.g. useImportAllocationAgreement or useImportFinalSupplyEquipment).
  * - getJobStatusHook: A hook to check the import job status.
  * - onComplete: Callback invoked when the background import job finishes successfully.
+ * - title: Optional string to override the default dialog title.
  */
 function ImportDialog({
   open,
@@ -71,7 +72,10 @@ function ImportDialog({
   isOverwrite,
   importHook,
   getJobStatusHook,
-  onComplete
+  onComplete,
+  title: titleProp,
+  importedLabel: importedLabelProp,
+  skippedLabel: skippedLabelProp
 }) {
   const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
@@ -90,8 +94,9 @@ function ImportDialog({
   const [jobID, setJobID] = useState(null)
   const [intervalID, setIntervalID] = useState(null)
 
-  // Imported/Rejected counts
+  // Imported/Skipped/Rejected counts
   const [createdCount, setCreatedCount] = useState(0)
+  const [skippedCount, setSkippedCount] = useState(0)
   const [rejectedCount, setRejectedCount] = useState(0)
 
   const { mutate: importFile } = importHook(complianceReportId, {
@@ -141,6 +146,7 @@ function ImportDialog({
             setUploadProgress(data.progress)
             setUploadStatus(data.status)
             setCreatedCount(data.created)
+            setSkippedCount(data.skipped ?? 0)
             setRejectedCount(data.rejected)
           if (data.progress >= 100) {
             if (data.status === 'Import process completed.') {
@@ -185,6 +191,7 @@ function ImportDialog({
     setUploadProgress(0)
     setJobID(null)
     setCreatedCount(0)
+    setSkippedCount(0)
     setRejectedCount(0)
     setErrorMsgs([])
     setUploadStatus(t(`common:importExport.import.dialog.uploadStatusStarting`))
@@ -286,11 +293,19 @@ function ImportDialog({
               <LinearProgressWithLabel value={uploadProgress} />
               <Box>
                 <BCTypography variant="body2">
-                  {t(`common:importExport.import.dialog.uploadStatus.imported`)}{' '}
+                  {importedLabelProp ?? t(`common:importExport.import.dialog.uploadStatus.imported`)}{' '}
                   <BCTypography color="success" component="span">
                     {createdCount}
                   </BCTypography>
                 </BCTypography>
+                {(skippedLabelProp || skippedCount > 0) && (
+                  <BCTypography variant="body2">
+                    {skippedLabelProp ?? t(`common:importExport.import.dialog.uploadStatus.skipped`)}{' '}
+                    <BCTypography color="warning" component="span">
+                      {skippedCount}
+                    </BCTypography>
+                  </BCTypography>
+                )}
                 <BCTypography variant="body2">
                   {t(`common:importExport.import.dialog.uploadStatus.rejected`)}{' '}
                   <BCTypography color="error" component="span">
@@ -314,10 +329,10 @@ function ImportDialog({
                       fileName: uploadedFile.fileName
                     })}
                   </BCTypography>
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 2 }}>
                     <Box sx={{ display: 'flex' }}>
                       <BCTypography variant="body2">
-                        {t(
+                        {importedLabelProp ?? t(
                           `common:importExport.import.dialog.uploadStatus.imported`
                         )}
                         &nbsp;
@@ -326,7 +341,20 @@ function ImportDialog({
                         {createdCount}
                       </BCTypography>
                     </Box>
-                    <Box sx={{ display: 'flex', ml: 2 }}>
+                    {(skippedLabelProp || skippedCount > 0) && (
+                      <Box sx={{ display: 'flex' }}>
+                        <BCTypography variant="body2">
+                          {skippedLabelProp ?? t(
+                            `common:importExport.import.dialog.uploadStatus.skipped`
+                          )}
+                          &nbsp;
+                        </BCTypography>
+                        <BCTypography variant="body2" color="warning">
+                          {skippedCount}
+                        </BCTypography>
+                      </Box>
+                    )}
+                    <Box sx={{ display: 'flex' }}>
                       <BCTypography variant="body2">
                         {t(
                           `common:importExport.import.dialog.uploadStatus.rejected`
@@ -355,11 +383,11 @@ function ImportDialog({
       onClose={handleClose}
       open={open}
       data={{
-        title: t(`common:importExport.import.dialog.title`, {
-          mode: isOverwrite
-            ? t(`common:importExport.import.dialog.uploadMode.overwrite`)
-            : t(`common:importExport.import.dialog.uploadMode.append`)
-        }),
+      title: titleProp ?? t(`common:importExport.import.dialog.title`, {
+        mode: isOverwrite
+          ? t(`common:importExport.import.dialog.uploadMode.overwrite`)
+          : t(`common:importExport.import.dialog.uploadMode.append`)
+      }),
         secondaryButtonAction: handleClose,
         secondaryButtonText:
           dialogState === DIALOG_STATES.COMPLETED
