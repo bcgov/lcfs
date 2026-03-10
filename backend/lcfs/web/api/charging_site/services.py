@@ -301,7 +301,7 @@ class ChargingSiteService:
         status_ids = self._get_equipment_status_ids(statuses)
         # Define valid status transitions: new_status -> (from_status, error_message)
         valid_transitions = {
-            "Draft": ["Submitted", "Validated"],  # Return to Draft (from Submitted or Validated)
+            "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
                 "Validated",
