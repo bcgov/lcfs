@@ -36,11 +36,6 @@ interface SeededUserAssociationFormValues {
   saltPhrase: string
 }
 
-const readOnlyOption = {
-  label: roles.read_only,
-  value: roles.read_only.toLowerCase()
-}
-
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
     padding: '7.5px 4px 7.5px 5px',
@@ -190,10 +185,7 @@ export const SeededUserAssociation = () => {
     [organizations, selectedOrgId]
   )
 
-  const roleOptions = useMemo(
-    () => [...bceidRoleOptions(t), readOnlyOption],
-    [t]
-  )
+  const roleOptions = useMemo(() => bceidRoleOptions(t), [t])
 
   const selectedRoleOptions = useMemo(
     () => roleOptions.filter((option) => selectedRoles.includes(option.value)),
@@ -614,7 +606,7 @@ export const SeededUserAssociation = () => {
 
                     <Box>
                       <BCButton
-                      color="secondary"
+                      color="primary"
                       variant="outlined"
                       disabled={isPending || isResolvingOrgName}
                       onClick={handleResolveOrgName}
