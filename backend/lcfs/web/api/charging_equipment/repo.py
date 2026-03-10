@@ -36,7 +36,6 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     apply_filter_conditions,
 )
-from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -60,10 +59,10 @@ class ChargingEquipmentRepository:
             ),
         )
 
-    def _apply_latest_equipment_version_filter(self, stmt, prefer_validated=False):
+    def _apply_latest_equipment_version_filter(self, stmt, prefer_validated: bool = False):
         """
-        Constrain statements to the latest charging equipment record per group_uuid.
-        When prefer_validated is True, prioritize non Draft/Updated statuses.
+        Constrain statements to the latest charging equipment record per group UUID.
+        When prefer_validated is True, prioritize non Draft/Updated statuses for IDIR users.
         """
         status_alias = aliased(ChargingEquipmentStatus)
         order_by = [ChargingEquipment.version.desc()]
@@ -86,15 +85,18 @@ class ChargingEquipmentRepository:
             )
             .join(
                 status_alias,
-                ChargingEquipment.status_id == status_alias.charging_equipment_status_id,
+                ChargingEquipment.status_id
+                == status_alias.charging_equipment_status_id,
             )
             .subquery()
         )
 
-        return stmt.join(
-            ranked_subquery,
-            ChargingEquipment.charging_equipment_id == ranked_subquery.c.ce_id,
-        ).where(ranked_subquery.c.rn == 1)
+        return (
+            stmt.join(
+                ranked_subquery,
+                ChargingEquipment.charging_equipment_id == ranked_subquery.c.ce_id,
+            ).where(ranked_subquery.c.rn == 1)
+        )
 
     @repo_handler
     async def get_charging_equipment_by_id(
@@ -202,7 +204,7 @@ class ChargingEquipmentRepository:
                 ~ChargingEquipmentStatus.status.in_(("Updated", "Draft"))
             )
 
-        # Apply filters
+        # Apply filters from pagination model
         filter_columns = {
             "status": ChargingEquipmentStatus.status,
             "site_name": latest_site_alias.site_name,
@@ -503,7 +505,10 @@ class ChargingEquipmentRepository:
             new_equipment.action_type = ActionTypeEnum.UPDATE
             new_equipment.status = updated_status
 
-            if "intended_use_ids" in equipment_data and equipment_data["intended_use_ids"] is not None:
+            if (
+                "intended_use_ids" in equipment_data
+                and equipment_data["intended_use_ids"] is not None
+            ):
                 intended_uses_query = select(EndUseType).where(
                     EndUseType.end_use_type_id.in_(equipment_data["intended_use_ids"])
                 )
@@ -512,7 +517,10 @@ class ChargingEquipmentRepository:
             else:
                 new_equipment.intended_uses = list(equipment.intended_uses)
 
-            if "intended_user_ids" in equipment_data and equipment_data["intended_user_ids"] is not None:
+            if (
+                "intended_user_ids" in equipment_data
+                and equipment_data["intended_user_ids"] is not None
+            ):
                 intended_users_query = select(EndUserType).where(
                     EndUserType.end_user_type_id.in_(
                         equipment_data["intended_user_ids"]
@@ -683,7 +691,9 @@ class ChargingEquipmentRepository:
             return
 
         existing_stmt = (
-            select(ComplianceReportChargingEquipment.charging_equipment_compliance_id)
+            select(
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id
+            )
             .where(
                 and_(
                     ComplianceReportChargingEquipment.compliance_report_group_uuid
@@ -858,7 +868,11 @@ class ChargingEquipmentRepository:
             select(ChargingEquipment.charging_site_id)
             .distinct()
             .join(ChargingSite)
-            .where(and_(ChargingEquipment.charging_equipment_id.in_(equipment_ids)))
+            .where(
+                and_(
+                    ChargingEquipment.charging_equipment_id.in_(equipment_ids)
+                )
+            )
         )
         if organization_id is not None:
             query = query.where(ChargingSite.organization_id == organization_id)

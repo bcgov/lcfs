@@ -39,6 +39,9 @@ describe('ComplianceReports buttonConfigs', () => {
           'report:actionBtns.assessReportBtn': 'Issue assessment',
           'report:actionBtns.issueNonAssessmentBtn': 'Issue non-assessment',
           'report:actionBtns.nonAssessment': 'Non-assessment',
+          'report:actionBtns.issueExemptionBtn': 'Issue exemption',
+          'report:exemptConfirmText':
+            'Are you sure you want to exempt this compliance report? This will finalize the report without issuing any compliance units.',
           confirmation: 'Confirmation',
           cancelBtn: 'Cancel',
           'report:assessConfirmText':

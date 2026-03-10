@@ -5,6 +5,7 @@ import { DownloadButton } from '@/components/DownloadButton'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
 import {
+  faCirclePlus,
   faCheck,
   faBan,
   faSquareCheck
@@ -583,24 +584,40 @@ export const ChargingEquipment = () => {
 
       {!isOnNestedRoute && (
         <Grid item xs={12}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} lg={7}>
+              <Stack spacing={1} direction="row">
+                {!isIDIR && (
+                  <BCButton
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    onClick={handleNewFSE}
+                  >
+                    <BCTypography variant="subtitle2">
+                      {t('chargingEquipment:newFSE')}
+                    </BCTypography>
+                  </BCButton>
+                )}
+                <DownloadButton
+                  dataTest="download-fse-excel"
+                  isDownloading={isExporting}
+                  onDownload={handleDownloadExcel}
+                  label="Download Excel"
+                  downloadLabel="Generating Excel..."
+                />
+              </Stack>
+            </Grid>
+          </Grid>
+
           <BCBox sx={{ width: '100%', minHeight: 600, mt: 2 }}>
             <Box display="flex" justifyContent="space-between" mb={2} gap={2}>
-              {!isIDIR && (
+              {!isIDIR ? (
                 <Stack
-                  data-testid="manage-fse-action-row"
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={2}
                   sx={{ flexWrap: 'wrap' }}
                 >
-                  <BCButton
-                    variant="contained"
-                    color="primary"
-                    size="medium"
-                    onClick={handleNewFSE}
-                  >
-                    {t('chargingEquipment:newFSE')}
-                  </BCButton>
-
                   <BCButton
                     variant="contained"
                     color="primary"
@@ -643,21 +660,10 @@ export const ChargingEquipment = () => {
                     {t('chargingEquipment:setToDecommissioned')}
                   </BCButton>
                 </Stack>
+              ) : (
+                <Box />
               )}
 
-              <DownloadButton
-                onDownload={handleDownloadExcel}
-                isDownloading={isExporting}
-                label={t(
-                  'chargingEquipment:downloadAsExcel',
-                  'Download as Excel'
-                )}
-                downloadLabel={t(
-                  'chargingEquipment:downloadingFSEInfo',
-                  'Downloading FSE info'
-                )}
-                dataTest="download-fse-excel"
-              />
             </Box>
 
             <BCBox sx={{ width: '100%' }}>
