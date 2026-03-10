@@ -178,6 +178,10 @@ class BulkEquipmentStatusUpdateSchema(BaseSchema):
     new_status: str
 
 
+class ChargingSiteManualStatusUpdateSchema(BaseSchema):
+    new_status: str
+
+
 class ChargingSiteStatusEnum:
     DRAFT = "Draft"
     SUBMITTED = "Submitted"

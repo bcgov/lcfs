@@ -23,6 +23,8 @@
     "selectAllValidated": "Select all validated",
     "setSelectedAsSubmitted": "Submit selected",
     "setSelectedAsValidated": "Set selected as validated",
+    "setAsValidated": "Set as validated",
+    "submitUpdates": "Submit updates",
     "undoValidation": "Undo validation",
     "setToDecommission": "Set to decommissioned",
     "returnSelectedToDraft": "Return selected to draft",
@@ -71,7 +73,9 @@
     "noEquipmentFound": "No equipment records found for this charging site",
     "bulkUpdateSuccess": "Equipment status updated successfully",
     "bulkUpdateError": "Failed to update equipment status",
-    "siteDeleted": "Charging site deleted successfully"
+    "siteDeleted": "Charging site deleted successfully",
+    "statusUpdateSuccess": "Charging site status updated successfully",
+    "statusUpdateError": "Failed to update charging site status"
   },
   "documents": {
     "uploadTitle": "Upload supporting documents for charging site",
