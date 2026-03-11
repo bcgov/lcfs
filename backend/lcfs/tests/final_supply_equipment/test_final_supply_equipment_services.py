@@ -426,6 +426,9 @@ async def test_get_fse_reporting_list_paginated_success(
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
         1, pagination, "uuid-1234", "current"
     )
+    mock_repo.sync_reporting_associations_to_latest_equipment.assert_awaited_once_with(
+        "uuid-1234", 1
+    )
     mock_repo.get_charging_power_output.assert_awaited_once_with(
         22,
         ["LDV"],

@@ -2,6 +2,7 @@ from unittest.mock import Mock
 import pytest
 from lcfs.db.models import UserProfile, UserLoginHistory
 from lcfs.web.api.user.repo import UserRepository
+from lcfs.web.api.user.schema import UserCreateSchema
 from lcfs.tests.user.user_payloads import user_orm_model
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy import text
@@ -113,3 +114,44 @@ async def test_delete_user(dbsession):
     dbsession.delete.assert_awaited_once_with(fake_user)
     dbsession.flush.assert_awaited_once()
     assert result is None
+
+
+@pytest.mark.anyio
+async def test_update_user_updates_organization_id_for_bceid_user(dbsession):
+    repo = UserRepository(db=dbsession)
+    repo.update_bceid_roles = AsyncMock()
+
+    user = UserProfile(
+        keycloak_user_id="user_id_2",
+        keycloak_email="user2@domain.com",
+        keycloak_username="username2",
+        email="user2@domain.com",
+        title="Developer",
+        phone="1234567890",
+        mobile_phone="0987654321",
+        first_name="Jane",
+        last_name="Doe",
+        is_active=True,
+        organization_id=1,
+    )
+    user.organization = MagicMock()
+
+    payload = UserCreateSchema(
+        user_profile_id=2,
+        title="Developer",
+        keycloak_username="username2",
+        keycloak_email="user2@domain.com",
+        email="user2@domain.com",
+        phone="1234567890",
+        mobile_phone="0987654321",
+        first_name="Jane",
+        last_name="Doe",
+        is_active=True,
+        organization_id=2,
+        roles=["supplier"],
+    )
+
+    updated_user = await repo.update_user(user, payload)
+
+    assert updated_user.organization_id == 2
+    repo.update_bceid_roles.assert_awaited_once()

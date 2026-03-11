@@ -43,6 +43,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
+    from lcfs.web.api.final_supply_equipment.repo import (
+        FinalSupplyEquipmentRepository,
+    )
 
 
 class ComplianceReportUpdateService:
@@ -67,6 +70,7 @@ class ComplianceReportUpdateService:
         self.org_snapshot_repo = org_snapshot_repo
         self._charging_equipment_repo = None
         self._charging_equipment_service = None
+        self._final_supply_equipment_repo = None
 
     @property
     def charging_equipment_repo(self) -> "ChargingEquipmentRepository":
@@ -91,6 +95,19 @@ class ComplianceReportUpdateService:
                 repo=repo, session=self.repo.db
             )
         return self._charging_equipment_service
+
+    @property
+    def final_supply_equipment_repo(self) -> "FinalSupplyEquipmentRepository":
+        """Lazy-load final supply equipment repository for report-equipment sync."""
+        if self._final_supply_equipment_repo is None:
+            from lcfs.web.api.final_supply_equipment.repo import (
+                FinalSupplyEquipmentRepository,
+            )
+
+            self._final_supply_equipment_repo = FinalSupplyEquipmentRepository(
+                db=self.repo.db
+            )
+        return self._final_supply_equipment_repo
 
     async def update_compliance_report(
         self,
@@ -264,6 +281,12 @@ class ComplianceReportUpdateService:
         await self._validate_organization_details_for_submission(
             report.compliance_report_id
         )
+
+        if report.compliance_report_group_uuid:
+            await self.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment(
+                report.compliance_report_group_uuid,
+                report.organization_id,
+            )
 
         # Auto-submit all FSE records in Draft or Updated status to Submitted status
         await self.charging_equipment_service.auto_submit_equipment_for_report(
