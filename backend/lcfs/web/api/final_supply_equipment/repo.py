@@ -14,7 +14,7 @@ from sqlalchemy import (
     asc,
     desc,
     literal,
-    union_all,
+    union,
     case,
 )
 import sqlalchemy as sa
@@ -61,6 +61,171 @@ logger = structlog.get_logger(__name__)
 class FinalSupplyEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def _combine_reporting_queries(self, union_queries: list[Any]):
+        """
+        Combine reporting queries while removing exact duplicate rows.
+        """
+        if len(union_queries) == 1:
+            return union_queries[0]
+        return union(*union_queries)
+
+    def _latest_equipment_versions_subquery(self, organization_id: int):
+        """
+        Keep only the latest non-decommissioned charging equipment row per
+        logical equipment series (`group_uuid`) for the organization.
+        """
+        latest_sites = latest_charging_site_version_subquery()
+
+        return (
+            select(
+                ChargingEquipment.group_uuid.label("group_uuid"),
+                ChargingEquipment.charging_equipment_id.label("charging_equipment_id"),
+                ChargingEquipment.version.label("charging_equipment_version"),
+                func.row_number()
+                .over(
+                    partition_by=ChargingEquipment.group_uuid,
+                    order_by=(
+                        desc(ChargingEquipment.version),
+                        desc(ChargingEquipment.charging_equipment_id),
+                    ),
+                )
+                .label("row_number"),
+            )
+            .join(
+                ChargingSite,
+                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+            )
+            .join(
+                latest_sites,
+                and_(
+                    ChargingSite.group_uuid == latest_sites.c.group_uuid,
+                    ChargingSite.version == latest_sites.c.latest_version,
+                ),
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(
+                and_(
+                    ChargingSite.organization_id == organization_id,
+                    ChargingEquipmentStatus.status != "Decommissioned",
+                )
+            )
+            .subquery()
+        )
+
+    @repo_handler
+    async def sync_reporting_associations_to_latest_equipment(
+        self, compliance_report_group_uuid: str, organization_id: int
+    ) -> int:
+        """
+        Move report-equipment associations forward to the latest charging
+        equipment version for each logical equipment `group_uuid`.
+        """
+        latest_equipment_versions = self._latest_equipment_versions_subquery(
+            organization_id
+        )
+        current_equipment = aliased(ChargingEquipment, name="current_equipment")
+
+        sync_candidates_stmt = (
+            select(
+                ComplianceReportChargingEquipment,
+                latest_equipment_versions.c.charging_equipment_id.label(
+                    "latest_charging_equipment_id"
+                ),
+                latest_equipment_versions.c.charging_equipment_version.label(
+                    "latest_charging_equipment_version"
+                ),
+            )
+            .join(
+                current_equipment,
+                ComplianceReportChargingEquipment.charging_equipment_id
+                == current_equipment.charging_equipment_id,
+            )
+            .join(
+                latest_equipment_versions,
+                and_(
+                    current_equipment.group_uuid
+                    == latest_equipment_versions.c.group_uuid,
+                    latest_equipment_versions.c.row_number == 1,
+                ),
+            )
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                    (
+                        ComplianceReportChargingEquipment.charging_equipment_id
+                        != latest_equipment_versions.c.charging_equipment_id
+                    )
+                    | (
+                        ComplianceReportChargingEquipment.charging_equipment_version
+                        != latest_equipment_versions.c.charging_equipment_version
+                    ),
+                )
+            )
+        )
+
+        sync_candidates = (await self.db.execute(sync_candidates_stmt)).all()
+        if not sync_candidates:
+            return 0
+
+        synced_count = 0
+
+        for row in sync_candidates:
+            association = row[0]
+            latest_equipment_id = row.latest_charging_equipment_id
+            latest_equipment_version = row.latest_charging_equipment_version
+
+            existing_target_stmt = select(ComplianceReportChargingEquipment).where(
+                and_(
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                    ComplianceReportChargingEquipment.organization_id
+                    == association.organization_id,
+                    ComplianceReportChargingEquipment.charging_equipment_id
+                    == latest_equipment_id,
+                    ComplianceReportChargingEquipment.charging_equipment_version
+                    == latest_equipment_version,
+                )
+            )
+            existing_target = (
+                await self.db.execute(existing_target_stmt)
+            ).scalars().first()
+
+            if (
+                existing_target
+                and existing_target.charging_equipment_compliance_id
+                != association.charging_equipment_compliance_id
+            ):
+                existing_target.supply_from_date = association.supply_from_date
+                existing_target.supply_to_date = association.supply_to_date
+                existing_target.kwh_usage = (
+                    association.kwh_usage
+                    if association.kwh_usage is not None
+                    else existing_target.kwh_usage
+                )
+                existing_target.compliance_notes = (
+                    association.compliance_notes
+                    if association.compliance_notes is not None
+                    else existing_target.compliance_notes
+                )
+                existing_target.is_active = (
+                    association.is_active or existing_target.is_active
+                )
+                existing_target.compliance_report_id = association.compliance_report_id
+                await self.db.delete(association)
+            else:
+                association.charging_equipment_id = latest_equipment_id
+                association.charging_equipment_version = latest_equipment_version
+
+            synced_count += 1
+
+        await self.db.flush()
+        return synced_count
 
     def _apply_latest_site_filter(self, stmt):
         """
@@ -544,6 +709,9 @@ class FinalSupplyEquipmentRepository:
     ):
         source_site = aliased(ChargingSite, name="source_charging_site")
         latest_sites = latest_charging_site_version_subquery()
+        latest_equipment_versions = self._latest_equipment_versions_subquery(
+            organization_id
+        )
 
         # Subquery for intended_uses (from charging equipment)
         intended_uses_subquery = (
@@ -623,6 +791,14 @@ class FinalSupplyEquipmentRepository:
                 literal(source_priority).label("source_priority"),
             )
             .select_from(ChargingEquipment)
+            .join(
+                latest_equipment_versions,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == latest_equipment_versions.c.charging_equipment_id,
+                    latest_equipment_versions.c.row_number == 1,
+                ),
+            )
             .join(
                 source_site,
                 ChargingEquipment.charging_site_id == source_site.charging_site_id,
@@ -865,10 +1041,7 @@ class FinalSupplyEquipmentRepository:
                 self._build_base_select(1, organization_id, filter_conditions)
             )
 
-        if len(union_queries) == 1:
-            combined_query = union_queries[0]
-        else:
-            combined_query = union_all(*union_queries)
+        combined_query = self._combine_reporting_queries(union_queries)
 
         combined_subquery = combined_query.subquery()
 

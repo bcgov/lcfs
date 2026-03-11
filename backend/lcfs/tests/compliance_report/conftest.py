@@ -311,6 +311,10 @@ def compliance_report_update_service(
     service._charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
         return_value=0
     )
+    service._final_supply_equipment_repo = AsyncMock()
+    service._final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment = AsyncMock(
+        return_value=0
+    )
     return service
 
 
