@@ -47,6 +47,24 @@ const fieldSx = {
   }
 }
 
+const multiSelectFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    background: 'white',
+    minHeight: '47px',
+    height: 'auto',
+    alignItems: 'center',
+    padding: '4px 4px 4px 5px'
+  },
+  '& .MuiInputBase-root': {
+    lineHeight: '1.4375em',
+    minHeight: '47px',
+    height: 'auto'
+  },
+  '& .MuiAutocomplete-inputRoot': {
+    alignItems: 'center'
+  }
+}
+
 export const GOVERNMENT_ROLE_VALUES = new Set([
   roles.government.toLowerCase(),
   roles.administrator.toLowerCase(),
@@ -462,7 +480,7 @@ export const SeededUserAssociation = () => {
                           multiple
                           fullWidth
                           id="selectedRoles"
-                          sx={fieldSx}
+                          sx={multiSelectFieldSx}
                           disableCloseOnSelect
                           options={roleOptions}
                           value={selectedRoleOptions}
