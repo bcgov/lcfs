@@ -1,4 +1,6 @@
 from typing import List
+import hashlib
+import re
 
 import structlog
 from fastapi import Depends, HTTPException
@@ -49,6 +51,7 @@ from lcfs.web.api.user.schema import (
     UserBaseSchema,
     UserLoginHistorySchema,
 )
+from lcfs.db.seeders.user_seed_data import get_seed_usernames
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -323,6 +326,165 @@ class UserRepository:
         # Execute the query
         user_result = await self.db.execute(query)
         return user_result.unique().scalar_one_or_none() if user_result else None
+
+    @repo_handler
+    async def get_seeded_test_users(self, seed_env: str) -> list[UserBaseSchema]:
+        usernames = get_seed_usernames(seed_env)
+        if not usernames:
+            return []
+
+        query = (
+            select(UserProfile)
+            .join(
+                UserRole,
+                UserProfile.user_profile_id == UserRole.user_profile_id,
+                isouter=True,
+            )
+            .join(Role, UserRole.role_id == Role.role_id, isouter=True)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
+            .where(UserProfile.keycloak_username.in_(usernames))
+            .order_by(asc(UserProfile.first_name), asc(UserProfile.last_name))
+        )
+
+        results = (await self.db.execute(query)).scalars().unique().all()
+        return [UserBaseSchema.model_validate(user) for user in results]
+
+    @repo_handler
+    async def resolve_org_name(self, organization_name: str, salt_phrase: str) -> dict:
+        input_name = (organization_name or "").strip()
+        if not input_name:
+            return {
+                "resolved": False,
+                "input_name": input_name,
+                "message": "Organization name is required.",
+            }
+
+        table_exists = await self.db.execute(
+            text("SELECT to_regclass('public.anonymizer_original_values')")
+        )
+        if table_exists.scalar_one_or_none() is None:
+            return {
+                "resolved": False,
+                "input_name": input_name,
+                "message": "No anonymizer backup table found.",
+            }
+
+        # Masked -> Original (expects suffix ... #<10-hex>)
+        masked_row = (
+            (
+                await self.db.execute(
+                    text(
+                        """
+                    SELECT
+                        o.organization_id,
+                        o.name AS masked_name,
+                        a.original_value AS original_name
+                    FROM organization o
+                    JOIN anonymizer_original_values a
+                      ON a.table_name = 'organization'
+                     AND a.column_name = 'name'
+                     AND a.record_id = o.organization_id
+                    WHERE o.name = :input_name
+                    LIMIT 1
+                    """
+                    ),
+                    {"input_name": input_name},
+                )
+            )
+            .mappings()
+            .first()
+        )
+
+        if masked_row:
+            suffix_match = re.search(
+                r"\s#([a-f0-9]{10})$", masked_row["masked_name"] or ""
+            )
+            if suffix_match:
+                expected_hash = hashlib.md5(
+                    f"{(masked_row['original_name'] or '').lower()}:{salt_phrase}:{masked_row['organization_id']}".encode(
+                        "utf-8"
+                    )
+                ).hexdigest()[:10]
+                if suffix_match.group(1) == expected_hash:
+                    return {
+                        "resolved": True,
+                        "organization_id": masked_row["organization_id"],
+                        "input_name": input_name,
+                        "masked_name": masked_row["masked_name"],
+                        "original_name": masked_row["original_name"],
+                        "direction": "masked_to_original",
+                        "message": "Resolved masked organization name to original.",
+                    }
+            return {
+                "resolved": False,
+                "organization_id": masked_row["organization_id"],
+                "input_name": input_name,
+                "masked_name": masked_row["masked_name"],
+                "message": "Salt phrase did not match this masked organization name.",
+            }
+
+        # Original -> Masked
+        original_row = (
+            (
+                await self.db.execute(
+                    text(
+                        """
+                    SELECT
+                        o.organization_id,
+                        o.name AS masked_name,
+                        a.original_value AS original_name
+                    FROM anonymizer_original_values a
+                    JOIN organization o
+                      ON o.organization_id = a.record_id
+                    WHERE a.table_name = 'organization'
+                      AND a.column_name = 'name'
+                      AND a.original_value = :input_name
+                    LIMIT 1
+                    """
+                    ),
+                    {"input_name": input_name},
+                )
+            )
+            .mappings()
+            .first()
+        )
+
+        if not original_row:
+            return {
+                "resolved": False,
+                "input_name": input_name,
+                "message": "Organization name not found in anonymizer mapping.",
+            }
+
+        suffix_match = re.search(
+            r"\s#([a-f0-9]{10})$", original_row["masked_name"] or ""
+        )
+        expected_hash = hashlib.md5(
+            f"{(original_row['original_name'] or '').lower()}:{salt_phrase}:{original_row['organization_id']}".encode(
+                "utf-8"
+            )
+        ).hexdigest()[:10]
+        if not suffix_match or suffix_match.group(1) != expected_hash:
+            return {
+                "resolved": False,
+                "organization_id": original_row["organization_id"],
+                "input_name": input_name,
+                "original_name": original_row["original_name"],
+                "message": "Salt phrase did not match this original organization name.",
+            }
+
+        return {
+            "resolved": True,
+            "organization_id": original_row["organization_id"],
+            "input_name": input_name,
+            "masked_name": original_row["masked_name"],
+            "original_name": original_row["original_name"],
+            "direction": "original_to_masked",
+            "message": "Resolved original organization name to masked.",
+        }
 
     @repo_handler
     async def create_user(
