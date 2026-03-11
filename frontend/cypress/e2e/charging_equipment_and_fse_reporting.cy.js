@@ -214,10 +214,12 @@ describe('ChargingEquipment create/edit/list filters/download', () => {
     cy.wait(['@orgNames', '@equipmentList'])
 
     cy.contains('.filter-toolbar', 'Show FSE for:', { timeout: 30000 })
+      .should('be.visible')
       .find('input')
       .first()
+      .should('be.visible')
       .type('LCFS Org 2')
-    cy.contains('li', 'LCFS Org 2', { timeout: 30000 }).click()
+    cy.contains('li', 'LCFS Org 2', { timeout: 30000 }).should('be.visible').click()
     cy.wait('@equipmentListFiltered').its('request.body.organization_id').should('eq', 1002)
 
     cy.getByDataTest('download-fse-excel', { timeout: 30000 }).click()
@@ -357,10 +359,12 @@ describe('FSE Reporting grid interactions + save flow', () => {
       'be.visible'
     )
 
-    cy.get('#site-selector input', { timeout: 30000 }).type(
-      'Cypress Charging Site'
-    )
-    cy.contains('li', 'Cypress Charging Site', { timeout: 30000 }).click()
+    cy.get('#site-selector input', { timeout: 30000 })
+      .should('be.visible')
+      .type('Cypress Charging Site')
+    cy.contains('li', 'Cypress Charging Site', { timeout: 30000 })
+      .should('be.visible')
+      .click()
     cy.wait('@fseReportingListFiltered')
 
     cy.contains('.ag-row', 'REG-8001', { timeout: 30000 })

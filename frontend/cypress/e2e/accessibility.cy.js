@@ -21,7 +21,7 @@ describe('Accessibility Tests for LCFS', () => {
         Cypress.env('ADMIN_IDIR_USERNAME'),
         Cypress.env('ADMIN_IDIR_PASSWORD')
       )
-      cy.wait(5000)
+      cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
       cy.injectAxe() // Injects the axe-core library
       cy.checkA11y(null, null, terminalLog)
     })
@@ -36,9 +36,8 @@ describe('Accessibility Tests for LCFS', () => {
         Cypress.env('ADMIN_IDIR_USERNAME'),
         Cypress.env('ADMIN_IDIR_PASSWORD')
       )
-      cy.wait(5000)
+      cy.getByDataTest('bc-navbar', { timeout: 30000 }).should('be.visible')
       cy.injectAxe() // Injects the axe-core library
-      cy.getByDataTest('bc-navbar').should('exist')
       cy.getByDataTest('bc-navbar').within(() => {
         cy.checkA11y(null, null, terminalLog)
       })
