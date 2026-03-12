@@ -50,6 +50,7 @@ export const ViewChargingSite = () => {
     <BCAlert2 severity="error" message={t('error')} ref={alertRef} />
   ) : (
     <div data-test="view-charging-site-fse">
+      <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
       <BCTypography variant="h5" color="primary">
         {isIDIR ? t('idirSitetitle') : t('viewTitle')}
       </BCTypography>
@@ -59,6 +60,7 @@ export const ViewChargingSite = () => {
         hasRoles={hasRoles}
         isIDIR={isIDIR}
         refetch={refetch}
+        alertRef={alertRef}
       />
       <ChargingSiteDocument attachments={chargingSiteData?.documents} />
       <ChargingSiteFSEGrid

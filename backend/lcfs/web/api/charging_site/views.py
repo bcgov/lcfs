@@ -31,6 +31,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingSiteSchema,
     ChargingSiteStatusSchema,
     ChargingSitesSchema,
+    ChargingSiteManualStatusUpdateSchema,
     CommonPaginatedCSRequestSchema,
     DeleteChargingSiteResponseSchema,
 )
@@ -152,6 +153,27 @@ async def get_charging_site(
     Get a specific charging site with its attachments
     """
     return await service.get_charging_site_by_id(site_id)
+
+
+@router.patch(
+    "/{site_id}/status",
+    response_model=ChargingSiteSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def update_charging_site_status(
+    request: Request,
+    site_id: int = Path(..., description="Charging site ID"),
+    body: ChargingSiteManualStatusUpdateSchema = Body(...),
+    service: ChargingSiteService = Depends(),
+    validate: ChargingSiteValidation = Depends(),
+) -> ChargingSiteSchema:
+    """
+    Manually set charging site status. IDIR Analyst: Submitted -> Validated.
+    BCeID Compliance Reporting/Signing Authority: Draft or Updated -> Submitted.
+    """
+    await validate.validate_organization_access(site_id)
+    return await service.update_charging_site_status_manual(site_id, body)
 
 
 @router.post(
