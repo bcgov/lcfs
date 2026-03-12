@@ -1,7 +1,6 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock
 from starlette.responses import StreamingResponse
-import io
 
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
@@ -27,6 +26,8 @@ def mock_fse_repo():
     repo = AsyncMock()
     # get_fse_paginated returns a tuple (data, total_count)
     repo.get_fse_paginated = AsyncMock(return_value=([], 0))
+    # get_fse_reporting_list_paginated used by compliance report export
+    repo.get_fse_reporting_list_paginated = AsyncMock(return_value=([], 0))
     return repo
 
 
@@ -107,6 +108,7 @@ def mock_annual_report():
     # Mock organization
     organization = Mock()
     organization.name = "Test Organization"
+    organization.organization_id = 1
     report.organization = organization
 
     # Mock compliance period
@@ -349,6 +351,59 @@ class TestComplianceReportExporter:
             response.headers["Content-Disposition"]
             == 'attachment; filename="EIR-Early Issuance Org-2024-Submitted.xlsx"'
         )
+
+    @pytest.mark.anyio
+    async def test_export_excludes_fse_sheet_for_pre_2024_reports(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        """Test that FSE sheet is excluded from export for compliance years before 2024."""
+        period_2023 = Mock()
+        period_2023.description = "2023"
+        mock_report_2023 = Mock()
+        mock_report_2023.compliance_report_id = 1
+        mock_report_2023.compliance_report_group_uuid = "test-uuid"
+        mock_report_2023.version = 0
+        mock_report_2023.reporting_frequency = ReportingFrequency.ANNUAL
+        mock_report_2023.organization = mock_annual_report.organization
+        mock_report_2023.current_status = mock_annual_report.current_status
+        mock_report_2023.compliance_period = period_2023
+
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_report_2023
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1)
+
+        # FSE loader is skipped for pre-2024 reports, so get_fse_reporting_list_paginated is never called
+        exporter.fse_repo.get_fse_reporting_list_paginated.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_export_includes_fse_sheet_for_2024_and_later_reports(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        """Test that FSE loader is called for compliance years 2024 and later."""
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1)
+
+        # FSE loader calls get_fse_reporting_list_paginated for 2024+ reports
+        exporter.fse_repo.get_fse_reporting_list_paginated.assert_called()
 
     @pytest.mark.anyio
     async def test_load_fuel_supply_data_annual(

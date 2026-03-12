@@ -14,7 +14,10 @@ vi.mock('@react-keycloak/web', () => ({
 
 vi.mock('@/contexts/AuthorizationContext', () => ({
   useAuthorization: () => ({
-    setForbidden: vi.fn()
+    setForbidden: vi.fn(),
+    addErrorRef: vi.fn(),
+    setErrorStatus: vi.fn(),
+    serverErrorBlockedRef: { current: false }
   })
 }))
 

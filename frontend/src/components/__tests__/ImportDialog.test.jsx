@@ -536,4 +536,236 @@ describe('ImportDialog', () => {
       expect(screen.getByText('Row 12: Missing required field')).toBeInTheDocument()
     })
   })
+
+  // ---------------------------------------------------------------------------
+  // title prop
+  // ---------------------------------------------------------------------------
+
+  it('renders default title when no title prop is given', () => {
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+      />,
+      { wrapper }
+    )
+    // Default title from translation key
+    expect(screen.getByText('Import append')).toBeInTheDocument()
+  })
+
+  it('renders custom title when title prop is provided', () => {
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+        title="Upload FSE bulk update template"
+      />,
+      { wrapper }
+    )
+    expect(screen.getByText('Upload FSE bulk update template')).toBeInTheDocument()
+  })
+
+  // ---------------------------------------------------------------------------
+  // importedLabel prop
+  // ---------------------------------------------------------------------------
+
+  it('shows default "Imported:" label when importedLabel prop is absent', async () => {
+    let savedOnSuccess
+    mockImportHook.mockImplementation((_, { onSuccess }) => {
+      savedOnSuccess = onSuccess
+      return { mutate: vi.fn() }
+    })
+    mockGetJobStatusHook.mockReturnValue({
+      data: { progress: 80, status: 'Processing...', created: 5, rejected: 0, errors: [] },
+      refetch: vi.fn()
+    })
+
+    const { validateFile } = await import('@/utils/fileValidation')
+    validateFile.mockReturnValue({ isValid: true })
+
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+      />,
+      { wrapper }
+    )
+
+    const file = new File(['test'], 'test.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [file] } })
+    savedOnSuccess({ data: { jobId: 'job1' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Imported:')).toBeInTheDocument()
+    })
+  })
+
+  it('shows custom importedLabel when prop is provided', async () => {
+    let savedOnSuccess
+    mockImportHook.mockImplementation((_, { onSuccess }) => {
+      savedOnSuccess = onSuccess
+      return { mutate: vi.fn() }
+    })
+    mockGetJobStatusHook.mockReturnValue({
+      data: { progress: 80, status: 'Processing...', created: 5, rejected: 0, errors: [] },
+      refetch: vi.fn()
+    })
+
+    const { validateFile } = await import('@/utils/fileValidation')
+    validateFile.mockReturnValue({ isValid: true })
+
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+        importedLabel="Updated:"
+      />,
+      { wrapper }
+    )
+
+    const file = new File(['test'], 'test.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [file] } })
+    savedOnSuccess({ data: { jobId: 'job1' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Updated:')).toBeInTheDocument()
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // skippedLabel prop
+  // ---------------------------------------------------------------------------
+
+  it('does not show skipped row when skippedLabel absent and skippedCount is 0', async () => {
+    let savedOnSuccess
+    mockImportHook.mockImplementation((_, { onSuccess }) => {
+      savedOnSuccess = onSuccess
+      return { mutate: vi.fn() }
+    })
+    mockGetJobStatusHook.mockReturnValue({
+      data: { progress: 80, status: 'Processing...', created: 5, rejected: 0, skipped: 0, errors: [] },
+      refetch: vi.fn()
+    })
+
+    const { validateFile } = await import('@/utils/fileValidation')
+    validateFile.mockReturnValue({ isValid: true })
+
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+      />,
+      { wrapper }
+    )
+
+    const file = new File(['test'], 'test.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [file] } })
+    savedOnSuccess({ data: { jobId: 'job1' } })
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Skipped/)).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows skipped row with skippedLabel even when skippedCount is 0', async () => {
+    let savedOnSuccess
+    mockImportHook.mockImplementation((_, { onSuccess }) => {
+      savedOnSuccess = onSuccess
+      return { mutate: vi.fn() }
+    })
+    mockGetJobStatusHook.mockReturnValue({
+      data: { progress: 80, status: 'Processing...', created: 5, rejected: 0, skipped: 0, errors: [] },
+      refetch: vi.fn()
+    })
+
+    const { validateFile } = await import('@/utils/fileValidation')
+    validateFile.mockReturnValue({ isValid: true })
+
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+        skippedLabel="Skipped (blank kWh):"
+      />,
+      { wrapper }
+    )
+
+    const file = new File(['test'], 'test.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [file] } })
+    savedOnSuccess({ data: { jobId: 'job1' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Skipped (blank kWh):')).toBeInTheDocument()
+    })
+  })
+
+  it('shows skipped row when skippedCount > 0 even without skippedLabel', async () => {
+    let savedOnSuccess
+    mockImportHook.mockImplementation((_, { onSuccess }) => {
+      savedOnSuccess = onSuccess
+      return { mutate: vi.fn() }
+    })
+    mockGetJobStatusHook.mockReturnValue({
+      data: { progress: 80, status: 'Processing...', created: 5, rejected: 0, skipped: 3, errors: [] },
+      refetch: vi.fn()
+    })
+
+    const { validateFile } = await import('@/utils/fileValidation')
+    validateFile.mockReturnValue({ isValid: true })
+
+    render(
+      <ImportDialog
+        open={true}
+        close={vi.fn()}
+        complianceReportId="123"
+        isOverwrite={false}
+        importHook={mockImportHook}
+        getJobStatusHook={mockGetJobStatusHook}
+      />,
+      { wrapper }
+    )
+
+    const file = new File(['test'], 'test.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    fireEvent.change(screen.getByTestId('file-input'), { target: { files: [file] } })
+    savedOnSuccess({ data: { jobId: 'job1' } })
+
+    await waitFor(() => {
+      // Falls back to the common translation key label
+      expect(screen.getByText('3')).toBeInTheDocument()
+    })
+  })
 })
