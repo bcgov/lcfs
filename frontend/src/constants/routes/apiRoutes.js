@@ -157,6 +157,7 @@ export const apiRoutes = {
     importJobStatus: '/charging-equipment/status/:jobId'
   },
   getChargingSite: '/charging-sites/:siteId',
+  updateChargingSiteStatus: '/charging-sites/:siteId/status',
   getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete

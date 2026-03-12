@@ -12,6 +12,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingSiteSchema,
     ChargingSiteStatusSchema,
     ChargingSitesSchema,
+    ChargingSiteManualStatusUpdateSchema,
     DeleteChargingSiteResponseSchema,
     ChargingEquipmentStatusSchema,
     ChargingEquipmentPaginatedSchema,
@@ -744,3 +745,88 @@ async def test_search_allocation_organizations_service_error(
         response = await client.get(url, params={"query": "test"})
 
         assert response.status_code == 500
+
+
+# --- Manual charging site status (PATCH /charging-sites/{site_id}/status) ---
+
+
+@pytest.mark.anyio
+async def test_update_charging_site_status_success_government(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, valid_charging_site_schema
+):
+    """Test IDIR Analyst can set charging site status to Validated (Submitted -> Validated)."""
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.update_charging_site_status_manual"
+    ) as mock_update, patch(
+        "lcfs.web.api.charging_site.validation.ChargingSiteValidation.validate_organization_access"
+    ) as mock_validate:
+        mock_validate.return_value = None
+        updated = valid_charging_site_schema.model_copy()
+        updated.status = ChargingSiteStatusSchema(
+            charging_site_status_id=2, status="Validated"
+        )
+        mock_update.return_value = updated
+
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+        url = fastapi_app.url_path_for("update_charging_site_status", site_id=1)
+        response = await client.patch(url, json={"new_status": "Validated"})
+
+        assert response.status_code == 200
+        assert response.json()["status"]["status"] == "Validated"
+        mock_update.assert_called_once()
+        assert mock_update.call_args[0][0] == 1
+        assert mock_update.call_args[0][1].new_status == "Validated"
+
+
+@pytest.mark.anyio
+async def test_update_charging_site_status_success_bceid(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, valid_charging_site_schema
+):
+    """Test BCeID Compliance Reporting user can set charging site status to Submitted (Draft/Updated -> Submitted)."""
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.update_charging_site_status_manual"
+    ) as mock_update, patch(
+        "lcfs.web.api.charging_site.validation.ChargingSiteValidation.validate_organization_access"
+    ) as mock_validate:
+        mock_validate.return_value = None
+        updated = valid_charging_site_schema.model_copy()
+        updated.status = ChargingSiteStatusSchema(
+            charging_site_status_id=3, status="Submitted"
+        )
+        mock_update.return_value = updated
+
+        user_details = {"organization_id": 3}
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING], user_details)
+        url = fastapi_app.url_path_for("update_charging_site_status", site_id=1)
+        response = await client.patch(url, json={"new_status": "Submitted"})
+
+        assert response.status_code == 200
+        assert response.json()["status"]["status"] == "Submitted"
+        mock_update.assert_called_once()
+        assert mock_update.call_args[0][0] == 1
+        assert mock_update.call_args[0][1].new_status == "Submitted"
+
+
+@pytest.mark.anyio
+async def test_update_charging_site_status_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test Supplier without Compliance Reporting/Signing Authority cannot update charging site status."""
+    user_details = {"organization_id": 3}
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], user_details)
+    url = fastapi_app.url_path_for("update_charging_site_status", site_id=1)
+    response = await client.patch(url, json={"new_status": "Validated"})
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_update_charging_site_status_validation_error(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test PATCH with invalid body returns 422."""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = fastapi_app.url_path_for("update_charging_site_status", site_id=1)
+    response = await client.patch(url, json={})
+
+    assert response.status_code == 422
