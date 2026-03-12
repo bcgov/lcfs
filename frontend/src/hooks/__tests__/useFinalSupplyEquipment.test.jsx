@@ -13,7 +13,9 @@ import {
   useSaveFSEReporting,
   useDeleteFSEReportingBatch,
   useUpdateFSEReportingActiveStatus,
-  useSetFSEReportingDefaultDates
+  useSetFSEReportingDefaultDates,
+  useImportFSEReportingUpdate,
+  useGetFSEReportingUpdateJobStatus
 } from '../useFinalSupplyEquipment'
 
 // Mock the API service
@@ -39,7 +41,11 @@ vi.mock('@/constants/routes', () => ({
       '/final-supply-equipment/import-job-status/:jobID',
     saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
     updateFSEReportingActiveStatus:
-      '/final-supply-equipments/reporting/active-status'
+      '/final-supply-equipments/reporting/active-status',
+    fseReportingBulkUpdate:
+      '/final-supply-equipments/reporting/bulk-update/:reportID',
+    fseReportingBulkUpdateStatus:
+      '/final-supply-equipments/reporting/bulk-update/status/:jobID'
   }
 }))
 
@@ -722,6 +728,170 @@ describe('useFinalSupplyEquipment', () => {
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
       })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // useImportFSEReportingUpdate
+  // -------------------------------------------------------------------------
+
+  describe('useImportFSEReportingUpdate', () => {
+    it('should upload the file and return job data on success', async () => {
+      const mockResponse = { data: { jobId: 'bulk-job-1' } }
+      mockApiService.post.mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(
+        () => useImportFSEReportingUpdate(123),
+        { wrapper: createWrapper() }
+      )
+
+      const file = new File(['xlsx'], 'update.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+      result.current.mutate({ file })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/bulk-update/123',
+        expect.any(FormData),
+        expect.objectContaining({
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+      )
+    })
+
+    it('should throw when complianceReportId is missing', async () => {
+      const { result } = renderHook(
+        () => useImportFSEReportingUpdate(null),
+        { wrapper: createWrapper() }
+      )
+
+      const file = new File(['xlsx'], 'update.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+      result.current.mutate({ file })
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error.message).toMatch(/Compliance report ID is required/)
+    })
+
+    it('should call onSuccess callback when provided', async () => {
+      const onSuccess = vi.fn()
+      mockApiService.post.mockResolvedValue({ data: { jobId: 'bulk-job-2' } })
+
+      const { result } = renderHook(
+        () => useImportFSEReportingUpdate(456, { onSuccess }),
+        { wrapper: createWrapper() }
+      )
+
+      const file = new File(['xlsx'], 'update.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+      result.current.mutate({ file })
+
+      await waitFor(() => {
+        // React Query v5 calls onSuccess(data, variables, context, mutation)
+        expect(onSuccess).toHaveBeenCalled()
+        expect(onSuccess.mock.calls[0][0]).toEqual({ jobId: 'bulk-job-2' })
+      })
+    })
+
+    it('should call onError callback when upload fails', async () => {
+      const onError = vi.fn()
+      const mockError = new Error('Upload failed')
+      mockApiService.post.mockRejectedValue(mockError)
+
+      const { result } = renderHook(
+        () => useImportFSEReportingUpdate(123, { onError }),
+        { wrapper: createWrapper() }
+      )
+
+      const file = new File(['xlsx'], 'update.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+      result.current.mutate({ file })
+
+      await waitFor(() => {
+        // React Query v5 calls onError(error, variables, context, mutation)
+        expect(onError).toHaveBeenCalled()
+        expect(onError.mock.calls[0][0]).toEqual(mockError)
+      })
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // useGetFSEReportingUpdateJobStatus
+  // -------------------------------------------------------------------------
+
+  describe('useGetFSEReportingUpdateJobStatus', () => {
+    it('should fetch job status including skipped count', async () => {
+      const mockStatus = {
+        progress: 100,
+        status: 'Import process completed.',
+        created: 10,
+        rejected: 2,
+        skipped: 3,
+        errors: []
+      }
+      mockApiService.get.mockResolvedValue({ data: mockStatus })
+
+      const { result } = renderHook(
+        () => useGetFSEReportingUpdateJobStatus('bulk-job-1'),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual(mockStatus)
+      expect(result.current.data.skipped).toBe(3)
+      expect(mockApiService.get).toHaveBeenCalledWith(
+        '/final-supply-equipments/reporting/bulk-update/status/bulk-job-1'
+      )
+    })
+
+    it('should not fetch when jobId is falsy', () => {
+      const { result } = renderHook(
+        () => useGetFSEReportingUpdateJobStatus(null),
+        { wrapper: createWrapper() }
+      )
+
+      expect(result.current.status).toBe('pending')
+      expect(mockApiService.get).not.toHaveBeenCalled()
+    })
+
+    it('should not fetch when enabled is false', () => {
+      const { result } = renderHook(
+        () => useGetFSEReportingUpdateJobStatus('bulk-job-1', { enabled: false }),
+        { wrapper: createWrapper() }
+      )
+
+      expect(result.current.status).toBe('pending')
+      expect(mockApiService.get).not.toHaveBeenCalled()
+    })
+
+    it('should handle API errors', async () => {
+      const mockError = new Error('Status fetch failed')
+      mockApiService.get.mockRejectedValue(mockError)
+
+      const { result } = renderHook(
+        () => useGetFSEReportingUpdateJobStatus('bad-job', { retry: 0 }),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(
+        () => { expect(result.current.isError).toBe(true) },
+        { timeout: 5000 }
+      )
 
       expect(result.current.error).toEqual(mockError)
     })
