@@ -841,6 +841,7 @@ class ComplianceReportExporter:
             rows.append(
                 [
                     row.get("organization_name") or organization_name,
+                    row.get("allocating_organization_name"),
                     self._format_date(row.get("supply_from_date")),
                     self._format_date(row.get("supply_to_date")),
                     row.get("kwh_usage"),
