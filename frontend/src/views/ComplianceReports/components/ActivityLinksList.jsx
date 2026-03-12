@@ -17,6 +17,7 @@ import { StyledChip } from '@/components/StyledChip'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { getQuarterDateRange } from '@/utils/dateQuarterUtils'
 import { dateToLongString } from '@/utils/formatters'
+import { LEGISLATION_TRANSITION_YEAR } from '@/constants/common'
 
 export const ActivityLinksList = ({
   currentStatus,
@@ -90,12 +91,16 @@ export const ActivityLinksList = ({
 
   const secondaryList = useMemo(
     () => [
-      createActivity(
-        'report:activityLists.finalSupplyEquipment',
-        'report:activityLabels.finalSupplyEquipment',
-        ROUTES.REPORTS.CHARGING_SITE.INDEX,
-        true
-      ),
+      ...(parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+        ? [
+            createActivity(
+              'report:activityLists.finalSupplyEquipment',
+              'report:activityLabels.finalSupplyEquipment',
+              ROUTES.REPORTS.CHARGING_SITE.INDEX,
+              true
+            )
+          ]
+        : []),
       createActivity(
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
