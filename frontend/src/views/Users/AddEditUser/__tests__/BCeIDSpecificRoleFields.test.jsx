@@ -1,188 +1,204 @@
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// Mock external dependencies first, before importing the component
-vi.mock('@mui/material', () => ({
-  Box: ({ children }) => <div data-test="box">{children}</div>
-}))
+// @/components/BCForm is globally mocked in testSetup.js:
+//   BCFormCheckbox → <div data-test="{name}-checkbox-group"> with child <input> per option
+// Our mock for CustomLabel and MUI components uses `data-test` (testIdAttribute config).
 
-vi.mock('@/components/BCTypography', () => ({
-  __esModule: true,
-  default: ({ children, variant, component }) => (
-    <span
-      data-test="bc-typography"
-      data-variant={variant}
-      data-component={component}
-    >
-      {children}
+vi.mock('@/components/BCForm/CustomLabel', () => ({
+  CustomLabel: ({ header, text }) => (
+    <span data-test="custom-label" data-header={header} data-text={text}>
+      {header}
     </span>
   )
 }))
 
-vi.mock('@/components/BCForm', () => ({
-  BCFormCheckbox: ({ form, name, label, options, disabled }) => (
-    <div
-      data-test="bc-form-checkbox"
-      data-name={name}
-      data-label={label}
-      data-disabled={disabled}
-      data-options-length={options?.length}
-    >
-      Checkbox Component
+vi.mock('react-hook-form', () => ({
+  Controller: ({ name, control, render: renderFn }) =>
+    renderFn({
+      field: {
+        onChange: vi.fn(),
+        value: control?.__mockValue ?? []
+      }
+    })
+}))
+
+vi.mock('@mui/material', () => ({
+  Box: ({ children }) => <div data-test="box">{children}</div>,
+  FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
+  FormControlLabel: ({ control: ctrl, label }) => (
+    <div data-test="form-control-label">
+      {ctrl}
+      {label}
     </div>
+  ),
+  Checkbox: ({ id, checked, disabled }) => (
+    <input
+      data-test="ia-signer-checkbox"
+      id={id}
+      type="checkbox"
+      defaultChecked={checked}
+      disabled={disabled}
+      readOnly
+    />
   )
 }))
 
 vi.mock('../_schema', () => ({
-  bceidRoleOptions: vi.fn()
+  bceidRoleOptions: vi.fn(() => [
+    { label: 'Manage Users', header: 'Manage Users', text: 'desc', value: 'manage users', dataTestId: 'bceidRoles1' },
+    { label: 'IA Proponent', header: 'IA Proponent', text: 'desc', value: 'ia proponent', dataTestId: 'bceidRoles2' }
+  ]),
+  iaSignerOption: vi.fn(() => ({
+    label: 'IA Signer',
+    header: 'IA Signer',
+    text: 'ia signer desc',
+    value: 'ia signer'
+  }))
 }))
 
-// Import the component and mocked schema function
+vi.mock('@/constants/roles', () => ({
+  roles: {
+    ia_proponent: 'IA Proponent',
+    ia_signer: 'IA Signer'
+  }
+}))
+
 import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
-import { bceidRoleOptions } from '../_schema'
+import { bceidRoleOptions, iaSignerOption } from '../_schema'
+
+const t = vi.fn((key) => key)
+
+function makeForm(watchValue = []) {
+  return {
+    control: { __mockValue: watchValue },
+    watch: vi.fn(() => watchValue)
+  }
+}
 
 describe('BCeIDSpecificRoleFields', () => {
-  let mockForm, mockT, mockOptions
-
   beforeEach(() => {
     vi.clearAllMocks()
-
-    mockForm = {
-      control: {}
-    }
-
-    mockT = vi.fn((key) => `translated-${key}`)
-
-    mockOptions = [
-      {
-        label: 'Role 1',
-        header: 'Role 1',
-        text: 'Role 1 description',
-        value: 'role1'
-      },
-      {
-        label: 'Role 2',
-        header: 'Role 2',
-        text: 'Role 2 description',
-        value: 'role2'
-      }
-    ]
-
-    bceidRoleOptions.mockReturnValue(mockOptions)
+    t.mockImplementation((key) => key)
+    bceidRoleOptions.mockReturnValue([
+      { label: 'Manage Users', header: 'Manage Users', text: 'desc', value: 'manage users', dataTestId: 'bceidRoles1' },
+      { label: 'IA Proponent', header: 'IA Proponent', text: 'desc', value: 'ia proponent', dataTestId: 'bceidRoles2' }
+    ])
+    iaSignerOption.mockReturnValue({
+      label: 'IA Signer',
+      header: 'IA Signer',
+      text: 'ia signer desc',
+      value: 'ia signer'
+    })
   })
 
-  it('renders without crashing', () => {
-    render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
-    )
-
-    expect(screen.getByTestId('box')).toBeInTheDocument()
+  it('renders the main BCFormCheckbox group for bceidRoles', () => {
+    render(<BCeIDSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    // Global BCFormCheckbox mock renders <div data-test="{name}-checkbox-group">
+    expect(screen.getByTestId('bceidRoles-checkbox-group')).toBeInTheDocument()
   })
 
-  it('passes label with correct translation key to BCFormCheckbox', () => {
-    render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
-    )
-
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toBeInTheDocument()
-    expect(checkbox).toHaveAttribute('data-label', 'translated-admin:Roles')
-    expect(mockT).toHaveBeenCalledWith('admin:Roles')
+  it('renders one checkbox per bceidRoleOption', () => {
+    render(<BCeIDSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    // Global mock renders one <input type="checkbox"> per option
+    const checkboxes = screen.getAllByRole('checkbox')
+    // 2 options from bceidRoleOptions (IA Signer not yet visible — isGovernmentUser false)
+    expect(checkboxes).toHaveLength(2)
   })
 
-  it('renders BCFormCheckbox with correct props', () => {
-    render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
-    )
-
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toBeInTheDocument()
-    expect(checkbox).toHaveAttribute('data-name', 'bceidRoles')
-    expect(checkbox).toHaveAttribute('data-options-length', '2')
+  it('does NOT render IA Signer section when isGovernmentUser is false (default)', () => {
+    render(<BCeIDSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    expect(screen.queryByTestId('ia-signer-checkbox')).not.toBeInTheDocument()
   })
 
-  it('passes form object to BCFormCheckbox', () => {
-    const customForm = { control: { customProp: 'test' } }
-    render(
-      <BCeIDSpecificRoleFields form={customForm} disabled={false} t={mockT} />
-    )
-
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toBeInTheDocument()
-  })
-
-  it('passes disabled prop as false to BCFormCheckbox', () => {
-    render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
-    )
-
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toHaveAttribute('data-disabled', 'false')
-  })
-
-  it('passes disabled prop as true to BCFormCheckbox', () => {
-    render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={true} t={mockT} />
-    )
-
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toHaveAttribute('data-disabled', 'true')
-  })
-
-  it('calls bceidRoleOptions with translation function', () => {
-    render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
-    )
-
-    expect(bceidRoleOptions).toHaveBeenCalledWith(mockT)
-    expect(bceidRoleOptions).toHaveBeenCalledTimes(1)
-  })
-
-  it('destructures control from form object', () => {
-    const formWithControl = {
-      control: {
-        test: 'value'
-      }
-    }
-
+  it('renders IA Signer checkbox when isGovernmentUser is true', () => {
     render(
       <BCeIDSpecificRoleFields
-        form={formWithControl}
+        form={makeForm()}
         disabled={false}
-        t={mockT}
+        t={t}
+        isGovernmentUser
       />
     )
-
-    // Component renders successfully, indicating control was destructured properly
-    expect(screen.getByTestId('bc-form-checkbox')).toBeInTheDocument()
+    expect(screen.getByTestId('ia-signer-checkbox')).toBeInTheDocument()
   })
 
-  it('handles empty options array', () => {
-    bceidRoleOptions.mockReturnValue([])
-
+  it('IA Signer checkbox is disabled when IA Proponent is not in bceidRoles', () => {
     render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
+      <BCeIDSpecificRoleFields
+        form={makeForm([])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+      />
     )
-
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toHaveAttribute('data-options-length', '0')
+    expect(screen.getByTestId('ia-signer-checkbox')).toBeDisabled()
   })
 
-  it('renders all required components in correct structure', () => {
+  it('IA Signer checkbox is enabled when IA Proponent is checked', () => {
     render(
-      <BCeIDSpecificRoleFields form={mockForm} disabled={false} t={mockT} />
+      <BCeIDSpecificRoleFields
+        form={makeForm(['ia proponent'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+      />
     )
+    expect(screen.getByTestId('ia-signer-checkbox')).not.toBeDisabled()
+  })
 
-    const box = screen.getByTestId('box')
-    const checkbox = screen.getByTestId('bc-form-checkbox')
+  it('IA Signer checkbox is disabled when form is globally disabled, even with IA Proponent', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['ia proponent'])}
+        disabled={true}
+        t={t}
+        isGovernmentUser
+      />
+    )
+    expect(screen.getByTestId('ia-signer-checkbox')).toBeDisabled()
+  })
 
-    expect(box).toBeInTheDocument()
-    expect(checkbox).toBeInTheDocument()
+  it('IA Signer shows as checked when its value is in bceidRoles', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['ia proponent', 'ia signer'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+      />
+    )
+    expect(screen.getByTestId('ia-signer-checkbox')).toBeChecked()
+  })
 
-    // Verify structure: checkbox should be inside box
-    expect(box).toContainElement(checkbox)
+  it('renders CustomLabel with correct IA Signer header and text', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm()}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+      />
+    )
+    const label = screen.getByTestId('custom-label')
+    expect(label).toHaveAttribute('data-header', 'IA Signer')
+    expect(label).toHaveAttribute('data-text', 'ia signer desc')
+  })
 
-    // Verify the checkbox has the label prop
-    expect(checkbox).toHaveAttribute('data-label', 'translated-admin:Roles')
+  it('calls iaSignerOption with the translation function', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm()}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+      />
+    )
+    expect(iaSignerOption).toHaveBeenCalledWith(t)
+  })
+
+  it('calls bceidRoleOptions with the translation function', () => {
+    render(<BCeIDSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    expect(bceidRoleOptions).toHaveBeenCalledWith(t)
   })
 })

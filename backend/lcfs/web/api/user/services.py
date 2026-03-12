@@ -4,7 +4,7 @@ from datetime import datetime
 import structlog
 from typing import List
 
-from fastapi import Depends, Request, HTTPException
+from fastapi import Depends, Request, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,7 @@ from lcfs.web.api.user.schema import (
     UsersSchema,
     UserActivitySchema,
     UserActivitiesResponseSchema,
+    ResolveOrgNameResponseSchema,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
@@ -35,6 +36,7 @@ from fastapi_cache import FastAPICache
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.role.services import RoleServices
+from lcfs.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -73,6 +75,16 @@ class UserServices:
         self.session = session
         self.notification_service = notification_service
         self.role_service = role_service
+
+    @staticmethod
+    def _is_local_env() -> bool:
+        env = settings.environment.lower()
+        return env in {"local", "dev", "development"}
+
+    @staticmethod
+    def _is_nonprod_env() -> bool:
+        env = settings.environment.lower()
+        return env in {"local", "dev", "development", "test"}
 
     @service_handler
     async def export_users(self, export_format) -> StreamingResponse:
@@ -162,6 +174,46 @@ class UserServices:
         )
 
     @service_handler
+    async def get_seeded_test_users(
+        self, seed_env: str | None = None
+    ) -> list[UserBaseSchema]:
+        if not self._is_nonprod_env():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Seeded test users endpoint is only available in local/test environments.",
+            )
+        resolved_env = (seed_env or "").lower().strip()
+        if resolved_env not in {"local", "test"}:
+            resolved_env = "test" if settings.environment.lower() == "test" else "local"
+        return await self.repo.get_seeded_test_users(resolved_env)
+
+    @service_handler
+    async def resolve_org_name(
+        self, organization_name: str, salt_phrase: str
+    ) -> ResolveOrgNameResponseSchema:
+        if not self._is_local_env():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Org-name resolver is only available in local environment.",
+            )
+        if not organization_name or not organization_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization name is required.",
+            )
+        if not salt_phrase or not salt_phrase.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Salt phrase is required.",
+            )
+        return ResolveOrgNameResponseSchema.model_validate(
+            await self.repo.resolve_org_name(
+                organization_name=organization_name.strip(),
+                salt_phrase=salt_phrase.strip(),
+            )
+        )
+
+    @service_handler
     async def get_user_by_id(self, user_id: int) -> UserBaseSchema:
         """
         Get information of a user by ID, plus indicates if they're safe to remove.
@@ -229,6 +281,26 @@ class UserServices:
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
+
+        # Enforce: only government (IDIR) users may assign or remove the IA Signer role.
+        # If the caller is a BCeID user, preserve the existing IA Signer assignment
+        # regardless of what was submitted.
+        if user.organization and not self.request.user.is_government:
+            submitted_roles_lower = {r.lower() for r in (user_create.roles or [])}
+            has_ia_signer = any(
+                r == RoleEnum.IA_SIGNER for r in user.role_names
+            )
+            ia_signer_value_lower = RoleEnum.IA_SIGNER.value.lower()
+            if has_ia_signer:
+                # Preserve the existing assignment — add it back if missing
+                if ia_signer_value_lower not in submitted_roles_lower:
+                    user_create.roles.append(RoleEnum.IA_SIGNER.value)
+            else:
+                # Strip any attempt to grant the role
+                user_create.roles = [
+                    r for r in (user_create.roles or [])
+                    if r.lower() != ia_signer_value_lower
+                ]
 
         # Snapshot old roles & active status
         old_roles = {RoleEnum(r) for r in user.role_names}

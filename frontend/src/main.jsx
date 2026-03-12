@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer'
 import { KeycloakProvider } from '@/components/KeycloakProvider'
 import { AuthorizationProvider } from '@/contexts/AuthorizationContext'
+import { ErrorOverlay } from '@/components/ErrorOverlay/ErrorOverlay'
 import theme from '@/themes'
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers'
@@ -27,6 +28,7 @@ if (root) {
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <SnackbarProvider>
                   <CssBaseline />
+                  <ErrorOverlay />
                   <App />
                 </SnackbarProvider>
               </LocalizationProvider>
