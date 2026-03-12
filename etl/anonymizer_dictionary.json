@@ -1,0 +1,63 @@
+{
+  "person": {
+    "first_names": [
+      "Alex", "Jordan", "Taylor", "Morgan", "Riley", "Casey", "Jamie", "Avery", "Cameron", "Parker",
+      "Quinn", "Rowan", "Harper", "Reese", "Dakota", "Emerson", "Logan", "Skyler", "Sage", "Devin",
+      "Blake", "Kendall", "Reagan", "Finley", "Bailey", "Charlie", "Drew", "Elliot", "Frankie", "Hayden",
+      "Jules", "Kai", "Lane", "Marley", "Noel", "Oakley", "Peyton", "Robin", "Shawn", "Tatum",
+      "Adrian", "Brennan", "Cassidy", "Dallas", "Eden", "Flynn", "Gray", "Hollis", "Indigo", "Justice",
+      "Keegan", "Lennon", "Micah", "Nico", "Onyx", "Phoenix", "Remy", "Sterling", "Teagan", "Winter",
+      "Arden", "Brooks", "Cleo", "Darian", "Ellis", "Fable", "Gale", "Haven", "Ivory", "Jaden",
+      "Kiran", "Larkin", "Marlow", "Navy", "Ori", "Perry", "Rory", "Sutton", "Toby", "Vale"
+    ],
+    "last_names": [
+      "Brown", "Nguyen", "Patel", "Wilson", "Lee", "Singh", "Chen", "Martin", "Taylor", "Clark",
+      "Wong", "Hernandez", "Johnson", "Campbell", "Lopez", "Moore", "Davis", "Thompson", "Walker", "Anderson",
+      "Scott", "Young", "King", "Baker", "Adams", "Turner", "Hill", "Green", "Nelson", "Carter",
+      "Mitchell", "Roberts", "Phillips", "Evans", "Parker", "Edwards", "Collins", "Stewart", "Morris", "Rogers",
+      "Reed", "Cook", "Morgan", "Bell", "Murphy", "Bailey", "Rivera", "Cooper", "Richardson", "Cox",
+      "Howard", "Ward", "Torres", "Peterson", "Gray", "Ramirez", "James", "Watson", "Brooks", "Kelly",
+      "Sanders", "Price", "Bennett", "Wood", "Barnes", "Ross", "Henderson", "Coleman", "Jenkins", "Perry",
+      "Powell", "Long", "Patterson", "Hughes", "Flores", "Washington", "Butler", "Simmons", "Foster", "Gonzalez"
+    ]
+  },
+  "org": {
+    "prefixes": [
+      "Pacific", "Coastal", "Northern", "Summit", "Evergreen", "Cedar", "Harbour", "Frontier", "Aurora", "Bluewater",
+      "Maple", "Westshore", "Pinnacle", "Sterling", "Vector", "Atlas", "Granite", "Silverline", "Redwood", "Crown",
+      "Northstar", "Southridge", "Lakeside", "Riverside", "Peak", "Union", "Capital", "Meridian", "Beacon", "Goldcrest",
+      "Skyline", "Seabreeze", "Oakridge", "Ironclad", "Sunrise", "Moonstone", "Highland", "Bridgeview", "Trailhead", "Clearwater",
+      "Wildwood", "Stonebridge", "Horizon", "Voyager", "Cascadia", "Glacier", "Timber", "Portside", "Tidal", "Prairie"
+    ],
+    "focuses": [
+      "Energy", "Logistics", "Transport", "Fuel", "Renewables", "Infrastructure", "Resources", "Mobility", "Commodities", "Distribution",
+      "Supply", "Solutions", "Partners", "Systems", "Holdings", "Ventures", "Operations", "Networks", "Services", "Trading",
+      "Industries", "Technologies", "Management", "Consulting", "Development", "Projects", "Engineering", "Manufacturing", "Storage", "Processing",
+      "Terminals", "Shipping", "Pipeline", "Materials", "Analytics", "Optimization", "Procurement", "Advisory", "Compliance", "Markets"
+    ],
+    "suffixes": [
+      "Ltd", "Inc", "Corp", "Group", "Co", "LP", "Enterprises", "Industries", "Canada", "International",
+      "West", "North", "BC", "Partners", "Collective", "Association", "Alliance", "Trust", "Foundation", "Exchange",
+      "Union", "Network", "Consortium", "Company", "Works", "Labs", "Center", "Bureau", "Authority", "Council"
+    ]
+  },
+  "address": {
+    "street_names": [
+      "Oak", "Cedar", "Maple", "Pine", "Willow", "River", "Harbour", "Granville", "Kingsway", "Douglas",
+      "Main", "Front", "Victoria", "Boundary", "Broadway", "Spruce", "Birch", "Chestnut", "Alder", "Seaview",
+      "Park", "Garden", "Lake", "Forest", "Valley", "Hillcrest", "Meadow", "Sunset", "Sunrise", "Harborview",
+      "Ridge", "Creek", "Shore", "Bay", "Marine", "Canyon", "Prairie", "Orchard", "Gateway", "Beacon",
+      "Copper", "Silver", "Golden", "Summit", "Peak", "Trail", "Bridge", "Market", "Commerce", "Liberty"
+    ],
+    "street_types": [
+      "Street", "Avenue", "Road", "Boulevard", "Drive", "Way", "Lane", "Place", "Court", "Terrace",
+      "Crescent", "Circle", "Parkway", "Mews", "Close", "Trail"
+    ],
+    "cities": [
+      "Victoria", "Vancouver", "Burnaby", "Surrey", "Richmond", "Kelowna", "Nanaimo", "Kamloops", "Langford", "Abbotsford",
+      "Prince George", "Chilliwack", "Delta", "Coquitlam", "New Westminster", "North Vancouver", "West Vancouver", "Maple Ridge", "Penticton", "Courtenay",
+      "Campbell River", "Port Coquitlam", "Port Moody", "White Rock", "Squamish", "Whistler", "Duncan", "Vernon", "Salmon Arm", "Nelson",
+      "Trail", "Cranbrook", "Fort St. John", "Terrace", "Prince Rupert", "Quesnel", "Williams Lake", "Sechelt", "Ladysmith", "Sidney"
+    ]
+  }
+}
