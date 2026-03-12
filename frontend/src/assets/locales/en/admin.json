@@ -1,6 +1,7 @@
 {
   "OrgId": "Organization ID",
   "Users": "Users",
+  "SeededUserAssociation": "Seeded user association",
   "UserActivity": "User activity",
   "UserLoginHistory": "User login history",
   "AuditLog": "Audit log",
@@ -100,5 +101,24 @@
     "success": "User has been successfully deleted."
   },
   "editSuccessMessage": "User has been updated successfully.",
-  "createSuccessMessage": "User has been created successfully."
+  "createSuccessMessage": "User has been created successfully.",
+  "seededAssoc": {
+    "title": "Seeded User Association",
+    "description": "Assign seeded {{env}} users to organizations and update BCeID roles.",
+    "user": "BCeID test-user",
+    "organization": "Organization",
+    "roles": "Roles",
+    "associateBtn": "Save association",
+    "saltPhrase": "Anonymizer salt phrase",
+    "resolveOrgNameInput": "Organization name (masked or original)",
+    "resolveOrgNameHelp": "Enter either masked org name or original org name.",
+    "resolveBtn": "Resolve organization name",
+    "resolveValidation": "Enter an organization name and salt phrase.",
+    "resolveSuccess": "Organization name resolved successfully.",
+    "resolveResult": "Resolved ({{direction}}): original=\"{{original}}\" | masked=\"{{masked}}\"",
+    "invalidRoleMix": "Role selection includes roles that are not allowed for organization users.",
+    "validation": "Select a seeded user and organization before saving.",
+    "success": "Seeded user association updated successfully.",
+    "supplierRoleNote": "Supplier role is always included"
+  }
 }
