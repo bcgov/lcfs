@@ -48,7 +48,7 @@ class FinalSupplyEquipmentValidation:
         is_overlapping = await self.fse_repo.check_overlap_of_fse_row(data)
         if is_overlapping:
             raise ValueError(
-                f"Date range overlap found for equipment with serial number {data.serial_nbr} at the same or different location."
+                f"Date range overlap found for equipment with serial number {data.serial_nbr} at the same Charging site."
             )
 
         return True  # If no duplicates or overlaps found
