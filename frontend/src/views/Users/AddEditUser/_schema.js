@@ -1,5 +1,5 @@
 import * as Yup from 'yup'
-import { govRoles, nonGovRoles, roles } from '@/constants/roles'
+import { roles } from '@/constants/roles'
 import { PHONE_REGEX } from '@/constants/common'
 
 // Schema for form validation
@@ -26,7 +26,18 @@ export const userInfoSchema = (userType) =>
       .nullable(true),
     status: Yup.string(),
     adminRole: Yup.array(),
-    idirRole: Yup.string(),
+    idirRole: Yup.string().test(
+      'director-ia-conflict',
+      'Director cannot be combined with IA analyst or IA manager roles.',
+      function (idirRole) {
+        const { iaRole } = this.parent
+        if (idirRole === roles.director.toLowerCase() && iaRole) {
+          return false
+        }
+        return true
+      }
+    ),
+    iaRole: Yup.string(),
     bceidRoles: Yup.array(),
     readOnly: Yup.string()
   })
@@ -115,6 +126,7 @@ export const defaultValues = {
   status: 'Active',
   adminRole: [],
   idirRole: '',
+  iaRole: '',
   bceidRoles: [],
   readOnly: ''
 }
@@ -130,29 +142,47 @@ export const statusOptions = (t) => [
   }
 ]
 
-export const idirRoleOptions = (t) =>
-  govRoles
-    .map(
-      (role, idx) =>
-        idx > 1 && {
-          label: role,
-          header: role,
-          text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
-          value: role.toLowerCase()
-        }
-    )
-    .filter((val) => val)
+const toOption = (role, t) => ({
+  label: role,
+  header: role,
+  text: t(`admin:userForm.${role.toLowerCase().replace(/ /g, '_')}`),
+  value: role.toLowerCase()
+})
 
+export const adminRoleOptions = (t) => [
+  toOption(roles.administrator, t),
+  {
+    label: 'System Admin',
+    header: 'System Admin',
+    text: t('admin:userForm.system_admin'),
+    // roles.system_admin is 'System Admin'; lowercase matches RoleEnum.SYSTEM_ADMIN.value.lower()
+    value: roles.system_admin.toLowerCase()
+  }
+]
+
+// Mutually exclusive: Director | Analyst | Compliance Manager
+export const idirRoleOptions = (t) => [
+  toOption(roles.director, t),
+  toOption(roles.analyst, t),
+  toOption(roles.compliance_manager, t)
+]
+
+// Mutually exclusive: IA Analyst | IA Manager. Cannot be combined with Director.
+export const iaRoleOptions = (t) => [
+  toOption(roles.ia_analyst, t),
+  toOption(roles.ia_manager, t)
+]
+
+// IA Signer is excluded here — it is rendered separately, indented under IA Proponent
 export const bceidRoleOptions = (t) =>
-  nonGovRoles
-    .map(
-      (role, idx) =>
-        !role.includes(roles.supplier) &&
-        !role.includes(roles.read_only) && {
-          label: role,
-          header: role,
-          text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
-          value: role.toLowerCase()
-        }
-    )
-    .filter((val) => val)
+  [
+    roles.manage_users,
+    roles.transfers,
+    roles.compliance_reporting,
+    roles.signing_authority,
+    roles.ci_applicant,
+    roles.ia_proponent
+  ].map((role) => toOption(role, t))
+
+// Only shown when a government user edits a BCeID user
+export const iaSignerOption = (t) => toOption(roles.ia_signer, t)

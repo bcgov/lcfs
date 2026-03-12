@@ -84,8 +84,14 @@
     "read_only": "can view transactions, compliance reports and files.",
     "ci_applicant": "can access Fuel code tab and CI application subtab.",
     "ia_proponent": "can access Initiative agreement tab.",
+    "ia_analyst": "can make recommendations on initiative agreements and designated actions.",
+    "ia_manager": "can make recommendations on initiative agreements and designated actions.",
+    "ia_signer": "can sign and submit IA submissions, designated actions and evidence to government. This role can only be assigned by government users.",
+    "system_admin": "can manage system-level configuration controls and feature administration.",
     "optional": "optional",
-    "selectRolePrompt": "Select a role before saving."
+    "selectRolePrompt": "Select a role before saving.",
+    "initiativeAgreementsSection": "Initiative agreements",
+    "complianceSection": "Compliance reporting, transfers, CI applications & fuel codes"
   },
   "userActivity": {
     "actionTaken": "Action taken",

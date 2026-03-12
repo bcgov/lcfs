@@ -282,6 +282,26 @@ class UserServices:
         if not user:
             raise DataNotFoundException("User not found")
 
+        # Enforce: only government (IDIR) users may assign or remove the IA Signer role.
+        # If the caller is a BCeID user, preserve the existing IA Signer assignment
+        # regardless of what was submitted.
+        if user.organization and not self.request.user.is_government:
+            submitted_roles_lower = {r.lower() for r in (user_create.roles or [])}
+            has_ia_signer = any(
+                r == RoleEnum.IA_SIGNER for r in user.role_names
+            )
+            ia_signer_value_lower = RoleEnum.IA_SIGNER.value.lower()
+            if has_ia_signer:
+                # Preserve the existing assignment — add it back if missing
+                if ia_signer_value_lower not in submitted_roles_lower:
+                    user_create.roles.append(RoleEnum.IA_SIGNER.value)
+            else:
+                # Strip any attempt to grant the role
+                user_create.roles = [
+                    r for r in (user_create.roles or [])
+                    if r.lower() != ia_signer_value_lower
+                ]
+
         # Snapshot old roles & active status
         old_roles = {RoleEnum(r) for r in user.role_names}
         was_active = user.is_active
