@@ -58,23 +58,32 @@ class TestChargingSiteFunctionality:
 
     def test_status_validation_invalid_transitions(self):
         """Test invalid status transitions"""
-        # These represent invalid transitions
+        # Valid transitions based on the new business rules:
+        # - Draft can come from: Submitted, Validated
+        # - Submitted can come from: Draft, Updated
+        # - Validated can come from: Submitted
+        # - Decommissioned can come from: Validated
+        
+        valid_transitions = {
+            "Draft": ["Submitted", "Validated"],
+            "Submitted": ["Draft", "Updated"],
+            "Validated": ["Submitted"],
+            "Decommissioned": ["Validated"]
+        }
+        
+        # Test some invalid transitions
         invalid_transitions = [
             ("Draft", "Validated"),  # Can't go directly from Draft to Validated
-            ("Validated", "Draft"),  # Can't go directly from Validated to Draft
+            ("Validated", "Submitted"),  # Can't undo validation (Validated -> Submitted)
+            ("Draft", "Decommissioned"),  # Can't go directly from Draft to Decommissioned
+            ("Submitted", "Decommissioned"),  # Can't go directly from Submitted to Decommissioned
         ]
 
         for current, target in invalid_transitions:
-            # In the real service, these would raise ValueError
-            # Here we just verify the business logic rules
-            if target == "Draft":
-                assert (
-                    current != "Submitted"
-                ), f"Invalid transition from {current} to {target}"
-            elif target == "Validated":
-                assert (
-                    current != "Submitted"
-                ), f"Invalid transition from {current} to {target}"
+            # Verify that current is NOT in the list of valid sources for target
+            assert (
+                current not in valid_transitions.get(target, [])
+            ), f"Invalid transition from {current} to {target} should not be allowed"
 
     def test_bulk_update_data_structure(self):
         """Test the expected data structure for bulk updates"""

@@ -242,7 +242,7 @@ export const FSEProcessing = () => {
       gridRef.current?.api?.forEachNode((node) => {
         if (
           equipmentIds.includes(node.data.charging_equipment_id) &&
-          (node.data.status === 'Submitted' || node.data.status === 'Validated')
+          node.data.status === 'Submitted'
         ) {
           node.updateData({ ...node.data, status: 'Draft' })
         }
@@ -278,7 +278,7 @@ export const FSEProcessing = () => {
 
   const canValidate = selectedRows.some((row) => row.status === 'Submitted')
   const canReturnToDraft = selectedRows.some(
-    (row) => row.status === 'Submitted' || row.status === 'Validated'
+    (row) => row.status === 'Submitted'
   )
 
   if (isLoading) return <Loading />
