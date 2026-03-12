@@ -100,6 +100,21 @@ vi.mock('@/constants/roles', () => ({
   }
 }))
 
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasRoles: vi.fn(() => false),
+    hasAnyRole: vi.fn(() => false),
+    data: null,
+    isLoading: false
+  })
+}))
+
+vi.mock('@/constants/config', () => ({
+  CONFIG: {
+    ENVIRONMENT: 'production'
+  }
+}))
+
 describe('AdminMenu Component', () => {
   const originalInnerWidth = window.innerWidth
   const addEventListenerSpy = vi.spyOn(window, 'addEventListener')

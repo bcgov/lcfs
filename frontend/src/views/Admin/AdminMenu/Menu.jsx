@@ -7,9 +7,17 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserActivity, UserLoginHistory, AuditLog } from '.'
+import {
+  Users,
+  SeededUserAssociation,
+  UserActivity,
+  UserLoginHistory,
+  AuditLog
+} from '.'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
+import { CONFIG } from '@/constants/config'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 function a11yProps(index) {
   return {
@@ -22,14 +30,33 @@ export function AdminMenu({ tabIndex }) {
   const { t } = useTranslation(['admin'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
+  const { hasRoles } = useCurrentUser()
+  const normalizedEnvironment = (CONFIG.ENVIRONMENT || '').toLowerCase()
+  const showSeededAssociation = [
+    'local',
+    'development',
+    'dev',
+    'test'
+  ].includes(normalizedEnvironment)
+  const showSeededAssociationAdminOnly =
+    showSeededAssociation && hasRoles(roles.administrator)
   const paths = useMemo(
-    () => [
-      ROUTES.ADMIN.USERS.LIST,
-      ROUTES.ADMIN.USER_ACTIVITY,
-      ROUTES.ADMIN.USER_LOGIN_HISTORY,
-      ROUTES.ADMIN.AUDIT_LOG.LIST
-    ],
-    []
+    () =>
+      showSeededAssociationAdminOnly
+        ? [
+            ROUTES.ADMIN.USERS.LIST,
+            ROUTES.ADMIN.USER_ACTIVITY,
+            ROUTES.ADMIN.USER_LOGIN_HISTORY,
+            ROUTES.ADMIN.AUDIT_LOG.LIST,
+            ROUTES.ADMIN.SEEDED_USER_ASSOCIATION
+          ]
+        : [
+            ROUTES.ADMIN.USERS.LIST,
+            ROUTES.ADMIN.USER_ACTIVITY,
+            ROUTES.ADMIN.USER_LOGIN_HISTORY,
+            ROUTES.ADMIN.AUDIT_LOG.LIST
+          ],
+    [showSeededAssociationAdminOnly]
   )
 
   useEffect(() => {
@@ -68,6 +95,9 @@ export function AdminMenu({ tabIndex }) {
           <Tab label={t('UserActivity')} {...a11yProps(1)} />
           <Tab label={t('UserLoginHistory')} {...a11yProps(2)} />
           <Tab label={t('AuditLog')} {...a11yProps(3)} />
+          {showSeededAssociationAdminOnly && (
+            <Tab label={t('SeededUserAssociation')} wrapped {...a11yProps(4)} />
+          )}
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>
@@ -83,6 +113,11 @@ export function AdminMenu({ tabIndex }) {
         <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
           <AuditLog />
         </AdminTabPanel>
+        {showSeededAssociationAdminOnly && (
+          <AdminTabPanel value={tabIndex} index={4} component="div" mx={-3}>
+            <SeededUserAssociation />
+          </AdminTabPanel>
+        )}
       </Role>
     </BCBox>
   )
