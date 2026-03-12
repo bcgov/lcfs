@@ -16,7 +16,7 @@ import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { Role } from '@/components/Role'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
-import { REPORT_SCHEDULES } from '@/constants/common'
+import { REPORT_SCHEDULES, LEGISLATION_TRANSITION_YEAR } from '@/constants/common'
 import { roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
@@ -431,6 +431,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
 
       const hasRealData = !isArrayEmpty(scheduleData)
 
+      // FSE is not applicable for compliance periods before 2024
+      const isFSEHiddenByYear =
+        activity.key === 'finalSupplyEquipments' &&
+        parseInt(compliancePeriod) < LEGISLATION_TRANSITION_YEAR
+
       // For FSE section: show if organization has any charging equipment,
       // not just if there's FSE linked to the current report group.
       // This ensures users can add FSE to supplemental reports even when
@@ -443,10 +448,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       // Show if has data OR if in editing mode OR if it was recently edited
       // OR (for FSE) if organization has charging equipment
       const shouldShow =
-        hasRealData ||
-        hasFSECapability ||
-        activity.key === 'supportingDocs' ||
-        expandedSchedule === activity.key
+        !isFSEHiddenByYear &&
+        (hasRealData ||
+          hasFSECapability ||
+          activity.key === 'supportingDocs' ||
+          expandedSchedule === activity.key)
 
       accordionsData.set(panelId, {
         shouldShow,
@@ -464,6 +470,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     activityDataResults,
     t,
     currentStatus,
+    compliancePeriod,
     location.state?.expandedSchedule
   ])
 

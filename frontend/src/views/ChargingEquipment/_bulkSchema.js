@@ -80,6 +80,7 @@ export const bulkChargingEquipmentColDefs = (
       },
       editable: (params) =>
         !isChargingSiteLocked &&
+        !params.data?.registrationNumber &&
         isEditableByStatus(params) &&
         (!params.data?.chargingEquipmentId || params.data?.status === 'Draft'),
       valueFormatter: (params) => {
@@ -90,7 +91,7 @@ export const bulkChargingEquipmentColDefs = (
       },
       cellStyle: (params) => {
         const baseStyle = StandardCellWarningAndErrors(params, errors, warnings)
-        if (isChargingSiteLocked) {
+        if (isChargingSiteLocked || params.data?.registrationNumber) {
           return {
             ...baseStyle,
             backgroundColor: '#f5f5f5',

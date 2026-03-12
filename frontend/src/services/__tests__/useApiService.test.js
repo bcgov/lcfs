@@ -14,6 +14,15 @@ vi.mock('react', async () => {
 const mockKeycloak = { authenticated: false, token: null }
 const mockEnqueueSnackbar = vi.fn()
 const mockSetForbidden = vi.fn()
+const mockAddErrorRef = vi.fn()
+const mockSetErrorStatus = vi.fn()
+const mockServerErrorBlockedRef = { current: false }
+const mockUseAuthorization = vi.fn(() => ({
+  setForbidden: mockSetForbidden,
+  addErrorRef: mockAddErrorRef,
+  setErrorStatus: mockSetErrorStatus,
+  serverErrorBlockedRef: mockServerErrorBlockedRef
+}))
 
 vi.mock('axios')
 vi.mock('@react-keycloak/web', () => ({
@@ -23,7 +32,7 @@ vi.mock('notistack', () => ({
   useSnackbar: () => ({ enqueueSnackbar: mockEnqueueSnackbar })
 }))
 vi.mock('@/contexts/AuthorizationContext', () => ({
-  useAuthorization: () => ({ setForbidden: mockSetForbidden })
+  useAuthorization: mockUseAuthorization
 }))
 vi.mock('@/constants/config', () => ({
   CONFIG: {
@@ -89,6 +98,15 @@ describe('useApiService', () => {
     // Reset mock state
     mockKeycloak.authenticated = false
     mockKeycloak.token = null
+    mockServerErrorBlockedRef.current = false
+
+    // Reset useAuthorization mock to default
+    mockUseAuthorization.mockReturnValue({
+      setForbidden: mockSetForbidden,
+      addErrorRef: mockAddErrorRef,
+      setErrorStatus: mockSetErrorStatus,
+      serverErrorBlockedRef: mockServerErrorBlockedRef
+    })
 
     // Setup DOM element mock
     const mockElement = {
@@ -186,6 +204,51 @@ describe('useApiService', () => {
       await expect(() => requestErrorHandler(error)).rejects.toThrow('Request error')
 
     })
+
+    it('should block requests when server is in error state', async () => {
+      // useMemo is mocked globally
+
+      mockServerErrorBlockedRef.current = true
+      mockUseAuthorization.mockReturnValue({
+        setForbidden: mockSetForbidden,
+        addErrorRef: mockAddErrorRef,
+        setErrorStatus: mockSetErrorStatus,
+        serverErrorBlockedRef: mockServerErrorBlockedRef
+      })
+
+      useApiService()
+
+      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const config = { headers: {} }
+      
+      await expect(() => requestInterceptor(config)).rejects.toThrow('Blocked: server is in error state')
+
+    })
+
+    it('should allow requests when server is not in error state', () => {
+      // useMemo is mocked globally
+
+      mockServerErrorBlockedRef.current = false
+      mockUseAuthorization.mockReturnValue({
+        setForbidden: mockSetForbidden,
+        addErrorRef: mockAddErrorRef,
+        setErrorStatus: mockSetErrorStatus,
+        serverErrorBlockedRef: mockServerErrorBlockedRef
+      })
+
+      mockKeycloak.authenticated = true
+      mockKeycloak.token = 'test-token'
+
+      useApiService()
+
+      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0]
+      const config = { headers: {} }
+      
+      const result = requestInterceptor(config)
+
+      expect(result.headers.Authorization).toBe('Bearer test-token')
+
+    })
   })
 
   describe('Response Interceptor', () => {
@@ -265,7 +328,27 @@ describe('useApiService', () => {
         
         await expect(() => responseErrorHandler(error)).rejects.toThrow()
         expect(mockSetForbidden).toHaveBeenCalledWith(true)
-        expect(mockConsoleError).not.toHaveBeenCalled()
+        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 403, { message: 'Forbidden' })
+        expect(mockEnqueueSnackbar).not.toHaveBeenCalled()
+
+      })
+
+      it('should handle 500 errors by setting error status', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: { detail: 'Internal Server Error' }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockSetErrorStatus).toHaveBeenCalledWith(500)
+        expect(mockConsoleError).toHaveBeenCalledWith('API Error:', 500, { detail: 'Internal Server Error' })
         expect(mockEnqueueSnackbar).not.toHaveBeenCalled()
 
       })
@@ -284,6 +367,174 @@ describe('useApiService', () => {
         expect(mockConsoleError).not.toHaveBeenCalled()
         expect(mockEnqueueSnackbar).not.toHaveBeenCalled()
         expect(mockSetForbidden).not.toHaveBeenCalled()
+
+      })
+    })
+
+    describe('Reference Number Extraction', () => {
+      it('should extract reference number from response body', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: { 
+              detail: 'Internal Server Error',
+              reference_number: 'ref-abc-123'
+            }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).toHaveBeenCalledWith('ref-abc-123')
+
+      })
+
+      it('should extract reference number from response header', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: { detail: 'Internal Server Error' },
+            headers: {
+              'x-correlation-id': 'correlation-xyz-789'
+            }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).toHaveBeenCalledWith('correlation-xyz-789')
+
+      })
+
+      it('should prefer reference_number from body over header', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: { 
+              detail: 'Internal Server Error',
+              reference_number: 'body-ref-123'
+            },
+            headers: {
+              'x-correlation-id': 'header-ref-456'
+            }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).toHaveBeenCalledWith('body-ref-123')
+
+      })
+
+      it('should handle missing reference number gracefully', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: { detail: 'Internal Server Error' }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).not.toHaveBeenCalled()
+
+      })
+
+      it('should extract reference number for 422 validation errors', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 422,
+            data: { 
+              message: 'Validation failed',
+              reference_number: 'validation-ref-999'
+            }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).toHaveBeenCalledWith('validation-ref-999')
+
+      })
+
+      it('should extract reference number for 403 errors', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 403,
+            data: { 
+              message: 'Forbidden',
+              reference_number: 'forbidden-ref-111'
+            }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).toHaveBeenCalledWith('forbidden-ref-111')
+        expect(mockSetForbidden).toHaveBeenCalledWith(true)
+
+      })
+
+      it('should handle non-string reference numbers', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: { 
+              detail: 'Internal Server Error',
+              reference_number: 12345
+            }
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).not.toHaveBeenCalled()
+
+      })
+
+      it('should handle non-object response data', async () => {
+        // useMemo is mocked globally
+
+        useApiService()
+
+        const responseErrorHandler = mockAxiosInstance.interceptors.response.use.mock.calls[0][1]
+        const error = {
+          response: {
+            status: 500,
+            data: 'Internal Server Error'
+          }
+        }
+        
+        await expect(() => responseErrorHandler(error)).rejects.toThrow()
+        expect(mockAddErrorRef).not.toHaveBeenCalled()
 
       })
     })
@@ -373,7 +624,7 @@ describe('useApiService', () => {
         url: '/test-download'
       })).rejects.toThrow('Download failed')
 
-      expect(mockConsoleError).toHaveBeenCalledWith('Error in download:', error)
+      expect(mockConsoleError).not.toHaveBeenCalled()
       expect(mockCreateObjectURL).not.toHaveBeenCalled()
       expect(mockCreateElement).not.toHaveBeenCalled()
 
