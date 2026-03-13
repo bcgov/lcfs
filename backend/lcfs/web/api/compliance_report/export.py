@@ -125,8 +125,13 @@ class ComplianceReportExporter:
         )
         await self._add_summary_sheet(wb, summary_schema)
 
+        compliance_year = int(report.compliance_period.description)
+
         # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
+            # FSE is not applicable for compliance periods before 2024
+            if sheet_name == FSE_EXPORT_SHEET and compliance_year < 2024:
+                continue
             if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
                 data = await loader(cid, is_quarterly)
             else:
@@ -836,6 +841,7 @@ class ComplianceReportExporter:
             rows.append(
                 [
                     row.get("organization_name") or organization_name,
+                    row.get("allocating_organization_name"),
                     self._format_date(row.get("supply_from_date")),
                     self._format_date(row.get("supply_to_date")),
                     row.get("kwh_usage"),

@@ -688,15 +688,15 @@ class ChargingEquipmentServices:
                 detail="Only government users can return equipment to draft",
             )
 
-        # Validate current statuses: Submitted and Validated are eligible
+        # Validate current statuses: only Submitted
         status_map = await self.repo.get_equipment_status_map(equipment_ids, None)
         eligible_ids = [
-            eid for eid, status in status_map.items() if status in ("Submitted", "Validated")
+            eid for eid, status in status_map.items() if status == "Submitted"
         ]
         ineligible_ids = [
             eid
             for eid, status in status_map.items()
-            if status not in ("Submitted", "Validated")
+            if status != "Submitted"
         ]
 
         # Update status to Draft for eligible ones
@@ -712,9 +712,9 @@ class ChargingEquipmentServices:
                 message="No equipment could be returned to draft",
                 affected_count=0,
                 errors=[
-                    "No valid equipment found or not in Submitted/Validated status",
+                    "No valid equipment found or not in Submitted status",
                     *[
-                        f"Equipment {eid} not in Submitted/Validated"
+                        f"Equipment {eid} not in Submitted status"
                         for eid in ineligible_ids
                     ],
                 ],

@@ -115,6 +115,7 @@ export const ROUTES = {
       VIEW: '/admin/users/:userID',
       EDIT: '/admin/users/:userID/edit-user'
     },
+    SEEDED_USER_ASSOCIATION: '/admin/seeded-user-association',
     USER_ACTIVITY: '/admin/user-activity',
     USER_LOGIN_HISTORY: '/admin/user-login-history',
     AUDIT_LOG: {

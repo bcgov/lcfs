@@ -7,9 +7,18 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserActivity, UserLoginHistory, AuditLog, LoginScreenBackground } from '.'
+import {
+  Users,
+  SeededUserAssociation,
+  UserActivity,
+  UserLoginHistory,
+  AuditLog,
+  LoginScreenBackground
+} from '.'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
+import { CONFIG } from '@/constants/config'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 function a11yProps(index) {
   return {
@@ -22,15 +31,31 @@ export function AdminMenu({ tabIndex }) {
   const { t } = useTranslation(['admin'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
+  const { hasRoles } = useCurrentUser()
+  const normalizedEnvironment = (CONFIG.ENVIRONMENT || '').toLowerCase()
+  const showSeededAssociation = [
+    'local',
+    'development',
+    'dev',
+    'test'
+  ].includes(normalizedEnvironment)
+  const showSeededAssociationAdminOnly =
+    showSeededAssociation && hasRoles(roles.administrator)
   const paths = useMemo(
-    () => [
-      ROUTES.ADMIN.USERS.LIST,
-      ROUTES.ADMIN.USER_ACTIVITY,
-      ROUTES.ADMIN.USER_LOGIN_HISTORY,
-      ROUTES.ADMIN.AUDIT_LOG.LIST,
-      ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
-    ],
-    []
+    () => {
+      const base = [
+        ROUTES.ADMIN.USERS.LIST,
+        ROUTES.ADMIN.USER_ACTIVITY,
+        ROUTES.ADMIN.USER_LOGIN_HISTORY,
+        ROUTES.ADMIN.AUDIT_LOG.LIST,
+        ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
+      ]
+      if (showSeededAssociationAdminOnly) {
+        base.push(ROUTES.ADMIN.SEEDED_USER_ASSOCIATION)
+      }
+      return base
+    },
+    [showSeededAssociationAdminOnly]
   )
 
   useEffect(() => {
@@ -70,6 +95,9 @@ export function AdminMenu({ tabIndex }) {
           <Tab label={t('UserLoginHistory')} {...a11yProps(2)} />
           <Tab label={t('AuditLog')} {...a11yProps(3)} />
           <Tab label={t('LoginScreenBackground')} {...a11yProps(4)} />
+          {showSeededAssociationAdminOnly && (
+            <Tab label={t('SeededUserAssociation')} wrapped {...a11yProps(5)} />
+          )}
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>
@@ -88,6 +116,11 @@ export function AdminMenu({ tabIndex }) {
         <AdminTabPanel value={tabIndex} index={4} component="div" mx={-3}>
           <LoginScreenBackground />
         </AdminTabPanel>
+        {showSeededAssociationAdminOnly && (
+          <AdminTabPanel value={tabIndex} index={5} component="div" mx={-3}>
+            <SeededUserAssociation />
+          </AdminTabPanel>
+        )}
       </Role>
     </BCBox>
   )

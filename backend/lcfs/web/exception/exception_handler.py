@@ -7,6 +7,10 @@ from starlette.responses import JSONResponse
 from lcfs.logging_config import correlation_id_var
 
 
+def _reference_number() -> str | None:
+    return correlation_id_var.get() or None
+
+
 def _make_json_serializable(errors: list) -> list:
     """Convert validation errors to JSON-serializable format."""
     serializable_errors = []
@@ -35,17 +39,15 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     standard_errors = [
         {"fields": [error["loc"][-1]], "message": error["msg"]} for error in errors
     ]
-
-    return JSONResponse(
-        status_code=422,
-        content={
-            "message": "Validation failed",
-            "details": _make_json_serializable(
-                errors
-            ),  # This provides the detailed validation error
-            "errors": standard_errors,  # The body of the request, if needed
-        },
-    )
+    content = {
+        "message": "Validation failed",
+        "details": _make_json_serializable(errors),
+        "errors": standard_errors,
+    }
+    ref = _reference_number()
+    if ref:
+        content["reference_number"] = ref
+    return JSONResponse(status_code=422, content=content)
 
 
 async def validation_error_exception_handler_no_details(
@@ -53,6 +55,14 @@ async def validation_error_exception_handler_no_details(
 ):
     """Handler for ValidationErrorException that returns content without 'detail' wrapping"""
     return JSONResponse(status_code=422, content=exc.errors)
+
+
+async def http_exception_handler(request: Request, exc: HTTPException):
+    content = dict(exc.detail) if isinstance(exc.detail, dict) else {"detail": exc.detail}
+    ref = _reference_number()
+    if ref:
+        content["reference_number"] = ref
+    return JSONResponse(status_code=exc.status_code, content=content)
 
 
 async def global_exception_handler(request: Request, exc: Exception):
@@ -67,7 +77,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers=dict(request.headers),
         correlation_id=correlation_id_var.get(),
     )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal Server Error"},
-    )
+    ref = _reference_number()
+    content = {"detail": "Internal Server Error"}
+    if ref:
+        content["reference_number"] = ref
+    return JSONResponse(status_code=500, content=content)
