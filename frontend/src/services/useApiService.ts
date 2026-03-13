@@ -61,7 +61,10 @@ export const useApiService = (
             error.response.data
           )
           if (CONFIG.ENVIRONMENT === 'development') {
-            enqueueSnackbar(`${error.response.status} error`, {
+            const detail =
+              (error.response.data as { detail?: string })?.detail ||
+              `${error.response.status} error`
+            enqueueSnackbar(detail, {
               autoHideDuration: 5000,
               variant: 'error'
             })
