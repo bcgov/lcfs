@@ -157,6 +157,7 @@ export const apiRoutes = {
     importJobStatus: '/charging-equipment/status/:jobId'
   },
   getChargingSite: '/charging-sites/:siteId',
+  updateChargingSiteStatus: '/charging-sites/:siteId/status',
   getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
@@ -244,5 +245,12 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache'
+  geocoderClearCache: '/geocoder/cache',
+
+  // login background image endpoints
+  loginBgImages: '/login-bg-images/',
+  loginBgImageActive: '/login-bg-images/active',
+  loginBgImage: '/login-bg-images/:imageId',
+  loginBgImageActivate: '/login-bg-images/:imageId/activate',
+  loginBgImageStream: '/login-bg-images/:imageId/stream'
 }
