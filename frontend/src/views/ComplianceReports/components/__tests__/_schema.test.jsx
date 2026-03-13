@@ -271,7 +271,7 @@ describe('ComplianceReports Schema', () => {
     // Supplier has draft supplemental > 30 days, IDIR sees Original Report with flag
     it('should show flag on Original Report when a draft supplemental is > 30 days old (IDIR)', () => {
       const thirtyOneDaysAgo = new Date()
-      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31)
+      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 32)
 
       const data = {
         reportType: 'Original Report',

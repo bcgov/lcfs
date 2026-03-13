@@ -36,6 +36,7 @@ from lcfs.web.api import (
     forms,
     geocoder,
     charging_site,
+    login_bg_image,
 )
 
 api_router = APIRouter()
@@ -124,4 +125,7 @@ api_router.include_router(forms.router, prefix="/forms", tags=["forms"])
 api_router.include_router(geocoder.router, prefix="/geocoder", tags=["geocoder"])
 api_router.include_router(
     charging_site.router, prefix="/charging-sites", tags=["charging_site"]
+)
+api_router.include_router(
+    login_bg_image.router, prefix="/login-bg-images", tags=["login_bg_image"]
 )

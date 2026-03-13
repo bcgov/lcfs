@@ -61,5 +61,10 @@ export const adminRoutes: AppRouteObject[] = [
     path: ROUTES.ADMIN.USERS.VIEW,
     element: <UserDetailsCard />,
     handle: { title: 'User profile' }
+  },
+  {
+    path: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND,
+    element: <AdminMenu tabIndex={4} />,
+    handle: { title: 'Login screen background' }
   }
 ]
