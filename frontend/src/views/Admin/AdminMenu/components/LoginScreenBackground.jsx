@@ -129,18 +129,17 @@ export function LoginScreenBackground() {
   return (
     <BCBox>
       <BCTypography variant="h5" mb={1}>
-        Login screen background
+        {t('loginBg.title')}
       </BCTypography>
       <BCTypography variant="body2" color="text.secondary" mb={1}>
-        Manage the background image displayed on the LCFS login page. Upload landscape
-        photos and select one as the active background. Only one image can be active at
-        a time.
+        {t('loginBg.description')}
       </BCTypography>
-      <BCTypography variant="body2" color="text.secondary" mb={3}>
-        <strong>Recommended:</strong> JPEG or PNG, minimum 1920 × 1080 px, landscape
-        orientation, under 10 MB. Images are scaled to fill the full browser viewport,
-        so higher resolution will look sharper on large screens.
-      </BCTypography>
+      <BCTypography
+        variant="body2"
+        color="text.secondary"
+        mb={3}
+        dangerouslySetInnerHTML={{ __html: t('loginBg.recommended') }}
+      />
 
       <Grid container spacing={2}>
         {images.map((image) => (
@@ -181,7 +180,7 @@ export function LoginScreenBackground() {
                   handleEditOpen(image)
                 }}
               >
-                Edit Image
+                {t('loginBg.editImageBtn')}
               </BCButton>
 
               {/* Active badge */}
@@ -200,7 +199,7 @@ export function LoginScreenBackground() {
                     fontWeight: 'bold'
                   }}
                 >
-                  Active
+                  {t('loginBg.active')}
                 </Box>
               )}
 
@@ -243,7 +242,7 @@ export function LoginScreenBackground() {
                         setDeleteConfirmId(image.loginBgImageId)
                       }}
                     >
-                      Delete
+                      {t('loginBg.delete')}
                     </Typography>
                   }
                   labelPlacement="start"
@@ -263,7 +262,7 @@ export function LoginScreenBackground() {
           startIcon={<CloudUpload />}
           onClick={handleUploadOpen}
         >
-          Upload image
+          {t('loginBg.uploadImageBtn')}
         </BCButton>
         <BCButton
           variant="contained"
@@ -271,7 +270,7 @@ export function LoginScreenBackground() {
           disabled={!selectedId || activateMutation.isPending}
           onClick={handleSetBackground}
         >
-          Set background image
+          {t('loginBg.setBackgroundBtn')}
         </BCButton>
       </Box>
 
@@ -283,7 +282,7 @@ export function LoginScreenBackground() {
         fullWidth
       >
         <DialogTitle>
-          {editTarget ? 'Edit image caption' : 'Upload image and add caption'}
+          {editTarget ? t('loginBg.editTitle') : t('loginBg.uploadTitle')}
         </DialogTitle>
         <DialogContent>
           {!editTarget && (
@@ -305,17 +304,17 @@ export function LoginScreenBackground() {
             >
               <CloudUpload sx={{ fontSize: 48, color: 'grey.500', mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
-                Drag and drop your JPG or PNG file(s) here or{' '}
+                {t('loginBg.dragDropText')}{' '}
                 <Typography component="span" color="primary" sx={{ textDecoration: 'underline' }}>
-                  click to select files from your machine to upload
+                  {t('loginBg.clickToSelect')}
                 </Typography>
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                Images must be a minimum of 1440 x 900px
+                {t('loginBg.minResolution')}
               </Typography>
               {file && (
                 <Typography variant="body2" color="success.main" mt={1}>
-                  Selected: {file.name}
+                  {t('loginBg.selected', { fileName: file.name })}
                 </Typography>
               )}
               <input
@@ -329,7 +328,7 @@ export function LoginScreenBackground() {
           )}
 
           <BCTypography variant="body2" sx={{ mt: 2, mb: 0.5, fontWeight: 500 }}>
-            Name *
+            {t('loginBg.nameLabel')}
           </BCTypography>
           <TextField
             fullWidth
@@ -340,10 +339,10 @@ export function LoginScreenBackground() {
                 ? setEditTarget((prev) => ({ ...prev, displayName: e.target.value }))
                 : setDisplayName(e.target.value)
             }
-            placeholder="Photographer or author name"
+            placeholder={t('loginBg.namePlaceholder')}
           />
           <BCTypography variant="body2" sx={{ mt: 2, mb: 0.5, fontWeight: 500 }}>
-            Caption
+            {t('loginBg.captionLabel')}
           </BCTypography>
           <TextField
             fullWidth
@@ -354,7 +353,7 @@ export function LoginScreenBackground() {
                 ? setEditTarget((prev) => ({ ...prev, caption: e.target.value }))
                 : setCaption(e.target.value)
             }
-            placeholder="Location or attribution text"
+            placeholder={t('loginBg.captionPlaceholder')}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -363,7 +362,7 @@ export function LoginScreenBackground() {
             color="dark"
             onClick={editTarget ? handleEditClose : handleUploadClose}
           >
-            Cancel
+            {t('loginBg.cancelBtn')}
           </BCButton>
           <BCButton
             variant="contained"
@@ -380,7 +379,7 @@ export function LoginScreenBackground() {
                 : null
             }
           >
-            {editTarget ? 'Save changes' : 'Upload image'}
+            {editTarget ? t('loginBg.saveChangesBtn') : t('loginBg.uploadImageBtn')}
           </BCButton>
         </DialogActions>
       </Dialog>
@@ -392,10 +391,10 @@ export function LoginScreenBackground() {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Delete image?</DialogTitle>
+        <DialogTitle>{t('loginBg.deleteConfirmTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            This will permanently delete the image and cannot be undone.
+            {t('loginBg.deleteConfirmMessage')}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -404,7 +403,7 @@ export function LoginScreenBackground() {
             color="dark"
             onClick={() => setDeleteConfirmId(null)}
           >
-            Cancel
+            {t('loginBg.cancelBtn')}
           </BCButton>
           <BCButton
             variant="contained"
@@ -412,7 +411,7 @@ export function LoginScreenBackground() {
             disabled={deleteMutation.isPending}
             onClick={handleDeleteConfirm}
           >
-            Delete
+            {t('loginBg.deleteBtn')}
           </BCButton>
         </DialogActions>
       </Dialog>

@@ -1,4 +1,4 @@
-import bgFallbackImage from '@/assets/images/backgrounds/winter.webp'
+import bgFallbackImage from '@/assets/images/backgrounds/summer.webp'
 import logoDark from '@/assets/images/logo-banner.svg'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -14,8 +14,6 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 
-const FALLBACK_BG = bgFallbackImage
-
 export const Login = () => {
   const { t } = useTranslation()
   const { keycloak } = useKeycloak()
@@ -24,7 +22,7 @@ export const Login = () => {
   const redirectUri = window.location.origin
   const { message, severity } = location.state || {}
 
-  const [bgUrl, setBgUrl] = useState(FALLBACK_BG)
+  const [bgUrl, setBgUrl] = useState(bgFallbackImage)
   const [credits, setCredits] = useState(null)
 
   useEffect(() => {

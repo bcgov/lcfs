@@ -101,5 +101,30 @@
     "success": "User has been successfully deleted."
   },
   "editSuccessMessage": "User has been updated successfully.",
-  "createSuccessMessage": "User has been created successfully."
+  "createSuccessMessage": "User has been created successfully.",
+  "loginBg": {
+    "title": "Login screen background",
+    "description": "Manage the background image displayed on the LCFS login page. Upload landscape photos and select one as the active background. Only one image can be active at a time.",
+    "recommended": "<strong>Recommended:</strong> JPEG or PNG, minimum 1920 × 1080 px, landscape orientation, under 10 MB. Images are scaled to fill the full browser viewport, so higher resolution will look sharper on large screens.",
+    "uploadImageBtn": "Upload image",
+    "setBackgroundBtn": "Set background image",
+    "editImageBtn": "Edit Image",
+    "active": "Active",
+    "delete": "Delete",
+    "uploadTitle": "Upload image and add caption",
+    "editTitle": "Edit image caption",
+    "nameLabel": "Name *",
+    "captionLabel": "Caption",
+    "dragDropText": "Drag and drop your JPG or PNG file(s) here or",
+    "clickToSelect": "click to select files from your machine to upload",
+    "minResolution": "Images must be a minimum of 1440 x 900px",
+    "selected": "Selected: {{fileName}}",
+    "namePlaceholder": "Photographer or author name",
+    "captionPlaceholder": "Location or attribution text",
+    "cancelBtn": "Cancel",
+    "saveChangesBtn": "Save changes",
+    "deleteConfirmTitle": "Delete image?",
+    "deleteConfirmMessage": "This will permanently delete the image and cannot be undone.",
+    "deleteBtn": "Delete"
+  }
 }
