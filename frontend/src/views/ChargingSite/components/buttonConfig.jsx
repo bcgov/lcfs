@@ -229,24 +229,6 @@ class ButtonActionFactory {
         })
     })
   }
-  undoValidation() {
-    return this.createButton({
-      style: BUTTON_STYLES.WARNING_OUTLINED,
-      id: 'undo-validation-btn',
-      label: this.context.t('chargingSite:buttons.undoValidation'),
-      disabled:
-        this.context.selectedRows.length === 0 ||
-        this.context.isUpdating ||
-        !this.context.canUndoValidation,
-      tooltip:
-        this.context.selectedRows.length > 0 && !this.context.canUndoValidation
-          ? this.context.t('chargingSite:tooltips.onlyValidatedCanBeReturned')
-          : '',
-      handler: () =>
-        this.context.handleBulkStatusUpdate(EQUIPMENT_STATUSES.SUBMITTED)
-    })
-  }
-
   returnSelectedToDraft() {
     return this.createButton({
       style: BUTTON_STYLES.ERROR_OUTLINED,
@@ -326,21 +308,18 @@ const BUTTON_RULES = {
     [USER_TYPES.IDIR_ANALYST]: [
       'selectAllSubmitted',
       'setSelectedAsValidated',
-      'undoValidation',
       'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.IDIR_MANAGER]: [
       'selectAllSubmitted',
       'setSelectedAsValidated',
-      'undoValidation',
       'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.IDIR_ADMIN]: [
       'selectAllSubmitted',
       'setSelectedAsValidated',
-      'undoValidation',
       'returnSelectedToDraft',
       'clearFilters'
     ]
@@ -372,14 +351,6 @@ function shouldShowButton(buttonName, context) {
       // Only show if some equipment is selected and can be validated
       return (
         (context.selectedRows.length > 0 && context.canValidate) ||
-        context.isGovernmentUser
-      )
-
-    case 'undoValidation':
-      // Only analysts and above can undo validation
-      // Only show if some equipment is selected and can be undone
-      return (
-        (context.selectedRows.length > 0 && context.canUndoValidation) ||
         context.isGovernmentUser
       )
 
@@ -441,7 +412,6 @@ export const buildButtonContext = ({
   selectedRows,
   isUpdating,
   canValidate,
-  canUndoValidation,
   canReturnToDraft,
   canSubmit,
   canSetToDecommission,
@@ -464,7 +434,6 @@ export const buildButtonContext = ({
     selectedRows,
     isUpdating,
     canValidate,
-    canUndoValidation,
     canReturnToDraft,
     canSubmit,
     canSetToDecommission,

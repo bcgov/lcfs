@@ -174,7 +174,7 @@ class TestChargingSiteService:
             result = await charging_site_service.get_charging_site_by_id(1)
 
             assert isinstance(result, ChargingSiteSchema)
-            mock_repo.get_charging_site_by_id.assert_called_once_with(1)
+            mock_repo.get_charging_site_by_id.assert_called_once_with(1, government_visible=False)
 
     @pytest.mark.anyio
     async def test_get_charging_site_by_id_not_found(
@@ -763,7 +763,7 @@ class TestChargingSiteService:
 
         assert isinstance(result, ChargingSitesSchema)
         assert len(result.charging_sites) == 1
-        mock_repo.get_all_charging_sites_by_organization_id.assert_called_once_with(1)
+        mock_repo.get_all_charging_sites_by_organization_id.assert_called_once_with(1, government_visible=False)
 
     @pytest.mark.anyio
     async def test_get_charging_sites_paginated(self, charging_site_service, mock_repo):

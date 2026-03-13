@@ -232,7 +232,7 @@ async def bulk_return_to_draft(
     """
     Bulk return charging equipment to draft (Government/Analyst only).
 
-    - Changes status from Submitted/Validated to Draft
+    - Changes status from Submitted to Draft
     - Only government users can return equipment to draft
     """
     return await service.bulk_return_to_draft(
