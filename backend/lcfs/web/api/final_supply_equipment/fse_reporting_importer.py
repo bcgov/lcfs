@@ -215,12 +215,14 @@ async def _import_async(
                         if all(cell is None for cell in row):
                             continue
 
-                        expanded = list(row) + [None] * max(0, 5 - len(list(row)))
-                        registration_number = expanded[0]
-                        supply_from_raw = expanded[1]
-                        supply_to_raw = expanded[2]
-                        kwh_usage_raw = expanded[3]
-                        compliance_notes = expanded[4]
+                        # Column layout: A=Site name, B=Reg#, C=From, D=To, E=kWh, F=Notes
+                        expanded = list(row) + [None] * max(0, 6 - len(list(row)))
+                        # col A (index 0) = site name — read-only identifier, not used
+                        registration_number = expanded[1]
+                        supply_from_raw = expanded[2]
+                        supply_to_raw = expanded[3]
+                        kwh_usage_raw = expanded[4]
+                        compliance_notes = expanded[5]
 
                         # Registration number is required
                         if not registration_number:
@@ -273,24 +275,6 @@ async def _import_async(
                                 rejected += 1
                                 continue
 
-                        # Blank kWh skips the entire row — no other fields are updated
-                        if kwh_usage_raw is None:
-                            skipped += 1
-                            continue
-
-                        # Validate kWh usage
-                        try:
-                            kwh_usage = float(kwh_usage_raw)
-                            if kwh_usage < 0:
-                                raise ValueError("kWh must be non-negative")
-                        except (ValueError, TypeError):
-                            errors.append(
-                                f"Row {row_idx}: Invalid kWh Usage value: "
-                                f"'{kwh_usage_raw}'. Must be a numeric value."
-                            )
-                            rejected += 1
-                            continue
-
                         # Look up the ChargingEquipment by registration number
                         equipment = (
                             await fse_repo.get_charging_equipment_by_registration_number(
@@ -323,10 +307,46 @@ async def _import_async(
                             str(compliance_notes).strip() if compliance_notes else None
                         )
 
-                        # Skip inactive rows — do not update or reactivate them via upload
-                        if existing_record is not None and existing_record.is_active is False:
-                            skipped += 1
+                        # No editable data — deactivate existing active record and clear
+                        # its fields to match what the user left blank in Excel.
+                        has_any_data = (
+                            supply_from_raw is not None
+                            or supply_to_raw is not None
+                            or kwh_usage_raw is not None
+                            or notes_value
+                        )
+                        if not has_any_data:
+                            if existing_record is not None and existing_record.is_active is not False:
+                                await fse_repo.bulk_update_fse_reporting_record(
+                                    charging_equipment_compliance_id=(
+                                        existing_record.charging_equipment_compliance_id
+                                    ),
+                                    supply_from_date=None,
+                                    supply_to_date=None,
+                                    kwh_usage=None,
+                                    compliance_notes=None,
+                                    deactivate=True,
+                                )
+                                updated += 1
+                            else:
+                                skipped += 1
                             continue
+
+                        # Blank kWh defaults to 0 when other data is present
+                        if kwh_usage_raw is None:
+                            kwh_usage = 0
+                        else:
+                            try:
+                                kwh_usage = float(kwh_usage_raw)
+                                if kwh_usage < 0:
+                                    raise ValueError("kWh must be non-negative")
+                            except (ValueError, TypeError):
+                                errors.append(
+                                    f"Row {row_idx}: Invalid kWh Usage value: "
+                                    f"'{kwh_usage_raw}'. Must be a numeric value."
+                                )
+                                rejected += 1
+                                continue
 
                         if existing_record is None:
                             # Create new record only when dates are supplied
