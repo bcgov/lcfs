@@ -1322,3 +1322,317 @@ class FinalSupplyEquipmentRepository:
         result = await self.db.execute(stmt)
         await self.db.flush()
         return result.rowcount
+
+    @repo_handler
+    async def get_fse_for_bulk_update_template(
+        self,
+        organization_id: int,
+        compliance_report_group_uuid: str | None = None,
+    ) -> list:
+        latest_sites_main = latest_charging_site_version_subquery()
+        latest_sites_rank = latest_charging_site_version_subquery()
+
+        source_site_rank = aliased(ChargingSite, name="source_site_rank")
+        source_site_main = aliased(ChargingSite, name="source_site_main")
+
+        # Deduplicate to latest version per ChargingEquipment group_uuid
+        ce_latest_subquery = (
+            select(
+                ChargingEquipment.charging_equipment_id.label("ce_id"),
+                func.row_number()
+                .over(
+                    partition_by=ChargingEquipment.group_uuid,
+                    order_by=ChargingEquipment.version.desc(),
+                )
+                .label("rn"),
+            )
+            .join(
+                source_site_rank,
+                ChargingEquipment.charging_site_id
+                == source_site_rank.charging_site_id,
+            )
+            .join(
+                latest_sites_rank,
+                source_site_rank.group_uuid == latest_sites_rank.c.group_uuid,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(
+                and_(
+                    source_site_rank.organization_id == organization_id,
+                    ChargingEquipmentStatus.status != "Decommissioned",
+                )
+            )
+            .subquery()
+        )
+
+        # Mirror the UI "all" mode: outer join all CRCE for the org, then dedup
+        # using row_number prioritising current compliance report group first.
+        dedup_priority = case(
+            (
+                ComplianceReportChargingEquipment.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                0,
+            ),
+            else_=1,
+        )
+
+        all_rows_subquery = (
+            select(
+                ChargingEquipment.charging_equipment_id,
+                ChargingEquipment.version.label("charging_equipment_version"),
+                (
+                    ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
+                ).label("registration_number"),
+                ChargingSite.site_name.label("site_name"),
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id,
+                ComplianceReportChargingEquipment.supply_from_date,
+                ComplianceReportChargingEquipment.supply_to_date,
+                ComplianceReportChargingEquipment.kwh_usage,
+                ComplianceReportChargingEquipment.compliance_notes,
+                ComplianceReportChargingEquipment.organization_id,
+                ComplianceReportChargingEquipment.is_active,
+                ComplianceReportChargingEquipment.compliance_report_group_uuid,
+                func.row_number()
+                .over(
+                    partition_by=(
+                        ChargingEquipment.charging_equipment_id,
+                        ChargingEquipment.version,
+                    ),
+                    order_by=[
+                        dedup_priority,
+                        desc(
+                            ComplianceReportChargingEquipment.charging_equipment_compliance_id
+                        ).nullslast(),
+                    ],
+                )
+                .label("row_num"),
+            )
+            .select_from(ChargingEquipment)
+            .join(
+                ce_latest_subquery,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == ce_latest_subquery.c.ce_id,
+                    ce_latest_subquery.c.rn == 1,
+                ),
+            )
+            .join(
+                source_site_main,
+                ChargingEquipment.charging_site_id
+                == source_site_main.charging_site_id,
+            )
+            .join(
+                latest_sites_main,
+                source_site_main.group_uuid == latest_sites_main.c.group_uuid,
+            )
+            .join(
+                ChargingSite,
+                and_(
+                    ChargingSite.group_uuid == latest_sites_main.c.group_uuid,
+                    ChargingSite.version == latest_sites_main.c.latest_version,
+                ),
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .outerjoin(
+                ComplianceReportChargingEquipment,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == ComplianceReportChargingEquipment.charging_equipment_id,
+                    ChargingEquipment.version
+                    == ComplianceReportChargingEquipment.charging_equipment_version,
+                ),
+            )
+            .where(
+                and_(
+                    source_site_main.organization_id == organization_id,
+                    ChargingEquipmentStatus.status != "Decommissioned",
+                )
+            )
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                all_rows_subquery.c.charging_equipment_id,
+                all_rows_subquery.c.charging_equipment_version,
+                all_rows_subquery.c.registration_number,
+                all_rows_subquery.c.site_name,
+                all_rows_subquery.c.charging_equipment_compliance_id,
+                all_rows_subquery.c.supply_from_date,
+                all_rows_subquery.c.supply_to_date,
+                all_rows_subquery.c.kwh_usage,
+                all_rows_subquery.c.compliance_notes,
+                all_rows_subquery.c.organization_id,
+                all_rows_subquery.c.is_active,
+                all_rows_subquery.c.compliance_report_group_uuid,
+            )
+            .where(all_rows_subquery.c.row_num == 1)
+            .order_by(
+                asc(all_rows_subquery.c.site_name),
+                asc(all_rows_subquery.c.registration_number),
+            )
+        )
+
+        result = await self.db.execute(stmt)
+        return result.fetchall()
+
+    @repo_handler
+    async def get_charging_equipment_by_registration_number(
+        self,
+        registration_number: str,
+        organization_id: int,
+    ) -> Any | None:
+        """
+        Find the latest-version ChargingEquipment whose composite registration number
+        ({site_code}-{equipment_number}) matches the provided value.
+        """
+        latest_sites = latest_charging_site_version_subquery()
+
+        source_site = aliased(ChargingSite, name="source_site_lookup")
+        latest_site = aliased(ChargingSite, name="latest_site_lookup")
+
+        ranked_subquery = (
+            select(
+                ChargingEquipment.charging_equipment_id.label("ce_id"),
+                ChargingEquipment.version.label("ce_version"),
+                func.row_number()
+                .over(
+                    partition_by=ChargingEquipment.group_uuid,
+                    order_by=ChargingEquipment.version.desc(),
+                )
+                .label("rn"),
+            )
+            .join(
+                source_site,
+                ChargingEquipment.charging_site_id == source_site.charging_site_id,
+            )
+            .join(
+                latest_sites,
+                source_site.group_uuid == latest_sites.c.group_uuid,
+            )
+            .join(
+                latest_site,
+                and_(
+                    latest_site.group_uuid == latest_sites.c.group_uuid,
+                    latest_site.version == latest_sites.c.latest_version,
+                ),
+            )
+            .where(
+                and_(
+                    source_site.organization_id == organization_id,
+                    (
+                        latest_site.site_code + "-" + ChargingEquipment.equipment_number
+                    )
+                    == registration_number,
+                )
+            )
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                ChargingEquipment.charging_equipment_id,
+                ChargingEquipment.version.label("charging_equipment_version"),
+            )
+            .join(
+                ranked_subquery,
+                and_(
+                    ChargingEquipment.charging_equipment_id == ranked_subquery.c.ce_id,
+                    ChargingEquipment.version == ranked_subquery.c.ce_version,
+                    ranked_subquery.c.rn == 1,
+                ),
+            )
+        )
+
+        result = await self.db.execute(stmt)
+        return result.fetchone()
+
+    @repo_handler
+    async def get_fse_reporting_record_for_group(
+        self,
+        charging_equipment_id: int,
+        charging_equipment_version: int,
+        compliance_report_group_uuid: str,
+    ) -> Any | None:
+        """
+        Retrieve the ComplianceReportChargingEquipment record for the given
+        equipment + version + compliance report group, if it exists.
+        """
+        # Match on id + group_uuid only (version-agnostic) so that equipment
+        # stored against an older version is still found; take the highest version.
+        stmt = (
+            select(ComplianceReportChargingEquipment)
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.charging_equipment_id
+                    == charging_equipment_id,
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                )
+            )
+            .order_by(
+                ComplianceReportChargingEquipment.charging_equipment_version.desc()
+            )
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    @repo_handler
+    async def bulk_update_fse_reporting_record(
+        self,
+        charging_equipment_compliance_id: int,
+        supply_from_date,
+        supply_to_date,
+        kwh_usage,
+        compliance_notes: str | None,
+        activate: bool = False,
+        deactivate: bool = False,
+    ) -> None:
+        """
+        Update supply dates, kWh usage, and compliance notes for a single
+        ComplianceReportChargingEquipment record.
+        Only fields that are not None are updated; blank values are skipped.
+        When activate=True the record's is_active flag is set to True.
+        When deactivate=True all editable fields are cleared and is_active set to False.
+        """
+        values: dict = {}
+        if deactivate:
+            # supply_from_date and supply_to_date are NOT NULL — cannot be cleared.
+            # Only clear optional fields and mark the row inactive.
+            values["is_active"] = False
+            values["kwh_usage"] = None
+            values["compliance_notes"] = None
+        else:
+            if supply_from_date is not None:
+                values["supply_from_date"] = supply_from_date
+            if supply_to_date is not None:
+                values["supply_to_date"] = supply_to_date
+            if kwh_usage is not None:
+                values["kwh_usage"] = kwh_usage
+            if compliance_notes is not None:
+                values["compliance_notes"] = compliance_notes
+            if activate:
+                values["is_active"] = True
+
+        if not values:
+            return
+
+        stmt = (
+            update(ComplianceReportChargingEquipment)
+            .where(
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id
+                == charging_equipment_compliance_id
+            )
+            .values(**values)
+        )
+        await self.db.execute(stmt)
+        await self.db.flush()
