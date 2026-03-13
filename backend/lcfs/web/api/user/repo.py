@@ -574,6 +574,7 @@ class UserRepository:
         user.first_name = user_update.first_name
         user.last_name = user_update.last_name
         user.is_active = user_update.is_active
+        user.organization_id = user_update.organization_id
         user.keycloak_email = user_update.keycloak_email
         user.keycloak_username = user_update.keycloak_username
         user.phone = user_update.phone

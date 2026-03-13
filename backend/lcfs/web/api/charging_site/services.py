@@ -212,7 +212,10 @@ class ChargingSiteService:
         Service method to get a charging site by ID
         """
         logger.info("Getting charging site by ID")
-        charging_site = await self.repo.get_charging_site_by_id(site_id)
+        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        charging_site = await self.repo.get_charging_site_by_id(
+            site_id, government_visible=is_government
+        )
 
         if not charging_site:
             raise HTTPException(
@@ -493,7 +496,12 @@ class ChargingSiteService:
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders, organization_id
+            offset,
+            limit,
+            conditions,
+            pagination.sort_orders,
+            organization_id,
+            government_visible=self.request.user.is_government,
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -527,7 +535,12 @@ class ChargingSiteService:
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_all_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders, exclude_draft
+            offset,
+            limit,
+            conditions,
+            pagination.sort_orders,
+            exclude_draft,
+            government_visible=True,
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -549,7 +562,8 @@ class ChargingSiteService:
         logger.info("Getting charging sites")
         try:
             charging_sites = await self.repo.get_all_charging_sites_by_organization_id(
-                organization_id
+                organization_id,
+                government_visible=self.request.user.is_government,
             )
             return ChargingSitesSchema(
                 charging_sites=[
