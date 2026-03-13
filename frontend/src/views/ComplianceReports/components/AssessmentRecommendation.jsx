@@ -150,6 +150,14 @@ export const AssessmentRecommendation = ({
     )
   }, [isAnalyst, isDirector, currentStatus])
 
+  const isNonAssessment = methods.watch('isNonAssessment') || false
+  const isRenewableFuelExempted =
+    methods.watch('isRenewableFuelExempted') || false
+  const isLowCarbonFuelExempted =
+    methods.watch('isLowCarbonFuelExempted') || false
+  const hasSelectedExemption =
+    isRenewableFuelExempted || isLowCarbonFuelExempted
+
   const handleRenewableFuelExemptionChange = (event) => {
     const newValue = event.target.checked
     methods.setValue('isRenewableFuelExempted', newValue)
@@ -211,8 +219,11 @@ export const AssessmentRecommendation = ({
       <FormControlLabel
         control={
           <Checkbox
-            disabled={!canEditExemptionStatus}
-            checked={methods.watch('isRenewableFuelExempted') || false}
+            disabled={
+              !canEditExemptionStatus ||
+              (!isRenewableFuelExempted && isNonAssessment)
+            }
+            checked={isRenewableFuelExempted}
             onChange={handleRenewableFuelExemptionChange}
           />
         }
@@ -232,8 +243,11 @@ export const AssessmentRecommendation = ({
       <FormControlLabel
         control={
           <Checkbox
-            disabled={!canEditExemptionStatus}
-            checked={methods.watch('isLowCarbonFuelExempted') || false}
+            disabled={
+              !canEditExemptionStatus ||
+              (!isLowCarbonFuelExempted && isNonAssessment)
+            }
+            checked={isLowCarbonFuelExempted}
             onChange={handleLowCarbonFuelExemptionChange}
           />
         }
@@ -341,8 +355,11 @@ export const AssessmentRecommendation = ({
               <FormControlLabel
                 control={
                   <Checkbox
-                    disabled={!canEditNonAssessmentStatus}
-                    checked={methods.watch('isNonAssessment') || false}
+                    disabled={
+                      !canEditNonAssessmentStatus ||
+                      (!isNonAssessment && hasSelectedExemption)
+                    }
+                    checked={isNonAssessment}
                     onChange={handleNonAssessmentChange}
                   />
                 }
@@ -423,8 +440,11 @@ export const AssessmentRecommendation = ({
               <FormControlLabel
                 control={
                   <Checkbox
-                    disabled={!canEditNonAssessmentStatus}
-                    checked={methods.watch('isNonAssessment') || false}
+                    disabled={
+                      !canEditNonAssessmentStatus ||
+                      (!isNonAssessment && hasSelectedExemption)
+                    }
+                    checked={isNonAssessment}
                     onChange={handleNonAssessmentChange}
                   />
                 }
