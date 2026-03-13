@@ -6,7 +6,8 @@ import {
   useGetChargingSiteById,
   useChargingSiteStatuses,
   useBulkUpdateEquipmentStatus,
-  useChargingSiteEquipmentPaginated
+  useChargingSiteEquipmentPaginated,
+  useUpdateChargingSiteStatus
 } from '../useChargingSite'
 
 vi.mock('../../services/useApiService')
@@ -14,12 +15,14 @@ vi.mock('../../services/useApiService')
 describe('useChargingSite', () => {
   const mockGet = vi.fn()
   const mockPost = vi.fn()
+  const mockPatch = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useApiService).mockReturnValue({
       get: mockGet,
-      post: mockPost
+      post: mockPost,
+      patch: mockPatch
     })
   })
 
@@ -278,6 +281,70 @@ describe('useChargingSite', () => {
           new_status: 'Submitted'
         }
       )
+    })
+  })
+
+  describe('useUpdateChargingSiteStatus', () => {
+    it('should call PATCH with siteId and new_status', async () => {
+      const mockResponseData = {
+        chargingSiteId: 1,
+        status: { status: 'Validated' }
+      }
+      mockPatch.mockResolvedValue({ data: mockResponseData })
+
+      const { result } = renderHook(() => useUpdateChargingSiteStatus(), {
+        wrapper
+      })
+
+      let resolvedData
+      await act(async () => {
+        resolvedData = await result.current.mutateAsync({
+          siteId: 57,
+          newStatus: 'Validated'
+        })
+      })
+
+      expect(mockPatch).toHaveBeenCalledWith(
+        '/charging-sites/57/status',
+        { new_status: 'Validated' }
+      )
+      expect(resolvedData).toEqual(mockResponseData)
+    })
+
+    it('should throw when siteId is missing', async () => {
+      const { result } = renderHook(() => useUpdateChargingSiteStatus(), {
+        wrapper
+      })
+
+      await act(async () => {
+        try {
+          await result.current.mutateAsync({ newStatus: 'Validated' })
+        } catch (err) {
+          expect(err.message).toBe('Charging site ID is required')
+        }
+      })
+
+      expect(mockPatch).not.toHaveBeenCalled()
+    })
+
+    it('should call onSuccess and invalidate queries on success', async () => {
+      const mockResponse = { data: { chargingSiteId: 1, status: { status: 'Validated' } } }
+      mockPatch.mockResolvedValue(mockResponse)
+
+      const onSuccess = vi.fn()
+      const { result } = renderHook(
+        () => useUpdateChargingSiteStatus({ onSuccess }),
+        { wrapper }
+      )
+
+      await act(async () => {
+        await result.current.mutateAsync({ siteId: 1, newStatus: 'Validated' })
+      })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+      expect(onSuccess).toHaveBeenCalled()
     })
   })
 

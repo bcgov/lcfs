@@ -178,11 +178,16 @@ class BulkEquipmentStatusUpdateSchema(BaseSchema):
     new_status: str
 
 
-class ChargingSiteStatusEnum:
+class ChargingSiteStatusEnum(str, Enum):
+
     DRAFT = "Draft"
     SUBMITTED = "Submitted"
     VALIDATED = "Validated"
     UPDATED = "Updated"
+
+
+class ChargingSiteManualStatusUpdateSchema(BaseSchema):
+    new_status: ChargingSiteStatusEnum
 
 
 class EquipmentStatusEnum:

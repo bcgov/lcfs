@@ -18,9 +18,11 @@ export const ChargingSiteCard = ({
   hasAnyRole,
   hasRoles,
   isIDIR,
-  refetch
+  refetch,
+  alertRef: alertRefProp
 }) => {
-  const alertRef = useRef(null)
+  const localAlertRef = useRef(null)
+  const alertRef = alertRefProp ?? localAlertRef
   const { t } = useTranslation('chargingSite')
   const [isEditMode, setIsEditMode] = useState(addMode)
   const { siteId } = useParams()
@@ -62,7 +64,14 @@ export const ChargingSiteCard = ({
                   />
                 </>
               ) : (
-                <ChargingSiteProfile data={data} />
+                <ChargingSiteProfile
+                  data={data}
+                  hasAnyRole={hasAnyRole}
+                  hasRoles={hasRoles}
+                  isIDIR={isIDIR}
+                  refetch={refetch}
+                  alertRef={alertRef}
+                />
               )
             }
           />
