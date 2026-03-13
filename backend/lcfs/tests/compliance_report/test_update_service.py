@@ -212,6 +212,7 @@ async def test_handle_submitted_status_auto_submits_fse_records(
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
     mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.line_20_surplus_deficit_units = 100
 
@@ -278,6 +279,10 @@ async def test_handle_submitted_status_auto_submits_fse_records(
     mock_user_has_roles.assert_called_once_with(
         mock.ANY,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment.assert_awaited_once_with(
+        "report-group-123", 123
     )
 
     # Verify that auto_submit_equipment_for_report was called

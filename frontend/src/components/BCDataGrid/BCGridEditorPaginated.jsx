@@ -951,6 +951,7 @@ export const BCGridEditorPaginated = ({
           ...defaultColDefParams,
           ...defaultColDef
         }}
+        enableCellTextSelection={true}
         columnDefs={transformedColumnDefs}
         {...props}
       />
