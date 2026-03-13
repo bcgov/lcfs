@@ -614,7 +614,7 @@ async def test_update_reporting_active_status(repo, fake_db):
 
 @pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fake_db):
-    """Ensure mode='all' prioritizes rows matching provided compliance_report_group_uuid"""
+    """Ensure mode='all' uses the preference view for prioritization"""
     fake_db.scalar.return_value = 0
     data_result = MagicMock()
     data_result.fetchall.return_value = []
@@ -628,8 +628,8 @@ async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fak
     executed_query = fake_db.execute.call_args[0][0]
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
 
-    assert "CASE" in compiled_sql
-    assert group_uuid in compiled_sql
+    # When mode='all', the query should use FSEReportingBasePrefView which has prioritization logic
+    assert "v_fse_reporting_base_pref" in compiled_sql
 
 
 @pytest.mark.anyio
