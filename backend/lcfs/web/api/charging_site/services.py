@@ -624,6 +624,7 @@ class ChargingSiteService:
                 ChargingSite(
                     **payload,
                     status=status,
+                    version=1,
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(

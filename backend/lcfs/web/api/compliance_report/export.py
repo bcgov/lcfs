@@ -1,5 +1,6 @@
 import decimal
 import io
+import re
 from datetime import datetime
 from fastapi import Depends
 from openpyxl import Workbook
@@ -218,7 +219,10 @@ class ComplianceReportExporter:
 
     def _add_table(self, ws, title: str, cols: int, rows: int) -> None:
         """Add a styled table to the worksheet."""
-        table_name = title.replace(" ", "") + "Tbl"
+        if rows <= 0:
+            return
+        # Sanitize table name: only alphanumeric and underscores allowed
+        table_name = re.sub(r"[^A-Za-z0-9_]", "", title.replace(" ", "")) + "Tbl"
         table_ref = f"A1:{get_column_letter(cols)}{rows+1}"
 
         tab = Table(displayName=table_name, ref=table_ref)
@@ -814,7 +818,7 @@ class ComplianceReportExporter:
             pagination=PaginationRequestSchema(
                 page=1, size=1000, filters=[], sort_orders=[]
             ),
-            compliance_report_group_uuid=report_group_uuid,
+            compliance_report_id=cid,
             mode="summary",
         )
         reporting_rows = reporting_result[0]
@@ -844,7 +848,7 @@ class ComplianceReportExporter:
                     row.get("manufacturer"),
                     row.get("model"),
                     row.get("level_of_equipment"),
-                    row.get("ports").value if row.get("ports") else None,
+                    row.get("ports").value if hasattr(row.get("ports"), "value") else row.get("ports"),
                     ", ".join(intended_uses) if intended_uses else None,
                     ", ".join(intended_users) if intended_users else None,
                     row.get("street_address"),

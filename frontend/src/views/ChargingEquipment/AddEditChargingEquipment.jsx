@@ -459,12 +459,20 @@ export const AddEditChargingEquipment = ({ mode }) => {
 
         params.node.updateData(responseData)
         setSingleRowData([responseData])
-        alertRef.current?.triggerAlert({
-          message: isEdit
-            ? t('chargingEquipment:updateSuccess')
-            : t('chargingEquipment:createSuccess'),
-          severity: 'success'
-        })
+
+        // Only show success if save actually succeeded
+        // (handleScheduleSave sets validationStatus on error/warning)
+        if (
+          responseData.validationStatus === 'success' ||
+          !responseData.validationStatus
+        ) {
+          alertRef.current?.triggerAlert({
+            message: isEdit
+              ? t('chargingEquipment:updateSuccess')
+              : t('chargingEquipment:createSuccess'),
+            severity: 'success'
+          })
+        }
       } catch (error) {
         alertRef.current?.triggerAlert({
           message: error.message || 'Failed to save equipment',
@@ -1060,7 +1068,10 @@ export const AddEditChargingEquipment = ({ mode }) => {
               saveButtonProps={{
                 enabled: true,
                 text: t('chargingEquipment:saveAndReturn'),
-                onSave: navigateBack
+                onSave: navigateBack,
+                confirmText:
+                  'There are unsaved changes or validation errors. Are you sure you want to leave?',
+                confirmLabel: t('chargingEquipment:saveAndReturn')
               }}
             />
           </Box>
