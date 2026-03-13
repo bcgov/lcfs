@@ -817,3 +817,113 @@ async def test_get_fse_reporting_record_for_group_not_found(repo, fake_db):
     )
 
     assert record is None
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_record_for_group_query_does_not_filter_on_version(
+    repo, fake_db
+):
+    """
+    The query must be version-agnostic: the compiled SQL should NOT contain a
+    WHERE clause on charging_equipment_version so that equipment linked to an
+    older site version is still found.
+    """
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.first.return_value = None
+    fake_db.execute.return_value = result_mock
+
+    await repo.get_fse_reporting_record_for_group(
+        charging_equipment_id=1,
+        charging_equipment_version=99,   # arbitrary; must be ignored
+        compliance_report_group_uuid="group-xyz",
+    )
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    # The WHERE clause must filter on charging_equipment_id and
+    # compliance_report_group_uuid but NOT on charging_equipment_version.
+    assert "charging_equipment_id" in compiled
+    assert "compliance_report_group_uuid" in compiled
+    assert "charging_equipment_version" not in compiled.split("WHERE")[1].split("ORDER")[0]
+
+
+# ===========================================================================
+# bulk_update_fse_reporting_record — deactivate path
+# ===========================================================================
+
+
+@pytest.mark.anyio
+async def test_bulk_update_deactivate_executes_update(repo, fake_db):
+    """deactivate=True → execute + flush are called."""
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=20,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=None,
+        compliance_notes=None,
+        deactivate=True,
+    )
+
+    fake_db.execute.assert_called_once()
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_deactivate_sets_is_active_false(repo, fake_db):
+    """deactivate=True → compiled SQL must set is_active = false."""
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=20,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=None,
+        compliance_notes=None,
+        deactivate=True,
+    )
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "is_active" in compiled
+    assert "false" in compiled.lower()
+
+
+@pytest.mark.anyio
+async def test_bulk_update_deactivate_does_not_set_dates(repo, fake_db):
+    """
+    deactivate=True must NOT update supply_from_date or supply_to_date because
+    those columns are NOT NULL in the database.
+    """
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=20,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=None,
+        compliance_notes=None,
+        deactivate=True,
+    )
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "supply_from_date" not in compiled
+    assert "supply_to_date" not in compiled
+
+
+@pytest.mark.anyio
+async def test_bulk_update_deactivate_takes_precedence_over_activate(repo, fake_db):
+    """
+    When both deactivate=True and activate=True are passed, deactivate must win
+    (is_active is set to False, not True).
+    """
+    await repo.bulk_update_fse_reporting_record(
+        charging_equipment_compliance_id=30,
+        supply_from_date=None,
+        supply_to_date=None,
+        kwh_usage=None,
+        compliance_notes=None,
+        activate=True,
+        deactivate=True,
+    )
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "is_active" in compiled
+    assert "false" in compiled.lower()
