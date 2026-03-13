@@ -5,7 +5,7 @@ import enum
 
 
 class RoleEnum(enum.Enum):
-    SYSTEM_ADMIN = "SYSTEM_ADMIN"
+    SYSTEM_ADMIN = "System Admin"
 
     GOVERNMENT = "Government"
     ADMINISTRATOR = "Administrator"
@@ -23,6 +23,7 @@ class RoleEnum(enum.Enum):
     IA_PROPONENT = "IA Proponent"
     IA_ANALYST = "IA Analyst"
     IA_MANAGER = "IA Manager"
+    IA_SIGNER = "IA Signer"
 
 
 class Role(BaseModel, Auditable):

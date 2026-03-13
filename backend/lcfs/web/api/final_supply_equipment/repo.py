@@ -659,6 +659,9 @@ class FinalSupplyEquipmentRepository:
                 FinalSupplyEquipment.supply_to_date >= row.supply_from_date,
             ),
             FinalSupplyEquipment.serial_nbr == row.serial_nbr,
+            FinalSupplyEquipment.postal_code == row.postal_code,
+            FinalSupplyEquipment.latitude == row.latitude,
+            FinalSupplyEquipment.longitude == row.longitude,
         ]
 
         if row.final_supply_equipment_id is not None:

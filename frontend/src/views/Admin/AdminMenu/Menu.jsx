@@ -12,7 +12,8 @@ import {
   SeededUserAssociation,
   UserActivity,
   UserLoginHistory,
-  AuditLog
+  AuditLog,
+  LoginScreenBackground
 } from '.'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
@@ -41,21 +42,19 @@ export function AdminMenu({ tabIndex }) {
   const showSeededAssociationAdminOnly =
     showSeededAssociation && hasRoles(roles.administrator)
   const paths = useMemo(
-    () =>
-      showSeededAssociationAdminOnly
-        ? [
-            ROUTES.ADMIN.USERS.LIST,
-            ROUTES.ADMIN.USER_ACTIVITY,
-            ROUTES.ADMIN.USER_LOGIN_HISTORY,
-            ROUTES.ADMIN.AUDIT_LOG.LIST,
-            ROUTES.ADMIN.SEEDED_USER_ASSOCIATION
-          ]
-        : [
-            ROUTES.ADMIN.USERS.LIST,
-            ROUTES.ADMIN.USER_ACTIVITY,
-            ROUTES.ADMIN.USER_LOGIN_HISTORY,
-            ROUTES.ADMIN.AUDIT_LOG.LIST
-          ],
+    () => {
+      const base = [
+        ROUTES.ADMIN.USERS.LIST,
+        ROUTES.ADMIN.USER_ACTIVITY,
+        ROUTES.ADMIN.USER_LOGIN_HISTORY,
+        ROUTES.ADMIN.AUDIT_LOG.LIST,
+        ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
+      ]
+      if (showSeededAssociationAdminOnly) {
+        base.push(ROUTES.ADMIN.SEEDED_USER_ASSOCIATION)
+      }
+      return base
+    },
     [showSeededAssociationAdminOnly]
   )
 
@@ -85,7 +84,7 @@ export function AdminMenu({ tabIndex }) {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: 'auto' }}
           orientation={tabsOrientation}
           value={tabIndex}
           aria-label="Tabs for selection of administration options"
@@ -95,8 +94,9 @@ export function AdminMenu({ tabIndex }) {
           <Tab label={t('UserActivity')} {...a11yProps(1)} />
           <Tab label={t('UserLoginHistory')} {...a11yProps(2)} />
           <Tab label={t('AuditLog')} {...a11yProps(3)} />
+          <Tab label={t('LoginScreenBackground')} {...a11yProps(4)} />
           {showSeededAssociationAdminOnly && (
-            <Tab label={t('SeededUserAssociation')} wrapped {...a11yProps(4)} />
+            <Tab label={t('SeededUserAssociation')} wrapped {...a11yProps(5)} />
           )}
         </Tabs>
       </AppBar>
@@ -113,8 +113,11 @@ export function AdminMenu({ tabIndex }) {
         <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
           <AuditLog />
         </AdminTabPanel>
+        <AdminTabPanel value={tabIndex} index={4} component="div" mx={-3}>
+          <LoginScreenBackground />
+        </AdminTabPanel>
         {showSeededAssociationAdminOnly && (
-          <AdminTabPanel value={tabIndex} index={4} component="div" mx={-3}>
+          <AdminTabPanel value={tabIndex} index={5} component="div" mx={-3}>
             <SeededUserAssociation />
           </AdminTabPanel>
         )}

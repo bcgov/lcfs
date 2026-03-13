@@ -27,6 +27,10 @@ const AdminLinksCard = () => {
       {
         title: t('dashboard:adminLinks.usrActivity'),
         route: ROUTES.ADMIN.USER_ACTIVITY
+      },
+      {
+        title: t('dashboard:adminLinks.loginScreenBackground'),
+        route: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND
       }
     ],
     [t]

@@ -31,9 +31,12 @@ describe('Admin view happy paths', () => {
     ]
 
     cy.visit('/admin/users', { timeout: 30000 })
+    cy.getByDataTest('bc-grid-container', { timeout: 30000 }).should('exist')
 
     tabs.forEach(({ label, path, panelIndex }) => {
-      cy.contains('[role="tab"]', label, { timeout: 10000 }).click()
+      cy.contains('[role="tab"]', label, { timeout: 10000 })
+        .should('be.visible')
+        .click()
       cy.location('pathname', { timeout: 30000 }).should('eq', path)
       cy.get(
         `#full-width-AdminTabPanel-${panelIndex} [data-test="bc-grid-container"]`,

@@ -441,6 +441,42 @@ async def test_check_overlap_within_current_report_only(repo, fake_db):
 
 
 @pytest.mark.anyio
+async def test_check_overlap_different_charging_site_not_blocked(repo, fake_db):
+    """
+    Test that same serial number at a different Charging site (different postal_code/lat/lon)
+    does not trigger an overlap — the query must scope to the same location.
+    The mock returns False, simulating no match found when location differs.
+    """
+    from lcfs.web.api.final_supply_equipment.schema import (
+        FinalSupplyEquipmentCreateSchema,
+    )
+    from datetime import date
+
+    fse_record = FinalSupplyEquipmentCreateSchema(
+        compliance_report_id=400,
+        supply_from_date=date(2024, 1, 1),
+        supply_to_date=date(2024, 12, 31),
+        serial_nbr="RELOCATED_SERIAL",
+        postal_code="V8V 1V1",  # different site
+        latitude=48.425,
+        longitude=-123.365,
+        manufacturer="Test Manufacturer",
+        level_of_equipment="Level 2",
+        intended_use_types=["Public charging"],
+        intended_user_types=["Test"],
+        street_address="789 New Site Rd",
+        city="Victoria",
+        organization_name="Test Org",
+    )
+
+    # Simulate no overlap found because location conditions filter it out
+    fake_db.execute.return_value = FakeResult([False])
+
+    result = await repo.check_overlap_of_fse_row(fse_record)
+    assert result is False  # Different Charging site — should not be blocked
+
+
+@pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated(repo, fake_db):
     """Test getting paginated FSE reporting list"""
     # Mock the count query result
