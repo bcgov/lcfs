@@ -40,6 +40,7 @@ export const BCGridBase = forwardRef(
       autoSizeStrategy,
       autoHeight,
       containerStyle,
+      overlayNoRowsTemplate,
       onRowClicked,
       ...props
     },
@@ -271,7 +272,6 @@ export const BCGridBase = forwardRef(
           loadingMessage: 'One moment please...'
         }}
         animateRows
-        overlayNoRowsTemplate="No rows found"
         autoSizeStrategy={resolvedAutoSizeStrategy}
         suppressDragLeaveHidesColumns
         suppressMovableColumns

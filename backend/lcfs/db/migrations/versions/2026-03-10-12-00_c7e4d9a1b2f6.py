@@ -1,7 +1,7 @@
 """Deduplicate charging equipment rows per group/version
 
 Revision ID: c7e4d9a1b2f6
-Revises: a2b3c4d5e6f7
+Revises: 84d7cf6d1940
 Create Date: 2026-03-10 12:00:00.000000
 """
 
@@ -17,7 +17,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "c7e4d9a1b2f6"
-down_revision = "a2b3c4d5e6f7"
+down_revision = "84d7cf6d1940"
 branch_labels = None
 depends_on = None
 
