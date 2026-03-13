@@ -4,6 +4,7 @@ from sqlalchemy import text
 from lcfs.db.models import UserProfile, UserLoginHistory
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.user.repo import UserRepository
+from lcfs.web.api.user.schema import UserCreateSchema
 from lcfs.tests.user.user_payloads import user_orm_model
 
 

@@ -18,12 +18,28 @@ import {
 import { useSearchParams } from 'react-router-dom'
 
 const ROW_HEIGHT = 45
+const defaultNoRowsOverlayTemplate = `
+  <div
+    style="
+      min-height: ${ROW_HEIGHT}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 8px 12px;
+      box-sizing: border-box;
+    "
+  >
+    No rows found
+  </div>
+`
 
 export const BCGridBase = forwardRef(
   (
     {
       autoSizeStrategy,
       autoHeight,
+      containerStyle,
       enableCellTextSelection,
       getRowId,
       overlayNoRowsTemplate,
@@ -256,7 +272,7 @@ export const BCGridBase = forwardRef(
       <AgGridReact
         ref={ref}
         domLayout={domLayout}
-        containerStyle={{ height }}
+        containerStyle={{ height, ...containerStyle }}
         loadingOverlayComponent={loadingOverlayComponent}
         loadingOverlayComponentParams={{
           loadingMessage: 'One moment please...'
@@ -274,7 +290,9 @@ export const BCGridBase = forwardRef(
         suppressPaginationPanel
         suppressScrollOnNewData
         onRowDataUpdated={determineHeight}
-        overlayNoRowsTemplate={overlayNoRowsTemplate || "No rows found"}
+        overlayNoRowsTemplate={
+          overlayNoRowsTemplate || defaultNoRowsOverlayTemplate
+        }
         getRowStyle={(params) => {
           const defaultStyle =
             typeof getRowStyle === 'function' ? getRowStyle(params) : {}
