@@ -468,11 +468,6 @@ class FinalSupplyEquipmentServices:
                 )
             )
 
-        if report.compliance_report_group_uuid:
-            await self.repo.sync_reporting_associations_to_latest_equipment(
-                report.compliance_report_group_uuid, organization_id
-            )
-        
         # Check if organization has any charging equipment
         has_equipment = await self.repo.has_charging_equipment_for_organization(
             organization_id

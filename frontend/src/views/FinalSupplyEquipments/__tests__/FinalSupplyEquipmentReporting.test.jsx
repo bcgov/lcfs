@@ -159,6 +159,30 @@ describe('FinalSupplyEquipmentReporting', () => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
 
+    it('does not break hook ordering when loading data resolves after initial render', async () => {
+      let reportState = {
+        data: null,
+        isLoading: true
+      }
+
+      vi.mocked(useComplianceReportWithCache).mockImplementation(() => reportState)
+
+      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
+        wrapper
+      })
+
+      reportState = {
+        data: mockReportData,
+        isLoading: false
+      }
+
+      expect(() => rerender(<FinalSupplyEquipmentReporting />)).not.toThrow()
+
+      await waitFor(() => {
+        expect(screen.getByText('Grid Editor')).toBeInTheDocument()
+      })
+    })
+
     it('renders the component with title and description', () => {
       render(<FinalSupplyEquipmentReporting />, { wrapper })
 
