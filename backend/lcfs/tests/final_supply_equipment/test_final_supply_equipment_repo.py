@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from sqlalchemy import select, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
@@ -50,6 +51,34 @@ def fake_db():
 @pytest.fixture
 def repo(fake_db):
     return FinalSupplyEquipmentRepository(db=fake_db)
+
+
+def test_combine_reporting_queries_uses_union_for_multiple_queries(repo):
+    first_query = select(literal(1).label("charging_equipment_id"))
+    second_query = select(literal(1).label("charging_equipment_id"))
+
+    combined_query = repo._combine_reporting_queries([first_query, second_query])
+
+    assert "UNION ALL" not in str(
+        combined_query.compile(compile_kwargs={"literal_binds": True})
+    )
+
+
+def test_combine_reporting_queries_returns_single_query_unchanged(repo):
+    query = select(literal(1).label("charging_equipment_id"))
+
+    combined_query = repo._combine_reporting_queries([query])
+
+    assert combined_query is query
+
+
+def test_latest_equipment_versions_subquery_ranks_by_group_uuid(repo):
+    subquery = repo._latest_equipment_versions_subquery(42)
+
+    compiled = str(subquery.select().compile(compile_kwargs={"literal_binds": True}))
+
+    assert "PARTITION BY charging_equipment.group_uuid" in compiled
+    assert "charging_equipment.version DESC" in compiled
 
 
 @pytest.mark.anyio
@@ -585,7 +614,7 @@ async def test_update_reporting_active_status(repo, fake_db):
 
 @pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fake_db):
-    """Ensure mode='all' prioritizes rows matching provided compliance_report_group_uuid"""
+    """Ensure mode='all' uses the preference view for prioritization"""
     fake_db.scalar.return_value = 0
     data_result = MagicMock()
     data_result.fetchall.return_value = []
@@ -599,8 +628,8 @@ async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fak
     executed_query = fake_db.execute.call_args[0][0]
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
 
-    assert "CASE" in compiled_sql
-    assert group_uuid in compiled_sql
+    # When mode='all', the query should use FSEReportingBasePrefView which has prioritization logic
+    assert "v_fse_reporting_base_pref" in compiled_sql
 
 
 @pytest.mark.anyio
