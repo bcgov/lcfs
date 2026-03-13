@@ -940,8 +940,8 @@ class FinalSupplyEquipmentRepository:
                     final_query = final_query.order_by(asc(field))
         else:
             final_query = final_query.order_by(
-                dedup_subquery.c.charging_equipment_id,
-                dedup_subquery.c.charging_equipment_version,
+                asc(dedup_subquery.c.site_name),
+                asc(dedup_subquery.c.registration_number),
             )
 
         # Count total
@@ -1110,6 +1110,9 @@ class FinalSupplyEquipmentRepository:
         latest_sites_main = latest_charging_site_version_subquery()
         latest_sites_rank = latest_charging_site_version_subquery()
 
+        source_site_rank = aliased(ChargingSite, name="source_site_rank")
+        source_site_main = aliased(ChargingSite, name="source_site_main")
+
         # Deduplicate to latest version per ChargingEquipment group_uuid
         ce_latest_subquery = (
             select(
@@ -1122,15 +1125,13 @@ class FinalSupplyEquipmentRepository:
                 .label("rn"),
             )
             .join(
-                ChargingSite,
-                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+                source_site_rank,
+                ChargingEquipment.charging_site_id
+                == source_site_rank.charging_site_id,
             )
             .join(
                 latest_sites_rank,
-                and_(
-                    ChargingSite.group_uuid == latest_sites_rank.c.group_uuid,
-                    ChargingSite.version == latest_sites_rank.c.latest_version,
-                ),
+                source_site_rank.group_uuid == latest_sites_rank.c.group_uuid,
             )
             .join(
                 ChargingEquipmentStatus,
@@ -1139,7 +1140,7 @@ class FinalSupplyEquipmentRepository:
             )
             .where(
                 and_(
-                    ChargingSite.organization_id == organization_id,
+                    source_site_rank.organization_id == organization_id,
                     ChargingEquipmentStatus.status != "Decommissioned",
                 )
             )
@@ -1164,6 +1165,7 @@ class FinalSupplyEquipmentRepository:
                 (
                     ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
                 ).label("registration_number"),
+                ChargingSite.site_name.label("site_name"),
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id,
                 ComplianceReportChargingEquipment.supply_from_date,
                 ComplianceReportChargingEquipment.supply_to_date,
@@ -1197,11 +1199,16 @@ class FinalSupplyEquipmentRepository:
                 ),
             )
             .join(
-                ChargingSite,
-                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+                source_site_main,
+                ChargingEquipment.charging_site_id
+                == source_site_main.charging_site_id,
             )
             .join(
                 latest_sites_main,
+                source_site_main.group_uuid == latest_sites_main.c.group_uuid,
+            )
+            .join(
+                ChargingSite,
                 and_(
                     ChargingSite.group_uuid == latest_sites_main.c.group_uuid,
                     ChargingSite.version == latest_sites_main.c.latest_version,
@@ -1223,7 +1230,7 @@ class FinalSupplyEquipmentRepository:
             )
             .where(
                 and_(
-                    ChargingSite.organization_id == organization_id,
+                    source_site_main.organization_id == organization_id,
                     ChargingEquipmentStatus.status != "Decommissioned",
                 )
             )
@@ -1235,6 +1242,7 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.charging_equipment_id,
                 all_rows_subquery.c.charging_equipment_version,
                 all_rows_subquery.c.registration_number,
+                all_rows_subquery.c.site_name,
                 all_rows_subquery.c.charging_equipment_compliance_id,
                 all_rows_subquery.c.supply_from_date,
                 all_rows_subquery.c.supply_to_date,
@@ -1242,11 +1250,12 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.compliance_notes,
                 all_rows_subquery.c.organization_id,
                 all_rows_subquery.c.is_active,
+                all_rows_subquery.c.compliance_report_group_uuid,
             )
             .where(all_rows_subquery.c.row_num == 1)
             .order_by(
-                all_rows_subquery.c.charging_equipment_id.asc(),
-                all_rows_subquery.c.charging_equipment_version.asc(),
+                asc(all_rows_subquery.c.site_name),
+                asc(all_rows_subquery.c.registration_number),
             )
         )
 
@@ -1265,6 +1274,9 @@ class FinalSupplyEquipmentRepository:
         """
         latest_sites = latest_charging_site_version_subquery()
 
+        source_site = aliased(ChargingSite, name="source_site_lookup")
+        latest_site = aliased(ChargingSite, name="latest_site_lookup")
+
         ranked_subquery = (
             select(
                 ChargingEquipment.charging_equipment_id.label("ce_id"),
@@ -1277,21 +1289,25 @@ class FinalSupplyEquipmentRepository:
                 .label("rn"),
             )
             .join(
-                ChargingSite,
-                ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
+                source_site,
+                ChargingEquipment.charging_site_id == source_site.charging_site_id,
             )
             .join(
                 latest_sites,
+                source_site.group_uuid == latest_sites.c.group_uuid,
+            )
+            .join(
+                latest_site,
                 and_(
-                    ChargingSite.group_uuid == latest_sites.c.group_uuid,
-                    ChargingSite.version == latest_sites.c.latest_version,
+                    latest_site.group_uuid == latest_sites.c.group_uuid,
+                    latest_site.version == latest_sites.c.latest_version,
                 ),
             )
             .where(
                 and_(
-                    ChargingSite.organization_id == organization_id,
+                    source_site.organization_id == organization_id,
                     (
-                        ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
+                        latest_site.site_code + "-" + ChargingEquipment.equipment_number
                     )
                     == registration_number,
                 )
@@ -1328,15 +1344,22 @@ class FinalSupplyEquipmentRepository:
         Retrieve the ComplianceReportChargingEquipment record for the given
         equipment + version + compliance report group, if it exists.
         """
-        stmt = select(ComplianceReportChargingEquipment).where(
-            and_(
-                ComplianceReportChargingEquipment.charging_equipment_id
-                == charging_equipment_id,
-                ComplianceReportChargingEquipment.charging_equipment_version
-                == charging_equipment_version,
-                ComplianceReportChargingEquipment.compliance_report_group_uuid
-                == compliance_report_group_uuid,
+        # Match on id + group_uuid only (version-agnostic) so that equipment
+        # stored against an older version is still found; take the highest version.
+        stmt = (
+            select(ComplianceReportChargingEquipment)
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.charging_equipment_id
+                    == charging_equipment_id,
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                )
             )
+            .order_by(
+                ComplianceReportChargingEquipment.charging_equipment_version.desc()
+            )
+            .limit(1)
         )
         result = await self.db.execute(stmt)
         return result.scalars().first()
@@ -1350,25 +1373,33 @@ class FinalSupplyEquipmentRepository:
         kwh_usage,
         compliance_notes: str | None,
         activate: bool = False,
+        deactivate: bool = False,
     ) -> None:
         """
         Update supply dates, kWh usage, and compliance notes for a single
         ComplianceReportChargingEquipment record.
         Only fields that are not None are updated; blank values are skipped.
-        When activate=True the record's is_active flag is also set to True,
-        so that previously unchecked rows become checked in the report.
+        When activate=True the record's is_active flag is set to True.
+        When deactivate=True all editable fields are cleared and is_active set to False.
         """
         values: dict = {}
-        if supply_from_date is not None:
-            values["supply_from_date"] = supply_from_date
-        if supply_to_date is not None:
-            values["supply_to_date"] = supply_to_date
-        if kwh_usage is not None:
-            values["kwh_usage"] = kwh_usage
-        if compliance_notes is not None:
-            values["compliance_notes"] = compliance_notes
-        if activate:
-            values["is_active"] = True
+        if deactivate:
+            # supply_from_date and supply_to_date are NOT NULL — cannot be cleared.
+            # Only clear optional fields and mark the row inactive.
+            values["is_active"] = False
+            values["kwh_usage"] = None
+            values["compliance_notes"] = None
+        else:
+            if supply_from_date is not None:
+                values["supply_from_date"] = supply_from_date
+            if supply_to_date is not None:
+                values["supply_to_date"] = supply_to_date
+            if kwh_usage is not None:
+                values["kwh_usage"] = kwh_usage
+            if compliance_notes is not None:
+                values["compliance_notes"] = compliance_notes
+            if activate:
+                values["is_active"] = True
 
         if not values:
             return

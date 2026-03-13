@@ -6,9 +6,18 @@ Covers:
   - FSEReportingImporter.get_status   (Redis read including `skipped` field)
   - _parse_date                       (all recognised formats, sentinel types, errors)
   - _load_sheet                       (sheet name validation)
-  - Row-processing logic              (blank kWh → skip; valid row → update+activate;
-                                       missing reg → reject; invalid kWh → reject;
-                                       invalid date → reject)
+  - Row-processing logic:
+      col layout: [Site name, Registration #, From, To, kWh, Notes]
+      blank editable fields + existing record → deactivate called
+      blank editable fields + no record      → skipped
+      note only (no dates/kWh) + existing    → activate=True, kwh defaults to 0
+      valid full row                         → updated=1, activate=True
+      missing reg number                     → rejected
+      invalid kWh                            → rejected
+      negative kWh                           → rejected
+      invalid date                           → rejected
+      inverted date range                    → rejected
+      registration not found in org          → rejected
 """
 
 import asyncio
@@ -138,13 +147,9 @@ async def test_import_data_report_not_found_raises(importer, mock_compliance_rep
 
 @pytest.mark.anyio
 async def test_import_data_invalid_mime_raises(importer):
-    """HTTPException 400 for disallowed MIME type.
-
-    Note: text/plain IS in ALLOWED_MIME_TYPES; use text/html which is not.
-    The executor is patched to prevent background threads from leaking.
-    """
+    """HTTPException 400 for disallowed MIME type."""
     bad_file = _xlsx_file()
-    bad_file.content_type = "text/html"   # definitely not in ALLOWED_MIME_TYPES
+    bad_file.content_type = "text/html"
 
     with patch(
         "lcfs.web.api.final_supply_equipment.fse_reporting_importer._import_async",
@@ -163,10 +168,7 @@ async def test_import_data_invalid_mime_raises(importer):
 
 @pytest.mark.anyio
 async def test_import_data_file_too_large_raises(importer):
-    """HTTPException 400 when file exceeds the size limit.
-
-    The executor is patched to prevent background threads from leaking.
-    """
+    """HTTPException 400 when file exceeds the size limit."""
     big_file = _xlsx_file()
     big_file.read = AsyncMock(return_value=b"x" * (51 * 1024 * 1024))
 
@@ -296,8 +298,10 @@ def _build_upload_file(sheetname: str) -> MagicMock:
     wb = Workbook()
     ws = wb.active
     ws.title = sheetname
-    ws.append(["Registration #", "From", "To", "kWh usage", "Notes"])
-    ws.append(["ORG-001-001", "2024-01-01", "2024-12-31", 500, "ok"])
+    # New column layout: Site name | Registration # | From | To | kWh | Notes
+    ws.append(["Site name", "Registration #", "Dates of supply from",
+               "Dates of supply to", "kWh usage", "Compliance notes"])
+    ws.append(["Site A", "ORG-001-001", "2024-01-01", "2024-12-31", 500, "ok"])
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -322,8 +326,8 @@ def test_load_sheet_wrong_name_raises():
 
 
 # ---------------------------------------------------------------------------
-# Row-processing logic (tested by running _import_async with a real XLSX
-# but mocked DB calls)
+# Row-processing logic (tested via _import_async with mocked DB calls)
+# Column layout: [Site name, Registration #, From, To, kWh, Notes]
 # ---------------------------------------------------------------------------
 
 
@@ -334,15 +338,14 @@ async def _run_import(rows: list, fse_repo_override=None):
     """
     from lcfs.web.api.final_supply_equipment.fse_reporting_importer import (
         _import_async,
-        _update_progress,
     )
 
-    # Build in-memory workbook
     wb = Workbook()
     ws = wb.active
     ws.title = FSE_UPDATE_SHEETNAME
-    ws.append(["Registration #", "Dates of supply from", "Dates of supply to",
-               "kWh usage", "Compliance notes"])
+    # Header row must match new column layout
+    ws.append(["Site name", "Registration #", "Dates of supply from",
+               "Dates of supply to", "kWh usage", "Compliance notes"])
     for row in rows:
         ws.append(row)
 
@@ -353,7 +356,6 @@ async def _run_import(rows: list, fse_repo_override=None):
     upload_file = MagicMock()
     upload_file.file = buf
 
-    # Track Redis calls
     progress_records = []
 
     async def fake_update(redis_client, job_id, progress, status_msg,
@@ -367,7 +369,6 @@ async def _run_import(rows: list, fse_repo_override=None):
             "errors": errors or [],
         })
 
-    # Default FSE repo: equipment not found
     if fse_repo_override is None:
         fse_repo = MagicMock(spec=FinalSupplyEquipmentRepository)
         fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
@@ -439,21 +440,12 @@ async def _run_import(rows: list, fse_repo_override=None):
     return progress_records
 
 
-@pytest.mark.anyio
-async def test_row_blank_kwh_is_skipped_entirely():
-    """Blank kWh → row is counted as skipped; no update call made."""
-    rows = [["REG-001", "2024-01-01", "2024-12-31", None, "some note"]]
-    records = await _run_import(rows)
-    final = records[-1]
-    assert final["skipped"] == 1
-    assert final["updated"] == 0
-    assert final["rejected"] == 0
-
+# col layout: [site_name, reg_num, from, to, kwh, notes]
 
 @pytest.mark.anyio
 async def test_row_missing_registration_is_rejected():
     """Empty registration number → rejected."""
-    rows = [[None, "2024-01-01", "2024-12-31", 500, "note"]]
+    rows = [["Site A", None, "2024-01-01", "2024-12-31", 500, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -463,7 +455,7 @@ async def test_row_missing_registration_is_rejected():
 @pytest.mark.anyio
 async def test_row_invalid_kwh_is_rejected():
     """Non-numeric kWh value → rejected."""
-    rows = [["REG-001", "2024-01-01", "2024-12-31", "NOT_A_NUMBER", "note"]]
+    rows = [["Site A", "REG-001", "2024-01-01", "2024-12-31", "NOT_A_NUMBER", "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -473,7 +465,7 @@ async def test_row_invalid_kwh_is_rejected():
 @pytest.mark.anyio
 async def test_row_negative_kwh_is_rejected():
     """Negative kWh value → rejected."""
-    rows = [["REG-001", "2024-01-01", "2024-12-31", -100, "note"]]
+    rows = [["Site A", "REG-001", "2024-01-01", "2024-12-31", -100, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -482,7 +474,7 @@ async def test_row_negative_kwh_is_rejected():
 @pytest.mark.anyio
 async def test_row_invalid_date_is_rejected():
     """Unparseable 'from' date → rejected."""
-    rows = [["REG-001", "not-a-date", "2024-12-31", 500, "note"]]
+    rows = [["Site A", "REG-001", "not-a-date", "2024-12-31", 500, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -491,7 +483,7 @@ async def test_row_invalid_date_is_rejected():
 @pytest.mark.anyio
 async def test_row_inverted_date_range_is_rejected():
     """supply_from > supply_to → rejected."""
-    rows = [["REG-001", "2024-12-31", "2024-01-01", 500, "note"]]
+    rows = [["Site A", "REG-001", "2024-12-31", "2024-01-01", 500, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -504,7 +496,7 @@ async def test_row_registration_not_found_is_rejected():
     fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
         return_value=None
     )
-    rows = [["UNKNOWN-REG", "2024-01-01", "2024-12-31", 500, "note"]]
+    rows = [["Site A", "UNKNOWN-REG", "2024-01-01", "2024-12-31", 500, "note"]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
     assert final["rejected"] == 1
@@ -527,7 +519,7 @@ async def test_valid_row_existing_record_is_updated_and_activated():
     fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=existing)
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
-    rows = [["ORG-001-001", "2024-01-01", "2024-12-31", 500, "good note"]]
+    rows = [["Site A", "ORG-001-001", "2024-01-01", "2024-12-31", 500, "good note"]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
 
@@ -545,14 +537,18 @@ async def test_valid_row_existing_record_is_updated_and_activated():
 
 
 @pytest.mark.anyio
-async def test_blank_kWh_does_not_call_bulk_update():
-    """Blank kWh → bulk_update_fse_reporting_record is never called."""
-    equipment = MagicMock()
-    equipment.charging_equipment_id = 1
-    equipment.charging_equipment_version = 0
-
+async def test_row_all_editable_empty_with_existing_record_calls_deactivate():
+    """
+    Row with only site name + reg # (all editable fields blank) and an existing
+    active record → deactivate=True must be called on bulk_update.
+    """
     existing = MagicMock()
-    existing.charging_equipment_compliance_id = 99
+    existing.charging_equipment_compliance_id = 77
+    existing.is_active = True
+
+    equipment = MagicMock()
+    equipment.charging_equipment_id = 5
+    equipment.charging_equipment_version = 0
 
     fse_repo = MagicMock(spec=FinalSupplyEquipmentRepository)
     fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
@@ -561,17 +557,76 @@ async def test_blank_kWh_does_not_call_bulk_update():
     fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=existing)
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
-    rows = [["ORG-001-001", "2024-01-01", "2024-12-31", None, "some note"]]
-    await _run_import(rows, fse_repo_override=fse_repo)
+    # All editable columns blank: no from, no to, no kWh, no notes
+    rows = [["Site A", "ORG-001-001", None, None, None, None]]
+    records = await _run_import(rows, fse_repo_override=fse_repo)
 
-    # DB update must NOT be called because the row was skipped before lookup
+    fse_repo.bulk_update_fse_reporting_record.assert_called_once()
+    call_kwargs = fse_repo.bulk_update_fse_reporting_record.call_args.kwargs
+    assert call_kwargs.get("deactivate") is True
+    assert call_kwargs.get("charging_equipment_compliance_id") == 77
+
+
+@pytest.mark.anyio
+async def test_row_all_editable_empty_no_existing_record_is_skipped():
+    """
+    Row with only site name + reg # (all editable fields blank) and NO existing
+    record → skipped, no DB call.
+    """
+    equipment = MagicMock()
+    equipment.charging_equipment_id = 5
+    equipment.charging_equipment_version = 0
+
+    fse_repo = MagicMock(spec=FinalSupplyEquipmentRepository)
+    fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
+        return_value=equipment
+    )
+    fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=None)
+    fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
+
+    rows = [["Site A", "ORG-001-001", None, None, None, None]]
+    records = await _run_import(rows, fse_repo_override=fse_repo)
+    final = records[-1]
+
+    assert final["skipped"] == 1
     fse_repo.bulk_update_fse_reporting_record.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_row_note_only_activates_row_with_zero_kwh():
+    """
+    Row with only a compliance note (no dates, no kWh) → treated as has_any_data,
+    row is activated and kwh defaults to 0.
+    """
+    existing = MagicMock()
+    existing.charging_equipment_compliance_id = 55
+
+    equipment = MagicMock()
+    equipment.charging_equipment_id = 3
+    equipment.charging_equipment_version = 0
+
+    fse_repo = MagicMock(spec=FinalSupplyEquipmentRepository)
+    fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
+        return_value=equipment
+    )
+    fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=existing)
+    fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
+
+    rows = [["Site A", "ORG-001-001", None, None, None, "Just a note"]]
+    records = await _run_import(rows, fse_repo_override=fse_repo)
+    final = records[-1]
+
+    assert final["updated"] == 1
+    call_kwargs = fse_repo.bulk_update_fse_reporting_record.call_args.kwargs
+    assert call_kwargs.get("activate") is True
+    assert call_kwargs.get("kwh_usage") == 0
+    assert call_kwargs.get("compliance_notes") == "Just a note"
 
 
 @pytest.mark.anyio
 async def test_fully_blank_row_is_silently_skipped():
     """Rows where every cell is None are silently ignored (not counted)."""
-    rows = [[None, None, None, None, None]]
+    rows = [[None, None, None, None, None, None]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["updated"] == 0
@@ -581,12 +636,13 @@ async def test_fully_blank_row_is_silently_skipped():
 
 @pytest.mark.anyio
 async def test_mixed_rows_counters_are_accurate():
-    """A mix of valid, blank-kWh, and rejected rows → correct counters."""
+    """A mix of valid, deactivated, and rejected rows → correct counters."""
     equipment = MagicMock()
     equipment.charging_equipment_id = 1
     equipment.charging_equipment_version = 0
     existing = MagicMock()
     existing.charging_equipment_compliance_id = 10
+    existing.is_active = True
 
     fse_repo = MagicMock(spec=FinalSupplyEquipmentRepository)
     fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
@@ -596,13 +652,13 @@ async def test_mixed_rows_counters_are_accurate():
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
     rows = [
-        ["ORG-001", "2024-01-01", "2024-12-31", 300, "ok"],      # updated
-        ["ORG-001", "2024-01-01", "2024-12-31", None, "no kwh"],  # skipped
-        [None, "2024-01-01", "2024-12-31", 100, "no reg"],        # rejected
+        ["Site A", "ORG-001", "2024-01-01", "2024-12-31", 300, "ok"],     # updated
+        ["Site A", "ORG-001", None, None, None, None],                     # deactivated (also counted as updated)
+        [None, None, "2024-01-01", "2024-12-31", 100, "no reg"],           # rejected
     ]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
 
-    assert final["updated"] == 1
-    assert final["skipped"] == 1
+    # 2 calls to bulk_update (activate + deactivate), 1 rejected
+    assert final["updated"] == 2
     assert final["rejected"] == 1
