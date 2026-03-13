@@ -70,22 +70,15 @@ export const ChargingSiteFSEGrid = ({
     return selectedEquipment.every((eq) => eq.status.status === 'Draft' || eq.status.status === 'Updated')
   }, [selectedRows, equipmentList])
 
-  // Check if selected equipment can be returned to draft (only from Submitted status)
+  // Check if selected equipment can be returned to draft (only from Submitted or Validated status)
   const canReturnToDraft = useMemo(() => {
     if (selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
-    return selectedEquipment.every((eq) => eq.status.status === 'Submitted')
-  }, [selectedRows, equipmentList])
-
-  // Check if selected equipment can be returned to submitted (undo validation - only from Validated status)
-  const canUndoValidation = useMemo(() => {
-    if (selectedRows.length === 0) return false
-    const selectedEquipment = equipmentList.filter((eq) =>
-      selectedRows.includes(eq.chargingEquipmentId)
+    return selectedEquipment.every((eq) => 
+      eq.status.status === 'Submitted' || eq.status.status === 'Validated'
     )
-    return selectedEquipment.every((eq) => eq.status.status === 'Validated')
   }, [selectedRows, equipmentList])
 
   // Check if selected equipment can be validated (only from Submitted status)
@@ -279,7 +272,6 @@ export const ChargingSiteFSEGrid = ({
       selectedRows,
       isUpdating,
       canValidate,
-      canUndoValidation,
       canReturnToDraft,
       canSubmit,
       canSetToDecommission,
@@ -299,7 +291,6 @@ export const ChargingSiteFSEGrid = ({
     selectedRows,
     isUpdating,
     canValidate,
-    canUndoValidation,
     canReturnToDraft,
     canSubmit,
     canSetToDecommission,
