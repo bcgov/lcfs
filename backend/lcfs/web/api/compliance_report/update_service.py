@@ -70,7 +70,7 @@ class ComplianceReportUpdateService:
         self.org_snapshot_repo = org_snapshot_repo
         self._charging_equipment_repo = None
         self._charging_equipment_service = None
-        self._final_supply_equipment_repo = None
+        self._fse_repo = None
 
     @property
     def charging_equipment_repo(self) -> "ChargingEquipmentRepository":
@@ -99,15 +99,15 @@ class ComplianceReportUpdateService:
     @property
     def final_supply_equipment_repo(self) -> "FinalSupplyEquipmentRepository":
         """Lazy-load final supply equipment repository for report-equipment sync."""
-        if self._final_supply_equipment_repo is None:
+        if self._fse_repo is None:
             from lcfs.web.api.final_supply_equipment.repo import (
                 FinalSupplyEquipmentRepository,
             )
 
-            self._final_supply_equipment_repo = FinalSupplyEquipmentRepository(
+            self._fse_repo = FinalSupplyEquipmentRepository(
                 db=self.repo.db
             )
-        return self._final_supply_equipment_repo
+        return self._fse_repo
 
     async def update_compliance_report(
         self,

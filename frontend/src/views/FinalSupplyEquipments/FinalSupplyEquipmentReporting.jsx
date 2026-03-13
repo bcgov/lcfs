@@ -95,19 +95,6 @@ export const FinalSupplyEquipmentReporting = () => {
   const { mutateAsync: setDefaults } =
     useSetFSEReportingDefaultDates(complianceReportId)
 
-  if (isReportLoading || !organizationId) {
-    return (
-      <Stack
-        data-test="fse-reporting-loading"
-        alignItems="center"
-        justifyContent="center"
-        sx={{ width: '100%', minHeight: 200 }}
-      >
-        <CircularProgress />
-      </Stack>
-    )
-  }
-
   // Initialize global selection from all data when component loads
   useEffect(() => {
     if (!data?.finalSupplyEquipments) return
@@ -644,6 +631,19 @@ export const FinalSupplyEquipmentReporting = () => {
       (data?.pagination?.total || 0) === 0
     )
   }, [data])
+
+  if (isReportLoading || !organizationId) {
+    return (
+      <Stack
+        data-test="fse-reporting-loading"
+        alignItems="center"
+        justifyContent="center"
+        sx={{ width: '100%', minHeight: 200 }}
+      >
+        <CircularProgress />
+      </Stack>
+    )
+  }
 
   return (
     <Stack className="fse-reporting-container" spacing={6}>

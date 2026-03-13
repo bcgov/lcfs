@@ -27,11 +27,24 @@ def upgrade() -> None:
     conn = op.get_bind()
     logger = logging.getLogger("alembic.runtime.migration")
 
+    # Snapshot tables are temporary rollback aids and should be dropped manually
+    # after 30 days once the migration has been validated in all environments.
+    conn.execute(
+        sa.text("DROP TABLE IF EXISTS charging_equipment_snapshot_3d7b65a9d2ef;")
+    )
     conn.execute(
         sa.text(
             """
             CREATE TABLE IF NOT EXISTS charging_equipment_snapshot_c7e4d9a1b2f6
             (LIKE charging_equipment INCLUDING ALL);
+            """
+        )
+    )
+    conn.execute(
+        sa.text(
+            """
+            COMMENT ON TABLE charging_equipment_snapshot_c7e4d9a1b2f6 IS
+            'Temporary rollback snapshot for migration c7e4d9a1b2f6. Drop after 30 days.';
             """
         )
     )
@@ -97,6 +110,17 @@ def upgrade() -> None:
         logger.info(
             "No duplicate charging_equipment rows detected for identical group_uuid/version pairs."
         )
+
+    conn.execute(
+        sa.text(
+            dedup_cte
+            + """
+        DELETE FROM compliance_report_charging_equipment crce
+        USING duplicates d
+        WHERE crce.charging_equipment_id = d.charging_equipment_id;
+        """
+        )
+    )
 
     conn.execute(
         sa.text(
