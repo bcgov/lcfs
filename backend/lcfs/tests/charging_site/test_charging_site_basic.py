@@ -58,28 +58,26 @@ class TestChargingSiteFunctionality:
 
     def test_status_validation_invalid_transitions(self):
         """Test invalid status transitions"""
-        # These represent invalid transitions
+        # Valid transitions map: target_status -> [allowed_source_statuses]
+        valid_transitions = {
+            "Draft": ["Submitted"],
+            "Submitted": ["Draft", "Updated"],
+            "Validated": ["Submitted"],
+            "Decommissioned": ["Validated"],
+        }
+
+        # These represent invalid transitions (current -> target)
         invalid_transitions = [
             ("Draft", "Validated"),  # Can't go directly from Draft to Validated
-            ("Validated", "Submitted"),  # Can't undo validation (Validated -> Submitted)
+            ("Validated", "Submitted"),  # Can't undo validation
         ]
 
         for current, target in invalid_transitions:
-            # In the real service, these would raise ValueError
-            # Here we just verify the business logic rules
-            if target == "Draft":
-                assert (
-                    current not in ["Submitted", "Validated"]
-                ), f"Invalid transition from {current} to {target}"
-            elif target == "Validated":
-                assert (
-                    current != "Submitted"
-                ), f"Invalid transition from {current} to {target}"
-            elif target == "Submitted":
-                # Submitted can only come from Draft or Updated, not Validated
-                assert (
-                    current != "Validated"
-                ), f"Invalid transition from {current} to {target}"
+            allowed_sources = valid_transitions.get(target, [])
+            assert current not in allowed_sources, (
+                f"Transition from {current} to {target} should be invalid "
+                f"but {current} is in allowed sources {allowed_sources}"
+            )
 
     def test_bulk_update_data_structure(self):
         """Test the expected data structure for bulk updates"""
