@@ -1,7 +1,7 @@
 """Add login_bg_image table for admin-managed login screen backgrounds.
 
 Revision ID: a2b3c4d5e6f7
-Revises: f5a8c3d7e2b4
+Revises: a9b8c7d6e5f4
 Create Date: 2026-03-09 12:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "a2b3c4d5e6f7"
-down_revision = "f5a8c3d7e2b4"
+down_revision = "a9b8c7d6e5f4"
 branch_labels = None
 depends_on = None
 
