@@ -10,7 +10,6 @@ from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
-    FilterModel,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -458,15 +457,6 @@ class FinalSupplyEquipmentServices:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Compliance report not found",
             )
-        if report and mode != "all":
-            pagination.filters.append(
-                FilterModel(
-                    filter_type="number",
-                    field="compliance_report_group_uuid",
-                    type="equals",
-                    filter=report.compliance_report_group_uuid,
-                )
-            )
 
         # Check if organization has any charging equipment
         has_equipment = await self.repo.has_charging_equipment_for_organization(
@@ -481,36 +471,13 @@ class FinalSupplyEquipmentServices:
             )
 
         data, total = await self.repo.get_fse_reporting_list_paginated(
-            organization_id, pagination, report.compliance_report_group_uuid, mode
+            organization_id, pagination, report.compliance_report_id, mode
         )
 
-        # Process data to set fields to None if compliance_report_id doesn't match
         processed_data = []
         for item in data:
-            row_dict = dict(item._mapping) if hasattr(item, '_mapping') else dict(item)
-            level_id = row_dict.get("level_of_equipment_id") or row_dict.get(
-                "level_of_equipment_internal_id"
-            )
-            power_value = await self.repo.get_charging_power_output(
-                level_id,
-                row_dict.get("intended_uses") or [],
-                row_dict.get("intended_users") or [],
-            )
-            row_dict["power_output"] = power_value
-            row_dict["capacity_utilization_percent"] = self._calculate_capacity_utilization(
-                row_dict, power_value
-            )
+            row_dict = dict(item._mapping) if hasattr(item, "_mapping") else dict(item)
             schemaData = FSEReportingSchema.model_validate(row_dict)
-            if (
-                report.compliance_report_group_uuid
-                and schemaData.compliance_report_group_uuid != report.compliance_report_group_uuid
-            ):
-                schemaData.supply_from_date = None
-                schemaData.supply_to_date = None
-                schemaData.charging_equipment_compliance_id = None
-                schemaData.compliance_report_id = None
-                schemaData.compliance_report_group_uuid = None
-                schemaData.compliance_notes = None
             processed_data.append(schemaData)
 
         return {
@@ -524,54 +491,6 @@ class FinalSupplyEquipmentServices:
             ),
             "hasChargingEquipment": has_equipment,
         }
-
-    def _calculate_capacity_utilization(self, row: dict, power_value: float | None) -> int | None:
-        """
-        Calculate the electricity reasonableness percentage for a row based on
-        reported kWh usage and the configured charger power output reference data.
-        """
-        kwh_usage = row.get("kwh_usage")
-        if not kwh_usage:
-            return None
-
-        supply_from = row.get("supply_from_date")
-        supply_to = row.get("supply_to_date")
-        if not supply_from or not supply_to:
-            return None
-
-        def _to_date(value):
-            if isinstance(value, datetime):
-                return value.date()
-            if isinstance(value, date):
-                return value
-            return None
-
-        from_date = _to_date(supply_from)
-        to_date = _to_date(supply_to)
-        if not from_date or not to_date:
-            return None
-
-        operational_days = (to_date - from_date).days + 1
-        if operational_days <= 0 or power_value is None:
-            return None
-
-        try:
-            kwh_value = float(kwh_usage)
-            power_value_number = float(power_value)
-        except (TypeError, ValueError):
-            return None
-
-        if power_value_number <= 0:
-            return None
-
-        reasonable_max = (
-            power_value_number * self.DEFAULT_OPERATIONAL_HOURS * operational_days
-        )
-        if reasonable_max <= 0:
-            return None
-
-        utilization = (kwh_value / reasonable_max) * 100
-        return int(round(utilization))
 
     @service_handler
     async def create_fse_reporting_batch(

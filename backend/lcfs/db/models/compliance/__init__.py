@@ -14,6 +14,8 @@ from .EndUserType import EndUserType
 from .FinalSupplyEquipment import FinalSupplyEquipment
 from .FuelExport import FuelExport
 from .FuelSupply import FuelSupply
+from .FSEReportingBasePrefView import FSEReportingBasePrefView
+from .FSEReportingBaseView import FSEReportingBaseView
 from .ChargingEquipment import ChargingEquipment
 from .ChargingEquipmentStatus import ChargingEquipmentStatus
 from .ComplianceReportChargingEquipment import ComplianceReportChargingEquipment
@@ -39,6 +41,8 @@ __all__ = [
     "FinalSupplyEquipment",
     "FuelSupply",
     "FuelExport",
+    "FSEReportingBaseView",
+    "FSEReportingBasePrefView",
     "ChargingEquipment",
     "ChargingEquipmentStatus",
     "ComplianceReportChargingEquipment",

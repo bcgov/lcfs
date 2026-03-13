@@ -27,6 +27,8 @@ from lcfs.db.models.compliance import (
     AllocationAgreement,
     ComplianceReport,
     EndUserType,
+    FSEReportingBasePrefView,
+    FSEReportingBaseView,
     FinalSupplyEquipment,
     ChargingEquipmentStatus,
     ComplianceReportChargingEquipment,
@@ -133,6 +135,7 @@ class FinalSupplyEquipmentRepository:
         sync_candidates_stmt = (
             select(
                 ComplianceReportChargingEquipment,
+                current_equipment.group_uuid.label("charging_equipment_group_uuid"),
                 latest_equipment_versions.c.charging_equipment_id.label(
                     "latest_charging_equipment_id"
                 ),
@@ -177,6 +180,7 @@ class FinalSupplyEquipmentRepository:
 
         for row in sync_candidates:
             association = row[0]
+            charging_equipment_group_uuid = row.charging_equipment_group_uuid
             latest_equipment_id = row.latest_charging_equipment_id
             latest_equipment_version = row.latest_charging_equipment_version
 
@@ -218,9 +222,42 @@ class FinalSupplyEquipmentRepository:
                 )
                 existing_target.compliance_report_id = association.compliance_report_id
                 await self.db.delete(association)
+                retained_association_id = existing_target.charging_equipment_compliance_id
             else:
                 association.charging_equipment_id = latest_equipment_id
                 association.charging_equipment_version = latest_equipment_version
+                association.is_active = True
+                retained_association_id = association.charging_equipment_compliance_id
+
+            previous_versions_subquery = (
+                select(ComplianceReportChargingEquipment.charging_equipment_compliance_id)
+                .join(
+                    current_equipment,
+                    ComplianceReportChargingEquipment.charging_equipment_id
+                    == current_equipment.charging_equipment_id,
+                )
+                .where(
+                    and_(
+                        ComplianceReportChargingEquipment.compliance_report_group_uuid
+                        == compliance_report_group_uuid,
+                        ComplianceReportChargingEquipment.compliance_report_id
+                        == association.compliance_report_id,
+                        current_equipment.group_uuid
+                        == charging_equipment_group_uuid,
+                        ComplianceReportChargingEquipment.charging_equipment_compliance_id
+                        != retained_association_id,
+                    )
+                )
+            )
+            await self.db.execute(
+                update(ComplianceReportChargingEquipment)
+                .where(
+                    ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                        previous_versions_subquery
+                    )
+                )
+                .values(is_active=False)
+            )
 
             synced_count += 1
 
@@ -1014,97 +1051,113 @@ class FinalSupplyEquipmentRepository:
         self,
         organization_id: int,
         pagination: PaginationRequestSchema,
-        compliance_report_group_uuid: str | None = None,
+        compliance_report_id: int,
         mode: str = "all",
     ) -> tuple[list[dict], int]:
         """
-        Get paginated charging equipment with related charging site and FSE compliance reporting data
+        Get paginated charging equipment reporting rows from reporting views.
         """
-
-        filter_conditions: list[Any] = []
-        # Apply filters
-        if pagination.filters:
-            self._apply_filters(filter_conditions, pagination.filters)
-        union_queries: list[Any] = []
-
-        if mode == "summary":
-            filter_conditions.append(
-                ComplianceReportChargingEquipment.is_active.is_(True)
-            )
-
-        if compliance_report_group_uuid is not None and mode != "all":
-            union_queries.append(
-                self._build_base_select(0, organization_id, filter_conditions).where(
-                    ComplianceReportChargingEquipment.compliance_report_group_uuid
-                    == compliance_report_group_uuid
-                )
-            )
-        else:
-            union_queries.append(
-                self._build_base_select(1, organization_id, filter_conditions)
-            )
-
-        combined_query = self._combine_reporting_queries(union_queries)
-
-        combined_subquery = combined_query.subquery()
-
-        ordering_columns = []
-        if compliance_report_group_uuid and mode == "all":
-            ordering_columns.append(
-                case(
-                    (
-                        combined_subquery.c.compliance_report_group_uuid
-                        == compliance_report_group_uuid,
-                        0,
-                    ),
-                    else_=1,
-                )
-            )
-        ordering_columns.append(combined_subquery.c.source_priority)
-        ordering_columns.append(
-            desc(combined_subquery.c.charging_equipment_compliance_id).nullslast()
+        view_model = (
+            FSEReportingBasePrefView if mode == "all" else FSEReportingBaseView
         )
+        vt = view_model.__table__
 
-        row_number_column = (
-            func.row_number()
-            .over(
-                partition_by=(
-                    combined_subquery.c.charging_equipment_id,
-                    combined_subquery.c.charging_equipment_version,
-                ),
-                order_by=ordering_columns,
-            )
-            .label("row_number")
-        )
+        stmt = select(
+            vt.c.charging_equipment_compliance_id,
+            vt.c.charging_equipment_id,
+            vt.c.charging_equipment_version,
+            vt.c.charging_site_id,
+            vt.c.serial_number,
+            vt.c.manufacturer,
+            vt.c.model,
+            vt.c.site_name,
+            vt.c.street_address,
+            vt.c.city,
+            vt.c.postal_code,
+            vt.c.latitude,
+            vt.c.longitude,
+            vt.c.level_of_equipment,
+            vt.c.level_of_equipment_id,
+            vt.c.ports,
+            vt.c.allocating_organization_name,
+            vt.c.supply_from_date,
+            vt.c.supply_to_date,
+            vt.c.kwh_usage,
+            vt.c.compliance_notes,
+            vt.c.equipment_notes,
+            vt.c.compliance_report_id,
+            vt.c.compliance_report_group_uuid,
+            vt.c.organization_id,
+            vt.c.registration_number,
+            vt.c.intended_uses,
+            vt.c.intended_users,
+            vt.c.power_output,
+            vt.c.capacity_utilization_percent,
+            vt.c.charging_equipment_status.label("status"),
+            vt.c.is_active,
+        ).select_from(vt)
 
-        dedup_subquery = select(*combined_subquery.c, row_number_column).subquery()
-
-        selectable_columns = [
-            column
-            for column in dedup_subquery.c
-            if column.key not in {"row_number", "source_priority"}
+        conditions = [
+            vt.c.organization_id == organization_id,
+            vt.c.compliance_report_id == compliance_report_id,
         ]
+        if mode == "summary":
+            conditions.append(vt.c.is_active.is_(True))
 
-        final_query = (
-            select(*selectable_columns)
-            .select_from(dedup_subquery)
-            .where(dedup_subquery.c.row_number == 1)
-        )
+        filter_field_map = {
+            "site_name": vt.c.site_name,
+            "registration_number": vt.c.registration_number,
+            "street_address": vt.c.street_address,
+            "charging_site_id": vt.c.charging_site_id,
+            "serial_number": vt.c.serial_number,
+            "manufacturer": vt.c.manufacturer,
+            "model": vt.c.model,
+            "equipment_notes": vt.c.equipment_notes,
+            "supply_from_date": vt.c.supply_from_date,
+            "supply_to_date": vt.c.supply_to_date,
+            "kwh_usage": vt.c.kwh_usage,
+            "compliance_report_id": vt.c.compliance_report_id,
+            "compliance_notes": vt.c.compliance_notes,
+            "level_of_equipment": vt.c.level_of_equipment,
+            "ports": vt.c.ports,
+            "status": vt.c.charging_equipment_status,
+            "is_active": vt.c.is_active,
+            "power_output": vt.c.power_output,
+            "capacity_utilization_percent": vt.c.capacity_utilization_percent,
+        }
+        if pagination.filters:
+            for f in pagination.filters:
+                field = filter_field_map.get(f.field)
+                if field is None:
+                    continue
+                condition = apply_filter_conditions(
+                    field, f.filter, f.type, f.filter_type
+                )
+                if condition is not None:
+                    conditions.append(condition)
+
+        final_query = stmt.where(*conditions)
         # Apply sorting
+        sort_field_map = {
+            "site_name": vt.c.site_name,
+            "serial_number": vt.c.serial_number,
+            "manufacturer": vt.c.manufacturer,
+            "model": vt.c.model,
+            "supply_from_date": vt.c.supply_from_date,
+            "supply_to_date": vt.c.supply_to_date,
+            "kwh_usage": vt.c.kwh_usage,
+            "compliance_report_id": vt.c.compliance_report_id,
+            "registration_number": vt.c.registration_number,
+            "level_of_equipment": vt.c.level_of_equipment,
+            "power_output": vt.c.power_output,
+            "capacity_utilization_percent": vt.c.capacity_utilization_percent,
+            "status": vt.c.charging_equipment_status,
+            "is_active": vt.c.is_active,
+        }
         if pagination.sort_orders:
             for sort_order in pagination.sort_orders:
-                if sort_order.field == "site_name":
-                    field = dedup_subquery.c.site_name
-                elif sort_order.field in ["serial_number", "manufacturer", "model"]:
-                    field = getattr(dedup_subquery.c, sort_order.field)
-                elif sort_order.field in [
-                    "supply_from_date",
-                    "supply_to_date",
-                    "kwh_usage",
-                    "compliance_report_id",
-                ]:
-                    field = getattr(dedup_subquery.c, sort_order.field)
-                else:
+                field = sort_field_map.get(sort_order.field)
+                if field is None:
                     continue
 
                 if sort_order.direction.lower() == "desc":
@@ -1113,16 +1166,12 @@ class FinalSupplyEquipmentRepository:
                     final_query = final_query.order_by(asc(field))
         else:
             final_query = final_query.order_by(
-                dedup_subquery.c.charging_equipment_id,
-                dedup_subquery.c.charging_equipment_version,
+                vt.c.charging_equipment_id,
+                vt.c.charging_equipment_version,
             )
 
         # Count total
-        count_query = (
-            select(func.count())
-            .select_from(dedup_subquery)
-            .where(dedup_subquery.c.row_number == 1)
-        )
+        count_query = select(func.count()).select_from(vt).where(*conditions)
         total = await self.db.scalar(count_query)
 
         # Apply pagination

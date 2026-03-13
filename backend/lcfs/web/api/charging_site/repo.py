@@ -63,17 +63,57 @@ class ChargingSiteRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
-    def _apply_latest_version_filter(self, stmt):
+    def _site_version_subquery(self, government_visible: bool = False):
+        if not government_visible:
+            latest_versions = latest_charging_site_version_subquery()
+            return (
+                select(
+                    latest_versions.c.group_uuid,
+                    latest_versions.c.latest_version.label("selected_version"),
+                )
+                .subquery()
+            )
+
+        status_alias = aliased(ChargingSiteStatus)
+        return (
+            select(
+                ChargingSite.group_uuid.label("group_uuid"),
+                ChargingSite.version.label("selected_version"),
+                func.row_number()
+                .over(
+                    partition_by=ChargingSite.group_uuid,
+                    order_by=(
+                        case(
+                            (status_alias.status.in_(("Draft", "Updated")), 1),
+                            else_=0,
+                        ).asc(),
+                        ChargingSite.version.desc(),
+                    ),
+                )
+                .label("rn"),
+            )
+            .join(
+                status_alias,
+                ChargingSite.status_id == status_alias.charging_site_status_id,
+            )
+            .subquery()
+        )
+
+    def _apply_latest_version_filter(self, stmt, government_visible: bool = False):
         """
-        Ensure the provided statement only returns the most recent version of each charging site.
+        Ensure the provided statement only returns the appropriate visible
+        version of each charging site.
         """
-        latest_versions = latest_charging_site_version_subquery()
+        latest_versions = self._site_version_subquery(government_visible)
+        join_conditions = [
+            ChargingSite.group_uuid == latest_versions.c.group_uuid,
+            ChargingSite.version == latest_versions.c.selected_version,
+        ]
+        if government_visible and "rn" in latest_versions.c:
+            join_conditions.append(latest_versions.c.rn == 1)
         return stmt.join(
             latest_versions,
-            and_(
-                ChargingSite.group_uuid == latest_versions.c.group_uuid,
-                ChargingSite.version == latest_versions.c.latest_version,
-            ),
+            and_(*join_conditions),
         )
 
     async def _get_group_uuid_by_site_id(self, charging_site_id: int) -> Optional[str]:
@@ -145,7 +185,7 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_charging_site_by_id(
-        self, charging_site_id: int
+        self, charging_site_id: int, government_visible: bool = False
     ) -> Optional[ChargingSite]:
         """
         Retrieve the latest charging site record for the group identified by the provided site ID.
@@ -168,7 +208,9 @@ class ChargingSiteRepository:
             )
             .where(ChargingSite.group_uuid == group_uuid_subquery)
         )
-        stmt = self._apply_latest_version_filter(stmt)
+        stmt = self._apply_latest_version_filter(
+            stmt, government_visible=government_visible
+        )
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
@@ -272,8 +314,12 @@ class ChargingSiteRepository:
         # Create an alias for the subquery
         ranked_equipment = aliased(ChargingEquipment, ranked_subquery)
         source_site = aliased(ChargingSite, name="source_charging_site")
-        latest_sites = latest_charging_site_version_subquery()
+        latest_sites = self._site_version_subquery(is_government_user)
         latest_site_alias = aliased(ChargingSite, name="latest_charging_site")
+
+        latest_site_join_conditions = [source_site.group_uuid == latest_sites.c.group_uuid]
+        if "rn" in latest_sites.c:
+            latest_site_join_conditions.append(latest_sites.c.rn == 1)
 
         query = (
             select(
@@ -287,13 +333,13 @@ class ChargingSiteRepository:
             )
             .join(
                 latest_sites,
-                source_site.group_uuid == latest_sites.c.group_uuid,
+                and_(*latest_site_join_conditions),
             )
             .join(
                 latest_site_alias,
                 and_(
                     latest_site_alias.group_uuid == latest_sites.c.group_uuid,
-                    latest_site_alias.version == latest_sites.c.latest_version,
+                    latest_site_alias.version == latest_sites.c.selected_version,
                 ),
             )
             .options(
@@ -435,7 +481,7 @@ class ChargingSiteRepository:
 
     @repo_handler
     async def get_all_charging_sites_by_organization_id(
-        self, organization_id: int
+        self, organization_id: int, government_visible: bool = False
     ) -> Sequence[ChargingSite]:
         """
         Retrieve all charging sites for a specific organization, ordered by creation date.
@@ -454,7 +500,9 @@ class ChargingSiteRepository:
             )
             .order_by(asc(ChargingSite.create_date))
         )
-        stmt = self._apply_latest_version_filter(stmt)
+        stmt = self._apply_latest_version_filter(
+            stmt, government_visible=government_visible
+        )
         results = await self.db.execute(stmt)
         sites = results.unique().scalars().all()
         if not isinstance(sites, list):
@@ -491,6 +539,7 @@ class ChargingSiteRepository:
         conditions: list,
         sort_orders: list,
         exclude_draft: bool = False,
+        government_visible: bool = False,
     ) -> tuple[list[ChargingSite], int]:
         """
         Retrieve all charging sites with pagination, filtering, and sorting.
@@ -509,7 +558,9 @@ class ChargingSiteRepository:
             .where(ChargingSite.action_type != ActionTypeEnum.DELETE)
         )
 
-        stmt = self._apply_latest_version_filter(stmt)
+        stmt = self._apply_latest_version_filter(
+            stmt, government_visible=government_visible
+        )
 
         # Add condition to exclude draft sites if requested
         if exclude_draft:
@@ -557,15 +608,20 @@ class ChargingSiteRepository:
         conditions: list,
         sort_orders: list,
         organization_id: int,
+        government_visible: bool = False,
     ) -> tuple[list[ChargingSite], int]:
         """
         Retrieve charging sites for a specific organization with pagination.
         """
         org_condition = ChargingSite.organization_id == organization_id
         all_conditions = [org_condition] + (conditions or [])
-        # Pass False for exclude_draft since supplier users should see their own drafts
         return await self.get_all_charging_sites_paginated(
-            offset, limit, all_conditions, sort_orders, False
+            offset,
+            limit,
+            all_conditions,
+            sort_orders,
+            government_visible,
+            government_visible,
         )
 
     @repo_handler

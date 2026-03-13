@@ -8,7 +8,12 @@ import { Controller, useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import BCButton from '@/components/BCButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faUpload } from '@fortawesome/free-solid-svg-icons'
+import {
+  faDownload,
+  faUpload,
+  faEyeSlash,
+  faFilterCircleXmark
+} from '@fortawesome/free-solid-svg-icons'
 import { useSiteNames } from '@/hooks/useChargingSite'
 import { getFSEReportingColDefs } from './_schema'
 import {
@@ -26,6 +31,13 @@ import ROUTES from '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
 import ImportDialog from '@/components/ImportDialog'
+
+const inactiveRowsFilter = {
+  field: 'isActive',
+  type: 'equals',
+  filterType: 'text',
+  filter: 'false'
+}
 
 export const FinalSupplyEquipmentReporting = () => {
   const { t } = useTranslation()
@@ -71,6 +83,15 @@ export const FinalSupplyEquipmentReporting = () => {
 
   const defaultFromDate = watch('defaultFromDate')
   const defaultToDate = watch('defaultToDate')
+
+  const showingOnlyUnselected = useMemo(
+    () =>
+      (paginationOptions?.filters || []).some(
+        (filter) =>
+          filter.field === 'isActive' && String(filter.filter) === 'false'
+      ),
+    [paginationOptions]
+  )
 
   // Query hook for data fetching
   const queryData = useGetFSEReportingList(
@@ -549,18 +570,39 @@ export const FinalSupplyEquipmentReporting = () => {
     setPaginationOptions((prev) => ({
       ...prev,
       page: 1,
-      filters: newValue
-        ? [
-            {
-              field: 'chargingSiteId',
-              type: 'equals',
-              filterType: 'number',
-              filter: newValue.chargingSiteId
-            }
-          ]
-        : []
+      filters: [
+        ...(newValue
+          ? [
+              {
+                field: 'chargingSiteId',
+                type: 'equals',
+                filterType: 'number',
+                filter: newValue.chargingSiteId
+              }
+            ]
+          : []),
+        ...(showingOnlyUnselected ? [inactiveRowsFilter] : [])
+      ]
     }))
-  }, [])
+  }, [showingOnlyUnselected])
+
+  const handleToggleUnselectedRows = useCallback(() => {
+    setPaginationOptions((prev) => {
+      const filters = prev?.filters || []
+      const nextFilters = showingOnlyUnselected
+        ? filters.filter((filter) => filter.field !== 'isActive')
+        : [
+            ...filters.filter((filter) => filter.field !== 'isActive'),
+            inactiveRowsFilter
+          ]
+
+      return {
+        ...prev,
+        page: 1,
+        filters: nextFilters
+      }
+    })
+  }, [showingOnlyUnselected])
 
   const handleSetDefaultValues = useCallback(async () => {
     const selectedNodes = fseGridRef.current?.api.getSelectedNodes()
@@ -790,6 +832,25 @@ export const FinalSupplyEquipmentReporting = () => {
           >
             {t('finalSupplyEquipment:bulkUpdate.uploadTemplate')}
           </BCButton>
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color={showingOnlyUnselected ? 'secondary' : 'primary'}
+            startIcon={
+              <FontAwesomeIcon
+                icon={
+                  showingOnlyUnselected ? faFilterCircleXmark : faEyeSlash
+                }
+              />
+            }
+            onClick={handleToggleUnselectedRows}
+            sx={{ height: 40, whiteSpace: 'nowrap' }}
+          >
+            {showingOnlyUnselected
+              ? t('common:showAll', 'Show all')
+              : t('finalSupplyEquipment:showUnselectedRows', 'Show unselected rows only')}
+          </BCButton>
+
         </BCBox>
 
         {/* Right side: Filter dropdown */}
