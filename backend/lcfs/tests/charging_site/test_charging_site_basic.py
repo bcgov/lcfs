@@ -63,14 +63,14 @@ class TestChargingSiteFunctionality:
         # - Submitted can come from: Draft, Updated
         # - Validated can come from: Submitted
         # - Decommissioned can come from: Validated
-        
+
         valid_transitions = {
             "Draft": ["Submitted", "Validated"],
             "Submitted": ["Draft", "Updated"],
             "Validated": ["Submitted"],
             "Decommissioned": ["Validated"]
         }
-        
+
         # Test some invalid transitions
         invalid_transitions = [
             ("Draft", "Validated"),  # Can't go directly from Draft to Validated

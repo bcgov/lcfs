@@ -77,7 +77,10 @@ export const useApiService = (opts: AxiosRequestConfig = {}): ApiServiceInstance
           } else if (status === 500) {
             setErrorStatus(500)
           } else if (CONFIG.ENVIRONMENT === 'development') {
-            enqueueSnackbar(`${status} error`, { autoHideDuration: 5000, variant: 'error' })
+            const detail =
+              (error.response?.data as { detail?: string })?.detail ||
+              `${status} error`
+            enqueueSnackbar(detail, { autoHideDuration: 5000, variant: 'error' })
           }
         }
 

@@ -270,14 +270,14 @@ describe('ComplianceReports Schema', () => {
     // Matches screenshot: LCFS Org 2 (2025) - Original Report with flag
     // Supplier has draft supplemental > 30 days, IDIR sees Original Report with flag
     it('should show flag on Original Report when a draft supplemental is > 30 days old (IDIR)', () => {
-      const thirtyOneDaysAgo = new Date()
-      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 32)
+      const thirtyTwoDaysAgo = new Date()
+      thirtyTwoDaysAgo.setDate(thirtyTwoDaysAgo.getDate() - 32)
 
       const data = {
         reportType: 'Original Report',
         compliancePeriod: '2025',
         complianceReportId: 1,
-        latestSupplementalCreateDate: thirtyOneDaysAgo.toISOString(),
+        latestSupplementalCreateDate: thirtyTwoDaysAgo.toISOString(),
         latestStatus: 'Draft',
         isLatest: false
       }
