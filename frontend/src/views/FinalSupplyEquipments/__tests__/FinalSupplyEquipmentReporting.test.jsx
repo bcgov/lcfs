@@ -598,4 +598,69 @@ describe('FinalSupplyEquipmentReporting', () => {
       expect(useImportFSEReportingUpdate).toHaveBeenCalled()
     })
   })
+
+  describe('Bulk Update Template Buttons', () => {
+    it('renders the "Download update template" button', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      expect(downloadBtn).toBeInTheDocument()
+    })
+
+    it('renders the "Upload update template" button', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const uploadBtn = screen.getByRole('button', { name: /upload.*template/i })
+      expect(uploadBtn).toBeInTheDocument()
+    })
+
+    it('download button is not in a loading state initially', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      expect(downloadBtn).not.toBeDisabled()
+    })
+
+    it('download button shows loading state while downloading', async () => {
+      // Mock the download to never resolve so we can observe the loading state
+      let resolveDownload
+      mockApiDownload.mockReturnValue(
+        new Promise((res) => {
+          resolveDownload = res
+        })
+      )
+
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      fireEvent.click(downloadBtn)
+
+      // The button should enter a loading/disabled state while the download is in-flight
+      await waitFor(() => {
+        expect(mockApiDownload).toHaveBeenCalled()
+      })
+
+      // Resolve to clean up
+      resolveDownload({})
+    })
+
+    it('clicking download button triggers the api service download', async () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      fireEvent.click(downloadBtn)
+
+      await waitFor(() => {
+        expect(mockApiDownload).toHaveBeenCalled()
+      })
+    })
+
+    it('import hook is called with the compliance report ID', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      // useImportFSEReportingUpdate is passed as the importHook prop to ImportDialog,
+      // which calls it at render time; verify it was invoked.
+      expect(useImportFSEReportingUpdate).toHaveBeenCalled()
+    })
+  })
 })

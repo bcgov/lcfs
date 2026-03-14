@@ -70,7 +70,7 @@ export const ChargingSiteFSEGrid = ({
     return selectedEquipment.every((eq) => eq.status.status === 'Draft' || eq.status.status === 'Updated')
   }, [selectedRows, equipmentList])
 
-  // Check if selected equipment can be returned to draft (only from Submitted status)
+  // Check if selected equipment can be returned to draft (only from Submitted or Validated status)
   const canReturnToDraft = useMemo(() => {
     if (selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>

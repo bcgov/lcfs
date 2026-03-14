@@ -411,9 +411,8 @@ class ChargingSiteService:
             "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
-                "Validated",
                 "Updated",
-            ],  # Submit (from Draft) or Undo Validation (from Validated) or Updated
+            ],  # Submit (from Draft or Updated)
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
         }
@@ -625,6 +624,7 @@ class ChargingSiteService:
                 ChargingSite(
                     **payload,
                     status=status,
+                    version=1,
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(

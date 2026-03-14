@@ -406,6 +406,66 @@ class ChargingEquipmentRepository:
         return result.rowcount or 0
 
     @repo_handler
+    async def check_duplicate_serial_number(
+        self,
+        charging_site_id: int,
+        serial_number: str,
+        exclude_equipment_id: Optional[int] = None,
+    ) -> bool:
+        """
+        Check if a serial number already exists at the same charging site.
+        Only checks the latest version of each equipment record.
+        Returns True if a duplicate exists.
+        """
+        # Get the group_uuid for the charging site to check all versions
+        site_group_query = select(ChargingSite.group_uuid).where(
+            ChargingSite.charging_site_id == charging_site_id
+        )
+        site_group_result = await self.db.execute(site_group_query)
+        group_uuid = site_group_result.scalar_one_or_none()
+
+        if not group_uuid:
+            return False
+
+        # Get all site IDs in this group (all versions)
+        all_site_ids_query = select(ChargingSite.charging_site_id).where(
+            ChargingSite.group_uuid == group_uuid
+        )
+        all_site_ids_result = await self.db.execute(all_site_ids_query)
+        all_site_ids = all_site_ids_result.scalars().all()
+
+        query = (
+            select(func.count())
+            .select_from(ChargingEquipment)
+            .where(
+                and_(
+                    ChargingEquipment.charging_site_id.in_(all_site_ids),
+                    func.lower(ChargingEquipment.serial_number)
+                    == serial_number.lower().strip(),
+                )
+            )
+        )
+
+        if exclude_equipment_id is not None:
+            # Exclude the current equipment's group_uuid (all versions of it)
+            exclude_group_query = select(ChargingEquipment.group_uuid).where(
+                ChargingEquipment.charging_equipment_id == exclude_equipment_id
+            )
+            exclude_group_result = await self.db.execute(exclude_group_query)
+            exclude_group_uuid = exclude_group_result.scalar_one_or_none()
+            if exclude_group_uuid:
+                query = query.where(
+                    ChargingEquipment.group_uuid != exclude_group_uuid
+                )
+
+        # Only check latest versions
+        query = self._apply_latest_equipment_version_filter(query)
+
+        result = await self.db.execute(query)
+        count = result.scalar()
+        return count > 0
+
+    @repo_handler
     async def create_charging_equipment(
         self, equipment_data: Dict[str, Any]
     ) -> ChargingEquipment:
@@ -948,6 +1008,113 @@ class ChargingEquipmentRepository:
         await self.db.flush()
 
         return result.rowcount
+
+    @repo_handler
+    async def revert_sites_to_draft_if_all_equipment_draft(
+        self,
+        equipment_ids: List[int],
+    ) -> int:
+        """
+        For each charging site associated with the given equipment IDs,
+        revert the site status to Draft only if ALL of its equipment
+        (latest versions) are now in Draft status.
+        """
+        from lcfs.db.models.compliance.ChargingSiteStatus import ChargingSiteStatus
+
+        # Get unique site IDs from equipment
+        site_ids_query = (
+            select(ChargingEquipment.charging_site_id)
+            .distinct()
+            .where(ChargingEquipment.charging_equipment_id.in_(equipment_ids))
+        )
+        site_ids_result = await self.db.execute(site_ids_query)
+        site_ids = site_ids_result.scalars().all()
+
+        if not site_ids:
+            return 0
+
+        # Get Draft status for equipment and site
+        equip_status_query = select(ChargingEquipmentStatus).where(
+            ChargingEquipmentStatus.status == "Draft"
+        )
+        equip_status_result = await self.db.execute(equip_status_query)
+        draft_equip_status = equip_status_result.scalar_one_or_none()
+
+        site_status_query = select(ChargingSiteStatus).where(
+            ChargingSiteStatus.status == "Draft"
+        )
+        site_status_result = await self.db.execute(site_status_query)
+        draft_site_status = site_status_result.scalar_one_or_none()
+
+        if not draft_equip_status or not draft_site_status:
+            return 0
+
+        # For each site, check if ALL its latest-version equipment is Draft
+        updated_count = 0
+        for site_id in site_ids:
+            # Get the group_uuid for this site
+            site_query = select(ChargingSite.group_uuid).where(
+                ChargingSite.charging_site_id == site_id
+            )
+            site_result = await self.db.execute(site_query)
+            group_uuid = site_result.scalar_one_or_none()
+            if not group_uuid:
+                continue
+
+            # Get all site IDs in this group (all versions point equipment here)
+            all_site_ids_query = select(ChargingSite.charging_site_id).where(
+                ChargingSite.group_uuid == group_uuid
+            )
+            all_site_ids_result = await self.db.execute(all_site_ids_query)
+            all_site_ids = all_site_ids_result.scalars().all()
+
+            # Check if any non-Draft equipment exists for this site group
+            non_draft_query = (
+                select(func.count())
+                .select_from(ChargingEquipment)
+                .where(
+                    and_(
+                        ChargingEquipment.charging_site_id.in_(all_site_ids),
+                        ChargingEquipment.status_id
+                        != draft_equip_status.charging_equipment_status_id,
+                    )
+                )
+            )
+            # Only consider latest versions of equipment
+            non_draft_query = self._apply_latest_equipment_version_filter(
+                non_draft_query
+            )
+            non_draft_result = await self.db.execute(non_draft_query)
+            non_draft_count = non_draft_result.scalar()
+
+            if non_draft_count == 0:
+                # All equipment is Draft - revert site to Draft
+                # Get the Submitted status ID to only revert submitted sites
+                submitted_status_query = select(ChargingSiteStatus).where(
+                    ChargingSiteStatus.status == "Submitted"
+                )
+                submitted_result = await self.db.execute(submitted_status_query)
+                submitted_site_status = submitted_result.scalar_one_or_none()
+
+                if submitted_site_status:
+                    site_update = (
+                        update(ChargingSite)
+                        .where(
+                            and_(
+                                ChargingSite.charging_site_id.in_(all_site_ids),
+                                ChargingSite.status_id
+                                == submitted_site_status.charging_site_status_id,
+                            )
+                        )
+                        .values(
+                            status_id=draft_site_status.charging_site_status_id
+                        )
+                    )
+                    result = await self.db.execute(site_update)
+                    updated_count += result.rowcount
+
+        await self.db.flush()
+        return updated_count
 
     @repo_handler
     async def get_charging_site_by_id(self, site_id: int) -> Optional[ChargingSite]:
