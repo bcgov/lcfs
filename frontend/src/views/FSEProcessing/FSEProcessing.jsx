@@ -234,6 +234,21 @@ export const FSEProcessing = () => {
     const equipmentIds = selectedRows.map((row) => row.charging_equipment_id)
     try {
       const result = await returnToDraft(equipmentIds)
+
+      // Check if all equipment on this site will now be Draft
+      let allWillBeDraft = true
+      gridRef.current?.api?.forEachNode((node) => {
+        const isDraftTarget = equipmentIds.includes(node.data.charging_equipment_id)
+        if (!isDraftTarget && node.data.status !== 'Draft') {
+          allWillBeDraft = false
+        }
+      })
+
+      if (allWillBeDraft) {
+        navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+        return
+      }
+
       alertRef.current?.triggerAlert({
         message: result.message,
         severity: 'success'

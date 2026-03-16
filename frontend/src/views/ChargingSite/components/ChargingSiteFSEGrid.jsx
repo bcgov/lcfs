@@ -195,6 +195,20 @@ export const ChargingSiteFSEGrid = ({
           equipmentIds: selectedRows,
           newStatus
         })
+
+        // If moving to Draft, check if all equipment on this site will now be Draft
+        if (newStatus === 'Draft') {
+          const allWillBeDraft = equipmentList.every(
+            (eq) =>
+              selectedRows.includes(eq.chargingEquipmentId) ||
+              eq.status.status === 'Draft'
+          )
+          if (allWillBeDraft) {
+            navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+            return
+          }
+        }
+
         refetch()
         handleClearFilters()
         alertRef.current?.triggerAlert({
@@ -211,7 +225,7 @@ export const ChargingSiteFSEGrid = ({
         setModalData(null)
       }
     },
-    [selectedRows, siteId, bulkUpdateStatus, handleClearFilters]
+    [selectedRows, siteId, bulkUpdateStatus, handleClearFilters, equipmentList, navigate]
   )
 
   const gridOptions = useMemo(
