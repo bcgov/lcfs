@@ -1005,7 +1005,7 @@ class FinalSupplyEquipmentRepository:
         Return total kWh usage for effective FSE records in a report group.
 
         Effective records are derived by keeping the latest record per
-        (charging_equipment_id, charging_equipment_version).
+        equipment group_uuid (which spans all versions of the same equipment).
         """
         conditions = [
             ComplianceReportChargingEquipment.compliance_report_group_uuid
@@ -1016,16 +1016,11 @@ class FinalSupplyEquipmentRepository:
 
         dedup_subquery = (
             select(
-                ComplianceReportChargingEquipment.charging_equipment_id.label(
-                    "charging_equipment_id"
-                ),
-                ComplianceReportChargingEquipment.charging_equipment_version.label(
-                    "charging_equipment_version"
-                ),
+                ChargingEquipment.group_uuid.label("equipment_group_uuid"),
                 ComplianceReportChargingEquipment.kwh_usage.label("kwh_usage"),
                 func.row_number()
                 .over(
-                    partition_by=ComplianceReportChargingEquipment.charging_equipment_id,
+                    partition_by=ChargingEquipment.group_uuid,
                     order_by=(
                         desc(ComplianceReportChargingEquipment.charging_equipment_version),
                         desc(
@@ -1034,6 +1029,11 @@ class FinalSupplyEquipmentRepository:
                     ),
                 )
                 .label("row_number"),
+            )
+            .join(
+                ChargingEquipment,
+                ChargingEquipment.charging_equipment_id
+                == ComplianceReportChargingEquipment.charging_equipment_id,
             )
             .where(and_(*conditions))
             .subquery()
