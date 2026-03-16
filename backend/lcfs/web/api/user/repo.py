@@ -55,6 +55,7 @@ from lcfs.db.seeders.user_seed_data import get_seed_usernames
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
+ORG_BOUND_TEST_USER_RE = re.compile(r"^(lcfs|tfs)\d+$", re.IGNORECASE)
 
 
 class UserRepository:
@@ -62,6 +63,11 @@ class UserRepository:
 
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    @staticmethod
+    def is_test_user(user: UserProfile) -> bool:
+        username = getattr(user, "keycloak_username", "") or ""
+        return bool(ORG_BOUND_TEST_USER_RE.match(username))
 
     def apply_filters(self, pagination, conditions, full_name):
         role_filter_present = False
@@ -574,7 +580,8 @@ class UserRepository:
         user.first_name = user_update.first_name
         user.last_name = user_update.last_name
         user.is_active = user_update.is_active
-        user.organization_id = user_update.organization_id
+        if self.is_test_user(user):
+            user.organization_id = user_update.organization_id
         user.keycloak_email = user_update.keycloak_email
         user.keycloak_username = user_update.keycloak_username
         user.phone = user_update.phone

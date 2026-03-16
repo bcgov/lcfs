@@ -320,3 +320,62 @@ async def test_bceid_role_removed_when_not_in_new_roles():
     names = {ur.role.name for ur in user.user_roles}
     assert RoleEnum.TRANSFER not in names
     assert RoleEnum.COMPLIANCE_REPORTING in names
+
+
+# ---------------------------------------------------------------------------
+# update_user organization guard
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_update_user_allows_organization_update_for_test_user():
+    repo = UserRepository(db=MagicMock())
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "lcfs12"
+    user.organization_id = 4
+    user.organization = None
+    user.role_names = []
+    user.user_roles = []
+
+    user_update = UserCreateSchema(
+        title="Developer",
+        keycloak_username="lcfs12",
+        keycloak_email="lcfs12@example.com",
+        email="lcfs12@example.com",
+        first_name="Test",
+        last_name="User",
+        is_active=True,
+        organization_id=9,
+        roles=[],
+    )
+
+    await repo.update_user(user, user_update)
+
+    assert user.organization_id == 9
+
+
+@pytest.mark.anyio
+async def test_update_user_blocks_organization_update_for_non_test_user():
+    repo = UserRepository(db=MagicMock())
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "real.user"
+    user.organization_id = 4
+    user.organization = None
+    user.role_names = []
+    user.user_roles = []
+
+    user_update = UserCreateSchema(
+        title="Developer",
+        keycloak_username="real.user",
+        keycloak_email="real.user@example.com",
+        email="real.user@example.com",
+        first_name="Real",
+        last_name="User",
+        is_active=True,
+        organization_id=9,
+        roles=[],
+    )
+
+    await repo.update_user(user, user_update)
+
+    assert user.organization_id == 4
