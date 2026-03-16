@@ -308,7 +308,9 @@
     "Low carbon fuel requirement only"
   ],
   "changeInUnits": "Projected change in compliance units balance",
-  "generatedLabel": "Credits generated",
+  "generatedLabel": "Compliance units generated",
+  "selectedFuelType": "Selected fuel type",
+  "quantitySupplied": "Quantity supplied",
   "allRecordsDeleted": "All previous records deleted.",
   "notSubjectToAssessment": "Not Subject to Assessment",
   "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above.",
