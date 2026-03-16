@@ -14,7 +14,7 @@ const seededRoute: AppRouteObject[] = isNonProdEnvironment
   ? [
       {
         path: ROUTES.ADMIN.SEEDED_USER_ASSOCIATION,
-        element: <AdminMenu tabIndex={4} />,
+        element: <AdminMenu tabIndex={5} />,
         handle: { title: 'Seeded user association' }
       }
     ]
