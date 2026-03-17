@@ -961,7 +961,6 @@ export const BCGridViewer = forwardRef(
           onRowClicked={onRowClicked}
           getRowId={getRowId}
           autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
-          enableCellTextSelection={true}
           {...props}
         />
         {!suppressPagination && (
