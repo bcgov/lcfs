@@ -14,18 +14,25 @@ def _to_decimal(value) -> Decimal:
 
 
 def calculate_compliance_units(
-    TCI: float, EER: float, RCI: float, UCI: float, Q: float, ED: float
-) -> Decimal:
+    TCI: float,
+    EER: float,
+    RCI: float,
+    UCI: float,
+    Q: float,
+    ED: float,
+    is_historical: bool = False,
+) -> float:
     """
-    Calculate the compliance units using the fuel supply formula.
+    Calculate the compliance units using the appropriate formula based on the compliance period.
 
     Parameters:
-    - TCI: Target Carbon Intensity
+    - TCI: Target Carbon Intensity (ci_limit in TFRS)
     - EER: Energy Efficiency Ratio
-    - RCI: Recorded Carbon Intensity
-    - UCI: Additional Carbon Intensity Attributable to Use
+    - RCI: Recorded Carbon Intensity (effective_carbon_intensity in TFRS)
+    - UCI: Additional Carbon Intensity Attributable to Use (only used in new calculation)
     - Q: Quantity of Fuel Supplied
     - ED: Energy Density
+    - is_historical: Whether to use pre-2024 calculation method
 
     Returns:
     - The calculated compliance units as a Decimal rounded to 5 decimal places.
@@ -38,8 +45,13 @@ def calculate_compliance_units(
     Q = _to_decimal(Q)
     ED = _to_decimal(ED)
 
-    # Perform the calculation using Decimal arithmetic
-    compliance_units = (TCI * EER - (RCI + UCI)) * ((Q * ED) / Decimal("1000000"))
+    if is_historical:
+        # Pre-2024 calculation (TFRS method)
+        # Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1 000 000
+        compliance_units = (TCI * EER - RCI) * ((Q * ED) / Decimal("1000000"))
+    else:
+        # Post-2024 calculation (LCFS method)
+        compliance_units = (TCI * EER - (RCI + UCI)) * ((Q * ED) / Decimal("1000000"))
 
     # Return rounded to 5 decimal places using ROUND_HALF_UP
     return compliance_units.quantize(Decimal("0.00001"), rounding=ROUND_HALF_UP)
@@ -70,6 +82,7 @@ def calculate_quantity_from_compliance_units(
 
     quantity = (compliance_units * Decimal("1000000")) / denominator
     return quantity.quantize(Decimal("0.00001"), rounding=ROUND_HALF_UP)
+
 
 def calculate_legacy_compliance_units(
     TCI: float, EER: float, RCI: float, Q: float, ED: float

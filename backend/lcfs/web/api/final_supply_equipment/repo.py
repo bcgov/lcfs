@@ -1166,8 +1166,8 @@ class FinalSupplyEquipmentRepository:
                     final_query = final_query.order_by(asc(field))
         else:
             final_query = final_query.order_by(
-                vt.c.charging_equipment_id,
-                vt.c.charging_equipment_version,
+                asc(vt.c.site_name),
+                asc(vt.c.registration_number),
             )
 
         # Count total

@@ -32,22 +32,24 @@ export const CompareReports = () => {
   const [fuelType, setFuelType] = useState('gasoline')
   const [hasUserSelectedFuel, setHasUserSelectedFuel] = useState(false)
 
-  const originalReport = useMemo(() => {
-    if (!Array.isArray(reportChain)) return null
-    return reportChain.find((report) => report.version === 0) || null
-  }, [reportChain])
-
-  const hasSupplementalReports = useMemo(() => {
+  const hasAssessedReport = useMemo(() => {
     if (!Array.isArray(reportChain)) return false
-    return reportChain.some((report) => (report.version ?? 0) > 0)
+    return reportChain.some(
+      (report) =>
+        report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    )
   }, [reportChain])
 
-  const shouldShowOriginalNotAssessedLabel = useMemo(() => {
-    if (!originalReport) return false
-    if (!hasSupplementalReports) return false
-    const originalStatus = originalReport.currentStatus?.status
-    return originalStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
-  }, [originalReport, hasSupplementalReports])
+  const isReportNotAssessed = (reportId) => {
+    if (!hasAssessedReport) return false
+    const report = reportChain.find((r) => r.complianceReportId === reportId)
+    if (!report) return false
+    const status = report.currentStatus?.status
+    return (
+      status !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+      status !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
+    )
+  }
 
   useEffect(() => {
     if (currentReport) {
@@ -255,27 +257,19 @@ export const CompareReports = () => {
         ?.nickname || ''
     : ''
 
-  const originalReportId = originalReport?.complianceReportId
-
-  const isOriginalReport = (reportId) =>
-    !!originalReportId && reportId === originalReportId
-
-  const shouldLabelOriginal = (reportId) =>
-    shouldShowOriginalNotAssessedLabel && isOriginalReport(reportId)
-
-  const report1Label = shouldLabelOriginal(report1ID)
-    ? t('report:originalReportNotAssessed')
+  const report1Label = isReportNotAssessed(report1ID)
+    ? t('report:reportNotAssessed', { nickname: selectedReportName1 })
     : selectedReportName1
 
-  const report2Label = shouldLabelOriginal(report2ID)
-    ? t('report:originalReportNotAssessed')
+  const report2Label = isReportNotAssessed(report2ID)
+    ? t('report:reportNotAssessed', { nickname: selectedReportName2 })
     : selectedReportName2
 
   const highlightedColumns = []
-  if (shouldLabelOriginal(report1ID)) {
+  if (isReportNotAssessed(report1ID)) {
     highlightedColumns.push('report1')
   }
-  if (shouldLabelOriginal(report2ID)) {
+  if (isReportNotAssessed(report2ID)) {
     highlightedColumns.push('report2')
   }
 

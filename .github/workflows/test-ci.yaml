@@ -447,6 +447,7 @@ jobs:
           node-version: '20'
 
       - name: Restore node_modules cache
+        id: cache-restore
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
@@ -456,11 +457,10 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Install frontend dependencies (fallback)
+        if: steps.cache-restore.outputs.cache-hit != 'true'
         run: |
           cd frontend
-          if [ ! -d "node_modules" ]; then
-            npm ci --prefer-offline --no-audit --no-fund
-          fi
+          npm ci --prefer-offline --no-audit --no-fund
 
       - name: Run frontend tests
         id: frontend_tests

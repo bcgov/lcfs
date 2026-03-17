@@ -25,7 +25,8 @@ vi.mock('@/utils/array.js', () => ({
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  cleanEmptyStringValues: vi.fn((data) => ({ ...data, cleaned: true }))
+  cleanEmptyStringValues: vi.fn((data) => ({ ...data, cleaned: true })),
+  formatNumberWithCommas: vi.fn((value) => value?.toString())
 }))
 
 vi.mock('@/utils/schedules.js', () => ({
@@ -79,6 +80,39 @@ vi.mock('@/constants/common', () => ({
 }))
 
 vi.mock('@/constants/statuses', () => ({
+  TRANSFER_STATUSES: {
+    NEW: 'New',
+    DRAFT: 'Draft',
+    DELETED: 'Deleted',
+    SENT: 'Sent',
+    SUBMITTED: 'Submitted',
+    RECOMMENDED: 'Recommended',
+    RECORDED: 'Recorded',
+    REFUSED: 'Refused',
+    DECLINED: 'Declined',
+    RESCINDED: 'Rescinded'
+  },
+  COMPLIANCE_REPORT_STATUSES: {
+    DRAFT: 'Draft',
+    DELETED: 'Deleted',
+    SUBMITTED: 'Submitted',
+    ANALYST_ADJUSTMENT: 'Analyst adjustment',
+    RECOMMENDED_BY_ANALYST: 'Recommended by analyst',
+    RECOMMENDED_BY_MANAGER: 'Recommended by manager',
+    SUPPLEMENTAL_REQUESTED: 'Supplemental requested',
+    ASSESSED: 'Assessed',
+    REJECTED: 'Rejected',
+    RETURN_TO_ANALYST: 'Return to analyst',
+    RETURN_TO_MANAGER: 'Return to manager',
+    RETURN_TO_SUPPLIER: 'Return to supplier'
+  },
+  TRANSACTION_STATUSES: {
+    NEW: 'New',
+    DRAFT: 'Draft',
+    RECOMMENDED: 'Recommended',
+    APPROVED: 'Approved',
+    DELETED: 'Deleted'
+  },
   REPORT_SCHEDULES_VIEW: {
     EDIT: 'EDIT',
     VIEW: 'VIEW'

@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react'
+import { useMemo, useState, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -11,31 +11,35 @@ import {
   faInfoCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
-import {
-  useGetOrgComplianceReportReportedYears,
-  useOrgEarlyIssuance
-} from '@/hooks/useOrganization'
-import { isFeatureEnabled, FEATURE_FLAGS } from '@/constants/config'
+import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
 
-/**
- * TEMPORARY SOLUTION - Issue #3730
- * This component uses hardcoded year checks for 2025/2026 compliance periods.
- * A more robust long-term solution should be implemented to support future years
- * dynamically (e.g., backend-driven configuration per compliance period).
- *
- * Current behavior:
- * - 2025: Disabled when REPORTING_2025_ENABLED feature flag is false
- * - 2026: ALWAYS disabled unless org has early issuance enabled for 2026
- */
 export const NewComplianceReportButton = forwardRef((props, ref) => {
-  const { handleNewReport, isButtonLoading, setIsButtonLoading } = props
+  const {
+    handleNewReport,
+    isButtonLoading,
+    setIsButtonLoading = () => {}
+  } = props
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
-  // Check if org has early issuance for 2026 - always required for 2026 reporting
-  const { data: earlyIssuance2026 } = useOrgEarlyIssuance('2026')
   const { t } = useTranslation(['common', 'report'])
 
   const reportedPeriodIDs = reportedPeriods?.map((p) => p.compliancePeriodId)
+  const availablePeriods = useMemo(() => {
+    const periodsArray = periods?.data || periods || []
+
+    return periodsArray.filter((period) => {
+      if (period?.description?.trim()) {
+        return true
+      }
+
+      if (!period?.effectiveDate) {
+        return false
+      }
+
+      const effectiveYear = new Date(period.effectiveDate).getUTCFullYear()
+      return !Number.isNaN(effectiveYear)
+    })
+  }, [periods])
 
   const [anchorEl, setAnchorEl] = useState(null)
 
@@ -54,17 +58,6 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
   }
 
   const isMenuOpen = Boolean(anchorEl)
-
-  const filteredDates = () => {
-    const currentYear = new Date().getFullYear()
-
-    // Handle both possible data structures safely
-    const periodsArray = periods?.data || periods || []
-    return periodsArray.filter((item) => {
-      const effectiveYear = new Date(item.effectiveDate).getFullYear()
-      return effectiveYear <= currentYear && effectiveYear >= 2024
-    })
-  }
 
   return (
     <div>
@@ -112,33 +105,35 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
             }
           }}
         >
-          {filteredDates().map((period) => {
-            // Determine if this period should be disabled
+          {availablePeriods.map((period) => {
+            const effectiveYear = period?.effectiveDate
+              ? new Date(period.effectiveDate).getUTCFullYear()
+              : null
+            const periodLabel =
+              period?.description?.trim() ||
+              (!Number.isNaN(effectiveYear) && effectiveYear
+                ? effectiveYear
+                : '')
             const isAlreadyReported = reportedPeriodIDs?.includes(
               period.compliancePeriodId
             )
-            // 2025: Blocked when feature flag is disabled
-            const is2025Blocked =
-              period.description === '2025' &&
-              !isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED)
-            // 2026: ALWAYS requires early issuance, regardless of 2025 flag
-            const is2026Blocked =
-              period.description === '2026' &&
-              !earlyIssuance2026?.hasEarlyIssuance
 
             return (
               <MenuItem
                 key={period.compliancePeriodId}
                 onClick={() => handleComplianceOptionClick(period)}
-                disabled={isAlreadyReported || is2025Blocked || is2026Blocked}
-                className={`compliance-period-${period.description}`}
+                disabled={isAlreadyReported}
+                className={`compliance-period-${
+                  !Number.isNaN(effectiveYear) && effectiveYear
+                    ? effectiveYear
+                    : period.compliancePeriodId
+                }`}
               >
-                {period.description}
+                {periodLabel}
               </MenuItem>
             )
           })}
-          {/* Show info message only when 2025 reporting is disabled */}
-          {!isFeatureEnabled(FEATURE_FLAGS.REPORTING_2025_ENABLED) && (
+          {availablePeriods.length === 0 && (
             <Box
               sx={{
                 px: 2,
@@ -158,7 +153,7 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
                   }}
                 />
                 <BCTypography variant="caption" color="text.secondary">
-                  2025 reporting is temporarily unavailable due to regulatory updates
+                  {t('report:noReportsFound')}
                 </BCTypography>
               </Box>
             </Box>

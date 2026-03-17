@@ -156,6 +156,22 @@ describe('currencyFormatter', () => {
   it('should handle very small numbers correctly', () => {
     expect(currencyFormatter(0.0001)).toEqual('$0.00')
   })
+
+  it('should format with custom maxDecimals', () => {
+    expect(currencyFormatter(1234.56, false, 0)).toEqual('$1,235')
+    expect(currencyFormatter(1234.56, false, 1)).toEqual('$1,234.6')
+    expect(currencyFormatter(1234.56, false, 2)).toEqual('$1,234.56')
+  })
+
+  it('should format negative numbers with parentheses when useParentheses is true', () => {
+    expect(currencyFormatter(-1234.56, true, 2)).toEqual('($1,234.56)')
+    expect(currencyFormatter(-7890, true, 0)).toEqual('($7,890)')
+  })
+
+  it('should format negative numbers with minus sign when useParentheses is false', () => {
+    expect(currencyFormatter(-1234.56, false, 2)).toEqual('-$1,234.56')
+    expect(currencyFormatter(-7890, false, 0)).toEqual('-$7,890')
+  })
 })
 
 describe('decimalFormatter', () => {

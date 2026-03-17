@@ -126,8 +126,9 @@ async def save_fuel_supply_row(
         # Delete fuel supply row using actions service
         return await action_service.delete_fuel_supply(request_data)
     else:
+        compliance_period_year = int(compliance_report.compliance_period.description)
         duplicate_id = await fs_validate.check_duplicate(request_data)
-        await fs_validate.validate_other(request_data)
+        await fs_validate.validate_other(request_data, compliance_period_year)
         if duplicate_id is not None:
             duplicate_response = format_duplicate_error(duplicate_id)
             return duplicate_response

@@ -1,8 +1,14 @@
+import structlog
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from lcfs.web.exception.exceptions import ValidationErrorException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from lcfs.logging_config import correlation_id_var
+
+
+def _reference_number() -> str | None:
+    return correlation_id_var.get() or None
 
 
 def _make_json_serializable(errors: list) -> list:
@@ -33,17 +39,15 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     standard_errors = [
         {"fields": [error["loc"][-1]], "message": error["msg"]} for error in errors
     ]
-
-    return JSONResponse(
-        status_code=422,
-        content={
-            "message": "Validation failed",
-            "details": _make_json_serializable(
-                errors
-            ),  # This provides the detailed validation error
-            "errors": standard_errors,  # The body of the request, if needed
-        },
-    )
+    content = {
+        "message": "Validation failed",
+        "details": _make_json_serializable(errors),
+        "errors": standard_errors,
+    }
+    ref = _reference_number()
+    if ref:
+        content["reference_number"] = ref
+    return JSONResponse(status_code=422, content=content)
 
 
 async def validation_error_exception_handler_no_details(
@@ -51,3 +55,30 @@ async def validation_error_exception_handler_no_details(
 ):
     """Handler for ValidationErrorException that returns content without 'detail' wrapping"""
     return JSONResponse(status_code=422, content=exc.errors)
+
+
+async def http_exception_handler(request: Request, exc: HTTPException):
+    content = dict(exc.detail) if isinstance(exc.detail, dict) else {"detail": exc.detail}
+    ref = _reference_number()
+    if ref:
+        content["reference_number"] = ref
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle uncaught exceptions."""
+    logger = structlog.get_logger(__name__)
+    logger.error(
+        "Unhandled exception",
+        error=str(exc),
+        exc_info=True,
+        request_url=str(request.url),
+        method=request.method,
+        headers=dict(request.headers),
+        correlation_id=correlation_id_var.get(),
+    )
+    ref = _reference_number()
+    content = {"detail": "Internal Server Error"}
+    if ref:
+        content["reference_number"] = ref
+    return JSONResponse(status_code=500, content=content)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Union, Optional, Sequence
 
 from lcfs.db.models.compliance import (
@@ -16,6 +16,8 @@ from sqlalchemy import (
     or_,
     select,
     func,
+    cast,
+    String,
     text,
     update,
     distinct,
@@ -73,6 +75,173 @@ class CarbonIntensityResult:
 class FuelCodeRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    def get_fuel_code_bulletin_pagination_params(
+        self, pagination: PaginationRequestSchema
+    ) -> tuple[list, list]:
+        conditions = []
+        filter_field_map = {
+            "fuel_code": func.concat(
+                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            ),
+            "fuel": FuelCodeListView.fuel_type,
+            "company": FuelCodeListView.company,
+            "carbon_intensity": FuelCodeListView.carbon_intensity,
+            "effective_date": FuelCodeListView.effective_date,
+            "expiry_date": FuelCodeListView.expiration_date,
+        }
+
+        for filter in pagination.filters:
+            filter_value = filter.filter
+
+            if filter.filter_type == "set":
+                filter_value = filter.values or []
+            elif filter.filter_type == "date":
+                if filter.type == "inRange":
+                    filter_value = [filter.date_from, filter.date_to]
+                else:
+                    filter_value = filter.date_from
+
+            filter_option = filter.type
+            filter_type = filter.filter_type
+            field = filter_field_map.get(filter.field) or get_field_for_filter(
+                FuelCodeListView, filter.field
+            )
+            conditions.append(
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+            )
+
+        return conditions, pagination.sort_orders or []
+
+    @repo_handler
+    async def get_fuel_code_bulletin_rows(
+        self,
+        compliance_period_start: date,
+        bulletin_type: str,
+        offset: int,
+        limit: int,
+        conditions: list,
+        sort_orders: list,
+    ):
+        """
+        Returns paginated approved fuel code bulletin rows.
+
+        bulletin_type: 'current' or 'archived'
+        Current:
+          - Approved fuel codes
+          - Effective after compliance period start
+          - Still active beyond compliance period start
+
+        Archived:
+          - Approved fuel codes not in current
+        """
+        query = select(
+            FuelCodeListView.prefix,
+            FuelCodeListView.fuel_suffix,
+            FuelCodeListView.fuel_type,
+            FuelCodeListView.company,
+            FuelCodeListView.carbon_intensity,
+            FuelCodeListView.effective_date,
+            FuelCodeListView.expiration_date,
+        ).where(
+            cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
+        )
+        # compliance_period end would 31st March of next compliance year, so add 1 year to start and set to 31st March
+        compliance_period_end = date(compliance_period_start.year + 1, 3, 31)
+        count_query = (
+            select(func.count())
+            .select_from(FuelCodeListView)
+            .where(
+                cast(FuelCodeListView.status, String)
+                == FuelCodeStatusEnum.Approved.value
+            )
+        )
+
+        current_conditions = and_(
+            FuelCodeListView.effective_date < compliance_period_end,
+            or_(
+                FuelCodeListView.expiration_date.is_(None),
+                FuelCodeListView.expiration_date > compliance_period_start,
+            ),
+        )
+
+        # Apply bulletin type filter
+        if bulletin_type == "current":
+            type_conditions = current_conditions
+        else:  # archived
+            type_conditions = ~current_conditions
+
+        query = query.where(type_conditions)
+        count_query = count_query.where(type_conditions)
+
+        # Apply additional filter conditions
+        if conditions:
+            query = query.where(and_(*conditions))
+            count_query = count_query.where(and_(*conditions))
+
+        # Apply sorting
+        sort_map = {
+            "fuel_code": func.concat(
+                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            ),
+            "fuelCode": func.concat(
+                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            ),
+            "fuel": FuelCodeListView.fuel_type,
+            "company": FuelCodeListView.company,
+            "carbon_intensity": FuelCodeListView.carbon_intensity,
+            "carbonIntensity": FuelCodeListView.carbon_intensity,
+            "effective_date": FuelCodeListView.effective_date,
+            "effectiveDate": FuelCodeListView.effective_date,
+            "expiry_date": FuelCodeListView.expiration_date,
+            "expiryDate": FuelCodeListView.expiration_date,
+        }
+
+        order_by_clauses = []
+        for sort in sort_orders or []:
+            column = sort_map.get(sort.field)
+            if not column:
+                continue
+            order_by_clauses.append(
+                asc(column) if sort.direction == "asc" else desc(column)
+            )
+
+        if not order_by_clauses:
+            order_by_clauses = [
+                asc(FuelCodeListView.prefix),
+                asc(FuelCodeListView.fuel_suffix),
+                desc(FuelCodeListView.effective_date),
+            ]
+
+        query = query.order_by(*order_by_clauses).offset(offset).limit(limit)
+
+        result = await self.db.execute(query)
+        total = await self.db.scalar(count_query)
+        rows = result.all()
+
+        formatted_rows = []
+        for row in rows:
+            r = row._mapping
+            effective_date = r["effective_date"]
+            expiration_date = r["expiration_date"]
+
+            if isinstance(effective_date, datetime):
+                effective_date = effective_date.date()
+            if isinstance(expiration_date, datetime):
+                expiration_date = expiration_date.date()
+
+            formatted_rows.append(
+                {
+                    "fuel_code": f'{r["prefix"]}{r["fuel_suffix"]}',
+                    "fuel": r["fuel_type"],
+                    "company": r["company"],
+                    "carbon_intensity": r["carbon_intensity"],
+                    "effective_date": effective_date,
+                    "expiry_date": expiration_date,
+                }
+            )
+
+        return formatted_rows, (total or 0)
 
     @repo_handler
     async def get_fuel_types(self, include_legacy=False) -> List[FuelType]:
@@ -974,13 +1143,32 @@ class FuelCodeRepository:
         result = await self.db.execute(stmt)
         energy_effectiveness_ratio = result.scalars().first()
 
+        # Fallback: if no match with a specific end_use_type_id, try matching
+        # rows where end_use_type_id IS NULL. Pre-2024 EER data has no end-use
+        # type breakdown, so all rows have end_use_type_id=NULL.
+        if energy_effectiveness_ratio is None and end_use_type_id is not None:
+            fallback_conditions = [
+                EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
+                EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
+                EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
+                EnergyEffectivenessRatio.end_use_type_id.is_(None),
+            ]
+            fallback_stmt = select(EnergyEffectivenessRatio).where(*fallback_conditions)
+            fallback_result = await self.db.execute(fallback_stmt)
+            energy_effectiveness_ratio = fallback_result.scalars().first()
+
         return energy_effectiveness_ratio
 
     @repo_handler
     async def get_target_carbon_intensity(
         self, fuel_category_id: int, compliance_period: str
-    ) -> TargetCarbonIntensity:
+    ) -> Optional[TargetCarbonIntensity]:
+        """
+        Get target carbon intensity for specified compliance period and fuel category.
 
+        Returns None if no TCI record exists for the given compliance period,
+        which can happen for legacy years (pre-2024) that were migrated from TFRS.
+        """
         compliance_period_id_subquery = (
             select(CompliancePeriod.compliance_period_id)
             .where(CompliancePeriod.description == compliance_period)
@@ -1001,7 +1189,7 @@ class FuelCodeRepository:
         )
         result = await self.db.execute(stmt)
 
-        return result.scalar_one()
+        return result.scalar_one_or_none()
 
     @repo_handler
     async def get_standardized_fuel_data(
@@ -1100,10 +1288,15 @@ class FuelCodeRepository:
         eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
 
         # Fetch target carbon intensity (TCI)
+        # For legacy years (pre-2024), TCI may not exist in the database
         target_carbon_intensity = await self.get_target_carbon_intensity(
             fuel_category_id, compliance_period
         )
-        target_ci = target_carbon_intensity.target_carbon_intensity
+        target_ci = (
+            target_carbon_intensity.target_carbon_intensity
+            if target_carbon_intensity
+            else None
+        )
 
         # Additional Carbon Intensity (UCI)
         uci = await self.get_additional_carbon_intensity(
@@ -1145,7 +1338,11 @@ class FuelCodeRepository:
     async def get_default_carbon_intensity(
         self, fuel_type_id: int, compliance_period: str
     ) -> Optional[float]:
-        """Get default carbon intensity for specified compliance period"""
+        """Get default carbon intensity for specified compliance period.
+
+        Falls back to the fuel_type table's default_carbon_intensity if no
+        period-specific entry exists (common for pre-2024 petroleum-based fuels).
+        """
 
         compliance_period_id_subquery = (
             select(CompliancePeriod.compliance_period_id)
@@ -1161,7 +1358,17 @@ class FuelCodeRepository:
 
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
-        return record.default_carbon_intensity if record else 0.0
+        if record:
+            return record.default_carbon_intensity
+
+        # Fallback: use the fuel_type table's default_carbon_intensity
+        fuel_type = await self.db.execute(
+            select(FuelType.default_carbon_intensity).where(
+                FuelType.fuel_type_id == fuel_type_id
+            )
+        )
+        fallback_ci = fuel_type.scalar_one_or_none()
+        return fallback_ci if fallback_ci is not None else 0.0
 
     @repo_handler
     async def get_category_carbon_intensity(

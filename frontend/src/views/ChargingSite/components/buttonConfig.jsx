@@ -96,30 +96,36 @@ class ButtonActionFactory {
   }
 
   selectAllDraft() {
-    const draftEquipment = this.context.equipmentList.filter(
-      (e) => e.status.status === 'Draft'
+    const draftUpdatedEquipment = this.context.equipmentList.filter(
+      (e) =>
+        e.status.status === 'Draft' || e.status.status === 'Updated'
     )
-    const draftIds = draftEquipment.map((eq) => eq.chargingEquipmentId)
-    const allDraftSelected =
-      draftIds.length > 0 &&
-      draftIds.every((id) => this.context.selectedRows.includes(id))
+    const draftUpdatedIds = draftUpdatedEquipment.map(
+      (eq) => eq.chargingEquipmentId
+    )
+    const allDraftUpdatedSelected =
+      draftUpdatedIds.length > 0 &&
+      draftUpdatedIds.every((id) => this.context.selectedRows.includes(id))
 
     return this.createButton({
-      style: allDraftSelected
+      style: allDraftUpdatedSelected
         ? BUTTON_STYLES.WARNING_OUTLINED
         : BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-draft-btn',
-      label: allDraftSelected
+      label: allDraftUpdatedSelected
         ? this.context.t('chargingSite:buttons.unselectAllDraft')
         : this.context.t('chargingSite:buttons.selectAllDraft'),
-      icon: allDraftSelected ? (
+      icon: allDraftUpdatedSelected ? (
         <CheckBoxOutlineBlank sx={{ width: '24px', height: '24px' }} />
       ) : (
         <CheckBox sx={{ width: '24px', height: '24px' }} />
       ),
-      disabled: draftEquipment.length === 0,
+      disabled: draftUpdatedEquipment.length === 0,
       handler: () =>
-        this.context.handleToggleSelectByStatus(EQUIPMENT_STATUSES.DRAFT)
+        this.context.handleToggleSelectByStatus([
+          EQUIPMENT_STATUSES.DRAFT,
+          EQUIPMENT_STATUSES.UPDATED
+        ])
     })
   }
 
@@ -291,14 +297,12 @@ const BUTTON_RULES = {
     [USER_TYPES.BCEID_USER]: [
       'createFSE',
       'selectAllDraft',
-      'selectAllSubmitted',
       'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.BCEID_MANAGER]: [
       'createFSE',
       'selectAllDraft',
-      'selectAllSubmitted',
       'setSelectedAsSubmitted',
       'returnSelectedToDraft',
       'selectAllValidated',
