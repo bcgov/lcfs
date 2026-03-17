@@ -20,15 +20,20 @@ const Controls = styled(Box)({
 
 const FUEL_TYPES = ['gasoline', 'diesel', 'jetFuel']
 
-// Lines disabled for compliance periods prior to 2024 (imported TFRS data)
-const GREYED_LOW_CARBON_LINES = [12, 13, 14, 16, 17, 19, 22]
-
+/**
+ * Mirrors the grey-out rules from SummaryTable.isLineGreyedByYear exactly:
+ * - Lines 12, 13, 14, 16, 19: grey for years before 2024
+ * - Lines 17, 22: grey for 2022 and prior
+ */
 const isLowCarbonLineGreyed = (lineNumber, compliancePeriodYear) => {
   if (!compliancePeriodYear) return false
-  return (
-    GREYED_LOW_CARBON_LINES.includes(parseInt(lineNumber)) &&
-    parseInt(compliancePeriodYear) < 2024
-  )
+  const year = parseInt(compliancePeriodYear)
+  const line = parseInt(lineNumber)
+
+  if ([12, 13, 14, 16, 19].includes(line) && year < 2024) return true
+  if ([17, 22].includes(line) && year <= 2022) return true
+
+  return false
 }
 
 export const CompareReports = () => {

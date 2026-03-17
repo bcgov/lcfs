@@ -68,15 +68,21 @@ const SummaryTable = ({
 
   /**
    * Checks if a line should be greyed out based on compliance period year.
-   * Lines 12, 13, 14, 16, 17, 19, 22: Grey out for all reports prior to 2024
-   * (i.e. 2023 and earlier, which includes imported TFRS data)
+   * - Lines 12, 13, 14, 16, 19: Grey out for all reports prior to 2024
+   * - Lines 17, 22: Additionally grey out for 2022 and prior
    */
   const isLineGreyedByYear = (row) => {
     if (!compliancePeriodYear) return false
     const year = parseInt(compliancePeriodYear)
     const lineNumber = parseInt(row.line)
 
-    if ([12, 13, 14, 16, 17, 19, 22].includes(lineNumber) && year < 2024) {
+    // Lines 12, 13, 14, 16, 19 - grey out for years before 2024
+    if ([12, 13, 14, 16, 19].includes(lineNumber) && year < 2024) {
+      return true
+    }
+
+    // Lines 17, 22 - grey out for 2022 and prior
+    if ([17, 22].includes(lineNumber) && year <= 2022) {
       return true
     }
 
