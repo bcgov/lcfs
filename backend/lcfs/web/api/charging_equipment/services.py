@@ -236,6 +236,17 @@ class ChargingEquipmentServices:
 
         equipment_dict = equipment_data.model_dump()
 
+        # Validate no duplicate serial number at the same charging site
+        duplicate = await self.repo.check_duplicate_serial_number(
+            charging_site_id=equipment_dict["charging_site_id"],
+            serial_number=equipment_dict["serial_number"],
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A charging equipment with serial number '{equipment_dict['serial_number']}' already exists at this charging site.",
+            )
+
         # Create equipment
         equipment = await self.repo.create_charging_equipment(equipment_dict)
 
@@ -287,8 +298,24 @@ class ChargingEquipmentServices:
                 detail=f"Cannot edit equipment in {existing.status.status} status",
             )
 
-        # Update equipment
+        # Validate no duplicate serial number at the same charging site
         equipment_dict = equipment_data.model_dump(exclude_unset=True)
+        new_serial = equipment_dict.get("serial_number", existing.serial_number)
+        new_site_id = equipment_dict.get(
+            "charging_site_id", existing.charging_site_id
+        )
+        duplicate = await self.repo.check_duplicate_serial_number(
+            charging_site_id=new_site_id,
+            serial_number=new_serial,
+            exclude_equipment_id=charging_equipment_id,
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A charging equipment with serial number '{new_serial}' already exists at this charging site.",
+            )
+
+        # Update equipment
         equipment = await self.repo.update_charging_equipment(
             charging_equipment_id, equipment_dict
         )
@@ -688,15 +715,15 @@ class ChargingEquipmentServices:
                 detail="Only government users can return equipment to draft",
             )
 
-        # Validate current statuses: Submitted and Validated are eligible
+        # Validate current statuses: only Submitted
         status_map = await self.repo.get_equipment_status_map(equipment_ids, None)
         eligible_ids = [
-            eid for eid, status in status_map.items() if status in ("Submitted", "Validated")
+            eid for eid, status in status_map.items() if status == "Submitted"
         ]
         ineligible_ids = [
             eid
             for eid, status in status_map.items()
-            if status not in ("Submitted", "Validated")
+            if status != "Submitted"
         ]
 
         # Update status to Draft for eligible ones
@@ -712,13 +739,16 @@ class ChargingEquipmentServices:
                 message="No equipment could be returned to draft",
                 affected_count=0,
                 errors=[
-                    "No valid equipment found or not in Submitted/Validated status",
+                    "No valid equipment found or not in Submitted status",
                     *[
-                        f"Equipment {eid} not in Submitted/Validated"
+                        f"Equipment {eid} not in Submitted status"
                         for eid in ineligible_ids
                     ],
                 ],
             )
+
+        # Revert parent charging sites to Draft if all their equipment is now Draft
+        await self.repo.revert_sites_to_draft_if_all_equipment_draft(eligible_ids)
 
         await add_notification_msg(
             action_type=ActionTypeEnum.UPDATE,

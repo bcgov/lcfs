@@ -406,12 +406,16 @@ async def test_get_fse_reporting_list_paginated_success(
             "intended_uses": ["LDV"],
             "intended_users": ["Residential"],
             "status": "Submitted",
+            "power_output": 0,
+            "capacity_utilization_percent": 0,
         }
     ]
     mock_repo.get_fse_reporting_list_paginated.return_value = (mock_data, 1)
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+    mock_report = MagicMock(
+        compliance_report_id=10,
         compliance_report_group_uuid="uuid-1234"
     )
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = mock_report
 
     pagination = MagicMock(page=1, size=10, filters=[])
     result = await service.get_fse_reporting_list_paginated(
@@ -424,12 +428,7 @@ async def test_get_fse_reporting_list_paginated_success(
     assert result["pagination"].total == 1
     assert result["finalSupplyEquipments"][0].status == "Submitted"
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
-        1, pagination, "uuid-1234", "current"
-    )
-    mock_repo.get_charging_power_output.assert_awaited_once_with(
-        22,
-        ["LDV"],
-        ["Residential"],
+        1, pagination, 10, "current"
     )
     mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
         "uuid-1234", only_active=False
@@ -468,15 +467,16 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
         "registration_number": "REG-001",
         "intended_uses": ["Light duty motor vehicles"],
         "intended_users": ["Residential"],
-        "intended_uses": ["Light duty motor vehicles"],
-        "intended_users": ["Residential"],
         "level_of_equipment_internal_id": 303,
         "deleted": None,
+        "power_output": 50,
+        "capacity_utilization_percent": 80,
+        "status": "Submitted",
     }
     mock_repo.get_fse_reporting_list_paginated.return_value = ([mock_row], 1)
-    mock_repo.get_charging_power_output.return_value = 50
     mock_repo.get_total_kwh_usage_for_report_group.return_value = 4800
     mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        compliance_report_id=10,
         compliance_report_group_uuid="uuid-1234"
     )
 
@@ -487,11 +487,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
 
     equipment = result["finalSupplyEquipments"][0]
     assert equipment.capacity_utilization_percent == 80
-    mock_repo.get_charging_power_output.assert_awaited_once_with(
-        303,
-        ["Light duty motor vehicles"],
-        ["Residential"],
-    )
+    assert equipment.power_output == 50
     mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
         "uuid-1234", only_active=True
     )

@@ -251,6 +251,41 @@ export const useSiteNames = (organizationId = null, options = {}) => {
   })
 }
 
+export const useUpdateChargingSiteStatus = (options = {}) => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ siteId, newStatus }) => {
+      if (!siteId) {
+        throw new Error('Charging site ID is required')
+      }
+      const response = await apiService.patch(
+        apiRoutes.updateChargingSiteStatus.replace(':siteId', String(siteId)),
+        { new_status: newStatus }
+      )
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      const siteId = variables?.siteId
+      if (siteId) {
+        queryClient.invalidateQueries({ queryKey: ['chargingSite', siteId] })
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated', siteId]
+        })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+      }
+      onSuccess?.(data, variables)
+    },
+    onError,
+    retry: 0,
+    ...restOptions
+  })
+}
+
 export const useBulkUpdateEquipmentStatus = (options = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
@@ -297,7 +332,10 @@ export const useBulkUpdateEquipmentStatus = (options = {}) => {
         queryClient.invalidateQueries({
           queryKey: ['charging-site-equipment-paginated']
         })
-        // 3. Invalidate all charging sites by organization queries
+        // 3. Invalidate all charging sites list queries (both IDIR and org)
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSitesAll']
+        })
         queryClient.invalidateQueries({
           queryKey: ['chargingSitesByOrg']
         })

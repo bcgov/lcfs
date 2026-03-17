@@ -301,6 +301,12 @@ def compliance_report_update_service(
     service._charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
         return_value=0
     )
+    # Mock the _fse_repo with proper async mock
+    mock_fse_repo = AsyncMock()
+    mock_fse_repo.sync_reporting_associations_to_latest_equipment = AsyncMock(
+        return_value=0
+    )
+    service._fse_repo = mock_fse_repo
     return service
 
 

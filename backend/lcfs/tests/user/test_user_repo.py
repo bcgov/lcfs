@@ -2,6 +2,7 @@ from unittest.mock import Mock
 import pytest
 from lcfs.db.models import UserProfile, UserLoginHistory
 from lcfs.web.api.user.repo import UserRepository
+from lcfs.web.api.user.schema import UserCreateSchema
 from lcfs.tests.user.user_payloads import user_orm_model
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy import text

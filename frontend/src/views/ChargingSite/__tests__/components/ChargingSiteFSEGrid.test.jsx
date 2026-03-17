@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChargingSiteFSEGrid } from '../../components/ChargingSiteFSEGrid'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
@@ -30,6 +30,32 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
       >
         Row Click
       </button>
+      <button
+        onClick={() =>
+          props.gridOptions?.onSelectionChanged?.({
+            api: {
+              getSelectedNodes: () => [
+                { data: { chargingEquipmentId: 2, status: { status: 'Validated' } } }
+              ]
+            }
+          })
+        }
+      >
+        Select Validated
+      </button>
+      <button
+        onClick={() =>
+          props.gridOptions?.onSelectionChanged?.({
+            api: {
+              getSelectedNodes: () => [
+                { data: { chargingEquipmentId: 3, status: { status: 'Submitted' } } }
+              ]
+            }
+          })
+        }
+      >
+        Select Submitted
+      </button>
     </div>
   ))
 }))
@@ -52,6 +78,16 @@ describe('ChargingSiteFSEGrid', () => {
         chargingEquipmentId: 1,
         status: { status: 'Draft' },
         registrationNumber: 'REG001'
+      },
+      {
+        chargingEquipmentId: 2,
+        status: { status: 'Validated' },
+        registrationNumber: 'REG002'
+      },
+      {
+        chargingEquipmentId: 3,
+        status: { status: 'Submitted' },
+        registrationNumber: 'REG003'
       }
     ],
     status: { status: 'Draft' },
@@ -248,6 +284,42 @@ describe('ChargingSiteFSEGrid', () => {
       expect(String(firstCall[1].state.chargingSiteId)).toBe(
         String(secondCall[1].state.chargingSiteId)
       )
+    })
+  })
+
+  describe('Return to draft button rules', () => {
+    it('disables Return to draft for IDIR when a Validated row is selected', async () => {
+      const idirProps = {
+        ...mockProps,
+        isIDIR: true,
+        hasAnyRole: vi.fn(() => true),
+        hasRoles: vi.fn((role) => role === 'analyst')
+      }
+      render(<ChargingSiteFSEGrid {...idirProps} />, { wrapper })
+
+      fireEvent.click(screen.getByText('Select Validated'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', {
+            name: 'chargingSite:buttons.returnSelectedToDraft'
+          })
+        ).toBeDisabled()
+      })
+    })
+
+    it('keeps Return to draft enabled for non-IDIR when a Validated row is selected', async () => {
+      render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
+
+      fireEvent.click(screen.getByText('Select Validated'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', {
+            name: 'chargingSite:buttons.returnSelectedToDraft'
+          })
+        ).toBeEnabled()
+      })
     })
   })
 })

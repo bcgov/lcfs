@@ -11,6 +11,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingSiteCreateSchema,
     ChargingSiteSchema,
     ChargingSitesSchema,
+    ChargingSiteManualStatusUpdateSchema,
     ChargingEquipmentStatusSchema,
     ChargingSiteStatusSchema,
 )
@@ -173,7 +174,7 @@ class TestChargingSiteService:
             result = await charging_site_service.get_charging_site_by_id(1)
 
             assert isinstance(result, ChargingSiteSchema)
-            mock_repo.get_charging_site_by_id.assert_called_once_with(1)
+            mock_repo.get_charging_site_by_id.assert_called_once_with(1, government_visible=False)
 
     @pytest.mark.anyio
     async def test_get_charging_site_by_id_not_found(
@@ -382,6 +383,162 @@ class TestChargingSiteService:
         mock_repo.charging_site_name_exists.assert_awaited_once_with(
             "Updated Site", 1, exclude_site_id=mock_existing_site.charging_site_id
         )
+
+    @pytest.mark.anyio
+    async def test_update_charging_site_status_manual_government_submitted_to_validated(
+        self, charging_site_service, mock_repo, mock_request
+    ):
+        """Test IDIR Analyst can set status from Submitted to Validated."""
+        mock_request.user.organization = MagicMock()
+        mock_request.user.organization.organization_id = 1
+
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.charging_site_id = 1
+        mock_site.organization_id = 1
+        mock_site.status = MagicMock()
+        mock_site.status.status = "Submitted"
+
+        mock_validated_status = MagicMock(spec=ChargingSiteStatus)
+        mock_validated_status.charging_site_status_id = 2
+        mock_validated_status.status = "Validated"
+
+        # Second call returns a site that must validate as ChargingSiteSchema
+        mock_org = MagicMock()
+        mock_org.organization_id = 1
+        mock_org.name = "Test Org"
+        mock_allocating_org = MagicMock()
+        mock_allocating_org.organization_id = 2
+        mock_allocating_org.name = "Allocating Org"
+        mock_updated_site = MagicMock(spec=ChargingSite)
+        mock_updated_site.charging_site_id = 1
+        mock_updated_site.group_uuid = "site-uuid-1"
+        mock_updated_site.organization_id = 1
+        mock_updated_site.organization = mock_org
+        mock_updated_site.allocating_organization_id = 2
+        mock_updated_site.allocating_organization = mock_allocating_org
+        mock_updated_site.allocating_organization_name = "Allocating Org"
+        mock_updated_site.status_id = 2
+        mock_updated_site.status = mock_validated_status
+        mock_updated_site.version = 1
+        mock_updated_site.site_code = "SITE001"
+        mock_updated_site.site_name = "Test Site"
+        mock_updated_site.street_address = "123 Main St"
+        mock_updated_site.city = "Vancouver"
+        mock_updated_site.postal_code = "V6B 1A1"
+        mock_updated_site.latitude = 49.2827
+        mock_updated_site.longitude = -123.1207
+        mock_updated_site.documents = []
+        mock_updated_site.notes = "Test notes"
+        mock_updated_site.create_date = None
+        mock_updated_site.update_date = None
+        mock_updated_site.create_user = "testuser"
+        mock_updated_site.update_user = "testuser"
+
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+        mock_repo.get_charging_site_status_by_name.return_value = mock_validated_status
+        mock_repo.update_charging_site_status.return_value = None
+        mock_repo.get_charging_site_by_id.side_effect = [mock_site, mock_updated_site]
+
+        with patch(
+            "lcfs.web.api.charging_site.services.user_has_roles"
+        ) as mock_has_roles:
+            # Government and Analyst return True so IDIR Analyst path is taken
+            mock_has_roles.side_effect = lambda user, roles: (
+                RoleEnum.GOVERNMENT in roles or RoleEnum.ANALYST in roles
+            )
+
+            body = ChargingSiteManualStatusUpdateSchema(new_status="Validated")
+            result = await charging_site_service.update_charging_site_status_manual(
+                1, body
+            )
+
+            assert result.status.status == "Validated"
+            mock_repo.update_charging_site_status.assert_called_once_with(1, 2)
+
+    @pytest.mark.anyio
+    async def test_update_charging_site_status_manual_unauthorized(
+        self, charging_site_service, mock_repo, mock_request
+    ):
+        """Test user without Government or BCeID roles gets 403."""
+        with patch(
+            "lcfs.web.api.charging_site.services.user_has_roles"
+        ) as mock_has_roles:
+            mock_has_roles.return_value = False
+
+            body = ChargingSiteManualStatusUpdateSchema(new_status="Validated")
+            with pytest.raises(HTTPException) as exc_info:
+                await charging_site_service.update_charging_site_status_manual(
+                    1, body
+                )
+
+            assert exc_info.value.status_code == 403
+            mock_repo.get_charging_site_by_id.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_update_charging_site_status_manual_government_not_analyst_forbidden(
+        self, charging_site_service, mock_repo, mock_request
+    ):
+        """Test Government user without Analyst role cannot set status to Validated (403)."""
+        mock_request.user.organization = MagicMock()
+        mock_request.user.organization.organization_id = 1
+
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.charging_site_id = 1
+        mock_site.organization_id = 1
+        mock_site.status = MagicMock()
+        mock_site.status.status = "Submitted"
+
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+
+        with patch(
+            "lcfs.web.api.charging_site.services.user_has_roles"
+        ) as mock_has_roles:
+            # Government True, Analyst False (and not compliance/signing)
+            mock_has_roles.side_effect = lambda user, roles: (
+                RoleEnum.GOVERNMENT in roles and RoleEnum.ANALYST not in roles
+            )
+
+            body = ChargingSiteManualStatusUpdateSchema(new_status="Validated")
+            with pytest.raises(HTTPException) as exc_info:
+                await charging_site_service.update_charging_site_status_manual(
+                    1, body
+                )
+
+            assert exc_info.value.status_code == 403
+            assert "Only IDIR Analyst" in str(exc_info.value.detail)
+            mock_repo.update_charging_site_status.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_update_charging_site_status_manual_invalid_transition_government(
+        self, charging_site_service, mock_repo, mock_request
+    ):
+        """Test IDIR Analyst cannot set status to Validated when current is not Submitted."""
+        mock_request.user.organization = MagicMock()
+        mock_request.user.organization.organization_id = 1
+
+        mock_site = MagicMock(spec=ChargingSite)
+        mock_site.charging_site_id = 1
+        mock_site.organization_id = 1
+        mock_site.status = MagicMock()
+        mock_site.status.status = "Draft"
+
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+
+        with patch(
+            "lcfs.web.api.charging_site.services.user_has_roles"
+        ) as mock_has_roles:
+            mock_has_roles.side_effect = lambda user, roles: (
+                RoleEnum.GOVERNMENT in roles or RoleEnum.ANALYST in roles
+            )
+
+            body = ChargingSiteManualStatusUpdateSchema(new_status="Validated")
+            with pytest.raises(HTTPException) as exc_info:
+                await charging_site_service.update_charging_site_status_manual(
+                    1, body
+                )
+
+            assert exc_info.value.status_code == 400
+            mock_repo.update_charging_site_status.assert_not_called()
 
     @pytest.mark.anyio
     async def test_update_charging_site_validated_creates_new_version(
@@ -606,7 +763,7 @@ class TestChargingSiteService:
 
         assert isinstance(result, ChargingSitesSchema)
         assert len(result.charging_sites) == 1
-        mock_repo.get_all_charging_sites_by_organization_id.assert_called_once_with(1)
+        mock_repo.get_all_charging_sites_by_organization_id.assert_called_once_with(1, government_visible=False)
 
     @pytest.mark.anyio
     async def test_get_charging_sites_paginated(self, charging_site_service, mock_repo):

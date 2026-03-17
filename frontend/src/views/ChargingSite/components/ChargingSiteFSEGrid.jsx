@@ -76,17 +76,12 @@ export const ChargingSiteFSEGrid = ({
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
-    return selectedEquipment.every((eq) => eq.status.status === 'Submitted')
-  }, [selectedRows, equipmentList])
-
-  // Check if selected equipment can be returned to submitted (undo validation - only from Validated status)
-  const canUndoValidation = useMemo(() => {
-    if (selectedRows.length === 0) return false
-    const selectedEquipment = equipmentList.filter((eq) =>
-      selectedRows.includes(eq.chargingEquipmentId)
+    return selectedEquipment.every((eq) =>
+      isIDIR
+        ? eq.status.status === 'Submitted'
+        : eq.status.status === 'Submitted' || eq.status.status === 'Validated'
     )
-    return selectedEquipment.every((eq) => eq.status.status === 'Validated')
-  }, [selectedRows, equipmentList])
+  }, [selectedRows, equipmentList, isIDIR])
 
   // Check if selected equipment can be validated (only from Submitted status)
   const canValidate = useMemo(() => {
@@ -202,6 +197,20 @@ export const ChargingSiteFSEGrid = ({
           equipmentIds: selectedRows,
           newStatus
         })
+
+        // If moving to Draft, check if all equipment on this site will now be Draft
+        if (newStatus === 'Draft') {
+          const allWillBeDraft = equipmentList.every(
+            (eq) =>
+              selectedRows.includes(eq.chargingEquipmentId) ||
+              eq.status.status === 'Draft'
+          )
+          if (allWillBeDraft) {
+            navigate(ROUTES.REPORTS.CHARGING_SITE.INDEX)
+            return
+          }
+        }
+
         refetch()
         handleClearFilters()
         alertRef.current?.triggerAlert({
@@ -218,7 +227,7 @@ export const ChargingSiteFSEGrid = ({
         setModalData(null)
       }
     },
-    [selectedRows, siteId, bulkUpdateStatus, handleClearFilters]
+    [selectedRows, siteId, bulkUpdateStatus, handleClearFilters, equipmentList, navigate]
   )
 
   const gridOptions = useMemo(
@@ -279,7 +288,6 @@ export const ChargingSiteFSEGrid = ({
       selectedRows,
       isUpdating,
       canValidate,
-      canUndoValidation,
       canReturnToDraft,
       canSubmit,
       canSetToDecommission,
@@ -299,7 +307,6 @@ export const ChargingSiteFSEGrid = ({
     selectedRows,
     isUpdating,
     canValidate,
-    canUndoValidation,
     canReturnToDraft,
     canSubmit,
     canSetToDecommission,

@@ -27,6 +27,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingSiteStatusEnum,
     ChargingSitesSchema,
     ChargingSiteStatusSchema,
+    ChargingSiteManualStatusUpdateSchema,
     ChargingEquipmentForSiteSchema,
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentPaginatedSchema,
@@ -211,7 +212,10 @@ class ChargingSiteService:
         Service method to get a charging site by ID
         """
         logger.info("Getting charging site by ID")
-        charging_site = await self.repo.get_charging_site_by_id(site_id)
+        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        charging_site = await self.repo.get_charging_site_by_id(
+            site_id, government_visible=is_government
+        )
 
         if not charging_site:
             raise HTTPException(
@@ -242,6 +246,109 @@ class ChargingSiteService:
             )
 
         return ChargingSiteSchema.model_validate(charging_site)
+
+    @service_handler
+    async def update_charging_site_status_manual(
+        self,
+        charging_site_id: int,
+        body: ChargingSiteManualStatusUpdateSchema,
+    ) -> ChargingSiteSchema:
+        """
+        Manually set charging site status. Role-based allowed transitions:
+        - IDIR Analyst: Submitted -> Validated
+        - BCeID Compliance Reporting / Signing Authority: Draft or Updated -> Submitted
+        """
+        user = self.request.user
+        is_government = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_bceid_compliance = user_has_roles(user, [RoleEnum.COMPLIANCE_REPORTING]) or user_has_roles(
+            user, [RoleEnum.SIGNING_AUTHORITY]
+        )
+
+        if not is_government and not is_bceid_compliance:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only IDIR (Government) or BCeID Compliance Reporting/Signing Authority can manually change charging site status.",
+            )
+
+        charging_site = await self.repo.get_charging_site_by_id(charging_site_id)
+        if not charging_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {charging_site_id} not found",
+            )
+        organization_id = charging_site.organization_id
+        user_organization_id = (
+            user.organization.organization_id if user.organization else None
+        )
+        if (
+            not user_has_roles(user, [RoleEnum.GOVERNMENT])
+            and organization_id != user_organization_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this site.",
+            )
+
+        current_status = (
+            charging_site.status.status if charging_site.status else None
+        )
+        new_status = body.new_status
+
+        if new_status == ChargingSiteStatusEnum.VALIDATED and is_government and not is_analyst:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only IDIR Analyst can set charging site status to Validated.",
+            )
+
+        # IDIR Analyst only: Submitted -> Validated
+        if is_government and is_analyst and not is_bceid_compliance:
+            if new_status != ChargingSiteStatusEnum.VALIDATED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="IDIR users can only set charging site status to Validated.",
+                )
+            if current_status != ChargingSiteStatusEnum.SUBMITTED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Charging site can only be set to Validated when current status is Submitted.",
+                )
+        elif is_bceid_compliance:
+            if new_status != ChargingSiteStatusEnum.SUBMITTED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="BCeID users can only set charging site status to Submitted.",
+                )
+            if current_status not in (
+                ChargingSiteStatusEnum.DRAFT,
+                ChargingSiteStatusEnum.UPDATED,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Charging site can only be set to Submitted when current status is Draft or Updated.",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to perform this status change.",
+            )
+
+        new_status_record = await self.repo.get_charging_site_status_by_name(
+            new_status
+        )
+        if not new_status_record:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status: {new_status}",
+            )
+
+        await self.repo.update_charging_site_status(
+            charging_site.charging_site_id,
+            new_status_record.charging_site_status_id,
+        )
+
+        updated = await self.repo.get_charging_site_by_id(charging_site_id)
+        return ChargingSiteSchema.model_validate(updated)
 
     @service_handler
     async def get_charging_site_equipment_paginated(
@@ -304,9 +411,8 @@ class ChargingSiteService:
             "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
-                "Validated",
                 "Updated",
-            ],  # Submit (from Draft) or Undo Validation (from Validated) or Updated
+            ],  # Submit (from Draft or Updated)
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
         }
@@ -389,7 +495,12 @@ class ChargingSiteService:
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders, organization_id
+            offset,
+            limit,
+            conditions,
+            pagination.sort_orders,
+            organization_id,
+            government_visible=self.request.user.is_government,
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -423,7 +534,12 @@ class ChargingSiteService:
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_all_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders, exclude_draft
+            offset,
+            limit,
+            conditions,
+            pagination.sort_orders,
+            exclude_draft,
+            government_visible=True,
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -445,7 +561,8 @@ class ChargingSiteService:
         logger.info("Getting charging sites")
         try:
             charging_sites = await self.repo.get_all_charging_sites_by_organization_id(
-                organization_id
+                organization_id,
+                government_visible=self.request.user.is_government,
             )
             return ChargingSitesSchema(
                 charging_sites=[
@@ -507,6 +624,7 @@ class ChargingSiteService:
                 ChargingSite(
                     **payload,
                     status=status,
+                    version=1,
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(
