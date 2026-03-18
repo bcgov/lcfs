@@ -40,7 +40,7 @@ export const BCGridBase = forwardRef(
       autoSizeStrategy,
       autoHeight,
       containerStyle,
-      enableCellTextSelection=true,
+      enableCellTextSelection,
       getRowId,
       overlayNoRowsTemplate,
       queryData,

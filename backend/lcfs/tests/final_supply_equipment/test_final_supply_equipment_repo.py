@@ -517,6 +517,30 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
     assert data[0]["charging_equipment_id"] == 1
     assert data[0]["status"] == "Submitted"
 
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+    assert "site_name ASC NULLS LAST" in compiled_sql
+    assert "registration_number DESC NULLS LAST" in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_get_fse_for_bulk_update_template_uses_site_then_registration_sort(
+    repo, fake_db
+):
+    fake_result = MagicMock()
+    fake_result.fetchall.return_value = []
+    fake_db.execute.return_value = fake_result
+
+    await repo.get_fse_for_bulk_update_template(
+        organization_id=1, compliance_report_group_uuid="group-123"
+    )
+
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "site_name ASC NULLS LAST" in compiled_sql
+    assert "registration_number DESC NULLS LAST" in compiled_sql
+
 
 @pytest.mark.anyio
 async def test_create_fse_reporting_batch(repo, fake_db):
