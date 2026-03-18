@@ -396,19 +396,30 @@ describe('Charging Site and FSE supplier workflows', () => {
     cy.visit('/compliance-reporting/fse', { timeout: 30000 })
     cy.wait('@chargingEquipmentList')
 
-    cy.contains('button', 'Select all Draft/Updated', { timeout: 30000 }).click()
-    cy.contains('button', 'Submit selected').click()
+    cy.contains('button', 'Select all Draft/Updated', { timeout: 30000 })
+      .should('be.visible')
+      .click()
+    cy.contains('button', 'Submit selected', { timeout: 30000 })
+      .should('be.visible')
+      .click()
+    // Click the confirmation button in the modal
     cy.contains('button', 'Submit selected', { timeout: 30000 }).last().click()
     cy.wait('@bulkSubmit')
-    cy.getByDataTest('alert-box').should('contain', 'submitted')
+    cy.getByDataTest('alert-box', { timeout: 30000 }).should('contain', 'submitted')
 
-    cy.contains('button', 'Select all Validated', { timeout: 30000 }).click()
-    cy.contains('button', 'Set to Decommissioned').first().click()
+    cy.contains('button', 'Select all Validated', { timeout: 30000 })
+      .should('be.visible')
+      .click()
+    cy.contains('button', 'Set to Decommissioned', { timeout: 30000 })
+      .should('be.visible')
+      .first()
+      .click()
+    // Click the confirmation button in the modal
     cy.contains('button', 'Set to Decommissioned', { timeout: 30000 })
       .last()
       .click()
     cy.wait('@bulkDecommission')
-    cy.getByDataTest('alert-box').should('contain', 'decommissioned')
+    cy.getByDataTest('alert-box', { timeout: 30000 }).should('contain', 'decommissioned')
   })
 })
 
@@ -499,13 +510,18 @@ describe('FSE processing and map workflows (IDIR)', () => {
     cy.contains('h5, h6', 'Charging site/FSE processing', {
       timeout: 30000
     }).should('be.visible')
-    cy.contains('button', 'Select all submitted').click()
-    cy.contains('button', 'Set selected as validated').click()
+    cy.contains('button', 'Select all submitted', { timeout: 30000 })
+      .should('be.visible')
+      .click()
+    cy.contains('button', 'Set selected as validated', { timeout: 30000 })
+      .should('be.visible')
+      .click()
+    // Click the confirmation button in the modal
     cy.contains('button', 'Validate Equipment', { timeout: 30000 })
       .last()
       .click()
     cy.wait('@bulkValidate')
-    cy.getByDataTest('alert-box').should('contain', 'Validated')
+    cy.getByDataTest('alert-box', { timeout: 30000 }).should('contain', 'Validated')
   })
 
   it('renders the FSE map view and supports interactions', () => {

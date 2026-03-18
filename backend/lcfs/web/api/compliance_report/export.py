@@ -1,5 +1,6 @@
 import decimal
 import io
+import re
 from datetime import datetime
 from fastapi import Depends
 from openpyxl import Workbook
@@ -125,8 +126,13 @@ class ComplianceReportExporter:
         )
         await self._add_summary_sheet(wb, summary_schema)
 
+        compliance_year = int(report.compliance_period.description)
+
         # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
+            # FSE is not applicable for compliance periods before 2024
+            if sheet_name == FSE_EXPORT_SHEET and compliance_year < 2024:
+                continue
             if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
                 data = await loader(cid, is_quarterly)
             else:
@@ -218,7 +224,10 @@ class ComplianceReportExporter:
 
     def _add_table(self, ws, title: str, cols: int, rows: int) -> None:
         """Add a styled table to the worksheet."""
-        table_name = title.replace(" ", "") + "Tbl"
+        if rows <= 0:
+            return
+        # Sanitize table name: only alphanumeric and underscores allowed
+        table_name = re.sub(r"[^A-Za-z0-9_]", "", title.replace(" ", "")) + "Tbl"
         table_ref = f"A1:{get_column_letter(cols)}{rows+1}"
 
         tab = Table(displayName=table_name, ref=table_ref)
@@ -814,7 +823,7 @@ class ComplianceReportExporter:
             pagination=PaginationRequestSchema(
                 page=1, size=1000, filters=[], sort_orders=[]
             ),
-            compliance_report_group_uuid=report_group_uuid,
+            compliance_report_id=cid,
             mode="summary",
         )
         reporting_rows = reporting_result[0]
@@ -836,6 +845,7 @@ class ComplianceReportExporter:
             rows.append(
                 [
                     row.get("organization_name") or organization_name,
+                    row.get("allocating_organization_name"),
                     self._format_date(row.get("supply_from_date")),
                     self._format_date(row.get("supply_to_date")),
                     row.get("kwh_usage"),
@@ -843,7 +853,7 @@ class ComplianceReportExporter:
                     row.get("manufacturer"),
                     row.get("model"),
                     row.get("level_of_equipment"),
-                    row.get("ports").value if row.get("ports") else None,
+                    row.get("ports").value if hasattr(row.get("ports"), "value") else row.get("ports"),
                     ", ".join(intended_uses) if intended_uses else None,
                     ", ".join(intended_users) if intended_users else None,
                     row.get("street_address"),

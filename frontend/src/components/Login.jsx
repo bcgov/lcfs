@@ -1,107 +1,18 @@
-// Particle Images
-import autumn1 from '@/assets/images/particles/autumn-fall-leaves.png'
-import autumn2 from '@/assets/images/particles/autumn-fall-leaves2.png'
-import cherry1 from '@/assets/images/particles/cherry-blossom.png'
-import cherry2 from '@/assets/images/particles/cherry-blossom2.png'
-import snowflake1 from '@/assets/images/particles/snowflake.png'
-import snowflake2 from '@/assets/images/particles/snowflake2.png'
-import waterdrop from '@/assets/images/particles/water-drop.png'
-
-// Background Images
-import bgAutumnImage from '@/assets/images/backgrounds/autumn.webp'
-import bgSpringImage from '@/assets/images/backgrounds/spring.webp'
-import bgSummerImage from '@/assets/images/backgrounds/summer.webp'
-import bgWinterImage from '@/assets/images/backgrounds/winter.webp'
-
+import bgFallbackImage from '@/assets/images/backgrounds/summer.webp'
 import logoDark from '@/assets/images/logo-banner.svg'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
+import { CONFIG } from '@/constants/config'
+import { apiRoutes } from '@/constants/routes'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
-import { Alert, Card } from '@mui/material'
+import { Alert, Card, Typography } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
-import Snowfall from 'react-snowfall'
-
-const currentDate = new Date()
-
-const month = currentDate.getMonth() + 1 // Months are zero-indexed
-const day = currentDate.getDate()
-
-const season =
-  (month === 3 && day >= 20) ||
-  (month > 3 && month < 6) ||
-  (month === 6 && day <= 20)
-    ? 'spring'
-    : (month === 6 && day >= 21) ||
-        (month > 6 && month < 9) ||
-        (month === 9 && day <= 21)
-      ? 'summer'
-      : (month === 9 && day >= 22) ||
-          (month > 9 && month < 12) ||
-          (month === 12 && day <= 20)
-        ? 'autumn'
-        : 'winter'
-
-const seasonImages = {
-  spring: {
-    count: 250,
-    radius: [5, 5],
-    wind: [0, 0],
-    image: bgSpringImage
-  },
-  summer: {
-    count: 150,
-    radius: [2, 6],
-    wind: [1, 1],
-    image: bgSummerImage
-  },
-  autumn: {
-    count: 5,
-    radius: [12, 24],
-    wind: [-0.5, 2.0],
-    image: bgAutumnImage
-  },
-  winter: {
-    count: 150,
-    radius: [2, 6],
-    wind: [-0.5, 2.0],
-    image: bgWinterImage
-  }
-}
-
-const droplets = () => {
-  const elm1 = document.createElement('img')
-  const elm2 = document.createElement('img')
-
-  switch (season) {
-    case 'spring':
-      elm1.src = waterdrop
-      elm2.src = waterdrop
-      break
-    case 'summer':
-      elm1.src = cherry1
-      elm2.src = cherry2
-      break
-    case 'autumn':
-      elm1.src = autumn1
-      elm2.src = autumn2
-      break
-    case 'winter':
-      elm1.src = snowflake1
-      elm2.src = snowflake2
-      break
-    default:
-      break
-  }
-  return [elm1, elm2]
-}
-
-const image = seasonImages[season].image
 
 export const Login = () => {
   const { t } = useTranslation()
@@ -110,20 +21,44 @@ export const Login = () => {
   const navigate = useNavigate()
   const redirectUri = window.location.origin
   const { message, severity } = location.state || {}
-  const styles = useMemo(() => ({
-    loginBackground: {
-      backgroundImage: `url(${image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    },
-    loginCard: {
-      background: 'rgba(255, 255, 255, 0.15)',
-      backdropFilter: 'blur(2px)',
-      bordeRadius: '15px',
-      border: '1px solid rgba(43, 43, 43, 0.568)'
-    }
-  }))
+
+  const [bgUrl, setBgUrl] = useState(bgFallbackImage)
+  const [credits, setCredits] = useState(null)
+
+  useEffect(() => {
+    const activeUrl = `${CONFIG.API_BASE}${apiRoutes.loginBgImageActive}`
+    fetch(activeUrl)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.loginBgImageId) {
+          const streamUrl = `${CONFIG.API_BASE}${apiRoutes.loginBgImageStream.replace(':imageId', data.loginBgImageId)}`
+          setBgUrl(streamUrl)
+          const creditParts = [data.displayName, data.caption].filter(Boolean)
+          setCredits(creditParts.length ? creditParts.join(' — ') : null)
+        }
+      })
+      .catch(() => {
+        // keep fallback
+      })
+  }, [])
+
+  const styles = useMemo(
+    () => ({
+      loginBackground: {
+        backgroundImage: `url(${bgUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      },
+      loginCard: {
+        background: 'rgba(255, 255, 255, 0.15)',
+        backdropFilter: 'blur(2px)',
+        bordeRadius: '15px',
+        border: '1px solid rgba(43, 43, 43, 0.568)'
+      }
+    }),
+    [bgUrl]
+  )
 
   return (
     <BCBox
@@ -133,14 +68,6 @@ export const Login = () => {
       sx={styles.loginBackground}
       data-test="login"
     >
-      {season !== 'summer' && (
-        <Snowfall
-          wind={seasonImages[season].wind}
-          snowflakeCount={seasonImages[season].count}
-          radius={seasonImages[season].radius}
-          images={droplets()}
-        />
-      )}
       <BCTypography variant="h1" className="visually-hidden">
         Login
       </BCTypography>
@@ -278,6 +205,27 @@ export const Login = () => {
           </Grid>
         </Grid>
       </BCBox>
+
+      {/* Photo credits overlay */}
+      {credits && (
+        <BCBox
+          position="absolute"
+          bottom={16}
+          right={16}
+          sx={{
+            background: 'rgba(0,0,0,0.45)',
+            borderRadius: 1,
+            px: 2.5,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <Typography variant="caption" color="white" lineHeight={1}>
+            {credits}
+          </Typography>
+        </BCBox>
+      )}
     </BCBox>
   )
 }

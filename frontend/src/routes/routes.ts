@@ -115,23 +115,30 @@ export const ROUTES = {
       VIEW: '/admin/users/:userID',
       EDIT: '/admin/users/:userID/edit-user'
     },
+    SEEDED_USER_ASSOCIATION: '/admin/seeded-user-association',
     USER_ACTIVITY: '/admin/user-activity',
     USER_LOGIN_HISTORY: '/admin/user-login-history',
     AUDIT_LOG: {
       LIST: '/admin/audit-log',
       VIEW: '/admin/audit-log/:auditLogId'
-    }
+    },
+    LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background'
   },
 
   FUEL_CODES: {
     LIST: '/fuel-codes',
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID',
-    EXPORT: '/fuel-codes/export'
+    EXPORT: '/fuel-codes/export',
+    BULLETINS: '/fuel-codes-bulletins'
   },
 
   CHARGING_SITES: {
     EQUIPMENT_PROCESSING: '/charging-sites/:siteId/equipment-processing'
+  },
+
+  INITIATIVE_AGREEMENTS: {
+    LIST: '/initiative-agreements'
   },
 
   FORMS: {

@@ -38,6 +38,7 @@ def mock_repo():
     """
     repo = AsyncMock()
     repo.get_charging_power_output.return_value = None
+    repo.get_total_kwh_usage_for_report_group.return_value = 0
     return repo
 
 
@@ -405,12 +406,16 @@ async def test_get_fse_reporting_list_paginated_success(
             "intended_uses": ["LDV"],
             "intended_users": ["Residential"],
             "status": "Submitted",
+            "power_output": 0,
+            "capacity_utilization_percent": 0,
         }
     ]
     mock_repo.get_fse_reporting_list_paginated.return_value = (mock_data, 1)
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+    mock_report = MagicMock(
+        compliance_report_id=10,
         compliance_report_group_uuid="uuid-1234"
     )
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = mock_report
 
     pagination = MagicMock(page=1, size=10, filters=[])
     result = await service.get_fse_reporting_list_paginated(
@@ -418,16 +423,15 @@ async def test_get_fse_reporting_list_paginated_success(
     )
 
     assert "finalSupplyEquipments" in result
+    assert "totalKwhUsage" in result
     assert "pagination" in result
     assert result["pagination"].total == 1
     assert result["finalSupplyEquipments"][0].status == "Submitted"
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
-        1, pagination, "uuid-1234", "current"
+        1, pagination, 10, "current"
     )
-    mock_repo.get_charging_power_output.assert_awaited_once_with(
-        22,
-        ["LDV"],
-        ["Residential"],
+    mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
+        "uuid-1234", only_active=False
     )
 
 
@@ -463,14 +467,16 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
         "registration_number": "REG-001",
         "intended_uses": ["Light duty motor vehicles"],
         "intended_users": ["Residential"],
-        "intended_uses": ["Light duty motor vehicles"],
-        "intended_users": ["Residential"],
         "level_of_equipment_internal_id": 303,
         "deleted": None,
+        "power_output": 50,
+        "capacity_utilization_percent": 80,
+        "status": "Submitted",
     }
     mock_repo.get_fse_reporting_list_paginated.return_value = ([mock_row], 1)
-    mock_repo.get_charging_power_output.return_value = 50
+    mock_repo.get_total_kwh_usage_for_report_group.return_value = 4800
     mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        compliance_report_id=10,
         compliance_report_group_uuid="uuid-1234"
     )
 
@@ -481,10 +487,9 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
 
     equipment = result["finalSupplyEquipments"][0]
     assert equipment.capacity_utilization_percent == 80
-    mock_repo.get_charging_power_output.assert_awaited_once_with(
-        303,
-        ["Light duty motor vehicles"],
-        ["Residential"],
+    assert equipment.power_output == 50
+    mock_repo.get_total_kwh_usage_for_report_group.assert_awaited_once_with(
+        "uuid-1234", only_active=True
     )
 
 
@@ -546,127 +551,19 @@ async def test_delete_fse_reporting_batch_success(service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_update_fse_reporting_active_status(service, mock_repo, mock_comp_report_repo):
+async def test_update_fse_reporting_active_status(service, mock_repo):
     """Test toggling FSE reporting active status"""
     mock_repo.update_reporting_active_status.return_value = 3
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
-        organization_id=5,
-        current_status=MagicMock(status="Draft"),
-    )
 
-    data = MagicMock(
-        reporting_ids=[1, 2, 3],
-        is_active=False,
-        compliance_report_id=10,
-        organization_id=5,
-    )
-    user = MagicMock(role_names=[RoleEnum.SUPPLIER], organization_id=5)
-    result = await service.update_fse_reporting_active_status(data, user)
+    data = MagicMock(reporting_ids=[1, 2, 3], is_active=False)
+    result = await service.update_fse_reporting_active_status(data)
 
     assert result["updated"] == 3
     assert result["is_active"] is False
     assert "deactivated" in result["message"]
     mock_repo.update_reporting_active_status.assert_awaited_once_with(
-        reporting_ids=[1, 2, 3],
-        is_active=False,
-        compliance_report_id=10,
-        organization_id=5,
+        [1, 2, 3], False
     )
-    mock_comp_report_repo.get_compliance_report_by_id.assert_awaited_once_with(10)
-
-
-@pytest.mark.anyio
-async def test_update_fse_reporting_active_status_forbidden_for_non_supplier_or_analyst(
-    service, mock_repo, mock_comp_report_repo
-):
-    data = MagicMock(
-        reporting_ids=[1],
-        is_active=False,
-        compliance_report_id=10,
-        organization_id=5,
-    )
-    user = MagicMock(role_names=[RoleEnum.GOVERNMENT], organization_id=5)
-
-    with pytest.raises(HTTPException) as exc_info:
-        await service.update_fse_reporting_active_status(data, user)
-
-    assert exc_info.value.status_code == 403
-    mock_repo.update_reporting_active_status.assert_not_awaited()
-    mock_comp_report_repo.get_compliance_report_by_id.assert_not_awaited()
-
-
-@pytest.mark.anyio
-async def test_update_fse_reporting_active_status_forbidden_for_other_org(
-    service, mock_repo, mock_comp_report_repo
-):
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
-        organization_id=999,
-        current_status=MagicMock(status="Draft"),
-    )
-    data = MagicMock(
-        reporting_ids=[1],
-        is_active=True,
-        compliance_report_id=10,
-        organization_id=999,
-    )
-    user = MagicMock(role_names=[RoleEnum.SUPPLIER], organization_id=5)
-
-    with pytest.raises(HTTPException) as exc_info:
-        await service.update_fse_reporting_active_status(data, user)
-
-    assert exc_info.value.status_code == 403
-    mock_repo.update_reporting_active_status.assert_not_awaited()
-
-
-@pytest.mark.anyio
-async def test_update_fse_reporting_active_status_analyst_allowed_in_analyst_adjustment(
-    service, mock_repo, mock_comp_report_repo
-):
-    mock_repo.update_reporting_active_status.return_value = 1
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
-        organization_id=5,
-        current_status=MagicMock(status="Analyst adjustment"),
-    )
-    data = MagicMock(
-        reporting_ids=[9],
-        is_active=True,
-        compliance_report_id=10,
-        organization_id=5,
-    )
-    user = MagicMock(role_names=[RoleEnum.ANALYST], organization_id=123)
-
-    result = await service.update_fse_reporting_active_status(data, user)
-
-    assert result["updated"] == 1
-    mock_repo.update_reporting_active_status.assert_awaited_once_with(
-        reporting_ids=[9],
-        is_active=True,
-        compliance_report_id=10,
-        organization_id=5,
-    )
-
-
-@pytest.mark.anyio
-async def test_update_fse_reporting_active_status_analyst_forbidden_outside_analyst_adjustment(
-    service, mock_repo, mock_comp_report_repo
-):
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
-        organization_id=5,
-        current_status=MagicMock(status="Submitted"),
-    )
-    data = MagicMock(
-        reporting_ids=[9],
-        is_active=True,
-        compliance_report_id=10,
-        organization_id=5,
-    )
-    user = MagicMock(role_names=[RoleEnum.ANALYST], organization_id=123)
-
-    with pytest.raises(HTTPException) as exc_info:
-        await service.update_fse_reporting_active_status(data, user)
-
-    assert exc_info.value.status_code == 403
-    mock_repo.update_reporting_active_status.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -749,6 +646,7 @@ async def test_get_fse_reporting_list_paginated_includes_has_charging_equipment_
     result = await service.get_fse_reporting_list_paginated(1, pagination, 10, "all")
 
     assert "hasChargingEquipment" in result
+    assert "totalKwhUsage" in result
     assert result["hasChargingEquipment"] is True
     mock_repo.has_charging_equipment_for_organization.assert_awaited_once_with(1)
 

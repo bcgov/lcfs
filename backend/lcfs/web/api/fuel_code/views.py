@@ -8,6 +8,7 @@ import structlog
 from fastapi import (
     APIRouter,
     Body,
+    HTTPException,
     status,
     Request,
     Response,
@@ -29,6 +30,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeSchema,
     FuelCodeStatusSchema,
     TransportModeSchema,
+    FuelCodeBulletinsSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.core.decorators import view_handler
@@ -169,6 +171,37 @@ async def export_fuel_codes(
         as CSV files do not support multiple sheets.
     """
     return await exporter.export(format, pagination)
+
+
+@router.post(
+    "/bulletins",
+    response_model=FuelCodeBulletinsSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_fuel_code_bulletins(
+    request: Request,
+    bulletin_type: Optional[str] = Query(
+        None, alias="bulletinType", description="Type: 'current' or 'archived'"
+    ),
+    bulletin_type_snake: Optional[str] = Query(
+        None, alias="bulletin_type", description="Type: 'current' or 'archived'"
+    ),
+    pagination: PaginationRequestSchema = Body(
+        PaginationRequestSchema(), embed=False
+    ),
+    service: FuelCodeServices = Depends(),
+) -> FuelCodeBulletinsSchema:
+    """Fetch paginated Bulletin 12 (current) or Bulletin 12a (archived) fuel code data."""
+    resolved_bulletin_type = (bulletin_type or bulletin_type_snake or "").strip().lower()
+
+    if resolved_bulletin_type not in {"current", "archived"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Query parameter bulletinType (or bulletin_type) must be 'current' or 'archived'.",
+        )
+
+    return await service.get_fuel_code_bulletins(resolved_bulletin_type, pagination)
 
 
 @router.get(

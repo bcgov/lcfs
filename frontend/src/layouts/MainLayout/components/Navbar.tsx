@@ -1,5 +1,5 @@
 import BCNavbar from '@/components/BCNavbar'
-import { roles } from '@/constants/roles'
+import { nonGovRoles, roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMemo } from 'react'
@@ -28,6 +28,13 @@ export const Navbar = () => {
       roles.signing_authority,
       roles.compliance_reporting
     )
+    const canSeeFuelCodeBulletins = hasAnyRole(...nonGovRoles)
+    const canSeeInitiativeAgreementsIdir = hasAnyRole(
+      roles.ia_analyst,
+      roles.ia_manager,
+      roles.director
+    )
+    const canSeeInitiativeAgreementsBceid = hasAnyRole(roles.ia_proponent)
     const idirRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },
@@ -36,6 +43,11 @@ export const Navbar = () => {
       {
         name: t('FuelCodes'),
         route: ROUTES.FUEL_CODES.LIST
+      },
+      {
+        name: t('InitiativeAgreements'),
+        route: ROUTES.INITIATIVE_AGREEMENTS.LIST,
+        hide: !canSeeInitiativeAgreementsIdir
       },
       { name: t('Administration'), route: ROUTES.ADMIN.MAIN, hide: !isAdmin }
     ]
@@ -46,6 +58,16 @@ export const Navbar = () => {
         name: t('ComplianceReporting'),
         route: ROUTES.REPORTS.LIST,
         hide: !canSeeComplianceReports
+      },
+      {
+        name: t('FuelCodes'),
+        route: ROUTES.FUEL_CODES.BULLETINS,
+        hide: !canSeeFuelCodeBulletins
+      },
+      {
+        name: t('InitiativeAgreements'),
+        route: ROUTES.INITIATIVE_AGREEMENTS.LIST,
+        hide: !canSeeInitiativeAgreementsBceid
       },
       { name: t('Organization'), route: ROUTES.ORGANIZATION.ORG }
     ]

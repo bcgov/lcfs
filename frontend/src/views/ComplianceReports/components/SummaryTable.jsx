@@ -30,6 +30,7 @@ const SummaryTable = ({
   tableType = '',
   lines6And8Locked = false,
   compliancePeriodYear = null,
+  exemptedLines = [],
   ...props
 }) => {
   const [data, setData] = useState(initialData)
@@ -86,6 +87,15 @@ const SummaryTable = ({
     }
 
     return false
+  }
+
+  /**
+   * Checks if a line should be greyed out due to an exemption.
+   */
+  const isLineExempted = (row) => {
+    if (!exemptedLines.length) return false
+    const lineNumber = parseInt(row.line)
+    return exemptedLines.includes(lineNumber)
   }
 
   const getCellConstraints = (rowIndex, columnId) => {
@@ -231,7 +241,10 @@ const SummaryTable = ({
     }
   }
 
-  const lineNumberTooltip = (lineNumber, isGreyedByYear = false) => {
+  const lineNumberTooltip = (lineNumber, isGreyedByYear = false, isExempted = false) => {
+    if (isExempted) {
+      return 'Exempted — not applicable'
+    }
     if (isGreyedByYear) {
       return 'Not applicable for this compliance period'
     }
@@ -293,14 +306,15 @@ const SummaryTable = ({
             >
               {columns.map((column, colIndex) => {
                 const isGreyedByYear = isLineGreyedByYear(row)
-                const isGreyedOrLocked = isCellLocked(rowIndex, row) || isGreyedByYear
+                const isExempted = isLineExempted(row)
+                const isGreyedOrLocked = isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
                 return (
                 <TableCell
                   key={column.id}
                   align={column.align || 'left'}
                   title={
                     isGreyedOrLocked
-                      ? lineNumberTooltip(parseInt(row.line), isGreyedByYear)
+                      ? lineNumberTooltip(parseInt(row.line), isGreyedByYear, isExempted)
                       : undefined
                   }
                   sx={{
@@ -450,7 +464,7 @@ const SummaryTable = ({
                       {(() => {
                         // Hide values for greyed-out rows (except line number and description)
                         if (
-                          isGreyedByYear &&
+                          (isGreyedByYear || isExempted) &&
                           column.id !== 'line' &&
                           column.id !== 'description'
                         ) {

@@ -27,6 +27,7 @@ from lcfs.web.api.charging_site.schema import (
     ChargingSiteStatusEnum,
     ChargingSitesSchema,
     ChargingSiteStatusSchema,
+    ChargingSiteManualStatusUpdateSchema,
     ChargingEquipmentForSiteSchema,
     BulkEquipmentStatusUpdateSchema,
     ChargingEquipmentPaginatedSchema,
@@ -194,7 +195,7 @@ class ChargingSiteService:
             statuses = [
                 status
                 for status in statuses
-                if status.status not in (ChargingSiteStatusEnum.DRAFT,ChargingSiteStatusEnum.UPDATED)
+                if status.status not in (ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED)
             ]
         return [
             ChargingSiteStatusSchema(
@@ -211,7 +212,10 @@ class ChargingSiteService:
         Service method to get a charging site by ID
         """
         logger.info("Getting charging site by ID")
-        charging_site = await self.repo.get_charging_site_by_id(site_id)
+        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        charging_site = await self.repo.get_charging_site_by_id(
+            site_id, government_visible=is_government
+        )
 
         if not charging_site:
             raise HTTPException(
@@ -234,7 +238,7 @@ class ChargingSiteService:
             )
         if (
             user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-            and charging_site.status.status == ChargingSiteStatusEnum.DRAFT
+            and charging_site.status.status in [ChargingSiteStatusEnum.DRAFT, ChargingSiteStatusEnum.UPDATED]
         ):
             raise HTTPException(
                 status_code=404,
@@ -244,6 +248,109 @@ class ChargingSiteService:
         return ChargingSiteSchema.model_validate(charging_site)
 
     @service_handler
+    async def update_charging_site_status_manual(
+        self,
+        charging_site_id: int,
+        body: ChargingSiteManualStatusUpdateSchema,
+    ) -> ChargingSiteSchema:
+        """
+        Manually set charging site status. Role-based allowed transitions:
+        - IDIR Analyst: Submitted -> Validated
+        - BCeID Compliance Reporting / Signing Authority: Draft or Updated -> Submitted
+        """
+        user = self.request.user
+        is_government = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_bceid_compliance = user_has_roles(user, [RoleEnum.COMPLIANCE_REPORTING]) or user_has_roles(
+            user, [RoleEnum.SIGNING_AUTHORITY]
+        )
+
+        if not is_government and not is_bceid_compliance:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only IDIR (Government) or BCeID Compliance Reporting/Signing Authority can manually change charging site status.",
+            )
+
+        charging_site = await self.repo.get_charging_site_by_id(charging_site_id)
+        if not charging_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {charging_site_id} not found",
+            )
+        organization_id = charging_site.organization_id
+        user_organization_id = (
+            user.organization.organization_id if user.organization else None
+        )
+        if (
+            not user_has_roles(user, [RoleEnum.GOVERNMENT])
+            and organization_id != user_organization_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this site.",
+            )
+
+        current_status = (
+            charging_site.status.status if charging_site.status else None
+        )
+        new_status = body.new_status
+
+        if new_status == ChargingSiteStatusEnum.VALIDATED and is_government and not is_analyst:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only IDIR Analyst can set charging site status to Validated.",
+            )
+
+        # IDIR Analyst only: Submitted -> Validated
+        if is_government and is_analyst and not is_bceid_compliance:
+            if new_status != ChargingSiteStatusEnum.VALIDATED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="IDIR users can only set charging site status to Validated.",
+                )
+            if current_status != ChargingSiteStatusEnum.SUBMITTED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Charging site can only be set to Validated when current status is Submitted.",
+                )
+        elif is_bceid_compliance:
+            if new_status != ChargingSiteStatusEnum.SUBMITTED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="BCeID users can only set charging site status to Submitted.",
+                )
+            if current_status not in (
+                ChargingSiteStatusEnum.DRAFT,
+                ChargingSiteStatusEnum.UPDATED,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Charging site can only be set to Submitted when current status is Draft or Updated.",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to perform this status change.",
+            )
+
+        new_status_record = await self.repo.get_charging_site_status_by_name(
+            new_status
+        )
+        if not new_status_record:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status: {new_status}",
+            )
+
+        await self.repo.update_charging_site_status(
+            charging_site.charging_site_id,
+            new_status_record.charging_site_status_id,
+        )
+
+        updated = await self.repo.get_charging_site_by_id(charging_site_id)
+        return ChargingSiteSchema.model_validate(updated)
+
+    @service_handler
     async def get_charging_site_equipment_paginated(
         self, site_id: int, pagination: PaginationRequestSchema
     ) -> ChargingEquipmentPaginatedSchema:
@@ -251,18 +358,30 @@ class ChargingSiteService:
         Get paginated charging equipment for a specific site
         """
         pagination = validate_pagination(pagination)
+        charging_site = await self.repo.get_charging_site_by_id(site_id)
+        if not charging_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {site_id} not found",
+            )
+        latest_site_id = charging_site.charging_site_id
 
         equipment_records, total_count = (
             await self.repo.get_equipment_for_charging_site_paginated(
-                site_id, pagination, self.request.user.is_government
+                latest_site_id, pagination, self.request.user.is_government
             )
         )
 
         # Convert equipment records to schema
-        equipment_list = [
-            ChargingEquipmentForSiteSchema.model_validate(equipment)
-            for equipment in equipment_records
-        ]
+        equipment_list = []
+        for equipment in equipment_records:
+            latest_site = getattr(equipment, "latest_charging_site", None)
+            latest_site_id = getattr(equipment, "latest_charging_site_id", None)
+            if latest_site is not None:
+                equipment.charging_site = latest_site
+            if latest_site_id is not None:
+                equipment.charging_site_id = latest_site_id
+            equipment_list.append(ChargingEquipmentForSiteSchema.model_validate(equipment))
 
         return ChargingEquipmentPaginatedSchema(
             equipments=equipment_list,
@@ -292,8 +411,8 @@ class ChargingSiteService:
             "Draft": ["Submitted"],  # Return to Draft (from Submitted)
             "Submitted": [
                 "Draft",
-                "Validated",
-            ],  # Submit (from Draft) or Undo Validation (from Validated)
+                "Updated",
+            ],  # Submit (from Draft or Updated)
             "Validated": ["Submitted"],  # Validate (from Submitted)
             "Decommissioned": ["Validated"],  # Decommission (from Validated)
         }
@@ -325,8 +444,15 @@ class ChargingSiteService:
         site_statuses = await self.repo.get_charging_site_statuses()
         site_status_ids = self._get_site_status_ids(site_statuses)
 
+        current_site = await self.repo.get_charging_site_by_id(charging_site_id)
+        if not current_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {charging_site_id} not found",
+            )
+        latest_site_id = current_site.charging_site_id
+
         if bulk_update.new_status in ["Submitted", "Validated"]:
-            current_site = await self.repo.get_charging_site_by_id(charging_site_id)
 
             if not (
                 current_site
@@ -335,17 +461,17 @@ class ChargingSiteService:
             ):
                 # When equipment is Submitted or Validated, update site status to match
                 await self.repo.update_charging_site_status(
-                    charging_site_id, site_status_ids[bulk_update.new_status]
+                    latest_site_id, site_status_ids[bulk_update.new_status]
                 )
         elif bulk_update.new_status == "Draft":
             # When returning equipment to Draft, recalculate site status
             # based on the highest status of all remaining equipment
             new_site_status = await self.repo.calculate_site_status_from_equipment(
-                charging_site_id
+                latest_site_id
             )
             if new_site_status:
                 await self.repo.update_charging_site_status(
-                    charging_site_id, site_status_ids[new_site_status]
+                    latest_site_id, site_status_ids[new_site_status]
                 )
         return True
 
@@ -369,7 +495,12 @@ class ChargingSiteService:
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders, organization_id
+            offset,
+            limit,
+            conditions,
+            pagination.sort_orders,
+            organization_id,
+            government_visible=self.request.user.is_government,
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -403,7 +534,12 @@ class ChargingSiteService:
         offset = (pagination.page - 1) * pagination.size
         limit = pagination.size
         rows, total = await self.repo.get_all_charging_sites_paginated(
-            offset, limit, conditions, pagination.sort_orders, exclude_draft
+            offset,
+            limit,
+            conditions,
+            pagination.sort_orders,
+            exclude_draft,
+            government_visible=True,
         )
         return ChargingSitesSchema(
             charging_sites=[ChargingSiteSchema.model_validate(r) for r in rows],
@@ -425,7 +561,8 @@ class ChargingSiteService:
         logger.info("Getting charging sites")
         try:
             charging_sites = await self.repo.get_all_charging_sites_by_organization_id(
-                organization_id
+                organization_id,
+                government_visible=self.request.user.is_government,
             )
             return ChargingSitesSchema(
                 charging_sites=[
@@ -473,6 +610,7 @@ class ChargingSiteService:
             payload = charging_site_data.model_dump(
                 exclude={
                     "site_code",
+                    "group_uuid",
                     "status_id",
                     "current_status",
                     "deleted",
@@ -486,6 +624,7 @@ class ChargingSiteService:
                 ChargingSite(
                     **payload,
                     status=status,
+                    version=1,
                 )
             )
             charging_site = await self.repo.get_charging_site_by_id(
@@ -565,11 +704,14 @@ class ChargingSiteService:
         status = await self.repo.get_charging_site_status_by_name(target_status_name)
 
         try:
+            # Update basic fields on the existing object
             update_data = charging_site_data.model_dump(
                 exclude={
                     "charging_site_id",
+                    "group_uuid",
                     "status_id",
                     "status",
+                    "current_status",
                     "deleted",
                 },
                 exclude_unset=True,

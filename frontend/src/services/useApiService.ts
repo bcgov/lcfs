@@ -21,12 +21,27 @@ export interface ApiServiceInstance extends AxiosInstance {
   download: (options: DownloadOptions) => Promise<void>
 }
 
-export const useApiService = (
-  opts: AxiosRequestConfig = {}
-): ApiServiceInstance => {
+type ErrorResponse = {
+  response?: { status: number; data?: unknown; headers?: Record<string, string> }
+  message?: string
+}
+
+function extractErrorRef(error: ErrorResponse): string | null {
+  const res = error.response
+  if (!res) return null
+  const body = res.data
+  if (body && typeof body === 'object' && 'reference_number' in body) {
+    const ref = (body as { reference_number: unknown }).reference_number
+    if (typeof ref === 'string') return ref
+  }
+  const header = res.headers?.['x-correlation-id']
+  return typeof header === 'string' ? header : null
+}
+
+export const useApiService = (opts: AxiosRequestConfig = {}): ApiServiceInstance => {
   const { keycloak } = useKeycloak()
   const { enqueueSnackbar } = useSnackbar()
-  const { setForbidden } = useAuthorization()
+  const { setForbidden, addErrorRef, setErrorStatus, serverErrorBlockedRef } = useAuthorization()
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
@@ -37,38 +52,36 @@ export const useApiService = (
 
     instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        if (serverErrorBlockedRef.current) {
+          return Promise.reject(new Error('Blocked: server is in error state'))
+        }
         if (keycloak.authenticated) {
           config.headers.Authorization = `Bearer ${keycloak.token}`
         }
         return config
       },
-      (error: unknown) => {
-        return Promise.reject(error)
-      }
+      (error: unknown) => Promise.reject(error)
     )
 
-    // Add response interceptor
     instance.interceptors.response.use(
       (response: AxiosResponse) => response,
-      (error: {
-        response?: { status: number; data: unknown }
-        message?: string
-      }) => {
-        if (error.response?.status && error.response.status >= 400 && error.response.status !== 403) {
-          console.error(
-            'API Error:',
-            error.response.status,
-            error.response.data
-          )
-          if (CONFIG.ENVIRONMENT === 'development') {
-            enqueueSnackbar(`${error.response.status} error`, {
-              autoHideDuration: 5000,
-              variant: 'error'
-            })
+      (error: ErrorResponse) => {
+        const status = error.response?.status
+        const ref = extractErrorRef(error)
+        if (ref) addErrorRef(ref)
+
+        if (status) {
+          console.error('API Error:', status, error.response?.data)
+          if (status === 403) {
+            setForbidden(true)
+          } else if (status === 500) {
+            setErrorStatus(500)
+          } else if (CONFIG.ENVIRONMENT === 'development') {
+            const detail =
+              (error.response?.data as { detail?: string })?.detail ||
+              `${status} error`
+            enqueueSnackbar(detail, { autoHideDuration: 5000, variant: 'error' })
           }
-        }
-        if (error.response?.status === 403) {
-          setForbidden(true)
         }
 
         return Promise.reject(error)
@@ -82,26 +95,20 @@ export const useApiService = (
       params = {},
       data = {}
     }: DownloadOptions): Promise<void> => {
-      try {
-        const response = await instance.request({
-          url,
-          method,
-          params,
-          data,
-          responseType: 'blob'
-        })
-        const filename =
-          extractFilename(response) || generateDefaultFilename(url)
-        const objectURL = window.URL.createObjectURL(new Blob([response.data]))
-        triggerDownload(objectURL, filename)
-      } catch (error) {
-        console.error('Error in download:', error)
-        throw error
-      }
+      const response = await instance.request({
+        url,
+        method,
+        params,
+        data,
+        responseType: 'blob'
+      })
+      const filename = extractFilename(response) || generateDefaultFilename(url)
+      const objectURL = window.URL.createObjectURL(new Blob([response.data]))
+      triggerDownload(objectURL, filename)
     }
 
     return instance
-  }, [keycloak.authenticated, keycloak.token, opts]) // Dependencies array
+  }, [keycloak.authenticated, keycloak.token, opts])
 
   return apiService
 }

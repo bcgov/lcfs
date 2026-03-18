@@ -180,6 +180,62 @@ describe('ActivityLinksList', () => {
     })
   })
 
+  describe('FSE link visibility by compliance year', () => {
+    it('shows FSE link when compliance period is 2024 or later', () => {
+      useParams.mockReturnValue({
+        compliancePeriod: '2024',
+        complianceReportId: '123'
+      })
+      render(
+        <ActivityLinksList
+          currentStatus="Draft"
+          isQuarterlyReport={false}
+          reportQuarter={null}
+        />,
+        { wrapper }
+      )
+      expect(
+        screen.getByText('report:activityLists.finalSupplyEquipment')
+      ).toBeInTheDocument()
+    })
+
+    it('hides FSE link when compliance period is before 2024', () => {
+      useParams.mockReturnValue({
+        compliancePeriod: '2023',
+        complianceReportId: '123'
+      })
+      render(
+        <ActivityLinksList
+          currentStatus="Draft"
+          isQuarterlyReport={false}
+          reportQuarter={null}
+        />,
+        { wrapper }
+      )
+      expect(
+        screen.queryByText('report:activityLists.finalSupplyEquipment')
+      ).not.toBeInTheDocument()
+    })
+
+    it('hides FSE link for 2022 compliance period', () => {
+      useParams.mockReturnValue({
+        compliancePeriod: '2022',
+        complianceReportId: '456'
+      })
+      render(
+        <ActivityLinksList
+          currentStatus="Draft"
+          isQuarterlyReport={false}
+          reportQuarter={null}
+        />,
+        { wrapper }
+      )
+      expect(
+        screen.queryByText('report:activityLists.finalSupplyEquipment')
+      ).not.toBeInTheDocument()
+    })
+  })
+
   describe('Quarterly Report Activities (Q1-Q3)', () => {
     it('renders filtered links for Q1 (quarterly enabled only)', () => {
       render(

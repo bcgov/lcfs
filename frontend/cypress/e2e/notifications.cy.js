@@ -65,6 +65,7 @@ describe('Notifications view flows', () => {
     cy.getByDataTest('select-all').click()
     cy.getByDataTest('select-all').click()
 
+    // Note: data-test="mark-as-unread" is actually the delete button
     cy.getByDataTest('mark-as-unread').should('not.be.disabled').click()
     cy.wait('@deleteNotifications')
       .its('request.body')

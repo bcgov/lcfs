@@ -212,6 +212,7 @@ async def test_handle_submitted_status_auto_submits_fse_records(
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
     mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.line_20_surplus_deficit_units = 100
 
@@ -278,6 +279,10 @@ async def test_handle_submitted_status_auto_submits_fse_records(
     mock_user_has_roles.assert_called_once_with(
         mock.ANY,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment.assert_awaited_once_with(
+        "report-group-123", 123
     )
 
     # Verify that auto_submit_equipment_for_report was called
@@ -1860,3 +1865,568 @@ async def test_director_can_issue_assessment(
     await compliance_report_update_service.handle_assessed_status(
         mock_report, director_user
     )
+
+
+# ==================== EXEMPTED STATUS TESTS ====================
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_not_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test handle_exempted_status succeeds for a director with no superseding draft."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = False
+
+    # Mock summary
+    mock_summary = MagicMock()
+    mock_report.summary = mock_summary
+
+    # Mock organization
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "Test Corp"
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
+        mock_report.compliance_report_group_uuid
+    )
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report)
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test handle_exempted_status raises 409 if a newer draft supersedes this report."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+
+    newer_draft = MagicMock(spec=ComplianceReport)
+    newer_draft.version = 2
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=newer_draft)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    assert exc_info.value.status_code == 409
+    assert "superseded" in exc_info.value.detail.lower()
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_forbidden_for_non_director(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_analyst: MagicMock,
+):
+    """Test handle_exempted_status raises 403 for non-director users."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=False,
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await compliance_report_update_service.handle_exempted_status(
+                mock_report, mock_user_profile_analyst
+            )
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail == "Forbidden."
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_deletes_existing_transaction(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test that handle_exempted_status deletes any existing transaction."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = 999  # Existing transaction
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = False
+    mock_report.summary = MagicMock()
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "Test Corp"
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    # Verify the transaction was deleted
+    compliance_report_update_service.trx_service.repo.delete_transaction.assert_called_once_with(
+        999, 200
+    )
+    # Verify the transaction_id was cleared
+    assert mock_report.transaction_id is None
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_blanks_summary_lines_both_exemptions(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test that handle_exempted_status zeros out all lines when both exemptions set."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = True
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "Test Corp"
+
+    # Create a real-ish summary with non-zero values
+    mock_summary = MagicMock()
+    mock_summary.line_4_eligible_renewable_fuel_required_gasoline = 100
+    mock_summary.line_4_eligible_renewable_fuel_required_diesel = 200
+    mock_summary.line_4_eligible_renewable_fuel_required_jet_fuel = 300
+    mock_summary.line_11_non_compliance_penalty_gasoline = 1000
+    mock_summary.line_11_non_compliance_penalty_diesel = 2000
+    mock_summary.line_11_non_compliance_penalty_jet_fuel = 3000
+    mock_summary.line_17_non_banked_units_used = 5000
+    mock_summary.line_18_units_to_be_banked = 500
+    mock_summary.line_20_surplus_deficit_units = 600
+    mock_summary.line_21_surplus_deficit_ratio = 0.5
+    mock_summary.line_21_non_compliance_penalty_payable = 700
+    mock_summary.line_22_compliance_units_issued = 5600
+    mock_report.summary = mock_summary
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    # Verify renewable fuel lines are zeroed (lines 4, 11)
+    assert mock_summary.line_4_eligible_renewable_fuel_required_gasoline == 0
+    assert mock_summary.line_4_eligible_renewable_fuel_required_diesel == 0
+    assert mock_summary.line_4_eligible_renewable_fuel_required_jet_fuel == 0
+    assert mock_summary.line_11_non_compliance_penalty_gasoline == 0
+    assert mock_summary.line_11_non_compliance_penalty_diesel == 0
+    assert mock_summary.line_11_non_compliance_penalty_jet_fuel == 0
+    # Verify low carbon fuel lines are zeroed (lines 18, 20, 21)
+    assert mock_summary.line_18_units_to_be_banked == 0
+    assert mock_summary.line_20_surplus_deficit_units == 0
+    assert mock_summary.line_21_surplus_deficit_ratio == 0
+    assert mock_summary.line_21_non_compliance_penalty_payable == 0
+    # Verify line 22 is recalculated to line 17 (since line 20 is now 0)
+    assert mock_summary.line_22_compliance_units_issued == 5000
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_blanks_only_renewable_lines(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test that only renewable lines (4, 11) are blanked when only renewable is exempted."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = False
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "Test Corp"
+
+    mock_summary = MagicMock()
+    mock_summary.line_4_eligible_renewable_fuel_required_gasoline = 100
+    mock_summary.line_4_eligible_renewable_fuel_required_diesel = 200
+    mock_summary.line_4_eligible_renewable_fuel_required_jet_fuel = 300
+    mock_summary.line_11_non_compliance_penalty_gasoline = 1000
+    mock_summary.line_11_non_compliance_penalty_diesel = 2000
+    mock_summary.line_11_non_compliance_penalty_jet_fuel = 3000
+    mock_summary.line_18_units_to_be_banked = 500
+    mock_summary.line_20_surplus_deficit_units = 600
+    mock_summary.line_21_surplus_deficit_ratio = 0.5
+    mock_summary.line_21_non_compliance_penalty_payable = 700
+    mock_summary.line_22_compliance_units_issued = 5600
+    mock_report.summary = mock_summary
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    # Renewable lines should be zeroed
+    assert mock_summary.line_4_eligible_renewable_fuel_required_gasoline == 0
+    assert mock_summary.line_4_eligible_renewable_fuel_required_diesel == 0
+    assert mock_summary.line_4_eligible_renewable_fuel_required_jet_fuel == 0
+    assert mock_summary.line_11_non_compliance_penalty_gasoline == 0
+    assert mock_summary.line_11_non_compliance_penalty_diesel == 0
+    assert mock_summary.line_11_non_compliance_penalty_jet_fuel == 0
+    # Low carbon lines should NOT be zeroed
+    assert mock_summary.line_18_units_to_be_banked == 500
+    assert mock_summary.line_20_surplus_deficit_units == 600
+    assert mock_summary.line_21_surplus_deficit_ratio == 0.5
+    assert mock_summary.line_21_non_compliance_penalty_payable == 700
+    assert mock_summary.line_22_compliance_units_issued == 5600
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_blanks_only_low_carbon_lines(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test that only low carbon lines (18, 20, 21, 22) are blanked when only low carbon is exempted."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = False
+    mock_report.is_low_carbon_fuel_exempted = True
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "Test Corp"
+
+    mock_summary = MagicMock()
+    mock_summary.line_4_eligible_renewable_fuel_required_gasoline = 100
+    mock_summary.line_4_eligible_renewable_fuel_required_diesel = 200
+    mock_summary.line_4_eligible_renewable_fuel_required_jet_fuel = 300
+    mock_summary.line_11_non_compliance_penalty_gasoline = 1000
+    mock_summary.line_11_non_compliance_penalty_diesel = 2000
+    mock_summary.line_11_non_compliance_penalty_jet_fuel = 3000
+    mock_summary.line_17_non_banked_units_used = 5000
+    mock_summary.line_18_units_to_be_banked = 500
+    mock_summary.line_20_surplus_deficit_units = 600
+    mock_summary.line_21_surplus_deficit_ratio = 0.5
+    mock_summary.line_21_non_compliance_penalty_payable = 700
+    mock_summary.line_22_compliance_units_issued = 5600
+    mock_report.summary = mock_summary
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    # Renewable lines should NOT be zeroed
+    assert mock_summary.line_4_eligible_renewable_fuel_required_gasoline == 100
+    assert mock_summary.line_4_eligible_renewable_fuel_required_diesel == 200
+    assert mock_summary.line_4_eligible_renewable_fuel_required_jet_fuel == 300
+    assert mock_summary.line_11_non_compliance_penalty_gasoline == 1000
+    assert mock_summary.line_11_non_compliance_penalty_diesel == 2000
+    assert mock_summary.line_11_non_compliance_penalty_jet_fuel == 3000
+    # Low carbon lines should be zeroed
+    assert mock_summary.line_18_units_to_be_banked == 0
+    assert mock_summary.line_20_surplus_deficit_units == 0
+    assert mock_summary.line_21_surplus_deficit_ratio == 0
+    assert mock_summary.line_21_non_compliance_penalty_payable == 0
+    # Line 22 should be recalculated to line 17 value
+    assert mock_summary.line_22_compliance_units_issued == 5000
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_generates_renewable_fuel_exemption_text(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test assessment statement text when only renewable fuel exemption is set."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = False
+    mock_report.summary = MagicMock()
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "Acme Fuels Ltd"
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    stmt = mock_report.assessment_statement
+    assert "Acme Fuels Ltd" in stmt
+    assert "renewable fuel requirement" in stmt
+    assert "low carbon fuel requirement" not in stmt
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_generates_low_carbon_fuel_exemption_text(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test assessment statement text when only low carbon fuel exemption is set."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = False
+    mock_report.is_low_carbon_fuel_exempted = True
+    mock_summary = MagicMock()
+    mock_summary.line_17_non_banked_units_used = 5000
+    mock_report.summary = mock_summary
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "GreenEnergy Inc"
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    stmt = mock_report.assessment_statement
+    assert "GreenEnergy Inc" in stmt
+    assert "low carbon fuel requirement" in stmt
+    assert "renewable fuel requirement" not in stmt
+
+
+@pytest.mark.anyio
+async def test_handle_exempted_status_generates_both_exemption_texts(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+):
+    """Test assessment statement text when both exemption flags are set."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 200
+    mock_report.compliance_report_group_uuid = "exempt-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = True
+    mock_summary = MagicMock()
+    mock_summary.line_17_non_banked_units_used = 5000
+    mock_report.summary = mock_summary
+    mock_report.organization = MagicMock()
+    mock_report.organization.name = "DualExempt Corp"
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        await compliance_report_update_service.handle_exempted_status(
+            mock_report, mock_user_profile_director
+        )
+
+    stmt = mock_report.assessment_statement
+    assert "DualExempt Corp" in stmt
+    assert "renewable fuel requirement" in stmt
+    assert "low carbon fuel requirement" in stmt
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_auto_transitions_to_exempted(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_notification_service,
+):
+    """Test that update_compliance_report auto-transitions from Assessed to Exempted
+    when exemption flags are set on the report."""
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = (
+        ComplianceReportStatusEnum.Recommended_by_manager
+    )
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = None
+    # Exemption flags are already set (analyst set them earlier)
+    mock_report.is_renewable_fuel_exempted = True
+    mock_report.is_low_carbon_fuel_exempted = False
+
+    # Assessed status - what the frontend sends
+    assessed_status = MagicMock(spec=ComplianceReportStatus)
+    assessed_status.status = ComplianceReportStatusEnum.Assessed
+
+    # Exempted status - what the backend auto-transitions to
+    exempted_status = MagicMock(spec=ComplianceReportStatus)
+    exempted_status.status = ComplianceReportStatusEnum.Exempted
+
+    report_data = ComplianceReportUpdateSchema(status="Assessed")
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    # First call returns Assessed, second call returns Exempted
+    mock_repo.get_compliance_report_status_by_desc.side_effect = [
+        assessed_status,
+        exempted_status,
+    ]
+    mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service.handle_status_change = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    await compliance_report_update_service.update_compliance_report(
+        report_id, report_data, mock.ANY
+    )
+
+    # Should have fetched Exempted status
+    assert mock_repo.get_compliance_report_status_by_desc.call_count == 2
+    mock_repo.get_compliance_report_status_by_desc.assert_any_call(
+        ComplianceReportStatusEnum.Exempted.value
+    )
+
+    # Report's current_status should be the exempted status
+    assert mock_report.current_status == exempted_status
+
+    # Status change handler should be called with Exempted status
+    compliance_report_update_service.handle_status_change.assert_called_once_with(
+        mock_report, ComplianceReportStatusEnum.Exempted, mock.ANY
+    )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_no_auto_transition_without_exemption_flags(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_notification_service,
+):
+    """Test that update_compliance_report does NOT auto-transition to Exempted
+    when exemption flags are not set."""
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = (
+        ComplianceReportStatusEnum.Recommended_by_manager
+    )
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = 123
+    # No exemption flags
+    mock_report.is_renewable_fuel_exempted = False
+    mock_report.is_low_carbon_fuel_exempted = False
+
+    assessed_status = MagicMock(spec=ComplianceReportStatus)
+    assessed_status.status = ComplianceReportStatusEnum.Assessed
+
+    report_data = ComplianceReportUpdateSchema(status="Assessed")
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = assessed_status
+    mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service.handle_status_change = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    await compliance_report_update_service.update_compliance_report(
+        report_id, report_data, mock.ANY
+    )
+
+    # Should have fetched status only once (Assessed, no Exempted lookup)
+    mock_repo.get_compliance_report_status_by_desc.assert_called_once_with("Assessed")
+
+    # Report should remain as Assessed
+    assert mock_report.current_status == assessed_status
+
+    # Status change handler should be called with Assessed
+    compliance_report_update_service.handle_status_change.assert_called_once_with(
+        mock_report, ComplianceReportStatusEnum.Assessed, mock.ANY
+    )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_persists_exemption_flags(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_notification_service,
+):
+    """Test that update_compliance_report persists exemption flag changes on the report."""
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = None
+    mock_report.is_renewable_fuel_exempted = False
+    mock_report.is_low_carbon_fuel_exempted = False
+
+    submitted_status = MagicMock(spec=ComplianceReportStatus)
+    submitted_status.status = ComplianceReportStatusEnum.Submitted
+
+    # Analyst saves exemption checkboxes (no status change, just flag update)
+    report_data = ComplianceReportUpdateSchema(
+        status="Submitted",
+        is_renewable_fuel_exempted=True,
+        is_low_carbon_fuel_exempted=True,
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = submitted_status
+    mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    await compliance_report_update_service.update_compliance_report(
+        report_id, report_data, mock.ANY
+    )
+
+    # Verify exemption flags were set on the report
+    assert mock_report.is_renewable_fuel_exempted is True
+    assert mock_report.is_low_carbon_fuel_exempted is True
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report)

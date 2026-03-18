@@ -212,7 +212,9 @@ class ComplianceReportRepository:
         where_conditions = [
             ComplianceReport.organization_id == organization_id,
             CompliancePeriod.description == str(period),
-            ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed,
+            ComplianceReportStatus.status.in_(
+                [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Exempted]
+            ),
         ]
 
         # Exclude the current report to avoid circular reference

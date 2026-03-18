@@ -338,6 +338,65 @@ async def test_get_expected_use_types(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
+async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
+    fuel_code_repo, mock_db
+):
+    # first execute() -> query rows, second scalar() -> count
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    rows, total = await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=date(2025, 3, 31),
+        bulletin_type="current",
+        offset=0,
+        limit=25,
+        conditions=[],
+        sort_orders=[],
+    )
+
+    assert rows == []
+    assert total == 0
+    assert mock_db.execute.await_count == 1
+    executed_stmt = mock_db.execute.await_args.args[0]
+    stmt_sql = str(executed_stmt)
+
+    assert "effective_date <" in stmt_sql
+    assert "effective_date >=" not in stmt_sql
+    assert "expiration_date >" in stmt_sql
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
+    fuel_code_repo, mock_db
+):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    rows, total = await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=date(2025, 3, 31),
+        bulletin_type="archived",
+        offset=0,
+        limit=25,
+        conditions=[],
+        sort_orders=[],
+    )
+
+    assert rows == []
+    assert total == 0
+    executed_stmt = mock_db.execute.await_args.args[0]
+    stmt_sql = str(executed_stmt)
+
+    # archived branch applies inverse (~current_conditions)
+    assert "NOT (" in stmt_sql
+    assert "effective_date <" in stmt_sql
+    assert "expiration_date >" in stmt_sql
+
+
+@pytest.mark.anyio
 async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
     eut = ExpectedUseType(expected_use_type_id=2, name="Heating")
     mock_result = MagicMock()

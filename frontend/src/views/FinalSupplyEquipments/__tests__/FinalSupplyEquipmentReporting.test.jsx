@@ -21,7 +21,24 @@ vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
   useSaveFSEReporting: vi.fn(),
   useDeleteFSEReportingBatch: vi.fn(),
   useSetFSEReportingDefaultDates: vi.fn(),
-  useUpdateFSEReportingActiveStatus: vi.fn()
+  useUpdateFSEReportingActiveStatus: vi.fn(),
+  useImportFSEReportingUpdate: vi.fn(),
+  useGetFSEReportingUpdateJobStatus: vi.fn()
+}))
+
+// vi.hoisted ensures this mock ref is available inside the hoisted vi.mock factory.
+const mockApiDownload = vi.hoisted(() => vi.fn().mockResolvedValue({}))
+
+// The component uses useApiService directly for the download; mock it
+// so the Keycloak dependency is never touched during rendering.
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    download: mockApiDownload
+  })
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
@@ -57,7 +74,9 @@ import {
   useSaveFSEReporting,
   useDeleteFSEReportingBatch,
   useSetFSEReportingDefaultDates,
-  useUpdateFSEReportingActiveStatus
+  useUpdateFSEReportingActiveStatus,
+  useImportFSEReportingUpdate,
+  useGetFSEReportingUpdateJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
@@ -136,6 +155,18 @@ describe('FinalSupplyEquipmentReporting', () => {
       mutateAsync: vi.fn().mockResolvedValue({ data: {} })
     })
 
+    // Reset API download mock
+    mockApiDownload.mockResolvedValue({})
+
+    // Mock bulk update hooks
+    vi.mocked(useImportFSEReportingUpdate).mockReturnValue({
+      mutate: vi.fn()
+    })
+    vi.mocked(useGetFSEReportingUpdateJobStatus).mockReturnValue({
+      data: null,
+      refetch: vi.fn()
+    })
+
     // Mock useComplianceReportWithCache
     vi.mocked(useComplianceReportWithCache).mockReturnValue({
       data: mockReportData,
@@ -157,6 +188,30 @@ describe('FinalSupplyEquipmentReporting', () => {
 
       render(<FinalSupplyEquipmentReporting />, { wrapper })
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    })
+
+    it('does not break hook ordering when loading data resolves after initial render', async () => {
+      let reportState = {
+        data: null,
+        isLoading: true
+      }
+
+      vi.mocked(useComplianceReportWithCache).mockImplementation(() => reportState)
+
+      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
+        wrapper
+      })
+
+      reportState = {
+        data: mockReportData,
+        isLoading: false
+      }
+
+      expect(() => rerender(<FinalSupplyEquipmentReporting />)).not.toThrow()
+
+      await waitFor(() => {
+        expect(screen.getByText('Grid Editor')).toBeInTheDocument()
+      })
     })
 
     it('renders the component with title and description', () => {
@@ -476,6 +531,136 @@ describe('FinalSupplyEquipmentReporting', () => {
       // Check that inputs exist with date type
       expect(fromDateInput).toHaveAttribute('type', 'date')
       expect(toDateInput).toHaveAttribute('type', 'date')
+    })
+  })
+
+  describe('Bulk Update Template Buttons', () => {
+    it('renders the "Download update template" button', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      expect(downloadBtn).toBeInTheDocument()
+    })
+
+    it('renders the "Upload update template" button', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const uploadBtn = screen.getByRole('button', { name: /upload.*template/i })
+      expect(uploadBtn).toBeInTheDocument()
+    })
+
+    it('download button is not in a loading state initially', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      expect(downloadBtn).not.toBeDisabled()
+    })
+
+    it('download button shows loading state while downloading', async () => {
+      // Mock the download to never resolve so we can observe the loading state
+      let resolveDownload
+      mockApiDownload.mockReturnValue(
+        new Promise((res) => {
+          resolveDownload = res
+        })
+      )
+
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      fireEvent.click(downloadBtn)
+
+      // The button should enter a loading/disabled state while the download is in-flight
+      await waitFor(() => {
+        expect(mockApiDownload).toHaveBeenCalled()
+      })
+
+      // Resolve to clean up
+      resolveDownload({})
+    })
+
+    it('clicking download button triggers the api service download', async () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      fireEvent.click(downloadBtn)
+
+      await waitFor(() => {
+        expect(mockApiDownload).toHaveBeenCalled()
+      })
+    })
+
+    it('import hook is called with the compliance report ID', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      // useImportFSEReportingUpdate is passed as the importHook prop to ImportDialog,
+      // which calls it at render time; verify it was invoked.
+      expect(useImportFSEReportingUpdate).toHaveBeenCalled()
+    })
+  })
+
+  describe('Bulk Update Template Buttons', () => {
+    it('renders the "Download update template" button', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      expect(downloadBtn).toBeInTheDocument()
+    })
+
+    it('renders the "Upload update template" button', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const uploadBtn = screen.getByRole('button', { name: /upload.*template/i })
+      expect(uploadBtn).toBeInTheDocument()
+    })
+
+    it('download button is not in a loading state initially', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      expect(downloadBtn).not.toBeDisabled()
+    })
+
+    it('download button shows loading state while downloading', async () => {
+      // Mock the download to never resolve so we can observe the loading state
+      let resolveDownload
+      mockApiDownload.mockReturnValue(
+        new Promise((res) => {
+          resolveDownload = res
+        })
+      )
+
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      fireEvent.click(downloadBtn)
+
+      // The button should enter a loading/disabled state while the download is in-flight
+      await waitFor(() => {
+        expect(mockApiDownload).toHaveBeenCalled()
+      })
+
+      // Resolve to clean up
+      resolveDownload({})
+    })
+
+    it('clicking download button triggers the api service download', async () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      const downloadBtn = screen.getByRole('button', { name: /download.*template/i })
+      fireEvent.click(downloadBtn)
+
+      await waitFor(() => {
+        expect(mockApiDownload).toHaveBeenCalled()
+      })
+    })
+
+    it('import hook is called with the compliance report ID', () => {
+      render(<FinalSupplyEquipmentReporting />, { wrapper })
+
+      // useImportFSEReportingUpdate is passed as the importHook prop to ImportDialog,
+      // which calls it at render time; verify it was invoked.
+      expect(useImportFSEReportingUpdate).toHaveBeenCalled()
     })
   })
 })

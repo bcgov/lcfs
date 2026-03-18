@@ -301,6 +301,324 @@ ORDER BY
     compliance_report_id;
 
 GRANT SELECT ON vw_compliance_reports_time_per_status TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- FSE Reporting Base View
+-- ==========================================
+DROP VIEW IF EXISTS v_fse_reporting_base CASCADE;
+CREATE OR REPLACE VIEW v_fse_reporting_base AS
+WITH latest_sites AS (
+    SELECT
+        cs.group_uuid,
+        cs.organization_id,
+        MAX(cs.version) AS latest_version
+    FROM charging_site cs
+    GROUP BY
+        cs.group_uuid,
+        cs.organization_id
+),
+latest_equipment_versions AS (
+    SELECT
+        ls.organization_id,
+        ls.group_uuid AS charing_site_group_uuid,
+        ls.latest_version AS charging_site_version,
+        ce.group_uuid AS charging_equipment_group_uuid,
+        ce.charging_equipment_id,
+        ce.version AS charging_equipment_version,
+        ROW_NUMBER() OVER (
+            PARTITION BY ce.group_uuid
+            ORDER BY
+                ce.version DESC,
+                ce.charging_equipment_id DESC
+        ) AS row_number
+    FROM charging_equipment ce
+    JOIN latest_sites ls
+        ON ls.group_uuid = (
+            SELECT group_uuid
+            FROM charging_site
+            WHERE charging_site_id = ce.charging_site_id
+        )
+)
+SELECT
+    current_site.organization_id,
+    ce.charging_equipment_id,
+    ce.serial_number,
+    ce.manufacturer,
+    ce.model,
+    (current_site.site_code || '-' || ce.equipment_number) AS registration_number,
+    current_site.site_name,
+    current_site.charging_site_id,
+    ce.notes AS equipment_notes,
+    crce.supply_from_date,
+    crce.supply_to_date,
+    crce.kwh_usage,
+    crce.compliance_notes,
+    crce.charging_equipment_compliance_id,
+    crce.compliance_report_id,
+    crce.compliance_report_group_uuid,
+    crce.is_active,
+    COALESCE(crce.charging_equipment_version, ce.version) AS charging_equipment_version,
+    current_site.street_address,
+    current_site.city,
+    current_site.postal_code,
+    current_site.latitude,
+    current_site.longitude,
+    loe.name AS level_of_equipment,
+    ce.level_of_equipment_id,
+    ce.ports,
+    current_site.allocating_organization_name,
+    (
+        SELECT array_agg(eut.type ORDER BY eut.type)
+        FROM charging_equipment_intended_use_association ceiu
+        JOIN end_use_type eut
+            ON ceiu.end_use_type_id = eut.end_use_type_id
+        WHERE ceiu.charging_equipment_id = ce.charging_equipment_id
+    ) AS intended_uses,
+    (
+        SELECT array_agg(eut2.type_name ORDER BY eut2.type_name)
+        FROM charging_equipment_intended_user_association ceiu2
+        JOIN end_user_type eut2
+            ON ceiu2.end_user_type_id = eut2.end_user_type_id
+        WHERE ceiu2.charging_equipment_id = ce.charging_equipment_id
+    ) AS intended_users,
+    power_lookup.power_output,
+    CASE
+        WHEN crce.kwh_usage IS NULL
+             OR crce.supply_from_date IS NULL
+             OR crce.supply_to_date IS NULL
+             OR power_lookup.power_output IS NULL
+             OR power_lookup.power_output <= 0
+             OR crce.supply_to_date::date < crce.supply_from_date::date
+        THEN NULL
+        ELSE ROUND(
+            (
+                crce.kwh_usage::numeric
+                / (
+                    power_lookup.power_output::numeric
+                    * 24
+                    * ((crce.supply_to_date::date - crce.supply_from_date::date) + 1)
+                )
+            ) * 100
+        )::integer
+    END AS capacity_utilization_percent,
+    ces.status AS charging_equipment_status
+FROM charging_equipment ce
+JOIN latest_equipment_versions lev
+    ON ce.group_uuid = lev.charging_equipment_group_uuid
+   AND lev.row_number = 1
+JOIN charging_site current_site
+    ON current_site.group_uuid = lev.charing_site_group_uuid
+   AND current_site.version = lev.charging_site_version
+JOIN level_of_equipment loe
+    ON ce.level_of_equipment_id = loe.level_of_equipment_id
+JOIN charging_equipment_status ces
+    ON ce.status_id = ces.charging_equipment_status_id
+LEFT JOIN compliance_report_charging_equipment crce
+    ON ce.charging_equipment_id = crce.charging_equipment_id
+   AND ce.version = crce.charging_equipment_version
+LEFT JOIN LATERAL (
+    SELECT cpo.charger_power_output AS power_output
+    FROM charging_power_output cpo
+    JOIN end_user_type eut_user
+        ON cpo.end_user_type_id = eut_user.end_user_type_id
+    LEFT JOIN end_use_type eut
+        ON cpo.end_use_type_id = eut.end_use_type_id
+       AND eut.type = ANY(
+            COALESCE(
+                (
+                    SELECT array_agg(eut_match.type ORDER BY eut_match.type)
+                    FROM charging_equipment_intended_use_association ceiu_match
+                    JOIN end_use_type eut_match
+                        ON ceiu_match.end_use_type_id = eut_match.end_use_type_id
+                    WHERE ceiu_match.charging_equipment_id = ce.charging_equipment_id
+                ),
+                ARRAY[]::varchar[]
+            )
+        )
+    WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
+      AND eut_user.type_name = ANY(
+            COALESCE(
+                (
+                    SELECT array_agg(eut_user_match.type_name ORDER BY eut_user_match.type_name)
+                    FROM charging_equipment_intended_user_association ceiu2_match
+                    JOIN end_user_type eut_user_match
+                        ON ceiu2_match.end_user_type_id = eut_user_match.end_user_type_id
+                    WHERE ceiu2_match.charging_equipment_id = ce.charging_equipment_id
+                ),
+                ARRAY[]::varchar[]
+            )
+        )
+    ORDER BY eut.end_use_type_id ASC NULLS FIRST
+    LIMIT 1
+) power_lookup ON TRUE;
+
+GRANT SELECT ON v_fse_reporting_base TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- FSE Reporting Base Preferred View
+-- ==========================================
+DROP VIEW IF EXISTS v_fse_reporting_base_pref;
+CREATE OR REPLACE VIEW v_fse_reporting_base_pref AS
+WITH report_context AS (
+    SELECT
+        cr.compliance_report_id,
+        cr.organization_id,
+        cr.compliance_report_group_uuid
+    FROM compliance_report cr
+),
+base_rows AS (
+    SELECT
+        v.*,
+        ce.group_uuid AS charging_equipment_group_uuid
+    FROM v_fse_reporting_base v
+    JOIN charging_equipment ce
+        ON ce.charging_equipment_id = v.charging_equipment_id
+       AND ce.version = v.charging_equipment_version
+),
+fallback_rows AS (
+    SELECT *
+    FROM (
+        SELECT
+            br.organization_id,
+            br.charging_equipment_group_uuid,
+            br.charging_equipment_id,
+            br.serial_number,
+            br.manufacturer,
+            br.model,
+            br.registration_number,
+            br.site_name,
+            br.charging_site_id,
+            br.equipment_notes,
+            br.charging_equipment_version,
+            br.street_address,
+            br.city,
+            br.postal_code,
+            br.latitude,
+            br.longitude,
+            br.level_of_equipment,
+            br.level_of_equipment_id,
+            br.ports,
+            br.allocating_organization_name,
+            br.intended_uses,
+            br.intended_users,
+            br.power_output,
+            br.capacity_utilization_percent,
+            br.charging_equipment_status,
+            ROW_NUMBER() OVER (
+                PARTITION BY
+                    br.organization_id,
+                    br.charging_equipment_group_uuid
+                ORDER BY
+                    CASE
+                        WHEN br.is_active IS TRUE THEN 0
+                        ELSE 1
+                    END,
+                    br.charging_equipment_version DESC,
+                    br.charging_equipment_id DESC
+            ) AS rn
+        FROM base_rows br
+    ) x
+    WHERE x.rn = 1
+),
+matched_rows AS (
+    SELECT *
+    FROM (
+        SELECT
+            br.organization_id,
+            br.compliance_report_id,
+            br.compliance_report_group_uuid,
+            br.charging_equipment_group_uuid,
+            br.charging_equipment_id,
+            br.serial_number,
+            br.manufacturer,
+            br.model,
+            br.registration_number,
+            br.site_name,
+            br.charging_site_id,
+            br.equipment_notes,
+            br.supply_from_date,
+            br.supply_to_date,
+            br.kwh_usage,
+            br.compliance_notes,
+            br.charging_equipment_compliance_id,
+            br.is_active,
+            br.charging_equipment_version,
+            br.street_address,
+            br.city,
+            br.postal_code,
+            br.latitude,
+            br.longitude,
+            br.level_of_equipment,
+            br.level_of_equipment_id,
+            br.ports,
+            br.allocating_organization_name,
+            br.intended_uses,
+            br.intended_users,
+            br.power_output,
+            br.capacity_utilization_percent,
+            br.charging_equipment_status,
+            ROW_NUMBER() OVER (
+                PARTITION BY
+                    br.organization_id,
+                    br.compliance_report_id,
+                    br.charging_equipment_group_uuid
+                ORDER BY
+                    CASE
+                        WHEN br.is_active IS TRUE THEN 0
+                        ELSE 1
+                    END,
+                    br.charging_equipment_version DESC,
+                    br.charging_equipment_id DESC
+            ) AS rn
+        FROM base_rows br
+        WHERE br.compliance_report_id IS NOT NULL
+    ) x
+    WHERE x.rn = 1
+)
+SELECT
+    rc.organization_id,
+    rc.compliance_report_id,
+    rc.compliance_report_group_uuid,
+    COALESCE(mr.charging_equipment_id, fr.charging_equipment_id) AS charging_equipment_id,
+    COALESCE(mr.serial_number, fr.serial_number) AS serial_number,
+    COALESCE(mr.manufacturer, fr.manufacturer) AS manufacturer,
+    COALESCE(mr.model, fr.model) AS model,
+    COALESCE(mr.registration_number, fr.registration_number) AS registration_number,
+    COALESCE(mr.site_name, fr.site_name) AS site_name,
+    COALESCE(mr.charging_site_id, fr.charging_site_id) AS charging_site_id,
+    COALESCE(mr.equipment_notes, fr.equipment_notes) AS equipment_notes,
+    mr.supply_from_date,
+    mr.supply_to_date,
+    mr.kwh_usage,
+    mr.compliance_notes,
+    mr.charging_equipment_compliance_id,
+    mr.is_active,
+    COALESCE(mr.charging_equipment_version, fr.charging_equipment_version) AS charging_equipment_version,
+    COALESCE(mr.street_address, fr.street_address) AS street_address,
+    COALESCE(mr.city, fr.city) AS city,
+    COALESCE(mr.postal_code, fr.postal_code) AS postal_code,
+    COALESCE(mr.latitude, fr.latitude) AS latitude,
+    COALESCE(mr.longitude, fr.longitude) AS longitude,
+    COALESCE(mr.level_of_equipment, fr.level_of_equipment) AS level_of_equipment,
+    COALESCE(mr.level_of_equipment_id, fr.level_of_equipment_id) AS level_of_equipment_id,
+    COALESCE(mr.ports, fr.ports) AS ports,
+    COALESCE(mr.allocating_organization_name, fr.allocating_organization_name) AS allocating_organization_name,
+    COALESCE(mr.intended_uses, fr.intended_uses) AS intended_uses,
+    COALESCE(mr.intended_users, fr.intended_users) AS intended_users,
+    COALESCE(mr.power_output, fr.power_output) AS power_output,
+    COALESCE(
+        mr.capacity_utilization_percent,
+        fr.capacity_utilization_percent
+    ) AS capacity_utilization_percent,
+    COALESCE(mr.charging_equipment_status, fr.charging_equipment_status) AS charging_equipment_status
+FROM report_context rc
+JOIN fallback_rows fr
+    ON fr.organization_id = rc.organization_id
+LEFT JOIN matched_rows mr
+    ON mr.organization_id = rc.organization_id
+   AND mr.compliance_report_id = rc.compliance_report_id
+   AND mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid;
+
 -- ==========================================
 -- Notional Transfer Base View
 -- ==========================================
@@ -1056,174 +1374,6 @@ GROUP BY
 -- Grant SELECT privileges to the reporting role
 GRANT SELECT ON vw_compliance_report_chained TO basic_lcfs_reporting_role;
 
--- ==========================================
--- Compliance Report Base View
--- ==========================================
-drop view if exists vw_compliance_report_base cascade;
-CREATE OR REPLACE VIEW vw_compliance_report_base AS
-SELECT
-      "compliance_report"."compliance_report_id" AS "compliance_report_id",
-      "compliance_report"."compliance_period_id" AS "compliance_period_id",
-      "compliance_report"."organization_id" AS "organization_id",
-      "compliance_report"."current_status_id" AS "current_status_id",
-      "compliance_report"."transaction_id" AS "transaction_id",
-      "compliance_report"."compliance_report_group_uuid" AS "compliance_report_group_uuid",
-      "compliance_report"."legacy_id" AS "legacy_id",
-      "compliance_report"."version" AS "version",
-      "compliance_report"."supplemental_initiator" AS "supplemental_initiator",
-      "compliance_report"."reporting_frequency" AS "reporting_frequency",
-      "compliance_report"."nickname" AS "nickname",
-      "compliance_report"."supplemental_note" AS "supplemental_note",
-      "compliance_report"."assessment_statement" AS "assessment_statement",
-      CASE
-        WHEN "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_total" > 0 THEN 'Not Met'
-        ELSE 'Met'
-      END AS "Renewable Requirements",
-      CASE
-        WHEN "Compliance Report Summary - Compliance Report"."line_21_non_compliance_penalty_payable" > 0 THEN 'Not Met'
-        ELSE 'Met'
-      END AS "Low Carbon Requirements",
-      "Compliance Period"."compliance_period_id" AS "Compliance Period__compliance_period_id",
-      "Compliance Period"."description" AS "Compliance Period__description",
-      "Compliance Period"."display_order" AS "Compliance Period__display_order",
-      "Compliance Period"."create_date" AS "Compliance Period__create_date",
-      "Compliance Period"."update_date" AS "Compliance Period__update_date",
-      "Compliance Period"."effective_date" AS "Compliance Period__effective_date",
-      "Compliance Period"."effective_status" AS "Compliance Period__effective_status",
-      "Compliance Period"."expiration_date" AS "Compliance Period__expiration_date",
-      "Compliance Report Status - Current Status"."compliance_report_status_id" AS "Compliance Report Status - Current Status__complian_8aca39b7",
-      "Compliance Report Status - Current Status"."display_order" AS "Compliance Report Status - Current Status__display_order",
-      "Compliance Report Status - Current Status"."status" AS "Compliance Report Status - Current Status__status",
-      "Compliance Report Status - Current Status"."create_date" AS "Compliance Report Status - Current Status__create_date",
-      "Compliance Report Status - Current Status"."update_date" AS "Compliance Report Status - Current Status__update_date",
-      "Compliance Report Status - Current Status"."effective_date" AS "Compliance Report Status - Current Status__effective_date",
-      "Compliance Report Status - Current Status"."effective_status" AS "Compliance Report Status - Current Status__effective_status",
-      "Compliance Report Status - Current Status"."expiration_date" AS "Compliance Report Status - Current Status__expiration_date",
-      "Compliance Report Summary - Compliance Report"."summary_id" AS "Compliance Report Summary - Compliance Report__summary_id",
-      "Compliance Report Summary - Compliance Report"."compliance_report_id" AS "Compliance Report Summary - Compliance Report__comp_1db2e1e9",
-      "Compliance Report Summary - Compliance Report"."quarter" AS "Compliance Report Summary - Compliance Report__quarter",
-      "Compliance Report Summary - Compliance Report"."is_locked" AS "Compliance Report Summary - Compliance Report__is_locked",
-      "Compliance Report Summary - Compliance Report"."line_1_fossil_derived_base_fuel_gasoline" AS "Compliance Report Summary - Compliance Report__line_2c0818fb",
-      "Compliance Report Summary - Compliance Report"."line_1_fossil_derived_base_fuel_diesel" AS "Compliance Report Summary - Compliance Report__line_2ff66c5b",
-      "Compliance Report Summary - Compliance Report"."line_1_fossil_derived_base_fuel_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_1fcf7a18",
-      "Compliance Report Summary - Compliance Report"."line_2_eligible_renewable_fuel_supplied_gasoline" AS "Compliance Report Summary - Compliance Report__line_d70f8aef",
-      "Compliance Report Summary - Compliance Report"."line_2_eligible_renewable_fuel_supplied_diesel" AS "Compliance Report Summary - Compliance Report__line_2773c83c",
-      "Compliance Report Summary - Compliance Report"."line_2_eligible_renewable_fuel_supplied_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_e4c8e80c",
-      "Compliance Report Summary - Compliance Report"."line_3_total_tracked_fuel_supplied_gasoline" AS "Compliance Report Summary - Compliance Report__line_9cec896d",
-      "Compliance Report Summary - Compliance Report"."line_3_total_tracked_fuel_supplied_diesel" AS "Compliance Report Summary - Compliance Report__line_489bea32",
-      "Compliance Report Summary - Compliance Report"."line_3_total_tracked_fuel_supplied_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_af2beb8e",
-      "Compliance Report Summary - Compliance Report"."line_4_eligible_renewable_fuel_required_gasoline" AS "Compliance Report Summary - Compliance Report__line_a26a000d",
-      "Compliance Report Summary - Compliance Report"."line_4_eligible_renewable_fuel_required_diesel" AS "Compliance Report Summary - Compliance Report__line_0ef43e75",
-      "Compliance Report Summary - Compliance Report"."line_4_eligible_renewable_fuel_required_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_91ad62ee",
-      "Compliance Report Summary - Compliance Report"."line_5_net_notionally_transferred_gasoline" AS "Compliance Report Summary - Compliance Report__line_b1027537",
-      "Compliance Report Summary - Compliance Report"."line_5_net_notionally_transferred_diesel" AS "Compliance Report Summary - Compliance Report__line_38be33f3",
-      "Compliance Report Summary - Compliance Report"."line_5_net_notionally_transferred_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_82c517d4",
-      "Compliance Report Summary - Compliance Report"."line_6_renewable_fuel_retained_gasoline" AS "Compliance Report Summary - Compliance Report__line_6927f733",
-      "Compliance Report Summary - Compliance Report"."line_6_renewable_fuel_retained_diesel" AS "Compliance Report Summary - Compliance Report__line_93d805cb",
-      "Compliance Report Summary - Compliance Report"."line_6_renewable_fuel_retained_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_5ae095d0",
-      "Compliance Report Summary - Compliance Report"."line_7_previously_retained_gasoline" AS "Compliance Report Summary - Compliance Report__line_157d6973",
-      "Compliance Report Summary - Compliance Report"."line_7_previously_retained_diesel" AS "Compliance Report Summary - Compliance Report__line_31fd1f1b",
-      "Compliance Report Summary - Compliance Report"."line_7_previously_retained_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_26ba0b90",
-      "Compliance Report Summary - Compliance Report"."line_8_obligation_deferred_gasoline" AS "Compliance Report Summary - Compliance Report__line_27419684",
-      "Compliance Report Summary - Compliance Report"."line_8_obligation_deferred_diesel" AS "Compliance Report Summary - Compliance Report__line_ac263897",
-      "Compliance Report Summary - Compliance Report"."line_8_obligation_deferred_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_1486f467",
-      "Compliance Report Summary - Compliance Report"."line_9_obligation_added_gasoline" AS "Compliance Report Summary - Compliance Report__line_c12cb8c0",
-      "Compliance Report Summary - Compliance Report"."line_9_obligation_added_diesel" AS "Compliance Report Summary - Compliance Report__line_05eb459f",
-      "Compliance Report Summary - Compliance Report"."line_9_obligation_added_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_f2ebda23",
-      "Compliance Report Summary - Compliance Report"."line_10_net_renewable_fuel_supplied_gasoline" AS "Compliance Report Summary - Compliance Report__line_1be763e7",
-      "Compliance Report Summary - Compliance Report"."line_10_net_renewable_fuel_supplied_diesel" AS "Compliance Report Summary - Compliance Report__line_b72177b0",
-      "Compliance Report Summary - Compliance Report"."line_10_net_renewable_fuel_supplied_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_28200104",
-      "Compliance Report Summary - Compliance Report"."line_11_non_compliance_penalty_gasoline" AS "Compliance Report Summary - Compliance Report__line_53735f1d",
-      "Compliance Report Summary - Compliance Report"."line_11_non_compliance_penalty_diesel" AS "Compliance Report Summary - Compliance Report__line_64a07c80",
-      "Compliance Report Summary - Compliance Report"."line_11_non_compliance_penalty_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_60b43dfe",
-      "Compliance Report Summary - Compliance Report"."line_12_low_carbon_fuel_required" AS "Compliance Report Summary - Compliance Report__line_da2710ad",
-      "Compliance Report Summary - Compliance Report"."line_13_low_carbon_fuel_supplied" AS "Compliance Report Summary - Compliance Report__line_b25fca1c",
-      "Compliance Report Summary - Compliance Report"."line_14_low_carbon_fuel_surplus" AS "Compliance Report Summary - Compliance Report__line_4b98033f",
-      "Compliance Report Summary - Compliance Report"."line_15_banked_units_used" AS "Compliance Report Summary - Compliance Report__line_1d7d6a31",
-      "Compliance Report Summary - Compliance Report"."line_16_banked_units_remaining" AS "Compliance Report Summary - Compliance Report__line_684112bb",
-      "Compliance Report Summary - Compliance Report"."line_17_non_banked_units_used" AS "Compliance Report Summary - Compliance Report__line_b1d3ad5e",
-      "Compliance Report Summary - Compliance Report"."line_18_units_to_be_banked" AS "Compliance Report Summary - Compliance Report__line_e173956e",
-      "Compliance Report Summary - Compliance Report"."line_19_units_to_be_exported" AS "Compliance Report Summary - Compliance Report__line_9a885574",
-      "Compliance Report Summary - Compliance Report"."line_20_surplus_deficit_units" AS "Compliance Report Summary - Compliance Report__line_8e71546f",
-      "Compliance Report Summary - Compliance Report"."line_21_surplus_deficit_ratio" AS "Compliance Report Summary - Compliance Report__line_00d2728d",
-      "Compliance Report Summary - Compliance Report"."line_22_compliance_units_issued" AS "Compliance Report Summary - Compliance Report__line_29d9cb9c",
-      "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_gasoline" AS "Compliance Report Summary - Compliance Report__line_d8942234",
-      "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_diesel" AS "Compliance Report Summary - Compliance Report__line_125e31fc",
-      "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_jet_fuel" AS "Compliance Report Summary - Compliance Report__line_eb5340d7",
-      "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_total" AS "Compliance Report Summary - Compliance Report__line_bff5157d",
-      "Compliance Report Summary - Compliance Report"."line_21_non_compliance_penalty_payable" AS "Compliance Report Summary - Compliance Report__line_7c9c21b1",
-      "Compliance Report Summary - Compliance Report"."total_non_compliance_penalty_payable" AS "Compliance Report Summary - Compliance Report__tota_0e1e6fb3",
-      "Compliance Report Summary - Compliance Report"."create_date" AS "Compliance Report Summary - Compliance Report__create_date",
-      "Compliance Report Summary - Compliance Report"."update_date" AS "Compliance Report Summary - Compliance Report__update_date",
-      "Compliance Report Summary - Compliance Report"."create_user" AS "Compliance Report Summary - Compliance Report__create_user",
-      "Compliance Report Summary - Compliance Report"."update_user" AS "Compliance Report Summary - Compliance Report__update_user",
-      "Compliance Report Summary - Compliance Report"."early_issuance_credits_q1" AS "Compliance Report Summary - Compliance Report__earl_6d4994a4",
-      "Compliance Report Summary - Compliance Report"."early_issuance_credits_q2" AS "Compliance Report Summary - Compliance Report__earl_f440c51e",
-      "Compliance Report Summary - Compliance Report"."early_issuance_credits_q3" AS "Compliance Report Summary - Compliance Report__earl_8347f588",
-      "Compliance Report Summary - Compliance Report"."early_issuance_credits_q4" AS "Compliance Report Summary - Compliance Report__earl_1d23602b",
-      "Transaction"."transaction_id" AS "Transaction__transaction_id",
-      "Transaction"."compliance_units" AS "Transaction__compliance_units",
-      "Transaction"."organization_id" AS "Transaction__organization_id",
-      "Transaction"."transaction_action" AS "Transaction__transaction_action",
-      "Transaction"."create_date" AS "Transaction__create_date",
-      "Transaction"."update_date" AS "Transaction__update_date",
-      "Transaction"."create_user" AS "Transaction__create_user",
-      "Transaction"."update_user" AS "Transaction__update_user",
-      "Transaction"."effective_date" AS "Transaction__effective_date",
-      "Transaction"."effective_status" AS "Transaction__effective_status",
-      "Transaction"."expiration_date" AS "Transaction__expiration_date",
-      "Organization"."organization_id" AS "Organization__organization_id",
-      "Organization"."organization_code" AS "Organization__organization_code",
-      "Organization"."name" AS "Organization__name",
-      "Organization"."operating_name" AS "Organization__operating_name",
-      "Organization"."email" AS "Organization__email",
-      "Organization"."phone" AS "Organization__phone",
-      "Organization"."edrms_record" AS "Organization__edrms_record",
-      "Organization"."total_balance" AS "Organization__total_balance",
-      "Organization"."reserved_balance" AS "Organization__reserved_balance",
-      "Organization"."count_transfers_in_progress" AS "Organization__count_transfers_in_progress",
-      "Organization"."organization_status_id" AS "Organization__organization_status_id",
-      "Organization"."organization_type_id" AS "Organization__organization_type_id",
-      "Organization"."organization_address_id" AS "Organization__organization_address_id",
-      "Organization"."organization_attorney_address_id" AS "Organization__organization_attorney_address_id",
-      "Organization"."create_date" AS "Organization__create_date",
-      "Organization"."update_date" AS "Organization__update_date",
-      "Organization"."create_user" AS "Organization__create_user",
-      "Organization"."update_user" AS "Organization__update_user",
-      "Organization"."effective_date" AS "Organization__effective_date",
-      "Organization"."effective_status" AS "Organization__effective_status",
-      "Organization"."expiration_date" AS "Organization__expiration_date",
-      COALESCE("Organization Early Issuance"."has_early_issuance", false) AS "Organization__has_early_issuance",
-      "Organization"."records_address" AS "Organization__records_address",
-      "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "CR Chained - CR Group UUID__group_uuid",
-      "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "CR Chained - CR Group UUID__max_version"
-    FROM
-      "compliance_report"
-      INNER JOIN "compliance_period" AS "Compliance Period" ON "compliance_report"."compliance_period_id" = "Compliance Period"."compliance_period_id"
-      INNER JOIN "compliance_report_status" AS "Compliance Report Status - Current Status" ON "compliance_report"."current_status_id" = "Compliance Report Status - Current Status"."compliance_report_status_id"
-      INNER JOIN "compliance_report_summary" AS "Compliance Report Summary - Compliance Report" ON "compliance_report"."compliance_report_id" = "Compliance Report Summary - Compliance Report"."compliance_report_id"
-     
-LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
-      LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
-      LEFT JOIN "organization_early_issuance_by_year" AS "Organization Early Issuance" ON "compliance_report"."organization_id" = "Organization Early Issuance"."organization_id" AND "compliance_report"."compliance_period_id" = "Organization Early Issuance"."compliance_period_id"
-      INNER JOIN (
-        SELECT
-          compliance_report_group_uuid AS group_uuid,
-          max(VERSION) AS max_version
-        FROM
-          COMPLIANCE_REPORT
-       
-GROUP BY
-          COMPLIANCE_REPORT.compliance_report_group_uuid
-      ) AS "Compliance Reports Chained - Compliance Report Group UUID" ON (
-        "compliance_report"."compliance_report_group_uuid" = "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid"
-      )
-     
-   AND (
-        "compliance_report"."version" = "Compliance Reports Chained - Compliance Report Group UUID"."max_version"
-      );
-
-GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Allocation Agreement Chained View
@@ -2047,7 +2197,7 @@ LEFT JOIN "allocation_agreement" AS "Allocation Agreement - Group UUID" ON (
           "Organization"."effective_date" AS "Organization__effective_date",
           "Organization"."effective_status" AS "Organization__effective_status",
           "Organization"."expiration_date" AS "Organization__expiration_date",
-          COALESCE("Organization Early Issuance"."has_early_issuance", false) AS "Organization__has_early_issuance",
+          false AS "Organization__has_early_issuance",
           "Organization"."records_address" AS "Organization__records_address",
           "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "Compliance Reports Chained - Compliance Report Grou_1a77e4cb",
           "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "Compliance Reports Chained - Compliance Report Grou_480bb7b1"
@@ -2058,7 +2208,6 @@ LEFT JOIN "allocation_agreement" AS "Allocation Agreement - Group UUID" ON (
           INNER JOIN "compliance_report_summary" AS "Compliance Report Summary - Compliance Report" ON "compliance_report"."compliance_report_id" = "Compliance Report Summary - Compliance Report"."compliance_report_id"
           LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
           LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
-          LEFT JOIN "organization_early_issuance_by_year" AS "Organization Early Issuance" ON "compliance_report"."organization_id" = "Organization Early Issuance"."organization_id" AND "compliance_report"."compliance_period_id" = "Organization Early Issuance"."compliance_period_id"
           INNER JOIN (
             SELECT
               compliance_report_group_uuid AS group_uuid,
@@ -2365,7 +2514,7 @@ SELECT
       "Organization"."effective_date" AS "Organization__effective_date",
       "Organization"."effective_status" AS "Organization__effective_status",
       "Organization"."expiration_date" AS "Organization__expiration_date",
-      COALESCE("Organization Early Issuance"."has_early_issuance", false) AS "Organization__has_early_issuance",
+      false AS "Organization__has_early_issuance",
       "Organization"."records_address" AS "Organization__records_address",
       "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "Compliance Reports Chained - Compliance Report Grou_1a77e4cb",
       "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "Compliance Reports Chained - Compliance Report Grou_480bb7b1"
@@ -2377,7 +2526,6 @@ SELECT
      
 LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
       LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
-      LEFT JOIN "organization_early_issuance_by_year" AS "Organization Early Issuance" ON "compliance_report"."organization_id" = "Organization Early Issuance"."organization_id" AND "compliance_report"."compliance_period_id" = "Organization Early Issuance"."compliance_period_id"
       INNER JOIN (
         SELECT
           compliance_report_group_uuid AS group_uuid,
@@ -3023,7 +3171,7 @@ SELECT
           "Organization"."effective_date" AS "Organization__effective_date",
           "Organization"."effective_status" AS "Organization__effective_status",
           "Organization"."expiration_date" AS "Organization__expiration_date",
-          COALESCE("Organization Early Issuance"."has_early_issuance", false) AS "Organization__has_early_issuance",
+          false AS "Organization__has_early_issuance",
           "Organization"."records_address" AS "Organization__records_address",
           "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "Compliance Reports Chained - Compliance Report Grou_1a77e4cb",
           "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "Compliance Reports Chained - Compliance Report Grou_480bb7b1"
@@ -3034,7 +3182,6 @@ SELECT
           INNER JOIN "compliance_report_summary" AS "Compliance Report Summary - Compliance Report" ON "compliance_report"."compliance_report_id" = "Compliance Report Summary - Compliance Report"."compliance_report_id"
           LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
           LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
-          LEFT JOIN "organization_early_issuance_by_year" AS "Organization Early Issuance" ON "compliance_report"."organization_id" = "Organization Early Issuance"."organization_id" AND "compliance_report"."compliance_period_id" = "Organization Early Issuance"."compliance_period_id"
           INNER JOIN (
             SELECT
               compliance_report_group_uuid AS group_uuid,
@@ -3084,7 +3231,7 @@ FROM
     JOIN organization ON cr.organization_id = organization.organization_id
 WHERE
     lh.rn = 1
-    AND crs.status NOT IN ('Assessed'::compliancereportstatusenum, 'Rejected'::compliancereportstatusenum, 'Not_recommended_by_analyst'::compliancereportstatusenum, 'Not_recommended_by_manager'::compliancereportstatusenum)
+    AND crs.status::text NOT IN ('Assessed', 'Exempted', 'Rejected', 'Not_recommended_by_analyst', 'Not_recommended_by_manager')
 ORDER BY
     days_in_status DESC NULLS LAST;
 

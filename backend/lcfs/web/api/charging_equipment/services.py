@@ -74,27 +74,66 @@ class ChargingEquipmentServices:
         # Transform to schema
         items = []
         for equipment in equipment_list:
+            latest_site_id = getattr(
+                equipment, "latest_charging_site_id", equipment.charging_site_id
+            )
+            latest_site_name = getattr(
+                equipment, "latest_site_name", equipment.charging_site.site_name
+            )
+            latest_site_code = getattr(
+                equipment, "latest_site_code", equipment.charging_site.site_code
+            )
+            latest_org_name = getattr(
+                equipment,
+                "latest_organization_name",
+                (
+                    equipment.charging_site.organization.name
+                    if equipment.charging_site.organization
+                    else None
+                ),
+            )
+            latest_street_address = getattr(
+                equipment,
+                "latest_street_address",
+                equipment.charging_site.street_address,
+            )
+            latest_city = getattr(equipment, "latest_city", equipment.charging_site.city)
+            latest_postal_code = getattr(
+                equipment, "latest_postal_code", equipment.charging_site.postal_code
+            )
+            latest_site_latitude = getattr(
+                equipment, "latest_latitude", equipment.charging_site.latitude
+            )
+            latest_site_longitude = getattr(
+                equipment, "latest_longitude", equipment.charging_site.longitude
+            )
+            latest_allocating_org_name = getattr(
+                equipment,
+                "latest_allocating_organization_name",
+                equipment.charging_site.allocating_organization_name,
+            )
+
             item = ChargingEquipmentListItemSchema(
                 charging_equipment_id=equipment.charging_equipment_id,
-                charging_site_id=equipment.charging_site_id,
+                charging_site_id=latest_site_id,
                 status=equipment.status.status,
-                site_name=equipment.charging_site.site_name,
-                organization_name=equipment.charging_site.organization.name if equipment.charging_site.organization else None,
+                site_name=latest_site_name,
+                organization_name=latest_org_name,
                 registration_number=equipment.registration_number
-                or f"{equipment.charging_site.site_code}-{equipment.equipment_number}",
+                or f"{latest_site_code}-{equipment.equipment_number}",
                 version=equipment.version,
                 serial_number=equipment.serial_number,
                 manufacturer=equipment.manufacturer,
                 model=equipment.model,
                 ports=equipment.ports.value if equipment.ports else None,
-                allocating_organization_name=equipment.charging_site.allocating_organization_name,
+                allocating_organization_name=latest_allocating_org_name,
                 latitude=equipment.latitude,
                 longitude=equipment.longitude,
-                site_latitude=equipment.charging_site.latitude,
-                site_longitude=equipment.charging_site.longitude,
-                street_address=equipment.charging_site.street_address,
-                city=equipment.charging_site.city,
-                postal_code=equipment.charging_site.postal_code,
+                site_latitude=latest_site_latitude,
+                site_longitude=latest_site_longitude,
+                street_address=latest_street_address,
+                city=latest_city,
+                postal_code=latest_postal_code,
                 level_of_equipment_name=equipment.level_of_equipment.name,
                 intended_uses=[
                     {
@@ -197,6 +236,17 @@ class ChargingEquipmentServices:
 
         equipment_dict = equipment_data.model_dump()
 
+        # Validate no duplicate serial number at the same charging site
+        duplicate = await self.repo.check_duplicate_serial_number(
+            charging_site_id=equipment_dict["charging_site_id"],
+            serial_number=equipment_dict["serial_number"],
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A charging equipment with serial number '{equipment_dict['serial_number']}' already exists at this charging site.",
+            )
+
         # Create equipment
         equipment = await self.repo.create_charging_equipment(equipment_dict)
 
@@ -248,8 +298,24 @@ class ChargingEquipmentServices:
                 detail=f"Cannot edit equipment in {existing.status.status} status",
             )
 
-        # Update equipment
+        # Validate no duplicate serial number at the same charging site
         equipment_dict = equipment_data.model_dump(exclude_unset=True)
+        new_serial = equipment_dict.get("serial_number", existing.serial_number)
+        new_site_id = equipment_dict.get(
+            "charging_site_id", existing.charging_site_id
+        )
+        duplicate = await self.repo.check_duplicate_serial_number(
+            charging_site_id=new_site_id,
+            serial_number=new_serial,
+            exclude_equipment_id=charging_equipment_id,
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A charging equipment with serial number '{new_serial}' already exists at this charging site.",
+            )
+
+        # Update equipment
         equipment = await self.repo.update_charging_equipment(
             charging_equipment_id, equipment_dict
         )
@@ -649,15 +715,15 @@ class ChargingEquipmentServices:
                 detail="Only government users can return equipment to draft",
             )
 
-        # Validate current statuses: Submitted and Validated are eligible
+        # Validate current statuses: only Submitted
         status_map = await self.repo.get_equipment_status_map(equipment_ids, None)
         eligible_ids = [
-            eid for eid, status in status_map.items() if status in ("Submitted", "Validated")
+            eid for eid, status in status_map.items() if status == "Submitted"
         ]
         ineligible_ids = [
             eid
             for eid, status in status_map.items()
-            if status not in ("Submitted", "Validated")
+            if status != "Submitted"
         ]
 
         # Update status to Draft for eligible ones
@@ -673,13 +739,16 @@ class ChargingEquipmentServices:
                 message="No equipment could be returned to draft",
                 affected_count=0,
                 errors=[
-                    "No valid equipment found or not in Submitted/Validated status",
+                    "No valid equipment found or not in Submitted status",
                     *[
-                        f"Equipment {eid} not in Submitted/Validated"
+                        f"Equipment {eid} not in Submitted status"
                         for eid in ineligible_ids
                     ],
                 ],
             )
+
+        # Revert parent charging sites to Draft if all their equipment is now Draft
+        await self.repo.revert_sites_to_draft_if_all_equipment_draft(eligible_ids)
 
         await add_notification_msg(
             action_type=ActionTypeEnum.UPDATE,

@@ -197,6 +197,7 @@ async def test_create_charging_equipment_success(
 ):
     """Test creating charging equipment successfully."""
     # Mock the repository responses
+    mock_repo.check_duplicate_serial_number.return_value = False
     mock_repo.create_charging_equipment.return_value = valid_charging_equipment
     mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
 
@@ -226,6 +227,7 @@ async def test_update_charging_equipment_success(
     """Test updating charging equipment successfully."""
     # Mock the repository responses
     mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+    mock_repo.check_duplicate_serial_number.return_value = False
     mock_repo.update_charging_equipment.return_value = valid_charging_equipment
 
     # Call the service method

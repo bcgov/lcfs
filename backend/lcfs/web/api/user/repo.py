@@ -1,4 +1,6 @@
 from typing import List
+import hashlib
+import re
 
 import structlog
 from fastapi import Depends, HTTPException
@@ -49,9 +51,11 @@ from lcfs.web.api.user.schema import (
     UserBaseSchema,
     UserLoginHistorySchema,
 )
+from lcfs.db.seeders.user_seed_data import get_seed_usernames
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
+ORG_BOUND_TEST_USER_RE = re.compile(r"^(lcfs|tfs)\d+$", re.IGNORECASE)
 
 
 class UserRepository:
@@ -59,6 +63,11 @@ class UserRepository:
 
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
+
+    @staticmethod
+    def is_test_user(user: UserProfile) -> bool:
+        username = getattr(user, "keycloak_username", "") or ""
+        return bool(ORG_BOUND_TEST_USER_RE.match(username))
 
     def apply_filters(self, pagination, conditions, full_name):
         role_filter_present = False
@@ -107,51 +116,78 @@ class UserRepository:
         return None
 
     async def update_idir_roles(self, user, new_roles, existing_roles_set):
+        COMPLIANCE_DIR_GROUP = {
+            RoleEnum.ANALYST,
+            RoleEnum.COMPLIANCE_MANAGER,
+            RoleEnum.DIRECTOR,
+        }
+
+        IA_GROUP = {RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER}
+
+        new_roles_set = set(new_roles)
+
         for new_role in new_roles:
-            if new_role in {
-                RoleEnum.ANALYST,
-                RoleEnum.COMPLIANCE_MANAGER,
-                RoleEnum.DIRECTOR,
-            }:
+            if new_role in COMPLIANCE_DIR_GROUP:
                 if new_role not in existing_roles_set:
-                    # Remove existing roles
-                    roles_to_keep = [
-                        user_role
-                        for user_role in user.user_roles
-                        if user_role.role.name
-                        not in {
-                            RoleEnum.ANALYST,
-                            RoleEnum.COMPLIANCE_MANAGER,
-                            RoleEnum.DIRECTOR,
-                        }
+                    # Enforce mutual exclusivity within the compliance/director group
+                    user.user_roles = [
+                        ur
+                        for ur in user.user_roles
+                        if ur.role.name not in COMPLIANCE_DIR_GROUP
                     ]
-                    # Add new role
-                    user.user_roles = roles_to_keep
                     user.user_roles.append(await self.find_user_role(new_role))
-            elif (
-                new_role == RoleEnum.ADMINISTRATOR
-                and RoleEnum.ADMINISTRATOR not in existing_roles_set
-            ):
-                # Add administrator role
-                user.user_roles.append(await self.find_user_role(new_role))
+            elif new_role in IA_GROUP:
+                if new_role not in existing_roles_set:
+                    # Enforce mutual exclusivity within the IA group
+                    user.user_roles = [
+                        ur for ur in user.user_roles if ur.role.name not in IA_GROUP
+                    ]
+                    user.user_roles.append(await self.find_user_role(new_role))
+            elif new_role in {RoleEnum.ADMINISTRATOR, RoleEnum.SYSTEM_ADMIN}:
+                if new_role not in existing_roles_set:
+                    user.user_roles.append(await self.find_user_role(new_role))
             elif (
                 new_role == RoleEnum.GOVERNMENT
                 and RoleEnum.GOVERNMENT not in existing_roles_set
             ):
-                # Add government role
                 user.user_roles.append(await self.find_user_role(new_role))
 
+        # Remove compliance/director role if none is in new_roles
+        if not new_roles_set.intersection(COMPLIANCE_DIR_GROUP):
+            user.user_roles = [
+                ur
+                for ur in user.user_roles
+                if ur.role.name not in COMPLIANCE_DIR_GROUP
+            ]
+
+        # Remove IA roles if none is requested OR if Director was assigned
+        # (Director cannot be combined with IA roles)
+        if not new_roles_set.intersection(IA_GROUP) or RoleEnum.DIRECTOR in new_roles_set:
+            user.user_roles = [
+                ur for ur in user.user_roles if ur.role.name not in IA_GROUP
+            ]
+
+        # Remove ADMINISTRATOR if not in new_roles
         if (
-            RoleEnum.ADMINISTRATOR not in new_roles
+            RoleEnum.ADMINISTRATOR not in new_roles_set
             and RoleEnum.ADMINISTRATOR in existing_roles_set
         ):
-            # Remove existing roles
-            roles_to_keep = [
-                user_role
-                for user_role in user.user_roles
-                if user_role.role.name != RoleEnum.ADMINISTRATOR
+            user.user_roles = [
+                ur
+                for ur in user.user_roles
+                if ur.role.name != RoleEnum.ADMINISTRATOR
             ]
-            user.user_roles = roles_to_keep
+
+        # Remove SYSTEM_ADMIN if not in new_roles
+        if (
+            RoleEnum.SYSTEM_ADMIN not in new_roles_set
+            and RoleEnum.SYSTEM_ADMIN in existing_roles_set
+        ):
+            user.user_roles = [
+                ur
+                for ur in user.user_roles
+                if ur.role.name != RoleEnum.SYSTEM_ADMIN
+            ]
 
     async def update_bceid_roles(self, user, new_roles, existing_roles_set):
         for new_role in new_roles:
@@ -159,19 +195,18 @@ class UserRepository:
                 new_role == RoleEnum.READ_ONLY
                 and RoleEnum.READ_ONLY not in existing_roles_set
             ):
+                # Read-only is mutually exclusive with all other BCeID roles
                 roles_to_keep = [
                     user_role
                     for user_role in user.user_roles
                     if user_role.role.name == RoleEnum.SUPPLIER
                 ]
-                # Add read_only role
                 user.user_roles = roles_to_keep
                 user.user_roles.append(await self.find_user_role(new_role))
             elif (
                 new_role == RoleEnum.SUPPLIER
                 and RoleEnum.SUPPLIER not in existing_roles_set
             ):
-                # Add supplier role
                 user.user_roles.append(await self.find_user_role(new_role))
             elif new_role in {
                 RoleEnum.COMPLIANCE_REPORTING,
@@ -180,9 +215,9 @@ class UserRepository:
                 RoleEnum.SIGNING_AUTHORITY,
                 RoleEnum.CI_APPLICANT,
                 RoleEnum.IA_PROPONENT,
+                RoleEnum.IA_SIGNER,
             }:
                 if new_role not in existing_roles_set:
-                    # Add missing role
                     user.user_roles.append(await self.find_user_role(new_role))
         user_roles_to_keep = [user_role for user_role in user.user_roles]
         for user_role in user.user_roles:
@@ -196,6 +231,7 @@ class UserRepository:
                     RoleEnum.READ_ONLY,
                     RoleEnum.CI_APPLICANT,
                     RoleEnum.IA_PROPONENT,
+                    RoleEnum.IA_SIGNER,
                 }
                 and user_role.role.name not in new_roles
             ):
@@ -325,6 +361,165 @@ class UserRepository:
         return user_result.unique().scalar_one_or_none() if user_result else None
 
     @repo_handler
+    async def get_seeded_test_users(self, seed_env: str) -> list[UserBaseSchema]:
+        usernames = get_seed_usernames(seed_env)
+        if not usernames:
+            return []
+
+        query = (
+            select(UserProfile)
+            .join(
+                UserRole,
+                UserProfile.user_profile_id == UserRole.user_profile_id,
+                isouter=True,
+            )
+            .join(Role, UserRole.role_id == Role.role_id, isouter=True)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
+            .where(UserProfile.keycloak_username.in_(usernames))
+            .order_by(asc(UserProfile.first_name), asc(UserProfile.last_name))
+        )
+
+        results = (await self.db.execute(query)).scalars().unique().all()
+        return [UserBaseSchema.model_validate(user) for user in results]
+
+    @repo_handler
+    async def resolve_org_name(self, organization_name: str, salt_phrase: str) -> dict:
+        input_name = (organization_name or "").strip()
+        if not input_name:
+            return {
+                "resolved": False,
+                "input_name": input_name,
+                "message": "Organization name is required.",
+            }
+
+        table_exists = await self.db.execute(
+            text("SELECT to_regclass('public.anonymizer_original_values')")
+        )
+        if table_exists.scalar_one_or_none() is None:
+            return {
+                "resolved": False,
+                "input_name": input_name,
+                "message": "No anonymizer backup table found.",
+            }
+
+        # Masked -> Original (expects suffix ... #<10-hex>)
+        masked_row = (
+            (
+                await self.db.execute(
+                    text(
+                        """
+                    SELECT
+                        o.organization_id,
+                        o.name AS masked_name,
+                        a.original_value AS original_name
+                    FROM organization o
+                    JOIN anonymizer_original_values a
+                      ON a.table_name = 'organization'
+                     AND a.column_name = 'name'
+                     AND a.record_id = o.organization_id
+                    WHERE o.name = :input_name
+                    LIMIT 1
+                    """
+                    ),
+                    {"input_name": input_name},
+                )
+            )
+            .mappings()
+            .first()
+        )
+
+        if masked_row:
+            suffix_match = re.search(
+                r"\s#([a-f0-9]{10})$", masked_row["masked_name"] or ""
+            )
+            if suffix_match:
+                expected_hash = hashlib.md5(
+                    f"{(masked_row['original_name'] or '').lower()}:{salt_phrase}:{masked_row['organization_id']}".encode(
+                        "utf-8"
+                    )
+                ).hexdigest()[:10]
+                if suffix_match.group(1) == expected_hash:
+                    return {
+                        "resolved": True,
+                        "organization_id": masked_row["organization_id"],
+                        "input_name": input_name,
+                        "masked_name": masked_row["masked_name"],
+                        "original_name": masked_row["original_name"],
+                        "direction": "masked_to_original",
+                        "message": "Resolved masked organization name to original.",
+                    }
+            return {
+                "resolved": False,
+                "organization_id": masked_row["organization_id"],
+                "input_name": input_name,
+                "masked_name": masked_row["masked_name"],
+                "message": "Salt phrase did not match this masked organization name.",
+            }
+
+        # Original -> Masked
+        original_row = (
+            (
+                await self.db.execute(
+                    text(
+                        """
+                    SELECT
+                        o.organization_id,
+                        o.name AS masked_name,
+                        a.original_value AS original_name
+                    FROM anonymizer_original_values a
+                    JOIN organization o
+                      ON o.organization_id = a.record_id
+                    WHERE a.table_name = 'organization'
+                      AND a.column_name = 'name'
+                      AND a.original_value = :input_name
+                    LIMIT 1
+                    """
+                    ),
+                    {"input_name": input_name},
+                )
+            )
+            .mappings()
+            .first()
+        )
+
+        if not original_row:
+            return {
+                "resolved": False,
+                "input_name": input_name,
+                "message": "Organization name not found in anonymizer mapping.",
+            }
+
+        suffix_match = re.search(
+            r"\s#([a-f0-9]{10})$", original_row["masked_name"] or ""
+        )
+        expected_hash = hashlib.md5(
+            f"{(original_row['original_name'] or '').lower()}:{salt_phrase}:{original_row['organization_id']}".encode(
+                "utf-8"
+            )
+        ).hexdigest()[:10]
+        if not suffix_match or suffix_match.group(1) != expected_hash:
+            return {
+                "resolved": False,
+                "organization_id": original_row["organization_id"],
+                "input_name": input_name,
+                "original_name": original_row["original_name"],
+                "message": "Salt phrase did not match this original organization name.",
+            }
+
+        return {
+            "resolved": True,
+            "organization_id": original_row["organization_id"],
+            "input_name": input_name,
+            "masked_name": original_row["masked_name"],
+            "original_name": original_row["original_name"],
+            "direction": "original_to_masked",
+            "message": "Resolved original organization name to masked.",
+        }
+
+    @repo_handler
     async def create_user(
         self, user_create: UserCreateSchema, user_id: int = None
     ) -> UserProfile:
@@ -385,6 +580,8 @@ class UserRepository:
         user.first_name = user_update.first_name
         user.last_name = user_update.last_name
         user.is_active = user_update.is_active
+        if self.is_test_user(user):
+            user.organization_id = user_update.organization_id
         user.keycloak_email = user_update.keycloak_email
         user.keycloak_username = user_update.keycloak_username
         user.phone = user_update.phone
@@ -396,15 +593,12 @@ class UserRepository:
             if not user.email or user.email != user.keycloak_email:
                 user.email = user.keycloak_email
 
-        # Find the RoleEnum member corresponding to each role
-        new_role_enums = []
-        for role_str in new_roles:
-            try:
-                name_str = role_str.title()
-                role_enum = RoleEnum(name_str)
-                new_role_enums.append(role_enum)
-            except ValueError:
-                pass
+        roles_lower = {r.lower() for r in new_roles}
+        new_role_enums = [
+            role_enum
+            for role_enum in RoleEnum
+            if role_enum.value.lower() in roles_lower
+        ]
 
         # Create a set for faster membership checks
         existing_roles_set = set(user.role_names)

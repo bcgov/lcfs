@@ -17,7 +17,9 @@ describe('Dashboard view coverage', () => {
     cy.getByDataTest('dashboard-admin-links-card', {
       timeout: 30000
     }).should('be.visible')
-    cy.getByDataTest('admin-link-admin-users').click()
+    cy.getByDataTest('admin-link-admin-users', { timeout: 30000 })
+      .should('be.visible')
+      .click()
     cy.location('pathname', { timeout: 30000 }).should('eq', '/admin/users')
   })
 

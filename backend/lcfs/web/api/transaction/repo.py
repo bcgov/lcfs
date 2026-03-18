@@ -393,7 +393,10 @@ class TransactionRepository:
         Calculate the available balance for Line 17 using the specific period end formula.
 
         This formula includes:
-        - validations or compliance unit balance changes from assessments listed with compliance period or prior
+        - validations or compliance unit balance changes from assessments listed with compliance period or prior,
+          AND assessed (transaction finalized) on or before the compliance period end date.
+          Uses update_date (not create_date) since transactions may be created as Reserved
+          before the final assessment converts them to Adjustment.
         - minus reductions listed with compliance period or prior
         - plus compliance units purchased through credit transfers with effective date on or before end of compliance period
         - minus compliance units sold through credit transfer with effective date on or before end of compliance period
@@ -425,6 +428,7 @@ class TransactionRepository:
                 Transaction.transaction_id,
                 Transaction.compliance_units,
                 Transaction.create_date,
+                Transaction.update_date,
                 # Check if transaction is from a compliance report
                 ComplianceReport.compliance_report_id.isnot(None).label(
                     "is_compliance_report"
@@ -537,6 +541,12 @@ class TransactionRepository:
             transaction_id = row.transaction_id
             compliance_units = row.compliance_units
             create_date = row.create_date
+            # update_date reflects when the transaction was last modified.
+            # For compliance report transactions, this is when the transaction
+            # action was changed to Adjustment (i.e., the assessment time),
+            # which may differ from create_date if the transaction was initially
+            # created as Reserved during an earlier pipeline step.
+            update_date = row.update_date
 
             # Determine if this transaction should be counted as past or future
             count_as_past = False
@@ -544,19 +554,28 @@ class TransactionRepository:
             # 1. Compliance report transactions
             if (
                 row.is_compliance_report
-                and row.compliance_status == ComplianceReportStatusEnum.Assessed
+                and row.compliance_status
+                in (ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Exempted)
             ):
-                # For compliance reports, check if the report's compliance period
-                # is <= the target period (not the transaction create date)
-                # This ensures supplemental reports assessed after the period ended
-                # are still counted in the correct period
+                # For compliance reports, check BOTH:
+                # a) The report's compliance period is <= the target period, AND
+                # b) The transaction was assessed on or before the compliance
+                #    period end date (March 31, year+1).
+                # We use update_date (not create_date) because transactions may
+                # be created as Reserved before assessment. update_date reflects
+                # when the transaction was finalized (Reserved → Adjustment).
+                # Credits from assessments after the deadline were not available
+                # during the compliance period and must be excluded.
                 if row.report_compliance_period is not None:
                     report_period_year = int(row.report_compliance_period)
-                    if report_period_year <= compliance_period:
+                    if (
+                        report_period_year <= compliance_period
+                        and update_date <= compliance_period_end_local
+                    ):
                         count_as_past = True
                 else:
                     # Fallback for historical data without period info
-                    if create_date <= compliance_period_end_local:
+                    if update_date <= compliance_period_end_local:
                         count_as_past = True
 
             # 2. Transfer transactions (from)

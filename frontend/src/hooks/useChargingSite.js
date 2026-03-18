@@ -143,6 +143,8 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
       }
     },
     onSuccess: (data, variables, context) => {
+      const responseSiteId = data?.data?.chargingSiteId
+
       // Comprehensive cache invalidation for charging site mutations
       if (clearCache) {
         // Remove all charging site related queries
@@ -171,6 +173,15 @@ export const useSaveChargingSite = (organizationId, options = {}) => {
               'charging-site-equipment-paginated',
               variables.chargingSiteId
             ]
+          })
+        }
+
+        if (responseSiteId && responseSiteId !== variables.chargingSiteId) {
+          queryClient.invalidateQueries({
+            queryKey: ['chargingSite', responseSiteId]
+          })
+          queryClient.invalidateQueries({
+            queryKey: ['charging-site-equipment-paginated', responseSiteId]
           })
         }
       }
@@ -236,6 +247,41 @@ export const useSiteNames = (organizationId = null, options = {}) => {
     },
     staleTime,
     enabled: enabled && !!currentUser,
+    ...restOptions
+  })
+}
+
+export const useUpdateChargingSiteStatus = (options = {}) => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ siteId, newStatus }) => {
+      if (!siteId) {
+        throw new Error('Charging site ID is required')
+      }
+      const response = await apiService.patch(
+        apiRoutes.updateChargingSiteStatus.replace(':siteId', String(siteId)),
+        { new_status: newStatus }
+      )
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      const siteId = variables?.siteId
+      if (siteId) {
+        queryClient.invalidateQueries({ queryKey: ['chargingSite', siteId] })
+        queryClient.invalidateQueries({
+          queryKey: ['charging-site-equipment-paginated', siteId]
+        })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+        queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+      }
+      onSuccess?.(data, variables)
+    },
+    onError,
+    retry: 0,
     ...restOptions
   })
 }

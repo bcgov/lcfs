@@ -26,6 +26,8 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExporter
 from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImporter
+from lcfs.web.api.final_supply_equipment.fse_reporting_export import FSEReportingExporter
+from lcfs.web.api.final_supply_equipment.fse_reporting_importer import FSEReportingImporter
 from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
@@ -347,6 +349,102 @@ async def get_job_status(
     return JSONResponse(content=status)
 
 
+@router.get(
+    "/reporting/update-template/{report_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_fse_reporting_update_template(
+    request: Request,
+    report_id: str,
+    report_validate: ComplianceReportValidation = Depends(),
+    exporter: FSEReportingExporter = Depends(),
+):
+    """
+    Download a pre-populated Excel template for bulk-updating FSE reporting data
+    (dates of supply, kWh usage, compliance notes) for all eligible FSE.
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
+
+    return await exporter.export_update_template(
+        compliance_report_id, request.user, compliance_report.organization
+    )
+
+
+@router.post(
+    "/reporting/bulk-update/{report_id}",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def bulk_update_fse_reporting(
+    request: Request,
+    report_id: str,
+    file: UploadFile = File(...),
+    report_validate: ComplianceReportValidation = Depends(),
+    importer: FSEReportingImporter = Depends(),
+):
+    """
+    Upload an Excel file to bulk-update FSE reporting data (dates, kWh, compliance notes).
+    Records are matched by FSE Registration Number. Returns a job_id for progress polling.
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
+
+    await report_validate.validate_compliance_report_editable(compliance_report)
+
+    job_id = await importer.import_data(
+        compliance_report_id=compliance_report_id,
+        user=request.user,
+        file=file,
+    )
+    return JSONResponse(content={"jobId": job_id})
+
+
+@router.get(
+    "/reporting/bulk-update/status/{job_id}",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_fse_bulk_update_job_status(
+    request: Request,
+    job_id: str,
+    importer: FSEReportingImporter = Depends(),
+):
+    """
+    Poll the progress/status of a running FSE bulk-update import job.
+    """
+    job_status = await importer.get_status(job_id)
+    return JSONResponse(content=job_status)
+
+
 @router.post(
     "/reporting/list",
     response_model=dict,
@@ -425,7 +523,7 @@ async def update_fse_reporting_active_status(
     """
     Activate or deactivate multiple FSE compliance reporting records without deleting data
     """
-    return await service.update_fse_reporting_active_status(request_data, request.user)
+    return await service.update_fse_reporting_active_status(request_data)
 
 
 @router.put(

@@ -13,6 +13,8 @@ export const apiRoutes = {
   currentUser: '/users/current',
   exportUsers: '/users/export?format=xlsx',
   listUsers: '/users/list',
+  seededTestUsers: '/users/seeded-test-users',
+  resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
@@ -72,6 +74,7 @@ export const apiRoutes = {
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',
   exportFuelCodes: '/fuel-codes/export',
+  fuelCodeBulletins: '/fuel-codes/bulletins',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
@@ -118,6 +121,12 @@ export const apiRoutes = {
   saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
   updateFSEReportingActiveStatus:
     '/final-supply-equipments/reporting/active-status',
+  fseReportingUpdateTemplate:
+    '/final-supply-equipments/reporting/update-template/:reportID',
+  fseReportingBulkUpdate:
+    '/final-supply-equipments/reporting/bulk-update/:reportID',
+  fseReportingBulkUpdateStatus:
+    '/final-supply-equipments/reporting/bulk-update/status/:jobID',
   // charging sites
   getSiteStatuses: '/charging-sites/statuses',
   getEquipmentStatuses: '/charging-sites/equipment/statuses',
@@ -148,6 +157,7 @@ export const apiRoutes = {
     importJobStatus: '/charging-equipment/status/:jobId'
   },
   getChargingSite: '/charging-sites/:siteId',
+  updateChargingSiteStatus: '/charging-sites/:siteId/status',
   getAllChargingSites: '/charging-sites/list-all',
   getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
   saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
@@ -235,5 +245,12 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache'
+  geocoderClearCache: '/geocoder/cache',
+
+  // login background image endpoints
+  loginBgImages: '/login-bg-images/',
+  loginBgImageActive: '/login-bg-images/active',
+  loginBgImage: '/login-bg-images/:imageId',
+  loginBgImageActivate: '/login-bg-images/:imageId/activate',
+  loginBgImageStream: '/login-bg-images/:imageId/stream'
 }
