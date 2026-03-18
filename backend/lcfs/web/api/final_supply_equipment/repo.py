@@ -64,6 +64,19 @@ class FinalSupplyEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
+    def _apply_site_registration_sort(self, stmt, site_field, registration_field, tie_breaker_field):
+        """
+        Apply the shared default FSE ordering:
+        1. Site name ascending (nulls last)
+        2. Registration number descending (nulls last)
+        3. Stable tie-breaker for deterministic pagination
+        """
+        return stmt.order_by(
+            asc(site_field).nullslast(),
+            desc(registration_field).nullslast(),
+            asc(tie_breaker_field),
+        )
+
     def _combine_reporting_queries(self, union_queries: list[Any]):
         """
         Combine reporting queries while removing exact duplicate rows.
@@ -1165,9 +1178,11 @@ class FinalSupplyEquipmentRepository:
                 else:
                     final_query = final_query.order_by(asc(field))
         else:
-            final_query = final_query.order_by(
-                asc(vt.c.site_name),
-                asc(vt.c.registration_number),
+            final_query = self._apply_site_registration_sort(
+                final_query,
+                vt.c.site_name,
+                vt.c.registration_number,
+                vt.c.charging_equipment_id,
             )
 
         # Count total
@@ -1475,10 +1490,12 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.compliance_report_group_uuid,
             )
             .where(all_rows_subquery.c.row_num == 1)
-            .order_by(
-                asc(all_rows_subquery.c.site_name),
-                asc(all_rows_subquery.c.registration_number),
-            )
+        )
+        stmt = self._apply_site_registration_sort(
+            stmt,
+            all_rows_subquery.c.site_name,
+            all_rows_subquery.c.registration_number,
+            all_rows_subquery.c.charging_equipment_id,
         )
 
         result = await self.db.execute(stmt)
