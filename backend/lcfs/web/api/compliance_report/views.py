@@ -316,7 +316,12 @@ async def get_changelog(
         "allocation-agreements",
     ],
     service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> List:
+    await validate.validate_organization_access_by_group_uuid(
+        compliance_report_group_uuid
+    )
+
     response_model_map = {
         "fuel_supplies": ChangelogFuelSuppliesDTO,
         "fuel_exports": ChangelogFuelExportsDTO,

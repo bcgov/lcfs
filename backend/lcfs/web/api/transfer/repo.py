@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
 from datetime import datetime
 
@@ -32,8 +32,14 @@ class TransferRepository:
         self.db = db
 
     @repo_handler
-    async def get_all_transfers(self) -> List[Transfer]:
-        """Queries the database for all transfer records."""
+    async def get_all_transfers(
+        self, organization_id: Optional[int] = None
+    ) -> List[Transfer]:
+        """Queries the database for all transfer records.
+
+        When organization_id is provided, only transfers involving that
+        organization (as sender or receiver) are returned.
+        """
         query = select(Transfer).options(
             selectinload(Transfer.from_organization),
             selectinload(Transfer.to_organization),
@@ -47,6 +53,13 @@ class TransferRepository:
             ),
             selectinload(Transfer.transfer_comments),
         )
+        if organization_id is not None:
+            query = query.where(
+                or_(
+                    Transfer.from_organization_id == organization_id,
+                    Transfer.to_organization_id == organization_id,
+                )
+            )
         result = await self.db.execute(query)
         transfers = result.scalars().all()
         return transfers
