@@ -4,6 +4,7 @@
 
 export const ROUTES = {
   DASHBOARD: '/',
+  AI_ANALYTICS: '/ai-analytics',
   API_DOCS: '/docs',
   CREDIT_CALCULATOR: '/credit-calculator',
   CALCULATION_DATA: '/calculation-data',

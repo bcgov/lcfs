@@ -211,6 +211,15 @@ export const apiRoutes = {
   complianceReportCounts: '/dashboard/compliance-report-counts',
   fuelCodeCounts: '/dashboard/fuel-code-counts',
 
+  // ai analytics
+  aiAnalytics: {
+    catalog: '/ai-analytics/schema/catalog',
+    plan: '/ai-analytics/query/plan',
+    run: '/ai-analytics/query/run',
+    followUp: '/ai-analytics/query/follow-up',
+    views: '/ai-analytics/views'
+  },
+
   // audit-logs
   getAuditLogs: '/audit-log/list',
   getAuditLog: '/audit-log/:auditLogId',

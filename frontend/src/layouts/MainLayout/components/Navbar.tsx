@@ -37,6 +37,7 @@ export const Navbar = () => {
     const canSeeInitiativeAgreementsBceid = hasAnyRole(roles.ia_proponent)
     const idirRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
+      { name: 'AI Analytics', route: ROUTES.AI_ANALYTICS },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },
       { name: t('Transactions'), route: ROUTES.TRANSACTIONS.LIST },
       { name: t('ComplianceReporting'), route: ROUTES.REPORTS.LIST },

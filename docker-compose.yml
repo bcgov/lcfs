@@ -115,6 +115,11 @@ services:
       LCFS_REDIS_PASSWORD: development_only
       LCFS_RELOAD: true
       APP_ENVIRONMENT: dev
+      LCFS_AI_ANALYTICS_MODE: heuristic_only
+      LCFS_AI_ANALYTICS_LLM_PROVIDER: ollama
+      LCFS_AI_ANALYTICS_LLM_BASE_URL: http://ollama:11434
+      LCFS_AI_ANALYTICS_LLM_MODEL: llama3.1:8b
+      LCFS_AI_ANALYTICS_ALLOWED_INTERNAL_HOSTS: localhost,127.0.0.1,ollama,openclaw
     ports:
       - '8000:8000' # Application port
       - '5678:5678' # Debugger port
@@ -145,6 +150,30 @@ services:
         target: /app/node_modules
     networks:
       - shared_network
+
+  # Optional fully local AI services for the analytics assistant.
+  # These stay on the private docker network and are never exposed to a cloud provider.
+  ollama:
+    container_name: ollama
+    restart: "no"
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - shared_network
+
+  # Example local orchestrator service. Keep internal/private only.
+  # Uncomment and replace with the real image if OpenCLAW is available in your environment.
+  # openclaw:
+  #   container_name: openclaw
+  #   restart: "no"
+  #   image: your-private-registry/openclaw:latest
+  #   ports:
+  #     - "8088:8080"
+  #   networks:
+  #     - shared_network
 
   # LCFS MCP Server - Development Only
   # Model Context Protocol server for local development and testing
@@ -180,6 +209,8 @@ volumes:
     name: lcfs_node_data
   s3:
     name: lcfs_s3_data
+  ollama_data:
+    name: lcfs_ollama_data
   clamav:
     name: clamav
   clamsocket:

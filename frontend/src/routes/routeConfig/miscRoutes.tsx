@@ -1,6 +1,7 @@
 import ROUTES from '../routes'
 import { Dashboard } from '@/views/Dashboard'
 import FormView from '@/views/Forms/FormView'
+import { AiAnalyticsPage } from '@/views/AiAnalytics/AiAnalyticsPage'
 import { AppRouteObject } from '../types'
 
 export const miscRoutes: AppRouteObject[] = [
@@ -13,6 +14,11 @@ export const miscRoutes: AppRouteObject[] = [
         handle: { title: 'Dashboard' }
       }
     ]
+  },
+  {
+    path: ROUTES.AI_ANALYTICS,
+    element: <AiAnalyticsPage />,
+    handle: { title: 'AI Analytics' }
   },
   {
     name: 'Authenticated Form View',

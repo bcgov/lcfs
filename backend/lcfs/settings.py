@@ -1,5 +1,6 @@
 import enum
 import os
+from typing import Literal
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
@@ -98,12 +99,64 @@ class Settings(BaseSettings):
     feature_credit_market_notifications: bool = True
     feature_fuel_code_expiry_email: bool = True
 
+    # AI analytics
+    ai_analytics_max_rows: int = 500
+    ai_analytics_default_limit: int = 100
+    ai_analytics_schema_cache_ttl_seconds: int = 300
+    ai_analytics_mode: Literal[
+        "heuristic_only", "local_llm_direct", "openclaw_local"
+    ] = "heuristic_only"
+    ai_analytics_llm_provider: str = "ollama"
+    ai_analytics_llm_model: Optional[str] = None
+    ai_analytics_llm_base_url: Optional[str] = None
+    ai_analytics_llm_api_key: Optional[str] = None
+    ai_analytics_openclaw_base_url: Optional[str] = None
+    ai_analytics_openclaw_model: Optional[str] = None
+    ai_analytics_openclaw_path: str = "/orchestrate"
+    ai_analytics_allow_private_hosts_only: bool = True
+    ai_analytics_allowed_internal_hosts: str = "localhost,127.0.0.1,ollama,openclaw"
+    ai_analytics_request_timeout_seconds: int = 60
+    ai_analytics_max_retries: int = 2
+    ai_analytics_enable_llm_summary: bool = True
+    ai_analytics_log_prompts: bool = False
+
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present
         app_env = os.getenv("APP_ENVIRONMENT")
         if app_env and "environment" not in kwargs:
             kwargs["environment"] = app_env
         super().__init__(**kwargs)
+        self._validate_ai_settings()
+
+    def _validate_ai_settings(self) -> None:
+        if self.ai_analytics_mode == "heuristic_only":
+            return
+        from lcfs.services.ai_analytics.providers.local_endpoint_validator import (
+            validate_private_ai_url,
+        )
+
+        if self.ai_analytics_mode == "local_llm_direct":
+            if not self.ai_analytics_llm_base_url:
+                raise ValueError(
+                    "LCFS_AI_ANALYTICS_LLM_BASE_URL is required for local_llm_direct mode."
+                )
+            validate_private_ai_url(
+                self.ai_analytics_llm_base_url,
+                self,
+                "LCFS_AI_ANALYTICS_LLM_BASE_URL",
+            )
+            return
+
+        if self.ai_analytics_mode == "openclaw_local":
+            if not self.ai_analytics_openclaw_base_url:
+                raise ValueError(
+                    "LCFS_AI_ANALYTICS_OPENCLAW_BASE_URL is required for openclaw_local mode."
+                )
+            validate_private_ai_url(
+                self.ai_analytics_openclaw_base_url,
+                self,
+                "LCFS_AI_ANALYTICS_OPENCLAW_BASE_URL",
+            )
 
     @property
     def db_url(self) -> URL:
