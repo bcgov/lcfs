@@ -51,6 +51,38 @@ class ComplianceReportValidation:
 
         return compliance_report
 
+    async def validate_organization_access_by_group_uuid(
+        self, compliance_report_group_uuid: str
+    ):
+        """
+        Validates that the user has access to compliance reports identified by
+        a group UUID. Raises 404 if no reports are found, 403 if the requesting
+        supplier does not belong to the report's organization.
+        """
+        reports = await self.repo.get_compliance_report_chain(
+            compliance_report_group_uuid
+        )
+        if not reports:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found.",
+            )
+
+        organization_id = reports[0].organization_id
+        user_organization_id = (
+            self.request.user.organization.organization_id
+            if self.request.user.organization
+            else None
+        )
+
+        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+
+        if not is_government and organization_id != user_organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this compliance report.",
+            )
+
     async def validate_compliance_report_access(
         self, compliance_report: ComplianceReport
     ):
