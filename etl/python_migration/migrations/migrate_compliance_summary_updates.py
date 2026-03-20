@@ -54,6 +54,7 @@ class ComplianceSummaryUpdater:
     ) -> float:
         """Calculate Line 17 available balance using raw SQL"""
         try:
+            lcfs_cursor.execute("SAVEPOINT line17_calc")
             # Calculate compliance period end date
             vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
             compliance_period_end = datetime.strptime(
@@ -153,10 +154,12 @@ class ComplianceSummaryUpdater:
             lcfs_cursor.execute(line_17_query, params)
             result = lcfs_cursor.fetchone()
 
+            lcfs_cursor.execute("RELEASE SAVEPOINT line17_calc")
             self.stats["line_17_calculations"] += 1
             return float(result[0] if result and result[0] is not None else 0)
 
         except Exception as e:
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT line17_calc")
             logger.error(
                 f"Error calculating line 17 balance for org {organization_id}: {e}"
             )
@@ -302,6 +305,7 @@ class ComplianceSummaryUpdater:
     def parse_summary_data(self, snapshot: Dict, lcfs_cursor, report_version: int = 0) -> Optional[Dict]:
         """Enhanced parsing with Alembic migration logic"""
         try:
+            lcfs_cursor.execute("SAVEPOINT parse_summary")
             # Extract organization and compliance period info
             organization_id = snapshot.get("organization", {}).get("id", 0)
             compliance_period_start = snapshot.get("compliance_period", {}).get(
@@ -460,7 +464,7 @@ class ComplianceSummaryUpdater:
             # Use calculated penalty with correct rate based on compliance year
             total_payable = line11_gas + line11_diesel + line_21_non_compliance_penalty
 
-            return {
+            result = {
                 # Gasoline class data
                 "line_1_fossil_derived_base_fuel_gasoline": line1_gas,
                 "line_2_eligible_renewable_fuel_supplied_gasoline": line2_gas,
@@ -525,8 +529,11 @@ class ComplianceSummaryUpdater:
                 "line_21_non_compliance_penalty_payable": line_21_non_compliance_penalty,
                 "total_non_compliance_penalty_payable": total_payable,
             }
+            lcfs_cursor.execute("RELEASE SAVEPOINT parse_summary")
+            return result
 
         except Exception as e:
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT parse_summary")
             logger.error(f"Failed to parse summary data from snapshot: {e}")
             return None
 
@@ -597,6 +604,7 @@ class ComplianceSummaryUpdater:
         """
 
         try:
+            lcfs_cursor.execute("SAVEPOINT update_summary")
             params = [
                 MIGRATION_USER,  # update_user
                 # Gasoline class
@@ -662,9 +670,11 @@ class ComplianceSummaryUpdater:
             ]
 
             lcfs_cursor.execute(update_sql, params)
+            lcfs_cursor.execute("RELEASE SAVEPOINT update_summary")
             return lcfs_cursor.rowcount > 0
 
         except Exception as e:
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT update_summary")
             logger.error(
                 f"Failed to update summary for compliance_report_id {lcfs_compliance_report_id}: {e}"
             )
@@ -681,6 +691,18 @@ class ComplianceSummaryUpdater:
                 with get_destination_connection() as lcfs_conn:
                     tfrs_cursor = tfrs_conn.cursor()
                     lcfs_cursor = lcfs_conn.cursor()
+
+                    # Ensure historical_snapshot column exists
+                    # (may be missing if Alembic migration 54d55e878dad was skipped in prod)
+                    lcfs_cursor.execute("""
+                        ALTER TABLE compliance_report_summary
+                        ADD COLUMN IF NOT EXISTS historical_snapshot jsonb;
+
+                        COMMENT ON COLUMN compliance_report_summary.historical_snapshot IS
+                        'Contains historical data from pre-2024 TFRS system for data retention and analysis purposes.';
+                    """)
+                    lcfs_conn.commit()
+                    logger.info("Ensured historical_snapshot column exists on compliance_report_summary")
 
                     # Load mappings
                     self.load_mappings(lcfs_cursor)
