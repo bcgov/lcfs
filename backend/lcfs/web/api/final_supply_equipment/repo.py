@@ -1611,6 +1611,7 @@ class FinalSupplyEquipmentRepository:
                     ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
                 ).label("registration_number"),
                 ChargingSite.site_name.label("site_name"),
+                ChargingEquipment.serial_number.label("serial_number"),
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id,
                 ComplianceReportChargingEquipment.supply_from_date,
                 ComplianceReportChargingEquipment.supply_to_date,
@@ -1688,6 +1689,7 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.charging_equipment_version,
                 all_rows_subquery.c.registration_number,
                 all_rows_subquery.c.site_name,
+                all_rows_subquery.c.serial_number,
                 all_rows_subquery.c.charging_equipment_compliance_id,
                 all_rows_subquery.c.supply_from_date,
                 all_rows_subquery.c.supply_to_date,
