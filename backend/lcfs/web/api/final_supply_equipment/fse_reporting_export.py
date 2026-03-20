@@ -21,13 +21,14 @@ FSE_UPDATE_SHEETNAME = "FSE"
 HEADERS = [
     "Site name",
     "Registration #",
+    "Serial #",
     "Dates of supply from",
     "Dates of supply to",
     "kWh usage",
     "Compliance notes",
 ]
 
-COLUMN_WIDTHS = [25, 18, 22, 22, 14, 40]
+COLUMN_WIDTHS = [25, 18, 18, 22, 22, 14, 40]
 
 
 class FSEReportingExporter:
@@ -101,11 +102,13 @@ class FSEReportingExporter:
                 not getattr(record, "is_active", True)
                 or record_group != compliance_report_group_uuid
             )
+            serial_number = getattr(record, "serial_number", None) or ""
             if is_inactive:
                 rows.append(
                     [
                         getattr(record, "site_name", None) or "",
                         record.registration_number or "",
+                        serial_number,
                         None,
                         None,
                         None,
@@ -123,6 +126,7 @@ class FSEReportingExporter:
                 [
                     getattr(record, "site_name", None) or "",
                     record.registration_number or "",
+                    serial_number,
                     supply_from,
                     supply_to,
                     record.kwh_usage if record.kwh_usage is not None else 0,
@@ -151,24 +155,25 @@ class FSEReportingExporter:
         # Column layout:
         # Col A (1): Site name        – locked for existing rows, unlocked for new rows
         # Col B (2): Registration #   – locked for existing rows, unlocked for new rows
-        # Col C (3): Supply from      – editable, date
-        # Col D (4): Supply to        – editable, date
-        # Col E (5): kWh usage        – editable, integer
-        # Col F (6): Compliance notes – editable, text
+        # Col C (3): Serial #         – locked (read-only) always
+        # Col D (4): Supply from      – editable, date
+        # Col E (5): Supply to        – editable, date
+        # Col F (6): kWh usage        – editable, integer
+        # Col G (7): Compliance notes – editable, text
 
         # Pre-populated data rows
         for row_idx, row_data in enumerate(rows, start=2):
             for col_idx, value in enumerate(row_data, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                if col_idx in (1, 2):
-                    # Site name & Registration # – locked (read-only)
+                if col_idx in (1, 2, 3):
+                    # Site name, Registration # & Serial # – locked (read-only)
                     cell.protection = Protection(locked=True)
                     cell.alignment = Alignment(horizontal="left")
-                elif col_idx in (3, 4):
+                elif col_idx in (4, 5):
                     cell.protection = Protection(locked=False)
                     cell.number_format = "yyyy-mm-dd"
                     cell.alignment = Alignment(horizontal="left")
-                elif col_idx == 5:
+                elif col_idx == 6:
                     cell.protection = Protection(locked=False)
                     cell.number_format = "#,##0"
                     cell.alignment = Alignment(horizontal="right")
@@ -176,15 +181,19 @@ class FSEReportingExporter:
                     cell.protection = Protection(locked=False)
                     cell.alignment = Alignment(horizontal="left", wrap_text=True)
 
-        # Empty rows for new entries – unlock all 6 columns so users can add new FSE
+        # Empty rows for new entries – unlock editable columns; Serial # stays locked
         first_empty_row = len(rows) + 2
         for row_idx in range(first_empty_row, first_empty_row + 500):
-            for col_idx in range(1, 7):
+            for col_idx in range(1, 8):
                 cell = ws.cell(row=row_idx, column=col_idx)
-                cell.protection = Protection(locked=False)
-                if col_idx in (3, 4):
+                if col_idx == 3:
+                    # Serial # – always locked
+                    cell.protection = Protection(locked=True)
+                else:
+                    cell.protection = Protection(locked=False)
+                if col_idx in (4, 5):
                     cell.number_format = "yyyy-mm-dd"
-                elif col_idx == 5:
+                elif col_idx == 6:
                     cell.number_format = "#,##0"
 
         # Data validators (allow blank – do not block partial updates)
@@ -205,8 +214,8 @@ class FSEReportingExporter:
                 "calendar year."
             ),
         )
-        date_validator.add("C2:C10000")
         date_validator.add("D2:D10000")
+        date_validator.add("E2:E10000")
         ws.add_data_validation(date_validator)
 
         kwh_validator = DataValidation(
@@ -215,7 +224,7 @@ class FSEReportingExporter:
             showErrorMessage=True,
             error="Please enter a valid integer.",
         )
-        kwh_validator.add("E2:E10000")
+        kwh_validator.add("F2:F10000")
         ws.add_data_validation(kwh_validator)
 
         # Protect the sheet – only rows with locked=False cells will be editable
