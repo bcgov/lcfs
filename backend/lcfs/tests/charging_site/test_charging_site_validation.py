@@ -340,3 +340,113 @@ class TestChargingSiteValidation:
                 await validation.validate_organization_access(1)
 
             assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+
+    # ------------------------------------------------------------------
+    # Self-allocation validation
+    # ------------------------------------------------------------------
+
+    @pytest.mark.anyio
+    async def test_create_rejects_own_org_as_allocating_org_by_id(
+        self, validation, mock_request
+    ):
+        """Cannot create a site where allocating_organization_id equals the user's own org."""
+        mock_request.user.organization.organization_id = 1
+        mock_request.user.organization.name = "Acme Corp"
+        validation.cs_repo.charging_site_name_exists.return_value = False
+
+        schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Site A",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_id=1,   # same as user's org
+            intended_users=[],
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await validation.charging_site_create_access(1, schema)
+
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert "own organization" in exc_info.value.detail.lower()
+
+    @pytest.mark.anyio
+    async def test_create_rejects_own_org_as_allocating_org_by_name(
+        self, validation, mock_request
+    ):
+        """Cannot create a site where allocating_organization_name matches the user's org (case-insensitive)."""
+        mock_request.user.organization.organization_id = 1
+        mock_request.user.organization.name = "Acme Corp"
+        validation.cs_repo.charging_site_name_exists.return_value = False
+
+        schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Site A",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_name="acme corp",  # case-insensitive match
+            intended_users=[],
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await validation.charging_site_create_access(1, schema)
+
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert "own organization" in exc_info.value.detail.lower()
+
+    @pytest.mark.anyio
+    async def test_update_rejects_own_org_as_allocating_org_by_id(
+        self, validation, mock_request, mock_charging_site
+    ):
+        """Cannot update a site to set allocating_organization_id to the user's own org."""
+        mock_request.user.organization.organization_id = 1
+        mock_request.user.organization.name = "Acme Corp"
+        validation.cs_repo.get_charging_site_by_id.return_value = mock_charging_site
+
+        update_schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Test Site",   # same name — no duplicate check triggered
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_id=1,   # same as user's org
+            intended_users=[],
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await validation.charging_site_delete_update_access(1, 1, update_schema)
+
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert "own organization" in exc_info.value.detail.lower()
+
+    @pytest.mark.anyio
+    async def test_create_allows_different_org_as_allocating_org(
+        self, validation, mock_request
+    ):
+        """A different org as allocating org is accepted."""
+        mock_request.user.organization.organization_id = 1
+        mock_request.user.organization.name = "Acme Corp"
+        validation.cs_repo.charging_site_name_exists.return_value = False
+
+        schema = ChargingSiteCreateSchema(
+            organization_id=1,
+            site_name="Site A",
+            street_address="1 Main St",
+            city="Vancouver",
+            postal_code="V6B 1A1",
+            latitude=49.28,
+            longitude=-123.12,
+            allocating_organization_id=2,   # different org
+            allocating_organization_name="Beta Inc",
+            intended_users=[],
+        )
+
+        result = await validation.charging_site_create_access(1, schema)
+        assert result is True

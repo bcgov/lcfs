@@ -239,6 +239,76 @@ class TestValidateRow:
         assert result is not None
         assert "Invalid postal code" in result
 
+    def test_validate_row_rejects_own_org_as_allocating_org(self):
+        """Row is rejected when the allocating org name matches the uploading org's name."""
+        row = (
+            "Test Site",
+            "123 Main St",
+            "Vancouver",
+            "V6B 1A1",
+            49.2827,
+            -123.1207,
+            "Acme Corp",    # matches organization_name below
+            "Notes",
+        )
+
+        result = _validate_row(row, 2, set(), organization_name="Acme Corp")
+
+        assert result is not None
+        assert "own organization" in result.lower()
+
+    def test_validate_row_rejects_own_org_case_insensitive(self):
+        """Own-org check is case-insensitive."""
+        row = (
+            "Test Site",
+            "123 Main St",
+            "Vancouver",
+            "V6B 1A1",
+            49.2827,
+            -123.1207,
+            "ACME CORP",    # upper-case variant
+            "Notes",
+        )
+
+        result = _validate_row(row, 2, set(), organization_name="Acme Corp")
+
+        assert result is not None
+        assert "own organization" in result.lower()
+
+    def test_validate_row_allows_different_org_as_allocating_org(self):
+        """A different org name is accepted as allocating org."""
+        row = (
+            "Test Site",
+            "123 Main St",
+            "Vancouver",
+            "V6B 1A1",
+            49.2827,
+            -123.1207,
+            "Beta Inc",     # different org — allowed
+            "Notes",
+        )
+
+        result = _validate_row(row, 2, set(), organization_name="Acme Corp")
+
+        assert result is None
+
+    def test_validate_row_allows_empty_allocating_org(self):
+        """Allocating org is optional; an empty value is always valid."""
+        row = (
+            "Test Site",
+            "123 Main St",
+            "Vancouver",
+            "V6B 1A1",
+            49.2827,
+            -123.1207,
+            None,           # no allocating org
+            "Notes",
+        )
+
+        result = _validate_row(row, 2, set(), organization_name="Acme Corp")
+
+        assert result is None
+
 
 class TestParseRow:
 
