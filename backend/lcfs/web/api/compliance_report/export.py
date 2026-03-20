@@ -108,7 +108,9 @@ class ComplianceReportExporter:
         }
 
     @service_handler
-    async def export(self, compliance_report_id: int) -> StreamingResponse:
+    async def export(
+        self, compliance_report_id: int, is_government: bool = True
+    ) -> StreamingResponse:
         wb = Workbook()
         wb.remove(wb.active)
 
@@ -133,7 +135,9 @@ class ComplianceReportExporter:
             # FSE is not applicable for compliance periods before 2024
             if sheet_name == FSE_EXPORT_SHEET and compliance_year < 2024:
                 continue
-            if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
+            if sheet_name == FSE_EXPORT_SHEET:
+                data = await loader(cid, is_quarterly, is_government)
+            elif sheet_name == ALLOCATION_AGREEMENTS_SHEET:
                 data = await loader(cid, is_quarterly)
             else:
                 data = await loader(uuid, cid, report.version, is_quarterly)
@@ -795,7 +799,9 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_fse_data(self, cid, is_quarterly) -> List[List[Any]]:
+    async def _load_fse_data(
+        self, cid, is_quarterly, is_government: bool = True
+    ) -> List[List[Any]]:
         """Load final supply equipment data."""
         # FSE doesn't have quarterly data, always use annual columns
         headers = [col.label for col in FSE_EXPORT_COLUMNS]
@@ -806,9 +812,10 @@ class ComplianceReportExporter:
         organization_name = (
             report.organization.name if report and report.organization else None
         )
+        report_organization_id = getattr(report, "organization_id", None) if report else None
         organization_id = (
-            report.organization_id
-            if report and getattr(report, "organization_id", None)
+            report_organization_id
+            if isinstance(report_organization_id, int)
             else (
                 report.organization.organization_id
                 if report and report.organization
@@ -818,15 +825,24 @@ class ComplianceReportExporter:
         if not organization_id:
             return [headers]
 
-        reporting_result = await self.fse_repo.get_fse_reporting_list_paginated(
-            organization_id=organization_id,
-            pagination=PaginationRequestSchema(
-                page=1, size=1000, filters=[], sort_orders=[]
-            ),
-            compliance_report_id=cid,
-            mode="summary",
-        )
-        reporting_rows = reporting_result[0]
+        if is_government:
+            reporting_result = await self.fse_repo.get_fse_reporting_list_paginated(
+                organization_id=organization_id,
+                pagination=PaginationRequestSchema(
+                    page=1, size=1000, filters=[], sort_orders=[]
+                ),
+                compliance_report_id=cid,
+                mode="summary",
+            )
+            reporting_rows = reporting_result[0]
+        else:
+            reporting_rows = (
+                await self.fse_repo.get_effective_fse_reporting_rows_for_export(
+                    organization_id=organization_id,
+                    compliance_report_id=cid,
+                    compliance_report_group_uuid=report_group_uuid,
+                )
+            )
 
         rows = []
         for item in reporting_rows:
