@@ -354,6 +354,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       minWidth: 200
     })
   }
+  cols.push({
+    field: 'allocatingOrganizationName',
+    headerName: t('chargingSite:fseColumnLabels.allocatingOrg'),
+    minWidth: 250,
+    sortable: false,
+    valueGetter: (params) =>
+      params.data.chargingSite?.allocatingOrganizationName ||
+      params.data.allocatingOrganizationName ||
+      ''
+  })
 
   // Registration Number
   cols.push({
@@ -411,16 +421,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     headerName: t('chargingSite:fseColumnLabels.ports'),
     minWidth: 160,
     sortable: false
-  })
-  cols.push({
-    field: 'allocatingOrganizationName',
-    headerName: t('chargingSite:fseColumnLabels.allocatingOrg'),
-    minWidth: 250,
-    sortable: false,
-    valueGetter: (params) =>
-      params.data.chargingSite?.allocatingOrganizationName ||
-      params.data.allocatingOrganizationName ||
-      ''
   })
 
   // Intended Uses

@@ -91,11 +91,16 @@ class ChargingSiteExporter:
     async def _create_validators(self, organization, builder):
         validators: List[DataValidation] = []
 
-        # Get allocating organization options (from allocation agreements)
-        allocating_org_options = await self.repo.get_allocation_agreement_organizations(
+        all_names = await self.repo.get_allocating_organization_names(
             organization.organization_id
         )
-        allocating_org_names = [org.name for org in allocating_org_options]
+        # Exclude the exporting organization's own name (own-org exclusion is also
+        # enforced at the ID level inside get_allocation_agreement_organizations)
+        user_org_name_lower = organization.name.lower() if organization.name else None
+        allocating_org_names = [
+            n for n in all_names
+            if not user_org_name_lower or n.lower() != user_org_name_lower
+        ]
 
         # Site Name column - helpful prompt
         site_name_validator = DataValidation(
