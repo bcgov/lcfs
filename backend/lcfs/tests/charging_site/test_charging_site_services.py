@@ -1208,79 +1208,81 @@ class TestChargingSiteService:
 
     @pytest.mark.anyio
     async def test_search_allocation_organizations_success(
-        self, charging_site_service, mock_repo
+        self, charging_site_service, mock_repo, mock_request
     ):
-        """Test successful search for allocation organizations"""
-        # Mock matched organizations
+        """Matched orgs carry an organizationId; freeform names carry None."""
+        mock_request.user.organization.name = "My Org"
+
         mock_org1 = MagicMock(spec=Organization)
-        mock_org1.organization_id = 1
+        mock_org1.organization_id = 2
         mock_org1.name = "ABC Company"
 
         mock_org2 = MagicMock(spec=Organization)
-        mock_org2.organization_id = 2
+        mock_org2.organization_id = 3
         mock_org2.name = "ABC Corporation"
 
-        mock_repo.get_allocation_agreement_organizations.return_value = [
-            mock_org1,
-            mock_org2,
-        ]
-
-        # Mock transaction partners
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
-            "ABC Company",  # Duplicate - should be filtered
+        mock_repo.get_allocation_agreement_organizations.return_value = [mock_org1, mock_org2]
+        # get_allocating_organization_names returns the merged, deduped list from the repo
+        mock_repo.get_allocating_organization_names.return_value = [
+            "ABC Company",
+            "ABC Corporation",
             "ABC Partner A",
             "ABC Partner B",
-        ]
-
-        # Mock historical names
-        mock_repo.get_distinct_allocating_organization_names.return_value = [
-            "ABC Corporation",  # Duplicate - should be filtered
             "ABC Historical C",
         ]
 
         result = await charging_site_service.search_allocation_organizations(1, "abc")
 
-        assert len(result) == 5  # 2 matched + 3 unmatched (duplicates removed)
-        assert result[0]["name"] == "ABC Company"
-        assert result[0]["organizationId"] == 1
-        assert result[1]["name"] == "ABC Corporation"
-        assert result[1]["organizationId"] == 2
+        assert len(result) == 5
+        names = [r["name"] for r in result]
+        assert "ABC Company" in names
+        assert "ABC Corporation" in names
 
-        # Verify unmatched entries have None as organizationId
-        unmatched = [r for r in result if r["organizationId"] is None]
-        assert len(unmatched) == 3
+        # Matched orgs resolve to their IDs; freeform names have None
+        by_name = {r["name"]: r for r in result}
+        assert by_name["ABC Company"]["organizationId"] == 2
+        assert by_name["ABC Corporation"]["organizationId"] == 3
+        assert by_name["ABC Partner A"]["organizationId"] is None
 
         mock_repo.get_allocation_agreement_organizations.assert_called_once_with(1)
-        mock_repo.get_transaction_partners_from_allocation_agreements.assert_called_once_with(
-            1
-        )
-        mock_repo.get_distinct_allocating_organization_names.assert_called_once_with(1)
+        mock_repo.get_allocating_organization_names.assert_called_once_with(1)
+
+    @pytest.mark.anyio
+    async def test_search_allocation_organizations_excludes_own_org_by_name(
+        self, charging_site_service, mock_repo, mock_request
+    ):
+        """Own organization must never appear in search results, even as freeform text."""
+        mock_request.user.organization.name = "My Org"
+
+        mock_repo.get_allocation_agreement_organizations.return_value = []
+        mock_repo.get_allocating_organization_names.return_value = [
+            "My Org",       # own org — must be excluded
+            "my org",       # case variant — must also be excluded
+            "Partner Org",
+        ]
+
+        result = await charging_site_service.search_allocation_organizations(1, "")
+
+        names = [r["name"] for r in result]
+        assert "My Org" not in names
+        assert "my org" not in names
+        assert "Partner Org" in names
+        assert len(result) == 1
 
     @pytest.mark.anyio
     async def test_search_allocation_organizations_with_query_filter(
-        self, charging_site_service, mock_repo
+        self, charging_site_service, mock_repo, mock_request
     ):
-        """Test search filters results by query string"""
-        mock_org1 = MagicMock(spec=Organization)
-        mock_org1.organization_id = 1
-        mock_org1.name = "ABC Company"
+        """Query string filters results case-insensitively."""
+        mock_request.user.organization.name = "My Org"
 
-        mock_org2 = MagicMock(spec=Organization)
-        mock_org2.organization_id = 2
-        mock_org2.name = "XYZ Corporation"
-
-        mock_repo.get_allocation_agreement_organizations.return_value = [
-            mock_org1,
-            mock_org2,
-        ]
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
-            "ABC Partner"
-        ]
-        mock_repo.get_distinct_allocating_organization_names.return_value = [
-            "XYZ Historical"
+        mock_repo.get_allocation_agreement_organizations.return_value = []
+        mock_repo.get_allocating_organization_names.return_value = [
+            "ABC Company",
+            "XYZ Corporation",
+            "ABC Partner",
         ]
 
-        # Search for "abc" - should only return ABC entries
         result = await charging_site_service.search_allocation_organizations(1, "abc")
 
         assert len(result) == 2
@@ -1288,51 +1290,43 @@ class TestChargingSiteService:
 
     @pytest.mark.anyio
     async def test_search_allocation_organizations_empty_query(
-        self, charging_site_service, mock_repo
+        self, charging_site_service, mock_repo, mock_request
     ):
-        """Test search with empty query returns all results"""
-        mock_org = MagicMock(spec=Organization)
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        """Empty query returns all names (minus own org)."""
+        mock_request.user.organization.name = "My Org"
 
-        mock_repo.get_allocation_agreement_organizations.return_value = [mock_org]
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
-            "Partner A"
-        ]
-        mock_repo.get_distinct_allocating_organization_names.return_value = [
-            "Historical B"
+        mock_repo.get_allocation_agreement_organizations.return_value = []
+        mock_repo.get_allocating_organization_names.return_value = [
+            "Partner A",
+            "Historical B",
+            "Historical C",
         ]
 
         result = await charging_site_service.search_allocation_organizations(1, "")
 
-        assert len(result) == 3  # All results returned
+        assert len(result) == 3
 
     @pytest.mark.anyio
     async def test_search_allocation_organizations_limits_results(
-        self, charging_site_service, mock_repo
+        self, charging_site_service, mock_repo, mock_request
     ):
-        """Test search limits results to 50"""
-        # Create 60 mock organizations
-        mock_orgs = []
-        for i in range(60):
-            mock_org = MagicMock(spec=Organization)
-            mock_org.organization_id = i
-            mock_org.name = f"Org {i:02d}"
-            mock_orgs.append(mock_org)
+        """Results are capped at 50."""
+        mock_request.user.organization.name = "My Org"
 
-        mock_repo.get_allocation_agreement_organizations.return_value = mock_orgs
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = []
-        mock_repo.get_distinct_allocating_organization_names.return_value = []
+        mock_repo.get_allocation_agreement_organizations.return_value = []
+        mock_repo.get_allocating_organization_names.return_value = [
+            f"Org {i:02d}" for i in range(60)
+        ]
 
         result = await charging_site_service.search_allocation_organizations(1, "org")
 
-        assert len(result) == 50  # Limited to 50
+        assert len(result) == 50
 
     @pytest.mark.anyio
     async def test_search_allocation_organizations_exception(
         self, charging_site_service, mock_repo
     ):
-        """Test search handles exceptions properly"""
+        """Database errors are wrapped in a 500 HTTPException."""
         mock_repo.get_allocation_agreement_organizations.side_effect = Exception(
             "Database error"
         )
