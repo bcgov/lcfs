@@ -5,7 +5,6 @@ import {
   AccordionSummary,
   Alert,
   Box,
-  Button,
   Chip,
   CircularProgress,
   Divider,
@@ -34,6 +33,7 @@ import {
 import { AssistantResponse, QueryPlan, SchemaCatalog } from './types'
 import { ChartRenderer } from './ChartRenderer'
 import { SqlPreview } from './SqlPreview'
+import BCButton from '@/components/BCButton'
 
 const createSessionId = () =>
   `ai-analytics-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -100,7 +100,11 @@ export const AiAnalyticsPanel = () => {
     setPlanning(true)
     setError(null)
     try {
-      const nextPlan = await planAiAnalyticsQuestion(client, question, sessionId)
+      const nextPlan = await planAiAnalyticsQuestion(
+        client,
+        question,
+        sessionId
+      )
       setPlan(nextPlan)
     } catch (err) {
       setError('Unable to interpret that question.')
@@ -113,7 +117,11 @@ export const AiAnalyticsPanel = () => {
     setRunning(true)
     setError(null)
     try {
-      const nextResponse = await runAiAnalyticsQuestion(client, question, sessionId)
+      const nextResponse = await runAiAnalyticsQuestion(
+        client,
+        question,
+        sessionId
+      )
       setResponse(nextResponse)
       setPlan(nextResponse.queryPlan)
       setFollowUp('')
@@ -133,7 +141,11 @@ export const AiAnalyticsPanel = () => {
     setRunning(true)
     setError(null)
     try {
-      const nextResponse = await runAiAnalyticsFollowUp(client, prompt, sessionId)
+      const nextResponse = await runAiAnalyticsFollowUp(
+        client,
+        prompt,
+        sessionId
+      )
       setResponse(nextResponse)
       setPlan(nextResponse.queryPlan)
       setShowAllRows(false)
@@ -151,31 +163,49 @@ export const AiAnalyticsPanel = () => {
     <Stack spacing={3}>
       <Paper sx={{ p: 3 }}>
         <Stack spacing={2}>
-          <BCTypography variant="h4" color="primary" fontWeight="bold">
+          <BCTypography variant="h6" color="primary" fontWeight="bold">
             AI Analytical Assistant
           </BCTypography>
-          <BCTypography variant="body1">
-            Ask grounded analytics questions against the live schema catalog. The assistant
-            plans first, generates read-only SQL, and explains which entities it used.
+          <BCTypography variant="body2">
+            Ask grounded analytics questions against the live schema catalog.
+            The assistant plans first, generates read-only SQL, and explains
+            which entities it used.
           </BCTypography>
-          <TextField
-            label="Analytical question"
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            multiline
-            minRows={3}
-            fullWidth
-          />
+          <Box pt={2}>
+            <TextField
+              label="Analytical question"
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              multiline
+              minRows={3}
+              fullWidth
+            />
+          </Box>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            <Button variant="outlined" onClick={loadCatalog} disabled={loadingCatalog}>
+            <BCButton
+              color="primary"
+              variant="outlined"
+              onClick={loadCatalog}
+              disabled={loadingCatalog}
+            >
               {loadingCatalog ? 'Loading catalog...' : 'Load Schema Catalog'}
-            </Button>
-            <Button variant="outlined" onClick={handlePlan} disabled={planning || !question}>
+            </BCButton>
+            <BCButton
+              color="primary"
+              variant="outlined"
+              onClick={handlePlan}
+              disabled={planning || !question}
+            >
               {planning ? 'Planning...' : 'Plan Query'}
-            </Button>
-            <Button variant="contained" onClick={handleRun} disabled={running || !question}>
+            </BCButton>
+            <BCButton
+              color="primary"
+              variant="contained"
+              onClick={handleRun}
+              disabled={running || !question}
+            >
               {running ? 'Running...' : 'Run Query'}
-            </Button>
+            </BCButton>
           </Stack>
           <Stack direction="row" spacing={1} flexWrap="wrap">
             {EXAMPLE_QUESTIONS.map((example) => (
@@ -198,8 +228,9 @@ export const AiAnalyticsPanel = () => {
               Catalog Snapshot
             </BCTypography>
             <BCTypography variant="body2">
-              {catalog.entities.length} entities discovered. Views and materialized views are
-              preferred when they already encode business logic.
+              {catalog.entities.length} entities discovered. Views and
+              materialized views are preferred when they already encode business
+              logic.
             </BCTypography>
           </Stack>
         </Paper>
@@ -213,10 +244,15 @@ export const AiAnalyticsPanel = () => {
             </BCTypography>
             <BCTypography variant="body2">{plan.explanation}</BCTypography>
             <Stack direction="row" spacing={1} flexWrap="wrap">
-              <Chip label={`Confidence ${Math.round(plan.confidence * 100)}%`} />
+              <Chip
+                label={`Confidence ${Math.round(plan.confidence * 100)}%`}
+              />
               <Chip label={`Chart ${plan.candidateChartType}`} />
               {plan.metrics.map((metric) => (
-                <Chip key={metric.name} label={`${metric.aggregation} ${metric.name}`} />
+                <Chip
+                  key={metric.name}
+                  label={`${metric.aggregation} ${metric.name}`}
+                />
               ))}
               {plan.dimensions.map((dimension) => (
                 <Chip key={dimension.name} label={`By ${dimension.name}`} />
@@ -252,14 +288,22 @@ export const AiAnalyticsPanel = () => {
                   </BCTypography>
                   <Stack direction="row" spacing={1} flexWrap="wrap">
                     <Chip label={`Mode ${response.executionMode}`} />
-                    {response.llmProvider && <Chip label={`Provider ${response.llmProvider}`} />}
-                    {response.modelName && <Chip label={`Model ${response.modelName}`} />}
-                    {response.forecastMode && <Chip color="secondary" label="Forecast" />}
+                    {response.llmProvider && (
+                      <Chip label={`Provider ${response.llmProvider}`} />
+                    )}
+                    {response.modelName && (
+                      <Chip label={`Model ${response.modelName}`} />
+                    )}
+                    {response.forecastMode && (
+                      <Chip color="secondary" label="Forecast" />
+                    )}
                     {response.mindsdbModelName && (
                       <Chip label={`MindsDB ${response.mindsdbModelName}`} />
                     )}
                   </Stack>
-                  <BCTypography variant="body1">{response.summary}</BCTypography>
+                  <BCTypography variant="body1">
+                    {response.summary}
+                  </BCTypography>
                   {response.keyFindings.map((finding) => (
                     <Alert severity="success" key={finding}>
                       {finding}
@@ -288,7 +332,9 @@ export const AiAnalyticsPanel = () => {
                     <Select
                       displayEmpty
                       value={chartMode}
-                      onChange={(event) => setChartMode(event.target.value as string)}
+                      onChange={(event) =>
+                        setChartMode(event.target.value as string)
+                      }
                       fullWidth
                     >
                       {CHART_FOLLOW_UPS.map((option) => (
@@ -297,13 +343,13 @@ export const AiAnalyticsPanel = () => {
                         </MenuItem>
                       ))}
                     </Select>
-                    <Button
+                    <BCButton
                       variant="outlined"
                       onClick={() => handleFollowUp()}
                       disabled={running || (!followUp && !chartMode)}
                     >
                       Apply
-                    </Button>
+                    </BCButton>
                   </Stack>
                 </Stack>
               </Grid>
@@ -321,7 +367,8 @@ export const AiAnalyticsPanel = () => {
               </BCTypography>
               {response.forecastMode && (
                 <BCTypography variant="body2" color="text.secondary">
-                  Horizon: {response.forecastHorizon} {response.forecastGranularity}
+                  Horizon: {response.forecastHorizon}{' '}
+                  {response.forecastGranularity}
                   {response.modelReused != null &&
                     ` | Model ${response.modelReused ? 'reused' : 'trained'}`}
                 </BCTypography>
@@ -335,19 +382,25 @@ export const AiAnalyticsPanel = () => {
                 Result Table
               </BCTypography>
               <BCTypography variant="body2">
-                {response.result.rowCount} rows returned in {response.result.executionMs} ms.
+                {response.result.rowCount} rows returned in{' '}
+                {response.result.executionMs} ms.
               </BCTypography>
               {response.result.rows.length > DEFAULT_VISIBLE_ROWS && (
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
                   <BCTypography variant="body2" color="text.secondary">
-                    Showing {visibleRows.length} of {response.result.rows.length} rows.
+                    Showing {visibleRows.length} of{' '}
+                    {response.result.rows.length} rows.
                   </BCTypography>
-                  <Button
+                  <BCButton
                     variant="text"
                     onClick={() => setShowAllRows((current) => !current)}
                   >
                     {showAllRows ? 'Show less' : 'Show all'}
-                  </Button>
+                  </BCButton>
                 </Stack>
               )}
               <TableContainer>
@@ -381,14 +434,15 @@ export const AiAnalyticsPanel = () => {
             </AccordionSummary>
             <AccordionDetails>
               <SqlPreview sql={response.sql} />
-              {response.sourceSqlUsed && response.sourceSqlUsed !== response.sql && (
-                <Box mt={2}>
-                  <BCTypography variant="subtitle2" color="primary">
-                    Forecast Training SQL
-                  </BCTypography>
-                  <SqlPreview sql={response.sourceSqlUsed} />
-                </Box>
-              )}
+              {response.sourceSqlUsed &&
+                response.sourceSqlUsed !== response.sql && (
+                  <Box mt={2}>
+                    <BCTypography variant="subtitle2" color="primary">
+                      Forecast Training SQL
+                    </BCTypography>
+                    <SqlPreview sql={response.sourceSqlUsed} />
+                  </Box>
+                )}
             </AccordionDetails>
           </Accordion>
 
