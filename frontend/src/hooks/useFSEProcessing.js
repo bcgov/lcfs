@@ -48,6 +48,10 @@ export const useFSEProcessing = (siteId) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fse-processing'] })
       queryClient.invalidateQueries({ queryKey: ['charging-equipment'] })
+      // Invalidate charging site list queries so the site disappears if all FSE are now draft
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
+      queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
     }
   })
 
