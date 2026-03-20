@@ -127,11 +127,28 @@ describe('ChargingSiteProfile', () => {
       expect(screen.queryByRole('button', { name: setValidatedLabel })).not.toBeInTheDocument()
     })
 
-    it('shows "Submit updates" when BCeID Compliance and status is Draft', () => {
+    it('does not show "Submit updates" when BCeID Compliance and status is Draft', () => {
       const hasAnyRole = vi.fn((...roles) => roles.includes('Compliance Reporting'))
       render(
         <ChargingSiteProfile
           data={mockData}
+          hasAnyRole={hasAnyRole}
+          hasRoles={vi.fn(() => false)}
+          isIDIR={false}
+          refetch={vi.fn()}
+        />,
+        { wrapper }
+      )
+      expect(screen.queryByRole('button', { name: submitUpdatesLabel })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: setValidatedLabel })).not.toBeInTheDocument()
+    })
+
+    it('shows "Submit updates" when BCeID Compliance and status is Updated', () => {
+      const hasAnyRole = vi.fn((...roles) => roles.includes('Compliance Reporting'))
+      const updatedData = { ...mockData, status: { status: 'Updated' } }
+      render(
+        <ChargingSiteProfile
+          data={updatedData}
           hasAnyRole={hasAnyRole}
           hasRoles={vi.fn(() => false)}
           isIDIR={false}
@@ -181,9 +198,10 @@ describe('ChargingSiteProfile', () => {
 
     it('calls mutation with Submitted when "Submit updates" is clicked', () => {
       const hasAnyRole = vi.fn((...roles) => roles.includes('Compliance Reporting'))
+      const updatedData = { ...mockData, status: { status: 'Updated' } }
       render(
         <ChargingSiteProfile
-          data={mockData}
+          data={updatedData}
           hasAnyRole={hasAnyRole}
           hasRoles={vi.fn(() => false)}
           isIDIR={false}
