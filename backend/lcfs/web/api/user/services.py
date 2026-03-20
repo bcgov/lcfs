@@ -177,11 +177,6 @@ class UserServices:
     async def get_seeded_test_users(
         self, seed_env: str | None = None
     ) -> list[UserBaseSchema]:
-        if not self._is_nonprod_env():
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Seeded test users endpoint is only available in local/test environments.",
-            )
         resolved_env = (seed_env or "").lower().strip()
         if resolved_env not in {"local", "test"}:
             resolved_env = "test" if settings.environment.lower() == "test" else "local"
