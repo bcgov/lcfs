@@ -57,6 +57,8 @@ class ChargingSiteValidation:
                 detail="Organization ID in URL and request body do not match",
             )
 
+        self._validate_allocating_organization(organization_id, data)
+
         return True
 
     async def charging_site_delete_update_access(
@@ -104,7 +106,35 @@ class ChargingSiteValidation:
                         detail="A charging site with this name already exists for your organization. Please use a unique site name.",
                     )
 
+        if data:
+            self._validate_allocating_organization(organization_id, data)
+
         return True
+
+    def _validate_allocating_organization(
+        self, organization_id: int, data: ChargingSiteCreateSchema
+    ):
+        """
+        Validates that the allocating organization is not the user's own organization.
+        """
+        if (
+            data.allocating_organization_id
+            and data.allocating_organization_id == organization_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot select your own organization as the Allocating organization.",
+            )
+        user_org = self.request.user.organization
+        if user_org and data.allocating_organization_name:
+            if (
+                data.allocating_organization_name.strip().lower()
+                == user_org.name.strip().lower()
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You cannot select your own organization as the Allocating organization.",
+                )
 
     async def validate_organization_access(self, charging_site_id: int):
         """
