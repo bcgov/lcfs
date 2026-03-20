@@ -164,12 +164,34 @@ class SqlGenerator:
                 resolved.append((filter_item, column))
         return resolved
 
-    def _format_filter(self, column_name: str, filter_item: QueryFilter) -> str:
+    def _is_numeric_type(self, data_type: str) -> bool:
+        lowered = (data_type or "").lower()
+        numeric_markers = [
+            "int",
+            "numeric",
+            "decimal",
+            "double",
+            "real",
+            "float",
+        ]
+        return any(marker in lowered for marker in numeric_markers)
+
+    def _format_literal(self, column: SchemaColumn, value) -> str:
+        if value is None:
+            return "NULL"
+        if self._is_numeric_type(column.data_type):
+            return str(value)
+        escaped = str(value).replace("'", "''")
+        return f"'{escaped}'"
+
+    def _format_filter(self, column: SchemaColumn, filter_item: QueryFilter) -> str:
         if filter_item.operator == "=":
-            return f'"{column_name}" = {int(filter_item.value)}'
+            return f'"{column.name}" = {self._format_literal(column, filter_item.value)}'
         if filter_item.operator == "in":
-            values = ", ".join(str(int(value)) for value in filter_item.value)
-            return f'"{column_name}" IN ({values})'
+            values = ", ".join(
+                self._format_literal(column, value) for value in filter_item.value
+            )
+            return f'"{column.name}" IN ({values})'
         raise ValueError(f"Unsupported filter operator: {filter_item.operator}")
 
     def _build_query(
@@ -187,7 +209,7 @@ class SqlGenerator:
         where_clause = ""
         if filters:
             where_clause = " WHERE " + " AND ".join(
-                self._format_filter(column.name, filter_item)
+                self._format_filter(column, filter_item)
                 for filter_item, column in filters
             )
             used_columns.extend(column.name for _, column in filters)
@@ -226,12 +248,14 @@ class SqlGenerator:
             ):
                 comparison_dim = dimensions[0][1].name
                 first_year, second_year = year_filter.value[:2]
+                first_year_literal = self._format_literal(year_column, first_year)
+                second_year_literal = self._format_literal(year_column, second_year)
                 sql = (
                     f'SELECT "{comparison_dim}" AS "dimension", '
-                    f'SUM(CASE WHEN "{year_column.name}" = {first_year} THEN "{metric_column.name}" ELSE 0 END) AS "value_{first_year}", '
-                    f'SUM(CASE WHEN "{year_column.name}" = {second_year} THEN "{metric_column.name}" ELSE 0 END) AS "value_{second_year}", '
-                    f'SUM(CASE WHEN "{year_column.name}" = {second_year} THEN "{metric_column.name}" ELSE 0 END) - '
-                    f'SUM(CASE WHEN "{year_column.name}" = {first_year} THEN "{metric_column.name}" ELSE 0 END) AS "value" '
+                    f'SUM(CASE WHEN "{year_column.name}" = {first_year_literal} THEN "{metric_column.name}" ELSE 0 END) AS "value_{first_year}", '
+                    f'SUM(CASE WHEN "{year_column.name}" = {second_year_literal} THEN "{metric_column.name}" ELSE 0 END) AS "value_{second_year}", '
+                    f'SUM(CASE WHEN "{year_column.name}" = {second_year_literal} THEN "{metric_column.name}" ELSE 0 END) - '
+                    f'SUM(CASE WHEN "{year_column.name}" = {first_year_literal} THEN "{metric_column.name}" ELSE 0 END) AS "value" '
                     f"FROM {from_clause}{where_clause} "
                     f'GROUP BY "{comparison_dim}" ORDER BY "value" ASC LIMIT {limit}'
                 )

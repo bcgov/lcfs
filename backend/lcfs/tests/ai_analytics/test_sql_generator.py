@@ -75,3 +75,27 @@ def test_sql_generator_builds_year_drop_query():
 
     assert "CASE WHEN" in generated.sql
     assert 'ORDER BY "value" ASC' in generated.sql
+
+
+def test_sql_generator_quotes_text_year_filters():
+    generator = SqlGenerator()
+    plan = QueryPlan(
+        question="Compare organizations by total credits in 2024",
+        intent="aggregation",
+        metrics=[QueryMetric(name="credits", aggregation="sum")],
+        dimensions=[QueryDimension(name="organization")],
+        filters=[QueryFilter(field="year", operator="=", value=2024)],
+        candidate_entities=["public.mv_credit_ledger"],
+        candidate_chart_type="bar",
+        explanation="test",
+        confidence=0.9,
+    )
+
+    catalog = build_catalog()
+    catalog.entities[0].columns.append(
+        SchemaColumn(name="compliance_year", data_type="character varying")
+    )
+
+    generated = generator.generate(plan, catalog)
+
+    assert '"compliance_year" = \'2024\'' in generated.sql

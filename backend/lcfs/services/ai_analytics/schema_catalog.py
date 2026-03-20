@@ -223,15 +223,16 @@ class SchemaCatalogService:
                 preferred_for_analytics=table.name.startswith(("vw_", "v_", "mv_")),
             )
             for column in table.columns:
+                column_comment = getattr(column, "comment", None)
                 entity.columns.append(
                     SchemaColumn(
                         name=column.name,
                         data_type=str(column.type),
-                        nullable=bool(column.nullable),
-                        primary_key=bool(column.primary_key),
-                        description=column.comment,
+                        nullable=bool(getattr(column, "nullable", True)),
+                        primary_key=bool(getattr(column, "primary_key", False)),
+                        description=column_comment,
                         semantic_tags=semantic_tags_for_text(
-                            column.name, column.comment or ""
+                            column.name, column_comment or ""
                         ),
                     )
                 )
