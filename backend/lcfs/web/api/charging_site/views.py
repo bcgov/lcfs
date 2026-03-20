@@ -411,6 +411,7 @@ async def import_charging_sites(
         organization.organization_code,
         file,
         overwrite,
+        organization_name=organization.name or "",
     )
     return JSONResponse(content={"jobId": job_id})
 

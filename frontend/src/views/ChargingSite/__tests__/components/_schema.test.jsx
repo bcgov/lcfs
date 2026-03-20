@@ -38,31 +38,17 @@ describe('_schema', () => {
   const mockErrors = {}
   const mockWarnings = {}
   const mockT = (key) => key
-  const mockAllocationOrganizations = [
-    { organization_id: 1, name: 'Org 1' },
-    { organization_id: 2, name: 'Org 2' }
-  ]
 
   describe('chargingSiteColDefs', () => {
     it('returns column definitions array', () => {
-      const colDefs = chargingSiteColDefs(
-        mockAllocationOrganizations,
-        mockErrors,
-        mockWarnings,
-        true
-      )
+      const colDefs = chargingSiteColDefs(mockErrors, mockWarnings, true)
 
       expect(Array.isArray(colDefs)).toBe(true)
       expect(colDefs.length).toBeGreaterThan(0)
     })
 
     it('includes required fields', () => {
-      const colDefs = chargingSiteColDefs(
-        mockAllocationOrganizations,
-        mockErrors,
-        mockWarnings,
-        true
-      )
+      const colDefs = chargingSiteColDefs(mockErrors, mockWarnings, true)
 
       const fieldNames = colDefs.map((col) => col.field)
       expect(fieldNames).toContain('siteName')
@@ -74,12 +60,7 @@ describe('_schema', () => {
     })
 
     it('configures editable fields correctly', () => {
-      const colDefs = chargingSiteColDefs(
-        mockAllocationOrganizations,
-        mockErrors,
-        mockWarnings,
-        true
-      )
+      const colDefs = chargingSiteColDefs(mockErrors, mockWarnings, true)
 
       const siteNameCol = colDefs.find((col) => col.field === 'siteName')
       expect(siteNameCol.editable).toBe(true)
