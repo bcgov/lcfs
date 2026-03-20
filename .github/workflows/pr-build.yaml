@@ -177,7 +177,7 @@ jobs:
           namespace: ${{ env.TOOLS_NAMESPACE }}
 
       - name: Update values-dev-pr.yaml for frentend and backend
-        uses: mikefarah/yq@v4.40.5
+        uses: mikefarah/yq@v4.52.4
         with:
           cmd: |
             yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml

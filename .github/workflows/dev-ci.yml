@@ -128,7 +128,7 @@ jobs:
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
 
       - name: Update tags
-        uses: mikefarah/yq@v4.40.5
+        uses: mikefarah/yq@v4.52.4
         with:
           cmd: |
             yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml

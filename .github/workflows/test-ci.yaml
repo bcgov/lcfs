@@ -584,7 +584,7 @@ jobs:
           echo "CURRENT_TIME=$(TZ='America/Vancouver' date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
 
       - name: Ask for approval for LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test deployment
-        uses: trstringer/manual-approval@v1.6.0
+        uses: trstringer/manual-approval@v1.12.0
         with:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,prv-proton,Grulin,kevin-hashimoto
