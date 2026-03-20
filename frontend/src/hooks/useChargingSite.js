@@ -332,7 +332,10 @@ export const useBulkUpdateEquipmentStatus = (options = {}) => {
         queryClient.invalidateQueries({
           queryKey: ['charging-site-equipment-paginated']
         })
-        // 3. Invalidate all charging sites by organization queries
+        // 3. Invalidate all charging sites list queries (both IDIR and org)
+        queryClient.invalidateQueries({
+          queryKey: ['chargingSitesAll']
+        })
         queryClient.invalidateQueries({
           queryKey: ['chargingSitesByOrg']
         })
