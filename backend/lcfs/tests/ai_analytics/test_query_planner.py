@@ -52,3 +52,14 @@ def test_query_planner_builds_follow_up_from_session_context():
 
     assert plan.follow_up_of == "Show total credits by compliance period"
     assert plan.dimensions[0].name == "compliance period"
+
+
+def test_query_planner_prefers_compare_subject_as_dimension():
+    planner = QueryPlanner()
+
+    plan = planner.create_plan(
+        "Compare organizations by total credits in 2024",
+        build_catalog(),
+    )
+
+    assert plan.dimensions[0].name == "organizations"

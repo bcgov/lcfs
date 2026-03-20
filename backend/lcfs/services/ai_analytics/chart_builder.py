@@ -26,6 +26,14 @@ class ChartBuilder:
                 rationale="A table fallback was selected because the result is sparse or not chart-friendly.",
             )
 
+        if len(result.columns) < 2:
+            return ChartSpec(
+                chart_type="table",
+                title=title,
+                option={"title": {"text": title}, "series": []},
+                rationale="A table fallback was selected because the result only contains a single value column.",
+            )
+
         if chart_type == "pie":
             return ChartSpec(
                 chart_type="pie",

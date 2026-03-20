@@ -236,11 +236,22 @@ class QueryPlanner:
 
     def _infer_dimensions(self, question: str) -> List[QueryDimension]:
         dimensions: List[QueryDimension] = []
+        compare_match = re.match(r"^\s*compare\s+(.+?)\s+by\s+.+$", question)
+        if compare_match:
+            compare_dimension = compare_match.group(1).strip()
+            if compare_dimension:
+                dimensions.append(QueryDimension(name=compare_dimension))
+                return dimensions
         if " by " in question:
             dimension_text = question.split(" by ", 1)[1]
             dimension_text = re.split(r"\b(where|for|in|as)\b", dimension_text)[0].strip()
             if dimension_text:
                 dimensions.append(QueryDimension(name=dimension_text))
+        if not dimensions:
+            if any(term in question for term in SYNONYMS["organization"]):
+                dimensions.append(QueryDimension(name="organization"))
+            elif any(term in question for term in SYNONYMS["fuel_category"]):
+                dimensions.append(QueryDimension(name="fuel category"))
         if not dimensions and "trend" in question:
             dimensions.append(QueryDimension(name="year"))
         return dimensions
