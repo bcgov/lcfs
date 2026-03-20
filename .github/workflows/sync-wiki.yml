@@ -5,7 +5,7 @@ on:
     branches:
       - develop # Add develop branch to the trigger
     paths:
-      - 'wiki/**' # Trigger workflow only if files in the 'wiki/' directory change
+      - "wiki/**" # Trigger workflow only if files in the 'wiki/' directory change
   workflow_dispatch: # Allows manual triggering
 
 jobs:
@@ -16,12 +16,12 @@ jobs:
 
     steps:
       - name: Checkout Main Repository (lcfs)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           path: main-repo # Checks out lcfs into a directory named 'main-repo'
 
       - name: Checkout Wiki Repository (lcfs.wiki.git)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           repository: ${{ github.repository }}.wiki # e.g., bcgov/lcfs.wiki
           path: wiki-repo # Checks out the wiki into 'wiki-repo'
@@ -72,4 +72,4 @@ jobs:
             git push origin HEAD # Pushes to the default branch of the wiki repo
           else
             echo "No changes to push to the wiki."
-          fi 
+          fi
