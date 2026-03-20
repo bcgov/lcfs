@@ -79,11 +79,32 @@ class SqlGenerator:
         entity: SchemaEntity,
         options: Sequence[str],
     ) -> Optional[SchemaColumn]:
+        normalized_options = [
+            option.lower().replace(" ", "_") for option in options if option
+        ]
+
+        for normalized in normalized_options:
+            for column in entity.columns:
+                if column.name.lower() == normalized:
+                    return column
+
+        for normalized in normalized_options:
+            for column in entity.columns:
+                column_name = column.name.lower()
+                if column_name.endswith(f"_{normalized}"):
+                    return column
+
+        for normalized in normalized_options:
+            for column in entity.columns:
+                column_name = column.name.lower()
+                if column_name.startswith(f"{normalized}_"):
+                    return column
+
         for option in options:
             normalized = option.lower().replace(" ", "_")
             for column in entity.columns:
                 column_name = column.name.lower()
-                if column_name == normalized or normalized in column_name:
+                if normalized and normalized in column_name:
                     return column
         for option in options:
             lowered = option.lower()
@@ -158,16 +179,57 @@ class SqlGenerator:
             options = [filter_item.field]
             if filter_item.field == "year":
                 options.extend(["compliance_period", "completion_year", "year"])
-            if filter_item.field in {"organization_id", "organization_name", "organization"}:
+            if filter_item.field == "organization_id":
                 options.extend(
                     [
-                        "organization_name",
                         "organization_id",
-                        "supplier_name",
                         "supplier_id",
                     ]
                 )
-            column = self._find_best_column(entity, options)
+            if filter_item.field in {"organization_name", "organization"}:
+                options.extend(
+                    [
+                        "organization_name",
+                        "supplier_name",
+                        "company",
+                        "legal_name",
+                    ]
+                )
+            candidate_columns = entity
+            if filter_item.field == "organization_id":
+                candidate_columns = SchemaEntity(
+                    name=entity.name,
+                    schema_name=entity.schema_name,
+                    entity_type=entity.entity_type,
+                    description=entity.description,
+                    columns=[
+                        column
+                        for column in entity.columns
+                        if column.name.lower().endswith("_id")
+                        or column.name.lower() in {"organization_id", "supplier_id"}
+                    ],
+                    relationships=entity.relationships,
+                    semantic_tags=entity.semantic_tags,
+                    preferred_for_analytics=entity.preferred_for_analytics,
+                    view_sql=entity.view_sql,
+                )
+            if filter_item.field in {"organization_name", "organization"}:
+                candidate_columns = SchemaEntity(
+                    name=entity.name,
+                    schema_name=entity.schema_name,
+                    entity_type=entity.entity_type,
+                    description=entity.description,
+                    columns=[
+                        column
+                        for column in entity.columns
+                        if not column.name.lower().endswith("_id")
+                    ],
+                    relationships=entity.relationships,
+                    semantic_tags=entity.semantic_tags,
+                    preferred_for_analytics=entity.preferred_for_analytics,
+                    view_sql=entity.view_sql,
+                )
+            column = self._find_best_column(candidate_columns, options)
             if column:
                 filter_item.resolved_column = column.name
                 resolved.append((filter_item, column))

@@ -142,3 +142,48 @@ def test_sql_generator_applies_organization_id_filter():
     generated = generator.generate(plan, build_catalog())
 
     assert '"organization_id" = 4' in generated.sql
+
+
+def test_sql_generator_applies_organization_name_filter_to_name_column():
+    generator = SqlGenerator()
+    plan = QueryPlan(
+        question="Show total credits by compliance period for org BC Hydro",
+        intent="aggregation",
+        metrics=[QueryMetric(name="credits", aggregation="sum")],
+        dimensions=[QueryDimension(name="compliance period")],
+        filters=[QueryFilter(field="organization_name", operator="ilike", value="bc hydro")],
+        candidate_entities=["public.mv_credit_ledger"],
+        candidate_chart_type="bar",
+        explanation="test",
+        confidence=0.9,
+    )
+
+    generated = generator.generate(plan, build_catalog())
+
+    assert '"organization_name" ILIKE \'%bc hydro%\'' in generated.sql
+    assert '"organization_id" ILIKE' not in generated.sql
+
+
+def test_sql_generator_prefers_compliance_period_over_period_id():
+    generator = SqlGenerator()
+    plan = QueryPlan(
+        question="Show total credits by compliance period",
+        intent="aggregation",
+        metrics=[QueryMetric(name="credits", aggregation="sum")],
+        dimensions=[QueryDimension(name="compliance period")],
+        filters=[],
+        candidate_entities=["public.mv_credit_ledger"],
+        candidate_chart_type="bar",
+        explanation="test",
+        confidence=0.9,
+    )
+
+    catalog = build_catalog()
+    catalog.entities[0].columns.insert(
+        2, SchemaColumn(name="compliance_period_id", data_type="integer")
+    )
+
+    generated = generator.generate(plan, catalog)
+
+    assert '"compliance_period" AS "compliance period"' in generated.sql
+    assert '"compliance_period_id" AS "compliance period"' not in generated.sql
