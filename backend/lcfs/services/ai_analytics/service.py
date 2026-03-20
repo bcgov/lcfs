@@ -108,6 +108,7 @@ class AiAnalyticsService:
         if self.forecasting_service is not None:
             forecast_plan = self.forecasting_service.maybe_build_forecast_plan(plan, catalog)
             if forecast_plan and forecast_plan.forecast_intent:
+                forecast_plan.candidate_source_entity = generated_sql.entity_name
                 forecast_result, chart, dataset_spec = await self.forecasting_service.run_forecast(
                     plan, forecast_plan, catalog
                 )

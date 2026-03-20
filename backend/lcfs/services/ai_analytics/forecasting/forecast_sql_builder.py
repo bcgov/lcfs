@@ -64,7 +64,16 @@ class ForecastSqlBuilder:
             for entity in catalog.entities:
                 if entity.qualified_name == qualified_name:
                     return entity
-        return next(iter(catalog.entities), None)
+        for entity in catalog.entities:
+            if self._is_real_forecast_entity(entity):
+                return entity
+        return None
+
+    def _is_real_forecast_entity(self, entity: SchemaEntity) -> bool:
+        name = entity.name.lower()
+        if name == "pjoin":
+            return False
+        return name.startswith(("vw_", "v_", "mv_")) or bool(entity.columns)
 
     def _resolve_metric_column(self, metric_name: Optional[str], entity: SchemaEntity) -> Optional[str]:
         if metric_name is None:
