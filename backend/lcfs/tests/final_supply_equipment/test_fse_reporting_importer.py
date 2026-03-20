@@ -440,12 +440,12 @@ async def _run_import(rows: list, fse_repo_override=None):
     return progress_records
 
 
-# col layout: [site_name, reg_num, from, to, kwh, notes]
+# col layout: [site_name, reg_num, serial#, from, to, kwh, notes]
 
 @pytest.mark.anyio
 async def test_row_missing_registration_is_rejected():
     """Empty registration number → rejected."""
-    rows = [["Site A", None, "2024-01-01", "2024-12-31", 500, "note"]]
+    rows = [["Site A", None, "SN-1", "2024-01-01", "2024-12-31", 500, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -455,7 +455,7 @@ async def test_row_missing_registration_is_rejected():
 @pytest.mark.anyio
 async def test_row_invalid_kwh_is_rejected():
     """Non-numeric kWh value → rejected."""
-    rows = [["Site A", "REG-001", "2024-01-01", "2024-12-31", "NOT_A_NUMBER", "note"]]
+    rows = [["Site A", "REG-001", "SN-1", "2024-01-01", "2024-12-31", "NOT_A_NUMBER", "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -465,7 +465,7 @@ async def test_row_invalid_kwh_is_rejected():
 @pytest.mark.anyio
 async def test_row_negative_kwh_is_rejected():
     """Negative kWh value → rejected."""
-    rows = [["Site A", "REG-001", "2024-01-01", "2024-12-31", -100, "note"]]
+    rows = [["Site A", "REG-001", "SN-1", "2024-01-01", "2024-12-31", -100, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -474,7 +474,7 @@ async def test_row_negative_kwh_is_rejected():
 @pytest.mark.anyio
 async def test_row_invalid_date_is_rejected():
     """Unparseable 'from' date → rejected."""
-    rows = [["Site A", "REG-001", "not-a-date", "2024-12-31", 500, "note"]]
+    rows = [["Site A", "REG-001", "SN-1", "not-a-date", "2024-12-31", 500, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -483,7 +483,7 @@ async def test_row_invalid_date_is_rejected():
 @pytest.mark.anyio
 async def test_row_inverted_date_range_is_rejected():
     """supply_from > supply_to → rejected."""
-    rows = [["Site A", "REG-001", "2024-12-31", "2024-01-01", 500, "note"]]
+    rows = [["Site A", "REG-001", "SN-1", "2024-12-31", "2024-01-01", 500, "note"]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["rejected"] == 1
@@ -496,7 +496,7 @@ async def test_row_registration_not_found_is_rejected():
     fse_repo.get_charging_equipment_by_registration_number = AsyncMock(
         return_value=None
     )
-    rows = [["Site A", "UNKNOWN-REG", "2024-01-01", "2024-12-31", 500, "note"]]
+    rows = [["Site A", "UNKNOWN-REG", "SN-1", "2024-01-01", "2024-12-31", 500, "note"]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
     assert final["rejected"] == 1
@@ -519,7 +519,7 @@ async def test_valid_row_existing_record_is_updated_and_activated():
     fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=existing)
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
-    rows = [["Site A", "ORG-001-001", "2024-01-01", "2024-12-31", 500, "good note"]]
+    rows = [["Site A", "ORG-001-001", "SN-1", "2024-01-01", "2024-12-31", 500, "good note"]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
 
@@ -558,7 +558,7 @@ async def test_row_all_editable_empty_with_existing_record_calls_deactivate():
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
     # All editable columns blank: no from, no to, no kWh, no notes
-    rows = [["Site A", "ORG-001-001", None, None, None, None]]
+    rows = [["Site A", "ORG-001-001", "SN-1", None, None, None, None]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
 
     fse_repo.bulk_update_fse_reporting_record.assert_called_once()
@@ -584,7 +584,7 @@ async def test_row_all_editable_empty_no_existing_record_is_skipped():
     fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=None)
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
-    rows = [["Site A", "ORG-001-001", None, None, None, None]]
+    rows = [["Site A", "ORG-001-001", "SN-1", None, None, None, None]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
 
@@ -612,7 +612,7 @@ async def test_row_note_only_activates_row_with_zero_kwh():
     fse_repo.get_fse_reporting_record_for_group = AsyncMock(return_value=existing)
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
-    rows = [["Site A", "ORG-001-001", None, None, None, "Just a note"]]
+    rows = [["Site A", "ORG-001-001", "SN-1", None, None, None, "Just a note"]]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]
 
@@ -626,7 +626,7 @@ async def test_row_note_only_activates_row_with_zero_kwh():
 @pytest.mark.anyio
 async def test_fully_blank_row_is_silently_skipped():
     """Rows where every cell is None are silently ignored (not counted)."""
-    rows = [[None, None, None, None, None, None]]
+    rows = [[None, None, None, None, None, None, None]]
     records = await _run_import(rows)
     final = records[-1]
     assert final["updated"] == 0
@@ -652,9 +652,9 @@ async def test_mixed_rows_counters_are_accurate():
     fse_repo.bulk_update_fse_reporting_record = AsyncMock(return_value=None)
 
     rows = [
-        ["Site A", "ORG-001", "2024-01-01", "2024-12-31", 300, "ok"],     # updated
-        ["Site A", "ORG-001", None, None, None, None],                     # deactivated (also counted as updated)
-        [None, None, "2024-01-01", "2024-12-31", 100, "no reg"],           # rejected
+        ["Site A", "ORG-001", "SN-1", "2024-01-01", "2024-12-31", 300, "ok"],     # updated
+        ["Site A", "ORG-001", "SN-1", None, None, None, None],                     # deactivated (also counted as updated)
+        [None, None, None, "2024-01-01", "2024-12-31", 100, "no reg"],             # rejected
     ]
     records = await _run_import(rows, fse_repo_override=fse_repo)
     final = records[-1]

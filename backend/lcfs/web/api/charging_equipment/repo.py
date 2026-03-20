@@ -864,13 +864,20 @@ class ChargingEquipmentRepository:
     @repo_handler
     async def get_serial_numbers_for_organization(
         self, organization_id: int
-    ) -> set[str]:
+    ) -> set[tuple[str, int]]:
         """
-        Retrieve serial numbers for all charging equipment owned by the organization.
+        Retrieve (serial_number, charging_site_id) pairs for all charging
+        equipment owned by the organization.
         Limited to non-deleted equipment and latest site versions.
+
+        Duplicate serial numbers are scoped per charging site — the same
+        serial at a different site is allowed.
         """
         stmt = (
-            select(ChargingEquipment.serial_number)
+            select(
+                ChargingEquipment.serial_number,
+                ChargingEquipment.charging_site_id,
+            )
             .join(
                 ChargingSite,
                 ChargingEquipment.charging_site_id == ChargingSite.charging_site_id,
@@ -883,12 +890,13 @@ class ChargingEquipmentRepository:
         )
         stmt = self._apply_latest_site_filter(stmt)
         result = await self.db.execute(stmt)
-        normalized = set()
-        for serial in result.scalars().all():
+        normalized: set[tuple[str, int]] = set()
+        for row in result.all():
+            serial, site_id = row
             if isinstance(serial, str):
                 clean = serial.strip()
                 if clean:
-                    normalized.add(clean.upper())
+                    normalized.add((clean.upper(), site_id))
         return normalized
 
     @repo_handler
