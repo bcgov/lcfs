@@ -40,3 +40,42 @@ def test_forecast_sql_builder_generates_time_series_sql():
 
     assert "DATE_TRUNC('month'" in dataset.sql
     assert 'SUM("compliance_units") AS y' in dataset.sql
+
+
+def test_forecast_sql_builder_uses_compliance_year_when_period_column_is_missing():
+    builder = ForecastSqlBuilder()
+    catalog = SchemaCatalog(
+        entities=[
+            SchemaEntity(
+                name="vw_fuel_supply_analytics_base",
+                schema_name="public",
+                entity_type="view",
+                columns=[
+                    SchemaColumn(name="compliance_year", data_type="character varying"),
+                    SchemaColumn(name="compliance_units", data_type="integer"),
+                ],
+            )
+        ],
+        generated_at="2026-03-19T00:00:00Z",
+    )
+    plan = QueryPlan(
+        question="Forecast total credits for the next 12 months",
+        intent="aggregation",
+        metrics=[QueryMetric(name="credits", aggregation="sum")],
+        candidate_entities=["public.vw_fuel_supply_analytics_base"],
+        explanation="test",
+        confidence=0.8,
+    )
+    forecast_plan = ForecastPlan(
+        forecast_intent=True,
+        target_metric="credits",
+        time_column="compliance_period",
+        forecast_horizon=12,
+        granularity="month",
+        candidate_source_entity="public.vw_fuel_supply_analytics_base",
+    )
+
+    dataset = builder.build(plan, forecast_plan, catalog)
+
+    assert 'TO_DATE("compliance_year"::text, \'YYYY\')' in dataset.sql
+    assert dataset.granularity == "year"
