@@ -20,12 +20,31 @@ const Controls = styled(Box)({
 
 const FUEL_TYPES = ['gasoline', 'diesel', 'jetFuel']
 
+/**
+ * Mirrors the grey-out rules from SummaryTable.isLineGreyedByYear exactly:
+ * - Lines 12, 13, 14, 16, 19: grey for years before 2024
+ * - Lines 17, 22: grey for 2022 and prior
+ */
+const isLowCarbonLineGreyed = (lineNumber, compliancePeriodYear) => {
+  if (!compliancePeriodYear) return false
+  const year = parseInt(compliancePeriodYear)
+  const line = parseInt(lineNumber)
+
+  if ([12, 13, 14, 16, 19].includes(line) && year < 2024) return true
+  if ([17, 22].includes(line) && year <= 2022) return true
+
+  return false
+}
+
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
   const [reportChain, setReportChain] = useState([])
 
   const { currentReport } = useComplianceReportStore()
+
+  const compliancePeriodYear =
+    currentReport?.report?.compliancePeriod?.description ?? null
 
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
@@ -147,11 +166,13 @@ export const CompareReports = () => {
         })
       }
       for (const row of report1Summary.lowCarbonFuelTargetSummary) {
+        const greyed = isLowCarbonLineGreyed(row.line, compliancePeriodYear)
         lowCarbonSummary.push({
           line: row.line,
           description: row.description,
           format: row.format,
-          report1: row.value
+          report1: greyed ? null : row.value,
+          greyed
         })
       }
       for (const row of report1Summary.nonCompliancePenaltySummary) {
@@ -173,12 +194,17 @@ export const CompareReports = () => {
         row.delta = (row.report2 ?? 0) - row.report1
       }
       for (const row of lowCarbonSummary) {
+        if (row.greyed) {
+          row.report2 = null
+          row.delta = null
+          continue
+        }
         const matchingRow = report2Summary.lowCarbonFuelTargetSummary.find(
           (row2) => row2.line === row.line
         )
         if (matchingRow) {
           row.report2 = matchingRow.value
-          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+          row.delta = row.report2 !== null ? row.report2 - (row.report1 ?? 0) : null
         } else {
           row.report2 = null
           row.delta = null
@@ -205,7 +231,7 @@ export const CompareReports = () => {
     setRenewableSummary(renewableSummary)
     setLowCarbonSummary(lowCarbonSummary)
     setNonCompliancePenaltySummary(nonCompliancePenaltySummary)
-  }, [report1Summary, report2Summary, fuelType])
+  }, [report1Summary, report2Summary, fuelType, compliancePeriodYear])
 
   function onSelectReport1(event) {
     const newReport1ID = event.target.value

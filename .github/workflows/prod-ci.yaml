@@ -27,11 +27,11 @@ jobs:
       cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.2
 
       - name: Set up cache for OpenShift CLI
         id: cache
-        uses: actions/cache@v4.2.0
+        uses: actions/cache@v5.0.4
         with:
           path: /usr/local/bin/oc # Path where the `oc` binary will be installed
           key: oc-cli-${{ runner.os }}
@@ -69,18 +69,18 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           sparse-checkout: |
             backend
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.10.13"
 
       - name: Cache Poetry dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: |
             ~/.cache/pypoetry
@@ -145,7 +145,7 @@ jobs:
           echo "Database dump created successfully ($(stat --printf=%s lcfs_template.pgdump) bytes)"
 
       - name: Upload database template
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: db-template
           path: lcfs_template.pgdump
@@ -226,18 +226,18 @@ jobs:
             45,
           ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           sparse-checkout: |
             backend
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.10.13"
 
       - name: Cache Poetry dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: |
             ~/.cache/pypoetry
@@ -257,7 +257,7 @@ jobs:
           poetry install
 
       - name: Cache pytest timing data
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: backend/.pytest_cache
           key: ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-${{ hashFiles('backend/lcfs/tests/**/*.py') }}
@@ -274,7 +274,7 @@ jobs:
           echo "PostgreSQL is ready!"
 
       - name: Download database template
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           name: db-template
           path: .
@@ -341,7 +341,7 @@ jobs:
 
       - name: Upload pytest results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: pytest-results-shard-${{ matrix.shard }}
           path: backend/pytest-results-shard-${{ matrix.shard }}.xml
@@ -354,18 +354,18 @@ jobs:
     outputs:
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           sparse-checkout: |
             frontend
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: "20"
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
@@ -385,7 +385,7 @@ jobs:
       #     wait $TYPE_CHECK_PID
 
       - name: Cache node_modules for test shards
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
@@ -440,19 +440,19 @@ jobs:
           ]
         shardTotal: [32]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           sparse-checkout: |
             frontend
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: "20"
 
       - name: Restore node_modules cache
         id: cache-restore
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
@@ -513,7 +513,7 @@ jobs:
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: blob-report-${{ matrix.shardIndex }}
           path: frontend/.vitest-reports/*
@@ -541,10 +541,10 @@ jobs:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.2
 
       - name: Restore oc command from Cache
-        uses: actions/cache@v4.2.0
+        uses: actions/cache@v5.0.4
         with:
           path: /usr/local/bin/oc
           key: oc-cli-${{ runner.os }}
@@ -588,7 +588,7 @@ jobs:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
     steps:
       - name: Ask for approval for LCFS ${{env.IMAGE_TAG }} Prod deployment
-        uses: trstringer/manual-approval@v1.6.0
+        uses: trstringer/manual-approval@v1.12.0
         with:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,prv-proton,Grulin
@@ -596,14 +596,14 @@ jobs:
           issue-title: "LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment."
 
       - name: Checkout Manifest repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6.0.2
         with:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
 
       - name: Restore oc command from Cache
-        uses: actions/cache@v4.2.0
+        uses: actions/cache@v5.0.4
         with:
           path: /usr/local/bin/oc
           key: oc-cli-${{ runner.os }}
@@ -622,7 +622,7 @@ jobs:
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{env.VERSION }}-${{env.PRE_RELEASE }} ${{ env.PROD_NAMESPACE }}/lcfs-frontend:${{env.VERSION }}-${{env.PRE_RELEASE }}
 
       - name: Update frontend tag for prod deployment
-        uses: mikefarah/yq@v4.40.5
+        uses: mikefarah/yq@v4.52.4
         with:
           cmd: |
             yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
@@ -647,7 +647,7 @@ jobs:
   #     PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
   #   steps:
   #     - name: Check out repository
-  #       uses: actions/checkout@v4.1.1
+  #       uses: actions/checkout@v6.0.2
 
   #     - name: Fetch tags
   #       run: |

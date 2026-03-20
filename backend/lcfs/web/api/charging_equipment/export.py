@@ -40,6 +40,7 @@ CE_INDEX_EXPORT_COLUMNS = [
     SpreadsheetColumn("Status", "text"),
     SpreadsheetColumn("Site name", "text"),
     SpreadsheetColumn("Organization", "text"),
+    SpreadsheetColumn("Allocating organization", "text"),
     SpreadsheetColumn("Registration #", "text"),
     SpreadsheetColumn("Version #", "int"),
     SpreadsheetColumn("Serial #", "text"),
@@ -58,6 +59,7 @@ CE_INDEX_EXPORT_COLUMNS = [
 CE_MANAGE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Status", "text"),
     SpreadsheetColumn("Site name", "text"),
+    SpreadsheetColumn("Allocating organization", "text"),
     SpreadsheetColumn("Registration #", "text"),
     SpreadsheetColumn("Version #", "int"),
     SpreadsheetColumn("Serial #", "text"),
@@ -375,9 +377,15 @@ class ChargingEquipmentExporter:
                 equipment.update_date.date() if getattr(equipment, "update_date", None) else None
             )
 
+            allocating_organization_name = (
+                equipment.charging_site.allocating_organization_name
+                if equipment.charging_site
+                else ""
+            ) or ""
             common_values = [
                 status,
                 site_name,
+                allocating_organization_name,
                 registration_number,
                 equipment.version,
                 equipment.serial_number,
@@ -398,6 +406,7 @@ class ChargingEquipmentExporter:
                         status,
                         site_name,
                         organization_name,
+                        allocating_organization_name,
                         registration_number,
                         equipment.version,
                         equipment.serial_number,
