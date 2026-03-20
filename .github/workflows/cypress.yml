@@ -33,7 +33,7 @@ jobs:
           - 15672:15672
           - 5672:5672
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6.0.2
 
       - name: Build Backend Service
         run: docker build -t backend-service -f ./backend/Dockerfile ./backend
@@ -57,7 +57,7 @@ jobs:
         run: docker run -d --name frontend --network=host -e DB_CYPRESS_PASS=development_only -e DB_CYPRESS_USER=lcfs frontend-service
 
       - name: Cypress run
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7.1.8
         with:
           headed: false
           browser: electron
@@ -83,14 +83,14 @@ jobs:
           CYPRESS_BROWSER_ARGS: --no-sandbox
       - name: Upload Cypress Artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cypress-artifacts
           path: |
             frontend/cypress/screenshots
             frontend/cypress/videos
             frontend/cypress/reports
-        
+
       # Print backend logs if something goes wrong
       - name: Print backend logs
         if: failure()
@@ -179,4 +179,3 @@ jobs:
           EOF
 
           curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
-      
