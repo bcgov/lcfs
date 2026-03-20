@@ -83,7 +83,7 @@ jobs:
           CYPRESS_BROWSER_ARGS: --no-sandbox
       - name: Upload Cypress Artifacts
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: cypress-artifacts
           path: |

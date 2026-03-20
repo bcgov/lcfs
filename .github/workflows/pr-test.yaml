@@ -118,7 +118,7 @@ jobs:
           echo "Database dump created successfully ($(stat --printf=%s lcfs_template.pgdump) bytes)"
 
       - name: Upload database template
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: db-template
           path: lcfs_template.pgdump
