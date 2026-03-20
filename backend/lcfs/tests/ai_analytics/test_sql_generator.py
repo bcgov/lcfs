@@ -123,3 +123,22 @@ def test_sql_generator_prefers_organization_name_in_detail_queries():
     generated = generator.generate(plan, catalog)
 
     assert '"organization_name"' in generated.sql
+
+
+def test_sql_generator_applies_organization_id_filter():
+    generator = SqlGenerator()
+    plan = QueryPlan(
+        question="Show total credits by compliance period for org id 4",
+        intent="aggregation",
+        metrics=[QueryMetric(name="credits", aggregation="sum")],
+        dimensions=[QueryDimension(name="compliance period")],
+        filters=[QueryFilter(field="organization_id", operator="=", value=4)],
+        candidate_entities=["public.mv_credit_ledger"],
+        candidate_chart_type="bar",
+        explanation="test",
+        confidence=0.9,
+    )
+
+    generated = generator.generate(plan, build_catalog())
+
+    assert '"organization_id" = 4' in generated.sql

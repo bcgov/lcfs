@@ -158,6 +158,15 @@ class SqlGenerator:
             options = [filter_item.field]
             if filter_item.field == "year":
                 options.extend(["compliance_period", "completion_year", "year"])
+            if filter_item.field in {"organization_id", "organization_name", "organization"}:
+                options.extend(
+                    [
+                        "organization_name",
+                        "organization_id",
+                        "supplier_name",
+                        "supplier_id",
+                    ]
+                )
             column = self._find_best_column(entity, options)
             if column:
                 filter_item.resolved_column = column.name
@@ -192,6 +201,9 @@ class SqlGenerator:
                 self._format_literal(column, value) for value in filter_item.value
             )
             return f'"{column.name}" IN ({values})'
+        if filter_item.operator == "ilike":
+            escaped = str(filter_item.value).replace("'", "''")
+            return f'"{column.name}" ILIKE \'%{escaped}%\''
         raise ValueError(f"Unsupported filter operator: {filter_item.operator}")
 
     def _select_detail_columns(self, entity: SchemaEntity, max_columns: int) -> List[str]:

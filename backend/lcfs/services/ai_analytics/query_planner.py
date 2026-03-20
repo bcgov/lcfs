@@ -19,6 +19,12 @@ class QueryPlanner:
     """Structured, grounded plan builder."""
 
     YEAR_PATTERN = re.compile(r"\b(20\d{2})\b")
+    ORGANIZATION_ID_PATTERN = re.compile(
+        r"\b(?:org(?:anization)?|supplier)\s*id\s*(?:=|is)?\s*(\d+)\b"
+    )
+    ORGANIZATION_NAME_PATTERN = re.compile(
+        r"\bfor\s+(?:org(?:anization)?|supplier)(?:\s+name)?\s+(.+?)(?=\s+\b(?:by|in|with|as|where)\b|$)"
+    )
 
     def create_plan(
         self,
@@ -269,6 +275,29 @@ class QueryPlanner:
                     value=[int(year) for year in years[:2]],
                 )
             )
+
+        organization_id_match = self.ORGANIZATION_ID_PATTERN.search(question)
+        if organization_id_match:
+            filters.append(
+                QueryFilter(
+                    field="organization_id",
+                    operator="=",
+                    value=int(organization_id_match.group(1)),
+                )
+            )
+            return filters
+
+        organization_name_match = self.ORGANIZATION_NAME_PATTERN.search(question)
+        if organization_name_match:
+            organization_name = organization_name_match.group(1).strip().strip("'\"")
+            if organization_name and " id " not in f" {organization_name.lower()} ":
+                filters.append(
+                    QueryFilter(
+                        field="organization_name",
+                        operator="ilike",
+                        value=organization_name,
+                    )
+                )
         return filters
 
     def _infer_chart_type(self, question: str):

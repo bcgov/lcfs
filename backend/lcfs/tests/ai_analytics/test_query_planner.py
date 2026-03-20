@@ -63,3 +63,17 @@ def test_query_planner_prefers_compare_subject_as_dimension():
     )
 
     assert plan.dimensions[0].name == "organizations"
+
+
+def test_query_planner_extracts_organization_id_filter():
+    planner = QueryPlanner()
+
+    plan = planner.create_plan(
+        "Show total credits by compliance period for org id 4",
+        build_catalog(),
+    )
+
+    assert any(
+        filter_item.field == "organization_id" and filter_item.value == 4
+        for filter_item in plan.filters
+    )
