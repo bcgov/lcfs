@@ -66,6 +66,7 @@ def _make_exporter(fse_rows=None, report_found=True, group_uuid="group-abc"):
 def _fse_row(
     registration="ORG-AAAA1A-001",
     site_name="Charge Site 1",
+    serial_number="SN-12345",
     supply_from=datetime.date(2024, 1, 1),
     supply_to=datetime.date(2024, 12, 31),
     kwh_usage=1500.0,
@@ -76,6 +77,7 @@ def _fse_row(
     row = MagicMock()
     row.registration_number = registration
     row.site_name = site_name
+    row.serial_number = serial_number
     row.supply_from_date = supply_from
     row.supply_to_date = supply_to
     row.kwh_usage = kwh_usage
@@ -153,12 +155,16 @@ def test_headers_second_column_is_registration():
     assert HEADERS[1] == "Registration #"
 
 
+def test_headers_third_column_is_serial():
+    assert HEADERS[2] == "Serial #"
+
+
 def test_header_labels():
     """Spot-check all header labels."""
-    assert HEADERS[2] == "Dates of supply from"
-    assert HEADERS[3] == "Dates of supply to"
-    assert HEADERS[4] == "kWh usage"
-    assert HEADERS[5] == "Compliance notes"
+    assert HEADERS[3] == "Dates of supply from"
+    assert HEADERS[4] == "Dates of supply to"
+    assert HEADERS[5] == "kWh usage"
+    assert HEADERS[6] == "Compliance notes"
 
 
 def test_column_count_matches_headers():
@@ -184,6 +190,7 @@ def _sample_row():
     return [
         "Charge Site 1",
         "ORG-001",
+        "SN-12345",
         datetime.date(2024, 1, 1),
         datetime.date(2024, 12, 31),
         500,
@@ -220,42 +227,57 @@ def test_registration_cell_is_locked():
     assert ws.cell(row=2, column=2).protection.locked is True
 
 
-def test_editable_columns_are_unlocked():
-    """Cols C–F (dates, kWh, notes) must be unlocked for existing data rows."""
+def test_serial_cell_is_locked():
+    """Col C (serial #) must be locked for existing data rows."""
     exp = _make_exporter()
     period = _compliance_period()
     wb = exp._build_workbook([_sample_row()], period)
     ws = wb[FSE_UPDATE_SHEETNAME]
-    for col in (3, 4, 5, 6):
+    assert ws.cell(row=2, column=3).protection.locked is True
+
+
+def test_editable_columns_are_unlocked():
+    """Cols D–G (dates, kWh, notes) must be unlocked for existing data rows."""
+    exp = _make_exporter()
+    period = _compliance_period()
+    wb = exp._build_workbook([_sample_row()], period)
+    ws = wb[FSE_UPDATE_SHEETNAME]
+    for col in (4, 5, 6, 7):
         assert ws.cell(row=2, column=col).protection.locked is False, (
             f"Column {col} should be unlocked"
         )
 
 
 def test_empty_rows_for_new_entries_are_unlocked():
-    """The 500 empty rows appended after data rows must all be unlocked."""
+    """The 500 empty rows appended after data rows must be unlocked (except Serial #)."""
     exp = _make_exporter()
     period = _compliance_period()
     wb = exp._build_workbook([_sample_row()], period)
     ws = wb[FSE_UPDATE_SHEETNAME]
     # Data rows start at row 2; one data row → first empty row is row 3
     first_empty = 3
-    for col in range(1, 7):
+    for col in range(1, 8):
         cell = ws.cell(row=first_empty, column=col)
-        assert cell.protection.locked is False, (
-            f"Empty row col {col} should be unlocked"
-        )
+        if col == 3:
+            # Serial # column is always locked
+            assert cell.protection.locked is True, (
+                "Empty row Serial # col should be locked"
+            )
+        else:
+            assert cell.protection.locked is False, (
+                f"Empty row col {col} should be unlocked"
+            )
 
 
 def test_empty_rows_date_columns_have_date_format():
-    """Empty rows' date columns (C, D) must carry the date number format."""
+    """Empty rows' date columns (D, E) must carry the date number format."""
     exp = _make_exporter()
     period = _compliance_period()
     wb = exp._build_workbook([], period)
     ws = wb[FSE_UPDATE_SHEETNAME]
     # No data rows → first empty row is row 2
-    assert ws.cell(row=2, column=3).number_format == "yyyy-mm-dd"
     assert ws.cell(row=2, column=4).number_format == "yyyy-mm-dd"
+    assert ws.cell(row=2, column=5).number_format == "yyyy-mm-dd"
 
 
 def test_sheet_protection_is_enabled():
@@ -271,9 +293,9 @@ def test_date_columns_have_date_number_format():
     period = _compliance_period()
     wb = exp._build_workbook([_sample_row()], period)
     ws = wb[FSE_UPDATE_SHEETNAME]
-    # Col C = 3, Col D = 4
-    assert ws.cell(row=2, column=3).number_format == "yyyy-mm-dd"
+    # Col D = 4, Col E = 5
     assert ws.cell(row=2, column=4).number_format == "yyyy-mm-dd"
+    assert ws.cell(row=2, column=5).number_format == "yyyy-mm-dd"
 
 
 def test_kwh_column_has_numeric_format():
@@ -281,8 +303,8 @@ def test_kwh_column_has_numeric_format():
     period = _compliance_period()
     wb = exp._build_workbook([_sample_row()], period)
     ws = wb[FSE_UPDATE_SHEETNAME]
-    # Col E = 5
-    assert ws.cell(row=2, column=5).number_format == "#,##0"
+    # Col F = 6
+    assert ws.cell(row=2, column=6).number_format == "#,##0"
 
 
 def test_data_validators_are_added():
@@ -330,6 +352,14 @@ async def test_load_fse_data_registration_is_second_column():
 
 
 @pytest.mark.anyio
+async def test_load_fse_data_serial_is_third_column():
+    row = _fse_row(serial_number="SN-99")
+    exporter = _make_exporter(fse_rows=[row])
+    rows = await exporter._load_fse_data(1, "group-abc")
+    assert rows[0][2] == "SN-99"
+
+
+@pytest.mark.anyio
 async def test_load_fse_data_converts_datetime_to_date():
     """datetime objects from the DB must be converted to plain date."""
     dt_from = datetime.datetime(2024, 3, 15, 0, 0, 0)
@@ -339,8 +369,8 @@ async def test_load_fse_data_converts_datetime_to_date():
     exporter = _make_exporter(fse_rows=[row])
     rows = await exporter._load_fse_data(1, "group-abc")
 
-    assert rows[0][2] == datetime.date(2024, 3, 15)
-    assert rows[0][3] == datetime.date(2024, 9, 30)
+    assert rows[0][3] == datetime.date(2024, 3, 15)
+    assert rows[0][4] == datetime.date(2024, 9, 30)
 
 
 @pytest.mark.anyio
@@ -349,7 +379,7 @@ async def test_load_fse_data_kwh_none_becomes_zero_for_active_rows():
     row = _fse_row(kwh_usage=None)
     exporter = _make_exporter(fse_rows=[row])
     rows = await exporter._load_fse_data(1, "group-abc")
-    assert rows[0][4] == 0
+    assert rows[0][5] == 0
 
 
 @pytest.mark.anyio
@@ -361,10 +391,11 @@ async def test_load_fse_data_inactive_row_shows_only_site_and_reg():
 
     assert rows[0][0] == "Charge Site 1"   # site name preserved
     assert rows[0][1] == "ORG-AAAA1A-001"  # reg # preserved
-    assert rows[0][2] is None              # from date blank
-    assert rows[0][3] is None              # to date blank
-    assert rows[0][4] is None              # kWh blank
-    assert rows[0][5] is None              # notes blank
+    assert rows[0][2] == "SN-12345"        # serial # preserved
+    assert rows[0][3] is None              # from date blank
+    assert rows[0][4] is None              # to date blank
+    assert rows[0][5] is None              # kWh blank
+    assert rows[0][6] is None              # notes blank
 
 
 @pytest.mark.anyio
@@ -377,8 +408,9 @@ async def test_load_fse_data_other_report_group_shows_only_site_and_reg():
 
     assert rows[0][0] == "Charge Site 1"
     assert rows[0][1] == "ORG-AAAA1A-001"
-    assert rows[0][2] is None
-    assert rows[0][4] is None
+    assert rows[0][2] == "SN-12345"        # serial # preserved
+    assert rows[0][3] is None
+    assert rows[0][5] is None
 
 
 @pytest.mark.anyio

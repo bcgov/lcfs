@@ -215,14 +215,15 @@ async def _import_async(
                         if all(cell is None for cell in row):
                             continue
 
-                        # Column layout: A=Site name, B=Reg#, C=From, D=To, E=kWh, F=Notes
-                        expanded = list(row) + [None] * max(0, 6 - len(list(row)))
+                        # Column layout: A=Site name, B=Reg#, C=Serial#, D=From, E=To, F=kWh, G=Notes
+                        expanded = list(row) + [None] * max(0, 7 - len(list(row)))
                         # col A (index 0) = site name — read-only identifier, not used
                         registration_number = expanded[1]
-                        supply_from_raw = expanded[2]
-                        supply_to_raw = expanded[3]
-                        kwh_usage_raw = expanded[4]
-                        compliance_notes = expanded[5]
+                        # col C (index 2) = serial # — read-only identifier, not used
+                        supply_from_raw = expanded[3]
+                        supply_to_raw = expanded[4]
+                        kwh_usage_raw = expanded[5]
+                        compliance_notes = expanded[6]
 
                         # Registration number is required
                         if not registration_number:

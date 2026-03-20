@@ -1225,17 +1225,13 @@ class TestChargingSiteService:
             mock_org2,
         ]
 
-        # Mock transaction partners
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
-            "ABC Company",  # Duplicate - should be filtered
+        # Mock all deduplicated names (sorted) from the consolidated repo method
+        mock_repo.get_allocating_organization_names.return_value = [
+            "ABC Company",
+            "ABC Corporation",
+            "ABC Historical C",
             "ABC Partner A",
             "ABC Partner B",
-        ]
-
-        # Mock historical names
-        mock_repo.get_distinct_allocating_organization_names.return_value = [
-            "ABC Corporation",  # Duplicate - should be filtered
-            "ABC Historical C",
         ]
 
         result = await charging_site_service.search_allocation_organizations(1, "abc")
@@ -1251,10 +1247,7 @@ class TestChargingSiteService:
         assert len(unmatched) == 3
 
         mock_repo.get_allocation_agreement_organizations.assert_called_once_with(1)
-        mock_repo.get_transaction_partners_from_allocation_agreements.assert_called_once_with(
-            1
-        )
-        mock_repo.get_distinct_allocating_organization_names.assert_called_once_with(1)
+        mock_repo.get_allocating_organization_names.assert_called_once_with(1)
 
     @pytest.mark.anyio
     async def test_search_allocation_organizations_with_query_filter(
@@ -1273,11 +1266,11 @@ class TestChargingSiteService:
             mock_org1,
             mock_org2,
         ]
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
-            "ABC Partner"
-        ]
-        mock_repo.get_distinct_allocating_organization_names.return_value = [
-            "XYZ Historical"
+        mock_repo.get_allocating_organization_names.return_value = [
+            "ABC Company",
+            "ABC Partner",
+            "XYZ Corporation",
+            "XYZ Historical",
         ]
 
         # Search for "abc" - should only return ABC entries
@@ -1296,11 +1289,10 @@ class TestChargingSiteService:
         mock_org.name = "Test Org"
 
         mock_repo.get_allocation_agreement_organizations.return_value = [mock_org]
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = [
-            "Partner A"
-        ]
-        mock_repo.get_distinct_allocating_organization_names.return_value = [
-            "Historical B"
+        mock_repo.get_allocating_organization_names.return_value = [
+            "Historical B",
+            "Partner A",
+            "Test Org",
         ]
 
         result = await charging_site_service.search_allocation_organizations(1, "")
@@ -1321,8 +1313,9 @@ class TestChargingSiteService:
             mock_orgs.append(mock_org)
 
         mock_repo.get_allocation_agreement_organizations.return_value = mock_orgs
-        mock_repo.get_transaction_partners_from_allocation_agreements.return_value = []
-        mock_repo.get_distinct_allocating_organization_names.return_value = []
+        mock_repo.get_allocating_organization_names.return_value = [
+            f"Org {i:02d}" for i in range(60)
+        ]
 
         result = await charging_site_service.search_allocation_organizations(1, "org")
 
