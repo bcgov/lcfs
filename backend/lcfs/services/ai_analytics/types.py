@@ -8,6 +8,7 @@ from lcfs.web.api.base import BaseSchema
 EntityType = Literal["table", "view", "materialized_view"]
 ChartType = Literal["line", "bar", "stacked_bar", "pie", "scatter", "table"]
 ExecutionMode = Literal["heuristic_only", "local_llm_direct", "openclaw_local"]
+AnalyticsMode = Literal["descriptive", "forecast", "mixed"]
 
 
 class SchemaColumn(BaseSchema):
@@ -73,6 +74,12 @@ class QueryPlan(BaseSchema):
     execution_mode: Optional[ExecutionMode] = None
     llm_provider: Optional[str] = None
     model_name: Optional[str] = None
+    mode: AnalyticsMode = "descriptive"
+    forecast_intent: bool = False
+    forecast_horizon: Optional[int] = None
+    forecast_granularity: Optional[str] = None
+    forecast_time_column: Optional[str] = None
+    forecast_grouping: List[str] = Field(default_factory=list)
     intent: str
     metrics: List[QueryMetric] = Field(default_factory=list)
     dimensions: List[QueryDimension] = Field(default_factory=list)
@@ -126,6 +133,16 @@ class AssistantResponse(BaseSchema):
     execution_mode: ExecutionMode
     llm_provider: Optional[str] = None
     model_name: Optional[str] = None
+    forecast_mode: bool = False
+    mindsdb_model_name: Optional[str] = None
+    forecast_horizon: Optional[int] = None
+    forecast_granularity: Optional[str] = None
+    source_entity_used: Optional[str] = None
+    source_sql_used: Optional[str] = None
+    historical_rows: List[Dict[str, Any]] = Field(default_factory=list)
+    forecast_rows: List[Dict[str, Any]] = Field(default_factory=list)
+    combined_series: List[Dict[str, Any]] = Field(default_factory=list)
+    model_reused: Optional[bool] = None
     summary: str
     sql: str
     query_plan: QueryPlan
@@ -166,3 +183,41 @@ class LlmAnalysisPayload(BaseSchema):
     caveats: List[str] = Field(default_factory=list)
     suggested_title: str
     suggested_subtitle: Optional[str] = None
+
+
+class ForecastPlan(BaseSchema):
+    forecast_intent: bool = False
+    target_metric: Optional[str] = None
+    time_column: Optional[str] = None
+    group_by: List[str] = Field(default_factory=list)
+    forecast_horizon: int = 0
+    granularity: Optional[str] = None
+    candidate_source_entity: Optional[str] = None
+    confidence: float = 0.0
+    ambiguities: List[str] = Field(default_factory=list)
+    explanation: str = ""
+
+
+class ForecastPoint(BaseSchema):
+    period: str
+    value: float
+    series: Optional[str] = None
+    kind: Literal["historical", "forecast"] = "historical"
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
+
+
+class ForecastResponse(BaseSchema):
+    forecast_mode: bool = True
+    historical_rows: List[Dict[str, Any]] = Field(default_factory=list)
+    forecast_rows: List[Dict[str, Any]] = Field(default_factory=list)
+    combined_series: List[ForecastPoint] = Field(default_factory=list)
+    mindsdb_model_name: str
+    model_reused: bool
+    forecast_horizon: int
+    forecast_granularity: str
+    source_entity_used: str
+    source_sql_used: str
+    summary: str
+    assumptions: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)

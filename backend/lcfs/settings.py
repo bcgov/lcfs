@@ -119,6 +119,16 @@ class Settings(BaseSettings):
     ai_analytics_max_retries: int = 2
     ai_analytics_enable_llm_summary: bool = True
     ai_analytics_log_prompts: bool = False
+    ai_analytics_enable_mindsdb: bool = False
+    ai_analytics_mindsdb_base_url: Optional[str] = None
+    ai_analytics_mindsdb_timeout_seconds: int = 60
+    ai_analytics_mindsdb_private_only: bool = True
+    ai_analytics_mindsdb_allowed_internal_hosts: str = "localhost,127.0.0.1,mindsdb"
+    ai_analytics_mindsdb_sql_path: str = "/api/sql/query"
+    ai_analytics_mindsdb_project: str = "mindsdb"
+    ai_analytics_mindsdb_postgres_integration: str = "lcfs_postgres"
+    ai_analytics_min_forecast_points: int = 12
+    ai_analytics_default_forecast_horizon: int = 6
 
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present
@@ -157,6 +167,24 @@ class Settings(BaseSettings):
                 self,
                 "LCFS_AI_ANALYTICS_OPENCLAW_BASE_URL",
             )
+        if self.ai_analytics_enable_mindsdb:
+            if not self.ai_analytics_mindsdb_base_url:
+                raise ValueError(
+                    "LCFS_AI_ANALYTICS_MINDSDB_BASE_URL is required when MindsDB is enabled."
+                )
+            if self.ai_analytics_mindsdb_private_only:
+                original_hosts = self.ai_analytics_allowed_internal_hosts
+                self.ai_analytics_allowed_internal_hosts = (
+                    self.ai_analytics_mindsdb_allowed_internal_hosts
+                )
+                try:
+                    validate_private_ai_url(
+                        self.ai_analytics_mindsdb_base_url,
+                        self,
+                        "LCFS_AI_ANALYTICS_MINDSDB_BASE_URL",
+                    )
+                finally:
+                    self.ai_analytics_allowed_internal_hosts = original_hosts
 
     @property
     def db_url(self) -> URL:

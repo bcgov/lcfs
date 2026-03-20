@@ -1,9 +1,17 @@
-from lcfs.db.base import Auditable, BaseModel
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON
-from sqlalchemy.ext.declarative import declarative_base
+from lcfs.db.base import Base, get_current_user
+from sqlalchemy import (
+    JSON,
+    TIMESTAMP,
+    Boolean,
+    Column,
+    DateTime,
+    Integer,
+    String,
+    Text,
+    func,
+    text,
+)
 from enum import Enum
-
-Base = declarative_base()
 
 
 class TaskStatus(str, Enum):
@@ -16,7 +24,7 @@ class TaskStatus(str, Enum):
     DISABLED = "disabled"
 
 
-class ScheduledTask(BaseModel, Auditable):
+class ScheduledTask(Base):
     """
     Enhanced task model for dynamic scheduling
     """
@@ -45,3 +53,26 @@ class ScheduledTask(BaseModel, Auditable):
     parameters = Column(JSON, nullable=True)  # Task-specific parameters
     max_retries = Column(Integer, default=3)
     timeout_seconds = Column(Integer, default=300)  # 5 minutes default
+
+    create_date = Column(
+        TIMESTAMP(timezone=True),
+        server_default=text("now()"),
+        comment="Date and time (UTC) when the physical record was created in the database.",
+    )
+    update_date = Column(
+        TIMESTAMP(timezone=True),
+        server_default=text("now()"),
+        onupdate=func.now(),
+        comment="Date and time (UTC) when the physical record was updated in the database.",
+    )
+    create_user = Column(
+        String,
+        default=get_current_user,
+        comment="The user who created this record in the database.",
+    )
+    update_user = Column(
+        String,
+        default=get_current_user,
+        onupdate=get_current_user,
+        comment="The user who last updated this record in the database.",
+    )

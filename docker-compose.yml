@@ -120,6 +120,9 @@ services:
       LCFS_AI_ANALYTICS_LLM_BASE_URL: http://ollama:11434
       LCFS_AI_ANALYTICS_LLM_MODEL: llama3.1:8b
       LCFS_AI_ANALYTICS_ALLOWED_INTERNAL_HOSTS: localhost,127.0.0.1,ollama,openclaw
+      LCFS_AI_ANALYTICS_ENABLE_MINDSDB: true
+      LCFS_AI_ANALYTICS_MINDSDB_BASE_URL: http://mindsdb:47334
+      LCFS_AI_ANALYTICS_MINDSDB_ALLOWED_INTERNAL_HOSTS: localhost,127.0.0.1,mindsdb
     ports:
       - '8000:8000' # Application port
       - '5678:5678' # Debugger port
@@ -128,6 +131,7 @@ services:
       - redis
       - create_bucket
       - rabbitmq
+      - mindsdb
       # - clamav
     networks:
       - shared_network
@@ -161,6 +165,15 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    networks:
+      - shared_network
+
+  mindsdb:
+    container_name: mindsdb
+    restart: "no"
+    image: mindsdb/mindsdb:latest
+    ports:
+      - "47334:47334"
     networks:
       - shared_network
 

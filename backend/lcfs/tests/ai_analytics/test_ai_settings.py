@@ -21,3 +21,12 @@ def test_settings_allow_private_openclaw_url():
     )
 
     assert settings.ai_analytics_mode == "openclaw_local"
+
+
+def test_settings_fail_closed_for_public_mindsdb_url():
+    with pytest.raises(ValueError):
+        Settings(
+            ai_analytics_mode="heuristic_only",
+            ai_analytics_enable_mindsdb=True,
+            ai_analytics_mindsdb_base_url="https://mindsdb-cloud.example.com",
+        )

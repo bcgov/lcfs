@@ -31,6 +31,7 @@ The repository now includes an in-app AI analytics feature for government users 
   - `heuristic_only`
   - `local_llm_direct`
   - `openclaw_local`
+- Can optionally use local/private MindsDB for forecasting and predictive analytics
 
 ### Local-only architecture
 
@@ -47,6 +48,7 @@ User -> React AI Analytics page
      -> PostgreSQL execution
      -> deterministic chart config
      -> grounded response back to frontend
+     -> optional MindsDB forecast layer for historical+future projections
 ```
 
 No cloud AI provider is used. The application is designed to fail closed if an AI endpoint is configured to a public host.
@@ -79,6 +81,15 @@ LCFS_AI_ANALYTICS_ALLOWED_INTERNAL_HOSTS=localhost,127.0.0.1,ollama,openclaw
 LCFS_AI_ANALYTICS_REQUEST_TIMEOUT_SECONDS=60
 LCFS_AI_ANALYTICS_MAX_RETRIES=2
 LCFS_AI_ANALYTICS_ENABLE_LLM_SUMMARY=true
+LCFS_AI_ANALYTICS_ENABLE_MINDSDB=true
+LCFS_AI_ANALYTICS_MINDSDB_BASE_URL=http://mindsdb:47334
+LCFS_AI_ANALYTICS_MINDSDB_ALLOWED_INTERNAL_HOSTS=localhost,127.0.0.1,mindsdb
+LCFS_AI_ANALYTICS_MINDSDB_PRIVATE_ONLY=true
+LCFS_AI_ANALYTICS_MINDSDB_SQL_PATH=/api/sql/query
+LCFS_AI_ANALYTICS_MINDSDB_PROJECT=mindsdb
+LCFS_AI_ANALYTICS_MINDSDB_POSTGRES_INTEGRATION=lcfs_postgres
+LCFS_AI_ANALYTICS_MIN_FORECAST_POINTS=12
+LCFS_AI_ANALYTICS_DEFAULT_FORECAST_HORIZON=6
 ```
 
 ### Running fully local with Ollama
@@ -118,6 +129,25 @@ LCFS_AI_ANALYTICS_ALLOWED_INTERNAL_HOSTS=localhost,127.0.0.1,ollama,openclaw
 
 OpenCLAW is only used for structured plan/summary JSON. It cannot directly execute SQL. SQL generation and validation stay inside application code.
 
+### Forecasting with local MindsDB
+
+Forecast questions such as:
+
+- `Forecast total credits for the next 12 months`
+- `Predict quarterly report volume for next year`
+- `Show historical lead time and forecast next 6 months`
+
+follow this path:
+
+1. App detects forecast intent
+2. App builds safe historical training SQL
+3. App validates and extracts the historical time-series shape
+4. App creates or reuses a local MindsDB model
+5. App requests predictions from local MindsDB
+6. App returns historical rows, forecast rows, combined series, chart config, and model metadata
+
+MindsDB is private/local only and does not replace deterministic SQL control in the app.
+
 ### Docker compose example for private local deployment
 
 ```yaml
@@ -129,9 +159,17 @@ services:
       LCFS_AI_ANALYTICS_LLM_BASE_URL: http://ollama:11434
       LCFS_AI_ANALYTICS_LLM_MODEL: llama3.1:8b
       LCFS_AI_ANALYTICS_ALLOWED_INTERNAL_HOSTS: localhost,127.0.0.1,ollama,openclaw
+      LCFS_AI_ANALYTICS_ENABLE_MINDSDB: true
+      LCFS_AI_ANALYTICS_MINDSDB_BASE_URL: http://mindsdb:47334
+      LCFS_AI_ANALYTICS_MINDSDB_ALLOWED_INTERNAL_HOSTS: localhost,127.0.0.1,mindsdb
 
   ollama:
     image: ollama/ollama:latest
+    networks:
+      - shared_network
+
+  mindsdb:
+    image: mindsdb/mindsdb:latest
     networks:
       - shared_network
 
@@ -191,6 +229,33 @@ services:
 }
 ```
 
+### Example forecast response shape
+
+```json
+{
+  "sessionId": "forecast-session-1",
+  "executionMode": "local_llm_direct",
+  "llmProvider": "ollama",
+  "modelName": "llama3.1:8b",
+  "forecastMode": true,
+  "mindsdbModelName": "forecast_public_mv_credit_ledger_compliance_units_month_ab12cd34ef",
+  "forecastHorizon": 12,
+  "forecastGranularity": "month",
+  "sourceEntityUsed": "public.mv_credit_ledger",
+  "sourceSqlUsed": "SELECT DATE_TRUNC('month', ...) AS ds, SUM(...) AS y ...",
+  "historicalRows": [
+    { "ds": "2024-01-01", "y": 900.0 }
+  ],
+  "forecastRows": [
+    { "ds": "2025-01-01", "y": 950.0 }
+  ],
+  "combinedSeries": [
+    { "period": "2024-01-01", "value": 900.0, "kind": "historical" },
+    { "period": "2025-01-01", "value": 950.0, "kind": "forecast" }
+  ]
+}
+```
+
 ### Usage notes
 
 - The assistant prefers analytics views such as `vw_*`, `v_*`, and `mv_*` before raw tables.
@@ -198,6 +263,8 @@ services:
 - If the schema does not support a grounded answer, the assistant is expected to narrow the request instead of inventing tables or columns.
 - If the local model returns invalid JSON, the app falls back to heuristic planning instead of calling any cloud service.
 - If a configured AI endpoint is public, backend startup fails immediately.
+- If there are not enough historical points for forecasting, the app refuses to fabricate a forecast.
+- If a configured MindsDB endpoint is public, backend startup fails immediately.
 
 ### Troubleshooting
 

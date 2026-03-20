@@ -6,6 +6,9 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.services.ai_analytics.chart_builder import ChartBuilder, ResultAnalyzer
+from lcfs.services.ai_analytics.forecasting.forecasting_service import (
+    ForecastingService,
+)
 from lcfs.services.ai_analytics.llm_client import build_local_llm_client
 from lcfs.services.ai_analytics.prompts import ANALYSIS_PROMPT, PLANNING_PROMPT
 from lcfs.services.ai_analytics.providers.base import StructuredLlmError
@@ -20,6 +23,7 @@ from lcfs.services.ai_analytics.types import (
     LlmAnalysisPayload,
     LlmPlanPayload,
     QueryPlan,
+    QueryExecutionResult,
     SchemaCatalog,
     SchemaEntity,
     SessionContext,
@@ -42,6 +46,7 @@ class AiAnalyticsService:
         self.executor = QueryExecutor(db)
         self.chart_builder = ChartBuilder()
         self.result_analyzer = ResultAnalyzer()
+        self.forecasting_service = ForecastingService(db) if settings.ai_analytics_enable_mindsdb else None
         self.memory = SessionMemoryStore()
         self.execution_mode = settings.ai_analytics_mode
         self.local_llm_client = None
@@ -98,6 +103,30 @@ class AiAnalyticsService:
             for entity in catalog.entities
             if entity.qualified_name == generated_sql.entity_name
         ]
+        forecast_result = None
+        dataset_spec = None
+        if self.forecasting_service is not None:
+            forecast_plan = self.forecasting_service.maybe_build_forecast_plan(plan, catalog)
+            if forecast_plan and forecast_plan.forecast_intent:
+                forecast_result, chart, dataset_spec = await self.forecasting_service.run_forecast(
+                    plan, forecast_plan, catalog
+                )
+                if forecast_result.forecast_rows:
+                    analysis.summary = (
+                        f"Forecast generated for the next {plan.forecast_horizon} "
+                        f"{plan.forecast_granularity}(s) using model "
+                        f"{forecast_result.model_info.model_name}."
+                    )
+                result = QueryExecutionResult(
+                    columns=list(forecast_result.historical_rows[0].keys())
+                    if forecast_result.historical_rows
+                    else [],
+                    column_types={},
+                    rows=forecast_result.historical_rows,
+                    row_count=len(forecast_result.historical_rows),
+                    execution_ms=result.execution_ms,
+                    sample_preview=forecast_result.historical_rows[:5],
+                )
 
         self.memory.upsert(
             SessionContext(
@@ -115,14 +144,26 @@ class AiAnalyticsService:
             execution_mode=self.execution_mode,
             llm_provider=self.provider_name,
             model_name=self.model_name,
+            forecast_mode=bool(forecast_result),
+            mindsdb_model_name=(
+                forecast_result.model_info.model_name if forecast_result else None
+            ),
+            forecast_horizon=plan.forecast_horizon,
+            forecast_granularity=plan.forecast_granularity,
+            source_entity_used=dataset_spec.entity_name if dataset_spec else generated_sql.entity_name,
+            source_sql_used=dataset_spec.sql if forecast_result else generated_sql.sql,
+            historical_rows=forecast_result.historical_rows if forecast_result else [],
+            forecast_rows=forecast_result.forecast_rows if forecast_result else [],
+            combined_series=forecast_result.combined_series if forecast_result else [],
+            model_reused=forecast_result.model_info.reused if forecast_result else None,
             summary=analysis.summary,
             sql=generated_sql.sql,
             query_plan=plan,
             result=result,
             chart=chart,
             entities_used=entities_used,
-            warnings=generated_sql.warnings,
-            assumptions=generated_sql.assumptions,
+            warnings=generated_sql.warnings + (forecast_result.warnings if forecast_result else []),
+            assumptions=generated_sql.assumptions + (forecast_result.assumptions if forecast_result else []),
             key_findings=analysis.key_findings,
             caveats=analysis.caveats,
         )

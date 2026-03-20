@@ -243,6 +243,10 @@ export const AiAnalyticsPanel = () => {
                     <Chip label={`Mode ${response.executionMode}`} />
                     {response.llmProvider && <Chip label={`Provider ${response.llmProvider}`} />}
                     {response.modelName && <Chip label={`Model ${response.modelName}`} />}
+                    {response.forecastMode && <Chip color="secondary" label="Forecast" />}
+                    {response.mindsdbModelName && (
+                      <Chip label={`MindsDB ${response.mindsdbModelName}`} />
+                    )}
                   </Stack>
                   <BCTypography variant="body1">{response.summary}</BCTypography>
                   {response.keyFindings.map((finding) => (
@@ -304,6 +308,13 @@ export const AiAnalyticsPanel = () => {
               <BCTypography variant="body2" color="text.secondary">
                 {response.chart.rationale}
               </BCTypography>
+              {response.forecastMode && (
+                <BCTypography variant="body2" color="text.secondary">
+                  Horizon: {response.forecastHorizon} {response.forecastGranularity}
+                  {response.modelReused != null &&
+                    ` | Model ${response.modelReused ? 'reused' : 'trained'}`}
+                </BCTypography>
+              )}
             </Stack>
           </Paper>
 
@@ -346,6 +357,14 @@ export const AiAnalyticsPanel = () => {
             </AccordionSummary>
             <AccordionDetails>
               <SqlPreview sql={response.sql} />
+              {response.sourceSqlUsed && response.sourceSqlUsed !== response.sql && (
+                <Box mt={2}>
+                  <BCTypography variant="subtitle2" color="primary">
+                    Forecast Training SQL
+                  </BCTypography>
+                  <SqlPreview sql={response.sourceSqlUsed} />
+                </Box>
+              )}
             </AccordionDetails>
           </Accordion>
 

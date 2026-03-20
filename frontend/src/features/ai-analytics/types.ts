@@ -99,6 +99,16 @@ export interface AssistantResponse {
   executionMode: 'heuristic_only' | 'local_llm_direct' | 'openclaw_local'
   llmProvider?: string | null
   modelName?: string | null
+  forecastMode?: boolean
+  mindsdbModelName?: string | null
+  forecastHorizon?: number | null
+  forecastGranularity?: string | null
+  sourceEntityUsed?: string | null
+  sourceSqlUsed?: string | null
+  historicalRows?: Array<Record<string, unknown>>
+  forecastRows?: Array<Record<string, unknown>>
+  combinedSeries?: Array<Record<string, unknown>>
+  modelReused?: boolean | null
   summary: string
   sql: string
   queryPlan: QueryPlan
