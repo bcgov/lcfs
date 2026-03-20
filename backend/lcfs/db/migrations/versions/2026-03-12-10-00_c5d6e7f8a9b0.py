@@ -60,6 +60,8 @@ def upgrade() -> None:
                         'migration_backfill',
                         true
                     )
+                    ON CONFLICT (compliance_period_id, fuel_type_id, fuel_category_id, end_use_type_id)
+                    DO NOTHING
                 """).bindparams(
                     fuel_category_id=fuel_category_id,
                     fuel_type_id=fuel_type_id,

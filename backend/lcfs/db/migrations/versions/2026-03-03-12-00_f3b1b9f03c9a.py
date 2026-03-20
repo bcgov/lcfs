@@ -11,6 +11,7 @@ from datetime import datetime
 import sqlalchemy as sa
 from enum import Enum
 from alembic import op
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "f3b1b9f03c9a"
@@ -31,7 +32,17 @@ enum_for_column = sa.Enum(
 )
 
 
+def table_exists(table_name):
+    """Check if a table exists in the database"""
+    bind = op.get_bind()
+    insp = inspect(bind)
+    return table_name in insp.get_table_names()
+
+
 def upgrade() -> None:
+    if table_exists("report_opening"):
+        return
+
     op.execute("DROP TYPE IF EXISTS supplemental_report_access_role_enum")
 
     op.create_table(
