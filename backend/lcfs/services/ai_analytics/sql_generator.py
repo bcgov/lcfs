@@ -194,6 +194,26 @@ class SqlGenerator:
             return f'"{column.name}" IN ({values})'
         raise ValueError(f"Unsupported filter operator: {filter_item.operator}")
 
+    def _select_detail_columns(self, entity: SchemaEntity, max_columns: int) -> List[str]:
+        selected_columns: List[str] = []
+        available_names = {column.name for column in entity.columns}
+        replacement_map = {
+            "organization_id": "organization_name",
+            "supplier_id": "supplier_name",
+        }
+
+        for column in entity.columns:
+            target_name = replacement_map.get(column.name, column.name)
+            if target_name in available_names and target_name not in selected_columns:
+                selected_columns.append(target_name)
+            elif column.name not in replacement_map and column.name not in selected_columns:
+                selected_columns.append(column.name)
+
+            if len(selected_columns) >= max_columns:
+                break
+
+        return selected_columns
+
     def _build_query(
         self,
         plan: QueryPlan,
@@ -215,9 +235,9 @@ class SqlGenerator:
             used_columns.extend(column.name for _, column in filters)
 
         if metric is None:
-            selected_columns = [
-                column.name for column in entity.columns[: min(8, len(entity.columns))]
-            ]
+            selected_columns = self._select_detail_columns(
+                entity, min(8, len(entity.columns))
+            )
             used_columns.extend(selected_columns)
             select_sql = ", ".join(f'"{column}"' for column in selected_columns)
             sql = f"SELECT {select_sql} FROM {from_clause}{where_clause} LIMIT {limit}"

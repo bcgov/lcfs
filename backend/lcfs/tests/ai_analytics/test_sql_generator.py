@@ -99,3 +99,27 @@ def test_sql_generator_quotes_text_year_filters():
     generated = generator.generate(plan, catalog)
 
     assert '"compliance_year" = \'2024\'' in generated.sql
+
+
+def test_sql_generator_prefers_organization_name_in_detail_queries():
+    generator = SqlGenerator()
+    plan = QueryPlan(
+        question="List fuel supply records",
+        intent="detail",
+        metrics=[],
+        dimensions=[],
+        filters=[],
+        candidate_entities=["public.mv_credit_ledger"],
+        candidate_chart_type="table",
+        explanation="test",
+        confidence=0.9,
+    )
+
+    catalog = build_catalog()
+    catalog.entities[0].columns.insert(
+        0, SchemaColumn(name="organization_id", data_type="integer")
+    )
+
+    generated = generator.generate(plan, catalog)
+
+    assert '"organization_name"' in generated.sql

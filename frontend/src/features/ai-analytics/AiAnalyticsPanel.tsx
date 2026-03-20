@@ -53,6 +53,7 @@ const EXAMPLE_QUESTIONS = [
 ]
 
 export const AiAnalyticsPanel = () => {
+  const DEFAULT_VISIBLE_ROWS = 10
   const client = useApiService()
   const [sessionId] = useState(createSessionId)
   const [question, setQuestion] = useState(EXAMPLE_QUESTIONS[0])
@@ -65,6 +66,7 @@ export const AiAnalyticsPanel = () => {
   const [planning, setPlanning] = useState(false)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAllRows, setShowAllRows] = useState(false)
 
   const entityLabels = useMemo(
     () =>
@@ -73,6 +75,13 @@ export const AiAnalyticsPanel = () => {
       ) || [],
     [response]
   )
+
+  const visibleRows = useMemo(() => {
+    if (!response) return []
+    return showAllRows
+      ? response.result.rows
+      : response.result.rows.slice(0, DEFAULT_VISIBLE_ROWS)
+  }, [response, showAllRows])
 
   const loadCatalog = async () => {
     setLoadingCatalog(true)
@@ -109,6 +118,7 @@ export const AiAnalyticsPanel = () => {
       setPlan(nextResponse.queryPlan)
       setFollowUp('')
       setChartMode('')
+      setShowAllRows(false)
     } catch (err) {
       setError('The analytics assistant could not run that query safely.')
     } finally {
@@ -126,6 +136,7 @@ export const AiAnalyticsPanel = () => {
       const nextResponse = await runAiAnalyticsFollowUp(client, prompt, sessionId)
       setResponse(nextResponse)
       setPlan(nextResponse.queryPlan)
+      setShowAllRows(false)
       if (!followUpText) {
         setFollowUp('')
       }
@@ -326,6 +337,19 @@ export const AiAnalyticsPanel = () => {
               <BCTypography variant="body2">
                 {response.result.rowCount} rows returned in {response.result.executionMs} ms.
               </BCTypography>
+              {response.result.rows.length > DEFAULT_VISIBLE_ROWS && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <BCTypography variant="body2" color="text.secondary">
+                    Showing {visibleRows.length} of {response.result.rows.length} rows.
+                  </BCTypography>
+                  <Button
+                    variant="text"
+                    onClick={() => setShowAllRows((current) => !current)}
+                  >
+                    {showAllRows ? 'Show less' : 'Show all'}
+                  </Button>
+                </Stack>
+              )}
               <TableContainer>
                 <Table size="small">
                   <TableHead>
@@ -336,7 +360,7 @@ export const AiAnalyticsPanel = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {response.result.rows.map((row, index) => (
+                    {visibleRows.map((row, index) => (
                       <TableRow key={index}>
                         {response.result.columns.map((column) => (
                           <TableCell key={`${index}-${column}`}>
