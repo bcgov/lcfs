@@ -436,24 +436,76 @@ class TestChargingSiteRepositoryDeletedFiltering:
     async def test_get_allocation_agreement_organizations(
         self, charging_site_repo, mock_db_session
     ):
-        """Test getting allocation agreement organizations"""
-        mock_org1 = MagicMock(spec=Organization)
-        mock_org1.organization_id = 1
-        mock_org1.name = "Test Org 1"
+        """Test that get_allocation_agreement_organizations excludes the requesting org"""
+        # Only org 2 should be returned; org 1 (the requesting org) is excluded by the
+        # WHERE Organization.organization_id != organization_id clause added in the fix.
         mock_org2 = MagicMock(spec=Organization)
         mock_org2.organization_id = 2
-        mock_org2.name = "Test Org 2"
+        mock_org2.name = "Partner Org"
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_org1, mock_org2]
+        mock_result.scalars.return_value.all.return_value = [mock_org2]
         mock_db_session.execute.return_value = mock_result
 
         result = await charging_site_repo.get_allocation_agreement_organizations(1)
 
-        assert len(result) == 2
-        assert result[0].name == "Test Org 1"
-        assert result[1].name == "Test Org 2"
+        assert len(result) == 1
+        assert result[0].organization_id == 2
+        assert result[0].name == "Partner Org"
         mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_get_allocating_organization_names_merges_and_deduplicates(
+        self, charging_site_repo
+    ):
+        """
+        get_allocating_organization_names should merge all three sources,
+        deduplicate case-insensitively (matched org wins), and sort alphabetically.
+        """
+        org_a = MagicMock(spec=Organization)
+        org_a.organization_id = 2
+        org_a.name = "Alpha Corp"
+
+        org_b = MagicMock(spec=Organization)
+        org_b.organization_id = 3
+        org_b.name = "Beta Ltd"
+
+        charging_site_repo.get_allocation_agreement_organizations = AsyncMock(
+            return_value=[org_a, org_b]
+        )
+        # "alpha corp" appears again in transaction partners — should be deduplicated
+        charging_site_repo.get_transaction_partners_from_allocation_agreements = AsyncMock(
+            return_value=["alpha corp", "Gamma Inc"]
+        )
+        # "beta ltd" appears again in historical names — should be deduplicated
+        charging_site_repo.get_distinct_allocating_organization_names = AsyncMock(
+            return_value=["Beta Ltd", "Delta Partners"]
+        )
+
+        result = await charging_site_repo.get_allocating_organization_names(1)
+
+        # Expect 4 unique names, sorted A→Z; the canonical casing from the
+        # first-seen source (matched org) should be preserved for duplicates.
+        assert result == ["Alpha Corp", "Beta Ltd", "Delta Partners", "Gamma Inc"]
+
+    @pytest.mark.anyio
+    async def test_get_allocating_organization_names_empty_sources(
+        self, charging_site_repo
+    ):
+        """Returns an empty list when all three sources are empty."""
+        charging_site_repo.get_allocation_agreement_organizations = AsyncMock(
+            return_value=[]
+        )
+        charging_site_repo.get_transaction_partners_from_allocation_agreements = AsyncMock(
+            return_value=[]
+        )
+        charging_site_repo.get_distinct_allocating_organization_names = AsyncMock(
+            return_value=[]
+        )
+
+        result = await charging_site_repo.get_allocating_organization_names(1)
+
+        assert result == []
 
     @pytest.mark.anyio
     async def test_get_distinct_allocating_organization_names(

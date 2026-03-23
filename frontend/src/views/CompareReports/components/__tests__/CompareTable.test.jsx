@@ -406,6 +406,112 @@ describe('CompareTable Component', () => {
     })
   })
 
+  describe('Greyed Row Rendering', () => {
+    // No 'format' on rows so description text renders as-is (format causes description
+    // to go through the number formatter since it is at colIndex 1, not 0).
+    const greyedData = [
+      {
+        line: 12,
+        description: 'Line 12 desc',
+        report1: null,
+        report2: null,
+        delta: null,
+        greyed: true
+      },
+      {
+        line: 18,
+        description: 'Line 18 desc',
+        report1: 200,
+        report2: 250,
+        delta: 50,
+        greyed: false
+      }
+    ]
+
+    const valueColumns = [
+      { id: 'line', label: 'Line', width: '5%' },
+      { id: 'description', label: 'Description', width: '40%', bold: true },
+      { id: 'report1', label: 'Report 1', width: '18%', align: 'right' },
+      { id: 'report2', label: 'Report 2', width: '18%', align: 'right' },
+      { id: 'delta', label: 'Delta', width: '18%', align: 'right' }
+    ]
+
+    it('shows values for non-greyed rows and suppresses them for greyed rows', () => {
+      render(<CompareTable title="Low Carbon" columns={valueColumns} data={greyedData} />)
+
+      // Non-greyed row should show its values
+      expect(screen.getAllByText('200').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('250').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('50').length).toBeGreaterThan(0)
+    })
+
+    it('greyed value cells show empty string and not "0" for null values', () => {
+      render(<CompareTable title="Low Carbon" columns={valueColumns} data={greyedData} />)
+
+      // The line number for greyed row is still visible at colIndex 0 (never formatted)
+      expect(screen.getByText('12')).toBeInTheDocument()
+
+      // Greyed cells return '' (empty string), so report1/report2/delta for line 12
+      // must NOT appear as '0' in the DOM (unlike ungreyed null cells which show '0')
+      const cells = screen.getAllByRole('cell')
+      // Collect all cell text content
+      const cellTexts = cells.map((c) => c.textContent)
+      // The only '0' values come from non-greyed row nulls; the greyed row has 3 empty cells
+      const emptyCells = cells.filter((c) => c.textContent === '')
+      expect(emptyCells.length).toBeGreaterThan(0)
+    })
+
+    it('applies "Not applicable" tooltip only to greyed value cells', () => {
+      render(<CompareTable title="Low Carbon" columns={valueColumns} data={greyedData} />)
+
+      const cells = screen.getAllByRole('cell')
+      const tooltippedCells = cells.filter(
+        (c) => c.getAttribute('title') === 'Not applicable for this compliance period'
+      )
+      // Line 12 has exactly 3 value columns (report1, report2, delta) that are greyed
+      expect(tooltippedCells).toHaveLength(3)
+    })
+
+    it('does not apply greyed styling to line or description cells', () => {
+      render(<CompareTable title="Low Carbon" columns={valueColumns} data={greyedData} />)
+
+      // line number cell must have no tooltip
+      const line12Cell = screen.getByText('12').closest('td')
+      expect(line12Cell).not.toHaveAttribute(
+        'title',
+        'Not applicable for this compliance period'
+      )
+
+      // description cell must have no tooltip
+      const descCell = screen.getByText('Line 12 desc').closest('td')
+      expect(descCell).not.toHaveAttribute(
+        'title',
+        'Not applicable for this compliance period'
+      )
+    })
+
+    it('renders non-greyed rows normally alongside greyed rows', () => {
+      render(<CompareTable title="Low Carbon" columns={valueColumns} data={greyedData} />)
+
+      expect(screen.getByText('Line 18 desc')).toBeInTheDocument()
+      expect(screen.getByText('18')).toBeInTheDocument()
+      expect(screen.getAllByText('200').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('250').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('50').length).toBeGreaterThan(0)
+    })
+
+    it('non-greyed value cells do not carry the "Not applicable" tooltip', () => {
+      render(<CompareTable title="Low Carbon" columns={valueColumns} data={greyedData} />)
+
+      // report1=200 cell for line 18 should have no tooltip
+      const cell200 = screen.getByText('200').closest('td')
+      expect(cell200).not.toHaveAttribute(
+        'title',
+        'Not applicable for this compliance period'
+      )
+    })
+  })
+
   describe('Translation Integration', () => {
     it('uses translation keys for fuel labels', () => {
       render(
