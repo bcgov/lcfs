@@ -28,7 +28,8 @@ export const handleScheduleSave = async ({
     })
     return finalData
   } catch (error) {
-    const newWarnings = error.response.data.warnings
+    const responseData = error?.response?.data
+    const newWarnings = responseData?.warnings
     if (newWarnings && newWarnings.length > 0) {
       setWarnings({
         [newWarnings[0].id]: newWarnings[0].fields
@@ -51,24 +52,24 @@ export const handleScheduleSave = async ({
     const severity = isNewRow ? 'warning' : 'error'
 
     // Handle HTTPException with detail field (e.g., duplicate name)
-    if (error.response.data.detail) {
+    if (responseData?.detail) {
       alertRef.current?.triggerAlert({
-        message: error.response.data.detail,
+        message: responseData.detail,
         severity
       })
-    } else if (error.response.data.errors && error.response.data.errors[0]) {
+    } else if (responseData?.errors && responseData.errors[0]) {
       if (isNewRow) {
         setWarnings({
-          [params.node.data.id]: error.response.data.errors[0].fields
+          [params.node.data.id]: responseData.errors[0].fields
         })
       } else {
         setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
+          [params.node.data.id]: responseData.errors[0].fields
         })
       }
 
       if (error.code === 'ERR_BAD_REQUEST') {
-        const { fields, message } = error.response.data.errors[0]
+        const { fields, message } = responseData.errors[0]
         const fieldLabels = fields.map((field) => {
           // Handle nested field names (e.g., "chargingEquipment.serialNumber")
           // Extract the last part and try to translate it

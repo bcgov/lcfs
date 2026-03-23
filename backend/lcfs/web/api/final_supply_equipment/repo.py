@@ -1457,7 +1457,15 @@ class FinalSupplyEquipmentRepository:
         records = [ComplianceReportChargingEquipment(**item) for item in data]
         self.db.add_all(records)
         await self.db.flush()
-        return {"message": "FSE compliance reporting data created successfully"}
+        created = [
+            {
+                "chargingEquipmentComplianceId": r.charging_equipment_compliance_id,
+                "chargingEquipmentId": r.charging_equipment_id,
+                "chargingEquipmentVersion": r.charging_equipment_version,
+            }
+            for r in records
+        ]
+        return {"message": "FSE compliance reporting data created successfully", "data": created}
 
     @repo_handler
     async def bulk_update_reporting_dates(self, data: FSEReportingDefaultDates) -> int:
@@ -1667,12 +1675,8 @@ class FinalSupplyEquipmentRepository:
             )
             .outerjoin(
                 ComplianceReportChargingEquipment,
-                and_(
-                    ChargingEquipment.charging_equipment_id
-                    == ComplianceReportChargingEquipment.charging_equipment_id,
-                    ChargingEquipment.version
-                    == ComplianceReportChargingEquipment.charging_equipment_version,
-                ),
+                ChargingEquipment.charging_equipment_id
+                == ComplianceReportChargingEquipment.charging_equipment_id,
             )
             .where(
                 and_(
