@@ -1,6 +1,6 @@
 """Fix FSE pref view to match compliance records by group UUID
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 098cf79762b9
 Revises: c7e4d9a1b2f6
 Create Date: 2026-03-24 12:00:00.000000
 """
@@ -12,7 +12,7 @@ from lcfs.db.dependencies import (
 )
 
 # revision identifiers, used by Alembic.
-revision = "a1b2c3d4e5f6"
+revision = "098cf79762b9"
 down_revision = "c7e4d9a1b2f6"
 branch_labels = None
 depends_on = None
