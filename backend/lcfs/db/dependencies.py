@@ -9,6 +9,7 @@ from fastapi import Request
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from lcfs.db.base import current_user_var, get_current_user
 from lcfs.settings import settings
@@ -21,12 +22,7 @@ db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(
     db_url,
     future=True,
-    pool_size=30,
-    max_overflow=50,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_timeout=30,
-    pool_reset_on_return="commit",
+    poolclass=NullPool,
 )
 logger = structlog.get_logger("sqlalchemy.engine")
 register_query_analyzer(async_engine.sync_engine)
