@@ -64,6 +64,19 @@ class FinalSupplyEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
+    def _apply_site_registration_sort(self, stmt, site_field, registration_field, tie_breaker_field):
+        """
+        Apply the shared default FSE ordering:
+        1. Site name ascending (nulls last)
+        2. Registration number descending (nulls last)
+        3. Stable tie-breaker for deterministic pagination
+        """
+        return stmt.order_by(
+            asc(site_field).nullslast(),
+            desc(registration_field).nullslast(),
+            asc(tie_breaker_field),
+        )
+
     def _combine_reporting_queries(self, union_queries: list[Any]):
         """
         Combine reporting queries while removing exact duplicate rows.
@@ -1057,9 +1070,7 @@ class FinalSupplyEquipmentRepository:
         """
         Get paginated charging equipment reporting rows from reporting views.
         """
-        view_model = (
-            FSEReportingBasePrefView if mode == "all" else FSEReportingBaseView
-        )
+        view_model = FSEReportingBasePrefView
         vt = view_model.__table__
 
         stmt = select(
@@ -1165,9 +1176,11 @@ class FinalSupplyEquipmentRepository:
                 else:
                     final_query = final_query.order_by(asc(field))
         else:
-            final_query = final_query.order_by(
+            final_query = self._apply_site_registration_sort(
+                final_query,
+                vt.c.site_name,
+                vt.c.registration_number,
                 vt.c.charging_equipment_id,
-                vt.c.charging_equipment_version,
             )
 
         # Count total
@@ -1193,6 +1206,10 @@ class FinalSupplyEquipmentRepository:
         """
         Return export rows using the latest equipment/site version while
         preserving the most relevant reporting data for the current report.
+
+        For BCeID draft exports, this lets equipment fields reflect the latest
+        Updated version even when the reporting row still references a prior
+        Validated version in the same report chain.
         """
         latest_sites = latest_charging_site_version_subquery()
         latest_site = aliased(ChargingSite, name="latest_site_export")
@@ -1268,33 +1285,32 @@ class FinalSupplyEquipmentRepository:
                         reporting_priority,
                         case(
                             (
-                                ComplianceReport.compliance_report_group_uuid
-                                == compliance_report_group_uuid,
+                                ComplianceReportChargingEquipment.is_active.is_(True),
                                 0,
                             ),
                             else_=1,
                         ),
-                        ComplianceReport.version.desc(),
-                        ComplianceReportChargingEquipment.charging_equipment_compliance_id.desc(),
+                        desc(
+                            ComplianceReportChargingEquipment.charging_equipment_compliance_id
+                        ),
                     ),
                 )
                 .label("row_num"),
             )
-            .select_from(ComplianceReportChargingEquipment)
             .join(
                 reporting_equipment,
-                ComplianceReportChargingEquipment.charging_equipment_id
-                == reporting_equipment.charging_equipment_id,
-            )
-            .join(
-                ComplianceReport,
-                ComplianceReportChargingEquipment.compliance_report_id
-                == ComplianceReport.compliance_report_id,
+                and_(
+                    reporting_equipment.charging_equipment_id
+                    == ComplianceReportChargingEquipment.charging_equipment_id,
+                    reporting_equipment.version
+                    == ComplianceReportChargingEquipment.charging_equipment_version,
+                ),
             )
             .where(
                 and_(
-                    reporting_equipment.organization_id == organization_id,
-                    ComplianceReportChargingEquipment.is_active.is_(True),
+                    ComplianceReportChargingEquipment.organization_id == organization_id,
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
                 )
             )
             .subquery()
@@ -1700,10 +1716,12 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.compliance_report_group_uuid,
             )
             .where(all_rows_subquery.c.row_num == 1)
-            .order_by(
-                asc(all_rows_subquery.c.site_name),
-                asc(all_rows_subquery.c.registration_number),
-            )
+        )
+        stmt = self._apply_site_registration_sort(
+            stmt,
+            all_rows_subquery.c.site_name,
+            all_rows_subquery.c.registration_number,
+            all_rows_subquery.c.charging_equipment_id,
         )
 
         result = await self.db.execute(stmt)

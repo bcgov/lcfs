@@ -96,11 +96,14 @@ class FSEReportingExporter:
         rows = []
         for record in records:
             # Show only registration number when:
-            # - the row is explicitly marked inactive
+            # - the row is explicitly marked inactive (is_active=False)
+            # - the row belongs to a different compliance report group
+            # Note: is_active may be None for equipment without compliance records
             record_group = getattr(record, "compliance_report_group_uuid", None)
+            is_active = getattr(record, "is_active", None)
             is_inactive = (
-                not getattr(record, "is_active", True)
-                or record_group != compliance_report_group_uuid
+                is_active is False
+                or (record_group is not None and record_group != compliance_report_group_uuid)
             )
             serial_number = getattr(record, "serial_number", None) or ""
             if is_inactive:
