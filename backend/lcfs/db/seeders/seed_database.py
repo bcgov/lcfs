@@ -4,6 +4,7 @@ import structlog
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from lcfs.db.seeders.dev_seeder import seed_dev
 from lcfs.db.seeders.prod_seeder import seed_prod
@@ -15,7 +16,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def seed_database(environment):
-    engine = create_async_engine(str(settings.db_url))
+    engine = create_async_engine(str(settings.db_url), poolclass=NullPool)
     AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession)
 
     async with AsyncSessionLocal() as session:
