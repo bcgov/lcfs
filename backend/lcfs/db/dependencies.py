@@ -23,6 +23,10 @@ async_engine = create_async_engine(
     db_url,
     future=True,
     poolclass=NullPool,
+    connect_args={
+        "prepared_statement_cache_size": 0,
+        "statement_cache_size": 0,
+    },
 )
 logger = structlog.get_logger("sqlalchemy.engine")
 register_query_analyzer(async_engine.sync_engine)
