@@ -33,6 +33,10 @@ def _setup_db(app: FastAPI) -> None:  # pragma: no cover
         pool_recycle=3600,
         pool_timeout=30,
         pool_reset_on_return="commit",
+        connect_args={
+            "prepared_statement_cache_size": 0,
+            "statement_cache_size": 0,
+        },
     )
     session_factory = async_sessionmaker(
         engine,
