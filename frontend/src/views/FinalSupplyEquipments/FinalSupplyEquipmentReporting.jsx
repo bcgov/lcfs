@@ -51,9 +51,9 @@ export const FinalSupplyEquipmentReporting = () => {
   const [downloadError, setDownloadError] = useState('')
   const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false)
   // Pagination state
-  const [paginationOptions, setPaginationOptions] = useState({
+  const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
-  })
+  )
   const fseGridRef = useRef(null)
   const fseGridAlertRef = useRef(null)
   const previousSelectionRef = useRef(new Set())
@@ -345,11 +345,12 @@ export const FinalSupplyEquipmentReporting = () => {
 
           const response = await saveRow(newRows)
 
+          const createdRecords = response?.data?.data || []
           nodesToCreate.forEach((node, index) => {
             const equipmentId = node.data?.chargingEquipmentId
-            const createdData = Array.isArray(response.data)
-              ? response.data[index]
-              : response.data
+            const createdData = Array.isArray(createdRecords)
+              ? createdRecords[index]
+              : createdRecords
             node.updateData({
               ...node.data,
               chargingEquipmentComplianceId:
@@ -500,8 +501,8 @@ export const FinalSupplyEquipmentReporting = () => {
         validationStatusCacheRef.current.set(equipmentId, 'pending')
       }
       const updatedData = {
-        supplyFromDate: params.data.supplyFromDate,
-        supplyToDate: params.data.supplyToDate,
+        supplyFromDate: params.data.supplyFromDate || defaultFromDate,
+        supplyToDate: params.data.supplyToDate || defaultToDate,
         kwhUsage: params.data.kwhUsage,
         complianceNotes: params.data.complianceNotes,
         chargingEquipmentComplianceId:
@@ -539,7 +540,7 @@ export const FinalSupplyEquipmentReporting = () => {
       }
       params.api?.autoSizeAllColumns?.()
     },
-    [saveRow, t, complianceReportId, reportData]
+    [saveRow, t, complianceReportId, reportData, defaultFromDate, defaultToDate]
   )
 
   const handleDownloadTemplate = useCallback(async () => {

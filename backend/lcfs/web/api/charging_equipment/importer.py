@@ -376,7 +376,7 @@ async def import_async(
                                         f"Row {row_idx}: Intended User '{clean}' not found; skipping this value"
                                     )
 
-                        if duplicate_tracker.is_duplicate(serial_number):
+                        if duplicate_tracker.is_duplicate(serial_number, charging_site_id):
                             rejected += 1
                             continue
 
@@ -485,31 +485,39 @@ async def _update_progress(
 
 class _DuplicateSerialTracker:
     """
-    Tracks duplicate serial numbers within a single upload while
-    considering existing records for an organization.
+    Tracks duplicate serial numbers *per charging site* within a single upload
+    while considering existing records for an organization.
+
+    Duplicate serial numbers are only blocked when they occur within the same
+    Charging Site.  The same serial number at a different site is allowed
+    (equipment may be relocated between sites).
     """
 
-    def __init__(self, existing_serials: Iterable[str] | None = None) -> None:
-        normalized_existing: set[str] = set()
-        for serial in existing_serials or []:
+    def __init__(
+        self, existing_serials: Iterable[tuple[str, int]] | None = None
+    ) -> None:
+        # Store as set of (normalized_serial, charging_site_id) tuples
+        normalized_existing: set[tuple[str, int]] = set()
+        for serial, site_id in existing_serials or []:
             normalized = _normalize_serial(serial)
             if normalized:
-                normalized_existing.add(normalized)
+                normalized_existing.add((normalized, site_id))
         self._existing_serials = normalized_existing
-        self._current_upload_serials: set[str] = set()
+        self._current_upload_serials: set[tuple[str, int]] = set()
         self._duplicate_count = 0
 
-    def is_duplicate(self, serial_number) -> bool:
+    def is_duplicate(self, serial_number, charging_site_id: int) -> bool:
         normalized = _normalize_serial(serial_number)
         if not normalized:
             return False
+        key = (normalized, charging_site_id)
         if (
-            normalized in self._existing_serials
-            or normalized in self._current_upload_serials
+            key in self._existing_serials
+            or key in self._current_upload_serials
         ):
             self._duplicate_count += 1
             return True
-        self._current_upload_serials.add(normalized)
+        self._current_upload_serials.add(key)
         return False
 
     def summary_message(self) -> str | None:

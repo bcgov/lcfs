@@ -64,6 +64,19 @@ class FinalSupplyEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
+    def _apply_site_registration_sort(self, stmt, site_field, registration_field, tie_breaker_field):
+        """
+        Apply the shared default FSE ordering:
+        1. Site name ascending (nulls last)
+        2. Registration number descending (nulls last)
+        3. Stable tie-breaker for deterministic pagination
+        """
+        return stmt.order_by(
+            asc(site_field).nullslast(),
+            desc(registration_field).nullslast(),
+            asc(tie_breaker_field),
+        )
+
     def _combine_reporting_queries(self, union_queries: list[Any]):
         """
         Combine reporting queries while removing exact duplicate rows.
@@ -1057,9 +1070,7 @@ class FinalSupplyEquipmentRepository:
         """
         Get paginated charging equipment reporting rows from reporting views.
         """
-        view_model = (
-            FSEReportingBasePrefView if mode == "all" else FSEReportingBaseView
-        )
+        view_model = FSEReportingBasePrefView
         vt = view_model.__table__
 
         stmt = select(
@@ -1165,9 +1176,11 @@ class FinalSupplyEquipmentRepository:
                 else:
                     final_query = final_query.order_by(asc(field))
         else:
-            final_query = final_query.order_by(
+            final_query = self._apply_site_registration_sort(
+                final_query,
+                vt.c.site_name,
+                vt.c.registration_number,
                 vt.c.charging_equipment_id,
-                vt.c.charging_equipment_version,
             )
 
         # Count total
@@ -1182,6 +1195,232 @@ class FinalSupplyEquipmentRepository:
         data = result.fetchall()
 
         return data, total or 0
+
+    @repo_handler
+    async def get_effective_fse_reporting_rows_for_export(
+        self,
+        organization_id: int,
+        compliance_report_id: int,
+        compliance_report_group_uuid: str,
+    ) -> list:
+        """
+        Return export rows using the latest equipment/site version while
+        preserving the most relevant reporting data for the current report.
+
+        For BCeID draft exports, this lets equipment fields reflect the latest
+        Updated version even when the reporting row still references a prior
+        Validated version in the same report chain.
+        """
+        latest_sites = latest_charging_site_version_subquery()
+        latest_site = aliased(ChargingSite, name="latest_site_export")
+        source_site = aliased(ChargingSite, name="source_site_export")
+        reporting_equipment = aliased(
+            ChargingEquipment, name="reporting_equipment_export"
+        )
+
+        latest_equipment = (
+            select(
+                ChargingEquipment.group_uuid.label("charging_equipment_group_uuid"),
+                ChargingEquipment.charging_equipment_id.label("charging_equipment_id"),
+                ChargingEquipment.version.label("charging_equipment_version"),
+                func.row_number()
+                .over(
+                    partition_by=ChargingEquipment.group_uuid,
+                    order_by=ChargingEquipment.version.desc(),
+                )
+                .label("row_num"),
+            )
+            .join(
+                source_site,
+                ChargingEquipment.charging_site_id == source_site.charging_site_id,
+            )
+            .join(
+                latest_sites,
+                source_site.group_uuid == latest_sites.c.group_uuid,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(
+                and_(
+                    source_site.organization_id == organization_id,
+                    ChargingEquipmentStatus.status != "Decommissioned",
+                )
+            )
+            .subquery()
+        )
+
+        reporting_priority = case(
+            (
+                ComplianceReportChargingEquipment.compliance_report_id
+                == compliance_report_id,
+                0,
+            ),
+            else_=1,
+        )
+
+        reporting_rows = (
+            select(
+                reporting_equipment.group_uuid.label("charging_equipment_group_uuid"),
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id.label(
+                    "charging_equipment_compliance_id"
+                ),
+                ComplianceReportChargingEquipment.supply_from_date.label(
+                    "supply_from_date"
+                ),
+                ComplianceReportChargingEquipment.supply_to_date.label(
+                    "supply_to_date"
+                ),
+                ComplianceReportChargingEquipment.kwh_usage.label("kwh_usage"),
+                ComplianceReportChargingEquipment.compliance_notes.label(
+                    "compliance_notes"
+                ),
+                ComplianceReportChargingEquipment.is_active.label("is_active"),
+                func.row_number()
+                .over(
+                    partition_by=reporting_equipment.group_uuid,
+                    order_by=(
+                        reporting_priority,
+                        case(
+                            (
+                                ComplianceReportChargingEquipment.is_active.is_(True),
+                                0,
+                            ),
+                            else_=1,
+                        ),
+                        desc(
+                            ComplianceReportChargingEquipment.charging_equipment_compliance_id
+                        ),
+                    ),
+                )
+                .label("row_num"),
+            )
+            .join(
+                reporting_equipment,
+                and_(
+                    reporting_equipment.charging_equipment_id
+                    == ComplianceReportChargingEquipment.charging_equipment_id,
+                    reporting_equipment.version
+                    == ComplianceReportChargingEquipment.charging_equipment_version,
+                ),
+            )
+            .where(
+                and_(
+                    ComplianceReportChargingEquipment.organization_id == organization_id,
+                    ComplianceReportChargingEquipment.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                )
+            )
+            .subquery()
+        )
+
+        intended_uses = (
+            select(func.array_agg(EndUseType.type))
+            .select_from(charging_equipment_intended_use_association)
+            .join(
+                EndUseType,
+                charging_equipment_intended_use_association.c.end_use_type_id
+                == EndUseType.end_use_type_id,
+            )
+            .where(
+                charging_equipment_intended_use_association.c.charging_equipment_id
+                == ChargingEquipment.charging_equipment_id
+            )
+            .scalar_subquery()
+        )
+
+        intended_users = (
+            select(func.array_agg(EndUserType.type_name))
+            .select_from(charging_equipment_intended_user_association)
+            .join(
+                EndUserType,
+                charging_equipment_intended_user_association.c.end_user_type_id
+                == EndUserType.end_user_type_id,
+            )
+            .where(
+                charging_equipment_intended_user_association.c.charging_equipment_id
+                == ChargingEquipment.charging_equipment_id
+            )
+            .scalar_subquery()
+        )
+
+        stmt = (
+            select(
+                Organization.name.label("organization_name"),
+                latest_site.allocating_organization_name.label(
+                    "allocating_organization_name"
+                ),
+                reporting_rows.c.supply_from_date,
+                reporting_rows.c.supply_to_date,
+                reporting_rows.c.kwh_usage,
+                ChargingEquipment.serial_number.label("serial_number"),
+                ChargingEquipment.manufacturer.label("manufacturer"),
+                ChargingEquipment.model.label("model"),
+                LevelOfEquipment.name.label("level_of_equipment"),
+                ChargingEquipment.ports.label("ports"),
+                intended_uses.label("intended_uses"),
+                intended_users.label("intended_users"),
+                latest_site.street_address.label("street_address"),
+                latest_site.city.label("city"),
+                latest_site.postal_code.label("postal_code"),
+                latest_site.latitude.label("latitude"),
+                latest_site.longitude.label("longitude"),
+                reporting_rows.c.compliance_notes,
+                ChargingEquipment.notes.label("equipment_notes"),
+            )
+            .select_from(ChargingEquipment)
+            .join(
+                latest_equipment,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == latest_equipment.c.charging_equipment_id,
+                    ChargingEquipment.version
+                    == latest_equipment.c.charging_equipment_version,
+                    latest_equipment.c.row_num == 1,
+                ),
+            )
+            .join(
+                source_site,
+                ChargingEquipment.charging_site_id == source_site.charging_site_id,
+            )
+            .join(
+                latest_sites,
+                source_site.group_uuid == latest_sites.c.group_uuid,
+            )
+            .join(
+                latest_site,
+                and_(
+                    latest_site.group_uuid == latest_sites.c.group_uuid,
+                    latest_site.version == latest_sites.c.latest_version,
+                ),
+            )
+            .join(
+                Organization,
+                latest_site.organization_id == Organization.organization_id,
+            )
+            .join(
+                LevelOfEquipment,
+                ChargingEquipment.level_of_equipment_id
+                == LevelOfEquipment.level_of_equipment_id,
+            )
+            .join(
+                reporting_rows,
+                and_(
+                    reporting_rows.c.charging_equipment_group_uuid
+                    == latest_equipment.c.charging_equipment_group_uuid,
+                    reporting_rows.c.row_num == 1,
+                ),
+            )
+            .order_by(
+                asc(latest_site.site_name),
+                asc(latest_site.site_code + "-" + ChargingEquipment.equipment_number),
+            )
+        )
+
+        result = await self.db.execute(stmt)
+        return result.fetchall()
 
     @repo_handler
     async def get_charging_power_output(
@@ -1388,6 +1627,7 @@ class FinalSupplyEquipmentRepository:
                     ChargingSite.site_code + "-" + ChargingEquipment.equipment_number
                 ).label("registration_number"),
                 ChargingSite.site_name.label("site_name"),
+                ChargingEquipment.serial_number.label("serial_number"),
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id,
                 ComplianceReportChargingEquipment.supply_from_date,
                 ComplianceReportChargingEquipment.supply_to_date,
@@ -1465,6 +1705,7 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.charging_equipment_version,
                 all_rows_subquery.c.registration_number,
                 all_rows_subquery.c.site_name,
+                all_rows_subquery.c.serial_number,
                 all_rows_subquery.c.charging_equipment_compliance_id,
                 all_rows_subquery.c.supply_from_date,
                 all_rows_subquery.c.supply_to_date,
@@ -1475,10 +1716,12 @@ class FinalSupplyEquipmentRepository:
                 all_rows_subquery.c.compliance_report_group_uuid,
             )
             .where(all_rows_subquery.c.row_num == 1)
-            .order_by(
-                asc(all_rows_subquery.c.site_name),
-                asc(all_rows_subquery.c.registration_number),
-            )
+        )
+        stmt = self._apply_site_registration_sort(
+            stmt,
+            all_rows_subquery.c.site_name,
+            all_rows_subquery.c.registration_number,
+            all_rows_subquery.c.charging_equipment_id,
         )
 
         result = await self.db.execute(stmt)

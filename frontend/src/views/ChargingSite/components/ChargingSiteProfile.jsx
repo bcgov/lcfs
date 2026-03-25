@@ -42,9 +42,8 @@ export const ChargingSiteProfile = ({
 
   // IDIR Analyst only: show "Set as validated" when site is Submitted (backend enforces Analyst)
   const canSetValidated = isIDIR && isAnalyst && currentStatus === 'Submitted'
-  // BCeID: show "Submit updates" for Compliance Reporting/Signing Authority when Draft or Updated
-  const canSubmitSite =
-    !isIDIR && isBCeIDCompliance && (currentStatus === 'Draft' || currentStatus === 'Updated')
+  // BCeID: show "Submit updates" for Compliance Reporting/Signing Authority only when Updated
+  const canSubmitSite = !isIDIR && isBCeIDCompliance && currentStatus === 'Updated'
 
   const handleSetValidated = () => {
     if (!canSetValidated || !siteId) return

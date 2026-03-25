@@ -119,44 +119,38 @@ class ChargingSiteService:
         self, organization_id: int, query: str
     ) -> List[dict]:
         """
-        Search for allocating organization suggestions.
+        Return allocating organization suggestions filtered by query,
+        excluding the user's own organization.
         """
         try:
             query_lower = query.lower().strip()
+            user_org = self.request.user.organization
+            user_org_name_lower = user_org.name.lower() if user_org else None
 
-            # Use existing method to get matched organizations
             matched_orgs = await self.repo.get_allocation_agreement_organizations(
                 organization_id
             )
-
-            # Get unmatched names from allocation agreements and charging sites
-            transaction_partners = (
-                await self.repo.get_transaction_partners_from_allocation_agreements(
-                    organization_id
-                )
-            )
-            historical_names = (
-                await self.repo.get_distinct_allocating_organization_names(
-                    organization_id
-                )
+            all_names = await self.repo.get_allocating_organization_names(
+                organization_id
             )
 
-            # Build suggestions dict - matched orgs take precedence
-            suggestions = {}
-            for org in matched_orgs:
-                if query_lower in org.name.lower():
-                    suggestions[org.name.lower()] = {
-                        "organizationId": org.organization_id,
-                        "name": org.name,
-                    }
+            # Build a lookup so matched orgs (with IDs) take precedence
+            org_id_by_name = {org.name.lower(): org.organization_id for org in matched_orgs}
 
-            # Add unmatched names (transaction partners + historical)
-            for name in transaction_partners + historical_names:
+            suggestions = []
+            for name in all_names:
                 name_lower = name.lower()
-                if name_lower not in suggestions and query_lower in name_lower:
-                    suggestions[name_lower] = {"organizationId": None, "name": name}
+                if user_org_name_lower and name_lower == user_org_name_lower:
+                    continue
+                if query_lower in name_lower:
+                    suggestions.append(
+                        {
+                            "organizationId": org_id_by_name.get(name_lower),
+                            "name": name,
+                        }
+                    )
 
-            return sorted(suggestions.values(), key=lambda x: x["name"].lower())[:50]
+            return suggestions[:50]
         except Exception as e:
             logger.error("Error searching allocation organizations", error=str(e))
             raise HTTPException(status_code=500, detail="Internal Server Error")

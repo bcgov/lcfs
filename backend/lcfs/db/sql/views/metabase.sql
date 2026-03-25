@@ -560,7 +560,7 @@ matched_rows AS (
             ROW_NUMBER() OVER (
                 PARTITION BY
                     br.organization_id,
-                    br.compliance_report_id,
+                    br.compliance_report_group_uuid,
                     br.charging_equipment_group_uuid
                 ORDER BY
                     CASE
@@ -568,7 +568,8 @@ matched_rows AS (
                         ELSE 1
                     END,
                     br.charging_equipment_version DESC,
-                    br.charging_equipment_id DESC
+                    br.charging_equipment_id DESC,
+                    br.charging_equipment_compliance_id DESC
             ) AS rn
         FROM base_rows br
         WHERE br.compliance_report_id IS NOT NULL
@@ -616,7 +617,7 @@ JOIN fallback_rows fr
     ON fr.organization_id = rc.organization_id
 LEFT JOIN matched_rows mr
     ON mr.organization_id = rc.organization_id
-   AND mr.compliance_report_id = rc.compliance_report_id
+   AND mr.compliance_report_group_uuid = rc.compliance_report_group_uuid
    AND mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid;
 
 -- ==========================================

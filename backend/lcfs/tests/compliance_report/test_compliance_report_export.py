@@ -27,6 +27,8 @@ def mock_fse_repo():
     repo = AsyncMock()
     # get_fse_paginated returns a tuple (data, total_count)
     repo.get_fse_paginated = AsyncMock(return_value=([], 0))
+    repo.get_fse_reporting_list_paginated = AsyncMock(return_value=([], 0))
+    repo.get_effective_fse_reporting_rows_for_export = AsyncMock(return_value=[])
     return repo
 
 
@@ -101,11 +103,13 @@ def mock_annual_report():
     report = Mock()
     report.compliance_report_id = 1
     report.compliance_report_group_uuid = "test-uuid"
+    report.organization_id = 1
     report.version = 0
     report.reporting_frequency = ReportingFrequency.ANNUAL
 
     # Mock organization
     organization = Mock()
+    organization.organization_id = 1
     organization.name = "Test Organization"
     report.organization = organization
 
@@ -432,6 +436,50 @@ class TestComplianceReportExporter:
         assert total_row[0] == 1000  # Total in Compliance Units column
         assert total_row[1] == "Total"  # "Total" label in Fuel type column
         assert len(total_row) == len(expected_headers)
+
+    @pytest.mark.anyio
+    async def test_export_uses_effective_fse_rows_for_bceid_users(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1, is_government=False)
+
+        exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_awaited_once_with(
+            organization_id=1,
+            compliance_report_id=1,
+            compliance_report_group_uuid="test-uuid",
+        )
+        exporter.fse_repo.get_fse_reporting_list_paginated.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_export_keeps_summary_fse_query_for_government_users(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1, is_government=True)
+
+        exporter.fse_repo.get_fse_reporting_list_paginated.assert_called_once()
+        exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_not_called()
 
     @pytest.mark.anyio
     async def test_load_notional_transfer_data_annual(
