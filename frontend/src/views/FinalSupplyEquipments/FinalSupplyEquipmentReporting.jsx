@@ -501,8 +501,8 @@ export const FinalSupplyEquipmentReporting = () => {
         validationStatusCacheRef.current.set(equipmentId, 'pending')
       }
       const updatedData = {
-        supplyFromDate: params.data.supplyFromDate,
-        supplyToDate: params.data.supplyToDate,
+        supplyFromDate: params.data.supplyFromDate || defaultFromDate,
+        supplyToDate: params.data.supplyToDate || defaultToDate,
         kwhUsage: params.data.kwhUsage,
         complianceNotes: params.data.complianceNotes,
         chargingEquipmentComplianceId:
@@ -540,7 +540,7 @@ export const FinalSupplyEquipmentReporting = () => {
       }
       params.api?.autoSizeAllColumns?.()
     },
-    [saveRow, t, complianceReportId, reportData]
+    [saveRow, t, complianceReportId, reportData, defaultFromDate, defaultToDate]
   )
 
   const handleDownloadTemplate = useCallback(async () => {

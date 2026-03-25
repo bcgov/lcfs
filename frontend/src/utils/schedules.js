@@ -15,10 +15,11 @@ export const handleScheduleSave = async ({
     setErrors({})
     setWarnings({})
 
-    const { data } = await saveRow(updatedData)
+    const response = await saveRow(updatedData)
+    const data = response?.data
     const finalData = {
       ...updatedData,
-      ...data,
+      ...(data || {}),
       validationStatus: 'success',
       modified: false
     }
