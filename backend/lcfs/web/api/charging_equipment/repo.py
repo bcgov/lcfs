@@ -45,6 +45,23 @@ class ChargingEquipmentRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
+    async def _get_site_reference(self, charging_site_id: int) -> Tuple[int, str, int]:
+        site = (
+            (
+                await self.db.execute(
+                    select(ChargingSite).where(
+                        ChargingSite.charging_site_id == charging_site_id
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        return (
+            site.group_uuid,
+            site.version,
+        )
+
     def _apply_latest_site_filter(self, stmt):
         """
         Join the statement to the latest charging site versions to ensure we only use
@@ -477,10 +494,14 @@ class ChargingEquipmentRepository:
         )
         status_result = await self.db.execute(status_query)
         draft_status = status_result.scalar_one()
+        site_group_uuid, site_version = await self._get_site_reference(
+            equipment_data["charging_site_id"]
+        )
 
         # Create charging equipment
         charging_equipment = ChargingEquipment(
-            charging_site_id=equipment_data["charging_site_id"],
+            charging_site_group_uuid=site_group_uuid,
+            charging_site_version=site_version,
             status_id=draft_status.charging_equipment_status_id,
             serial_number=equipment_data["serial_number"],
             manufacturer=equipment_data["manufacturer"],
@@ -532,6 +553,10 @@ class ChargingEquipmentRepository:
             return None
 
         create_new_version = equipment.status.status == "Validated"
+        target_site_id = equipment_data.get("charging_site_id", equipment.charging_site_id)
+        target_site_group_uuid, target_site_version = (
+            await self._get_site_reference(target_site_id)
+        )
 
         if create_new_version:
             status_query = select(ChargingEquipmentStatus).where(
@@ -541,7 +566,8 @@ class ChargingEquipmentRepository:
             updated_status = status_result.scalar_one()
 
             base_payload = {
-                "charging_site_id": equipment.charging_site_id,
+                "charging_site_group_uuid": target_site_group_uuid,
+                "charging_site_version": target_site_version,
                 "status_id": updated_status.charging_equipment_status_id,
                 "equipment_number": equipment.equipment_number,
                 "serial_number": equipment.serial_number,
@@ -602,6 +628,8 @@ class ChargingEquipmentRepository:
         for field, value in equipment_data.items():
             if field not in ["intended_use_ids", "intended_user_ids"]:
                 setattr(equipment, field, value)
+        equipment.charging_site_group_uuid = target_site_group_uuid
+        equipment.charging_site_version = target_site_version
 
         # Update intended uses if provided
         if "intended_use_ids" in equipment_data:

@@ -96,6 +96,85 @@ LEFT JOIN user_profile up ON sr.assigned_analyst_id = up.user_profile_id
 ORDER BY sr.compliance_report_group_uuid, sr.version DESC;
 
 -- ==========================================
+-- Temporary Charging Site Version Selector
+-- Latest row, plus second-latest when latest is Draft/Updated
+-- ==========================================
+DROP VIEW IF EXISTS v_charging_site;
+CREATE OR REPLACE VIEW v_charging_site AS
+WITH versioned_sites AS (
+    SELECT
+        cs.*,
+        css.status,
+        ROW_NUMBER() OVER (
+            PARTITION BY cs.group_uuid
+            ORDER BY cs.version DESC, cs.charging_site_id DESC
+        ) AS version_rank,
+        FIRST_VALUE(css.status) OVER (
+            PARTITION BY cs.group_uuid
+            ORDER BY cs.version DESC, cs.charging_site_id DESC
+        ) AS latest_status
+    FROM charging_site cs
+    JOIN charging_site_status css
+        ON cs.status_id = css.charging_site_status_id
+),
+selected_sites AS (
+    SELECT *
+    FROM versioned_sites
+    WHERE version_rank = 1
+       OR (
+           version_rank = 2
+           AND latest_status IN ('Draft', 'Updated')
+       )
+)
+SELECT
+    ss.*,
+    (ss.version_rank = 1) AS is_latest
+FROM selected_sites ss
+ORDER BY ss.group_uuid, ss.version DESC, ss.charging_site_id DESC;
+
+GRANT SELECT ON v_charging_site TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Temporary Charging Equipment Version Selector
+-- Latest row, plus second-latest when latest is Draft/Updated
+-- ==========================================
+DROP VIEW IF EXISTS v_charging_equipment;
+CREATE OR REPLACE VIEW v_charging_equipment AS
+WITH versioned_equipment AS (
+    SELECT
+        ce.*,
+        ces.status,
+        ROW_NUMBER() OVER (
+            PARTITION BY ce.group_uuid
+            ORDER BY ce.version DESC, ce.charging_equipment_id DESC
+        ) AS version_rank,
+        FIRST_VALUE(ces.status) OVER (
+            PARTITION BY ce.group_uuid
+            ORDER BY ce.version DESC, ce.charging_equipment_id DESC
+        ) AS latest_status
+    FROM charging_equipment ce
+    JOIN charging_equipment_status ces
+        ON ce.status_id = ces.charging_equipment_status_id
+),
+selected_equipment AS (
+    SELECT *
+    FROM versioned_equipment
+    WHERE version_rank = 1
+       OR (
+           version_rank = 2
+           AND latest_status IN ('Draft', 'Updated')
+       )
+)
+SELECT
+    se.*,
+    (se.version_rank = 1) AS is_latest
+FROM selected_equipment se
+ORDER BY se.group_uuid, se.version DESC, se.charging_equipment_id DESC;
+
+GRANT SELECT ON v_charging_equipment TO basic_lcfs_reporting_role;
+
+
+-- ==========================================
 -- Transfer base Analytics View
 -- ==========================================
 DROP VIEW IF EXISTS vw_transfer_base;
@@ -339,7 +418,7 @@ latest_equipment_versions AS (
             WHERE charging_site_id = ce.charging_site_id
         )
 )
-SELECT
+SELECT DISTINCT
     current_site.organization_id,
     ce.charging_equipment_id,
     ce.serial_number,

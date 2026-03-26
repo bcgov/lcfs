@@ -1,5 +1,6 @@
 from lcfs.db.base import BaseModel, Auditable, Versioning
 from sqlalchemy import (
+    and_,
     Column,
     Double,
     Integer,
@@ -10,8 +11,10 @@ from sqlalchemy import (
     Enum,
     select,
     event,
+    ForeignKeyConstraint,
 )
 from sqlalchemy.orm import relationship, Session
+from sqlalchemy.ext.hybrid import hybrid_property
 import enum
 
 
@@ -61,7 +64,14 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     """
 
     __tablename__ = "charging_equipment"
-    __table_args__ = {"comment": "Charging equipment"}
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["charging_site_group_uuid", "charging_site_version"],
+            ["charging_site.group_uuid", "charging_site.version"],
+            name="fk_charging_equipment_site_group_uuid_version",
+        ),
+        {"comment": "Charging equipment"},
+    )
 
     charging_equipment_id = Column(
         Integer,
@@ -76,6 +86,17 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Associated charging site",
         index=True,
+    )
+    charging_site_group_uuid = Column(
+        String(36),
+        nullable=False,
+        comment="Charging site group UUID referenced by this equipment row",
+        index=True,
+    )
+    charging_site_version = Column(
+        Integer,
+        nullable=False,
+        comment="Charging site version referenced by this equipment row",
     )
 
     status_id = Column(
@@ -144,7 +165,17 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
     )
 
     # Relationships
-    charging_site = relationship("ChargingSite", back_populates="charging_equipment")
+    charging_site = relationship(
+        "ChargingSite",
+        back_populates="charging_equipment",
+        primaryjoin=(
+            "and_("
+            "foreign(ChargingEquipment.charging_site_group_uuid) == ChargingSite.group_uuid, "
+            "foreign(ChargingEquipment.charging_site_version) == ChargingSite.version"
+            ")"
+        ),
+        foreign_keys=[charging_site_group_uuid, charging_site_version],
+    )
     status = relationship(
         "ChargingEquipmentStatus", back_populates="charging_equipment"
     )
@@ -190,15 +221,18 @@ class ChargingEquipment(BaseModel, Auditable, Versioning):
 def generate_equipment_number(mapper, connection, target):
     if getattr(target, "equipment_number", None):
         return
-    if not getattr(target, "charging_site_id", None):
+    if not getattr(target, "charging_site_group_uuid", None):
         # relying on DB constraint to ensure presence; skip if absent
         return
     session = Session(bind=connection)
     try:
-        # Find the highest equipment number for this charging site
+        # Find the highest equipment number for this logical charging site group.
         max_equipment_number = session.execute(
             select(ChargingEquipment.equipment_number)
-            .where(ChargingEquipment.charging_site_id == target.charging_site_id)
+            .where(
+                ChargingEquipment.charging_site_group_uuid
+                == target.charging_site_group_uuid
+            )
             .order_by(ChargingEquipment.equipment_number.desc())
             .limit(1)
         ).scalar_one_or_none()
