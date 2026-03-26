@@ -756,6 +756,56 @@ class ChargingSiteRepository:
         await self.db.execute(stmt)
 
     @repo_handler
+    async def sync_latest_equipment_to_site_version(
+        self, charging_site_id: int
+    ) -> int:
+        """
+        Move the latest version of each equipment series under a charging site group
+        to the supplied charging site version.
+        """
+        site = (
+            (
+                await self.db.execute(
+                    select(ChargingSite).where(
+                        ChargingSite.charging_site_id == charging_site_id
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if not site:
+            return 0
+
+        latest_equipment_versions = (
+            select(
+                ChargingEquipment.group_uuid.label("equipment_group_uuid"),
+                func.max(ChargingEquipment.version).label("latest_version"),
+            )
+            .where(ChargingEquipment.charging_site_group_uuid == site.group_uuid)
+            .group_by(ChargingEquipment.group_uuid)
+            .subquery()
+        )
+
+        result = await self.db.execute(
+            update(ChargingEquipment)
+            .where(
+                and_(
+                    ChargingEquipment.group_uuid
+                    == latest_equipment_versions.c.equipment_group_uuid,
+                    ChargingEquipment.version
+                    == latest_equipment_versions.c.latest_version,
+                    ChargingEquipment.charging_site_group_uuid == site.group_uuid,
+                    ChargingEquipment.charging_site_version != site.version,
+                )
+            )
+            .values(
+                charging_site_version=site.version,
+            )
+        )
+        return result.rowcount or 0
+
+    @repo_handler
     async def calculate_site_status_from_equipment(
         self,
         charging_site_id: int,

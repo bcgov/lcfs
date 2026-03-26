@@ -53,6 +53,11 @@ class ChargingSite(BaseModel, Auditable, Versioning):
             "version",
             name="uq_charging_site_id_version",
         ),
+        UniqueConstraint(
+            "group_uuid",
+            "version",
+            name="uq_charging_site_group_uuid_version",
+        ),
         {"comment": "Charging sites"},
     )
 
@@ -163,7 +168,15 @@ class ChargingSite(BaseModel, Auditable, Versioning):
     )
 
     charging_equipment = relationship(
-        "ChargingEquipment", back_populates="charging_site"
+        "ChargingEquipment",
+        back_populates="charging_site",
+        primaryjoin=(
+            "and_("
+            "ChargingSite.group_uuid == foreign(ChargingEquipment.charging_site_group_uuid), "
+            "ChargingSite.version == foreign(ChargingEquipment.charging_site_version)"
+            ")"
+        ),
+        foreign_keys="[ChargingEquipment.charging_site_group_uuid, ChargingEquipment.charging_site_version]",
     )
 
     def __repr__(self):

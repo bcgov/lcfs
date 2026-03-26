@@ -346,6 +346,10 @@ class ChargingSiteService:
             charging_site.charging_site_id,
             new_status_record.charging_site_status_id,
         )
+        if new_status == ChargingSiteStatusEnum.VALIDATED:
+            await self.repo.sync_latest_equipment_to_site_version(
+                charging_site.charging_site_id
+            )
 
         updated = await self.repo.get_charging_site_by_id(charging_site_id)
         return ChargingSiteSchema.model_validate(updated)
@@ -463,6 +467,10 @@ class ChargingSiteService:
                 await self.repo.update_charging_site_status(
                     latest_site_id, site_status_ids[bulk_update.new_status]
                 )
+                if bulk_update.new_status == "Validated":
+                    await self.repo.sync_latest_equipment_to_site_version(
+                        latest_site_id
+                    )
         elif bulk_update.new_status == "Draft":
             # When returning equipment to Draft, recalculate site status
             # based on the highest status of all remaining equipment

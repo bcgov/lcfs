@@ -448,12 +448,13 @@ class TestChargingSiteService:
             )
 
             body = ChargingSiteManualStatusUpdateSchema(new_status="Validated")
-            result = await charging_site_service.update_charging_site_status_manual(
-                1, body
-            )
+        result = await charging_site_service.update_charging_site_status_manual(
+            1, body
+        )
 
-            assert result.status.status == "Validated"
-            mock_repo.update_charging_site_status.assert_called_once_with(1, 2)
+        assert result.status.status == "Validated"
+        mock_repo.update_charging_site_status.assert_called_once_with(1, 2)
+        mock_repo.sync_latest_equipment_to_site_version.assert_called_once_with(1)
 
     @pytest.mark.anyio
     async def test_update_charging_site_status_manual_unauthorized(
@@ -623,6 +624,36 @@ class TestChargingSiteService:
         assert result.version == 2
         mock_repo.get_charging_site_status_by_name.assert_called_once_with("Updated")
         mock_repo.create_charging_site.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_bulk_update_equipment_status_syncs_latest_equipment_on_site_validate(
+        self, charging_site_service, mock_repo
+    ):
+        bulk_update = BulkEquipmentStatusUpdateSchema(
+            equipment_ids=[1, 2], new_status="Validated"
+        )
+        mock_repo.get_charging_equipment_statuses.return_value = [
+            MagicMock(status="Submitted", charging_equipment_status_id=1),
+            MagicMock(status="Validated", charging_equipment_status_id=2),
+        ]
+        mock_repo.bulk_update_equipment_status.return_value = [1, 2]
+        mock_repo.get_charging_site_statuses.return_value = [
+            MagicMock(status="Draft", charging_site_status_id=1),
+            MagicMock(status="Submitted", charging_site_status_id=2),
+            MagicMock(status="Validated", charging_site_status_id=3),
+        ]
+        mock_site = MagicMock()
+        mock_site.charging_site_id = 10
+        mock_site.status = MagicMock(status="Submitted")
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+
+        result = await charging_site_service.bulk_update_equipment_status(
+            bulk_update, 10, charging_site_service.request.user
+        )
+
+        assert result is True
+        mock_repo.update_charging_site_status.assert_called_once_with(10, 3)
+        mock_repo.sync_latest_equipment_to_site_version.assert_called_once_with(10)
 
     @pytest.mark.anyio
     async def test_update_charging_site_duplicate_name(
