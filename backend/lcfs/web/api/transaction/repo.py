@@ -258,7 +258,7 @@ class TransactionRepository:
                 ).label("total_balance")
             ).where(Transaction.organization_id == organization_id)
         )
-        return total_balance or 0
+        return max(total_balance or 0, 0)
 
     @repo_handler
     async def calculate_reserved_balance(self, organization_id: int):
