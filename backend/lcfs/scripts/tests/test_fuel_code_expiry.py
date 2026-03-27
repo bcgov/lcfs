@@ -130,6 +130,9 @@ class TestNotifyExpiringFuelCode:
             notified_ids = mock_repo.mark_fuel_codes_notified.call_args[0][0]
             assert sorted(notified_ids) == [1, 2, 3]
 
+            # Verify the session is committed so notification timestamps persist
+            mock_db_session.commit.assert_called_once()
+
     @pytest.mark.anyio
     @patch(
         "lcfs.scripts.tasks.fuel_code_expiry.settings.feature_fuel_code_expiry_email",
@@ -222,6 +225,8 @@ class TestNotifyExpiringFuelCode:
             assert result is False
             # No fuel codes should be marked as notified when all emails fail
             mock_repo.mark_fuel_codes_notified.assert_not_called()
+            # No commit should happen when no emails were sent
+            mock_db_session.commit.assert_not_called()
 
     @pytest.mark.anyio
     async def test_notify_expiring_fuel_code_partial_success(
@@ -261,6 +266,9 @@ class TestNotifyExpiringFuelCode:
             notified_ids = mock_repo.mark_fuel_codes_notified.call_args[0][0]
             # Only codes 1 and 3 (Company A) should be marked since that email succeeded
             assert sorted(notified_ids) == [1, 3]
+
+            # Verify commit is called to persist the notification timestamps
+            mock_db_session.commit.assert_called_once()
 
     @pytest.mark.anyio
     @patch(
