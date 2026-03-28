@@ -43,6 +43,7 @@ ALLOCATION_AGREEMENT_EXCLUDE_FIELDS = {
 }
 
 PROVISION_APPROVED_FUEL_CODE = "Fuel code - section 19 (b) (i)"
+PROVISION_APPROVED_FUEL_CODE_LEGACY = "Approved fuel code - Section 6 (5) (c)"
 
 
 class AllocationAgreementServices:
@@ -647,8 +648,8 @@ class AllocationAgreementServices:
             float: Carbon intensity value
         """
 
-        # Approved fuel code scenario
-        if provision_of_the_act == PROVISION_APPROVED_FUEL_CODE and fuel_code:
+        # Approved fuel code scenario (new or legacy provision)
+        if provision_of_the_act in (PROVISION_APPROVED_FUEL_CODE, PROVISION_APPROVED_FUEL_CODE_LEGACY) and fuel_code:
             return float(fuel_code.carbon_intensity or 0.0)
 
             # Unrecognized fuel type: use the category’s default carbon intensity
