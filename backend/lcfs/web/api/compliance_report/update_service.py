@@ -348,6 +348,21 @@ class ComplianceReportUpdateService:
 
         # Lock the summary when report is recommended by analyst - this is the snapshot point
         await self._calculate_and_lock_summary(report, user, skip_can_sign_check=True)
+
+        # For analyst adjustments/reassessments, create a Reserved transaction
+        # to hold credits while the adjustment is pending director approval.
+        # This mirrors the reserve created at submission for supplier reports.
+        if (
+            report.supplemental_initiator
+            == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+            and report.summary
+        ):
+            credit_change = report.summary.line_20_surplus_deficit_units
+            if credit_change != 0:
+                await self._create_or_update_reserve_transaction(
+                    credit_change, report
+                )
+
         await self.repo.update_compliance_report(report)
 
     async def handle_recommended_by_manager_status(
@@ -407,27 +422,46 @@ class ComplianceReportUpdateService:
 
             credit_change = report.summary.line_20_surplus_deficit_units
 
-            if report.transaction:
-                existing_units = report.transaction.compliance_units
-                report.transaction.transaction_action = TransactionActionEnum.Adjustment
-                report.transaction.update_user = user.keycloak_username
-                report.transaction.compliance_units = existing_units
-            else:
-                capped_units = await self._create_or_update_reserve_transaction(
-                    credit_change, report
+            # Calculate the final adjustment units, capping negative amounts
+            # so the org's balance never goes below zero.
+            # The remainder (penalty portion) is assumed paid by the supplier.
+            final_units = credit_change
+            if credit_change < 0:
+                available_balance = (
+                    await self.org_service.calculate_available_balance(
+                        report.organization_id
+                    )
+                )
+                # If a reserved transaction already exists, it's already reducing
+                # available_balance — add it back to get the effective balance
+                if (
+                    report.transaction
+                    and report.transaction.compliance_units < 0
+                    and report.transaction.transaction_action
+                    == TransactionActionEnum.Reserved
+                ):
+                    available_balance += abs(report.transaction.compliance_units)
+
+                final_units = -min(
+                    abs(credit_change), max(available_balance, 0)
                 )
 
-                if capped_units != 0:
-                    # Ensure a transaction exists before converting to Adjustment
-                    report.transaction = await self.org_service.adjust_balance(
-                        transaction_action=TransactionActionEnum.Reserved,
-                        compliance_units=capped_units,
-                        organization_id=report.organization_id,
+            if report.transaction:
+                report.transaction.transaction_action = (
+                    TransactionActionEnum.Adjustment
+                )
+                report.transaction.compliance_units = final_units
+                report.transaction.update_user = user.keycloak_username
+            elif final_units != 0:
+                # No existing transaction (e.g. analyst adjustment flow)
+                # Create directly as Adjustment, bypassing reserve validation
+                report.transaction = (
+                    await self.trx_service.repo.create_transaction(
+                        TransactionActionEnum.Adjustment,
+                        final_units,
+                        report.organization_id,
                     )
-                    report.transaction.transaction_action = (
-                        TransactionActionEnum.Adjustment
-                    )
-                    report.transaction.update_user = user.keycloak_username
+                )
         else:
             # For non-assessment reports: summary should already be locked when flag was set
             # Just ensure no transactions exist
