@@ -241,8 +241,9 @@ export const BCGridEditor = ({
         delimiter: '\t',
         header: true,
         transform: (value) => {
-          const num = Number(value) // Attempt to convert to a number if possible
-          return isNaN(num) ? value : num // Return the number if valid, otherwise keep as string
+          if (value === '' || value == null) return value // Preserve empty values as-is
+          const num = Number(value)
+          return isNaN(num) ? value : num
         },
         skipEmptyLines: true
       })
