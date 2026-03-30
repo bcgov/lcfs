@@ -224,13 +224,18 @@ export const BCGridEditor = ({
 
   const handleExcelPaste = useCallback(
     (params) => {
+      const gridApi = ref.current?.api
+      if (!gridApi) return
+
       const newData = []
       const clipboardData = params.clipboardData || window.clipboardData
       const pastedData = clipboardData.getData('text/plain')
-      const headerRow = ref.current.api
-        .getAllDisplayedColumns()
+      const displayedColumns = gridApi.getAllDisplayedColumns()
+      const editableColumns = displayedColumns.filter(
+        (col) => col.colDef.field && col.colDef.field !== 'action'
+      )
+      const headerRow = editableColumns
         .map((column) => column.colDef.field)
-        .filter((col) => col)
         .join('\t')
       const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
         delimiter: '\t',
@@ -241,26 +246,39 @@ export const BCGridEditor = ({
         },
         skipEmptyLines: true
       })
-      if (parsedData.data.length < 0 || parsedData.data[1].length < 2) {
+      if (
+        parsedData.data.length <= 0 ||
+        Object.keys(parsedData.data[0]).length < 2
+      ) {
         return
       }
       parsedData.data.forEach((row) => {
         const newRow = { ...row }
         newRow.id = uuid()
+        newRow.modified = true
         newData.push(newRow)
       })
-      const transactions = ref.current.api.applyTransaction({ add: newData })
-      // Trigger onCellEditingStopped event to update the row in backend.
+      const transactions = gridApi.applyTransaction({ add: newData })
+
+      // Build a proper params-like object for each pasted row so downstream
+      // handlers (which expect AG Grid CellEditingStopped params) don't crash.
+      const firstEditableCol = findFirstEditableColumn()
+      const colDef = firstEditableCol?.colDef || { field: editableColumns[0]?.colDef?.field }
+      const column = firstEditableCol || editableColumns[0]
+
       transactions.add.forEach((node) => {
         onCellEditingStopped({
           node,
+          data: node.data,
           oldValue: '',
-          newValue: node.data[findFirstEditableColumn()],
-          ...props
+          newValue: node.data[colDef.field],
+          colDef,
+          column,
+          api: gridApi
         })
       })
     },
-    [findFirstEditableColumn, onCellEditingStopped, props, ref]
+    [findFirstEditableColumn, onCellEditingStopped, ref]
   )
 
   useEffect(() => {
