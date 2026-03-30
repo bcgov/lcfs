@@ -89,7 +89,7 @@ async def get_compliance_report_statuses(
     response_model=List[AssignedAnalystSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
 async def get_available_analysts(
     request: Request,
     service: ComplianceReportServices = Depends(),
@@ -344,7 +344,7 @@ async def get_changelog(
     response_model=ChainedComplianceReportSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
 async def assign_analyst_to_report(
     request: Request,
     report_id: int,
