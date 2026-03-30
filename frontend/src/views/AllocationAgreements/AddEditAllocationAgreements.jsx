@@ -128,7 +128,7 @@ export const AddEditAllocationAgreements = () => {
   ) => {
     const value = field ? params.node?.data[field] : params
 
-    if (field && params.colDef.field !== field) {
+    if (field && params.colDef?.field !== field) {
       return true
     }
 
@@ -334,8 +334,10 @@ export const AddEditAllocationAgreements = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      const fieldName = params.colDef?.field
+
       // User cannot select their own organization as the transaction partner
-      if (params.colDef.field === 'transactionPartner') {
+      if (fieldName === 'transactionPartner') {
         const orgName = currentReport?.report?.organization?.name
         if (
           params.newValue === orgName ||
