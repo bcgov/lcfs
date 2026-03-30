@@ -4,6 +4,7 @@ from fastapi import (
     APIRouter,
     Body,
     Depends,
+    HTTPException,
     Query,
     Response,
     status,
@@ -122,7 +123,6 @@ async def create_user(
     return await user_service.create_user(user_create)
 
 
-# TODO Check if security concern exists on user creating user in different org
 @router.put(
     "/{organization_id}/users/{user_id}",
     response_model=UserBaseSchema,
@@ -141,6 +141,16 @@ async def update_user(
     Endpoint to update a user
     This endpoint updates a user and returns the information of the updated user.
     """
+    # Suppliers may only update users within their own organization.
+    # Government users (IDIR) are not bound by this restriction.
+    if not request.user.is_government and (
+        not request.user.organization
+        or request.user.organization.organization_id != organization_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update users in this organization.",
+        )
     user_create.organization_id = organization_id
     await user_service.update_user(user_create, user_id)
     return await user_service.get_user_by_id(user_id)

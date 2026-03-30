@@ -162,7 +162,21 @@ async def get_organization(
     request: Request, organization_id: int, service: OrganizationsService = Depends()
 ):
     """Fetch a single organization by id"""
-    return await service.get_organization(organization_id)
+    org = await service.get_organization(organization_id)
+
+    # Serialize to Pydantic schema, then strip compliance unit balances for
+    # users who are not government and not accessing their own organization.
+    response = OrganizationResponseSchema.model_validate(org)
+    user = request.user
+    is_own_org = (
+        user.organization is not None
+        and user.organization.organization_id == organization_id
+    )
+    if not user.is_government and not is_own_org:
+        response.total_balance = None
+        response.reserved_balance = None
+
+    return response
 
 
 @router.get(
@@ -177,6 +191,15 @@ async def get_penalty_analytics(
     """
     Retrieve penalty analytics (automatic and discretionary) for the specified organization.
     """
+    user = request.user
+    if not user.is_government and (
+        not user.organization
+        or user.organization.organization_id != organization_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this organization's penalty data.",
+        )
     return await service.get_penalty_analytics(organization_id)
 
 
@@ -193,6 +216,15 @@ async def get_penalty_logs(
     service: OrganizationsService = Depends(),
 ):
     """Fetch paginated penalty log entries for an organization."""
+    user = request.user
+    if not user.is_government and (
+        not user.organization
+        or user.organization.organization_id != organization_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this organization's penalty data.",
+        )
     return await service.get_penalty_logs_paginated(organization_id, pagination)
 
 

@@ -284,7 +284,7 @@ async def export_compliance_report(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     await validate.validate_organization_access(report_id)
-    return await export_service.export(report_id)
+    return await export_service.export(report_id, request.user.is_government)
 
 
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -316,7 +316,12 @@ async def get_changelog(
         "allocation-agreements",
     ],
     service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> List:
+    await validate.validate_organization_access_by_group_uuid(
+        compliance_report_group_uuid
+    )
+
     response_model_map = {
         "fuel_supplies": ChangelogFuelSuppliesDTO,
         "fuel_exports": ChangelogFuelExportsDTO,

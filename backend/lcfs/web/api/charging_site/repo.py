@@ -159,7 +159,10 @@ class ChargingSiteRepository:
                 AllocationAgreement.compliance_report_id
                 == ComplianceReport.compliance_report_id,
             )
-            .where(ComplianceReport.organization_id == organization_id)
+            .where(
+                ComplianceReport.organization_id == organization_id,
+                Organization.organization_id != organization_id,
+            )
             .distinct()
             .order_by(Organization.name)
         )
@@ -916,6 +919,31 @@ class ChargingSiteRepository:
             .limit(limit)
         )
         return result.scalars().all()
+
+    @repo_handler
+    async def get_allocating_organization_names(
+        self, organization_id: int
+    ) -> List[str]:
+        matched_orgs = await self.get_allocation_agreement_organizations(
+            organization_id
+        )
+        transaction_partners = (
+            await self.get_transaction_partners_from_allocation_agreements(
+                organization_id
+            )
+        )
+        historical_names = await self.get_distinct_allocating_organization_names(
+            organization_id
+        )
+
+        seen: dict[str, str] = {}
+        for org in matched_orgs:
+            seen[org.name.lower()] = org.name
+        for name in transaction_partners + historical_names:
+            if name.lower() not in seen:
+                seen[name.lower()] = name
+
+        return sorted(seen.values(), key=str.lower)
 
     @repo_handler
     async def get_transaction_partners_from_allocation_agreements(

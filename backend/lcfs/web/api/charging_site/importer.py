@@ -56,6 +56,7 @@ class ChargingSiteImporter:
         org_code: str,
         file: UploadFile,
         overwrite: bool = False,
+        organization_name: str = "",
     ) -> str:
         """
         Initiates the import job in a separate thread executor.
@@ -94,7 +95,13 @@ class ChargingSiteImporter:
         # Start the import task without blocking
         asyncio.create_task(
             import_async(
-                organization_id, user, org_code, copied_file, job_id, overwrite
+                organization_id,
+                user,
+                org_code,
+                copied_file,
+                job_id,
+                overwrite,
+                organization_name,
             )
         )
 
@@ -134,6 +141,7 @@ async def import_async(
     file: UploadFile,
     job_id: str,
     overwrite: bool = False,
+    organization_name: str = "",
 ):
     """
     Performs the actual import in an async context.
@@ -233,7 +241,9 @@ async def import_async(
                         # row[8] is now allocating_organization_name (optional string)
 
                         # Validate row
-                        error = _validate_row(row, row_idx, valid_org_names)
+                        error = _validate_row(
+                            row, row_idx, valid_org_names, organization_name
+                        )
                         if error:
                             errors.append(error)
                             rejected += 1
@@ -320,6 +330,7 @@ def _validate_row(
     row: tuple,
     row_idx: int,
     valid_org_names: set[str],
+    organization_name: str = "",
 ) -> str | None:
     """
     Validates a single row of data and returns an error string if invalid.
@@ -383,10 +394,17 @@ def _validate_row(
     except (ValueError, TypeError):
         return f"Row {row_idx}: Invalid longitude value '{longitude}'. Must be a valid number"
 
-    # Validate allocating organization (optional field)
-    # Validation disabled - any value is now accepted
-    # if allocating_org_name and allocating_org_name not in valid_org_names:
-    #     return f"Row {row_idx}: Invalid allocating organization: {allocating_org_name}. Must be from your allocation agreements."
+    # Validate that the allocating organization is not the user's own organization
+    if (
+        allocating_org_name
+        and organization_name
+        and str(allocating_org_name).strip().lower()
+        == organization_name.strip().lower()
+    ):
+        return (
+            f"Row {row_idx}: You cannot select your own organization "
+            f"as the Allocating organization."
+        )
 
     return None
 

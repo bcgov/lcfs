@@ -58,7 +58,7 @@ class SummarySchema(BaseSchema):
     has_renewable_fuel_requirement: Optional[bool] = True
 
     class Config:
-        extra = "allow"
+        extra = "ignore"
 
 
 class ComplianceReportStatusSchema(BaseSchema):
