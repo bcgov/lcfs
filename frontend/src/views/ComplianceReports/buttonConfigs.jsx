@@ -594,7 +594,7 @@ function isPastMarch31Deadline(compliancePeriod) {
     year: compliancePeriodYear + 1,
     month: 3,
     day: 31
-  })
+  }).endOf('day')
   return DateTime.now() > deadline
 }
 
