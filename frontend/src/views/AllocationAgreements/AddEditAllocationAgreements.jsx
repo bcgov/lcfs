@@ -414,6 +414,23 @@ export const AddEditAllocationAgreements = () => {
       })
 
       updatedData.ciOfFuel = params.node.data.ciOfFuel
+
+      // The backend may return nested objects for fields the grid expects as strings
+      if (updatedData.provisionOfTheAct && typeof updatedData.provisionOfTheAct === 'object') {
+        updatedData.provisionOfTheActId = updatedData.provisionOfTheAct.provisionOfTheActId
+        updatedData.provisionOfTheAct = updatedData.provisionOfTheAct.name
+      }
+      if (updatedData.fuelCode && typeof updatedData.fuelCode === 'object') {
+        updatedData.fuelCodeId = updatedData.fuelCode.fuelCodeId
+        updatedData.fuelCode = updatedData.fuelCode.fuelCode
+      }
+      if (updatedData.fuelType && typeof updatedData.fuelType === 'object') {
+        updatedData.fuelType = updatedData.fuelType.fuelType
+      }
+      if (updatedData.fuelCategory && typeof updatedData.fuelCategory === 'object') {
+        updatedData.fuelCategory = updatedData.fuelCategory.category || updatedData.fuelCategory.fuelCategory
+      }
+
       params.node.updateData(updatedData)
       params.api?.autoSizeAllColumns?.()
     },
