@@ -223,7 +223,7 @@ export const BCGridEditor = ({
   )
 
   const handleExcelPaste = useCallback(
-    (params) => {
+    async (params) => {
       const gridApi = ref.current?.api
       if (!gridApi) return
 
@@ -267,8 +267,10 @@ export const BCGridEditor = ({
       const colDef = firstEditableCol?.colDef || { field: editableColumns[0]?.colDef?.field }
       const column = firstEditableCol || editableColumns[0]
 
-      transactions.add.forEach((node) => {
-        onCellEditingStopped({
+      // Save rows sequentially so each save completes before the next starts.
+      // This prevents cache invalidation from wiping unsaved rows.
+      for (const node of transactions.add) {
+        await onCellEditingStopped({
           node,
           data: node.data,
           oldValue: '',
@@ -277,7 +279,7 @@ export const BCGridEditor = ({
           column,
           api: gridApi
         })
-      })
+      }
     },
     [findFirstEditableColumn, onCellEditingStopped, ref]
   )

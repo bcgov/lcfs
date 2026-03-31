@@ -19,6 +19,7 @@ import {
 } from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
+import Papa from 'papaparse'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
@@ -34,6 +35,7 @@ import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
+  const isPastingRef = useRef(false)
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [isDownloading, setIsDownloading] = useState(false)
@@ -198,6 +200,10 @@ export const AddEditAllocationAgreements = () => {
   ])
 
   useEffect(() => {
+    // Skip row data updates while a paste operation is in progress
+    // to prevent cache invalidation from wiping unsaved pasted rows
+    if (isPastingRef.current) return
+
     if (
       !allocationAgreementsLoading &&
       data?.allocationAgreements?.length > 0
@@ -408,10 +414,123 @@ export const AddEditAllocationAgreements = () => {
       })
 
       updatedData.ciOfFuel = params.node.data.ciOfFuel
+
+      // The backend may return nested objects for fields the grid expects as strings
+      if (updatedData.provisionOfTheAct && typeof updatedData.provisionOfTheAct === 'object') {
+        updatedData.provisionOfTheActId = updatedData.provisionOfTheAct.provisionOfTheActId
+        updatedData.provisionOfTheAct = updatedData.provisionOfTheAct.name
+      }
+      if (updatedData.fuelCode && typeof updatedData.fuelCode === 'object') {
+        updatedData.fuelCodeId = updatedData.fuelCode.fuelCodeId
+        updatedData.fuelCode = updatedData.fuelCode.fuelCode
+      }
+      if (updatedData.fuelType && typeof updatedData.fuelType === 'object') {
+        updatedData.fuelType = updatedData.fuelType.fuelType
+      }
+      if (updatedData.fuelCategory && typeof updatedData.fuelCategory === 'object') {
+        updatedData.fuelCategory = updatedData.fuelCategory.category || updatedData.fuelCategory.fuelCategory
+      }
+
       params.node.updateData(updatedData)
       params.api?.autoSizeAllColumns?.()
     },
     [saveRow, t]
+  )
+
+  const handlePaste = useCallback(
+    async (event, { api: gridApi }) => {
+      if (!gridApi) return
+
+      const clipboardData = event.clipboardData || window.clipboardData
+      const pastedData = clipboardData.getData('text/plain')
+      if (!pastedData?.trim()) return
+
+      const displayedColumns = gridApi.getAllDisplayedColumns()
+      const editableColumns = displayedColumns.filter(
+        (col) => col.colDef.field && col.colDef.field !== 'action'
+      )
+      const headerRow = editableColumns
+        .map((column) => column.colDef.field)
+        .join('\t')
+      const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
+        delimiter: '\t',
+        header: true,
+        transform: (value) => {
+          if (value === '' || value == null) return value
+          const num = Number(value)
+          return isNaN(num) ? value : num
+        },
+        skipEmptyLines: true
+      })
+
+      if (
+        parsedData.data.length <= 0 ||
+        Object.keys(parsedData.data[0]).length < 2
+      ) {
+        return
+      }
+
+      // Prevent the data-watching useEffect from overwriting rows during paste
+      isPastingRef.current = true
+
+      const newData = parsedData.data.map((row) => ({
+        ...row,
+        id: uuid(),
+        modified: true,
+        complianceReportId,
+        compliancePeriod,
+        // Backend expects integer quantities — round any decimal values
+        ...(row.quantity != null && row.quantity !== ''
+          ? { quantity: Math.round(Number(row.quantity)) }
+          : {})
+      }))
+      const transactions = gridApi.applyTransaction({ add: newData })
+
+      const firstEditableCol = editableColumns[0]
+      const colDef = firstEditableCol?.colDef || { field: 'allocationTransactionType' }
+
+      alertRef.current?.triggerAlert({
+        message: `Saving ${transactions.add.length} rows...`,
+        severity: 'pending'
+      })
+
+      let savedCount = 0
+      let errorCount = 0
+      for (const node of transactions.add) {
+        try {
+          await onCellEditingStopped({
+            node,
+            data: node.data,
+            oldValue: '',
+            newValue: node.data[colDef.field],
+            colDef,
+            column: firstEditableCol,
+            api: gridApi
+          })
+          savedCount++
+        } catch {
+          errorCount++
+        }
+      }
+
+      isPastingRef.current = false
+
+      if (errorCount > 0) {
+        alertRef.current?.triggerAlert({
+          message: `Saved ${savedCount} rows with ${errorCount} errors.`,
+          severity: 'warning'
+        })
+      } else {
+        alertRef.current?.triggerAlert({
+          message: `Successfully saved ${savedCount} rows.`,
+          severity: 'success'
+        })
+      }
+
+      // Refetch once to sync with backend
+      refetch()
+    },
+    [onCellEditingStopped, complianceReportId, compliancePeriod, refetch]
   )
 
   const onAction = async (action, params) => {
@@ -623,6 +742,7 @@ export const AddEditAllocationAgreements = () => {
             alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
+            handlePaste={handlePaste}
             onGridReady={onGridReady}
             rowData={rowData}
             gridOptions={gridOptions}
