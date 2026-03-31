@@ -590,12 +590,13 @@ function shouldShowButton(buttonName, context) {
 
 function isPastMarch31Deadline(compliancePeriod) {
   const compliancePeriodYear = parseInt(compliancePeriod)
+  // Use April 1 midnight so the button remains visible for the entire day of March 31
   const deadline = DateTime.fromObject({
     year: compliancePeriodYear + 1,
-    month: 3,
-    day: 31
-  }).endOf('day')
-  return DateTime.now() > deadline
+    month: 4,
+    day: 1
+  })
+  return DateTime.now() >= deadline
 }
 
 // =============================================================================
