@@ -7,7 +7,10 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.charging_equipment.repo import ChargingEquipmentRepository
 from lcfs.web.api.charging_equipment.services import ChargingEquipmentServices
-from lcfs.web.api.charging_equipment.schema import ChargingEquipmentFilterSchema
+from lcfs.web.api.charging_equipment.schema import (
+    ChargingEquipmentFilterSchema,
+    ChargingEquipmentUpdateSchema,
+)
 
 
 @pytest.fixture
@@ -215,6 +218,30 @@ async def test_create_charging_equipment_success(
 
 
 @pytest.mark.anyio
+async def test_create_charging_equipment_duplicate_same_site_blocked(
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment_create_schema,
+):
+    """Duplicate serials should still be blocked within the same charging site."""
+    mock_repo.check_duplicate_serial_number.return_value = True
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_charging_equipment(
+            mock_user, valid_charging_equipment_create_schema
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "already exists at this charging site" in str(exc_info.value.detail)
+    mock_repo.check_duplicate_serial_number.assert_called_once_with(
+        charging_site_id=valid_charging_equipment_create_schema.charging_site_id,
+        serial_number=valid_charging_equipment_create_schema.serial_number,
+    )
+    mock_repo.create_charging_equipment.assert_not_called()
+
+
+@pytest.mark.anyio
 @patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_update_charging_equipment_success(
     mock_notification,
@@ -241,6 +268,71 @@ async def test_update_charging_equipment_success(
     )
     mock_repo.update_charging_equipment.assert_called_once()
     mock_notification.assert_called_once()
+
+
+@pytest.mark.anyio
+@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
+async def test_update_charging_equipment_allows_duplicate_serial_at_different_site(
+    mock_notification,
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+):
+    """Changing site should scope duplicate checks to the new charging site only."""
+    update_schema = ChargingEquipmentUpdateSchema(
+        charging_site_id=2,
+        serial_number=valid_charging_equipment.serial_number,
+    )
+
+    mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+    mock_repo.check_duplicate_serial_number.return_value = False
+    mock_repo.update_charging_equipment.return_value = valid_charging_equipment
+
+    await service.update_charging_equipment(mock_user, 1, update_schema)
+
+    mock_repo.check_duplicate_serial_number.assert_called_once_with(
+        charging_site_id=2,
+        serial_number=valid_charging_equipment.serial_number,
+        exclude_equipment_id=1,
+    )
+    mock_repo.update_charging_equipment.assert_called_once_with(
+        1,
+        {
+            "charging_site_id": 2,
+            "serial_number": valid_charging_equipment.serial_number,
+        },
+    )
+    mock_notification.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_charging_equipment_duplicate_same_site_blocked(
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+):
+    """Duplicate serials should still fail when the target charging site is the same."""
+    update_schema = ChargingEquipmentUpdateSchema(
+        charging_site_id=valid_charging_equipment.charging_site_id,
+        serial_number=valid_charging_equipment.serial_number,
+    )
+
+    mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+    mock_repo.check_duplicate_serial_number.return_value = True
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_charging_equipment(mock_user, 1, update_schema)
+
+    assert exc_info.value.status_code == 400
+    assert "already exists at this charging site" in str(exc_info.value.detail)
+    mock_repo.check_duplicate_serial_number.assert_called_once_with(
+        charging_site_id=valid_charging_equipment.charging_site_id,
+        serial_number=valid_charging_equipment.serial_number,
+        exclude_equipment_id=1,
+    )
+    mock_repo.update_charging_equipment.assert_not_called()
 
 
 @pytest.mark.anyio
