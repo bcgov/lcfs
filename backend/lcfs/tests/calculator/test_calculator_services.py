@@ -674,3 +674,124 @@ async def test_get_lookup_table_data_filters_fuel_code_rows(calculator_service, 
     prescribed_row = next(r for r in result.data if r.fuel_type == "Renewable gasoline")
     assert prescribed_row.determining_carbon_intensity == "Prescribed carbon intensity"
     assert prescribed_row.ci_of_fuel == 20.0
+
+
+@pytest.mark.anyio
+async def test_get_lookup_table_data_filters_other_fuel_type_rows(
+    calculator_service, mock_repo
+):
+    """Test that rows with fuel_type 'Other' are excluded from the Calculation Data page (Issue #4138)."""
+    row_other_jet_fuel = SimpleNamespace(
+        fuel_category="Jet fuel",
+        fuel_type="Other",
+        end_use_type=None,
+        provision_of_the_act=None,
+        target_carbon_intensity=88.0,
+        default_carbon_intensity=None,
+        category_carbon_intensity=None,
+        energy_density=100000.0,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=19,
+        end_use_type_id=None,
+    )
+    row_other_diesel = SimpleNamespace(
+        fuel_category="Diesel",
+        fuel_type="Other",
+        end_use_type=None,
+        provision_of_the_act=None,
+        target_carbon_intensity=79.28,
+        default_carbon_intensity=None,
+        category_carbon_intensity=None,
+        energy_density=100000.0,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=19,
+        end_use_type_id=None,
+    )
+    row_other_gasoline = SimpleNamespace(
+        fuel_category="Gasoline",
+        fuel_type="Other",
+        end_use_type=None,
+        provision_of_the_act=None,
+        target_carbon_intensity=78.68,
+        default_carbon_intensity=None,
+        category_carbon_intensity=None,
+        energy_density=100000.0,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=19,
+        end_use_type_id=None,
+    )
+    row_valid = SimpleNamespace(
+        fuel_category="Diesel",
+        fuel_type="Fossil-derived diesel",
+        end_use_type="Any",
+        provision_of_the_act="Default carbon intensity",
+        target_carbon_intensity=79.281,
+        default_carbon_intensity=94.389,
+        category_carbon_intensity=None,
+        energy_density=38.654,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=1,
+        end_use_type_id=2,
+    )
+
+    mock_repo.get_lookup_table_data.return_value = {
+        "data": [row_other_jet_fuel, row_other_diesel, row_other_gasoline, row_valid],
+        "uci_map": {},
+    }
+
+    result = await calculator_service.get_lookup_table_data(2025)
+
+    # All three "Other" rows must be excluded; only the valid row remains
+    assert len(result.data) == 1
+    assert result.data[0].fuel_type == "Fossil-derived diesel"
+    fuel_types_in_result = {row.fuel_type for row in result.data}
+    assert "Other" not in fuel_types_in_result
+
+
+@pytest.mark.anyio
+async def test_get_lookup_table_data_excludes_other_but_keeps_other_diesel_fuel(
+    calculator_service, mock_repo
+):
+    """'Other diesel fuel' is a distinct named fuel type and must NOT be filtered out."""
+    row_other = SimpleNamespace(
+        fuel_category="Diesel",
+        fuel_type="Other",
+        end_use_type=None,
+        provision_of_the_act=None,
+        target_carbon_intensity=79.28,
+        default_carbon_intensity=None,
+        category_carbon_intensity=None,
+        energy_density=100000.0,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=19,
+        end_use_type_id=None,
+    )
+    row_other_diesel_fuel = SimpleNamespace(
+        fuel_category="Diesel",
+        fuel_type="Other diesel fuel",
+        end_use_type=None,
+        provision_of_the_act="Default carbon intensity",
+        target_carbon_intensity=79.281,
+        default_carbon_intensity=94.389,
+        category_carbon_intensity=None,
+        energy_density=38.654,
+        energy_density_unit="MJ/L",
+        eer=1.0,
+        fuel_type_id=20,
+        end_use_type_id=None,
+    )
+
+    mock_repo.get_lookup_table_data.return_value = {
+        "data": [row_other, row_other_diesel_fuel],
+        "uci_map": {},
+    }
+
+    result = await calculator_service.get_lookup_table_data(2025)
+
+    assert len(result.data) == 1
+    assert result.data[0].fuel_type == "Other diesel fuel"
