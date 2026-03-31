@@ -461,7 +461,11 @@ export const AddEditAllocationAgreements = () => {
         id: uuid(),
         modified: true,
         complianceReportId,
-        compliancePeriod
+        compliancePeriod,
+        // Backend expects integer quantities — round any decimal values
+        ...(row.quantity != null && row.quantity !== ''
+          ? { quantity: Math.round(Number(row.quantity)) }
+          : {})
       }))
       const transactions = gridApi.applyTransaction({ add: newData })
 
