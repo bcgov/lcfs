@@ -89,6 +89,7 @@ class ChargingEquipmentCreateSchema(BaseSchema):
 
 
 class ChargingEquipmentUpdateSchema(BaseSchema):
+    charging_site_id: Optional[int] = None
     serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
     manufacturer: Optional[str] = Field(None, min_length=1, max_length=100)
     model: Optional[str] = Field(None, max_length=100)
