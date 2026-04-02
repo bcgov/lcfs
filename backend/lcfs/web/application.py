@@ -92,6 +92,7 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             or path == "/api/health"
             or path == "/api/login-bg-images/active"
             or re.match(r"^/api/login-bg-images/\d+/stream$", path)
+            or path == "/api/fuel-codes/bulletins"
         ):
             return AuthCredentials([]), UnauthenticatedUser()
 

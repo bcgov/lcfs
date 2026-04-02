@@ -67,6 +67,10 @@ export const PublicBreadcrumb = ({
       label: 'Calculation data',
       route: '/calculation-data'
     },
+    'approved-carbon-intensities': {
+      label: 'Approved carbon intensities',
+      route: '/approved-carbon-intensities'
+    },
     ...customBreadcrumbs
   }
 

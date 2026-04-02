@@ -5,9 +5,11 @@ import BCBox from '@/components/BCBox'
 import Footer from '@/components/Footer'
 import { PublicHeader } from './components/PublicHeader'
 import { PublicBreadcrumb } from './components/PublicBreadcrumb'
+import ROUTES from '@/routes/routes'
 
 type RouteHandle = {
   title?: string
+  hideBreadcrumb?: boolean
 }
 
 export const PublicPageLayout = () => {
@@ -16,6 +18,7 @@ export const PublicPageLayout = () => {
     | RouteHandle
     | undefined
   const pageTitle = lastMatchHandle?.title || 'LCFS'
+  const hideBreadcrumb = lastMatchHandle?.hideBreadcrumb ?? false
 
   return (
     <BCBox display="flex" flexDirection="column" minHeight="100vh">
@@ -38,9 +41,11 @@ export const PublicPageLayout = () => {
         disableGutters
       >
         <Stack spacing={2}>
-          <BCBox size={12}>
-            <PublicBreadcrumb />
-          </BCBox>
+          {!hideBreadcrumb && (
+            <BCBox size={12}>
+              <PublicBreadcrumb rootPath={ROUTES.PUBLIC_DASHBOARD} />
+            </BCBox>
+          )}
           <BCBox
             elevation={5}
             sx={{
