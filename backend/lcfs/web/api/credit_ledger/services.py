@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from math import ceil
 from typing import Optional, List
 
@@ -170,7 +170,7 @@ class CreditLedgerService:
         )
         file_content: bytes = builder.build_spreadsheet()
 
-        date_stamp = datetime.now().strftime("%Y-%m-%d")
+        date_stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         filename = (
             f"{LCFS_Constants.CREDIT_LEDGER_EXPORT_FILENAME}"
             f"-org{organization_id}-{date_stamp}.{export_format}"

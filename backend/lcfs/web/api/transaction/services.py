@@ -312,7 +312,7 @@ class TransactionsService:
         file_content = builder.build_spreadsheet()
 
         # Get the current date in YYYY-MM-DD format
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         filename = f"{LCFS_Constants.TRANSACTIONS_EXPORT_FILENAME}-{current_date}.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}

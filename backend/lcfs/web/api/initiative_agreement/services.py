@@ -6,7 +6,7 @@ from lcfs.web.api.notification.schema import (
 )
 from lcfs.web.api.notification.services import NotificationService
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
@@ -217,7 +217,7 @@ class InitiativeAgreementServices:
 
         # Set effective date to today if the analyst left it blank
         if initiative_agreement.transaction_effective_date is None:
-            initiative_agreement.transaction_effective_date = datetime.now().date()
+            initiative_agreement.transaction_effective_date = datetime.now(timezone.utc).date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
 
