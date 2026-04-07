@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { isOtherExpectedUseMissing } from '../AddEditOtherUses'
 
 // Mock all external dependencies to prevent memory leaks
 vi.mock('react-router-dom', () => ({
@@ -172,13 +173,31 @@ describe('AddEditOtherUses', () => {
 
     it('should check column visibility', () => {
       const columnVisibilityState = { isQ1Supplied: true }
-      
+
       const getColumn = (column) => ({
         isVisible: () => columnVisibilityState[column]
       })
 
       const column = getColumn('isQ1Supplied')
       expect(column.isVisible()).toBe(true)
+    })
+
+    it('requires other expected use details when Expected use is Other', () => {
+      expect(
+        isOtherExpectedUseMissing({
+          expectedUse: 'Other',
+          rationale: '   '
+        })
+      ).toBe(true)
+    })
+
+    it('does not require other expected use details for non-Other values', () => {
+      expect(
+        isOtherExpectedUseMissing({
+          expectedUse: 'Transportation',
+          rationale: ''
+        })
+      ).toBe(false)
     })
   })
 })
