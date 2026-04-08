@@ -496,13 +496,20 @@ export const useSaveFSEReporting = (
       const chargingEquipmentComplianceId =
         data.chargingEquipmentComplianceId || null
 
-      // UPDATE operation (has ID and not deleted)
+      // UPDATE operation (has ID)
       if (chargingEquipmentComplianceId) {
         return await client.put(
           `/final-supply-equipments/reporting/${chargingEquipmentComplianceId}`,
           { ...data }
         )
       }
+
+      // CREATE operation (no ID yet — row from view with no compliance record)
+      return await client.post(apiRoutes.saveFSEReportingBatch, {
+        fseReports: [data],
+        complianceReportId,
+        organizationId
+      })
     },
     onSuccess: (data, variables, context) => {
       if (clearCache) {

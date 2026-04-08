@@ -1416,8 +1416,9 @@ class FuelCodeRepository:
         """
         query = (
             select(FuelCode)
+            .join(FuelCode.fuel_code_status)
             .options(
-                joinedload(FuelCode.fuel_code_status),
+                contains_eager(FuelCode.fuel_code_status),
                 joinedload(FuelCode.fuel_code_prefix),
             )
             .where(

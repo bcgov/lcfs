@@ -117,6 +117,10 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
                 f"Marking {len(notified_fuel_code_ids)} fuel codes as notified"
             )
             await fuel_code_repo.mark_fuel_codes_notified(notified_fuel_code_ids)
+            # Commit so the notification timestamps are persisted — without this,
+            # the session closes uncommitted and the same codes are re-selected
+            # on the next scheduler run, causing duplicate emails.
+            await db_session.commit()
 
         logger.info(
             f"Sent fuel code expiry notifications to {success_count}/{total_emails} contacts"
