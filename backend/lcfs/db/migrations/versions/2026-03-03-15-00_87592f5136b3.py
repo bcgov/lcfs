@@ -1,0 +1,218 @@
+"""historical target carbon intensities
+
+Revision ID: 87592f5136b3
+Revises: 54d55e878dad
+Create Date: 2025-04-07 15:25:24.384935
+
+"""
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision = "87592f5136b3"
+down_revision = "54d55e878dad"
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    # Insert historical gasoline values
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO target_carbon_intensity (
+            compliance_period_id,
+            fuel_category_id,
+            target_carbon_intensity,
+            reduction_target_percentage,
+            effective_status,
+            create_date,
+            update_date
+        ) VALUES
+        -- 2013 Diesel
+        (4, 2, 92.38, 0, true, NOW(), NOW()),
+        -- 2014 Diesel
+        (5, 2, 92.38, 0, true, NOW(), NOW()),
+        -- 2015 Diesel
+        (6, 2, 91.21, 0, true, NOW(), NOW()),
+        -- 2016 Diesel
+        (7, 2, 90.28, 0, true, NOW(), NOW()),
+        -- 2017 Diesel
+        (8, 2, 90.02, 0, true, NOW(), NOW()),
+        -- 2018 Diesel
+        (9, 2, 88.60, 0, true, NOW(), NOW()),
+        -- 2019 Diesel
+        (10, 2, 87.18, 0, true, NOW(), NOW()),
+        -- 2020 Diesel
+        (11, 2, 86.15, 0, true, NOW(), NOW()),
+        -- 2021 Diesel
+        (12, 2, 85.11, 0, true, NOW(), NOW()),
+        -- 2022 Diesel
+        (13, 2, 84.04, 0, true, NOW(), NOW()),
+        -- 2023 Diesel
+        (14, 2, 81.86, 0, true, NOW(), NOW());
+    """
+        )
+    )
+
+    # Insert historical diesel values
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO target_carbon_intensity (
+            compliance_period_id,
+            fuel_category_id,
+            target_carbon_intensity,
+            reduction_target_percentage,
+            effective_status,
+            create_date,
+            update_date
+        ) VALUES
+        -- 2013 Gasoline
+        (4, 1, 86.20, 0, true, NOW(), NOW()),
+        -- 2014 Gasoline
+        (5, 1, 86.20, 0, true, NOW(), NOW()),
+        -- 2015 Gasoline
+        (6, 1, 85.11, 0, true, NOW(), NOW()),
+        -- 2016 Gasoline
+        (7, 1, 84.23, 0, true, NOW(), NOW()),
+        -- 2017 Gasoline
+        (8, 1, 83.74, 0, true, NOW(), NOW()),
+        -- 2018 Gasoline
+        (9, 1, 82.41, 0, true, NOW(), NOW()),
+        -- 2019 Gasoline
+        (10, 1, 81.09, 0, true, NOW(), NOW()),
+        -- 2020 Gasoline
+        (11, 1, 80.13, 0, true, NOW(), NOW()),
+        -- 2021 Gasoline
+        (12, 1, 79.17, 0, true, NOW(), NOW()),
+        -- 2022 Gasoline
+        (13, 1, 78.20, 0, true, NOW(), NOW()),
+        -- 2023 Gasoline
+        (14, 1, 76.14, 0, true, NOW(), NOW());
+    """
+        )
+    )
+
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO fuel_instance (
+            fuel_type_id,
+            fuel_category_id,
+            create_date,
+            update_date
+        ) VALUES
+        -- Natural gas-based gasoline (21) -> Gasoline (2)
+        (21, 1, NOW(), NOW()),
+        -- Petroleum-based diesel (22) -> Diesel (1)
+        (22, 2, NOW(), NOW()),
+        -- Petroleum-based gasoline (23) -> Gasoline (2)
+        (23, 1, NOW(), NOW());
+    """
+        )
+    )
+
+    # Add EER records for legacy fuel types (2013-2023)
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO energy_effectiveness_ratio (
+            fuel_category_id,
+            fuel_type_id,
+            end_use_type_id,
+            ratio,
+            create_date,
+            update_date,
+            effective_status,
+            compliance_period_id
+        ) VALUES
+        -- Natural gas-based gasoline (21) records
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 4),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 5),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 6),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 7),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 8),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 9),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 10),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 11),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 12),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 13),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 14),
+        -- Petroleum-based diesel (22) records
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 4),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 5),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 6),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 7),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 8),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 9),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 10),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 11),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 12),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 13),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 14),
+        -- Petroleum-based gasoline (23) records
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 4),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 5),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 6),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 7),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 8),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 9),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 10),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 11),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 12),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 13),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 14);
+    """
+        )
+    )
+
+    # Set fossil_derived to true for legacy fuel types
+    op.execute(
+        """
+        UPDATE fuel_type 
+        SET fossil_derived = true 
+        WHERE fuel_type_id IN (21, 22, 23)
+    """
+    )
+
+
+def downgrade():
+    # Remove the fossil_derived flag
+    op.execute(
+        """
+        UPDATE fuel_type 
+        SET fossil_derived = false 
+        WHERE fuel_type_id IN (21, 22, 23)
+    """
+    )
+    # Remove the added EER records
+    op.execute(
+        sa.text(
+            """
+        DELETE FROM energy_effectiveness_ratio
+        WHERE fuel_type_id IN (21, 22, 23);
+    """
+        )
+    )
+
+    # Remove the added fuel_instance records
+    op.execute(
+        sa.text(
+            """
+        DELETE FROM fuel_instance
+        WHERE fuel_type_id IN (21, 22, 23);
+    """
+        )
+    )
+
+    # Remove the imported historical values
+    op.execute(
+        sa.text(
+            """
+        DELETE FROM target_carbon_intensity
+        WHERE compliance_period_id IN (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+    """
+        )
+    )

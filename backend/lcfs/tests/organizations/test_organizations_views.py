@@ -621,3 +621,173 @@ class TestOrganizationLinkKeyViews:
             assert len(args) >= 3
             assert args[0] == 1
             assert args[1] == 1
+
+
+def _mock_org_schema(org_id=1, name="Test Org", total_balance=500, reserved_balance=50):
+    """Return an OrganizationResponseSchema-compatible SimpleNamespace."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        organization_id=org_id,
+        name=name,
+        operating_name=name,
+        has_early_issuance=False,
+        total_balance=total_balance,
+        reserved_balance=reserved_balance,
+        email=None,
+        phone=None,
+        edrms_record=None,
+        credit_market_contact_name=None,
+        credit_market_contact_email=None,
+        credit_market_contact_phone=None,
+        credit_market_is_seller=False,
+        credit_market_is_buyer=False,
+        credits_to_sell=0,
+        display_in_credit_market=False,
+        company_details=None,
+        company_representation_agreements=None,
+        company_acting_as_aggregator=None,
+        company_additional_notes=None,
+        organization_type_id=None,
+        org_status=None,
+        org_type=None,
+        records_address=None,
+        org_address=None,
+        org_attorney_address=None,
+    )
+
+
+class TestGetOrganizationBalanceStripping:
+    """Tests that compliance unit balances are only exposed to authorized users."""
+
+    @pytest.mark.anyio
+    async def test_government_user_sees_balance(
+        self, fastapi_app: FastAPI, set_mock_user
+    ):
+        """Government users receive total_balance and reserved_balance."""
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        with patch(
+            "lcfs.web.api.organizations.views.OrganizationsService"
+        ) as mock_service_cls:
+            mock_svc = AsyncMock()
+            mock_service_cls.return_value = mock_svc
+            mock_svc.get_organization.return_value = _mock_org_schema(org_id=1)
+            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+                response = await client.get("/api/organizations/1")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["totalBalance"] == 500
+        assert data["reservedBalance"] == 50
+
+    @pytest.mark.anyio
+    async def test_supplier_own_org_sees_balance(
+        self, fastapi_app: FastAPI, set_mock_user
+    ):
+        """A supplier accessing their own organization sees balance fields."""
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 1})
+
+        with patch(
+            "lcfs.web.api.organizations.views.OrganizationsService"
+        ) as mock_service_cls:
+            mock_svc = AsyncMock()
+            mock_service_cls.return_value = mock_svc
+            mock_svc.get_organization.return_value = _mock_org_schema(org_id=1)
+            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+                response = await client.get("/api/organizations/1")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["totalBalance"] == 500
+        assert data["reservedBalance"] == 50
+
+    @pytest.mark.anyio
+    async def test_supplier_other_org_balance_stripped(
+        self, fastapi_app: FastAPI, set_mock_user
+    ):
+        """A supplier accessing another org's record gets null balance fields."""
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 99})
+
+        with patch(
+            "lcfs.web.api.organizations.views.OrganizationsService"
+        ) as mock_service_cls:
+            mock_svc = AsyncMock()
+            mock_service_cls.return_value = mock_svc
+            mock_svc.get_organization.return_value = _mock_org_schema(
+                org_id=1, name="Other Org"
+            )
+            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+                response = await client.get("/api/organizations/1")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["totalBalance"] is None
+        assert data["reservedBalance"] is None
+
+
+class TestPenaltyEndpointsOrgCheck:
+    """Tests that penalty analytics/logs enforce org ownership for suppliers."""
+
+    @pytest.mark.anyio
+    async def test_supplier_penalty_analytics_own_org_allowed(
+        self, fastapi_app: FastAPI, set_mock_user
+    ):
+        """Supplier can fetch penalty analytics for their own org."""
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 1})
+
+        with patch(
+            "lcfs.web.api.organizations.views.OrganizationsService"
+        ) as mock_service_cls:
+            mock_svc = AsyncMock()
+            mock_service_cls.return_value = mock_svc
+            mock_svc.get_penalty_analytics.return_value = MagicMock(
+                yearly_summaries=[], automatic_total=0, discretionary_total=0
+            )
+            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+                response = await client.get("/api/organizations/1/penalties/analytics")
+
+        assert response.status_code == status.HTTP_200_OK
+
+    @pytest.mark.anyio
+    async def test_supplier_penalty_analytics_other_org_forbidden(
+        self, fastapi_app: FastAPI, set_mock_user
+    ):
+        """Supplier cannot fetch penalty analytics for another org."""
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 99})
+
+        with patch("lcfs.web.api.organizations.views.OrganizationsService"):
+            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+                response = await client.get("/api/organizations/1/penalties/analytics")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    @pytest.mark.anyio
+    async def test_government_penalty_analytics_any_org_allowed(
+        self, fastapi_app: FastAPI, set_mock_user
+    ):
+        """Government users can fetch penalty analytics for any org."""
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        with patch(
+            "lcfs.web.api.organizations.views.OrganizationsService"
+        ) as mock_service_cls:
+            mock_svc = AsyncMock()
+            mock_service_cls.return_value = mock_svc
+            mock_svc.get_penalty_analytics.return_value = MagicMock(
+                yearly_summaries=[], automatic_total=0, discretionary_total=0
+            )
+            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+            async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
+                response = await client.get("/api/organizations/5/penalties/analytics")
+
+        assert response.status_code == status.HTTP_200_OK

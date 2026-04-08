@@ -4,12 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { AddEditUser } from '../AddEditUser'
 import { wrapper } from '@/tests/utils/wrapper'
+import { HttpResponse } from 'msw'
+import { httpOverwrite } from '@/tests/utils/handlers'
 import * as currentUserHooks from '@/hooks/useCurrentUser'
 import * as userHooks from '@/hooks/useUser'
 import * as organizationUserHooks from '@/hooks/useOrganization'
 import { ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
-import { useForm, FormProvider } from 'react-hook-form'
+import { useForm, FormProvider, useWatch } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { userInfoSchema, idirTextFields, bceidTextFields } from '../_schema'
 
@@ -81,17 +83,39 @@ vi.mock('@/hooks/useUser')
 vi.mock('@/hooks/useOrganization')
 
 // Mock child components to simplify testing focus on parent logic
+// Mock child components to simplify testing focus on parent logic.
+// useWatch inside the mock gives us reactive re-renders when form state changes,
+// so we can use data-attribute assertions rather than fragile `checked` props.
 vi.mock('../components/IDIRSpecificRoleFields', () => ({
-  IDIRSpecificRoleFields: ({ form, disabled, t }) => {
-    const { control } = form
+  IDIRSpecificRoleFields: ({ form, disabled }) => {
+    const idirRoleVal = useWatch({ name: 'idirRole' })
+    const iaRoleVal = useWatch({ name: 'iaRole' })
     return (
-      <div data-test="idir-roles">
+      <div
+        data-test="idir-roles"
+        data-idir-role={idirRoleVal}
+        data-ia-role={iaRoleVal}
+      >
+        {/* kept for existing disabled/enabled tests */}
         <input
           data-test="idir-role-radio"
           type="radio"
           value="analyst"
-          onChange={(e) => form.setValue('idirRole', e.target.value)}
-          checked={form.watch('idirRole') === 'analyst'}
+          onClick={() => form.setValue('idirRole', 'analyst')}
+          disabled={disabled}
+        />
+        <input
+          data-test="idir-director-radio"
+          type="radio"
+          value="director"
+          onClick={() => form.setValue('idirRole', 'director')}
+          disabled={disabled}
+        />
+        <input
+          data-test="idir-ia-role-radio"
+          type="radio"
+          value="ia analyst"
+          onClick={() => form.setValue('iaRole', 'ia analyst')}
           disabled={disabled}
         />
         <span>IDIR Role Fields</span>
@@ -99,12 +123,8 @@ vi.mock('../components/IDIRSpecificRoleFields', () => ({
           data-test="idir-admin-checkbox"
           type="checkbox"
           onChange={(e) =>
-            form.setValue(
-              'adminRole',
-              e.target.checked ? ['administrator'] : []
-            )
+            form.setValue('adminRole', e.target.checked ? ['administrator'] : [])
           }
-          checked={Array.isArray(form.watch('adminRole')) && form.watch('adminRole').includes('administrator')}
           disabled={disabled}
         />
         <span>Admin Role</span>
@@ -612,6 +632,43 @@ describe('AddEditUser', () => {
         expect(screen.getByTestId('idir-admin-checkbox')).not.toBeDisabled()
       })
     }
+  })
+
+  // Form state is observed via data-idir-role / data-ia-role attributes on the mock
+  // wrapper, kept in sync by useWatch inside the mock component.
+
+  it('clears iaRole when Director is selected', async () => {
+    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+
+    // Set an IA role first
+    fireEvent.click(screen.getByTestId('idir-ia-role-radio'))
+    await waitFor(() => {
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-ia-role', 'ia analyst')
+    })
+
+    // Select Director — the existing useEffect must clear iaRole
+    fireEvent.click(screen.getByTestId('idir-director-radio'))
+    await waitFor(() => {
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-idir-role', 'director')
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-ia-role', '')
+    })
+  })
+
+  it('clears Director when an IA role is selected', async () => {
+    render(<AddEditUser userType="idir" handleCancelEdit={mockHandleCancelEdit} />, { wrapper })
+
+    // Set Director first
+    fireEvent.click(screen.getByTestId('idir-director-radio'))
+    await waitFor(() => {
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-idir-role', 'director')
+    })
+
+    // Select an IA role — the new useEffect must clear idirRole (Director)
+    fireEvent.click(screen.getByTestId('idir-ia-role-radio'))
+    await waitFor(() => {
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-ia-role', 'ia analyst')
+      expect(screen.getByTestId('idir-roles')).toHaveAttribute('data-idir-role', '')
+    })
   })
 
   // --- Delete Functionality Tests ---

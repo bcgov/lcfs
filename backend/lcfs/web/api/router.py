@@ -21,6 +21,7 @@ from lcfs.web.api import (
     admin_adjustment,
     initiative_agreement,
     compliance_report,
+    report_opening,
     notional_transfer,
     other_uses,
     final_supply_equipment,
@@ -35,6 +36,7 @@ from lcfs.web.api import (
     forms,
     geocoder,
     charging_site,
+    login_bg_image,
 )
 
 api_router = APIRouter()
@@ -86,6 +88,9 @@ api_router.include_router(
     compliance_report.router, prefix="/reports", tags=["compliance_reports"]
 )
 api_router.include_router(
+    report_opening.router, prefix="/report-openings", tags=["report_openings"]
+)
+api_router.include_router(
     notional_transfer.router, prefix="/notional-transfers", tags=["notional_transfers"]
 )
 api_router.include_router(other_uses.router, prefix="/other-uses", tags=["other_uses"])
@@ -120,4 +125,7 @@ api_router.include_router(forms.router, prefix="/forms", tags=["forms"])
 api_router.include_router(geocoder.router, prefix="/geocoder", tags=["geocoder"])
 api_router.include_router(
     charging_site.router, prefix="/charging-sites", tags=["charging_site"]
+)
+api_router.include_router(
+    login_bg_image.router, prefix="/login-bg-images", tags=["login_bg_image"]
 )

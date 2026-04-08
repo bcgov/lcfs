@@ -40,7 +40,13 @@ export const BCGridBase = forwardRef(
       autoSizeStrategy,
       autoHeight,
       containerStyle,
+      enableCellTextSelection,
+      getRowId,
       overlayNoRowsTemplate,
+      queryData,
+      dataKey,
+      paginationOptions,
+      onPaginationChange,
       onRowClicked,
       ...props
     },
@@ -279,6 +285,8 @@ export const BCGridBase = forwardRef(
         suppressCsvExport={false}
         suppressColumnVirtualisation={true}
         enableBrowserTooltips={true}
+        enableCellTextSelection={enableCellTextSelection}
+        getRowId={getRowId}
         suppressPaginationPanel
         suppressScrollOnNewData
         onRowDataUpdated={determineHeight}

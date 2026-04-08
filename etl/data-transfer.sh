@@ -128,12 +128,8 @@ if [ -n "$table" ]; then
 fi
 
 if [ "$direction" = "import" ]; then
-    echo "** Starting pg_dump on OpenShift pod (using remote user $remote_db_user)"
-    oc exec $pod_name -- bash -c "pg_dump -U $remote_db_user $table_option -F t --no-privileges --no-owner -c -d $db_name > /tmp/${file_suffix}.tar"
-    echo
-
-    echo "** Downloading .tar file from OpenShift pod"
-    oc rsync $pod_name:/tmp/${file_suffix}.tar ./
+    echo "** Starting pg_dump on OpenShift pod and streaming directly to local file"
+    oc exec $pod_name -- bash -c "pg_dump -U $remote_db_user $table_option -F t --no-privileges --no-owner -c -d $db_name" > ${file_suffix}.tar
     echo
 
     echo "** Copying .tar to local database container $local_container"
@@ -142,10 +138,6 @@ if [ "$direction" = "import" ]; then
 
     echo "** Restoring local database (using local user $local_db_user)"
     docker exec $local_container bash -c "pg_restore -U $local_db_user --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/${file_suffix}.tar" || true
-    echo
-
-    echo "** Cleaning up dump file from OpenShift pod"
-    oc exec $pod_name -- bash -c "rm /tmp/${file_suffix}.tar"
     echo
 
     echo "** Cleaning up local dump file"
@@ -166,7 +158,7 @@ elif [ "$direction" = "export" ]; then
     echo
 
     echo "** Uploading .tar file to OpenShift pod"
-    oc rsync ./tmp_transfer $pod_name:/tmp/
+    oc cp ./tmp_transfer/${file_suffix}.tar ${pod_name#pod/}:/tmp/tmp_transfer/${file_suffix}.tar
     echo
 
     echo "** Restoring database on OpenShift pod (using remote user $remote_db_user)"

@@ -74,6 +74,25 @@ def fuel_code_required_label(values: dict) -> dict:
     return values
 
 
+def other_expected_use_required(values: dict) -> dict:
+    expected_use = values.get("expected_use") or values.get("expectedUse")
+    rationale = values.get("rationale")
+
+    if expected_use == "Other" and (
+        rationale is None or not str(rationale).strip()
+    ):
+        errors = [
+            {
+                "loc": ("rationale",),
+                "msg": "required when Expected use is Other",
+                "type": "value_error",
+            }
+        ]
+        raise RequestValidationError(errors)
+
+    return values
+
+
 def unknown_provision_requires_date(values: dict) -> dict:
     provision_of_the_act = values.get("provisionOfTheAct")
     export_date = values.get("exportDate")

@@ -39,6 +39,7 @@ from .document import *
 from .form import *
 from .fuel import *
 from .initiative_agreement import *
+from .login_bg_image import *
 from .notification import *
 from .organization import *
 from .transaction import *

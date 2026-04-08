@@ -5,7 +5,7 @@ import { Dashboard } from '../Dashboard'
 import { Dashboard as DashboardFromIndex } from '../index'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { roles } from '@/constants/roles'
+import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 
 // Mock components
 vi.mock('@/components/Role', () => ({
@@ -75,6 +75,9 @@ vi.mock('../components/cards/idir/ComplianceReportCard', () => ({
 vi.mock('@/hooks/useCurrentUser')
 
 describe('Dashboard Component', () => {
+  const govRolesTestId = `role-${govRoles.join('-')}`
+  const nonGovRolesTestId = `role-${nonGovRoles.join('-')}`
+
   beforeEach(() => {
     vi.clearAllMocks()
     // Default to a government user with analyst role
@@ -128,11 +131,7 @@ describe('Dashboard Component', () => {
     render(<Dashboard />, { wrapper })
 
     // Gov role related components
-    expect(
-      screen.getAllByTestId(
-        'role-Government-Administrator-Analyst-Compliance Manager-Director'
-      )
-    ).not.toHaveLength(0)
+    expect(screen.getAllByTestId(govRolesTestId)).not.toHaveLength(0)
     expect(screen.getByText('Organizations Summary Card')).toBeInTheDocument()
     expect(screen.getByText('Transactions Card')).toBeInTheDocument()
     expect(screen.getByText('Compliance Report Card')).toBeInTheDocument()
@@ -153,9 +152,7 @@ describe('Dashboard Component', () => {
     // Non-gov role related components
     expect(screen.getByTestId('role-Transfer')).toBeInTheDocument()
     expect(
-      screen.getAllByTestId(
-        'role-Supplier-Manage Users-Transfer-Compliance Reporting-Signing Authority-Read Only'
-      )
+      screen.getAllByTestId(nonGovRolesTestId)
     ).not.toHaveLength(0)
     expect(screen.getByText('Org Balance Card')).toBeInTheDocument()
     expect(screen.getByText('Feedback Card')).toBeInTheDocument()
@@ -191,9 +188,7 @@ describe('Dashboard Component', () => {
 
     // Test nonGovRoles components - using getAllByTestId since there are multiple instances
     expect(
-      screen.getAllByTestId(
-        'role-Supplier-Manage Users-Transfer-Compliance Reporting-Signing Authority-Read Only'
-      )
+      screen.getAllByTestId(nonGovRolesTestId)
     ).toHaveLength(3)
     expect(screen.getByText('Org Balance Card')).toBeInTheDocument()
     expect(screen.getByText('Feedback Card')).toBeInTheDocument()
@@ -227,11 +222,7 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('Admin Links Card')).toBeInTheDocument()
     expect(screen.getByText('User Settings Card')).toBeInTheDocument()
     
-    // Verify role components are present
-    const govRoles = screen.getAllByTestId(
-      'role-Government-Administrator-Analyst-Compliance Manager-Director'
-    )
-    expect(govRoles.length).toBeGreaterThan(0)
+    expect(screen.getAllByTestId(govRolesTestId).length).toBeGreaterThan(0)
   })
 
   it('renders the appropriate cards for compliance reporting role', () => {
@@ -260,11 +251,7 @@ describe('Dashboard Component', () => {
 
     render(<Dashboard />, { wrapper })
 
-    // Test nested roles structure - using getAllByTestId for multiple instances
-    const govRoles = screen.getAllByTestId(
-      'role-Government-Administrator-Analyst-Compliance Manager-Director'
-    )
-    expect(govRoles.length).toBeGreaterThan(0)
+    expect(screen.getAllByTestId(govRolesTestId).length).toBeGreaterThan(0)
     
     expect(screen.getByTestId('role-Analyst-Compliance Manager')).toBeInTheDocument()
     expect(screen.getByTestId('role-Analyst')).toBeInTheDocument()

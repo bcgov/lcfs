@@ -175,7 +175,7 @@ async def test_update_notification_message(notification_repo, mock_db_session):
     mock_db_session.merge.assert_called_once_with(mock_notification)
     mock_db_session.flush.assert_called_once()
     assert result == updated_notification
-    assert result.is_read == True
+    assert result.is_read is True
     assert result.message == "Updated message"
 
 
@@ -427,6 +427,53 @@ async def test_add_subscriptions_for_user_role(notification_repo, mock_db_sessio
 
 
 @pytest.mark.anyio
+async def test_add_subscriptions_for_notification_types(
+    notification_repo, mock_db_session
+):
+    user_profile_id = 1
+    notification_types = [
+        NotificationTypeEnum.BCEID__GOVERNMENT_NOTIFICATION,
+        NotificationTypeEnum.IDIR_ANALYST__GOVERNMENT_NOTIFICATION,
+    ]
+
+    # Mock enabled channels
+    mock_channels_result = MagicMock()
+    mock_channels_result.scalars.return_value.all.return_value = [1]
+
+    # Mock matching notification types
+    mock_nt = NotificationType(notification_type_id=1, role_id=6, name="test")
+    mock_nt_result = MagicMock()
+    mock_nt_result.scalars.return_value.all.return_value = [mock_nt]
+
+    # Mock "no existing subscription" check
+    mock_no_sub_result = MagicMock()
+    mock_no_sub_result.scalar_one_or_none.return_value = None
+
+    call_count = 0
+
+    async def side_effect_execute(stmt, *args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return mock_channels_result
+        if call_count == 2:
+            return mock_nt_result
+        return mock_no_sub_result
+
+    mock_db_session.execute = AsyncMock(side_effect=side_effect_execute)
+    mock_db_session.flush = AsyncMock()
+    mock_db_session.add = MagicMock()
+
+    await notification_repo.add_subscriptions_for_notification_types(
+        user_profile_id, notification_types, is_enabled=True
+    )
+
+    mock_db_session.add.assert_called_once()
+    added_sub = mock_db_session.add.call_args[0][0]
+    assert isinstance(added_sub, NotificationChannelSubscription)
+
+
+@pytest.mark.anyio
 async def test_delete_subscriptions_for_user(mock_db_session):
     # Prepare two fake subscriptions for a given user_profile_id
     fake_sub1 = MagicMock(spec=NotificationChannelSubscription)
@@ -438,7 +485,7 @@ async def test_delete_subscriptions_for_user(mock_db_session):
     mock_db_session.execute = AsyncMock(return_value=mock_result)
 
     repo = NotificationRepository(db=mock_db_session)
-    
+
     user_profile_id = 42
     await repo.delete_subscriptions_for_user(user_profile_id)
 

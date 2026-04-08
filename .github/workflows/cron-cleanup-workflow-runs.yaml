@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 8 * * *"
-
+# monitor the new release for Mattraks/delete-workflow-runs
 jobs:
   del_runs:
     runs-on: ubuntu-latest

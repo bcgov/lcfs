@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 import math
 import uuid
 
@@ -39,6 +39,8 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodePrefixSchema,
     TableOptionsSchema,
     FuelCodeStatusSchema,
+    FuelCodeBulletinsSchema,
+    FuelCodeBulletinRowSchema,
 )
 from lcfs.web.core.decorators import service_handler
 
@@ -53,6 +55,46 @@ class FuelCodeServices:
     ) -> None:
         self.repo = repo
         self.notification_service = notification_service
+
+    def _get_compliance_period_bounds(self, today: date) -> tuple[date, date]:
+        period_anchor_this_year = date(today.year, 3, 31)
+        if today >= period_anchor_this_year:
+            period_start = period_anchor_this_year
+            period_end = date(today.year + 1, 3, 31)
+        else:
+            period_start = date(today.year - 1, 3, 31)
+            period_end = period_anchor_this_year
+        return period_start, period_end
+
+    @service_handler
+    async def get_fuel_code_bulletins(
+        self, bulletin_type: str, pagination: PaginationRequestSchema
+    ) -> FuelCodeBulletinsSchema:
+        period_start, _ = self._get_compliance_period_bounds(date.today())
+        conditions, sort_orders = self.repo.get_fuel_code_bulletin_pagination_params(
+            pagination
+        )
+        offset = (pagination.page - 1) * pagination.size
+
+        rows, total_count = await self.repo.get_fuel_code_bulletin_rows(
+            compliance_period_start=period_start,
+            bulletin_type=bulletin_type,
+            offset=offset,
+            limit=pagination.size,
+            conditions=conditions,
+            sort_orders=sort_orders,
+        )
+
+        return FuelCodeBulletinsSchema(
+            cutoff_date=period_start,
+            fuel_codes=[FuelCodeBulletinRowSchema.model_validate(row) for row in rows],
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+        )
 
     @service_handler
     async def search_fuel_code(self, fuel_code, prefix, distinct_search):
@@ -335,18 +377,25 @@ class FuelCodeServices:
         # Check for specific status transitions and new statuses
         if status == FuelCodeStatusEnumSchema.Recommended:
             # Draft → Recommended: notify Director
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Recommended, [])
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
+                FuelCodeStatusEnum.Recommended, []
+            )
         elif status == FuelCodeStatusEnumSchema.Approved:
             # Recommended → Approved: notify Analyst
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Approved, [])
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
+                FuelCodeStatusEnum.Approved, []
+            )
         elif (
             previous_status == FuelCodeStatusEnum.Recommended
             and status == FuelCodeStatusEnumSchema.Draft
-            and user.role_names and RoleEnum.DIRECTOR.value in user.role_names
+            and user.role_names
+            and RoleEnum.DIRECTOR.value in user.role_names
         ):
             # Recommended → Draft: notify Analyst (returned by Director)
             # Only send this notification if it's actually a Director making the change
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Draft, [])
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
+                FuelCodeStatusEnum.Draft, []
+            )
 
         if notifications:
             message_data = {
@@ -358,12 +407,14 @@ class FuelCodeServices:
             }
             # Create dynamic notification type based on status
             # Special case: when returned to Draft, show as "Returned"
-            if (previous_status == FuelCodeStatusEnum.Recommended and 
-                status == FuelCodeStatusEnumSchema.Draft):
+            if (
+                previous_status == FuelCodeStatusEnum.Recommended
+                and status == FuelCodeStatusEnumSchema.Draft
+            ):
                 notification_type = "Fuel Code Returned"
             else:
                 notification_type = f"Fuel Code {status.value}"
-            
+
             notification_data = NotificationMessageSchema(
                 type=notification_type,
                 message=json.dumps(message_data),

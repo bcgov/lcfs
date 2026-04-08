@@ -102,14 +102,18 @@ class OtherUsesServices:
             quantity_supplied=model.quantity_supplied,
             rationale=model.rationale,
             units=model.units,
-            fuel_type=model.fuel_type.fuel_type,
-            fuel_category=model.fuel_category.category,
-            provision_of_the_act=model.provision_of_the_act.name,
+            fuel_type=(model.fuel_type.fuel_type if model.fuel_type else None),
+            fuel_category=(
+                model.fuel_category.category if model.fuel_category else None
+            ),
+            provision_of_the_act=(
+                model.provision_of_the_act.name if model.provision_of_the_act else None
+            ),
             fuel_code=model.fuel_code.fuel_code if model.fuel_code else None,
             is_canada_produced=model.is_canada_produced,
             is_q1_supplied=model.is_q1_supplied,
             ci_of_fuel=model.ci_of_fuel,
-            expected_use=model.expected_use.name,
+            expected_use=(model.expected_use.name if model.expected_use else None),
             group_uuid=model.group_uuid,
             version=model.version,
             action_type=model.action_type,
