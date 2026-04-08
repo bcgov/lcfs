@@ -85,7 +85,6 @@ export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
         />
       </FormControl>
 
-      {/* Disabled when Director is selected — Director cannot be combined with IA roles */}
       <BCTypography variant="label" component="div" sx={{ mt: 2, mb: 0 }}>
         {t('admin:userForm.initiativeAgreementsSection')}
       </BCTypography>
@@ -93,7 +92,7 @@ export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
         control={control}
         name="iaRole"
         options={iaRoleOptions(t)}
-        disabled={disabled || isDirector}
+        disabled={disabled}
       />
     </Box>
   )

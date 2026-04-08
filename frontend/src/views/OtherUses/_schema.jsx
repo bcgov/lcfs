@@ -433,7 +433,13 @@ export const otherUsesColDefs = (
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
+    valueSetter: (params) => {
+      params.data.expectedUse = params.newValue
+      if (params.newValue !== 'Other') {
+        params.data.rationale = undefined
+      }
+      return true
+    },
     minWidth: 200
   },
   {

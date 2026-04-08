@@ -27,6 +27,9 @@ import {
   applyRenewableClaimColumnVisibility
 } from '@/utils/renewableClaimUtils'
 
+export const isOtherExpectedUseMissing = (data) =>
+  data?.expectedUse === 'Other' && !data?.rationale?.trim()
+
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
   const [errors, setErrors] = useState({})
@@ -328,6 +331,9 @@ export const AddEditOtherUses = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      const rowId = params.node?.data?.id
+      const nextErrors = { ...errors }
+
       const isValid = validate(
         params,
         (value) => value !== null && !isNaN(value) && value > 0,
@@ -335,7 +341,38 @@ export const AddEditOtherUses = () => {
         'quantitySupplied'
       )
 
-      if (!isValid) return
+      if (!isValid) {
+        return
+      }
+
+      if (isOtherExpectedUseMissing(params.data)) {
+        setErrors({
+          ...nextErrors,
+          [rowId]: ['rationale']
+        })
+        params.node.updateData({
+          ...params.data,
+          validationStatus: 'error'
+        })
+        alertRef.current?.triggerAlert({
+          message: 'Unable to save row: If other, enter expected use is required when Expected use is Other.',
+          severity: 'error'
+        })
+        return
+      }
+
+      if (rowId && nextErrors[rowId]?.includes('rationale')) {
+        const remainingFields = nextErrors[rowId].filter(
+          (field) => field !== 'rationale'
+        )
+
+        if (remainingFields.length > 0) {
+          nextErrors[rowId] = remainingFields
+        } else {
+          delete nextErrors[rowId]
+        }
+        setErrors(nextErrors)
+      }
 
       params.data.complianceReportId = numericComplianceReportId
       params.data.validationStatus = 'pending'
@@ -370,7 +407,7 @@ export const AddEditOtherUses = () => {
       }
       params.api?.autoSizeAllColumns?.()
     },
-    [numericComplianceReportId, saveRow, t, validate]
+    [errors, numericComplianceReportId, saveRow, t, validate]
   )
 
   const handleNavigateBack = useCallback(() => {
