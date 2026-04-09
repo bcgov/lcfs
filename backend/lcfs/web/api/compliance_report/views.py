@@ -89,7 +89,7 @@ async def get_compliance_report_statuses(
     response_model=List[AssignedAnalystSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
 async def get_available_analysts(
     request: Request,
     service: ComplianceReportServices = Depends(),
@@ -316,7 +316,12 @@ async def get_changelog(
         "allocation-agreements",
     ],
     service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> List:
+    await validate.validate_organization_access_by_group_uuid(
+        compliance_report_group_uuid
+    )
+
     response_model_map = {
         "fuel_supplies": ChangelogFuelSuppliesDTO,
         "fuel_exports": ChangelogFuelExportsDTO,
@@ -339,7 +344,7 @@ async def get_changelog(
     response_model=ChainedComplianceReportSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
 async def assign_analyst_to_report(
     request: Request,
     report_id: int,

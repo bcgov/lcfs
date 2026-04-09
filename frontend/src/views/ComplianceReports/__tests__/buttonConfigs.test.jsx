@@ -15,10 +15,12 @@ vi.mock('luxon', () => ({
     now: vi.fn(() => ({
       year: 2024,
       month: 6,
-      day: 15
+      day: 15,
+      valueOf: () => new Date(2024, 5, 15).getTime()
     })),
     fromObject: vi.fn(() => ({
-      toMillis: () => 1609459200000 // Jan 1, 2021
+      toMillis: () => 1609459200000, // Jan 1, 2021
+      valueOf: () => new Date(2026, 3, 1).getTime() // April 1, 2026 — always in the future
     }))
   }
 }))
@@ -39,6 +41,9 @@ describe('ComplianceReports buttonConfigs', () => {
           'report:actionBtns.assessReportBtn': 'Issue assessment',
           'report:actionBtns.issueNonAssessmentBtn': 'Issue non-assessment',
           'report:actionBtns.nonAssessment': 'Non-assessment',
+          'report:actionBtns.issueExemptionBtn': 'Issue exemption',
+          'report:exemptConfirmText':
+            'Are you sure you want to exempt this compliance report? This will finalize the report without issuing any compliance units.',
           confirmation: 'Confirmation',
           cancelBtn: 'Cancel',
           'report:assessConfirmText':

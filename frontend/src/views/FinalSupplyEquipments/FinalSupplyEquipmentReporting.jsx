@@ -805,6 +805,7 @@ export const FinalSupplyEquipmentReporting = () => {
               {t('finalSupplyEquipment:setDefaultValues')}
             </BCTypography>
           </BCButton>
+
           <BCButton
             variant="outlined"
             size="medium"
@@ -832,7 +833,7 @@ export const FinalSupplyEquipmentReporting = () => {
           >
             {t('finalSupplyEquipment:bulkUpdate.uploadTemplate')}
           </BCButton>
-         <BCButton
+          <BCButton
             variant="outlined"
             size="medium"
             color={showingOnlyUnselected ? 'secondary' : 'primary'}

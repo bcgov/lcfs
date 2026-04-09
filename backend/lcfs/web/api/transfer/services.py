@@ -53,9 +53,18 @@ class TransferServices:
         self.notfn_service = notfn_service
 
     @service_handler
-    async def get_all_transfers(self) -> List[TransferSchema]:
-        """Fetches all transfer records and converts them to Pydantic models."""
-        transfers = await self.repo.get_all_transfers()
+    async def get_all_transfers(self, user: UserProfile) -> List[TransferSchema]:
+        """Fetches transfer records visible to the requesting user.
+
+        Government users receive all transfers. Supplier users receive only
+        transfers involving their own organization.
+        """
+        organization_id = None
+        if not user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            if user.organization:
+                organization_id = user.organization.organization_id
+
+        transfers = await self.repo.get_all_transfers(organization_id)
         result_list = []
         for t in transfers:
             # Convert to schema

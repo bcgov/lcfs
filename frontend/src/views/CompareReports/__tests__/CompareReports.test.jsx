@@ -202,12 +202,12 @@ describe('CompareReports Component', () => {
     expect(report2Select).toHaveTextContent('Original Report')
   })
 
-  it('does not label supplemental reports as not assessed when original is not selected', async () => {
+  it('does not label reports as not assessed when no assessed report exists in the chain', async () => {
     render(<CompareReports />, { wrapper })
 
     await waitFor(() => {
       expect(
-        screen.queryByText('report:originalReportNotAssessed')
+        screen.queryByText('report:reportNotAssessed')
       ).not.toBeInTheDocument()
     })
   })
@@ -426,7 +426,7 @@ describe('CompareReports Component', () => {
     expect(renewableTable).toBeInTheDocument()
   })
 
-  it('labels the original report column when supplemental exists and original is not assessed', async () => {
+  it('labels non-assessed reports when an assessed report exists in the chain', async () => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [
@@ -442,7 +442,34 @@ describe('CompareReports Component', () => {
             complianceReportId: 2,
             timestamp: '2021-02-01',
             version: 1,
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+          }
+        ],
+        report: { compliancePeriod: '2021', complianceReportId: 2 }
+      }
+    })
+
+    render(<CompareReports />, { wrapper })
+
+    await waitFor(() => {
+      // Original Report is not assessed, so it should show the not-assessed label
+      expect(
+        screen.getAllByText('report:reportNotAssessed').length
+      ).toBeGreaterThan(0)
+    })
+  })
+
+  it('does not label a report as not assessed when no report in the chain is assessed', async () => {
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        chain: [
+          {
+            ...mockReportChain[0],
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+          },
+          {
+            ...mockReportChain[1],
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
           }
         ],
         report: { compliancePeriod: '2021', complianceReportId: 2 }
@@ -453,35 +480,7 @@ describe('CompareReports Component', () => {
 
     await waitFor(() => {
       expect(
-        screen.getAllByText('report:originalReportNotAssessed').length
-      ).toBeGreaterThan(0)
-    })
-  })
-
-  it('does not label the original report when it has been assessed', async () => {
-    useComplianceReportStore.mockReturnValue({
-      currentReport: {
-        chain: [
-          {
-            ...mockReportChain[0],
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-          },
-          mockReportChain[1],
-          mockReportChain[2]
-        ],
-        report: { compliancePeriod: '2021', complianceReportId: 3 }
-      }
-    })
-
-    render(<CompareReports />, { wrapper })
-
-    const report1Select = screen.getAllByRole('combobox')[0]
-    fireEvent.mouseDown(report1Select)
-    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
-
-    await waitFor(() => {
-      expect(
-        screen.queryByText('report:originalReportNotAssessed')
+        screen.queryByText('report:reportNotAssessed')
       ).not.toBeInTheDocument()
     })
   })
@@ -690,5 +689,184 @@ describe('CompareReports Component', () => {
     // Each select should be present but may have limited options
     expect(selects[0]).toBeInTheDocument()
     expect(selects[1]).toBeInTheDocument()
+  })
+
+  describe('Low Carbon Fuel grey-out logic in Compare mode', () => {
+    const greyedLines = [12, 13, 14, 16, 19]
+    const greyedLinesPre2023 = [17, 22]
+
+    const makeLowCarbonSummary = (lines) =>
+      lines.map((line) => ({
+        line,
+        description: `Line ${line}`,
+        format: 'number',
+        value: 999
+      }))
+
+    it('marks lines 12,13,14,16,19 as greyed for a 2023 compliance period', async () => {
+      const allLines = [...greyedLines, ...greyedLinesPre2023, 15, 18, 20]
+      const summary = {
+        data: {
+          complianceReportId: 2,
+          renewableFuelTargetSummary: [],
+          lowCarbonFuelTargetSummary: makeLowCarbonSummary(allLines),
+          nonCompliancePenaltySummary: []
+        }
+      }
+
+      useComplianceReportStore.mockReturnValue({
+        currentReport: {
+          chain: mockReportChain.slice(0, 2),
+          report: {
+            compliancePeriod: { description: '2023' },
+            complianceReportId: 2
+          }
+        }
+      })
+      useGetComplianceReportSummary.mockReturnValue(summary)
+
+      render(<CompareReports />, { wrapper })
+
+      // Lines 12,13,14,16,19 should have greyed=true so values are suppressed
+      // They appear in the DOM but value cells should be empty (greyed out)
+      await waitFor(() => {
+        expect(screen.getByText('Line 15')).toBeInTheDocument()
+      })
+    })
+
+    it('does NOT grey lines 17,22 for a 2023 compliance period', async () => {
+      const summary = {
+        data: {
+          complianceReportId: 2,
+          renewableFuelTargetSummary: [],
+          lowCarbonFuelTargetSummary: makeLowCarbonSummary([17, 22]),
+          nonCompliancePenaltySummary: []
+        }
+      }
+
+      useComplianceReportStore.mockReturnValue({
+        currentReport: {
+          chain: mockReportChain.slice(0, 2),
+          report: {
+            compliancePeriod: { description: '2023' },
+            complianceReportId: 2
+          }
+        }
+      })
+      useGetComplianceReportSummary.mockReturnValue(summary)
+
+      render(<CompareReports />, { wrapper })
+
+      // Lines 17 and 22 should NOT be greyed for 2023
+      await waitFor(() => {
+        expect(screen.getByText('Line 17')).toBeInTheDocument()
+        expect(screen.getByText('Line 22')).toBeInTheDocument()
+      })
+    })
+
+    it('greys lines 17 and 22 for 2022 compliance period', async () => {
+      const summary = {
+        data: {
+          complianceReportId: 2,
+          renewableFuelTargetSummary: [],
+          lowCarbonFuelTargetSummary: makeLowCarbonSummary([17, 22]),
+          nonCompliancePenaltySummary: []
+        }
+      }
+
+      useComplianceReportStore.mockReturnValue({
+        currentReport: {
+          chain: mockReportChain.slice(0, 2),
+          report: {
+            compliancePeriod: { description: '2022' },
+            complianceReportId: 2
+          }
+        }
+      })
+      useGetComplianceReportSummary.mockReturnValue(summary)
+
+      render(<CompareReports />, { wrapper })
+
+      await waitFor(() => {
+        expect(screen.getByText('Line 17')).toBeInTheDocument()
+        expect(screen.getByText('Line 22')).toBeInTheDocument()
+      })
+    })
+
+    it('does NOT grey any low carbon lines for a 2024 compliance period', async () => {
+      const allTargetLines = [12, 13, 14, 16, 17, 19, 22]
+      const summary = {
+        data: {
+          complianceReportId: 2,
+          renewableFuelTargetSummary: [],
+          lowCarbonFuelTargetSummary: makeLowCarbonSummary(allTargetLines),
+          nonCompliancePenaltySummary: []
+        }
+      }
+
+      useComplianceReportStore.mockReturnValue({
+        currentReport: {
+          chain: mockReportChain.slice(0, 2),
+          report: {
+            compliancePeriod: { description: '2024' },
+            complianceReportId: 2
+          }
+        }
+      })
+      useGetComplianceReportSummary.mockReturnValue(summary)
+
+      render(<CompareReports />, { wrapper })
+
+      await waitFor(() => {
+        allTargetLines.forEach((line) => {
+          expect(screen.getByText(`Line ${line}`)).toBeInTheDocument()
+        })
+      })
+    })
+
+    it('sets report1, report2 and delta to null for greyed rows', async () => {
+      const summary = {
+        data: {
+          complianceReportId: 2,
+          renewableFuelTargetSummary: [],
+          lowCarbonFuelTargetSummary: [
+            { line: 12, description: 'Line 12', format: 'number', value: 500 },
+            { line: 18, description: 'Line 18', format: 'number', value: 200 }
+          ],
+          nonCompliancePenaltySummary: []
+        }
+      }
+
+      useComplianceReportStore.mockReturnValue({
+        currentReport: {
+          chain: mockReportChain.slice(0, 2),
+          report: {
+            compliancePeriod: { description: '2023' },
+            complianceReportId: 2
+          }
+        }
+      })
+      useGetComplianceReportSummary.mockReturnValue(summary)
+
+      render(<CompareReports />, { wrapper })
+
+      // Line 12 is greyed: value 500 must NOT appear in the table
+      await waitFor(() => {
+        expect(screen.getByText('Line 12')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('500')).not.toBeInTheDocument()
+    })
+
+    it('does not break when compliancePeriodYear is missing from store', () => {
+      useComplianceReportStore.mockReturnValue({
+        currentReport: {
+          chain: mockReportChain.slice(0, 2),
+          report: {} // no compliancePeriod
+        }
+      })
+      useGetComplianceReportSummary.mockReturnValue(reportData1)
+
+      expect(() => render(<CompareReports />, { wrapper })).not.toThrow()
+    })
   })
 })

@@ -554,7 +554,8 @@ class TransactionRepository:
             # 1. Compliance report transactions
             if (
                 row.is_compliance_report
-                and row.compliance_status == ComplianceReportStatusEnum.Assessed
+                and row.compliance_status
+                in (ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Exempted)
             ):
                 # For compliance reports, check BOTH:
                 # a) The report's compliance period is <= the target period, AND

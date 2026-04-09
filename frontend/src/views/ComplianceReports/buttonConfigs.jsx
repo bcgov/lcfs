@@ -355,17 +355,44 @@ class ButtonActionFactory {
 
   // IDIR Director Actions
   issueAssessment() {
-    // Use contextual label based on whether the report is marked as non-assessment
+    // Determine button label based on report flags
     const isNonAssessment = this.context.isNonAssessment || false
-    const buttonLabel = isNonAssessment
-      ? this.context.t('report:actionBtns.issueNonAssessmentBtn')
-      : this.context.t('report:actionBtns.assessReportBtn')
+    const isExempted =
+      this.context.isRenewableFuelExempted ||
+      this.context.isLowCarbonFuelExempted ||
+      false
+    const buttonLabel = isExempted
+      ? this.context.t('report:actionBtns.issueExemptionBtn')
+      : isNonAssessment
+        ? this.context.t('report:actionBtns.issueNonAssessmentBtn')
+        : this.context.t('report:actionBtns.assessReportBtn')
 
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'issue-assessment-btn',
       label: buttonLabel,
       handler: (formData) => {
+        // Check if the report has exemption flags set
+        if (
+          formData.isRenewableFuelExempted ||
+          formData.isLowCarbonFuelExempted
+        ) {
+          // Backend auto-transitions Assessed → Exempted when exemption flags are set
+          return this.context.setModalData({
+            primaryButtonAction: () =>
+              this.context.updateComplianceReport({
+                ...formData,
+                status: COMPLIANCE_REPORT_STATUSES.ASSESSED
+              }),
+            primaryButtonText: this.context.t(
+              'report:actionBtns.issueExemptionBtn'
+            ),
+            secondaryButtonText: this.context.t('cancelBtn'),
+            title: this.context.t('confirmation'),
+            content: this.context.t('report:exemptConfirmText')
+          })
+        }
+
         // Check if the report is marked as non-assessment
         if (formData.isNonAssessment) {
           return this.context.setModalData({
@@ -519,6 +546,14 @@ const BUTTON_RULES = {
     [USER_TYPES.IDIR_ANALYST]: [], // 'createSupplemental' is available directly in AssessmentRecommendation
     [USER_TYPES.IDIR_MANAGER]: [],
     [USER_TYPES.IDIR_DIRECTOR]: []
+  },
+
+  [COMPLIANCE_REPORT_STATUSES.EXEMPTED]: {
+    [USER_TYPES.BCEID_USER]: [],
+    [USER_TYPES.BCEID_SIGNER]: [],
+    [USER_TYPES.IDIR_ANALYST]: [],
+    [USER_TYPES.IDIR_MANAGER]: [],
+    [USER_TYPES.IDIR_DIRECTOR]: []
   }
 }
 
@@ -590,12 +625,13 @@ function shouldShowButton(buttonName, context) {
 
 function isPastMarch31Deadline(compliancePeriod) {
   const compliancePeriodYear = parseInt(compliancePeriod)
+  // Use April 1 midnight so the button remains visible for the entire day of March 31
   const deadline = DateTime.fromObject({
     year: compliancePeriodYear + 1,
-    month: 3,
-    day: 31
+    month: 4,
+    day: 1
   })
-  return DateTime.now() > deadline
+  return DateTime.now() >= deadline
 }
 
 // =============================================================================

@@ -7,7 +7,6 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from fastapi import status
 from lcfs.web.api.role.schema import user_has_roles
-from lcfs.settings import settings
 
 
 class ComplianceReportValidation:
@@ -25,14 +24,6 @@ class ComplianceReportValidation:
         """
         Validates that the user has access to the specified compliance report.
 
-        TEMPORARY SOLUTION - Issue #3730
-        This method includes temporary year-based access checks for 2025/2026.
-        A more robust long-term solution should be implemented to support future years
-        dynamically (e.g., database-driven configuration per compliance period).
-
-        Compliance year access rules (also enforced in organization/validation.py):
-        - 2025: Blocked when feature_reporting_2025_enabled is False
-        - 2026: ALWAYS requires early issuance, regardless of 2025 flag status
         """
         compliance_report = await self.repo.get_compliance_report_schema_by_id(
             compliance_report_id
@@ -58,35 +49,39 @@ class ComplianceReportValidation:
                 detail="User does not have access to this compliance report.",
             )
 
-        # For non-government users, validate access to 2025/2026 compliance periods
-        # Government users can always access all reports for oversight
-        if not is_government and user_organization_id:
-            compliance_period = compliance_report.compliance_period
-            period_desc = (
-                compliance_period.description
-                if hasattr(compliance_period, "description")
-                else str(compliance_period)
+        return compliance_report
+
+    async def validate_organization_access_by_group_uuid(
+        self, compliance_report_group_uuid: str
+    ):
+        """
+        Validates that the user has access to compliance reports identified by
+        a group UUID. Raises 404 if no reports are found, 403 if the requesting
+        supplier does not belong to the report's organization.
+        """
+        reports = await self.repo.get_compliance_report_chain(
+            compliance_report_group_uuid
+        )
+        if not reports:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found.",
             )
 
-            # 2025: Blocked when feature_reporting_2025_enabled is False
-            if period_desc == "2025" and not settings.feature_reporting_2025_enabled:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="2025 reporting is not yet available.",
-                )
+        organization_id = reports[0].organization_id
+        user_organization_id = (
+            self.request.user.organization.organization_id
+            if self.request.user.organization
+            else None
+        )
 
-            # 2026: ALWAYS requires early issuance, regardless of 2025 flag status
-            if period_desc == "2026":
-                early_issuance = await self.org_repo.get_early_issuance_by_year(
-                    user_organization_id, "2026"
-                )
-                if not early_issuance or not early_issuance.has_early_issuance:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="2026 reporting is only available to early issuance suppliers.",
-                    )
+        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
 
-        return compliance_report
+        if not is_government and organization_id != user_organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this compliance report.",
+            )
 
     async def validate_compliance_report_access(
         self, compliance_report: ComplianceReport

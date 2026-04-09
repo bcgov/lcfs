@@ -3,7 +3,7 @@ name: Testing pipeline
 on:
   pull_request:
     branches:
-      - '*'
+      - "*"
 
 permissions:
   contents: read
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   backend-setup:
-    name: 'Backend Setup'
+    name: "Backend Setup"
     runs-on: ubuntu-latest
     outputs:
       # Add output to signal completion
@@ -35,19 +35,19 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             backend
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.2.0
         with:
-          python-version: '3.10.13'
+          python-version: "3.10.13"
 
       - name: Cache Poetry dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: |
             ~/.cache/pypoetry
@@ -118,7 +118,7 @@ jobs:
           echo "Database dump created successfully ($(stat --printf=%s lcfs_template.pgdump) bytes)"
 
       - name: Upload database template
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: db-template
           path: lcfs_template.pgdump
@@ -131,7 +131,7 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   backend-tests:
-    name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
+    name: "Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})"
     needs: backend-setup
     runs-on: ubuntu-latest
     # Add explicit dependency check
@@ -201,19 +201,19 @@ jobs:
             45,
           ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             backend
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.2.0
         with:
-          python-version: '3.10.13'
+          python-version: "3.10.13"
 
       - name: Cache Poetry dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: |
             ~/.cache/pypoetry
@@ -233,7 +233,7 @@ jobs:
           poetry install
 
       - name: Cache pytest timing data
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: backend/.pytest_cache
           key: ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-${{ hashFiles('backend/lcfs/tests/**/*.py') }}
@@ -251,7 +251,7 @@ jobs:
           echo "PostgreSQL is ready!"
 
       - name: Download database template
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           name: db-template
           path: .
@@ -327,20 +327,20 @@ jobs:
 
       - name: Upload pytest results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: pytest-results-shard-${{ matrix.shard }}
           path: backend/pytest-results-shard-${{ matrix.shard }}.xml
           retention-days: 1
 
   post-backend-tests:
-    name: 'Publish Backend Test Results'
+    name: "Publish Backend Test Results"
     if: always()
     needs: backend-tests
     runs-on: ubuntu-latest
     steps:
       - name: Download all test results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: pytest-results-shard-*
           merge-multiple: true
@@ -366,35 +366,35 @@ jobs:
           python3 merge_results.py
 
       - name: Publish Backend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@v2.23.0
         with:
           files: merged-pytest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: 'Backend Test Results'
-          check_name: 'Backend Test Results'
-          fail_on: 'errors'
-          report_individual_runs: 'true'
-          deduplicate_classes_by_file_name: 'true'
+          comment_title: "Backend Test Results"
+          check_name: "Backend Test Results"
+          fail_on: "errors"
+          report_individual_runs: "true"
+          deduplicate_classes_by_file_name: "true"
 
   frontend-setup:
-    name: 'Frontend Setup'
+    name: "Frontend Setup"
     runs-on: ubuntu-latest
     outputs:
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             frontend
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
@@ -414,7 +414,7 @@ jobs:
       #     wait $TYPE_CHECK_PID
 
       - name: Cache node_modules for test shards
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
@@ -426,7 +426,7 @@ jobs:
         run: echo "complete=true" >> $GITHUB_OUTPUT
 
   frontend-tests:
-    name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
+    name: "Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
     needs: frontend-setup
     runs-on: ubuntu-latest
     if: needs.frontend-setup.outputs.setup-complete == 'true'
@@ -469,19 +469,20 @@ jobs:
           ]
         shardTotal: [32]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             frontend
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Restore node_modules cache
-        uses: actions/cache@v4
+        id: cache-restore
+        uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
           key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
@@ -490,11 +491,10 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Install frontend dependencies (fallback)
+        if: steps.cache-restore.outputs.cache-hit != 'true'
         run: |
           cd frontend
-          if [ ! -d "node_modules" ]; then
-            npm ci --prefer-offline --no-audit --no-fund
-          fi
+          npm ci --prefer-offline --no-audit --no-fund
 
       - name: Run frontend tests
         id: frontend_tests
@@ -534,7 +534,7 @@ jobs:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          VITEST_POOL_THREADS: '4'
+          VITEST_POOL_THREADS: "4"
 
       - name: Debug test failure details
         if: failure()
@@ -552,7 +552,7 @@ jobs:
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: blob-report-${{ matrix.shardIndex }}
           path: frontend/.vitest-reports/*
@@ -561,19 +561,19 @@ jobs:
           compression-level: 9
 
   post-frontend-tests:
-    name: 'Publish Frontend Test Results'
+    name: "Publish Frontend Test Results"
     if: always()
     needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             frontend
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: 20
 
@@ -585,7 +585,7 @@ jobs:
           npm install vitest@$VITEST_VERSION --no-save
 
       - name: Download blob reports from GitHub Actions Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           path: frontend/.vitest-reports
           pattern: blob-report-*
@@ -628,17 +628,17 @@ jobs:
           npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
 
       - name: Publish Frontend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@v2.23.0
         if: always()
         with:
           files: frontend/.vitest-reports/vitest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: 'Frontend Test Results'
-          check_name: 'Frontend Test Results'
-          fail_on: 'errors'
-          report_individual_runs: 'true'
-          deduplicate_classes_by_file_name: 'true'
-          comment_mode: 'always'
+          comment_title: "Frontend Test Results"
+          check_name: "Frontend Test Results"
+          fail_on: "errors"
+          report_individual_runs: "true"
+          deduplicate_classes_by_file_name: "true"
+          comment_mode: "always"
 
   teams-notification:
     needs: [post-backend-tests, post-frontend-tests]

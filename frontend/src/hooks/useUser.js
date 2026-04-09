@@ -44,6 +44,27 @@ export const useUser = (id, options) => {
   })
 }
 
+export const useSeededTestUsers = (seedEnv, options) => {
+  const client = useApiService()
+  const query = seedEnv ? `?seed_env=${seedEnv}` : ''
+  return useQuery({
+    queryKey: ['seeded-test-users', seedEnv || 'auto'],
+    queryFn: async () =>
+      (await client.get(`${apiRoutes.seededTestUsers}${query}`)).data,
+    ...options
+  })
+}
+
+export const useResolveOrgName = (options = {}) => {
+  const apiClient = useApiService()
+  return useMutation({
+    ...options,
+    mutationFn: async (payload) => {
+      return await apiClient.post(apiRoutes.resolveOrgName, payload)
+    }
+  })
+}
+
 export const useGetUserLoginHistory = (
   { page = 1, size = 10, sortOrders = [], filters = [] } = {},
   options

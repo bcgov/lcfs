@@ -79,8 +79,9 @@ describe('AdminLinksCard Component', () => {
     const translations = {
       'dashboard:adminLinks.administration': 'Administration',
       'dashboard:adminLinks.mngGovUsrsLabel': 'Manage Government Users',
-      'dashboard:adminLinks.addEditOrgsLabel': 'Add/Edit Organizations', 
-      'dashboard:adminLinks.usrActivity': 'User Activity'
+      'dashboard:adminLinks.addEditOrgsLabel': 'Add/Edit Organizations',
+      'dashboard:adminLinks.usrActivity': 'User Activity',
+      'dashboard:adminLinks.loginScreenBackground': 'Login Screen Background'
     }
     return translations[key] || key
   })
@@ -102,14 +103,15 @@ describe('AdminLinksCard Component', () => {
   it('renders all admin links correctly', () => {
     render(<AdminLinksCard />, { wrapper })
 
-    // Check all three admin links are rendered
+    // Check all four admin links are rendered
     expect(screen.getByText('Manage Government Users')).toBeInTheDocument()
     expect(screen.getByText('Add/Edit Organizations')).toBeInTheDocument()
     expect(screen.getByText('User Activity')).toBeInTheDocument()
-    
+    expect(screen.getByText('Login Screen Background')).toBeInTheDocument()
+
     // Check correct number of list item buttons
     const listItemButtons = screen.getAllByTestId('mui-list-item-button')
-    expect(listItemButtons).toHaveLength(3)
+    expect(listItemButtons).toHaveLength(4)
   })
 
   it('uses correct translation keys', () => {
@@ -119,6 +121,7 @@ describe('AdminLinksCard Component', () => {
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.mngGovUsrsLabel')
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.addEditOrgsLabel')
     expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.usrActivity')
+    expect(mockT).toHaveBeenCalledWith('dashboard:adminLinks.loginScreenBackground')
   })
 
   it('navigates to admin users list when first link is clicked', () => {
@@ -210,6 +213,9 @@ describe('AdminLinksCard Component', () => {
     
     fireEvent.click(buttons[2])
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USER_ACTIVITY)
+
+    fireEvent.click(buttons[3])
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND)
   })
 
   it('uses useTranslation hook with correct namespace', () => {

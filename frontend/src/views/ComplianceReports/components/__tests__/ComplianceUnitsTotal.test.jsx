@@ -134,5 +134,72 @@ describe('ComplianceUnitsTotal', () => {
     expect(screen.getByText('Custom Label:')).toBeInTheDocument()
     expect(screen.getByText('1,500')).toBeInTheDocument()
   })
+
+  describe('Currency formatting', () => {
+    it('formats as currency when isCurrency is true', () => {
+      render(
+        <ComplianceUnitsTotal
+          label="Penalty amount:"
+          value={1861.65}
+          isCurrency={true}
+        />
+      )
+
+      expect(screen.getByText('Penalty amount:')).toBeInTheDocument()
+      expect(screen.getByText('$1,861.65')).toBeInTheDocument()
+    })
+
+    it('formats as currency with zero cents', () => {
+      render(
+        <ComplianceUnitsTotal
+          label="Penalty amount:"
+          value={1000}
+          isCurrency={true}
+        />
+      )
+
+      expect(screen.getByText('Penalty amount:')).toBeInTheDocument()
+      expect(screen.getByText('$1,000.00')).toBeInTheDocument()
+    })
+
+    it('formats null value as $0.00 when isCurrency is true', () => {
+      render(
+        <ComplianceUnitsTotal
+          label="Penalty amount:"
+          value={null}
+          isCurrency={true}
+        />
+      )
+
+      expect(screen.getByText('Penalty amount:')).toBeInTheDocument()
+      expect(screen.getByText('$0.00')).toBeInTheDocument()
+    })
+
+    it('formats undefined value as $0.00 when isCurrency is true', () => {
+      render(
+        <ComplianceUnitsTotal
+          label="Penalty amount:"
+          value={undefined}
+          isCurrency={true}
+        />
+      )
+
+      expect(screen.getByText('Penalty amount:')).toBeInTheDocument()
+      expect(screen.getByText('$0.00')).toBeInTheDocument()
+    })
+
+    it('preserves decimal places for currency values', () => {
+      render(
+        <ComplianceUnitsTotal
+          label="Penalty amount:"
+          value={1234567.89}
+          isCurrency={true}
+        />
+      )
+
+      expect(screen.getByText('Penalty amount:')).toBeInTheDocument()
+      expect(screen.getByText('$1,234,567.89')).toBeInTheDocument()
+    })
+  })
 })
 

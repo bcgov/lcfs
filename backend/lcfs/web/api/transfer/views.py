@@ -19,7 +19,7 @@ get_async_db = dependencies.get_async_db_session
 @view_handler(["*"])
 async def get_all_transfers(request: Request, service: TransferServices = Depends()):
     """Endpoint to fetch all transfers."""
-    return await service.get_all_transfers()
+    return await service.get_all_transfers(request.user)
 
 
 @router.get("/{transfer_id}", response_model=TransferSchema)

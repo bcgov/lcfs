@@ -20,6 +20,22 @@ const Controls = styled(Box)({
 
 const FUEL_TYPES = ['gasoline', 'diesel', 'jetFuel']
 
+/**
+ * Mirrors the grey-out rules from SummaryTable.isLineGreyedByYear exactly:
+ * - Lines 12, 13, 14, 16, 19: grey for years before 2024
+ * - Lines 17, 22: grey for 2022 and prior
+ */
+const isLowCarbonLineGreyed = (lineNumber, compliancePeriodYear) => {
+  if (!compliancePeriodYear) return false
+  const year = parseInt(compliancePeriodYear)
+  const line = parseInt(lineNumber)
+
+  if ([12, 13, 14, 16, 19].includes(line) && year < 2024) return true
+  if ([17, 22].includes(line) && year <= 2022) return true
+
+  return false
+}
+
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
@@ -27,27 +43,32 @@ export const CompareReports = () => {
 
   const { currentReport } = useComplianceReportStore()
 
+  const compliancePeriodYear =
+    currentReport?.report?.compliancePeriod?.description ?? null
+
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
   const [hasUserSelectedFuel, setHasUserSelectedFuel] = useState(false)
 
-  const originalReport = useMemo(() => {
-    if (!Array.isArray(reportChain)) return null
-    return reportChain.find((report) => report.version === 0) || null
-  }, [reportChain])
-
-  const hasSupplementalReports = useMemo(() => {
+  const hasAssessedReport = useMemo(() => {
     if (!Array.isArray(reportChain)) return false
-    return reportChain.some((report) => (report.version ?? 0) > 0)
+    return reportChain.some(
+      (report) =>
+        report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    )
   }, [reportChain])
 
-  const shouldShowOriginalNotAssessedLabel = useMemo(() => {
-    if (!originalReport) return false
-    if (!hasSupplementalReports) return false
-    const originalStatus = originalReport.currentStatus?.status
-    return originalStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
-  }, [originalReport, hasSupplementalReports])
+  const isReportNotAssessed = (reportId) => {
+    if (!hasAssessedReport) return false
+    const report = reportChain.find((r) => r.complianceReportId === reportId)
+    if (!report) return false
+    const status = report.currentStatus?.status
+    return (
+      status !== COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+      status !== COMPLIANCE_REPORT_STATUSES.EXEMPTED
+    )
+  }
 
   useEffect(() => {
     if (currentReport) {
@@ -145,11 +166,13 @@ export const CompareReports = () => {
         })
       }
       for (const row of report1Summary.lowCarbonFuelTargetSummary) {
+        const greyed = isLowCarbonLineGreyed(row.line, compliancePeriodYear)
         lowCarbonSummary.push({
           line: row.line,
           description: row.description,
           format: row.format,
-          report1: row.value
+          report1: greyed ? null : row.value,
+          greyed
         })
       }
       for (const row of report1Summary.nonCompliancePenaltySummary) {
@@ -171,12 +194,17 @@ export const CompareReports = () => {
         row.delta = (row.report2 ?? 0) - row.report1
       }
       for (const row of lowCarbonSummary) {
+        if (row.greyed) {
+          row.report2 = null
+          row.delta = null
+          continue
+        }
         const matchingRow = report2Summary.lowCarbonFuelTargetSummary.find(
           (row2) => row2.line === row.line
         )
         if (matchingRow) {
           row.report2 = matchingRow.value
-          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+          row.delta = row.report2 !== null ? row.report2 - (row.report1 ?? 0) : null
         } else {
           row.report2 = null
           row.delta = null
@@ -203,7 +231,7 @@ export const CompareReports = () => {
     setRenewableSummary(renewableSummary)
     setLowCarbonSummary(lowCarbonSummary)
     setNonCompliancePenaltySummary(nonCompliancePenaltySummary)
-  }, [report1Summary, report2Summary, fuelType])
+  }, [report1Summary, report2Summary, fuelType, compliancePeriodYear])
 
   function onSelectReport1(event) {
     const newReport1ID = event.target.value
@@ -255,27 +283,19 @@ export const CompareReports = () => {
         ?.nickname || ''
     : ''
 
-  const originalReportId = originalReport?.complianceReportId
-
-  const isOriginalReport = (reportId) =>
-    !!originalReportId && reportId === originalReportId
-
-  const shouldLabelOriginal = (reportId) =>
-    shouldShowOriginalNotAssessedLabel && isOriginalReport(reportId)
-
-  const report1Label = shouldLabelOriginal(report1ID)
-    ? t('report:originalReportNotAssessed')
+  const report1Label = isReportNotAssessed(report1ID)
+    ? t('report:reportNotAssessed', { nickname: selectedReportName1 })
     : selectedReportName1
 
-  const report2Label = shouldLabelOriginal(report2ID)
-    ? t('report:originalReportNotAssessed')
+  const report2Label = isReportNotAssessed(report2ID)
+    ? t('report:reportNotAssessed', { nickname: selectedReportName2 })
     : selectedReportName2
 
   const highlightedColumns = []
-  if (shouldLabelOriginal(report1ID)) {
+  if (isReportNotAssessed(report1ID)) {
     highlightedColumns.push('report1')
   }
-  if (shouldLabelOriginal(report2ID)) {
+  if (isReportNotAssessed(report2ID)) {
     highlightedColumns.push('report2')
   }
 

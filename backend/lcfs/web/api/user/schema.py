@@ -98,3 +98,18 @@ class UserLoginHistoryResponseSchema(BaseSchema):
 
 class UpdateEmailSchema(BaseSchema):
     email: EmailStr
+
+
+class ResolveOrgNameRequestSchema(BaseSchema):
+    organization_name: str
+    salt_phrase: str
+
+
+class ResolveOrgNameResponseSchema(BaseSchema):
+    resolved: bool
+    organization_id: Optional[int] = None
+    input_name: str
+    masked_name: Optional[str] = None
+    original_name: Optional[str] = None
+    direction: Optional[str] = None
+    message: Optional[str] = None

@@ -21,6 +21,8 @@ branch_labels = None
 depends_on = None
 
 # Specify which sections to execute from the SQL file
+# These sections create the views that were excluded from the earlier migration
+# because they reference organization_early_issuance_by_year table
 SECTIONS_TO_EXECUTE = [
     "Compliance Report Base View With Early Issuance By Year",
     "Allocation Agreement Base View With Early Issuance By Year",
