@@ -15,6 +15,7 @@ import structlog
 from typing import Dict, List
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 
@@ -192,9 +193,7 @@ async def create_views(environment: str = "dev"):
     engine = create_async_engine(
         db_url,
         future=True,
-        pool_size=10,
-        max_overflow=20,
-        pool_pre_ping=True,
+        poolclass=NullPool,
     )
 
     AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession)

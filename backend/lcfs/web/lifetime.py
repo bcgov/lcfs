@@ -7,6 +7,7 @@ from fastapi_cache.backends.redis import RedisBackend
 from lcfs.services.scheduler.scheduler import shutdown_scheduler, start_scheduler
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
@@ -27,12 +28,11 @@ def _setup_db(app: FastAPI) -> None:  # pragma: no cover
     engine = create_async_engine(
         str(settings.db_url),
         echo=settings.db_echo,
-        pool_size=30,
-        max_overflow=50,
-        pool_pre_ping=True,
-        pool_recycle=3600,
-        pool_timeout=30,
-        pool_reset_on_return="commit",
+        poolclass=NullPool,
+        connect_args={
+            "prepared_statement_cache_size": 0,
+            "statement_cache_size": 0,
+        },
     )
     session_factory = async_sessionmaker(
         engine,

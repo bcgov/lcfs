@@ -49,6 +49,11 @@ class TransactionsService:
     @staticmethod
     def _to_pacific(dt):
         """Convert a naive-UTC or aware datetime to America/Vancouver."""
+        from datetime import date as date_type
+
+        # MV columns cast to ::date return date objects, not datetime
+        if isinstance(dt, date_type) and not isinstance(dt, datetime):
+            return dt
         pacific = zoneinfo.ZoneInfo("America/Vancouver")
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
