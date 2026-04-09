@@ -39,7 +39,7 @@ class QuantityUnitsEnum(enum.Enum):
     Kilograms = "kg"
     Kilowatt_hour = "kWh"
     Gigajoules = "Gj"
-    Cubic_metres = "m³"
+    Cubic_metres = "m³ (15°C and 1 atm)"
 
 
 # Association table for

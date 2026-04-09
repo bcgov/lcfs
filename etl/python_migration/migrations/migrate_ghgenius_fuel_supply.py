@@ -53,6 +53,7 @@ class GHGeniusMigrator:
             "L": "Litres",
             "kg": "Kilograms",
             "m³": "Cubic_metres",  # UTF-8 encoded
+            "m³ (15°C and 1 atm)": "Cubic_metres",  # Updated label
             "m\xb3": "Cubic_metres",  # Latin-1 encoded (byte 0xb3)
             "m\ufffd": "Cubic_metres",  # Corrupted: replacement character (U+FFFD)
             "m\xef\xbf\xbd": "Cubic_metres",  # Raw UTF-8 bytes for replacement char
