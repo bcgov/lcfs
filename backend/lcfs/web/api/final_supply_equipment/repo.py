@@ -1070,9 +1070,7 @@ class FinalSupplyEquipmentRepository:
         """
         Get paginated charging equipment reporting rows from reporting views.
         """
-        view_model = (
-            FSEReportingBasePrefView if mode == "all" else FSEReportingBaseView
-        )
+        view_model = FSEReportingBasePrefView
         vt = view_model.__table__
 
         stmt = select(
