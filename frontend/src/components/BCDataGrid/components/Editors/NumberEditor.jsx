@@ -33,7 +33,7 @@ export const NumberEditor = forwardRef(
     useImperativeHandle(ref, () => {
       return {
         getValue() {
-          return value.replace(/,/g, '') // Remove commas when returning the value
+          return String(value).replace(/,/g, '') // Remove commas when returning the value
         },
         isCancelBeforeStart() {
           return false

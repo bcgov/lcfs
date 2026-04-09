@@ -188,11 +188,19 @@ export const AddEditUser = ({
   }, [bceidRoles])
 
   const idirRole = watch('idirRole')
+  const iaRole = watch('iaRole')
+
   useEffect(() => {
     if (idirRole === roles.director.toLowerCase()) {
       setValue('iaRole', '')
     }
   }, [idirRole])
+
+  useEffect(() => {
+    if (iaRole && idirRole === roles.director.toLowerCase()) {
+      setValue('idirRole', '')
+    }
+  }, [iaRole])
 
   useEffect(() => {
     if (isUserFetched && data) {

@@ -54,7 +54,10 @@ export const AssignedAnalystCell = ({ data, onRefresh }) => {
   })
 
   // Check if user can assign analysts (IDIR users only)
-  const canAssign = hasRoles('Government', 'Analyst')
+  const canAssign =
+    hasRoles('Government', 'Analyst') ||
+    hasRoles('Government', 'Compliance Manager') ||
+    hasRoles('Government', 'Director')
 
   const handleAssignment = (analystId) => {
     assignAnalyst({

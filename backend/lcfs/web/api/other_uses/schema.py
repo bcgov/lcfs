@@ -11,7 +11,10 @@ from lcfs.web.api.base import (
     ComplianceReportRequestSchema,
 )
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from lcfs.web.utils.schema_validators import fuel_code_required_label
+from lcfs.web.utils.schema_validators import (
+    fuel_code_required_label,
+    other_expected_use_required,
+)
 
 
 class FuelCodeStatusEnumSchema(str, Enum):
@@ -116,11 +119,29 @@ class OtherUsesCreateSchema(BaseSchema):
     @model_validator(mode="before")
     @classmethod
     def check_fuel_code_required(cls, values):
-        return fuel_code_required_label(values)
+        values = fuel_code_required_label(values)
+        return other_expected_use_required(values)
 
 
-class OtherUsesSchema(OtherUsesCreateSchema):
-    pass
+class OtherUsesSchema(BaseSchema):
+    other_uses_id: Optional[int] = None
+    compliance_report_id: int
+    fuel_type: str
+    fuel_category: str
+    provision_of_the_act: str
+    quantity_supplied: int
+    units: str
+    expected_use: str
+    fuel_code: Optional[str] = None
+    ci_of_fuel: Optional[float] = None
+    rationale: Optional[str] = None
+    deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    action_type: Optional[str] = None
+    is_new_supplemental_entry: Optional[bool] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
 
 
 class PaginatedOtherUsesRequestSchema(BaseSchema):

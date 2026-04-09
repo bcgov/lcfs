@@ -1,9 +1,41 @@
+import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// @/components/BCForm is globally mocked in testSetup.js:
-//   BCFormCheckbox with name="adminRole" → <div data-test="adminRole-checkbox-group"> + child inputs
-//   BCFormRadio  with name="iaRole"      → <div data-test="iaRole-radio-group"> + child inputs
+// Local override for @/components/BCForm so that BCFormRadio propagates `disabled`
+// to its rendered inputs. This lets us assert the new behaviour where IA radio
+// inputs are NOT disabled simply because Director is selected.
+vi.mock('@/components/BCForm', () => ({
+  BCFormCheckbox: ({ name, options = [] }) =>
+    React.createElement(
+      'div',
+      { 'data-test': `${name}-checkbox-group` },
+      options.map((opt, i) =>
+        React.createElement('input', {
+          key: `${name}-${i}`,
+          type: 'checkbox',
+          'data-test': opt.dataTestId || `${name}${i + 1}`,
+          'data-testid': opt.dataTestId || `${name}${i + 1}`
+        })
+      )
+    ),
+  BCFormRadio: ({ name, options = [], disabled }) =>
+    React.createElement(
+      'div',
+      { 'data-test': `${name}-radio-group` },
+      options.map((opt, i) =>
+        React.createElement('input', {
+          key: `${name}-${i}`,
+          type: 'radio',
+          name,
+          value: opt.value || opt,
+          disabled: !!disabled,
+          'data-test': opt.dataTestId || `${name}${i + 1}`,
+          'data-testid': opt.dataTestId || `${name}${i + 1}`
+        })
+      )
+    )
+}))
 
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, component }) => (
@@ -76,10 +108,14 @@ import { adminRoleOptions, iaRoleOptions } from '../_schema'
 
 const t = vi.fn((key) => key)
 
-function makeForm(idirRoleValue = '') {
+function makeForm(idirRoleValue = '', iaRoleValue = '') {
   return {
     control: { __mockIdirRole: idirRoleValue },
-    watch: vi.fn((field) => (field === 'idirRole' ? idirRoleValue : ''))
+    watch: vi.fn((field) => {
+      if (field === 'idirRole') return idirRoleValue
+      if (field === 'iaRole') return iaRoleValue
+      return ''
+    })
   }
 }
 
@@ -157,9 +193,8 @@ describe('IDIRSpecificRoleFields', () => {
     expect(iaRoleOptions).toHaveBeenCalledWith(t)
   })
 
-  it('passes disabled prop to adminRole checkbox group', () => {
+  it('disables idirRole radios (Director/Analyst/CM) when disabled=true', () => {
     render(<IDIRSpecificRoleFields form={makeForm()} disabled={true} t={t} />)
-    // All radio inputs inside the idirRole controller should be disabled
     const radios = screen.getAllByTestId('radio')
     radios.forEach((r) => expect(r).toBeDisabled())
   })
@@ -167,5 +202,27 @@ describe('IDIRSpecificRoleFields', () => {
   it('Director radio is rendered in the radio group', () => {
     render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={false} t={t} />)
     expect(screen.getByTestId('radio-group')).toBeInTheDocument()
+  })
+
+  it('IA role radio inputs are NOT disabled when Director is selected and form is enabled', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={false} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
+    expect(iaInputs).toHaveLength(2)
+    iaInputs.forEach((input) => expect(input).not.toBeDisabled())
+  })
+
+  it('IA role radio inputs ARE disabled when form disabled=true, regardless of Director', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={true} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
+    iaInputs.forEach((input) => expect(input).toBeDisabled())
+  })
+
+  it('IA role radio inputs are enabled when no idirRole is selected', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('')} disabled={false} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
+    iaInputs.forEach((input) => expect(input).not.toBeDisabled())
   })
 })
