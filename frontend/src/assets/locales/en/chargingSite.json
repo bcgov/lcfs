@@ -28,7 +28,9 @@
     "undoValidation": "Undo validation",
     "setToDecommission": "Set to decommissioned",
     "returnSelectedToDraft": "Return selected to draft",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "expandHistory": "Expand history",
+    "collapseHistory": "Collapse history"
   },
   "tooltips": {
     "onlySubmittedCanBeValidated": "Only equipment with Submitted status can be validated",
@@ -84,6 +86,7 @@
   },
   "viewTitle": "Charging Site/FSE list",
   "cardTitle": "Charging site",
+  "historyToggle": "Site/FSE history",
   "cardLabels": {
     "organization": "Organization",
     "coordinates": "Coordinates",
@@ -99,6 +102,8 @@
   "documentTitle": "Charging site/FSE attachments",
   "gridTitle": "Submit or decommission FSE",
   "gridDescription": "Submit draft or updated FSE to government for validation, or decommission FSE to remove from future compliance reports. Select buttons will only select FSE displayed on current page. Increase page size and/or use filters to assist bulk processing.",
+  "historyGridTitle": "Compliance history",
+  "historyGridDescription": "History mode is read-only and shows all available FSE versions for this charging site, including the compliance years each version was reported in.",
   "noSitesFound": "No charging sites found",
   "newSiteBtn": "New charging site",
   "addNewSite": "Add charging sites",
@@ -139,6 +144,7 @@
     "latitude": "Latitude",
     "longitude": "Longitude",
     "notes": "FSE notes",
+    "complianceYears": "Compliance years",
     "created": "Created",
     "lastUpdated": "Last updated"
   },

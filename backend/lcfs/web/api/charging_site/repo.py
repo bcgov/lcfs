@@ -12,6 +12,8 @@ from lcfs.db.models.compliance import (
     ChargingSiteStatus,
     ChargingEquipmentStatus,
     ComplianceReport,
+    ComplianceReportChargingEquipment,
+    CompliancePeriod,
     AllocationAgreement,
 )
 from lcfs.db.models.compliance.ChargingSite import (
@@ -216,6 +218,34 @@ class ChargingSiteRepository:
         )
         result = await self.db.execute(stmt)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_charging_site_versions_by_id(
+        self, charging_site_id: int
+    ) -> Sequence[ChargingSite]:
+        """
+        Retrieve all versions for the charging site group identified by the provided site ID.
+        """
+        group_uuid_subquery = (
+            select(ChargingSite.group_uuid)
+            .where(ChargingSite.charging_site_id == charging_site_id)
+            .limit(1)
+            .scalar_subquery()
+        )
+
+        stmt = (
+            select(ChargingSite)
+            .options(
+                joinedload(ChargingSite.status),
+                joinedload(ChargingSite.organization),
+                joinedload(ChargingSite.allocating_organization),
+                selectinload(ChargingSite.documents),
+            )
+            .where(ChargingSite.group_uuid == group_uuid_subquery)
+            .order_by(ChargingSite.version.desc(), ChargingSite.update_date.desc())
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     @repo_handler
     async def get_equipment_for_charging_site_paginated(
@@ -429,6 +459,203 @@ class ChargingSiteRepository:
             equipment.append(ranked_eq)
 
         return equipment, total_count
+
+    @repo_handler
+    async def get_equipment_history_for_charging_site_paginated(
+        self,
+        site_id: int,
+        pagination: PaginationRequestSchema,
+    ):
+        """
+        Return all equipment versions for a charging site group, flattened so each
+        current version is followed by its historical versions in descending version order.
+        """
+        site_group_uuid = await self._get_group_uuid_by_site_id(site_id)
+        if not site_group_uuid:
+            return [], 0
+
+        site_ids_result = await self.db.execute(
+            select(ChargingSite.charging_site_id).where(
+                ChargingSite.group_uuid == site_group_uuid
+            )
+        )
+        related_site_ids = [row[0] for row in site_ids_result.fetchall()]
+        if not related_site_ids:
+            return [], 0
+
+        compliance_years_subquery = (
+            select(
+                ComplianceReportChargingEquipment.charging_equipment_id.label(
+                    "charging_equipment_id"
+                ),
+                ComplianceReportChargingEquipment.charging_equipment_version.label(
+                    "charging_equipment_version"
+                ),
+                func.array_agg(
+                    func.distinct(CompliancePeriod.description)
+                ).label("compliance_years"),
+            )
+            .join(
+                ComplianceReport,
+                ComplianceReport.compliance_report_id
+                == ComplianceReportChargingEquipment.compliance_report_id,
+            )
+            .join(
+                CompliancePeriod,
+                CompliancePeriod.compliance_period_id
+                == ComplianceReport.compliance_period_id,
+            )
+            .group_by(
+                ComplianceReportChargingEquipment.charging_equipment_id,
+                ComplianceReportChargingEquipment.charging_equipment_version,
+            )
+            .subquery()
+        )
+
+        source_site = aliased(ChargingSite, name="history_source_site")
+        latest_site = aliased(ChargingSite, name="history_latest_site")
+        latest_sites = latest_charging_site_version_subquery()
+        latest_version_subquery = (
+            select(
+                ChargingEquipment.group_uuid.label("group_uuid"),
+                func.max(ChargingEquipment.version).label("latest_version"),
+            )
+            .where(ChargingEquipment.charging_site_id.in_(related_site_ids))
+            .group_by(ChargingEquipment.group_uuid)
+            .subquery()
+        )
+
+        def _build_history_query(select_columns, include_loader_options=False):
+            history_query = (
+                select(*select_columns)
+                .join(
+                    source_site,
+                    ChargingEquipment.charging_site_id == source_site.charging_site_id,
+                )
+                .join(
+                    latest_sites,
+                    source_site.group_uuid == latest_sites.c.group_uuid,
+                )
+                .join(
+                    latest_site,
+                    and_(
+                        latest_site.group_uuid == latest_sites.c.group_uuid,
+                        latest_site.version == latest_sites.c.latest_version,
+                    ),
+                )
+                .join(
+                    latest_version_subquery,
+                    ChargingEquipment.group_uuid == latest_version_subquery.c.group_uuid,
+                )
+                .outerjoin(
+                    compliance_years_subquery,
+                    and_(
+                        ChargingEquipment.charging_equipment_id
+                        == compliance_years_subquery.c.charging_equipment_id,
+                        ChargingEquipment.version
+                        == compliance_years_subquery.c.charging_equipment_version,
+                    ),
+                )
+                .where(ChargingEquipment.charging_site_id.in_(related_site_ids))
+            )
+            if include_loader_options:
+                history_query = history_query.options(
+                    joinedload(ChargingEquipment.status),
+                    joinedload(ChargingEquipment.level_of_equipment),
+                    selectinload(ChargingEquipment.intended_uses),
+                    selectinload(ChargingEquipment.intended_users),
+                )
+            return history_query
+
+        count_query = _build_history_query(
+            [ChargingEquipment.charging_equipment_id], include_loader_options=False
+        )
+        query = _build_history_query(
+            [
+                ChargingEquipment,
+                latest_site,
+                compliance_years_subquery.c.compliance_years.label(
+                    "compliance_years"
+                ),
+                case(
+                    (
+                        ChargingEquipment.version
+                        < latest_version_subquery.c.latest_version,
+                        True,
+                    ),
+                    else_=False,
+                ).label("is_history_version"),
+            ],
+            include_loader_options=True,
+        )
+
+        if pagination.filters:
+            field_mappings = {
+                "allocating_organization": latest_site.allocating_organization_name,
+                "site_name": latest_site.site_name,
+                "registration_number": ChargingEquipment.equipment_number,
+                "serial_number": ChargingEquipment.serial_number,
+                "manufacturer": ChargingEquipment.manufacturer,
+                "model": ChargingEquipment.model,
+                "version": ChargingEquipment.version,
+            }
+            for filter_condition in pagination.filters:
+                if filter_condition.field == "status":
+                    condition = apply_filter_conditions(
+                        ChargingEquipmentStatus.status,
+                        filter_condition.filter,
+                        filter_condition.type,
+                        filter_condition.filter_type,
+                    )
+                    if condition is not None:
+                        count_query = count_query.join(
+                            ChargingEquipmentStatus,
+                            ChargingEquipment.status_id
+                            == ChargingEquipmentStatus.charging_equipment_status_id,
+                        ).where(condition)
+                        query = query.join(
+                            ChargingEquipmentStatus,
+                            ChargingEquipment.status_id
+                            == ChargingEquipmentStatus.charging_equipment_status_id,
+                        ).where(condition)
+                    continue
+
+                field = field_mappings.get(filter_condition.field)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field,
+                        filter_condition.filter,
+                        filter_condition.type,
+                        filter_condition.filter_type,
+                    )
+                    if condition is not None:
+                        count_query = count_query.where(condition)
+                        query = query.where(condition)
+
+        total_count = await self.db.scalar(
+            select(func.count()).select_from(count_query.subquery())
+        )
+
+        query = query.order_by(
+            latest_site.site_code.asc(),
+            ChargingEquipment.equipment_number.asc(),
+            ChargingEquipment.version.desc(),
+        )
+
+        offset = (pagination.page - 1) * pagination.size
+        query = query.offset(offset).limit(pagination.size)
+
+        result = await self.db.execute(query)
+        rows = result.all()
+        history_rows = []
+        for equipment, latest_site_row, compliance_years, is_history_version in rows:
+            setattr(equipment, "charging_site", latest_site_row)
+            setattr(equipment, "charging_site_id", latest_site_row.charging_site_id)
+            setattr(equipment, "compliance_years", compliance_years or [])
+            setattr(equipment, "is_history_version", is_history_version)
+            history_rows.append(equipment)
+
+        return history_rows, total_count or 0
 
     @repo_handler
     async def bulk_update_equipment_status(

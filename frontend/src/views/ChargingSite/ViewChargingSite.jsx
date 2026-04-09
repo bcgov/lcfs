@@ -6,17 +6,15 @@ import { ChargingSiteFSEGrid } from './components/ChargingSiteFSEGrid'
 import { useGetChargingSiteById } from '@/hooks/useChargingSite'
 import { useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import Loading from '@/components/Loading'
-import ChargingSitesMap from './components/ChargingSitesMap'
-import BCBox from '@/components/BCBox'
-import { Grid2 } from '@mui/material'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 
 export const ViewChargingSite = () => {
   const { t } = useTranslation('chargingSite')
   const alertRef = useRef(null)
+  const [historyMode, setHistoryMode] = useState(false)
   const { siteId } = useParams()
   const {
     data: currentUser,
@@ -30,12 +28,11 @@ export const ViewChargingSite = () => {
     isError,
     error,
     refetch
-  } = useGetChargingSiteById(siteId)
+  } = useGetChargingSiteById(siteId, { historyMode })
 
   if (isLoading || isCurrentUserLoading) {
     return <Loading />
   }
-  const orgID = currentUser?.organization?.organizationId
   const isIDIR = hasAnyRole(...govRoles)
   if (isError) {
     const errorMessage =
@@ -59,6 +56,8 @@ export const ViewChargingSite = () => {
         hasAnyRole={hasAnyRole}
         hasRoles={hasRoles}
         isIDIR={isIDIR}
+        historyMode={historyMode}
+        onHistoryModeChange={setHistoryMode}
         refetch={refetch}
         alertRef={alertRef}
       />
@@ -66,6 +65,7 @@ export const ViewChargingSite = () => {
       <ChargingSiteFSEGrid
         hasAnyRole={hasAnyRole}
         hasRoles={hasRoles}
+        historyMode={historyMode}
         isIDIR={isIDIR}
         currentUser={currentUser}
       />
