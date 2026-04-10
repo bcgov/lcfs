@@ -1,7 +1,7 @@
 """Create report_opening configuration table
 
 Revision ID: f3b1b9f03c9a
-Revises: 84d7cf6d1940
+Revises: 098cf79762b9
 Create Date: 2026-01-25 12:00:00.000000
 
 """
@@ -15,7 +15,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "f3b1b9f03c9a"
-down_revision = "84d7cf6d1940"
+down_revision = "098cf79762b9"
 branch_labels = None
 depends_on = None
 
