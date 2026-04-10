@@ -20,6 +20,15 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+vi.mock('@/components/BCButton', () => ({
+  __esModule: true,
+  default: ({ children, onClick, ...props }) => (
+    <button type="button" onClick={onClick} {...props}>
+      {children}
+    </button>
+  )
+}))
+
 vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   BCGridViewer: React.forwardRef((props, ref) => (
@@ -412,8 +421,12 @@ describe('ChargingSiteFSEGrid', () => {
 
       render(<ChargingSiteFSEGrid {...mockProps} historyMode />, { wrapper })
 
-      expect(lastGridProps.queryData.equipments).toHaveLength(2)
-      expect(lastGridProps.queryData.equipments[0]).toMatchObject({
+      await waitFor(() => {
+        expect(lastGridProps?.queryData?.data?.equipments).toBeDefined()
+      })
+
+      expect(lastGridProps.queryData.data.equipments).toHaveLength(2)
+      expect(lastGridProps.queryData.data.equipments[0]).toMatchObject({
         registrationNumber: 'REG001',
         version: 3,
         isCurrentVersionRow: true,
@@ -424,21 +437,23 @@ describe('ChargingSiteFSEGrid', () => {
       const toggleColumn = lastGridProps.columnDefs.find(
         (col) => col.field === '__historyToggle__'
       )
-      const toggleButton = render(
+      const { getByRole, unmount } = render(
         toggleColumn.cellRenderer({
-          data: lastGridProps.queryData.equipments[0]
+          data: lastGridProps.queryData.data.equipments[0]
         })
-      ).getByRole('button', {
+      )
+      const toggleButton = getByRole('button', {
         name: 'chargingSite:buttons.expandHistory'
       })
 
       fireEvent.click(toggleButton)
+      unmount()
 
       await waitFor(() => {
-        expect(lastGridProps.queryData.equipments).toHaveLength(3)
+        expect(lastGridProps.queryData.data.equipments).toHaveLength(3)
       })
 
-      expect(lastGridProps.queryData.equipments[1]).toMatchObject({
+      expect(lastGridProps.queryData.data.equipments[1]).toMatchObject({
         registrationNumber: 'REG001',
         version: 2,
         isHistoryVersion: true,
