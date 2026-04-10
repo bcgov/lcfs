@@ -5,7 +5,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -250,7 +250,7 @@ class TransferRepository:
         # If existing, update
         if existing:
             existing.comment = comment.strip()
-            existing.update_date = datetime.now()
+            existing.update_date = datetime.now(timezone.utc)
             self.db.add(existing)
             await self.db.flush()
             return existing
@@ -287,8 +287,8 @@ class TransferRepository:
                 )
             )
         )
-        existing_history.create_date = datetime.now()
-        existing_history.update_date = datetime.now()
+        existing_history.create_date = datetime.now(timezone.utc)
+        existing_history.update_date = datetime.now(timezone.utc)
         existing_history.user_profile_id = user_profile_id
         self.db.add(existing_history)
         await self.db.flush()
