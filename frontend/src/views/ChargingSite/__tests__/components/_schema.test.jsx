@@ -1,3 +1,5 @@
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   chargingSiteColDefs,
@@ -27,6 +29,15 @@ vi.mock('@/hooks/useChargingSite', () => ({
 
 vi.mock('@/components/BCDataGrid/FloatingFilters/BCSelectFloatingFilter', () => ({
   default: vi.fn()
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  __esModule: true,
+  default: ({ children, title, onClick }) => (
+    <button type="button" aria-label={title} onClick={onClick}>
+      {children}
+    </button>
+  )
 }))
 
 // ---------------------------------------------------------------------------
@@ -270,6 +281,76 @@ describe('chargingEquipmentColDefs', () => {
     it('does not add checkbox column when false', () => {
       const f = fields(chargingEquipmentColDefs(mockT, false, { enableSelection: false }))
       expect(f).not.toContain('__select__')
+    })
+  })
+
+  describe('historyMode option', () => {
+    it('adds a leading history toggle column and compliance years column', () => {
+      const f = fields(chargingEquipmentColDefs(mockT, false, { historyMode: true }))
+      expect(f[0]).toBe('__historyToggle__')
+      expect(f).toContain('complianceYears')
+    })
+
+    it('renders expand action for collapsed current rows', () => {
+      const onToggleHistory = vi.fn()
+      const col = chargingEquipmentColDefs(mockT, false, {
+        historyMode: true,
+        onToggleHistory,
+        expandedRows: new Set()
+      }).find((c) => c.field === '__historyToggle__')
+
+      render(
+        col.cellRenderer({
+          data: {
+            registrationNumber: 'REG-1',
+            isCurrentVersionRow: true,
+            hasHistory: true
+          }
+        })
+      )
+
+      const button = screen.getByRole('button', {
+        name: 'chargingSite:buttons.expandHistory'
+      })
+      fireEvent.click(button)
+      expect(onToggleHistory).toHaveBeenCalledWith('REG-1')
+    })
+
+    it('renders collapse action for expanded current rows', () => {
+      const col = chargingEquipmentColDefs(mockT, false, {
+        historyMode: true,
+        onToggleHistory: vi.fn(),
+        expandedRows: new Set(['REG-1'])
+      }).find((c) => c.field === '__historyToggle__')
+
+      render(
+        col.cellRenderer({
+          data: {
+            registrationNumber: 'REG-1',
+            isCurrentVersionRow: true,
+            hasHistory: true
+          }
+        })
+      )
+
+      expect(
+        screen.getByRole('button', {
+          name: 'chargingSite:buttons.collapseHistory'
+        })
+      ).toBeInTheDocument()
+    })
+
+    it('prefixes registration number for history rows', () => {
+      const col = chargingEquipmentColDefs(mockT, false, {
+        historyMode: true
+      }).find((c) => c.field === 'registrationNumber')
+
+      expect(
+        col.cellRenderer({
+          value: 'REG-1',
+          data: { isHistoryVersion: true }
+        })
+      ).toBe('↳ REG-1')
     })
   })
 

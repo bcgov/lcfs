@@ -18,8 +18,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../components/ChargingSiteProfile', () => ({
-  ChargingSiteProfile: () => (
-    <div data-testid="charging-site-profile">Profile</div>
+  ChargingSiteProfile: ({ data, historyMode }) => (
+    <div data-testid="charging-site-profile">
+      {historyMode ? `History Profile ${data?.version ?? ''}` : 'Profile'}
+    </div>
   )
 }))
 
@@ -56,8 +58,8 @@ vi.mock('@/constants/roles', () => ({
 // Mock BCWidgetCard
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   __esModule: true,
-  default: ({ content, editButton }) => (
-    <div>
+  default: ({ content, editButton, sx }) => (
+    <div data-testid="widget-card" data-sx={JSON.stringify(sx)}>
       {editButton && (
         <button onClick={editButton.onClick}>{editButton.text}</button>
       )}
@@ -78,6 +80,7 @@ describe('ChargingSiteCard', () => {
     hasAnyRole: vi.fn(),
     hasRoles: vi.fn(() => true),
     isIDIR: false,
+    onHistoryModeChange: vi.fn(),
     refetch: vi.fn()
   }
 
@@ -124,5 +127,45 @@ describe('ChargingSiteCard', () => {
 
     expect(screen.getByText('Edit Form')).toBeInTheDocument()
     expect(screen.queryByText('Profile')).not.toBeInTheDocument()
+  })
+
+  it('renders history toggle and notifies on change', () => {
+    render(<ChargingSiteCard {...mockProps} />, { wrapper })
+
+    const toggle = screen.getByRole('checkbox', {
+      name: 'historyToggle'
+    })
+    fireEvent.click(toggle)
+
+    expect(mockProps.onHistoryModeChange).toHaveBeenCalledWith(true)
+  })
+
+  it('renders site history in read-only mode without edit button', () => {
+    const historyProps = {
+      ...mockProps,
+      historyMode: true,
+      data: {
+        ...mockData,
+        history: [
+          { chargingSiteId: 123, version: 3, status: { status: 'Validated' } },
+          { chargingSiteId: 122, version: 2, status: { status: 'Submitted' } }
+        ]
+      }
+    }
+
+    render(<ChargingSiteCard {...historyProps} />, { wrapper })
+
+    expect(screen.queryByText('common:editBtn')).not.toBeInTheDocument()
+    expect(screen.getByText('History Profile 3')).toBeInTheDocument()
+    expect(screen.getByText('History Profile 2')).toBeInTheDocument()
+  })
+
+  it('applies a max-height card layout with scrollable content', () => {
+    const { container } = render(<ChargingSiteCard {...mockProps} />, { wrapper })
+
+    const card = container.querySelector('[data-testid="widget-card"]')
+    const sx = JSON.parse(card.getAttribute('data-sx'))
+    expect(sx.maxHeight).toBe(640)
+    expect(sx['& .MuiCardContent-root'].overflowY).toBe('auto')
   })
 })

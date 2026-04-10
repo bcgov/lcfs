@@ -25,7 +25,9 @@ export const ChargingSiteCard = ({
   const [isEditMode, setIsEditMode] = useState(addMode)
 
   const canEdit =
-    !historyMode && hasRoles(roles.supplier) && data.status.status != 'Submitted'
+    !historyMode &&
+    hasRoles(roles.supplier) &&
+    data.status.status != 'Submitted'
 
   const handleEditClick = useCallback(() => {
     setIsEditMode(true)
@@ -45,6 +47,16 @@ export const ChargingSiteCard = ({
           <BCWidgetCard
             title={t('cardTitle')}
             color="nav"
+            sx={{
+              maxHeight: 640,
+              display: 'flex',
+              flexDirection: 'column',
+              '& .MuiCardContent-root': {
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto'
+              }
+            }}
             editButton={
               canEdit && !isEditMode
                 ? {
@@ -66,7 +78,9 @@ export const ChargingSiteCard = ({
                 </>
               ) : (
                 <BCBox>
-                  <BCBox sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                  <BCBox
+                    sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}
+                  >
                     <FormControlLabel
                       control={
                         <Switch
@@ -78,17 +92,15 @@ export const ChargingSiteCard = ({
                         />
                       }
                       label={t('historyToggle')}
-                      sx={{ mr: 0 }}
+                      labelPlacement="start"
+                      sx={{
+                        mr: 0,
+                        '& .MuiSwitch-root': { mt: -0.6 }
+                      }}
                     />
                   </BCBox>
                   {historyMode ? (
-                    <BCBox
-                      sx={{
-                        maxHeight: 520,
-                        overflowY: 'auto',
-                        pr: 1
-                      }}
-                    >
+                    <BCBox sx={{ pr: 1 }}>
                       {siteHistory.map((siteVersion, index) => (
                         <BCBox key={siteVersion.chargingSiteId}>
                           <ChargingSiteProfile

@@ -276,6 +276,7 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     enableSelection = false,
     historyMode = false,
     onToggleHistory = null,
+    expandedRows = new Set(),
     showDateColumns = false,
     showIntendedUsers = false,
     showLocationFields = true,
@@ -291,15 +292,18 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     cols.push({
       field: '__historyToggle__',
       headerName: '',
-      minWidth: 72,
-      maxWidth: 72,
+      minWidth: 80,
+      maxWidth: 80,
       pinned: 'left',
       lockPinned: true,
       sortable: false,
       filter: false,
       suppressHeaderMenuButton: true,
       cellRenderer: (params) => {
-        if (!params.data?.isCurrentVersionRow || !params.data?.hasHistory) return null
+        if (!params.data?.isCurrentVersionRow || !params.data?.hasHistory)
+          return null
+
+        const isExpanded = expandedRows.has(params.data.registrationNumber)
 
         return (
           <BCButton
@@ -311,12 +315,16 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
             }}
             sx={{ minWidth: 0, px: 0.5 }}
             title={
-              params.data?.isExpanded
+              isExpanded
                 ? t('chargingSite:buttons.collapseHistory')
                 : t('chargingSite:buttons.expandHistory')
             }
           >
-            {params.data?.isExpanded ? <ExpandLess /> : <ExpandMore />}
+            {isExpanded ? (
+              <ExpandLess sx={{ width: '1.2rem', height: '1.2rem' }} />
+            ) : (
+              <ExpandMore sx={{ width: '1.2rem', height: '1.2rem' }} />
+            )}
           </BCButton>
         )
       }
@@ -457,7 +465,15 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       return (
         <>
           {years.map((year) => (
-            <StyledChip key={`${params.data?.chargingEquipmentId}-${year}`} label={year} />
+            <StyledChip
+              key={`${params.data?.chargingEquipmentId}-${year}`}
+              label={year}
+              sx={{
+                backgroundColor: '#686666',
+                color: '#fff',
+                fontWeight: '400'
+              }}
+            />
           ))}
         </>
       )

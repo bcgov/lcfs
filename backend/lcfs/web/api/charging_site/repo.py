@@ -68,13 +68,10 @@ class ChargingSiteRepository:
     def _site_version_subquery(self, government_visible: bool = False):
         if not government_visible:
             latest_versions = latest_charging_site_version_subquery()
-            return (
-                select(
-                    latest_versions.c.group_uuid,
-                    latest_versions.c.latest_version.label("selected_version"),
-                )
-                .subquery()
-            )
+            return select(
+                latest_versions.c.group_uuid,
+                latest_versions.c.latest_version.label("selected_version"),
+            ).subquery()
 
         status_alias = aliased(ChargingSiteStatus)
         return (
@@ -350,7 +347,9 @@ class ChargingSiteRepository:
         latest_sites = self._site_version_subquery(is_government_user)
         latest_site_alias = aliased(ChargingSite, name="latest_charging_site")
 
-        latest_site_join_conditions = [source_site.group_uuid == latest_sites.c.group_uuid]
+        latest_site_join_conditions = [
+            source_site.group_uuid == latest_sites.c.group_uuid
+        ]
         if "rn" in latest_sites.c:
             latest_site_join_conditions.append(latest_sites.c.rn == 1)
 
@@ -469,6 +468,7 @@ class ChargingSiteRepository:
         """
         Return all equipment versions for a charging site group, flattened so each
         current version is followed by its historical versions in descending version order.
+        Includes deleted equipment in changelog view.
         """
         site_group_uuid = await self._get_group_uuid_by_site_id(site_id)
         if not site_group_uuid:
@@ -483,17 +483,28 @@ class ChargingSiteRepository:
         if not related_site_ids:
             return [], 0
 
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(ChargingEquipment.group_uuid)
+            .where(
+                ChargingEquipment.charging_site_id.in_(related_site_ids),
+                ChargingEquipment.action_type == ActionTypeEnum.DELETE,
+            )
+            .distinct()
+        )
+
+        reporting_equipment = aliased(
+            ChargingEquipment, name="reporting_charging_equipment"
+        )
         compliance_years_subquery = (
             select(
-                ComplianceReportChargingEquipment.charging_equipment_id.label(
-                    "charging_equipment_id"
-                ),
+                reporting_equipment.group_uuid.label("charging_equipment_group_uuid"),
                 ComplianceReportChargingEquipment.charging_equipment_version.label(
                     "charging_equipment_version"
                 ),
-                func.array_agg(
-                    func.distinct(CompliancePeriod.description)
-                ).label("compliance_years"),
+                func.array_agg(func.distinct(CompliancePeriod.description)).label(
+                    "compliance_years"
+                ),
             )
             .join(
                 ComplianceReport,
@@ -501,12 +512,17 @@ class ChargingSiteRepository:
                 == ComplianceReportChargingEquipment.compliance_report_id,
             )
             .join(
+                reporting_equipment,
+                ComplianceReportChargingEquipment.charging_equipment_id
+                == reporting_equipment.charging_equipment_id,
+            )
+            .join(
                 CompliancePeriod,
                 CompliancePeriod.compliance_period_id
                 == ComplianceReport.compliance_period_id,
             )
             .group_by(
-                ComplianceReportChargingEquipment.charging_equipment_id,
+                reporting_equipment.group_uuid,
                 ComplianceReportChargingEquipment.charging_equipment_version,
             )
             .subquery()
@@ -515,12 +531,21 @@ class ChargingSiteRepository:
         source_site = aliased(ChargingSite, name="history_source_site")
         latest_site = aliased(ChargingSite, name="history_latest_site")
         latest_sites = latest_charging_site_version_subquery()
+        
+        # Get the latest version of each equipment group (including deleted)
         latest_version_subquery = (
             select(
                 ChargingEquipment.group_uuid.label("group_uuid"),
                 func.max(ChargingEquipment.version).label("latest_version"),
             )
-            .where(ChargingEquipment.charging_site_id.in_(related_site_ids))
+            .where(
+                ChargingEquipment.charging_site_id.in_(related_site_ids),
+                # In changelog view, include all groups (both active and deleted)
+                or_(
+                    ~ChargingEquipment.group_uuid.in_(deleted_groups),
+                    ChargingEquipment.group_uuid.in_(deleted_groups),
+                )
+            )
             .group_by(ChargingEquipment.group_uuid)
             .subquery()
         )
@@ -545,18 +570,26 @@ class ChargingSiteRepository:
                 )
                 .join(
                     latest_version_subquery,
-                    ChargingEquipment.group_uuid == latest_version_subquery.c.group_uuid,
+                    ChargingEquipment.group_uuid
+                    == latest_version_subquery.c.group_uuid,
                 )
                 .outerjoin(
                     compliance_years_subquery,
                     and_(
-                        ChargingEquipment.charging_equipment_id
-                        == compliance_years_subquery.c.charging_equipment_id,
+                        ChargingEquipment.group_uuid
+                        == compliance_years_subquery.c.charging_equipment_group_uuid,
                         ChargingEquipment.version
                         == compliance_years_subquery.c.charging_equipment_version,
                     ),
                 )
-                .where(ChargingEquipment.charging_site_id.in_(related_site_ids))
+                .where(
+                    ChargingEquipment.charging_site_id.in_(related_site_ids),
+                    # In changelog view, include all groups (both active and deleted)
+                    or_(
+                        ~ChargingEquipment.group_uuid.in_(deleted_groups),
+                        ChargingEquipment.group_uuid.in_(deleted_groups),
+                    )
+                )
             )
             if include_loader_options:
                 history_query = history_query.options(
@@ -574,9 +607,7 @@ class ChargingSiteRepository:
             [
                 ChargingEquipment,
                 latest_site,
-                compliance_years_subquery.c.compliance_years.label(
-                    "compliance_years"
-                ),
+                compliance_years_subquery.c.compliance_years.label("compliance_years"),
                 case(
                     (
                         ChargingEquipment.version
@@ -644,7 +675,14 @@ class ChargingSiteRepository:
 
         offset = (pagination.page - 1) * pagination.size
         query = query.offset(offset).limit(pagination.size)
+        print("Generated SQL Query:")
+        from sqlalchemy.dialects import postgresql
 
+        print(
+            query.compile(
+                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+            )
+        )
         result = await self.db.execute(query)
         rows = result.all()
         history_rows = []
@@ -794,9 +832,7 @@ class ChargingSiteRepository:
 
         # Add condition to exclude draft sites if requested
         if exclude_draft:
-            stmt = stmt.where(
-                ChargingSiteStatus.status.not_in(["Draft", "Updated"])
-            )
+            stmt = stmt.where(ChargingSiteStatus.status.not_in(["Draft", "Updated"]))
 
         # Apply other conditions
         if conditions:

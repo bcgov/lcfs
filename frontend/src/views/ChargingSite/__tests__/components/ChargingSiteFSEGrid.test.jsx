@@ -6,6 +6,7 @@ import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 const mockNavigate = vi.fn()
 const mockPathname = '/compliance-reporting/charging-sites/123'
+let lastGridProps
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -22,10 +23,11 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
   BCGridViewer: React.forwardRef((props, ref) => (
+    (lastGridProps = props,
     <div data-testid="bc-grid-viewer">
       <button
         onClick={() =>
-          props.onCellClicked({ data: { chargingEquipmentId: 456 } })
+          props.onCellClicked?.({ data: { chargingEquipmentId: 456 } })
         }
       >
         Row Click
@@ -56,7 +58,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
       >
         Select Submitted
       </button>
-    </div>
+    </div>)
   ))
 }))
 
@@ -103,6 +105,7 @@ describe('ChargingSiteFSEGrid', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    lastGridProps = null
     useChargingSiteEquipmentPaginated.mockReturnValue({
       data: mockEquipmentData,
       isLoading: false,
@@ -120,6 +123,16 @@ describe('ChargingSiteFSEGrid', () => {
     expect(screen.getByText('gridTitle')).toBeInTheDocument()
     expect(screen.getByText('gridDescription')).toBeInTheDocument()
     expect(screen.getByText('Row Click')).toBeInTheDocument()
+  })
+
+  it('uses a single built-in selection column instead of schema checkbox column', () => {
+    render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
+
+    const selectColumn = lastGridProps.columnDefs.find(
+      (col) => col.field === '__select__'
+    )
+    expect(selectColumn).toBeUndefined()
+    expect(lastGridProps.gridOptions.selectionColumnDef).toBeDefined()
   })
 
   it('renders IDIR view for government users', () => {
@@ -319,6 +332,123 @@ describe('ChargingSiteFSEGrid', () => {
             name: 'chargingSite:buttons.returnSelectedToDraft'
           })
         ).toBeEnabled()
+      })
+    })
+  })
+
+  describe('history mode', () => {
+    it('renders read-only history view without processing actions or row navigation', () => {
+      const historyData = {
+        equipments: [
+          {
+            chargingEquipmentId: 10,
+            registrationNumber: 'REG001',
+            version: 3,
+            status: { status: 'Validated' },
+            complianceYears: ['2024']
+          },
+          {
+            chargingEquipmentId: 9,
+            registrationNumber: 'REG001',
+            version: 2,
+            status: { status: 'Submitted' },
+            complianceYears: ['2023']
+          }
+        ],
+        pagination: { total: 2, page: 1, size: 25, totalPages: 1 }
+      }
+      useChargingSiteEquipmentPaginated.mockReturnValue({
+        data: historyData,
+        isLoading: false,
+        refetch: vi.fn()
+      })
+
+      render(<ChargingSiteFSEGrid {...mockProps} historyMode />, { wrapper })
+
+      expect(screen.getByText('historyGridTitle')).toBeInTheDocument()
+      expect(screen.getByText('historyGridDescription')).toBeInTheDocument()
+      expect(screen.queryByText('chargingSite:buttons.newFSE')).not.toBeInTheDocument()
+      expect(lastGridProps.onCellClicked).toBeUndefined()
+      expect(
+        lastGridProps.columnDefs.some((col) => col.field === '__historyToggle__')
+      ).toBe(true)
+    })
+
+    it('shows only the current version by default and expands older versions inline', async () => {
+      const historyData = {
+        equipments: [
+          {
+            chargingEquipmentId: 10,
+            registrationNumber: 'REG001',
+            version: 3,
+            status: { status: 'Validated' },
+            manufacturer: 'Current Co',
+            complianceYears: ['2024']
+          },
+          {
+            chargingEquipmentId: 9,
+            registrationNumber: 'REG001',
+            version: 2,
+            status: { status: 'Submitted' },
+            manufacturer: 'Older Co',
+            complianceYears: ['2023']
+          },
+          {
+            chargingEquipmentId: 8,
+            registrationNumber: 'REG002',
+            version: 1,
+            status: { status: 'Draft' },
+            manufacturer: 'Solo Co',
+            complianceYears: []
+          }
+        ],
+        pagination: { total: 3, page: 1, size: 25, totalPages: 1 }
+      }
+      useChargingSiteEquipmentPaginated.mockReturnValue({
+        data: historyData,
+        isLoading: false,
+        refetch: vi.fn()
+      })
+
+      render(<ChargingSiteFSEGrid {...mockProps} historyMode />, { wrapper })
+
+      expect(lastGridProps.queryData.equipments).toHaveLength(2)
+      expect(lastGridProps.queryData.equipments[0]).toMatchObject({
+        registrationNumber: 'REG001',
+        version: 3,
+        isCurrentVersionRow: true,
+        hasHistory: true,
+        isExpanded: false
+      })
+
+      const toggleColumn = lastGridProps.columnDefs.find(
+        (col) => col.field === '__historyToggle__'
+      )
+      const toggleButton = render(
+        toggleColumn.cellRenderer({
+          data: lastGridProps.queryData.equipments[0]
+        })
+      ).getByRole('button', {
+        name: 'chargingSite:buttons.expandHistory'
+      })
+
+      fireEvent.click(toggleButton)
+
+      await waitFor(() => {
+        expect(lastGridProps.queryData.equipments).toHaveLength(3)
+      })
+
+      expect(lastGridProps.queryData.equipments[1]).toMatchObject({
+        registrationNumber: 'REG001',
+        version: 2,
+        isHistoryVersion: true,
+        actionType: 'UPDATE',
+        diff: expect.arrayContaining([
+          'status',
+          'version',
+          'manufacturer',
+          'complianceYears'
+        ])
       })
     })
   })

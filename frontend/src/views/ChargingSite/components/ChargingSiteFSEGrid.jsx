@@ -499,9 +499,10 @@ export const ChargingSiteFSEGrid = ({
             gridRef={gridRef}
             alertRef={alertRef}
             columnDefs={chargingEquipmentColDefs(t, isIDIR, {
-              enableSelection: !historyMode,
+              enableSelection: false,
               historyMode,
               onToggleHistory: handleToggleHistory,
+              expandedRows: expandedHistoryRows,
               showIntendedUsers: true,
               showLocationFields: true,
               showPorts: true,

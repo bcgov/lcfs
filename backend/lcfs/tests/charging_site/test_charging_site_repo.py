@@ -63,6 +63,20 @@ class TestChargingSiteRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
+    async def test_get_charging_site_versions_by_id(
+        self, charging_site_repo, mock_db_session
+    ):
+        mock_sites = [MagicMock(spec=ChargingSite), MagicMock(spec=ChargingSite)]
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = mock_sites
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.get_charging_site_versions_by_id(1)
+
+        assert result == mock_sites
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.anyio
     async def test_bulk_update_equipment_status(
         self, charging_site_repo, mock_db_session
     ):
@@ -124,6 +138,53 @@ class TestChargingSiteRepository:
 
         assert len(equipment) == 2
         assert total_count == 2
+
+    @pytest.mark.anyio
+    async def test_get_equipment_history_for_charging_site_paginated(
+        self, charging_site_repo, mock_db_session
+    ):
+        pagination = PaginationRequestSchema(
+            page=1, size=10, sort_orders=[], filters=[]
+        )
+
+        current_equipment = MagicMock(spec=ChargingEquipment)
+        current_equipment.charging_equipment_id = 10
+        current_equipment.group_uuid = "group-1"
+        current_equipment.version = 3
+
+        latest_site = MagicMock(spec=ChargingSite)
+        latest_site.charging_site_id = 5
+
+        mock_group_uuid_result = MagicMock()
+        mock_group_uuid_result.scalar_one_or_none.return_value = "site-group-1"
+
+        mock_site_ids_result = MagicMock()
+        mock_site_ids_result.fetchall.return_value = [(5,), (4,)]
+
+        mock_history_result = MagicMock()
+        mock_history_result.all.return_value = [
+            (current_equipment, latest_site, ["2024", "2023"], False)
+        ]
+
+        mock_db_session.execute.side_effect = [
+            mock_group_uuid_result,
+            mock_site_ids_result,
+            mock_history_result,
+        ]
+        mock_db_session.scalar.return_value = 1
+
+        result, total_count = (
+            await charging_site_repo.get_equipment_history_for_charging_site_paginated(
+                5, pagination
+            )
+        )
+
+        assert total_count == 1
+        assert result == [current_equipment]
+        assert current_equipment.charging_site == latest_site
+        assert current_equipment.charging_site_id == 5
+        assert current_equipment.compliance_years == ["2024", "2023"]
+        assert current_equipment.is_history_version is False
 
     @pytest.mark.anyio
     async def test_get_charging_sites(self, charging_site_repo, mock_db_session):
