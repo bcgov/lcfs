@@ -413,6 +413,7 @@ FUEL_SUPPLY_COLUMNS = [
     ExportColumn("Determining carbon intensity"),
     ExportColumn("Fuel code"),
     ExportColumn("Fuel produced in Canada"),
+    ExportColumn("Supplied in Q1"),
     ExportColumn("Quantity supplied"),
     ExportColumn("Units"),
     ExportColumn("Target CI"),
