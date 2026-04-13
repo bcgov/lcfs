@@ -1,22 +1,20 @@
-// This component renders a list of internal comments and includes functionality
-// for editing and adding new comments. It showcases the use of child components
-// and passing callback functions for interactive features.
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
 import Tooltip from '@mui/material/Tooltip'
 import IconButton from '@mui/material/IconButton'
+import Chip from '@mui/material/Chip'
 import EditIcon from '@mui/icons-material/Edit'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useTranslation } from 'react-i18next'
-import InternalCommentForm from './InternalCommentForm'
+import CommentForm from './CommentForm'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-const InternalCommentList = ({
+const CommentList = ({
   comments,
   onAddComment,
   onEditComment,
@@ -24,25 +22,40 @@ const InternalCommentList = ({
   isAddingComment,
   isEditingComment,
   commentInput,
-  onCommentInputChange
+  onCommentInputChange,
+  commentMode = 'internal-only',
+  visibility = 'Internal',
+  onVisibilityChange,
+  allowInternalVisibility = true
 }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const [editCommentId, setEditCommentId] = useState(null)
   const [editCommentText, setEditCommentText] = useState('')
+  const [editVisibility, setEditVisibility] = useState('Internal')
 
-  const startEditing = (id, text) => {
+  const isGov = hasAnyRole(
+    roles.analyst,
+    roles.director,
+    roles.compliance_manager,
+    roles.government
+  )
+  const isDualMode = commentMode === 'dual'
+
+  const startEditing = (id, text, visibilityValue = 'Internal') => {
     setEditCommentId(id)
     setEditCommentText(text)
+    setEditVisibility(visibilityValue)
   }
 
   const stopEditing = () => {
     setEditCommentId(null)
     setEditCommentText('')
+    setEditVisibility('Internal')
   }
 
   const submitEdit = () => {
-    onEditComment(editCommentId, editCommentText)
+    onEditComment(editCommentId, editCommentText, editVisibility)
     stopEditing()
   }
 
@@ -50,7 +63,6 @@ const InternalCommentList = ({
     setEditCommentText(value)
   }
 
-  // Formats the provided date string into a readable format.
   const formatDate = (dateString) => {
     const options = {
       year: 'numeric',
@@ -64,7 +76,6 @@ const InternalCommentList = ({
     return new Date(dateString).toLocaleDateString(undefined, options)
   }
 
-  // Renders the timestamp for a comment, indicating if it has been edited.
   const CommentTimestamp = ({ createDate, updateDate }) => {
     const isEdited = updateDate && createDate !== updateDate
     return (
@@ -94,7 +105,6 @@ const InternalCommentList = ({
     )
   }
 
-  // Extracts and formats initials from a full name for use in the Avatar component.
   const getInitials = (name) => {
     if (!name) {
       return ''
@@ -104,9 +114,41 @@ const InternalCommentList = ({
     return initials.toUpperCase()
   }
 
+  // Determine the form title
+  const getFormTitle = () => {
+    if (isDualMode) {
+      if (!isGov) {
+        // Non-gov views already have organization context around this section.
+        return t('internalComment:addComment')
+      }
+      // Gov user in dual mode: title depends on visibility selection
+      if (visibility === 'Public') {
+        return t('internalComment:commentToOrganization')
+      }
+    }
+    // Internal-only mode or internal visibility in dual mode
+    if (
+      hasAnyRole(roles.analyst) ||
+      hasAnyRole(roles.compliance_manager)
+    ) {
+      return t('internalComment:commentToDirector')
+    }
+    if (hasAnyRole(roles.director)) {
+      return t('internalComment:commentToAnalyst')
+    }
+    return t('internalComment:addComment')
+  }
+
+  // Determine if the current user can add comments
+  const canAddComment = isDualMode
+    ? true // Both gov and BCeID can comment in dual mode
+    : hasAnyRole(roles.analyst, roles.director, roles.compliance_manager)
+
+  // Show visibility toggle only for gov users in dual mode
+  const showVisibilityToggle = isDualMode && isGov && allowInternalVisibility
+
   return (
     <>
-      {/* Global styles for customizing comment content appearance */}
       <GlobalStyles
         styles={{
           '.comment-content': {
@@ -169,7 +211,7 @@ const InternalCommentList = ({
               }}
             >
               {editCommentId === comment.internalCommentId ? (
-                <InternalCommentForm
+                <CommentForm
                   title={t('internalComment:editComment')}
                   commentText={editCommentText}
                   onSubmit={submitEdit}
@@ -178,6 +220,10 @@ const InternalCommentList = ({
                   isEditing={true}
                   isSubmitting={isEditingComment}
                   showAddCommentBtn={true}
+                  showVisibilityToggle={showVisibilityToggle}
+                  visibility={editVisibility}
+                  onVisibilityChange={setEditVisibility}
+                  visibilityAlign="left"
                 />
               ) : (
                 <BCBox>
@@ -188,32 +234,60 @@ const InternalCommentList = ({
                       alignItems: 'center'
                     }}
                   >
-                    <BCTypography variant="body2" color="text" component="span">
-                      <CommentTimestamp
-                        createDate={comment.createDate}
-                        updateDate={comment.updateDate}
-                      />
-                    </BCTypography>
-                    {currentUser.keycloakUsername === comment.createUser && (
-                      <Tooltip title={t('internalComment:edit')} arrow>
-                        <IconButton
-                          onClick={() =>
-                            startEditing(
-                              comment.internalCommentId,
-                              comment.comment
-                            )
+                    <BCBox sx={{ display: 'flex', alignItems: 'center' }}>
+                      <BCTypography variant="body2" color="text" component="span">
+                        <CommentTimestamp
+                          createDate={comment.createDate}
+                          updateDate={comment.updateDate}
+                        />
+                      </BCTypography>
+                    </BCBox>
+                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {isGov && currentUser.keycloakUsername === comment.createUser && (
+                        <Tooltip title={t('internalComment:edit')} arrow>
+                          <IconButton
+                            onClick={() =>
+                              startEditing(
+                                comment.internalCommentId,
+                                comment.comment,
+                                comment.visibility || 'Internal'
+                              )
+                            }
+                            sx={{
+                              color: '#003366',
+                              transform: 'scale(1.2)',
+                              marginTop: '2px'
+                            }}
+                            aria-label={t('internalComment:edit')}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {isDualMode && isGov && comment.visibility && (
+                        <Chip
+                          label={
+                            comment.visibility === 'Public'
+                              ? t('internalComment:public')
+                              : t('internalComment:internal')
                           }
+                          size="small"
                           sx={{
-                            color: '#003366',
-                            transform: 'scale(1.2)',
-                            marginTop: '2px'
+                            color: '#fff',
+                            bgcolor:
+                              comment.visibility === 'Public'
+                                ? '#187a11'
+                                : '#063267',
+                            minWidth: 88,
+                            height: 24,
+                            '& .MuiChip-label': {
+                              fontSize: '0.86rem',
+                              fontWeight: 600
+                            }
                           }}
-                          aria-label={t('internalComment:edit')}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                        />
+                      )}
+                    </BCBox>
                   </BCBox>
 
                   <div
@@ -225,27 +299,20 @@ const InternalCommentList = ({
             </BCBox>
           </BCBox>
         ))}
-        {/* Conditionally renders the form to add a new comment based on the user's role */}
-        {hasAnyRole(
-          roles.analyst,
-          roles.director,
-          roles.compliance_manager
-        ) && (
+        {canAddComment && (
           <BCBox sx={{ backgroundColor: '#fff' }} p={2}>
-            <InternalCommentForm
-              title={
-                ((hasAnyRole(roles.analyst) ||
-                  hasAnyRole(roles.compliance_manager)) &&
-                  t('internalComment:commentToDirector')) ||
-                (hasAnyRole(roles.director) &&
-                  t('internalComment:commentToAnalyst'))
-              }
+            <CommentForm
+              title={getFormTitle()}
               onSubmit={onAddComment}
               showAddCommentBtn={showAddCommentBtn}
               commentText={commentInput || ''}
               onCommentChange={onCommentInputChange}
               isSubmitting={isAddingComment}
               isEditing={false}
+              showVisibilityToggle={showVisibilityToggle}
+              visibility={visibility}
+              onVisibilityChange={onVisibilityChange}
+              visibilityAlign="left"
             />
           </BCBox>
         )}
@@ -254,7 +321,7 @@ const InternalCommentList = ({
   )
 }
 
-InternalCommentList.propTypes = {
+CommentList.propTypes = {
   comments: PropTypes.arrayOf(
     PropTypes.shape({
       internalCommentId: PropTypes.oneOfType([
@@ -264,7 +331,8 @@ InternalCommentList.propTypes = {
       comment: PropTypes.string.isRequired,
       fullName: PropTypes.string.isRequired,
       createDate: PropTypes.string.isRequired,
-      updateDate: PropTypes.string
+      updateDate: PropTypes.string,
+      visibility: PropTypes.string
     })
   ).isRequired,
   onAddComment: PropTypes.func.isRequired,
@@ -273,7 +341,11 @@ InternalCommentList.propTypes = {
   isAddingComment: PropTypes.bool,
   isEditingComment: PropTypes.bool,
   commentInput: PropTypes.string,
-  onCommentInputChange: PropTypes.func
+  onCommentInputChange: PropTypes.func,
+  commentMode: PropTypes.oneOf(['internal-only', 'dual']),
+  visibility: PropTypes.oneOf(['Internal', 'Public']),
+  onVisibilityChange: PropTypes.func,
+  allowInternalVisibility: PropTypes.bool
 }
 
-export default InternalCommentList
+export default CommentList

@@ -1,6 +1,6 @@
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -108,7 +108,7 @@ class InternalCommentRepository:
 
     @repo_handler
     async def get_internal_comments(
-        self, entity_type: EntityTypeEnum, entity_id: int
+        self, entity_type: EntityTypeEnum, entity_id: int, visibility_filter: Optional[str] = None
     ) -> List[dict]:
         """
         Retrieves a list of internal comments associated with a specific entity,
@@ -178,8 +178,15 @@ class InternalCommentRepository:
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
             .where(InternalComment.internal_comment_id.in_(distinct_comment_ids_query))
-            .order_by(asc(InternalComment.create_date))
         )
+
+        # Apply visibility filter (e.g., BCeID users only see Public comments)
+        if visibility_filter:
+            base_query = base_query.where(
+                InternalComment.visibility == visibility_filter
+            )
+
+        base_query = base_query.order_by(asc(InternalComment.create_date))
 
         # Execute the query
         results = await self.db.execute(base_query)
@@ -190,6 +197,7 @@ class InternalCommentRepository:
                 "internal_comment_id": internal_comment.internal_comment_id,
                 "comment": internal_comment.comment,
                 "audience_scope": internal_comment.audience_scope,
+                "visibility": internal_comment.visibility,
                 "create_user": internal_comment.create_user,
                 "create_date": internal_comment.create_date,
                 "update_date": internal_comment.update_date,
@@ -231,14 +239,20 @@ class InternalCommentRepository:
 
     @repo_handler
     async def update_internal_comment(
-        self, internal_comment_id: int, new_comment_text: str
+        self,
+        internal_comment_id: int,
+        new_comment_text: Optional[str] = None,
+        visibility: Optional[str] = None,
+        audience_scope: Optional[str] = None,
     ) -> InternalComment:
         """
         Updates the text of an existing internal comment.
 
         Args:
             internal_comment_id (int): The ID of the internal comment to update.
-            new_comment_text (str): The new text for the comment.
+            new_comment_text (str, optional): The new text for the comment.
+            visibility (str, optional): The visibility for the comment.
+            audience_scope (str, optional): The audience scope for the comment.
 
         Returns:
             InternalComment: The updated internal comment object.
@@ -257,7 +271,11 @@ class InternalCommentRepository:
                 f"Internal comment with ID {internal_comment_id} not found."
             )
 
-        internal_comment.comment = new_comment_text
+        if new_comment_text is not None:
+            internal_comment.comment = new_comment_text
+        if visibility is not None:
+            internal_comment.visibility = visibility
+        internal_comment.audience_scope = audience_scope
         await self.db.flush()
         await self.db.refresh(internal_comment)
 

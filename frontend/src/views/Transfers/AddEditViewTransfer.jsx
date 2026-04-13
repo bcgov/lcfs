@@ -49,7 +49,7 @@ import { buttonClusterConfigFn } from './buttonConfigs'
 import { CategoryCheckbox } from './components/CategoryCheckbox'
 import { Recommendation } from './components/Recommendation'
 import SigningAuthority from './components/SigningAuthority'
-import InternalComments from '@/components/InternalComments'
+import EntityComments from '@/components/Comments'
 
 export const AddEditViewTransfer = () => {
   const queryClient = useQueryClient()
@@ -487,12 +487,12 @@ export const AddEditViewTransfer = () => {
                 </>
               )}
 
-            {/* Internal Comments */}
+            {/* Comments */}
             {!editorMode && (
               <Role roles={govRoles}>
                 {transferId && (
                   <BCBox py={2}>
-                    <InternalComments
+                    <EntityComments
                       entityType="Transfer"
                       entityId={transferId}
                     />

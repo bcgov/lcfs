@@ -92,9 +92,9 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@/components/InternalComments', () => ({
+vi.mock('@/components/Comments', () => ({
   __esModule: true,
-  default: () => <div data-test="internal-comments" />
+  default: () => <div data-test="entity-comments" />
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -679,7 +679,7 @@ describe('EditViewComplianceReport', () => {
       expect(screen.queryByTestId('introduction')).not.toBeInTheDocument()
     })
 
-    it('renders internal comments for government users', () => {
+    it('renders comments for government users', () => {
       useCurrentUser.mockReturnValue({
         data: { ...defaultUser, isGovernmentUser: true },
         isLoading: false,
@@ -689,7 +689,7 @@ describe('EditViewComplianceReport', () => {
 
       render(<EditViewComplianceReport />)
 
-      expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
+      expect(screen.getByTestId('entity-comments')).toBeInTheDocument()
     })
 
     it('renders scroll FAB', () => {
@@ -1071,7 +1071,7 @@ describe('EditViewComplianceReport', () => {
 
       render(<EditViewComplianceReport />)
 
-      expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
+      expect(screen.getByTestId('entity-comments')).toBeInTheDocument()
     })
 
     it('calculates assessmentSectionConfig for non-quarterly reports', () => {
@@ -1689,7 +1689,7 @@ describe('EditViewComplianceReport', () => {
         render(<EditViewComplianceReport />)
 
         // Assessment section should be visible for government users
-        expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
+        expect(screen.getByTestId('entity-comments')).toBeInTheDocument()
       })
 
       it('shows assessment recommendation for analyst with annual report', () => {
@@ -1710,7 +1710,7 @@ describe('EditViewComplianceReport', () => {
 
         render(<EditViewComplianceReport />)
 
-        expect(screen.getByTestId('internal-comments')).toBeInTheDocument()
+        expect(screen.getByTestId('entity-comments')).toBeInTheDocument()
       })
 
       it('hides assessment sections when hasDraftSupplemental is true', () => {
