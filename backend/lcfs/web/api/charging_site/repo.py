@@ -447,7 +447,7 @@ class ChargingSiteRepository:
 
         # Execute query
         result = await self.db.execute(query)
-        rows = result.unique().all()
+        rows = result.all()
         equipment = []
         for row in rows:
             ranked_eq = row[0]
@@ -499,11 +499,21 @@ class ChargingSiteRepository:
         compliance_years_subquery = (
             select(
                 reporting_equipment.group_uuid.label("charging_equipment_group_uuid"),
-                ComplianceReportChargingEquipment.charging_equipment_version.label(
+                reporting_equipment.version.label(
                     "charging_equipment_version"
                 ),
                 func.array_agg(func.distinct(CompliancePeriod.description)).label(
                     "compliance_years"
+                ),
+            )
+            .select_from(ComplianceReportChargingEquipment)
+            .join(
+                reporting_equipment,
+                and_(
+                    ComplianceReportChargingEquipment.charging_equipment_id
+                    == reporting_equipment.charging_equipment_id,
+                    ComplianceReportChargingEquipment.charging_equipment_version
+                    == reporting_equipment.version,
                 ),
             )
             .join(
@@ -512,18 +522,14 @@ class ChargingSiteRepository:
                 == ComplianceReportChargingEquipment.compliance_report_id,
             )
             .join(
-                reporting_equipment,
-                ComplianceReportChargingEquipment.charging_equipment_id
-                == reporting_equipment.charging_equipment_id,
-            )
-            .join(
                 CompliancePeriod,
                 CompliancePeriod.compliance_period_id
                 == ComplianceReport.compliance_period_id,
             )
+            .where(ComplianceReportChargingEquipment.is_active == True)
             .group_by(
                 reporting_equipment.group_uuid,
-                ComplianceReportChargingEquipment.charging_equipment_version,
+                reporting_equipment.version,
             )
             .subquery()
         )

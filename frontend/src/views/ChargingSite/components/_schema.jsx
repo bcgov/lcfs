@@ -426,11 +426,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     sortable: false,
     filter: false,
     minWidth: 180,
-    cellRenderer: (params) => {
-      const value = params.value || ''
-      if (!params.data?.isHistoryVersion) return value
-      return `↳ ${value}`
-    }
+    // cellRenderer: (params) => {
+    //   const value = params.value || ''
+    //   if (!params.data?.isHistoryVersion) return value
+    //   return `↳ ${value}`
+    // }
   })
 
   // Version
@@ -440,49 +440,50 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     minWidth: 120,
     filter: false,
     type: enableSelection ? 'numericColumn' : undefined,
-    cellRenderer: (params) => {
-      const version = params.value ?? params.data?.version
-      if (version == null) return ''
-      return `v${version}`
-    },
+    // cellRenderer: (params) => {
+    //   const version = params.value ?? params.data?.version
+    //   if (version == null) return ''
+    //   return `v${version}`
+    // },
     cellStyle: (params) =>
       historyMode &&
       params.data?.isHistoryVersion &&
       changelogCellStyle(params, 'version')
   })
+  if (historyMode) {
+    cols.push({
+      field: 'complianceYears',
+      headerName: t('chargingSite:fseColumnLabels.complianceYears'),
+      minWidth: 220,
+      sortable: false,
+      filter: false,
+      valueGetter: (params) => params.data?.complianceYears || [],
+      cellRenderer: (params) => {
+        const years = params.value || []
+        if (!years.length) return ''
 
-  cols.push({
-    field: 'complianceYears',
-    headerName: t('chargingSite:fseColumnLabels.complianceYears'),
-    minWidth: 220,
-    sortable: false,
-    filter: false,
-    valueGetter: (params) => params.data?.complianceYears || [],
-    cellRenderer: (params) => {
-      const years = params.value || []
-      if (!years.length) return ''
-
-      return (
-        <>
-          {years.map((year) => (
-            <StyledChip
-              key={`${params.data?.chargingEquipmentId}-${year}`}
-              label={year}
-              sx={{
-                backgroundColor: '#686666',
-                color: '#fff',
-                fontWeight: '400'
-              }}
-            />
-          ))}
-        </>
-      )
-    },
-    cellStyle: (params) =>
-      historyMode &&
-      params.data?.isHistoryVersion &&
-      changelogCellStyle(params, 'complianceYears')
-  })
+        return (
+          <>
+            {years.map((year) => (
+              <StyledChip
+                key={`${params.data?.chargingEquipmentId}-${year}`}
+                label={year}
+                sx={{
+                  backgroundColor: '#686666',
+                  color: '#fff',
+                  fontWeight: '400'
+                }}
+              />
+            ))}
+          </>
+        )
+      },
+      cellStyle: (params) =>
+        historyMode &&
+        params.data?.isHistoryVersion &&
+        changelogCellStyle(params, 'complianceYears')
+    })
+  }
 
   // Serial Number
   cols.push({

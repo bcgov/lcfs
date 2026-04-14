@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Grid2 as Grid } from '@mui/material'
@@ -86,6 +86,8 @@ const buildHistoryRows = (equipments = [], expandedRows = new Set()) => {
       actionType: 'CURRENT',
       diff: [],
       hasHistory,
+      isHistoryGroupStart: true,
+      isHistoryGroupEnd: !hasHistory || !isExpanded,
       isCurrentVersionRow: true,
       isExpanded,
       rowKey: `${registrationNumber}-${currentVersion.version}-current`
@@ -109,6 +111,8 @@ const buildHistoryRows = (equipments = [], expandedRows = new Set()) => {
         updated: false,
         diff,
         hasHistory: false,
+        isHistoryGroupStart: false,
+        isHistoryGroupEnd: index === sortedVersions.length - 2,
         isCurrentVersionRow: false,
         isHistoryVersion: true,
         parentRegistrationNumber: registrationNumber,
@@ -132,6 +136,7 @@ export const ChargingSiteFSEGrid = ({
   const location = useLocation()
   const gridRef = useRef(null)
   const alertRef = useRef(null)
+  const historyModeInitializedRef = useRef(false)
 
   const [modalData, setModalData] = useState(null)
   const [selectedRows, setSelectedRows] = useState([])
@@ -156,6 +161,28 @@ export const ChargingSiteFSEGrid = ({
     if (!historyMode) return equipmentList
     return buildHistoryRows(equipmentList, expandedHistoryRows)
   }, [equipmentList, expandedHistoryRows, historyMode])
+
+  useEffect(() => {
+    if (!historyMode) {
+      historyModeInitializedRef.current = false
+      setExpandedHistoryRows(new Set())
+      return
+    }
+
+    if (historyModeInitializedRef.current || equipmentList.length === 0) {
+      return
+    }
+
+    setExpandedHistoryRows(
+      new Set(
+        equipmentList.map(
+          (equipment) =>
+            equipment.registrationNumber || `${equipment.chargingEquipmentId}`
+        )
+      )
+    )
+    historyModeInitializedRef.current = true
+  }, [historyMode, equipmentList])
 
   // Check if selected equipment can be submitted (only from Draft status)
   const canSubmit = useMemo(() => {
@@ -546,12 +573,19 @@ export const ChargingSiteFSEGrid = ({
               minWidth: 100
             }}
             getRowStyle={(params) =>
-              params.data?.isHistoryVersion
+              historyMode
                 ? {
-                    backgroundColor:
-                      params.data?.diff?.length > 0
+                    backgroundColor: params.data?.isHistoryVersion
+                      ? params.data?.diff?.length > 0
                         ? colors.alerts.warning.background
                         : '#f6f8fb'
+                      : undefined,
+                    borderTop: params.data?.isHistoryGroupStart
+                      ? `2px solid ${colors.grey[600]}`
+                      : undefined,
+                    borderBottom: params.data?.isHistoryGroupEnd
+                      ? `2px solid ${colors.grey[600]}`
+                      : undefined
                   }
                 : undefined
             }
