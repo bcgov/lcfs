@@ -466,7 +466,10 @@ class TransferServices:
             transfer.transfer_category, "category"
         ):
             today = datetime.now(timezone.utc)
-            diff_seconds = today.timestamp() - transfer.agreement_date.timestamp()
+            agreement_dt = datetime.combine(
+                transfer.agreement_date, datetime.min.time(), tzinfo=timezone.utc
+            )
+            diff_seconds = today.timestamp() - agreement_dt.timestamp()
             # Define approximate thresholds in seconds
             ONE_DAY = 24 * 60 * 60
             SIX_MONTHS = 6 * 30 * ONE_DAY
