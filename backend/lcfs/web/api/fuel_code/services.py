@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import math
 import uuid
 
@@ -352,8 +352,8 @@ class FuelCodeServices:
 
         fuel_code_status = await self.repo.get_fuel_code_status(status)
         fuel_code.fuel_code_status = fuel_code_status
-        fuel_code.update_date = datetime.now()
-        fuel_code.last_updated = datetime.now()
+        fuel_code.update_date = datetime.now(timezone.utc)
+        fuel_code.last_updated = datetime.now(timezone.utc)
         if fuel_code.group_uuid is None:
             fuel_code.group_uuid = str(uuid.uuid4())
         fuel_code.version += 1
@@ -491,7 +491,7 @@ class FuelCodeServices:
         fuel_code.facility_nameplate_capacity_unit = (
             facility_nameplate_capacity_units_enum
         )
-        fuel_code.last_updated = datetime.now()
+        fuel_code.last_updated = datetime.now(timezone.utc)
         fuel_code.action_type = ActionTypeEnum.UPDATE.value
 
         if fuel_code.group_uuid is None:
