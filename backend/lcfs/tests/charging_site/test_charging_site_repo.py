@@ -113,9 +113,9 @@ class TestChargingSiteRepository:
         mock_site_ids_result = MagicMock()
         mock_site_ids_result.fetchall.return_value = [(1,), (2,)]
 
-        # Mock equipment query
+        # Mock equipment query - returns tuples of (equipment, site, site_id)
         mock_equipment_result = MagicMock()
-        mock_equipment_result.unique.return_value.all.return_value = [
+        mock_equipment_result.all.return_value = [
             (mock_equipment_list[0], MagicMock(spec=ChargingSite), 1),
             (mock_equipment_list[1], MagicMock(spec=ChargingSite), 2),
         ]

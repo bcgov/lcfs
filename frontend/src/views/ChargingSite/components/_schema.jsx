@@ -426,11 +426,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     sortable: false,
     filter: false,
     minWidth: 180,
-    // cellRenderer: (params) => {
-    //   const value = params.value || ''
-    //   if (!params.data?.isHistoryVersion) return value
-    //   return `↳ ${value}`
-    // }
+    cellRenderer: (params) => {
+      const value = params.value || ''
+      if (!params.data?.isHistoryVersion) return value
+      return `↳ ${value}`
+    }
   })
 
   // Version
@@ -440,11 +440,6 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     minWidth: 120,
     filter: false,
     type: enableSelection ? 'numericColumn' : undefined,
-    // cellRenderer: (params) => {
-    //   const version = params.value ?? params.data?.version
-    //   if (version == null) return ''
-    //   return `v${version}`
-    // },
     cellStyle: (params) =>
       historyMode &&
       params.data?.isHistoryVersion &&
