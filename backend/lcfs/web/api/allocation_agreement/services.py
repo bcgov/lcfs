@@ -338,7 +338,7 @@ class AllocationAgreementServices:
                 )
 
             if (
-                existing_allocation_agreement.provision_of_the_act.name
+                getattr(existing_allocation_agreement.provision_of_the_act, "name", None)
                 != allocation_agreement_data.provision_of_the_act
             ):
                 existing_allocation_agreement.provision_of_the_act = (

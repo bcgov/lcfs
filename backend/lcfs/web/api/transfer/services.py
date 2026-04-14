@@ -484,7 +484,7 @@ class TransferServices:
             updated_transfer = await self.update_category(
                 transfer.transfer_id, category
             )
-            updated_transfer.transaction_effective_date = datetime.now(timezone.utc)
+            updated_transfer.transaction_effective_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
