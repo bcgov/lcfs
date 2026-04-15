@@ -43,7 +43,10 @@ export const PublicPageLayout = () => {
         <Stack spacing={2}>
           {!hideBreadcrumb && (
             <BCBox size={12}>
-              <PublicBreadcrumb rootPath={ROUTES.PUBLIC_DASHBOARD} />
+              <PublicBreadcrumb
+                rootLabel="Login"
+                rootPath={ROUTES.AUTH.LOGIN}
+              />
             </BCBox>
           )}
           <BCBox

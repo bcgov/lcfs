@@ -11,7 +11,7 @@ export const publicPageRoutes: AppRouteObject[] = [
     key: 'public-dashboard',
     path: ROUTES.PUBLIC_DASHBOARD,
     element: <PublicDashboard />,
-    handle: { title: 'LCFS program information', hideBreadcrumb: true }
+    handle: { title: 'LCFS program information' }
   },
   {
     name: 'Compliance unit calculator',
