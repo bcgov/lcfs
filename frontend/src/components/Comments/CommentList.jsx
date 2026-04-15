@@ -223,7 +223,7 @@ const CommentList = ({
                   showVisibilityToggle={showVisibilityToggle}
                   visibility={editVisibility}
                   onVisibilityChange={setEditVisibility}
-                  visibilityAlign="left"
+                  visibilityAlign="right"
                 />
               ) : (
                 <BCBox>
@@ -312,7 +312,7 @@ const CommentList = ({
               showVisibilityToggle={showVisibilityToggle}
               visibility={visibility}
               onVisibilityChange={onVisibilityChange}
-              visibilityAlign="left"
+              visibilityAlign="right"
             />
           </BCBox>
         )}
