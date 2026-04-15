@@ -325,6 +325,9 @@ export const allocationAgreementColDefs = (
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       suppressKeyboardEvent,
       minWidth: 300,
+      valueGetter: (params) =>
+        params.data.provisionOfTheAct?.name ||
+        params.data.provisionOfTheAct,
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.provisionOfTheAct = params.newValue
@@ -669,7 +672,10 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
         'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
       ),
       minWidth: 370,
-      field: 'provisionOfTheAct'
+      field: 'provisionOfTheAct',
+      valueGetter: (params) =>
+        params.data.provisionOfTheAct?.name ||
+        params.data.provisionOfTheAct
     },
     {
       headerName: i18n.t(
@@ -1139,7 +1145,10 @@ export const allocAgrmtSummaryColDefs = (t) => [
     headerName: t(
       'allocationAgreement:allocationAgreementColLabels.carbonIntensity'
     ),
-    field: 'provisionOfTheAct'
+    field: 'provisionOfTheAct',
+    valueGetter: (params) =>
+      params.data?.provisionOfTheAct?.name ||
+      params.data?.provisionOfTheAct
   },
   {
     headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'),
