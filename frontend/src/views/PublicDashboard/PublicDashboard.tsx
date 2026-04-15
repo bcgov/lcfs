@@ -34,9 +34,9 @@ export const PublicDashboard = () => {
         color="nav"
         title={t('publicDashboard.cardTitle')}
         data-test="public-dashboard-card"
-        sx={{ width: 320, mb: 0 }}
+        sx={{ width: 550, mb: 0, pb: 12 }}
         content={
-          <List component="div" sx={{ maxWidth: '100%' }}>
+          <List component="div" sx={{ maxWidth: '100%', py: 1, pr: 0 }}>
             {publicLinks.map(({ labelKey, path }) => (
               <ListItemButton
                 component={Link}
