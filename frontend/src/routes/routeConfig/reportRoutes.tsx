@@ -16,6 +16,7 @@ import { ViewChargingSite } from '@/views/ChargingSite/ViewChargingSite'
 import { FinalSupplyEquipmentReporting } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentReporting'
 import { FSEProcessing } from '@/views/FSEProcessing'
 import FSEFullMap from '@/views/FinalSupplyEquipments/FSEFullMap'
+import { ReportOpenings } from '@/views/ComplianceReports/ReportOpenings'
 import { AppRouteObject } from '../types'
 
 export const reportRoutes: AppRouteObject[] = [
@@ -67,8 +68,14 @@ export const reportRoutes: AppRouteObject[] = [
       },
       {
         path: 'fse-map',
-        element: <FSEFullMap />,
+        element: <FSEFullMap />, 
         handle: { title: 'FSE map' }
+      }
+      ,
+      {
+        path: 'report-openings',
+        element: <ReportOpenings />,
+        handle: { title: 'Report openings' }
       }
     ]
   },

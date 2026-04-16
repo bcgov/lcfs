@@ -27,11 +27,11 @@ jobs:
       cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.2
 
       - name: Set up cache for OpenShift CLI
         id: cache
-        uses: actions/cache@v4.2.0
+        uses: actions/cache@v5.0.4
         with:
           path: /usr/local/bin/oc # Path where the `oc` binary will be installed
           key: oc-cli-${{ runner.os }}
@@ -70,13 +70,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.2
 
-      - name: Restore oc command from Cache
-        uses: actions/cache@v4.2.0
+      - name: Install oc
+        uses: redhat-actions/openshift-tools-installer@v1
         with:
-          path: /usr/local/bin/oc
-          key: oc-cli-${{ runner.os }}
+          oc: "4"
 
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
@@ -121,14 +120,14 @@ jobs:
 
     steps:
       - name: Checkout Manifest repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6.0.2
         with:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
 
       - name: Update tags
-        uses: mikefarah/yq@v4.40.5
+        uses: mikefarah/yq@v4.52.4
         with:
           cmd: |
             yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml

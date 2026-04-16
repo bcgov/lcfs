@@ -3,7 +3,7 @@ import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { timezoneFormatter } from '@/utils/formatters.js'
+import { timezoneFormatter, currencyFormatter } from '@/utils/formatters.js'
 import { ExpandMore } from '@mui/icons-material'
 import { List, ListItemText, styled } from '@mui/material'
 import MuiAccordion from '@mui/material/Accordion'
@@ -59,7 +59,8 @@ export const HistoryCard = ({
 
   // Basic status checks
   const isCurrentAssessed =
-    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED ||
+    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
   const isSupplementalReport = reportVersion > 0
 
   // User permission checks
@@ -97,6 +98,24 @@ export const HistoryCard = ({
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
 
+  const renewablePenaltyAmountRaw =
+    report?.summary?.line11FossilDerivedBaseFuelTotal || 0
+  const lowCarbonPenaltyAmountRaw =
+    report?.summary?.line21NonCompliancePenaltyPayable || 0
+
+  const renewablePenaltyAmount = Math.trunc(
+    Number(renewablePenaltyAmountRaw) || 0
+  )
+  const lowCarbonPenaltyAmount = Math.trunc(
+    Number(lowCarbonPenaltyAmountRaw) || 0
+  )
+
+  const renewableTargetNotMet = renewablePenaltyAmountRaw > 0
+  const lowCarbonTargetNotMet = lowCarbonPenaltyAmountRaw > 0
+
+  const formattedRenewablePenalty = currencyFormatter(renewablePenaltyAmount)
+  const formattedLowCarbonPenalty = currencyFormatter(lowCarbonPenaltyAmount)
+
   /**
    * Helper: build the two assessment list items.
    * We use it twice – once top‑level for gov users (pre‑assessment)
@@ -112,6 +131,38 @@ export const HistoryCard = ({
             {t('report:notSubjectToAssessmentHistoryMessage')}
           </ListItemText>
         </StyledListItem>
+      )
+    }
+
+    // Check if the report has exemptions
+    if (report.isRenewableFuelExempted || report.isLowCarbonFuelExempted) {
+      return (
+        <>
+          {report.isRenewableFuelExempted && (
+            <StyledListItem disablePadding>
+              <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                <strong>
+                  {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+                </strong>
+                {t('report:assessmentExemptRenewable', {
+                  name: report.organization.name
+                })}
+              </ListItemText>
+            </StyledListItem>
+          )}
+          {report.isLowCarbonFuelExempted && (
+            <StyledListItem disablePadding>
+              <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                <strong>
+                  {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
+                </strong>
+                {t('report:assessmentExemptLowCarbon', {
+                  name: report.organization.name
+                })}
+              </ListItemText>
+            </StyledListItem>
+          )}
+        </>
       )
     }
 
@@ -134,6 +185,20 @@ export const HistoryCard = ({
                     : 'has not met'
               })}
             </ListItemText>
+            {renewableTargetNotMet && (
+              <List sx={{ p: 0, m: 0, width: '100%' }}>
+                <StyledListItem
+                  disablePadding
+                  sx={{ listStyleType: 'circle', marginLeft: '2.4rem' }}
+                >
+                  <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                    {t('report:assessmentPenaltyLn1', {
+                      penaltyAmount: formattedRenewablePenalty
+                    })}
+                  </ListItemText>
+                </StyledListItem>
+              </List>
+            )}
           </StyledListItem>
         )}
         <StyledListItem disablePadding>
@@ -149,6 +214,20 @@ export const HistoryCard = ({
                   : 'has not met'
             })}
           </ListItemText>
+          {lowCarbonTargetNotMet && (
+            <List sx={{ p: 0, m: 0, width: '100%' }}>
+              <StyledListItem
+                disablePadding
+                sx={{ listStyleType: 'circle', marginLeft: '2.4rem' }}
+              >
+                <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                  {t('report:assessmentPenaltyLn2', {
+                    penaltyAmount: formattedLowCarbonPenalty
+                  })}
+                </ListItemText>
+              </StyledListItem>
+            </List>
+          )}
         </StyledListItem>
       </>
     )
@@ -160,11 +239,14 @@ export const HistoryCard = ({
     return [...report.history]
       .sort((a, b) => new Date(b.createDate) - new Date(a.createDate))
       .map((item) => {
-        if (
-          item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
-          !isGovernmentUser
-        ) {
-          item.status.status = 'AssessedBy'
+        if (!isGovernmentUser) {
+          if (item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED) {
+            item.status.status = 'AssessedBy'
+          } else if (
+            item.status.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
+          ) {
+            item.status.status = 'ExemptedBy'
+          }
         }
         return item
       })
@@ -206,7 +288,10 @@ export const HistoryCard = ({
                       {t('report:complianceReportHistory.canBeEdited')}
                     </span>
                   )}
-                  : {assessedMessage}
+                  :{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>
+                    {assessedMessage.replace(/\n{2,}/g, '\n')}
+                  </span>
                 </ListItemText>
               </StyledListItem>
             )}
@@ -215,7 +300,9 @@ export const HistoryCard = ({
             {sortedHistory.map((item, index) => {
               const showNestedAssessment = [
                 COMPLIANCE_REPORT_STATUSES.ASSESSED,
-                'AssessedBy'
+                COMPLIANCE_REPORT_STATUSES.EXEMPTED,
+                'AssessedBy',
+                'ExemptedBy'
               ].includes(item.status.status)
 
               const hideHistoryLine =

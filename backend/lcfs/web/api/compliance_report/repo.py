@@ -1,6 +1,6 @@
 import asyncio
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends
 from sqlalchemy import (
     func,
@@ -126,7 +126,7 @@ class ComplianceReportRepository:
             .scalars()
             .all()
         )
-        current_year = str(datetime.now().year)
+        current_year = str(datetime.now(timezone.utc).year)
 
         # Check if the current year is already in the list of periods
         if not any(period.description == current_year for period in periods):
@@ -138,7 +138,7 @@ class ComplianceReportRepository:
             # Insert the current year if it doesn't exist
             new_period = CompliancePeriod(
                 description=current_year,
-                effective_date=datetime.now().date(),
+                effective_date=datetime.now(timezone.utc).date(),
                 display_order=max_display_order_value + 1,
             )
             self.db.add(new_period)
@@ -212,7 +212,9 @@ class ComplianceReportRepository:
         where_conditions = [
             ComplianceReport.organization_id == organization_id,
             CompliancePeriod.description == str(period),
-            ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed,
+            ComplianceReportStatus.status.in_(
+                [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Exempted]
+            ),
         ]
 
         # Exclude the current report to avoid circular reference
@@ -295,8 +297,8 @@ class ComplianceReportRepository:
             report.compliance_report_id, report.current_status_id
         )
         if history:
-            history.update_date = datetime.now()
-            history.create_date = datetime.now()
+            history.update_date = datetime.now(timezone.utc)
+            history.create_date = datetime.now(timezone.utc)
             history.status_id = report.current_status_id
             history.user_profile_id = user.user_profile_id
             history.display_name = f"{user.first_name} {user.last_name}"
@@ -1090,11 +1092,11 @@ class ComplianceReportRepository:
         """
         # First, get the group_uuid for the given report_id
         group_uuid_result = await self.db.execute(
-            select(ComplianceReport.compliance_report_group_uuid).where(
-                ComplianceReport.compliance_report_id == report_id
-            )
+            select(ComplianceReport.compliance_report_group_uuid)
+            .where(ComplianceReport.compliance_report_id == report_id)
+            .limit(1)
         )
-        group_uuid = group_uuid_result.scalar_one_or_none()
+        group_uuid = group_uuid_result.scalars().first()
 
         if not group_uuid:
             # Report not found, return empty list

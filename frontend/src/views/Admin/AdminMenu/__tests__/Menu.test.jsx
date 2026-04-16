@@ -20,7 +20,8 @@ vi.mock('@/routes/routes', () => ({
       USERS: { LIST: '/admin/users' },
       USER_ACTIVITY: '/admin/user-activity',
       USER_LOGIN_HISTORY: '/admin/user-login-history',
-      AUDIT_LOG: { LIST: '/admin/audit-log' }
+      AUDIT_LOG: { LIST: '/admin/audit-log' },
+      LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background'
     }
   }
 }))
@@ -91,12 +92,28 @@ vi.mock('@/views/Admin/AdminMenu', () => ({
   Users: vi.fn(() => <div data-test="users">Users Component</div>),
   UserActivity: vi.fn(() => <div data-test="user-activity">UserActivity Component</div>),
   UserLoginHistory: vi.fn(() => <div data-test="user-login-history">UserLoginHistory Component</div>),
-  AuditLog: vi.fn(() => <div data-test="audit-log">AuditLog Component</div>)
+  AuditLog: vi.fn(() => <div data-test="audit-log">AuditLog Component</div>),
+  LoginScreenBackground: vi.fn(() => <div data-test="login-screen-background">LoginScreenBackground Component</div>)
 }))
 
 vi.mock('@/constants/roles', () => ({
   roles: {
     administrator: 'administrator'
+  }
+}))
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasRoles: vi.fn(() => false),
+    hasAnyRole: vi.fn(() => false),
+    data: null,
+    isLoading: false
+  })
+}))
+
+vi.mock('@/constants/config', () => ({
+  CONFIG: {
+    ENVIRONMENT: 'production'
   }
 }))
 
@@ -127,8 +144,8 @@ describe('AdminMenu Component', () => {
       const { container } = render(<AdminMenu tabIndex={0} />)
       
       const tabs = container.querySelectorAll('[data-test="tab"]')
-      expect(tabs).toHaveLength(4)
-      
+      expect(tabs).toHaveLength(5)
+
       tabs.forEach((tab, index) => {
         expect(tab).toHaveAttribute('id', `full-width-tab-${index}`)
         expect(tab).toHaveAttribute('aria-controls', `full-width-admin-tabs-${index}`)
@@ -160,14 +177,14 @@ describe('AdminMenu Component', () => {
       const { container } = render(<AdminMenu tabIndex={0} />)
       
       const tabs = container.querySelectorAll('[data-test="tab"]')
-      expect(tabs).toHaveLength(4)
+      expect(tabs).toHaveLength(5)
     })
 
     it('renders all admin tab panels', () => {
       const { container } = render(<AdminMenu tabIndex={0} />)
       
       const panels = container.querySelectorAll('[data-test="admin-tab-panel"]')
-      expect(panels).toHaveLength(4)
+      expect(panels).toHaveLength(5)
     })
   })
 
@@ -227,6 +244,7 @@ describe('AdminMenu Component', () => {
       expect(mockT).toHaveBeenCalledWith('UserActivity')
       expect(mockT).toHaveBeenCalledWith('UserLoginHistory')
       expect(mockT).toHaveBeenCalledWith('AuditLog')
+      expect(mockT).toHaveBeenCalledWith('LoginScreenBackground')
     })
   })
 
@@ -246,6 +264,7 @@ describe('AdminMenu Component', () => {
       expect(container.querySelector('[data-test="user-activity"]')).toBeTruthy()
       expect(container.querySelector('[data-test="user-login-history"]')).toBeTruthy()
       expect(container.querySelector('[data-test="audit-log"]')).toBeTruthy()
+      expect(container.querySelector('[data-test="login-screen-background"]')).toBeTruthy()
     })
   })
 })

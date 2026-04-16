@@ -1,14 +1,43 @@
+import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { IDIRSpecificRoleFields } from '../components/IDIRSpecificRoleFields'
 
-// Mock dependencies
-vi.mock('@mui/material', () => ({
-  Box: ({ children }) => <div data-test="box">{children}</div>
+// Local override for @/components/BCForm so that BCFormRadio propagates `disabled`
+// to its rendered inputs. This lets us assert the new behaviour where IA radio
+// inputs are NOT disabled simply because Director is selected.
+vi.mock('@/components/BCForm', () => ({
+  BCFormCheckbox: ({ name, options = [] }) =>
+    React.createElement(
+      'div',
+      { 'data-test': `${name}-checkbox-group` },
+      options.map((opt, i) =>
+        React.createElement('input', {
+          key: `${name}-${i}`,
+          type: 'checkbox',
+          'data-test': opt.dataTestId || `${name}${i + 1}`,
+          'data-testid': opt.dataTestId || `${name}${i + 1}`
+        })
+      )
+    ),
+  BCFormRadio: ({ name, options = [], disabled }) =>
+    React.createElement(
+      'div',
+      { 'data-test': `${name}-radio-group` },
+      options.map((opt, i) =>
+        React.createElement('input', {
+          key: `${name}-${i}`,
+          type: 'radio',
+          name,
+          value: opt.value || opt,
+          disabled: !!disabled,
+          'data-test': opt.dataTestId || `${name}${i + 1}`,
+          'data-testid': opt.dataTestId || `${name}${i + 1}`
+        })
+      )
+    )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  __esModule: true,
   default: ({ children, variant, component }) => (
     <div data-test="bc-typography" data-variant={variant} data-component={component}>
       {children}
@@ -16,238 +45,184 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@/components/BCForm', () => ({
-  BCFormCheckbox: ({ form, name, options, disabled }) => (
-    <div 
-      data-test="bc-form-checkbox"
-      data-name={name}
-      data-disabled={disabled}
-      data-options-length={options?.length}
-      data-form={JSON.stringify(form)}
-    >
-      Checkbox Component
+vi.mock('@/components/BCForm/CustomLabel', () => ({
+  CustomLabel: ({ header, text }) => (
+    <span data-test="custom-label" data-header={header} data-text={text}>
+      {header}
+    </span>
+  )
+}))
+
+vi.mock('react-hook-form', () => ({
+  Controller: ({ name, control, render: renderFn }) =>
+    renderFn({
+      field: {
+        onChange: vi.fn(),
+        value: control?.__mockIdirRole ?? ''
+      }
+    })
+}))
+
+vi.mock('@mui/material', () => ({
+  Box: ({ children }) => <div data-test="box">{children}</div>,
+  FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
+  FormControlLabel: ({ control: ctrl, label, value }) => (
+    <div data-test="form-control-label" data-value={value}>
+      {ctrl}
+      {label}
     </div>
   ),
-  BCFormRadio: ({ control, name, options, disabled }) => (
-    <div 
-      data-test="bc-form-radio"
-      data-name={name}
-      data-disabled={disabled}
-      data-options-length={options?.length}
-      data-control={JSON.stringify(control)}
-    >
-      Radio Component
+  Radio: ({ disabled }) => (
+    <input data-test="radio" type="radio" disabled={disabled} readOnly />
+  ),
+  RadioGroup: ({ children, value }) => (
+    <div data-test="radio-group" data-value={value}>
+      {children}
     </div>
   )
 }))
 
-vi.mock('@/constants/roles', () => ({
-  govRoles: [
-    'Government',
-    'Administrator',
-    'Analyst',
-    'Compliance Manager',
-    'Director'
-  ]
-}))
-
 vi.mock('../_schema', () => ({
-  idirRoleOptions: vi.fn()
+  adminRoleOptions: vi.fn(() => [
+    { label: 'Administrator', header: 'Administrator', text: 'admin desc', value: 'administrator', dataTestId: 'adminRole1' },
+    { label: 'System Admin', header: 'System Admin', text: 'system admin desc', value: 'system admin', dataTestId: 'adminRole2' }
+  ]),
+  iaRoleOptions: vi.fn(() => [
+    { label: 'IA Analyst', header: 'IA Analyst', text: 'ia analyst desc', value: 'ia analyst', dataTestId: 'iaRole1' },
+    { label: 'IA Manager', header: 'IA Manager', text: 'ia manager desc', value: 'ia manager', dataTestId: 'iaRole2' }
+  ])
 }))
 
-// Import the mock after mocking
-import { idirRoleOptions } from '../_schema'
+vi.mock('@/constants/roles', () => ({
+  roles: {
+    director: 'Director',
+    analyst: 'Analyst',
+    compliance_manager: 'Compliance Manager',
+    ia_analyst: 'IA Analyst',
+    ia_manager: 'IA Manager'
+  }
+}))
+
+import { IDIRSpecificRoleFields } from '../components/IDIRSpecificRoleFields'
+import { adminRoleOptions, iaRoleOptions } from '../_schema'
+
+const t = vi.fn((key) => key)
+
+function makeForm(idirRoleValue = '', iaRoleValue = '') {
+  return {
+    control: { __mockIdirRole: idirRoleValue },
+    watch: vi.fn((field) => {
+      if (field === 'idirRole') return idirRoleValue
+      if (field === 'iaRole') return iaRoleValue
+      return ''
+    })
+  }
+}
 
 describe('IDIRSpecificRoleFields', () => {
-  let mockForm, mockT, mockOptions
-
   beforeEach(() => {
     vi.clearAllMocks()
-    
-    mockForm = {
-      control: { testControl: 'value' }
-    }
-    
-    mockT = vi.fn((key) => `translated-${key}`)
-    
-    mockOptions = [
-      { 
-        label: 'Analyst', 
-        header: 'Analyst', 
-        text: 'translated-admin:userForm.analyst', 
-        value: 'analyst' 
-      },
-      { 
-        label: 'Director', 
-        header: 'Director', 
-        text: 'translated-admin:userForm.director', 
-        value: 'director' 
-      }
-    ]
-    
-    idirRoleOptions.mockReturnValue(mockOptions)
+    t.mockImplementation((key) => key)
   })
 
   it('renders without crashing', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
     expect(screen.getByTestId('box')).toBeInTheDocument()
   })
 
-  it('renders BCTypography with correct props and translation key', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const typography = screen.getByTestId('bc-typography')
-    expect(typography).toBeInTheDocument()
-    expect(typography).toHaveAttribute('data-variant', 'label')
-    expect(typography).toHaveAttribute('data-component', 'div')
-    expect(mockT).toHaveBeenCalledWith('admin:Roles')
-    expect(typography).toHaveTextContent('translated-admin:Roles')
+  it('renders a "Roles" heading via BCTypography', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    const headings = screen.getAllByTestId('bc-typography')
+    expect(headings.some((el) => el.textContent === 'admin:Roles')).toBe(true)
   })
 
-  it('calls translation function for dynamic govRoles key', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    // Should call t with the dynamic key based on govRoles[1] transformation
-    expect(mockT).toHaveBeenCalledWith('admin:userForm.administrator')
+  it('renders the admin checkbox group (Administrator + System Admin)', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    // Global BCFormCheckbox mock → <div data-test="adminRole-checkbox-group">
+    expect(screen.getByTestId('adminRole-checkbox-group')).toBeInTheDocument()
+    // Two child inputs (one per option)
+    const inputs = screen
+      .getByTestId('adminRole-checkbox-group')
+      .querySelectorAll('input')
+    expect(inputs).toHaveLength(2)
   })
 
-  it('performs govRoles[1] access and string manipulation correctly', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    const formData = JSON.parse(checkbox.getAttribute('data-form'))
-    expect(formData).toEqual(mockForm)
-    
-    // Verify the string manipulation was performed: 'Administrator'.toLowerCase().replace(' ', '_')
-    expect(mockT).toHaveBeenCalledWith('admin:userForm.administrator')
+  it('renders the idirRole radio group with Director, Analyst, Compliance Manager', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    const labels = screen
+      .getAllByTestId('custom-label')
+      .map((el) => el.getAttribute('data-header'))
+    expect(labels).toContain('Director')
+    expect(labels).toContain('Analyst')
+    expect(labels).toContain('Compliance Manager')
   })
 
-  it('renders BCFormCheckbox with correct props and form object', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toBeInTheDocument()
-    expect(checkbox).toHaveAttribute('data-name', 'adminRole')
-    expect(checkbox).toHaveAttribute('data-options-length', '1')
-    expect(checkbox).toHaveAttribute('data-disabled', 'false')
-    
-    const formData = JSON.parse(checkbox.getAttribute('data-form'))
-    expect(formData).toEqual(mockForm)
+  it('renders the Initiative Agreements section heading', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    expect(t).toHaveBeenCalledWith('admin:userForm.initiativeAgreementsSection')
   })
 
-  it('renders BCFormRadio with correct props and control object', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const radio = screen.getByTestId('bc-form-radio')
-    expect(radio).toBeInTheDocument()
-    expect(radio).toHaveAttribute('data-name', 'idirRole')
-    expect(radio).toHaveAttribute('data-options-length', '2')
-    expect(radio).toHaveAttribute('data-disabled', 'false')
-    
-    const controlData = JSON.parse(radio.getAttribute('data-control'))
-    expect(controlData).toEqual(mockForm.control)
+  it('renders the compliance sub-section heading inside the radio group', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    expect(t).toHaveBeenCalledWith('admin:userForm.complianceSection')
   })
 
-  it('destructures control from form object correctly', () => {
-    const formWithSpecificControl = {
-      control: {
-        customProperty: 'customValue',
-        anotherProperty: 123
-      }
-    }
-    
-    render(<IDIRSpecificRoleFields form={formWithSpecificControl} disabled={false} t={mockT} />)
-    
-    const radio = screen.getByTestId('bc-form-radio')
-    const controlData = JSON.parse(radio.getAttribute('data-control'))
-    expect(controlData).toEqual(formWithSpecificControl.control)
+  it('renders BCFormRadio for IA roles (iaRole-radio-group)', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    // Global BCFormRadio mock → <div data-test="iaRole-radio-group">
+    expect(screen.getByTestId('iaRole-radio-group')).toBeInTheDocument()
   })
 
-  it('passes disabled=false to both form components', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    const radio = screen.getByTestId('bc-form-radio')
-    
-    expect(checkbox).toHaveAttribute('data-disabled', 'false')
-    expect(radio).toHaveAttribute('data-disabled', 'false')
+  it('renders two IA role radio inputs (IA Analyst, IA Manager)', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    expect(iaGroup.querySelectorAll('input[type="radio"]')).toHaveLength(2)
   })
 
-  it('passes disabled=true to both form components', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={true} t={mockT} />)
-    
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    const radio = screen.getByTestId('bc-form-radio')
-    
-    expect(checkbox).toHaveAttribute('data-disabled', 'true')
-    expect(radio).toHaveAttribute('data-disabled', 'true')
+  it('renders Director radio option with correct value', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    const directorLabel = screen
+      .getAllByTestId('form-control-label')
+      .find((el) => el.getAttribute('data-value') === 'director')
+    expect(directorLabel).toBeTruthy()
   })
 
-  it('calls idirRoleOptions function with translation function', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    expect(idirRoleOptions).toHaveBeenCalledWith(mockT)
-    expect(idirRoleOptions).toHaveBeenCalledTimes(1)
+  it('calls adminRoleOptions and iaRoleOptions with the t function', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={false} t={t} />)
+    expect(adminRoleOptions).toHaveBeenCalledWith(t)
+    expect(iaRoleOptions).toHaveBeenCalledWith(t)
   })
 
-  it('handles empty idirRoleOptions array', () => {
-    idirRoleOptions.mockReturnValue([])
-    
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const radio = screen.getByTestId('bc-form-radio')
-    expect(radio).toHaveAttribute('data-options-length', '0')
+  it('disables idirRole radios (Director/Analyst/CM) when disabled=true', () => {
+    render(<IDIRSpecificRoleFields form={makeForm()} disabled={true} t={t} />)
+    const radios = screen.getAllByTestId('radio')
+    radios.forEach((r) => expect(r).toBeDisabled())
   })
 
-  it('renders complete component structure correctly', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    const box = screen.getByTestId('box')
-    const typography = screen.getByTestId('bc-typography')
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    const radio = screen.getByTestId('bc-form-radio')
-    
-    expect(box).toBeInTheDocument()
-    expect(typography).toBeInTheDocument()
-    expect(checkbox).toBeInTheDocument()
-    expect(radio).toBeInTheDocument()
-    
-    // Verify structure: all components should be inside box
-    expect(box).toContainElement(typography)
-    expect(box).toContainElement(checkbox)
-    expect(box).toContainElement(radio)
+  it('Director radio is rendered in the radio group', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={false} t={t} />)
+    expect(screen.getByTestId('radio-group')).toBeInTheDocument()
   })
 
-  it('creates admin role option with correct structure', () => {
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockT} />)
-    
-    // Verify the component renders and the dynamic translation key was called
-    expect(mockT).toHaveBeenCalledWith('admin:userForm.administrator')
-    
-    const checkbox = screen.getByTestId('bc-form-checkbox')
-    expect(checkbox).toHaveAttribute('data-options-length', '1')
+  it('IA role radio inputs are NOT disabled when Director is selected and form is enabled', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={false} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
+    expect(iaInputs).toHaveLength(2)
+    iaInputs.forEach((input) => expect(input).not.toBeDisabled())
   })
 
-  it('handles undefined form control gracefully', () => {
-    const formWithoutControl = {}
-    
-    render(<IDIRSpecificRoleFields form={formWithoutControl} disabled={false} t={mockT} />)
-    
-    const radio = screen.getByTestId('bc-form-radio')
-    const controlData = JSON.parse(radio.getAttribute('data-control'))
-    expect(controlData).toBeNull()
+  it('IA role radio inputs ARE disabled when form disabled=true, regardless of Director', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('director')} disabled={true} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
+    iaInputs.forEach((input) => expect(input).toBeDisabled())
   })
 
-  it('handles translation function returning same key when no translation exists', () => {
-    const mockTNoTranslation = vi.fn((key) => key)
-    
-    render(<IDIRSpecificRoleFields form={mockForm} disabled={false} t={mockTNoTranslation} />)
-    
-    expect(mockTNoTranslation).toHaveBeenCalledWith('admin:Roles')
-    expect(mockTNoTranslation).toHaveBeenCalledWith('admin:userForm.administrator')
-    
-    const typography = screen.getByTestId('bc-typography')
-    expect(typography).toHaveTextContent('admin:Roles')
+  it('IA role radio inputs are enabled when no idirRole is selected', () => {
+    render(<IDIRSpecificRoleFields form={makeForm('')} disabled={false} t={t} />)
+    const iaGroup = screen.getByTestId('iaRole-radio-group')
+    const iaInputs = iaGroup.querySelectorAll('input[type="radio"]')
+    iaInputs.forEach((input) => expect(input).not.toBeDisabled())
   })
 })

@@ -228,6 +228,10 @@ class CalculatorService:
             if row.provision_of_the_act and row.provision_of_the_act.startswith("Fuel code"):
                 continue
 
+            # Skip "Other" fuel type rows — not shown on the Calculation Data page
+            if row.fuel_type == "Other":
+                continue
+
             # Create a unique key for each combination
             key = (
                 row.fuel_category,

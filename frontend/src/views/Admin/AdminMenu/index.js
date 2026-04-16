@@ -1,5 +1,7 @@
 export { AdminMenu } from './Menu'
 export { Users } from './components/Users'
+export { SeededUserAssociation } from './components/SeededUserAssociation'
 export { UserActivity } from './components/UserActivity'
 export { UserLoginHistory } from './components/UserLoginHistory'
 export { AuditLog } from './components/AuditLog'
+export { LoginScreenBackground } from './components/LoginScreenBackground'

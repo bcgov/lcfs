@@ -110,11 +110,12 @@ export const ChargingSiteFSEGrid = ({
     setSelectedRows(selectedIds)
   }, [])
 
-  // Toggle select all equipment by status
+  // Toggle select all equipment by status (accepts a single status string or array of statuses)
   const handleToggleSelectByStatus = useCallback(
     (status) => {
-      const equipmentWithStatus = equipmentList.filter(
-        (equipment) => equipment.status.status === status
+      const statuses = Array.isArray(status) ? status : [status]
+      const equipmentWithStatus = equipmentList.filter((equipment) =>
+        statuses.includes(equipment.status.status)
       )
       const equipmentIds = equipmentWithStatus.map(
         (equipment) => equipment.chargingEquipmentId
