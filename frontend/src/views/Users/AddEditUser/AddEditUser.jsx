@@ -174,7 +174,33 @@ export const AddEditUser = ({
     if (bceidRoles.length > 0) {
       setValue('readOnly', '')
     }
+    // IA Signer depends on IA Proponent — clear it from form state when IA Proponent is removed.
+    // For BCeID callers the backend (services.py) restores IA Signer regardless of form state.
+    if (
+      bceidRoles.includes(roles.ia_signer.toLowerCase()) &&
+      !bceidRoles.includes(roles.ia_proponent.toLowerCase())
+    ) {
+      setValue(
+        'bceidRoles',
+        bceidRoles.filter((r) => r !== roles.ia_signer.toLowerCase())
+      )
+    }
   }, [bceidRoles])
+
+  const idirRole = watch('idirRole')
+  const iaRole = watch('iaRole')
+
+  useEffect(() => {
+    if (idirRole === roles.director.toLowerCase()) {
+      setValue('iaRole', '')
+    }
+  }, [idirRole])
+
+  useEffect(() => {
+    if (iaRole && idirRole === roles.director.toLowerCase()) {
+      setValue('idirRole', '')
+    }
+  }, [iaRole])
 
   useEffect(() => {
     if (isUserFetched && data) {
@@ -182,9 +208,24 @@ export const AddEditUser = ({
         .map((role) => role.name.toLowerCase())
         .filter(
           (r) =>
-            r !== roles.government.toLocaleLowerCase() &&
-            r !== roles.supplier.toLocaleLowerCase()
+            r !== roles.government.toLowerCase() &&
+            r !== roles.supplier.toLowerCase()
         )
+
+      const IDIR_COMPLIANCE_ROLES = [
+        roles.analyst.toLowerCase(),
+        roles.compliance_manager.toLowerCase(),
+        roles.director.toLowerCase()
+      ]
+      const IDIR_IA_ROLES = [
+        roles.ia_analyst.toLowerCase(),
+        roles.ia_manager.toLowerCase()
+      ]
+      const IDIR_ADMIN_ROLES = [
+        roles.administrator.toLowerCase(),
+        roles.system_admin.toLowerCase()
+      ]
+
       const userData = {
         keycloakEmail: data?.keycloakEmail,
         altEmail: data?.email || '',
@@ -196,24 +237,27 @@ export const AddEditUser = ({
         mobile: data?.mobilePhone,
         status: data?.isActive ? 'Active' : 'Inactive',
         readOnly: dataRoles
-          .filter((r) => r === roles.read_only.toLocaleLowerCase())
+          .filter((r) => r === roles.read_only.toLowerCase())
           .join(''),
-        adminRole: dataRoles.filter(
-          (r) => r === roles.administrator.toLocaleLowerCase()
-        ),
+        adminRole: dataRoles.filter((r) => IDIR_ADMIN_ROLES.includes(r)),
         idirRole: dataRoles
-          .filter((r) => r !== roles.administrator.toLocaleLowerCase())
+          .filter((r) => IDIR_COMPLIANCE_ROLES.includes(r))
           .join(''),
-        bceidRoles: dataRoles.includes(roles.read_only.toLocaleLowerCase())
+        iaRole: dataRoles
+          .filter((r) => IDIR_IA_ROLES.includes(r))
+          .join(''),
+        bceidRoles: dataRoles.includes(roles.read_only.toLowerCase())
           ? []
           : dataRoles
       }
+
       if (data.isGovernmentUser) {
         userData.bceidRoles = []
         userData.readOnly = ''
       } else {
         userData.adminRole = []
         userData.idirRole = ''
+        userData.iaRole = ''
         setOrgName(data.organization?.name)
       }
       reset(userData)
@@ -247,6 +291,7 @@ export const AddEditUser = ({
               ...data.adminRole,
               ...(data.readOnly === '' ? data.bceidRoles : []),
               data.idirRole,
+              data.iaRole,
               data.readOnly
             ]
           : []
@@ -367,6 +412,7 @@ export const AddEditUser = ({
                     form={form}
                     disabled={disabled}
                     status={status}
+                    isGovernmentUser={isCurrentUserGovernment}
                     t={t}
                   />
                 ) : (

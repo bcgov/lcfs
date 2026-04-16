@@ -1,7 +1,7 @@
 import io
 import math
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 import structlog
 from typing import List, Dict
@@ -231,7 +231,7 @@ class OrganizationsService:
         file_content = builder.build_spreadsheet()
 
         # Get the current date in YYYY-MM-DD format
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}

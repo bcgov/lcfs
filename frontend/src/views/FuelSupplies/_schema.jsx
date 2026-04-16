@@ -9,7 +9,10 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas } from '@/utils/formatters'
+import {
+  formatNumberWithCommas,
+  formatNumberWithDecimals
+} from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -31,8 +34,14 @@ import {
 } from '@/utils/renewableClaimUtils'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
+  'Approved fuel code - Section 6 (5) (c)'
 export const PROVISION_GHGENIUS =
   'GHGenius modelled - Section 6 (5) (d) (ii) (A)'
+
+export const isFuelCodeProvision = (provision) =>
+  provision === PROVISION_APPROVED_FUEL_CODE ||
+  provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const fuelSupplyColDefs = (
   optionsData,
@@ -235,7 +244,7 @@ export const fuelSupplyColDefs = (
                 (item) =>
                   item.fuelCategory.fuelCategory === params.data.fuelCategory
               )
-              ?.map((item) => item.endUseType.type)
+              ?.map((item) => item.endUseType?.type)
               .sort()
           )
         ].filter((item) => item != null),
@@ -262,10 +271,10 @@ export const fuelSupplyColDefs = (
               (item) =>
                 item.fuelCategory.fuelCategory === params.data.fuelCategory
             )
-            .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
+            .find((eerRatio) => eerRatio.endUseType?.type === params.newValue)
 
-          params.data.endUseType = eerRatio.endUseType.type
-          params.data.endUseId = eerRatio.endUseType.endUseTypeId
+          params.data.endUseType = eerRatio?.endUseType?.type
+          params.data.endUseId = eerRatio?.endUseType?.endUseTypeId
         }
         return true
       },
@@ -329,7 +338,7 @@ export const fuelSupplyColDefs = (
                 params.data.ciOfFuel = fuelType.defaultCarbonIntensity || null
               }
             }
-          } else if (params.newValue === PROVISION_APPROVED_FUEL_CODE) {
+          } else if (isFuelCodeProvision(params.newValue)) {
             params.data.fuelCode = null
             params.data.fuelCodeId = null
             // Clear CI values when switching to fuel code - they'll be set when fuel code is selected
@@ -397,7 +406,7 @@ export const fuelSupplyColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         return (
-          params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+          isFuelCodeProvision(params.data.provisionOfTheAct) &&
           fuelType?.fuelCodes?.length > 0
         )
       },
@@ -405,8 +414,9 @@ export const fuelSupplyColDefs = (
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
-        const isFuelCodeScenario =
-          params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+        const isFuelCodeScenario = isFuelCodeProvision(
+          params.data.provisionOfTheAct
+        )
         const fuelCodes =
           fuelType?.fuelCodes?.map((item) => item.fuelCode || item.fuel_code) ||
           []
@@ -446,7 +456,7 @@ export const fuelSupplyColDefs = (
           const fuelType = optionsData?.fuelTypes?.find(
             (obj) => params.data.fuelType === obj.fuelType
           )
-          if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          if (isFuelCodeProvision(params.data.provisionOfTheAct)) {
             const matchingFuelCode = fuelType?.fuelCodes?.find(
               (fuelCode) => originalFuelCode === fuelCode.fuelCode
             )
@@ -969,11 +979,15 @@ export const fuelSupplySummaryColDef = (
       valueGetter: (params) => {
         if (isFuelTypeOther(params)) {
           return params.data?.energyDensity
-            ? params.data?.energyDensity + ' MJ/' + params.data?.units
+            ? Number(params.data.energyDensity).toFixed(2) +
+                ' MJ/' +
+                params.data?.units
             : 0
         } else {
           return params.data?.energyDensity
-            ? params.data?.energyDensity + ' MJ/' + params.data?.units
+            ? Number(params.data.energyDensity).toFixed(2) +
+                ' MJ/' +
+                params.data?.units
             : ''
         }
       }
@@ -981,13 +995,14 @@ export const fuelSupplySummaryColDef = (
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
       field: 'eer',
-      minWidth: 80
+      minWidth: 80,
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2)
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
       minWidth: 170,
-      valueFormatter: formatNumberWithCommas
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2)
     }
   ]
 
@@ -1201,13 +1216,14 @@ export const changelogCommonColDefs = (
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
       field: 'eer',
       minWidth: 80,
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2),
       cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
       field: 'energy',
       minWidth: 170,
-      valueFormatter: formatNumberWithCommas,
+      valueFormatter: (params) => formatNumberWithDecimals(params, 2),
       cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
     }
   ]

@@ -22,6 +22,8 @@ branch_labels = None
 depends_on = None
 
 # Specify which sections to execute from the SQL file
+# Note: Excluded views that reference organization_early_issuance_by_year table
+# as that table doesn't exist yet - will be created in migration a1b2c3d4e5f7
 SECTIONS_TO_EXECUTE = [
     "Compliance Reports Analytics View",
     "Compliance Reports Waiting review",
@@ -36,11 +38,12 @@ SECTIONS_TO_EXECUTE = [
     "Fuel Supply Fuel Code Base View",
     "Fuel Supply Base View",
     "Compliance Report Fuel Supply Base View",
-    "Compliance Report Chained View",
-    "Compliance Report Base View",
-    "Allocation Agreement Chained View",
-    "Allocation Agreement Base View",
-    "Fuel Code Base View"
+    "Compliance Report Chained View",  # Safe - doesn't reference organization_early_issuance_by_year
+    "Allocation Agreement Chained View",  # Safe - doesn't reference organization_early_issuance_by_year
+    "Fuel Code Base View",
+    # Excluded until organization_early_issuance_by_year table is created:
+    # "Compliance Report Base View",  # References organization_early_issuance_by_year
+    # "Allocation Agreement Base View",  # Depends on Compliance Report Base View
 ]
 
 

@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, notionalTransferColDefs } from './_schema'
-import { REPORT_SCHEDULES } from '@/constants/common'
+import { NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditNotionalTransfers = () => {
@@ -298,6 +298,13 @@ export const AddEditNotionalTransfers = () => {
   const updateGridColumnsVisibility = useCallback(() => {
     if (!gridRef.current?.api) return
     const api = gridRef.current.api
+    const complianceYear = parseInt(compliancePeriod, 10)
+    // These columns only apply for compliance years >= 2025
+    if (Number.isNaN(complianceYear) || complianceYear < NEW_REGULATION_YEAR) {
+      api.setColumnsVisible(['isCanadaProduced'], false)
+      api.setColumnsVisible(['isQ1Supplied'], false)
+      return
+    }
     let showColumns = false
     api.forEachNode((node) => {
       if (node.data?.fuelCategory === 'Diesel') {
@@ -305,7 +312,11 @@ export const AddEditNotionalTransfers = () => {
       }
     })
     api.setColumnsVisible(['isCanadaProduced'], showColumns)
-    api.setColumnsVisible(['isQ1Supplied'], showColumns)
+    // Q1 supplied only applies to the 2025 transition year
+    api.setColumnsVisible(
+      ['isQ1Supplied'],
+      showColumns && complianceYear === NEW_REGULATION_YEAR
+    )
     if (showColumns) {
       api?.autoSizeAllColumns?.()
     }

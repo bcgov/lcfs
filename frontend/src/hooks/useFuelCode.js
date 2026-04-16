@@ -68,6 +68,29 @@ export const useFuelCodeStatuses = (options) => {
   })
 }
 
+export const useFuelCodeBulletins = (bulletinType, paginationOptions, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['fuel-code-bulletins', bulletinType, paginationOptions],
+    queryFn: async () => {
+      const response = await client.post(
+        `/fuel-codes/bulletins?bulletinType=${bulletinType}`,
+        {
+          page: paginationOptions.page || 1,
+          size: paginationOptions.size || 25,
+          sortOrders: paginationOptions.sortOrders || [],
+          filters: paginationOptions.filters || []
+        }
+      )
+      return response.data
+    },
+    enabled: !!bulletinType,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    ...options
+  })
+}
+
 export const useTransportModes = (options) => {
   const client = useApiService()
   return useQuery({

@@ -7,6 +7,10 @@ import { use } from 'chai'
 // Create mock functions at the top level
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
+const mockUseParams = vi.fn(() => ({
+  compliancePeriod: '2024',
+  complianceReportId: '12345'
+}))
 const mockUseCurrentUser = vi.fn()
 const mockUseComplianceReportWithCache = vi.fn()
 const mockUseComplianceReportDocuments = vi.fn()
@@ -45,10 +49,7 @@ vi.mock('@react-keycloak/web', () => ({
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  useParams: () => ({
-    compliancePeriod: '2024',
-    complianceReportId: '12345'
-  }),
+  useParams: () => mockUseParams(),
   useLocation: () => mockUseLocation()
 }))
 
@@ -214,6 +215,10 @@ describe('ReportDetails', () => {
     vi.clearAllMocks()
 
     // Set up default mock returns
+    mockUseParams.mockReturnValue({
+      compliancePeriod: '2024',
+      complianceReportId: '12345'
+    })
     mockUseLocation.mockReturnValue({ state: {} })
     mockUseCurrentUser.mockReturnValue(defaultCurrentUser)
     mockUseComplianceReportWithCache.mockReturnValue(defaultComplianceReport)
@@ -689,4 +694,80 @@ describe('ReportDetails', () => {
     })
   })
 
+  describe('FSE section visibility by compliance year', () => {
+    it('shows FSE accordion when compliance period is 2024 or later and org has charging equipment', async () => {
+      mockUseParams.mockReturnValue({
+        compliancePeriod: '2024',
+        complianceReportId: '12345'
+      })
+      mockUseGetFSEReportingList.mockReturnValue({
+        data: {
+          finalSupplyEquipments: [],
+          hasChargingEquipment: true
+        },
+        isLoading: false,
+        error: null
+      })
+
+      render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('finalSupplyEquipment:fseTitle')
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('hides FSE accordion when compliance period is before 2024 even with charging equipment', async () => {
+      mockUseParams.mockReturnValue({
+        compliancePeriod: '2023',
+        complianceReportId: '12345'
+      })
+      mockUseGetFSEReportingList.mockReturnValue({
+        data: {
+          finalSupplyEquipments: [],
+          hasChargingEquipment: true
+        },
+        isLoading: false,
+        error: null
+      })
+
+      render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('finalSupplyEquipment:fseTitle')
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it('hides FSE accordion for 2022 compliance period', async () => {
+      mockUseParams.mockReturnValue({
+        compliancePeriod: '2022',
+        complianceReportId: '12345'
+      })
+      mockUseGetFSEReportingList.mockReturnValue({
+        data: {
+          finalSupplyEquipments: [{ fseId: 1 }],
+          hasChargingEquipment: true
+        },
+        isLoading: false,
+        error: null
+      })
+
+      render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('finalSupplyEquipment:fseTitle')
+        ).not.toBeInTheDocument()
+      })
+    })
+  })
 })

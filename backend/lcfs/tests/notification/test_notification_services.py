@@ -436,7 +436,29 @@ async def test_service_add_subscriptions_for_user_role(notification_service):
     await service.add_subscriptions_for_user_role(user_profile_id, role_enum)
 
     mock_repo.add_subscriptions_for_user_role.assert_awaited_once_with(
-        user_profile_id, role_enum
+        user_profile_id, role_enum, is_enabled=True
+    )
+
+
+@pytest.mark.anyio
+async def test_service_add_subscriptions_for_notification_types(
+    notification_service,
+):
+    service, mock_repo, mock_email_service = notification_service
+    user_profile_id = 1
+    notification_types = [
+        NotificationTypeEnum.BCEID__GOVERNMENT_NOTIFICATION,
+        NotificationTypeEnum.IDIR_ANALYST__GOVERNMENT_NOTIFICATION,
+    ]
+
+    mock_repo.add_subscriptions_for_notification_types = AsyncMock()
+
+    await service.add_subscriptions_for_notification_types(
+        user_profile_id, notification_types, is_enabled=True
+    )
+
+    mock_repo.add_subscriptions_for_notification_types.assert_awaited_once_with(
+        user_profile_id, notification_types, is_enabled=True
     )
 
 
@@ -490,6 +512,7 @@ async def test_send_notification_skip_analyst(notification_service):
     # Ensure that the analyst was skipped
     assert len(created_notifications) == 2
     assert created_notifications[0].related_user_profile_id == 2
+
 
 @pytest.mark.anyio
 async def test_remove_subscriptions_for_user():

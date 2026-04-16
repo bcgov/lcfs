@@ -458,3 +458,83 @@ async def test_get_compliance_report_by_id_success(
     mock_compliance_report_validation.validate_compliance_report_access.assert_awaited_once_with(
         mock.ANY
     )
+
+
+_UPDATE_USER_PAYLOAD = {
+    "title": "Mr",
+    "keycloak_username": "testuser",
+    "keycloak_email": "testuser@example.com",
+    "first_name": "Test",
+    "last_name": "User",
+    "is_active": True,
+    "phone": None,
+    "mobile_phone": None,
+    "organization_id": 1,
+    "role_names": [],
+}
+
+_USER_RESPONSE = {
+    "user_profile_id": 42,
+    "keycloak_username": "testuser",
+    "keycloak_email": "testuser@example.com",
+    "is_active": True,
+    "first_name": "Test",
+    "last_name": "User",
+    "title": "Mr",
+    "phone": None,
+    "mobile_phone": None,
+    "organization_id": 1,
+    "roles": [],
+}
+
+
+@pytest.mark.anyio
+async def test_update_user_supplier_own_org_succeeds(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_user_services,
+):
+    """A supplier with MANAGE_USERS can update a user in their own org."""
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 1})
+
+    mock_user_services.update_user.return_value = None
+    mock_user_services.get_user_by_id.return_value = _USER_RESPONSE
+    fastapi_app.dependency_overrides[UserServices] = lambda: mock_user_services
+
+    url = fastapi_app.url_path_for("update_user", organization_id=1, user_id=42)
+    response = await client.put(url, json=_UPDATE_USER_PAYLOAD)
+
+    assert response.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_update_user_supplier_other_org_forbidden(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    """A supplier with MANAGE_USERS cannot update a user in a different org."""
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 99})
+
+    url = fastapi_app.url_path_for("update_user", organization_id=1, user_id=42)
+    response = await client.put(url, json=_UPDATE_USER_PAYLOAD)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_update_user_supplier_no_organization_forbidden(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    """A supplier with no organization object set cannot update users."""
+    # Use org_id=0 so that the mock auth creates an org with id=0,
+    # which doesn't match organization_id=1 in the URL.
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 0})
+
+    url = fastapi_app.url_path_for("update_user", organization_id=1, user_id=42)
+    response = await client.put(url, json=_UPDATE_USER_PAYLOAD)
+
+    assert response.status_code == 403

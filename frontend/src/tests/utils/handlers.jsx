@@ -3,6 +3,22 @@ import { apiRoutes } from '@/constants/routes'
 import { http, HttpResponse } from 'msw'
 
 const api = 'http://localhost:8000/api'
+const reportOpenings = [
+  {
+    reportOpeningId: 1,
+    complianceYear: 2019,
+    complianceReportingEnabled: true,
+    earlyIssuanceEnabled: false,
+    supplementalReportRole: 'BCeID'
+  },
+  {
+    reportOpeningId: 2,
+    complianceYear: 2020,
+    complianceReportingEnabled: false,
+    earlyIssuanceEnabled: false,
+    supplementalReportRole: 'BCeID'
+  }
+]
 
 export const httpOverwrite = (method, endpoint, cb, once) => {
   return testServer.use(http[method](api + endpoint, cb, { once }))
@@ -48,6 +64,31 @@ export const handlers = [
   http.get(api + apiRoutes.getCompliancePeriods, () =>
     HttpResponse.json([])
   ),
+  http.get(api + apiRoutes.reportOpenings, () =>
+    HttpResponse.json(reportOpenings)
+  ),
+  http.put(api + apiRoutes.reportOpenings, async ({ request }) => {
+    const body = await request.json()
+    const updatedYears = body?.reportOpenings ?? []
+    const updated = reportOpenings.map((entry) => {
+      const override = updatedYears.find(
+        (item) => item.complianceYear === entry.complianceYear
+      )
+      if (!override) {
+        return entry
+      }
+      return {
+        ...entry,
+        complianceReportingEnabled:
+          override.complianceReportingEnabled ?? entry.complianceReportingEnabled,
+        earlyIssuanceEnabled:
+          override.earlyIssuanceEnabled ?? entry.earlyIssuanceEnabled,
+        supplementalReportRole:
+          override.supplementalReportRole ?? entry.supplementalReportRole
+      }
+    })
+    return HttpResponse.json(updated)
+  }),
 
   // Address geocoder API for AddressAutocomplete
   http.get('https://geocoder.api.gov.bc.ca/addresses.json', ({ request }) => {

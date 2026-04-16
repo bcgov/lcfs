@@ -14,6 +14,47 @@ from lcfs.db.models.transfer.TransferStatus import TransferStatus
 from lcfs.db.models.organization.Organization import Organization
 
 
+def _make_mock_transfer(transfer_id=1, from_org_id=1, to_org_id=2):
+    """Helper to build a minimal mock Transfer for get_all_transfers tests."""
+    mock_transfer = MagicMock(spec=Transfer)
+    mock_transfer.transfer_id = transfer_id
+    mock_transfer.from_organization = MagicMock()
+    mock_transfer.from_organization.organization_id = from_org_id
+    mock_transfer.from_organization.name = f"org{from_org_id}"
+    mock_transfer.to_organization = MagicMock()
+    mock_transfer.to_organization.organization_id = to_org_id
+    mock_transfer.to_organization.name = f"org{to_org_id}"
+    mock_transfer.current_status = MagicMock(spec=TransferStatus)
+    mock_transfer.current_status.transfer_status_id = 1
+    mock_transfer.current_status.status = "Draft"
+    mock_category = MagicMock()
+    mock_category.transfer_category_id = 123
+    mock_category.category = "A"
+    mock_transfer.transfer_category = mock_category
+    mock_transfer.recommendation = None
+    mock_transfer.agreement_date = date.today()
+    mock_transfer.quantity = 1
+    mock_transfer.price_per_unit = 1.0
+    mock_transfer.transfer_comments = []
+    return mock_transfer
+
+
+def _make_govt_user():
+    user = MagicMock(spec=UserProfile)
+    user.role_names = [RoleEnum.GOVERNMENT]
+    user.organization = MagicMock()
+    user.organization.organization_id = 99
+    return user
+
+
+def _make_supplier_user(org_id=1):
+    user = MagicMock(spec=UserProfile)
+    user.role_names = [RoleEnum.SUPPLIER]
+    user.organization = MagicMock()
+    user.organization.organization_id = org_id
+    return user
+
+
 @pytest.fixture
 def dummy_transfer():
     from types import SimpleNamespace
@@ -42,46 +83,63 @@ def mock_director():
 
 
 @pytest.mark.anyio
-async def test_get_all_transfers_success(transfer_service, mock_transfer_repo):
-    """
-    Use a MagicMock(Transfer) with valid string fields for .name,
-    a valid status, optional category, etc.
-    """
-    mock_transfer = MagicMock(spec=Transfer)
-    mock_transfer.transfer_id = 1
-
-    # from_organization
-    mock_transfer.from_organization = MagicMock()
-    mock_transfer.from_organization.organization_id = 1
-    mock_transfer.from_organization.name = "org1"
-
-    # to_organization
-    mock_transfer.to_organization = MagicMock()
-    mock_transfer.to_organization.organization_id = 2
-    mock_transfer.to_organization.name = "org2"
-
-    # current_status must be valid, e.g., "Draft", "Sent", "Submitted", "Recommended", "Recorded", etc.
-    mock_transfer.current_status = MagicMock(spec=TransferStatus)
-    mock_transfer.current_status.transfer_status_id = 1
-    mock_transfer.current_status.status = "Draft"
-
-    # Optional category
-    mock_category = MagicMock()
-    mock_category.transfer_category_id = 123
-    mock_category.category = "A"
-    mock_transfer.transfer_category = mock_category
-
-    # Optional recommendation: "Record", "Refuse", or None
-    mock_transfer.recommendation = None
-
-    mock_transfer.agreement_date = date.today()
-    mock_transfer.quantity = 1
-    mock_transfer.price_per_unit = 1.0
-    mock_transfer.transfer_comments = []  # no comments
-
+async def test_get_all_transfers_government_user_sees_all(
+    transfer_service, mock_transfer_repo
+):
+    """Government user receives all transfers; repo is called with no org filter."""
+    mock_transfer = _make_mock_transfer()
     mock_transfer_repo.get_all_transfers.return_value = [mock_transfer]
 
-    result = await transfer_service.get_all_transfers()
+    govt_user = _make_govt_user()
+    result = await transfer_service.get_all_transfers(govt_user)
+
+    mock_transfer_repo.get_all_transfers.assert_called_once_with(None)
+    assert len(result) == 1
+    assert isinstance(result[0], TransferSchema)
+    assert result[0].transfer_id == 1
+    assert result[0].from_organization.name == "org1"
+
+
+@pytest.mark.anyio
+async def test_get_all_transfers_supplier_scoped_to_own_org(
+    transfer_service, mock_transfer_repo
+):
+    """Supplier user receives only transfers involving their organization."""
+    mock_transfer = _make_mock_transfer(from_org_id=5, to_org_id=6)
+    mock_transfer_repo.get_all_transfers.return_value = [mock_transfer]
+
+    supplier_user = _make_supplier_user(org_id=5)
+    result = await transfer_service.get_all_transfers(supplier_user)
+
+    mock_transfer_repo.get_all_transfers.assert_called_once_with(5)
+    assert len(result) == 1
+
+
+@pytest.mark.anyio
+async def test_get_all_transfers_supplier_no_organization_sends_none(
+    transfer_service, mock_transfer_repo
+):
+    """Supplier user with no organization attribute falls back to no filter."""
+    mock_transfer_repo.get_all_transfers.return_value = []
+
+    user = MagicMock(spec=UserProfile)
+    user.role_names = [RoleEnum.SUPPLIER]
+    user.organization = None
+
+    await transfer_service.get_all_transfers(user)
+
+    mock_transfer_repo.get_all_transfers.assert_called_once_with(None)
+
+
+@pytest.mark.anyio
+async def test_get_all_transfers_success(transfer_service, mock_transfer_repo):
+    """Legacy smoke test: government user gets transfers (no org filter)."""
+    mock_transfer = _make_mock_transfer()
+    mock_transfer_repo.get_all_transfers.return_value = [mock_transfer]
+
+    govt_user = _make_govt_user()
+    result = await transfer_service.get_all_transfers(govt_user)
+
     assert len(result) == 1
     assert isinstance(result[0], TransferSchema)
     assert result[0].transfer_id == 1
