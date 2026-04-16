@@ -602,6 +602,24 @@ class ComplianceReportSummaryService:
         compliance_data_service.set_period(
             int(compliance_report.compliance_period.description)
         )
+        # Historical/migrated reports may have a missing summary. Return a
+        # minimal empty schema rather than attempting to recalculate against
+        # non-existent summary state.
+        if summary_model is None:
+            empty_summary = ComplianceReportSummarySchema(
+                summary_id=0,
+                compliance_report_id=compliance_report.compliance_report_id,
+                is_locked=True,
+                quarter=None,
+                renewable_fuel_target_summary=[],
+                low_carbon_fuel_target_summary=[],
+                non_compliance_penalty_summary=[],
+                can_sign=False,
+                lines_6_and_8_locked=True,
+                lines_7_and_9_locked=True,
+            )
+            return empty_summary
+
         # For locked or non-editable reports, return the stored summary values
         # to avoid recalculating user-entered lines (e.g., Line 6).
         # Submitted reports should recalculate to reflect any underlying data changes.
