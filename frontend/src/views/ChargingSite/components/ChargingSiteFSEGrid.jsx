@@ -496,10 +496,11 @@ export const ChargingSiteFSEGrid = ({
           <Grid container spacing={2} sx={{ mb: 3 }}>
             {availableButtons.map((button) => (
               <Grid
-                item
-                xs={12}
-                sm={6}
-                md={12 / availableButtons.length}
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 12 / availableButtons.length
+                }}
                 key={button.id}
               >
                 <BCButton
