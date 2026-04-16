@@ -1,7 +1,7 @@
 """Deduplicate charging equipment rows per group/version
 
 Revision ID: c7e4d9a1b2f6
-Revises: a2b3c4d5e6f7
+Revises: 84d7cf6d1940
 Create Date: 2026-03-10 12:00:00.000000
 """
 
@@ -10,6 +10,7 @@ import logging
 import sqlalchemy as sa
 from alembic import op
 from lcfs.db.dependencies import (
+    create_role_if_not_exists,
     execute_sql_sections,
     find_and_read_sql_file,
     parse_sql_sections,
@@ -17,7 +18,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "c7e4d9a1b2f6"
-down_revision = "a2b3c4d5e6f7"
+down_revision = "84d7cf6d1940"
 branch_labels = None
 depends_on = None
 
@@ -219,6 +220,7 @@ def upgrade() -> None:
         """
     )
 
+    create_role_if_not_exists()
     content = find_and_read_sql_file(sqlFile="metabase.sql")
     sections = parse_sql_sections(content)
     execute_sql_sections(sections, SECTIONS_TO_EXECUTE)

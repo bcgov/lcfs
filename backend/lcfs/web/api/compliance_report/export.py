@@ -452,9 +452,9 @@ class ComplianceReportExporter:
             if compliance_year >= 2025:
                 is_canada_produced_value = "Yes" if fs.is_canada_produced else ""
 
-            # Format is_q1_supplied field - only show for 2025 (quarterly reports)
+            # Format is_q1_supplied field - only show for 2025
             is_q1_supplied_value = None
-            if compliance_year == 2025 and is_quarterly:
+            if compliance_year == 2025:
                 is_q1_supplied_value = "Yes" if fs.is_q1_supplied else ""
 
             if is_quarterly:
@@ -508,6 +508,7 @@ class ComplianceReportExporter:
                         ),
                         fs.fuel_code.fuel_code if fs.fuel_code else None,
                         is_canada_produced_value,
+                        is_q1_supplied_value,
                         fs.quantity,
                         fs.units.value if fs.units else None,
                         fs.target_ci,
