@@ -75,7 +75,7 @@ export const handleFuelTypeChange = (params, optionsData, updateRowDataValues) =
     updateRowDataValues(params.node, {
       fuelCategory:
         fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null,
-      endUseType: endUseTypes.length === 1 ? endUseTypes[0].type : null,
+      endUseType: endUseTypes.length === 1 ? endUseTypes[0]?.type : null,
       provisionOfTheAct:
         selectedFuelType.provisions.length === 1
           ? selectedFuelType.provisions[0].name
@@ -103,7 +103,7 @@ export const handleFuelCategoryChange = (params, optionsData, updateRowDataValue
       .map((item) => item.endUseType)
 
     updateRowDataValues(params.node, {
-      endUseType: endUseTypes.length === 1 ? endUseTypes[0].type : null,
+      endUseType: endUseTypes.length === 1 ? endUseTypes[0]?.type : null,
       provisionOfTheAct:
         selectedFuelType.provisions.length === 1
           ? selectedFuelType.provisions[0].name

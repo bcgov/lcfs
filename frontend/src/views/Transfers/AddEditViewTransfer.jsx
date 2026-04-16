@@ -132,7 +132,10 @@ export const AddEditViewTransfer = () => {
         recommendation:
           prevValues.recommendation ?? transferData.recommendation,
         signingAuthorityDeclaration:
-          prevValues.signingAuthorityDeclaration ?? false
+          prevValues.signingAuthorityDeclaration ?? false,
+        fromOrgComment:
+          transferData?.comments?.find((c) => c.commentSource === 'FROM_ORG')
+            ?.comment || '',
       }))
     }
     if (isLoadingError || queryState?.status === 'error') {

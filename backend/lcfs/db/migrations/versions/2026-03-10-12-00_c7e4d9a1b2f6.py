@@ -10,6 +10,7 @@ import logging
 import sqlalchemy as sa
 from alembic import op
 from lcfs.db.dependencies import (
+    create_role_if_not_exists,
     execute_sql_sections,
     find_and_read_sql_file,
     parse_sql_sections,
@@ -219,6 +220,7 @@ def upgrade() -> None:
         """
     )
 
+    create_role_if_not_exists()
     content = find_and_read_sql_file(sqlFile="metabase.sql")
     sections = parse_sql_sections(content)
     execute_sql_sections(sections, SECTIONS_TO_EXECUTE)

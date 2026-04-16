@@ -13,6 +13,8 @@ export const apiRoutes = {
   currentUser: '/users/current',
   exportUsers: '/users/export?format=xlsx',
   listUsers: '/users/list',
+  seededTestUsers: '/users/seeded-test-users',
+  resolveOrgName: '/users/anonymizer/resolve-org-name',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
   trackUserLogin: '/users/logged-in',
@@ -72,6 +74,7 @@ export const apiRoutes = {
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',
   exportFuelCodes: '/fuel-codes/export',
+  fuelCodeBulletins: '/fuel-codes/bulletins',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
@@ -89,6 +92,7 @@ export const apiRoutes = {
   getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
   getAvailableAnalysts: '/reports/analysts',
   assignAnalyst: '/reports/:reportId/assign',
+  reportOpenings: '/report-openings',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',
@@ -241,5 +245,12 @@ export const apiRoutes = {
   geocoderBoundaryCheck: '/geocoder/boundary-check',
   geocoderAutocomplete: '/geocoder/autocomplete',
   geocoderHealth: '/geocoder/health',
-  geocoderClearCache: '/geocoder/cache'
+  geocoderClearCache: '/geocoder/cache',
+
+  // login background image endpoints
+  loginBgImages: '/login-bg-images/',
+  loginBgImageActive: '/login-bg-images/active',
+  loginBgImage: '/login-bg-images/:imageId',
+  loginBgImageActivate: '/login-bg-images/:imageId/activate',
+  loginBgImageStream: '/login-bg-images/:imageId/stream'
 }

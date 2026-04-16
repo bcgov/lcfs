@@ -4,6 +4,21 @@ import { Navigate } from 'react-router-dom'
 import { ViewAuditLog } from '@/views/Admin/AdminMenu/components/ViewAuditLog'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 import { AppRouteObject } from '../types'
+import { CONFIG } from '@/constants/config'
+
+const normalizedEnvironment = (CONFIG.ENVIRONMENT || '').toLowerCase()
+const isNonProdEnvironment = ['local', 'development', 'dev', 'test'].includes(
+  normalizedEnvironment
+)
+const seededRoute: AppRouteObject[] = isNonProdEnvironment
+  ? [
+      {
+        path: ROUTES.ADMIN.SEEDED_USER_ASSOCIATION,
+        element: <AdminMenu tabIndex={5} />,
+        handle: { title: 'Seeded user association' }
+      }
+    ]
+  : []
 
 export const adminRoutes: AppRouteObject[] = [
   {
@@ -31,6 +46,7 @@ export const adminRoutes: AppRouteObject[] = [
     element: <AdminMenu tabIndex={3} />,
     handle: { title: 'Audit log' }
   },
+  ...seededRoute,
   {
     path: ROUTES.ADMIN.AUDIT_LOG.VIEW,
     element: <ViewAuditLog />,
@@ -45,5 +61,10 @@ export const adminRoutes: AppRouteObject[] = [
     path: ROUTES.ADMIN.USERS.VIEW,
     element: <UserDetailsCard />,
     handle: { title: 'User profile' }
+  },
+  {
+    path: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND,
+    element: <AdminMenu tabIndex={4} />,
+    handle: { title: 'Login screen background' }
   }
 ]

@@ -15,6 +15,8 @@ from lcfs.web.api.user.schema import (
     UsersSchema,
     UserActivitiesResponseSchema,
     UpdateEmailSchema,
+    ResolveOrgNameRequestSchema,
+    ResolveOrgNameResponseSchema,
 )
 from lcfs.web.api.user.services import UserServices
 from lcfs.web.core.decorators import view_handler
@@ -113,6 +115,46 @@ async def get_current_user(
     This endpoint returns the information of the current user, including their roles and organization.
     """
     return UserBaseSchema.model_validate(request.user)
+
+
+@router.get(
+    "/seeded-test-users",
+    response_model=List[UserBaseSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def get_seeded_test_users(
+    request: Request,
+    seed_env: str = Query(
+        default=None, description="Seed set to use: local or test (defaults by app env)"
+    ),
+    service: UserServices = Depends(),
+) -> List[UserBaseSchema]:
+    """
+    Returns users from the non-production seeded user set.
+    """
+    return await service.get_seeded_test_users(seed_env)
+
+
+@router.post(
+    "/anonymizer/resolve-org-name",
+    response_model=ResolveOrgNameResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def resolve_org_name(
+    request: Request,
+    body: ResolveOrgNameRequestSchema,
+    service: UserServices = Depends(),
+) -> ResolveOrgNameResponseSchema:
+    """
+    Resolves organization name in either direction (masked->original or original->masked)
+    using the provided salt phrase. Available only in local environment.
+    """
+    return await service.resolve_org_name(
+        organization_name=body.organization_name,
+        salt_phrase=body.salt_phrase,
+    )
 
 
 @router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)

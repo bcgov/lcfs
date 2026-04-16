@@ -29,6 +29,8 @@ const SummaryTable = ({
   savingCellKey = null,
   tableType = '',
   lines6And8Locked = false,
+  compliancePeriodYear = null,
+  exemptedLines = [],
   ...props
 }) => {
   const [data, setData] = useState(initialData)
@@ -62,6 +64,38 @@ const SummaryTable = ({
       return true
     }
     return false
+  }
+
+  /**
+   * Checks if a line should be greyed out based on compliance period year.
+   * - Lines 12, 13, 14, 16, 19: Grey out for all reports prior to 2024
+   * - Lines 17, 22: Additionally grey out for 2022 and prior
+   */
+  const isLineGreyedByYear = (row) => {
+    if (!compliancePeriodYear) return false
+    const year = parseInt(compliancePeriodYear)
+    const lineNumber = parseInt(row.line)
+
+    // Lines 12, 13, 14, 16, 19 - grey out for years before 2024
+    if ([12, 13, 14, 16, 19].includes(lineNumber) && year < 2024) {
+      return true
+    }
+
+    // Lines 17, 22 - grey out for 2022 and prior
+    if ([17, 22].includes(lineNumber) && year <= 2022) {
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * Checks if a line should be greyed out due to an exemption.
+   */
+  const isLineExempted = (row) => {
+    if (!exemptedLines.length) return false
+    const lineNumber = parseInt(row.line)
+    return exemptedLines.includes(lineNumber)
   }
 
   const getCellConstraints = (rowIndex, columnId) => {
@@ -207,7 +241,13 @@ const SummaryTable = ({
     }
   }
 
-  const lineNumberTooltip = (lineNumber) => {
+  const lineNumberTooltip = (lineNumber, isGreyedByYear = false, isExempted = false) => {
+    if (isExempted) {
+      return 'Exempted — not applicable'
+    }
+    if (isGreyedByYear) {
+      return 'Not applicable for this compliance period'
+    }
     if (lineNumber === 6 || lineNumber === 8) {
       return 'Locked from assessed snapshot (retained/deferred volumes)'
     }
@@ -264,13 +304,17 @@ const SummaryTable = ({
                 backgroundColor: '#fcfcfc'
               }}
             >
-              {columns.map((column, colIndex) => (
+              {columns.map((column, colIndex) => {
+                const isGreyedByYear = isLineGreyedByYear(row)
+                const isExempted = isLineExempted(row)
+                const isGreyedOrLocked = isCellLocked(rowIndex, row) || isGreyedByYear || isExempted
+                return (
                 <TableCell
                   key={column.id}
                   align={column.align || 'left'}
                   title={
-                    isCellLocked(rowIndex, row)
-                      ? lineNumberTooltip(parseInt(row.line))
+                    isGreyedOrLocked
+                      ? lineNumberTooltip(parseInt(row.line), isGreyedByYear, isExempted)
                       : undefined
                   }
                   sx={{
@@ -288,13 +332,13 @@ const SummaryTable = ({
                       ? 0
                       : undefined,
                     backgroundColor:
-                      isCellLocked(rowIndex, row) &&
+                      isGreyedOrLocked &&
                       column.id !== 'line' &&
                       column.id !== 'description'
                         ? '#f5f5f5'
                         : undefined,
                     opacity:
-                      isCellLocked(rowIndex, row) &&
+                      isGreyedOrLocked &&
                       column.id !== 'line' &&
                       column.id !== 'description'
                         ? 0.7
@@ -418,6 +462,15 @@ const SummaryTable = ({
                       }}
                     >
                       {(() => {
+                        // Hide values for greyed-out rows (except line number and description)
+                        if (
+                          (isGreyedByYear || isExempted) &&
+                          column.id !== 'line' &&
+                          column.id !== 'description'
+                        ) {
+                          return ''
+                        }
+
                         const rawValue =
                           row[column.id] !== undefined &&
                           row[column.id] !== null
@@ -435,10 +488,12 @@ const SummaryTable = ({
                               ? rawValue
                               : Number(rawValue)
 
+                          const maxDecimals = row.format === 'currency' ? 2 : 0
+
                           return rowFormatters[row.format](
                             Number.isFinite(numericValue) ? numericValue : 0,
                             useParenthesis,
-                            0
+                            maxDecimals
                           )
                         }
 
@@ -447,7 +502,7 @@ const SummaryTable = ({
                     </span>
                   )}
                 </TableCell>
-              ))}
+              )})}
             </TableRow>
           ))}
         </TableBody>

@@ -259,7 +259,12 @@ const CompareTable = ({
           </TableHead>
         )}
         <TableBody>
-          {data?.map((row, rowIndex) => (
+          {data?.map((row, rowIndex) => {
+            const isValueColumn =
+              column_id =>
+                column_id !== 'line' && column_id !== 'description'
+            const isGreyed = !!row.greyed
+            return (
             <TableRow
               key={row.line ?? rowIndex}
               sx={{
@@ -267,10 +272,42 @@ const CompareTable = ({
                 backgroundColor: '#fcfcfc'
               }}
             >
-              {columns.map((column, colIndex) => (
+              {columns.map((column, colIndex) => {
+                const isValCol = isValueColumn(column.id)
+                const cellBg = isGreyed && isValCol
+                  ? '#f5f5f5'
+                  : isColumnHighlighted(column.id)
+                    ? tableStyles.highlightedBodyCell.backgroundColor
+                    : '#fcfcfc'
+
+                const cellValue = (() => {
+                  if (isGreyed && isValCol) return ''
+                  if (
+                    row.format &&
+                    colIndex !== 0 &&
+                    row[column.id] !== undefined &&
+                    row[column.id] !== null
+                  ) {
+                    return rowFormatters[row.format](
+                      row[column.id],
+                      useParenthesis
+                    )
+                  }
+                  if (row[column.id] === undefined || row[column.id] === null) {
+                    return column.id !== 'description' ? '0' : ''
+                  }
+                  return row[column.id]
+                })()
+
+                return (
                 <TableCell
                   key={column.id}
                   align={column.align || 'left'}
+                  title={
+                    isGreyed && isValCol
+                      ? 'Not applicable for this compliance period'
+                      : undefined
+                  }
                   sx={{
                     borderBottom:
                       rowIndex === data.length - 1
@@ -282,9 +319,8 @@ const CompareTable = ({
                         : 'none',
                     maxWidth: column.maxWidth || 'none',
                     width: column.width || 'auto',
-                    backgroundColor: isColumnHighlighted(column.id)
-                      ? tableStyles.highlightedBodyCell.backgroundColor
-                      : '#fcfcfc',
+                    backgroundColor: cellBg,
+                    opacity: isGreyed && isValCol ? 0.7 : 1,
                     ...tableStyles.tableCell
                   }}
                 >
@@ -298,24 +334,13 @@ const CompareTable = ({
                           : 'normal'
                     }}
                   >
-                    {row.format &&
-                    colIndex !== 0 &&
-                    row[column.id] !== undefined &&
-                    row[column.id] !== null
-                      ? rowFormatters[row.format](
-                          row[column.id],
-                          useParenthesis
-                        )
-                      : row[column.id] === undefined || row[column.id] === null
-                        ? column.id !== 'description'
-                          ? '0'
-                          : ''
-                        : row[column.id]}
+                    {cellValue}
                   </span>
                 </TableCell>
-              ))}
+              )})}
             </TableRow>
-          ))}
+          )})}
+
         </TableBody>
       </Table>
     </TableContainer>

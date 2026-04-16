@@ -451,27 +451,32 @@ export const CreditCalculator = () => {
 
   const handleCopy = async () => {
     try {
-      const copyText = `Compliance Year: ${complianceYear}
-Selected fuel type: ${fuelType || 'N/A'}
-End use: ${endUseType || 'N/A'}
-Determining carbon intensity: ${provisionDisplayLabel}
-Fuel code: ${fuelCode || 'N/A'}
+      const ciEntries = Object.entries(ciParameterLabels)
+      const ciLabels = ciEntries.map(([key, label]) => `${key.toUpperCase()} - ${label}`)
+      const maxLabelLen = Math.max(...ciLabels.map((l) => l.length))
+      const ciRows = ciEntries
+        .map(([, ], i) => {
+          const value = Object.values(resultData.formulaValues)[i]
+          return `${ciLabels[i].padEnd(maxLabelLen + 2)}${value}`
+        })
+        .join('\n')
 
-Quantity supplied: ${quantity?.toLocaleString() || 0} ${unit}
+      const copyText = `${t('report:complianceYear')}: ${complianceYear}
+${t('report:selectedFuelType')}: ${fuelType || 'N/A'}
+${t('report:endUse')}: ${endUseType || 'N/A'}
+${t('report:ciLabel')}: ${provisionDisplayLabel}
+${t('report:fuelCodeLabel')}: ${fuelCode || 'N/A'}
 
-Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000
+${t('report:quantitySupplied')}: ${quantity?.toLocaleString() || 0} ${unit}
+
+${t('report:formulaAfter2024')}
 ${t('report:formulaECDefinition')}
 
-TCI - Target carbon intensity        ${resultData.formulaValues.carbonIntensity}
-EER - Energy effectiveness ratio     ${resultData.formulaValues.eer}
-RCI - Recorded carbon intensity      ${resultData.formulaValues.ci}  
-UCI - Additional carbon intensity    ${resultData.formulaValues.uci}
-EC - Energy content                  ${resultData.formulaValues.energyContent}
-ED - Energy density                  ${resultData.formulaValues.energyDensity}
+${ciRows}
 
 ${resultData.formulaDisplay}
 
-Credits generated: ${resultData.credits.toLocaleString()}`
+${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
 
       const success = await copyToClipboard(copyText)
       if (success) {

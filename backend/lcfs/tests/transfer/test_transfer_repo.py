@@ -12,6 +12,7 @@ from lcfs.db.models.transfer import TransferStatus, TransferCategory
 
 @pytest.mark.anyio
 async def test_get_all_transfers_success(transfer_repo, mock_db):
+    """No org filter: returns all transfers."""
     expected_data = []
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = expected_data
@@ -19,6 +20,22 @@ async def test_get_all_transfers_success(transfer_repo, mock_db):
     mock_db.execute.return_value = mock_result
 
     result = await transfer_repo.get_all_transfers()
+
+    mock_db.execute.assert_called_once()
+    mock_result.scalars.return_value.all.assert_called_once()
+    assert result == expected_data
+
+
+@pytest.mark.anyio
+async def test_get_all_transfers_with_org_filter(transfer_repo, mock_db):
+    """With organization_id filter: query executes with WHERE clause."""
+    expected_data = []
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = expected_data
+
+    mock_db.execute.return_value = mock_result
+
+    result = await transfer_repo.get_all_transfers(organization_id=5)
 
     mock_db.execute.assert_called_once()
     mock_result.scalars.return_value.all.assert_called_once()

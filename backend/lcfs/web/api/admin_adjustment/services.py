@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.admin_adjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
@@ -68,12 +68,44 @@ class AdminAdjustmentServices:
         )
         status_has_changed = admin_adjustment.current_status != new_status
 
+        current_status_enum = admin_adjustment.current_status.status
+        new_status_enum = new_status.status
+
+        # Validate status transitions before applying any changes
+        if status_has_changed:
+            # Prevent skipping Recommended: Draft -> Approved requires Recommended first
+            if (
+                current_status_enum == AdminAdjustmentStatusEnum.Draft
+                and new_status_enum == AdminAdjustmentStatusEnum.Approved
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="An admin adjustment must be recommended before it can be approved.",
+                )
+
+            # Only Analysts can set the status to Recommended
+            if new_status_enum == AdminAdjustmentStatusEnum.Recommended:
+                if not user_has_roles(
+                    self.request.user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
+                ):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Only Analysts can recommend an admin adjustment.",
+                    )
+
+        # Fields that may only be edited while the transaction is in Draft status
+        DRAFT_ONLY_FIELDS = {
+            "transaction_effective_date",
+            "compliance_units",
+            "to_organization_id",
+        }
+        is_draft = current_status_enum == AdminAdjustmentStatusEnum.Draft
+
         # Update the fields except for 'current_status'
-        # FIXME: 1. if the transaction is not in Draft status then don't update the effective date, compliance units and organization details
-        # FIXME: 2. a draft transaction can be approved directly by the Director via backend api.
-        # FIXME: 3. should the Director/Compliance Manager be allowed to change the draft transaction to recommend? A validation may be required? NOTE: please confirm
         for field, value in admin_adjustment_data.dict(exclude_unset=True).items():
             if field != "current_status":
+                if not is_draft and field in DRAFT_ONLY_FIELDS:
+                    continue
                 setattr(admin_adjustment, field, value)
 
         # Initialize status flags
@@ -197,6 +229,6 @@ class AdminAdjustmentServices:
 
         # Set effective date to today if the analyst left it blank
         if admin_adjustment.transaction_effective_date is None:
-            admin_adjustment.transaction_effective_date = datetime.now().date()
+            admin_adjustment.transaction_effective_date = datetime.now(timezone.utc).date()
 
         await self.repo.refresh_admin_adjustment(admin_adjustment)

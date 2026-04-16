@@ -1,5 +1,6 @@
 {
   "title": "Initiative Agreements",
+  "initiativeAgreementsPlaceholder": "This section will provide access to Initiative Agreement functionality. Content and features are currently under development.",
   "initiativeAgreement": "Initiative agreement — ID:",
   "editInitiativeAgreementID": "Edit Initiative Agreement ID: ",
   "newInitiativeAgreement": "New Initiative Agreement",

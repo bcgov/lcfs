@@ -100,7 +100,7 @@ export const penaltyLogColumnDefs = [
     valueFormatter: ({ value }) =>
       value === null || value === undefined
         ? ''
-        : currencyFormatter(value, { maximumFractionDigits: 0 }),
+        : currencyFormatter(value, false, 0),
     minWidth: 260
   }
 ]

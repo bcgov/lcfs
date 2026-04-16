@@ -18,13 +18,17 @@ import { v4 as uuid } from 'uuid'
 import {
   defaultColDef,
   otherUsesColDefs,
-  PROVISION_APPROVED_FUEL_CODE
+  PROVISION_APPROVED_FUEL_CODE,
+  isFuelCodeProvision
 } from './_schema'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
 } from '@/utils/renewableClaimUtils'
+
+export const isOtherExpectedUseMissing = (data) =>
+  data?.expectedUse === 'Other' && !data?.rationale?.trim()
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -169,7 +173,7 @@ export const AddEditOtherUses = () => {
 
     if (!fuelType) return 0
 
-    if (data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+    if (isFuelCodeProvision(data.provisionOfTheAct)) {
       const fuelCode = fuelType.fuelCodes?.find(
         (item) => item.fuelCode === data.fuelCode
       )
@@ -302,7 +306,7 @@ export const AddEditOtherUses = () => {
       }
 
       // Auto-populate fuel code for approved fuel code scenarios
-      if (params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+      if (isFuelCodeProvision(params.node.data.provisionOfTheAct)) {
         const fuelCodeOptions =
           fuelType.fuelCodes?.map((code) => code.fuelCode) || []
         if (fuelCodeOptions.length === 1) {
@@ -327,6 +331,9 @@ export const AddEditOtherUses = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      const rowId = params.node?.data?.id
+      const nextErrors = { ...errors }
+
       const isValid = validate(
         params,
         (value) => value !== null && !isNaN(value) && value > 0,
@@ -334,7 +341,38 @@ export const AddEditOtherUses = () => {
         'quantitySupplied'
       )
 
-      if (!isValid) return
+      if (!isValid) {
+        return
+      }
+
+      if (isOtherExpectedUseMissing(params.data)) {
+        setErrors({
+          ...nextErrors,
+          [rowId]: ['rationale']
+        })
+        params.node.updateData({
+          ...params.data,
+          validationStatus: 'error'
+        })
+        alertRef.current?.triggerAlert({
+          message: 'Unable to save row: If other, enter expected use is required when Expected use is Other.',
+          severity: 'error'
+        })
+        return
+      }
+
+      if (rowId && nextErrors[rowId]?.includes('rationale')) {
+        const remainingFields = nextErrors[rowId].filter(
+          (field) => field !== 'rationale'
+        )
+
+        if (remainingFields.length > 0) {
+          nextErrors[rowId] = remainingFields
+        } else {
+          delete nextErrors[rowId]
+        }
+        setErrors(nextErrors)
+      }
 
       params.data.complianceReportId = numericComplianceReportId
       params.data.validationStatus = 'pending'
@@ -369,7 +407,7 @@ export const AddEditOtherUses = () => {
       }
       params.api?.autoSizeAllColumns?.()
     },
-    [numericComplianceReportId, saveRow, t, validate]
+    [errors, numericComplianceReportId, saveRow, t, validate]
   )
 
   const handleNavigateBack = useCallback(() => {
