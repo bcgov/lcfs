@@ -51,7 +51,7 @@ vi.mock('react-i18next', () => ({
       const translations = {
         'login.loginMessage': 'Login with',
         Login: 'Login',
-        'login.publicCreditCalculator': 'Public - Compliance unit calculator'
+        'login.publicCreditCalculator': 'Public LCFS information'
       }
       return translations[key] || key
     }
@@ -81,19 +81,19 @@ describe('Login Component', () => {
       expect(screen.getByText('Login')).toBeInTheDocument()
     })
 
-    it('should render both login buttons and public calculator button', () => {
+    it('should render both login buttons and public dashboard button', () => {
       render(<Login />, { wrapper })
 
       expect(screen.getByTestId('link-bceid')).toBeInTheDocument()
       expect(screen.getByTestId('link-idir')).toBeInTheDocument()
       expect(
-        screen.getByTestId('link-public-credit-calculator')
+        screen.getByTestId('link-public-dashboard')
       ).toBeInTheDocument()
       expect(screen.getAllByText(/Login with/)).toHaveLength(2)
       expect(screen.getByText('BCeID')).toBeInTheDocument()
       expect(screen.getByText('IDIR')).toBeInTheDocument()
       expect(
-        screen.getByText('Public - Compliance unit calculator')
+        screen.getByText('Public LCFS information')
       ).toBeInTheDocument()
     })
 
@@ -146,15 +146,13 @@ describe('Login Component', () => {
       )
     })
 
-    it('should navigate to public credit calculator when public calculator button is clicked', () => {
+    it('should navigate to public dashboard when public dashboard button is clicked', () => {
       render(<Login />, { wrapper })
 
-      const publicCalculatorButton = screen.getByTestId(
-        'link-public-credit-calculator'
-      )
-      fireEvent.click(publicCalculatorButton)
+      const publicDashboardButton = screen.getByTestId('link-public-dashboard')
+      fireEvent.click(publicDashboardButton)
 
-      expect(mockNavigate).toHaveBeenCalledWith('/credit-calculator')
+      expect(mockNavigate).toHaveBeenCalledWith('/public')
     })
   })
 
