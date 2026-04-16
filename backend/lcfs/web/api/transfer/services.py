@@ -1,6 +1,6 @@
 import json
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException
 from typing import List, Optional
 
@@ -465,8 +465,11 @@ class TransferServices:
         if transfer.transfer_category is None or not hasattr(
             transfer.transfer_category, "category"
         ):
-            today = datetime.now()
-            diff_seconds = today.timestamp() - transfer.agreement_date.timestamp()
+            today = datetime.now(timezone.utc)
+            agreement_dt = datetime.combine(
+                transfer.agreement_date, datetime.min.time(), tzinfo=timezone.utc
+            )
+            diff_seconds = today.timestamp() - agreement_dt.timestamp()
             # Define approximate thresholds in seconds
             ONE_DAY = 24 * 60 * 60
             SIX_MONTHS = 6 * 30 * ONE_DAY
@@ -481,7 +484,7 @@ class TransferServices:
             updated_transfer = await self.update_category(
                 transfer.transfer_id, category
             )
-            updated_transfer.transaction_effective_date = datetime.now()
+            updated_transfer.transaction_effective_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(

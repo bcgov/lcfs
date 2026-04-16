@@ -51,7 +51,8 @@ def upgrade():
         -- 2022 Diesel
         (13, 2, 84.04, 0, true, NOW(), NOW()),
         -- 2023 Diesel
-        (14, 2, 81.86, 0, true, NOW(), NOW());
+        (14, 2, 81.86, 0, true, NOW(), NOW())
+        ON CONFLICT (compliance_period_id, fuel_category_id) DO NOTHING;
     """
         )
     )
@@ -90,7 +91,8 @@ def upgrade():
         -- 2022 Gasoline
         (13, 1, 78.20, 0, true, NOW(), NOW()),
         -- 2023 Gasoline
-        (14, 1, 76.14, 0, true, NOW(), NOW());
+        (14, 1, 76.14, 0, true, NOW(), NOW())
+        ON CONFLICT (compliance_period_id, fuel_category_id) DO NOTHING;
     """
         )
     )
@@ -98,18 +100,27 @@ def upgrade():
     op.execute(
         sa.text(
             """
-        INSERT INTO fuel_instance (
-            fuel_type_id,
-            fuel_category_id,
-            create_date,
-            update_date
-        ) VALUES
-        -- Natural gas-based gasoline (21) -> Gasoline (2)
-        (21, 1, NOW(), NOW()),
-        -- Petroleum-based diesel (22) -> Diesel (1)
-        (22, 2, NOW(), NOW()),
-        -- Petroleum-based gasoline (23) -> Gasoline (2)
-        (23, 1, NOW(), NOW());
+        INSERT INTO fuel_instance (fuel_type_id, fuel_category_id, create_date, update_date)
+        SELECT 21, 1, NOW(), NOW()
+        WHERE NOT EXISTS (SELECT 1 FROM fuel_instance WHERE fuel_type_id = 21 AND fuel_category_id = 1)
+    """
+        )
+    )
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO fuel_instance (fuel_type_id, fuel_category_id, create_date, update_date)
+        SELECT 22, 2, NOW(), NOW()
+        WHERE NOT EXISTS (SELECT 1 FROM fuel_instance WHERE fuel_type_id = 22 AND fuel_category_id = 2)
+    """
+        )
+    )
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO fuel_instance (fuel_type_id, fuel_category_id, create_date, update_date)
+        SELECT 23, 1, NOW(), NOW()
+        WHERE NOT EXISTS (SELECT 1 FROM fuel_instance WHERE fuel_type_id = 23 AND fuel_category_id = 1)
     """
         )
     )
@@ -163,7 +174,9 @@ def upgrade():
         (2, 23, 24, 1.0, NOW(), NOW(), true, 11),
         (2, 23, 24, 1.0, NOW(), NOW(), true, 12),
         (2, 23, 24, 1.0, NOW(), NOW(), true, 13),
-        (2, 23, 24, 1.0, NOW(), NOW(), true, 14);
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 14)
+        ON CONFLICT (compliance_period_id, fuel_type_id, fuel_category_id, end_use_type_id)
+        DO NOTHING;
     """
         )
     )

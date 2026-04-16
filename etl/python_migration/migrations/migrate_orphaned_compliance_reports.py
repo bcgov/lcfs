@@ -425,17 +425,23 @@ class OrphanedComplianceReportMigrator:
             return False
 
     def disable_audit_triggers(self, lcfs_cursor):
-        """Disable audit triggers on compliance_report table."""
-        logger.info("Disabling audit triggers on compliance_report")
+        """Disable audit triggers on tables we insert into during migration."""
+        logger.info("Disabling audit triggers on compliance_report and compliance_report_summary")
         lcfs_cursor.execute("""
             ALTER TABLE compliance_report DISABLE TRIGGER audit_compliance_report_insert_update_delete
         """)
+        lcfs_cursor.execute("""
+            ALTER TABLE compliance_report_summary DISABLE TRIGGER audit_compliance_report_summary_insert_update_delete
+        """)
 
     def enable_audit_triggers(self, lcfs_cursor):
-        """Re-enable audit triggers on compliance_report table."""
-        logger.info("Re-enabling audit triggers on compliance_report")
+        """Re-enable audit triggers on tables modified during migration."""
+        logger.info("Re-enabling audit triggers on compliance_report and compliance_report_summary")
         lcfs_cursor.execute("""
             ALTER TABLE compliance_report ENABLE TRIGGER audit_compliance_report_insert_update_delete
+        """)
+        lcfs_cursor.execute("""
+            ALTER TABLE compliance_report_summary ENABLE TRIGGER audit_compliance_report_summary_insert_update_delete
         """)
 
     def migrate(self) -> Tuple[int, int, int]:

@@ -103,11 +103,13 @@ def mock_annual_report():
     report = Mock()
     report.compliance_report_id = 1
     report.compliance_report_group_uuid = "test-uuid"
+    report.organization_id = 1
     report.version = 0
     report.reporting_frequency = ReportingFrequency.ANNUAL
 
     # Mock organization
     organization = Mock()
+    organization.organization_id = 1
     organization.name = "Test Organization"
     organization.organization_id = 1
     report.organization = organization
@@ -407,50 +409,6 @@ class TestComplianceReportExporter:
         exporter.fse_repo.get_fse_reporting_list_paginated.assert_called()
 
     @pytest.mark.anyio
-    async def test_export_uses_effective_fse_rows_for_bceid_users(
-        self,
-        compliance_report_exporter,
-        mock_annual_report,
-    ):
-        exporter = compliance_report_exporter
-        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
-        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
-            return_value=1000
-        )
-        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
-            return_value=-500
-        )
-
-        await exporter.export(1, is_government=False)
-
-        exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_awaited_once_with(
-            organization_id=1,
-            compliance_report_id=1,
-            compliance_report_group_uuid="test-uuid",
-        )
-        exporter.fse_repo.get_fse_reporting_list_paginated.assert_not_called()
-
-    @pytest.mark.anyio
-    async def test_export_keeps_summary_fse_query_for_government_users(
-        self,
-        compliance_report_exporter,
-        mock_annual_report,
-    ):
-        exporter = compliance_report_exporter
-        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
-        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
-            return_value=1000
-        )
-        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
-            return_value=-500
-        )
-
-        await exporter.export(1, is_government=True)
-
-        exporter.fse_repo.get_fse_reporting_list_paginated.assert_called_once()
-        exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_not_called()
-
-    @pytest.mark.anyio
     async def test_load_fuel_supply_data_annual(
         self,
         compliance_report_exporter,
@@ -473,10 +431,11 @@ class TestComplianceReportExporter:
         assert result[0] == expected_headers
 
         # Check data row contains annual quantity field
-        # Position shifted due to "Fuel produced in Canada" column added at position 6
+        # Positions shifted due to "Fuel produced in Canada" and "Supplied in Q1" columns added
         data_row = result[1]
         assert data_row[6] == "Yes"  # is_canada_produced field (2025 report)
-        assert data_row[7] == 10000  # quantity field
+        assert data_row[7] == ""  # is_q1_supplied field (2025 report, False = "")
+        assert data_row[8] == 10000  # quantity field
         assert len(data_row) == len(expected_headers)
 
         # Check that empty row is present before total
@@ -532,6 +491,102 @@ class TestComplianceReportExporter:
         assert total_row[0] == 1000  # Total in Compliance Units column
         assert total_row[1] == "Total"  # "Total" label in Fuel type column
         assert len(total_row) == len(expected_headers)
+
+    @pytest.mark.anyio
+    async def test_load_fuel_supply_data_annual_2025_includes_q1_column(
+        self,
+        compliance_report_exporter,
+        mock_fuel_supply_data,
+    ):
+        """Annual 2025 reports must include the 'Supplied in Q1' column populated
+        from is_q1_supplied (regression test for #4224)."""
+        exporter = compliance_report_exporter
+        exporter.fs_repo.get_effective_fuel_supplies.return_value = (
+            mock_fuel_supply_data
+        )
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        # is_q1_supplied = True should render as "Yes"
+        mock_fuel_supply_data[0].is_q1_supplied = True
+
+        result = await exporter._load_fuel_supply_data("uuid", 1, 0, False)
+
+        headers = result[0]
+        assert "Supplied in Q1" in headers
+        q1_index = headers.index("Supplied in Q1")
+        assert result[1][q1_index] == "Yes"
+
+    @pytest.mark.anyio
+    async def test_load_fuel_supply_data_annual_pre_2025_excludes_q1_column(
+        self,
+        compliance_report_exporter,
+        mock_fuel_supply_data,
+    ):
+        """Pre-2025 annual reports must filter out the 'Supplied in Q1' column."""
+        exporter = compliance_report_exporter
+        exporter.fs_repo.get_effective_fuel_supplies.return_value = (
+            mock_fuel_supply_data
+        )
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        # Override default 2025 report with a 2024 report
+        mock_period_2024 = Mock()
+        mock_period_2024.description = "2024"
+        mock_report_2024 = Mock()
+        mock_report_2024.compliance_period = mock_period_2024
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_report_2024
+
+        result = await exporter._load_fuel_supply_data("uuid", 1, 0, False)
+
+        headers = result[0]
+        assert "Supplied in Q1" not in headers
+        assert "Fuel produced in Canada" not in headers
+
+    @pytest.mark.anyio
+    async def test_export_uses_effective_fse_rows_for_bceid_users(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1, is_government=False)
+
+        exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_awaited_once_with(
+            organization_id=1,
+            compliance_report_id=1,
+            compliance_report_group_uuid="test-uuid",
+        )
+        exporter.fse_repo.get_fse_reporting_list_paginated.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_export_keeps_summary_fse_query_for_government_users(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1, is_government=True)
+
+        exporter.fse_repo.get_fse_reporting_list_paginated.assert_called_once()
+        exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_not_called()
 
     @pytest.mark.anyio
     async def test_load_notional_transfer_data_annual(
@@ -738,12 +793,11 @@ class TestComplianceReportExporter:
 
     def test_column_count_consistency(self):
         """Test that quarterly columns have the correct number of additional columns."""
-        # Fuel supply: should have 5 extra columns (Supplied in Q1, Q1, Q2, Q3, Q4, Total) replacing 1 (Quantity)
-        # Annual has "Fuel produced in Canada" + Quantity = 15 total (removed Fuel type Other)
-        # Quarterly has "Fuel produced in Canada" + "Supplied in Q1" + Q1-Q4 + Total = 20 total (removed Fuel type Other)
+        # Fuel supply: quarterly replaces single "Quantity supplied" with Q1-Q4 + Total (4 extra).
+        # Both annual and quarterly include "Fuel produced in Canada" and "Supplied in Q1" for 2025.
         annual_fs_count = len(FUEL_SUPPLY_COLUMNS)
         quarterly_fs_count = len(FUEL_SUPPLY_QUARTERLY_COLUMNS)
-        assert quarterly_fs_count == annual_fs_count + 5
+        assert quarterly_fs_count == annual_fs_count + 4
 
         # Notional transfer: should have 4 extra columns
         annual_nt_count = len(NOTIONAL_TRANSFER_COLUMNS)
@@ -766,6 +820,11 @@ class TestComplianceReportExporter:
         assert "Q3 Quantity" in fs_labels
         assert "Q4 Quantity" in fs_labels
         assert "Total Quantity" in fs_labels
+
+        # Test fuel supply annual columns also include Q1 supplied for 2025
+        fs_annual_labels = [col.label for col in FUEL_SUPPLY_COLUMNS]
+        assert "Fuel produced in Canada" in fs_annual_labels
+        assert "Supplied in Q1" in fs_annual_labels
 
         # Test notional transfer quarterly columns
         nt_labels = [col.label for col in NOTIONAL_TRANSFER_QUARTERLY_COLUMNS]

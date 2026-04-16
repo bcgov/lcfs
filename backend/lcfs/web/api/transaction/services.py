@@ -49,6 +49,11 @@ class TransactionsService:
     @staticmethod
     def _to_pacific(dt):
         """Convert a naive-UTC or aware datetime to America/Vancouver."""
+        from datetime import date as date_type
+
+        # MV columns cast to ::date return date objects, not datetime
+        if isinstance(dt, date_type) and not isinstance(dt, datetime):
+            return dt
         pacific = zoneinfo.ZoneInfo("America/Vancouver")
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
@@ -312,7 +317,7 @@ class TransactionsService:
         file_content = builder.build_spreadsheet()
 
         # Get the current date in YYYY-MM-DD format
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         filename = f"{LCFS_Constants.TRANSACTIONS_EXPORT_FILENAME}-{current_date}.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}

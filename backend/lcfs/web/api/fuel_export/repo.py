@@ -384,13 +384,31 @@ class FuelExportRepository:
             )
         )
 
-        # Get groups that have any deleted records
+        # Get groups where the latest version is a DELETE.
+        # We check the latest version rather than any version because
+        # ETL-migrated TFRS supplemental chains can have DELETE followed
+        # by UPDATE on the same group_uuid (not possible in modern LCFS).
+        latest_version_per_group = (
+            select(
+                FuelExport.group_uuid,
+                func.max(FuelExport.version).label("max_version"),
+            )
+            .where(FuelExport.compliance_report_id.in_(compliance_reports_select))
+            .group_by(FuelExport.group_uuid)
+        ).subquery()
+
         deleted_groups = (
             select(FuelExport.group_uuid)
-            .where(
-                FuelExport.compliance_report_id.in_(compliance_reports_select),
-                FuelExport.action_type == ActionTypeEnum.DELETE,
+            .join(
+                latest_version_per_group,
+                and_(
+                    FuelExport.group_uuid
+                    == latest_version_per_group.c.group_uuid,
+                    FuelExport.version
+                    == latest_version_per_group.c.max_version,
+                ),
             )
+            .where(FuelExport.action_type == ActionTypeEnum.DELETE)
             .distinct()
         )
 
