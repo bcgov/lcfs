@@ -345,14 +345,18 @@ class ComplianceReportExporter:
                     self._format_cell(cell, val)
 
         end_row = ws.max_row
-        tab = Table(
-            displayName="RenewableTbl",
-            ref=f"A{header_row}:{get_column_letter(5)}{end_row}",
-        )
-        tab.tableStyleInfo = TableStyleInfo(
-            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
-        )
-        ws.add_table(tab)
+        # openpyxl rejects single-row tables (header-only). Skip the table wrap
+        # when the summary section has no data rows — e.g. historical/migrated
+        # reports that produce an empty summary.
+        if end_row > header_row:
+            tab = Table(
+                displayName="RenewableTbl",
+                ref=f"A{header_row}:{get_column_letter(5)}{end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+            )
+            ws.add_table(tab)
 
         # Add Low Carbon Fuel Target Summary
         ws.append(["", "", ""])
@@ -371,14 +375,15 @@ class ComplianceReportExporter:
                 cell.number_format = '"$"#,##0.00'
 
         end_row = ws.max_row
-        tab = Table(
-            displayName="LowCarbonTbl",
-            ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
-        )
-        tab.tableStyleInfo = TableStyleInfo(
-            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
-        )
-        ws.add_table(tab)
+        if end_row > header_row:
+            tab = Table(
+                displayName="LowCarbonTbl",
+                ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+            )
+            ws.add_table(tab)
 
         # Add Non-Compliance Penalty Summary
         ws.append(["", "", ""])
@@ -395,14 +400,15 @@ class ComplianceReportExporter:
             cell.number_format = '"$"#,##0.00'
 
         end_row = ws.max_row
-        tab = Table(
-            displayName="PenaltyTbl",
-            ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
-        )
-        tab.tableStyleInfo = TableStyleInfo(
-            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
-        )
-        ws.add_table(tab)
+        if end_row > header_row:
+            tab = Table(
+                displayName="PenaltyTbl",
+                ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+            )
+            ws.add_table(tab)
         self._auto_size_columns(ws)
 
     def _add_centered_title(self, ws, title: str, columns: int) -> None:
@@ -467,7 +473,7 @@ class ComplianceReportExporter:
                 )
                 rows.append(
                     [
-                        round(fs.compliance_units) if fs.compliance_units else None,
+                        round(fs.compliance_units) if fs.compliance_units is not None else None,
                         fs.fuel_type.fuel_type if fs.fuel_type else None,
                         fs.fuel_category.category if fs.fuel_category else None,
                         fs.end_use_type.type if fs.end_use_type else None,
@@ -497,7 +503,7 @@ class ComplianceReportExporter:
                 # Annual report format
                 rows.append(
                     [
-                        round(fs.compliance_units) if fs.compliance_units else None,
+                        round(fs.compliance_units) if fs.compliance_units is not None else None,
                         fs.fuel_type.fuel_type if fs.fuel_type else None,
                         fs.fuel_category.category if fs.fuel_category else None,
                         fs.end_use_type.type if fs.end_use_type else None,
@@ -703,7 +709,7 @@ class ComplianceReportExporter:
         for ef in data:
             rows.append(
                 [
-                    round(ef.compliance_units),
+                    round(ef.compliance_units) if ef.compliance_units is not None else None,
                     ef.fuel_type.fuel_type if ef.fuel_type else None,
                     ef.fuel_category.category if ef.fuel_category else None,
                     ef.end_use_type.type if ef.end_use_type else None,
