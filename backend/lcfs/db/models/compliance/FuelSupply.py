@@ -56,7 +56,7 @@ class FuelSupply(BaseModel, Auditable, Versioning):
     energy_density = Column(Numeric(10, 2), nullable=True, comment="Energy density")
     eer = Column(Numeric(10, 2), nullable=True, comment="Energy Effectiveness Ratio")
     uci = Column(Numeric(10, 2), nullable=True, comment="Additional Carbon Intensity")
-    energy = Column(BigInteger, nullable=True, comment="Energy content")
+    energy = Column(Numeric(20, 2), nullable=True, comment="Energy content")
     fuel_type_other = Column(
         String(1000), nullable=True, comment="Other fuel type if one provided"
     )

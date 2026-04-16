@@ -108,7 +108,7 @@ class FuelSupplyActionService:
 
         # Calculate total energy if energy density is available
         fuel_supply.energy = (
-            int(fuel_supply.energy_density * total_quantity)
+            round(fuel_supply.energy_density * total_quantity, 2)
             if fuel_supply.energy_density
             else 0
         )

@@ -8,6 +8,7 @@ Create Date: 2026-03-09 12:00:00.000000
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "a2b3c4d5e6f7"
@@ -17,6 +18,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    if "login_bg_image" in inspect(bind).get_table_names():
+        return
+
     op.create_table(
         "login_bg_image",
         sa.Column("login_bg_image_id", sa.Integer(), autoincrement=True, nullable=False),
