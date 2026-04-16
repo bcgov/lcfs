@@ -516,8 +516,38 @@ async def test_create_fse_reporting_batch_success(service, mock_repo):
 
 
 @pytest.mark.anyio
+async def test_create_fse_reporting_batch_rejects_decommissioned_equipment(
+    service, mock_repo
+):
+    mock_repo.get_latest_equipment_status.return_value = "Decommissioned"
+
+    data = [
+        MagicMock(
+            charging_equipment_id=99,
+            model_dump=lambda: {
+                "charging_equipment_id": 99,
+                "compliance_report_id": 10,
+                "supply_from_date": "2024-01-01",
+                "supply_to_date": "2024-12-31",
+            },
+        )
+    ]
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_fse_reporting_batch(data)
+
+    assert exc_info.value.status_code == 400
+    assert "Decommissioned FSE" in exc_info.value.detail
+    mock_repo.create_fse_reporting_batch.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_update_fse_reporting_success(service, mock_repo):
     """Test successful update of FSE reporting"""
+    mock_repo.get_reporting_record_by_id.return_value = MagicMock(
+        charging_equipment_id=1
+    )
+    mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.update_fse_reporting.return_value = {"id": 1, "kwh_usage": 1500.0}
 
     data = MagicMock(model_dump=lambda: {"kwh_usage": 1500.0})
@@ -553,6 +583,10 @@ async def test_delete_fse_reporting_batch_success(service, mock_repo):
 @pytest.mark.anyio
 async def test_update_fse_reporting_active_status(service, mock_repo):
     """Test toggling FSE reporting active status"""
+    mock_repo.get_reporting_record_by_id.return_value = MagicMock(
+        charging_equipment_id=1
+    )
+    mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.update_reporting_active_status.return_value = 3
 
     data = MagicMock(reporting_ids=[1, 2, 3], is_active=False)
@@ -567,8 +601,28 @@ async def test_update_fse_reporting_active_status(service, mock_repo):
 
 
 @pytest.mark.anyio
+async def test_update_fse_reporting_active_status_rejects_activating_decommissioned(
+    service, mock_repo
+):
+    mock_repo.get_reporting_record_by_id.return_value = MagicMock(
+        charging_equipment_id=1
+    )
+    mock_repo.get_latest_equipment_status.return_value = "Decommissioned"
+
+    data = MagicMock(reporting_ids=[1], is_active=True)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting_active_status(data)
+
+    assert exc_info.value.status_code == 400
+    assert "Decommissioned FSE" in exc_info.value.detail
+    mock_repo.update_reporting_active_status.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_success(service, mock_repo):
     """Test successful setting of default dates for FSE reporting"""
+    mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.bulk_update_reporting_dates.return_value = 3
 
     data = MagicMock(

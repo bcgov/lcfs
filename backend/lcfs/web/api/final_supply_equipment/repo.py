@@ -1060,6 +1060,68 @@ class FinalSupplyEquipmentRepository:
         return float(await self.db.scalar(total_query) or 0)
 
     @repo_handler
+    async def get_latest_equipment_status(self, charging_equipment_id: int) -> str | None:
+        """
+        Return the current status for the latest version in the same logical
+        charging equipment series as the provided equipment id.
+        """
+        group_uuid_subquery = (
+            select(ChargingEquipment.group_uuid)
+            .where(ChargingEquipment.charging_equipment_id == charging_equipment_id)
+            .scalar_subquery()
+        )
+
+        stmt = (
+            select(ChargingEquipmentStatus.status)
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
+            )
+            .where(ChargingEquipment.group_uuid == group_uuid_subquery)
+            .order_by(
+                desc(ChargingEquipment.version),
+                desc(ChargingEquipment.charging_equipment_id),
+            )
+            .limit(1)
+        )
+        return (await self.db.execute(stmt)).scalar_one_or_none()
+
+    @repo_handler
+    async def get_reporting_record_by_id(
+        self, charging_equipment_compliance_id: int
+    ) -> ComplianceReportChargingEquipment | None:
+        """
+        Retrieve a compliance-report charging equipment record by its primary key.
+        """
+        stmt = select(ComplianceReportChargingEquipment).where(
+            ComplianceReportChargingEquipment.charging_equipment_compliance_id
+            == charging_equipment_compliance_id
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    @repo_handler
+    async def has_decommissioned_fse_in_report(
+        self, compliance_report_id: int, only_active: bool = True
+    ) -> bool:
+        """
+        Check whether the current draft/report view contains any decommissioned
+        FSE rows that are still attached to the report.
+        """
+        vt = FSEReportingBasePrefView.__table__
+        conditions = [
+            vt.c.compliance_report_id == compliance_report_id,
+            vt.c.charging_equipment_compliance_id.is_not(None),
+            vt.c.charging_equipment_status == "Decommissioned",
+        ]
+        if only_active:
+            conditions.append(vt.c.is_active.is_(True))
+
+        stmt = select(func.count()).select_from(vt).where(*conditions)
+        return bool(await self.db.scalar(stmt))
+
+    @repo_handler
     async def get_fse_reporting_list_paginated(
         self,
         organization_id: int,
@@ -1111,6 +1173,10 @@ class FinalSupplyEquipmentRepository:
         conditions = [
             vt.c.organization_id == organization_id,
             vt.c.compliance_report_id == compliance_report_id,
+            sa.or_(
+                vt.c.charging_equipment_status != "Decommissioned",
+                vt.c.charging_equipment_compliance_id.is_not(None),
+            ),
         ]
         if mode == "summary":
             conditions.append(vt.c.is_active.is_(True))
