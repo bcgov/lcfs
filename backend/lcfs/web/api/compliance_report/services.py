@@ -738,7 +738,9 @@ class ComplianceReportServices:
             for report in compliance_report_chain
         ]
 
-        is_newest = len(compliance_report_chain) - 1 == report.version
+        is_newest = report.version == max(
+            r.version for r in compliance_report_chain
+        )
         had_been_assessed = any(
             report.current_status.status
             in (

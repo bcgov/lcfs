@@ -11,7 +11,10 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import {
+  formatNumberWithCommas as valueFormatter,
+  formatNumberWithDecimals
+} from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -25,6 +28,12 @@ import {
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
+  'Approved fuel code - Section 6 (5) (c)'
+
+export const isFuelCodeProvision = (provision) =>
+  provision === PROVISION_APPROVED_FUEL_CODE ||
+  provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const fuelExportColDefs = (
   optionsData,
@@ -301,7 +310,7 @@ export const fuelExportColDefs = (
             (item) => item.name === params.newValue
           )?.provisionOfTheActId
 
-        if (params.newValue !== PROVISION_APPROVED_FUEL_CODE) {
+        if (!isFuelCodeProvision(params.newValue)) {
           params.data.fuelCode = null
           params.data.fuelCodeId = null
         }
@@ -351,7 +360,7 @@ export const fuelExportColDefs = (
       const fuelCodes = fuelTypeObj?.fuelCodes || []
       return (
         fuelCodes.length > 0 &&
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+        isFuelCodeProvision(params.data.provisionOfTheAct)
       )
     },
     valueGetter: (params) => {
@@ -362,8 +371,9 @@ export const fuelExportColDefs = (
         return params.data.fuelCode
       }
 
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const isFuelCodeScenario = isFuelCodeProvision(
+        params.data.provisionOfTheAct
+      )
       const fuelCodes =
         fuelTypeObj.fuelCodes?.map((item) => item.fuelCode || item.fuel_code) ||
         []
@@ -747,11 +757,15 @@ export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
     valueGetter: (params) => {
       if (isFuelTypeOther(params)) {
         return params.data?.energyDensity
-          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          ? Number(params.data.energyDensity).toFixed(2) +
+              ' MJ/' +
+              params.data?.units
           : 0
       } else {
         return params.data?.energyDensity
-          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          ? Number(params.data.energyDensity).toFixed(2) +
+              ' MJ/' +
+              params.data?.units
           : ''
       }
     }
@@ -759,13 +773,14 @@ export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     field: 'eer',
-    minWidth: 80
+    minWidth: 80,
+    valueFormatter: (params) => formatNumberWithDecimals(params, 2)
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     field: 'energy',
     minWidth: 170,
-    valueFormatter
+    valueFormatter: (params) => formatNumberWithDecimals(params, 2)
   }
 ]
 
@@ -870,6 +885,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     field: 'eer',
     minWidth: 80,
+    valueFormatter: (params) => formatNumberWithDecimals(params, 2),
     cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
   },
   {
