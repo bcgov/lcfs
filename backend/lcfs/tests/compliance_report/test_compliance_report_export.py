@@ -211,18 +211,29 @@ def mock_notional_transfer_data():
 
 @pytest.fixture
 def mock_allocation_agreement_data():
-    """Mock allocation agreement data for testing."""
+    """Mock allocation agreement data for testing.
+
+    The repo returns raw AllocationAgreement ORM objects, so each relationship
+    (allocation_transaction_type, fuel_type, fuel_category, provision_of_the_act,
+    fuel_code) is modelled here as a nested Mock whose string attribute mirrors
+    the real column on the related model.
+    """
     aa1 = Mock()
-    aa1.allocation_transaction_type = "Allocated to"
+    aa1.allocation_transaction_type = Mock()
+    aa1.allocation_transaction_type.type = "Allocated to"
     aa1.transaction_partner = "Partner Corp"
     aa1.postal_address = "456 Oak Ave, Victoria, BC"
     aa1.transaction_partner_email = "partner@example.com"
     aa1.transaction_partner_phone = "250-555-1234"
-    aa1.fuel_type = "Renewable Diesel"
+    aa1.fuel_type = Mock()
+    aa1.fuel_type.fuel_type = "Renewable Diesel"
     aa1.fuel_type_other = None
-    aa1.fuel_category = "Diesel"
-    aa1.provision_of_the_act = "Section 19(b)(i)"
-    aa1.fuel_code = "FC002"
+    aa1.fuel_category = Mock()
+    aa1.fuel_category.category = "Diesel"
+    aa1.provision_of_the_act = Mock()
+    aa1.provision_of_the_act.name = "Section 19(b)(i)"
+    aa1.fuel_code = Mock()
+    aa1.fuel_code.fuel_code = "FC002"
     aa1.ci_of_fuel = 20.5
     aa1.quantity = 8000
     aa1.q1_quantity = 2000
