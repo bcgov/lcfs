@@ -95,7 +95,8 @@ try {
         'L': 'Litres',
         'kg': 'Kilograms',
         'kWh': 'Kilowatt_hour',
-        'm³': 'Cubic_metres'
+        'm³': 'Cubic_metres',
+        'm³ (15°C and 1 atm)': 'Cubic_metres'
     ]
 
     // Fetch compliance reports with non-null legacy_id from TFRS (source)
