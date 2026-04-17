@@ -526,6 +526,11 @@ class ComplianceReportExporter:
                     ]
                 )
 
+        # Skip the sheet entirely if there are no data rows. Returning just the
+        # headers lets _add_sheet's `len(data) <= 1` guard drop the tab.
+        if not rows:
+            return [headers]
+
         # Calculate total compliance units using the summary service
         total_compliance_units = (
             await self.summary_service.calculate_fuel_supply_compliance_units(report)
@@ -726,6 +731,11 @@ class ComplianceReportExporter:
                     ef.energy,
                 ]
             )
+
+        # Skip the sheet entirely if there are no data rows. Returning just the
+        # headers lets _add_sheet's `len(data) <= 1` guard drop the tab.
+        if not rows:
+            return [headers]
 
         # Get the compliance report and calculate total compliance units
         report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)

@@ -138,9 +138,23 @@ class ComplianceReportHistoryMigrator:
         return None
 
     def truncate_destination_table(self, lcfs_cursor):
-        """Truncate the destination compliance_report_history table for clean reload"""
-        logger.info("Truncating destination compliance_report_history table")
-        lcfs_cursor.execute("TRUNCATE TABLE compliance_report_history CASCADE")
+        """
+        DEPRECATED: retained for backwards compatibility with any external callers.
+
+        DO NOT call this from the migration. Truncating
+        compliance_report_history wipes every history row, including those for
+        LCFS-native (non-TFRS) reports that this migration does not repopulate
+        — which silently hides the Report History section in the UI for every
+        post-2023 report.
+
+        The INSERT path below uses
+        ON CONFLICT (compliance_report_id, status_id) DO NOTHING,
+        so re-running the migration is already safe without truncation.
+        """
+        logger.warning(
+            "truncate_destination_table is deprecated and will wipe LCFS-native "
+            "history. Skipping truncate — see ON CONFLICT DO NOTHING in insert_history_record."
+        )
 
     def fetch_source_history_records(self, tfrs_cursor) -> List[Dict]:
         """Fetch history records from source database"""
@@ -254,8 +268,12 @@ class ComplianceReportHistoryMigrator:
                     # Load reference data
                     self.load_reference_data(lcfs_cursor)
 
-                    # Truncate destination table for clean reload
-                    self.truncate_destination_table(lcfs_cursor)
+                    # NOTE: We intentionally do NOT truncate compliance_report_history.
+                    # The table also holds LCFS-native history rows that this ETL
+                    # does not regenerate; truncating would silently wipe them.
+                    # insert_history_record() uses
+                    # ON CONFLICT (compliance_report_id, status_id) DO NOTHING
+                    # so re-runs are idempotent without a truncate.
 
                     # Fetch source records
                     source_records = self.fetch_source_history_records(tfrs_cursor)
