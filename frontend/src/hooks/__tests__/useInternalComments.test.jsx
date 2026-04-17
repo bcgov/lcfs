@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { useInternalComments } from '../useInternalComments'
+import { useComments } from '../useComments'
 
 // Mock the API service
 const mockApiService = {
@@ -26,6 +26,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 // Mock roles constants
 vi.mock('@/constants/roles', () => ({
   roles: {
+    government: 'government',
     director: 'director',
     analyst: 'analyst',
     compliance_manager: 'compliance_manager'
@@ -44,7 +45,7 @@ const createWrapper = () => {
   )
 }
 
-describe('useInternalComments', () => {
+describe('useComments', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockHasAnyRole.mockReturnValue(false)
@@ -69,7 +70,7 @@ describe('useInternalComments', () => {
       mockApiService.get.mockResolvedValue({ data: mockComments })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -96,7 +97,7 @@ describe('useInternalComments', () => {
       mockApiService.get.mockResolvedValue({ data: mockComments })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -120,7 +121,7 @@ describe('useInternalComments', () => {
       mockApiService.get.mockResolvedValue({ data: mockComments })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -147,7 +148,7 @@ describe('useInternalComments', () => {
       mockApiService.get.mockResolvedValue({ data: mockComments })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -175,7 +176,7 @@ describe('useInternalComments', () => {
 
       const { result } = renderHook(
         () =>
-          useInternalComments('compliance_report', 123, { sortOrder: 'asc' }),
+          useComments('compliance_report', 123, { sortOrder: 'asc' }),
         { wrapper: createWrapper() }
       )
 
@@ -190,7 +191,7 @@ describe('useInternalComments', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', null),
+        () => useComments('compliance_report', null),
         { wrapper: createWrapper() }
       )
 
@@ -201,7 +202,7 @@ describe('useInternalComments', () => {
     it('should not fetch when entityType is missing', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 
-      const { result } = renderHook(() => useInternalComments(null, 123), {
+      const { result } = renderHook(() => useComments(null, 123), {
         wrapper: createWrapper()
       })
 
@@ -213,7 +214,7 @@ describe('useInternalComments', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123, { enabled: false }),
+        () => useComments('compliance_report', 123, { enabled: false }),
         { wrapper: createWrapper() }
       )
 
@@ -226,7 +227,7 @@ describe('useInternalComments', () => {
 
       const { result } = renderHook(
         () =>
-          useInternalComments('compliance_report', 123, { autoFetch: false }),
+          useComments('compliance_report', 123, { autoFetch: false }),
         { wrapper: createWrapper() }
       )
 
@@ -240,7 +241,7 @@ describe('useInternalComments', () => {
       mockApiService.get.mockRejectedValue(mockError)
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123, { retry: 0 }),
+        () => useComments('compliance_report', 123, { retry: 0 }),
         { wrapper: createWrapper() }
       )
 
@@ -263,7 +264,7 @@ describe('useInternalComments', () => {
       mockApiService.post.mockResolvedValue({ data: mockNewComment })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -279,7 +280,8 @@ describe('useInternalComments', () => {
         entityType: 'compliance_report',
         entityId: 123,
         comment: 'New comment',
-        audience_scope: 'Director'
+        audience_scope: 'Director',
+        visibility: 'Internal'
       })
     })
 
@@ -287,7 +289,7 @@ describe('useInternalComments', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -308,7 +310,7 @@ describe('useInternalComments', () => {
       mockApiService.post.mockResolvedValue({ data: mockNewComment })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -333,7 +335,7 @@ describe('useInternalComments', () => {
       mockApiService.post.mockRejectedValue(mockError)
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -354,11 +356,11 @@ describe('useInternalComments', () => {
       })
     })
 
-    it('should not allow adding comments without proper role', async () => {
+    it('should submit with null audience scope when user has no gov role', async () => {
       mockHasAnyRole.mockReturnValue(false) // No valid role
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -374,7 +376,13 @@ describe('useInternalComments', () => {
         }
       })
 
-      expect(mockApiService.post).not.toHaveBeenCalled()
+      expect(mockApiService.post).toHaveBeenCalledWith('/internal_comments/', {
+        entityType: 'compliance_report',
+        entityId: 123,
+        comment: 'New comment',
+        audience_scope: null,
+        visibility: 'Internal'
+      })
     })
 
     it('should trim comment text before submission', async () => {
@@ -387,7 +395,7 @@ describe('useInternalComments', () => {
       mockApiService.post.mockResolvedValue({ data: mockNewComment })
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -403,7 +411,8 @@ describe('useInternalComments', () => {
         entityType: 'compliance_report',
         entityId: 123,
         comment: 'Trimmed comment',
-        audience_scope: 'Director'
+        audience_scope: 'Director',
+        visibility: 'Internal'
       })
     })
 
@@ -411,7 +420,7 @@ describe('useInternalComments', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 
       const { result } = renderHook(
-        () => useInternalComments('compliance_report', 123),
+        () => useComments('compliance_report', 123),
         { wrapper: createWrapper() }
       )
 
@@ -424,6 +433,186 @@ describe('useInternalComments', () => {
       })
 
       expect(mockApiService.post).not.toHaveBeenCalled()
+    })
+
+    it('should force Public visibility for non-gov users in dual mode', async () => {
+      mockHasAnyRole.mockReturnValue(false)
+      mockApiService.post.mockResolvedValue({
+        data: {
+          internalCommentId: 200,
+          comment: 'Public only',
+          visibility: 'Public',
+          audience_scope: null
+        }
+      })
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual'
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      act(() => {
+        result.current.handleVisibilityChange('Internal')
+        result.current.handleCommentInputChange('Public only')
+      })
+
+      await act(async () => {
+        await result.current.addComment()
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith('/internal_comments/', {
+        entityType: 'compliance_report',
+        entityId: 123,
+        comment: 'Public only',
+        audience_scope: null,
+        visibility: 'Public'
+      })
+    })
+
+    it('should default gov-only users to Analyst audience scope in dual mode', async () => {
+      mockHasAnyRole.mockImplementation((role) => role === 'government')
+      mockApiService.post.mockResolvedValue({
+        data: {
+          internalCommentId: 201,
+          comment: 'Internal gov note',
+          visibility: 'Internal',
+          audience_scope: 'Analyst'
+        }
+      })
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual'
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      act(() => {
+        result.current.handleVisibilityChange('Internal')
+        result.current.handleCommentInputChange('Internal gov note')
+      })
+
+      await act(async () => {
+        await result.current.addComment()
+      })
+
+      expect(mockApiService.post).toHaveBeenCalledWith('/internal_comments/', {
+        entityType: 'compliance_report',
+        entityId: 123,
+        comment: 'Internal gov note',
+        audience_scope: 'Analyst',
+        visibility: 'Internal'
+      })
+    })
+  })
+
+  describe('Editing comments', () => {
+    it('should send null audience scope when setting visibility to Public', async () => {
+      mockHasAnyRole.mockImplementation((role) => role === 'director')
+      mockApiService.put.mockResolvedValue({
+        data: {
+          internalCommentId: 99,
+          comment: 'Updated public',
+          visibility: 'Public',
+          audience_scope: null
+        }
+      })
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual'
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      await act(async () => {
+        await result.current.editComment({
+          commentId: 99,
+          commentText: 'Updated public',
+          visibility: 'Public'
+        })
+      })
+
+      expect(mockApiService.put).toHaveBeenCalledWith('/internal_comments/99', {
+        comment: 'Updated public',
+        visibility: 'Public',
+        audience_scope: null
+      })
+    })
+
+    it('should send analyst audience scope when setting visibility to Internal for gov-only user', async () => {
+      mockHasAnyRole.mockImplementation((role) => role === 'government')
+      mockApiService.put.mockResolvedValue({
+        data: {
+          internalCommentId: 100,
+          comment: 'Updated internal',
+          visibility: 'Internal',
+          audience_scope: 'Analyst'
+        }
+      })
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual'
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      await act(async () => {
+        await result.current.editComment({
+          commentId: 100,
+          commentText: 'Updated internal',
+          visibility: 'Internal'
+        })
+      })
+
+      expect(mockApiService.put).toHaveBeenCalledWith('/internal_comments/100', {
+        comment: 'Updated internal',
+        visibility: 'Internal',
+        audience_scope: 'Analyst'
+      })
+    })
+  })
+
+  describe('Role and mode helpers', () => {
+    it('should expose dual-mode permissions for non-gov users', () => {
+      mockHasAnyRole.mockReturnValue(false)
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual',
+            autoFetch: false
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      expect(result.current.canComment).toBe(true)
+      expect(result.current.visibility).toBe('Public')
+      expect(result.current.allowInternalVisibility).toBe(false)
+    })
+
+    it('should expose internal visibility control for gov users', () => {
+      mockHasAnyRole.mockImplementation((role) => role === 'government')
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual',
+            autoFetch: false
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      expect(result.current.canComment).toBe(true)
+      expect(result.current.visibility).toBe('Internal')
+      expect(result.current.allowInternalVisibility).toBe(true)
     })
   })
 
@@ -446,7 +635,7 @@ describe('useInternalComments', () => {
 
       const { result } = renderHook(
         () =>
-          useInternalComments('compliance_report', 123, {
+          useComments('compliance_report', 123, {
             optimisticUpdates: true
           }),
         { wrapper: createWrapper() }
@@ -486,7 +675,7 @@ describe('useInternalComments', () => {
 
       const { result } = renderHook(
         () =>
-          useInternalComments('compliance_report', 123, {
+          useComments('compliance_report', 123, {
             optimisticUpdates: false
           }),
         { wrapper: createWrapper() }

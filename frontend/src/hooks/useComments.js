@@ -2,13 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 
-// Default cache configuration
-const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
-const DEFAULT_CACHE_TIME = 15 * 60 * 1000 // 15 minutes (longer for comments)
+const DEFAULT_STALE_TIME = 5 * 60 * 1000
+const DEFAULT_CACHE_TIME = 15 * 60 * 1000
 
-export const useInternalComments = (entityType, entityId, options = {}) => {
+export const useComments = (entityType, entityId, options = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
   const { hasAnyRole } = useCurrentUser()
@@ -20,23 +19,65 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
     enabled = true,
     autoFetch = true,
     optimisticUpdates = true,
-    sortOrder = 'desc', // 'desc' for newest first, 'asc' for oldest first
+    sortOrder = 'desc',
+    commentMode = 'internal-only',
     ...restOptions
   } = options
 
-  // Memoize audience scope to prevent unnecessary recalculations
+  const isGov = useMemo(
+    () => hasAnyRole(roles.government),
+    [hasAnyRole]
+  )
+  const hasInternalAudienceScopeRole = useMemo(
+    () => isGov || hasAnyRole(roles.director, roles.analyst, roles.compliance_manager),
+    [hasAnyRole, isGov]
+  )
+
+  const isDualMode = commentMode === 'dual'
+
+  // Visibility state for dual mode (gov users can toggle, BCeID forced to Public)
+  const [visibility, setVisibility] = useState(
+    isDualMode && !isGov
+      ? 'Public'
+      : 'Internal'
+  )
+
+  useEffect(() => {
+    if (isDualMode && !isGov && visibility === 'Internal') {
+      setVisibility('Public')
+    }
+  }, [isDualMode, isGov, visibility])
+
+  const handleVisibilityChange = useCallback((newVisibility) => {
+    // BCeID users cannot switch to Internal
+    if (!isGov && newVisibility === 'Internal') return
+    setVisibility(newVisibility)
+  }, [isGov])
+
+  // Memoize audience scope
   const audienceScope = useMemo(() => {
+    // In dual mode, BCeID users don't have audience scope
+    if (isDualMode && !isGov) {
+      return null
+    }
+    // Public comments don't need audience scope
+    if (isDualMode && visibility === 'Public') {
+      return null
+    }
+    // Standard gov audience scope logic
     if (hasAnyRole(roles.director)) {
       return 'Director'
     } else if (hasAnyRole(roles.analyst)) {
       return 'Analyst'
     } else if (hasAnyRole(roles.compliance_manager)) {
       return 'Compliance Manager'
+    } else if (isGov) {
+      // Fallback for government users without delegated assessment roles.
+      return 'Analyst'
     }
     return null
-  }, [hasAnyRole])
+  }, [hasAnyRole, isDualMode, isGov, visibility])
 
-  // Memoize fetch function
   const fetchComments = useCallback(async () => {
     if (!entityId || !entityType) {
       throw new Error('Entity ID and Entity Type are required')
@@ -46,7 +87,6 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
       `/internal_comments/${entityType}/${entityId}`
     )
 
-    // Sort comments based on sortOrder preference
     const sortedComments = response.data.sort((a, b) => {
       if (sortOrder === 'desc') {
         return b.internalCommentId - a.internalCommentId
@@ -77,15 +117,13 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
       if (!entityId || !entityType) {
         throw new Error('Entity ID and Entity Type are required')
       }
-      if (!audienceScope) {
-        throw new Error('User role not authorized for comments')
-      }
 
       const payload = {
         entityType,
         entityId,
         comment: commentText.trim(),
-        audience_scope: audienceScope
+        audience_scope: audienceScope,
+        visibility: isDualMode ? visibility : 'Internal'
       }
 
       const response = await apiService.post('/internal_comments/', payload)
@@ -94,14 +132,12 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
     onMutate: async (commentText) => {
       if (!optimisticUpdates) return
 
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries([
         'internal-comments',
         entityType,
         entityId
       ])
 
-      // Snapshot the previous value
       const previousComments = queryClient.getQueryData([
         'internal-comments',
         entityType,
@@ -109,12 +145,12 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
         { sortOrder }
       ])
 
-      // Optimistically update to the new value
       if (previousComments) {
         const optimisticComment = {
-          internalCommentId: Date.now(), // Temporary ID
+          internalCommentId: Date.now(),
           comment: commentText.trim(),
           audience_scope: audienceScope,
+          visibility: isDualMode ? visibility : 'Internal',
           createdAt: new Date().toISOString(),
           isOptimistic: true
         }
@@ -130,11 +166,9 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
         )
       }
 
-      // Return a context object with the snapshotted value
       return { previousComments }
     },
     onError: (_err, commentText, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
           ['internal-comments', entityType, entityId, { sortOrder }],
@@ -143,18 +177,15 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
       }
     },
     onSuccess: (newComment) => {
-      // Remove optimistic comment and add real comment
       queryClient.setQueryData(
         ['internal-comments', entityType, entityId, { sortOrder }],
         (oldData) => {
           if (!oldData) return [newComment]
 
-          // Remove any optimistic comments
           const realComments = oldData.filter(
             (comment) => !comment.isOptimistic
           )
 
-          // Insert new comment in correct position based on sort order
           if (sortOrder === 'desc') {
             const insertIndex = realComments.findIndex(
               (comment) =>
@@ -187,16 +218,15 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
         }
       )
 
-      setCommentInput('') // Clear the comment input after successful addition
+      setCommentInput('')
     },
     onSettled: () => {
-      // Always refetch after error or success to ensure we have latest data
       queryClient.invalidateQueries(['internal-comments', entityType, entityId])
     }
   })
 
   const editCommentMutation = useMutation({
-    mutationFn: async ({ commentId, commentText }) => {
+    mutationFn: async ({ commentId, commentText, visibility: editVisibility }) => {
       if (!commentId) {
         throw new Error('Comment ID is required for editing')
       }
@@ -204,12 +234,22 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
         throw new Error('Comment text is required')
       }
 
-      const response = await apiService.put(`/internal_comments/${commentId}`, {
+      const payload = {
         comment: commentText.trim()
-      })
+      }
+      if (typeof editVisibility === 'string') {
+        payload.visibility = editVisibility
+        payload.audience_scope =
+          editVisibility === 'Public' ? null : audienceScope
+      }
+
+      const response = await apiService.put(
+        `/internal_comments/${commentId}`,
+        payload
+      )
       return response.data
     },
-    onMutate: async ({ commentId, commentText }) => {
+    onMutate: async ({ commentId, commentText, visibility: editVisibility }) => {
       if (!optimisticUpdates) return
 
       await queryClient.cancelQueries([
@@ -225,11 +265,17 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
         { sortOrder }
       ])
 
-      // Optimistically update the comment
       if (previousComments) {
         const updatedComments = previousComments.map((comment) =>
           comment.internalCommentId === commentId
-            ? { ...comment, comment: commentText.trim(), isOptimistic: true }
+            ? {
+                ...comment,
+                comment: commentText.trim(),
+                ...(typeof editVisibility === 'string'
+                  ? { visibility: editVisibility }
+                  : {}),
+                isOptimistic: true
+              }
             : comment
         )
 
@@ -292,7 +338,6 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
         { sortOrder }
       ])
 
-      // Optimistically remove the comment
       if (previousComments) {
         const filteredComments = previousComments.filter(
           (comment) => comment.internalCommentId !== commentId
@@ -315,7 +360,6 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
       }
     },
     onSuccess: ({ commentId }) => {
-      // Ensure the comment is removed from cache
       queryClient.setQueryData(
         ['internal-comments', entityType, entityId, { sortOrder }],
         (oldData) =>
@@ -329,7 +373,6 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
     }
   })
 
-  // Memoized handlers to prevent unnecessary re-renders
   const handleCommentInputChange = useCallback((value) => {
     setCommentInput(value)
   }, [])
@@ -341,8 +384,12 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
   }, [commentInput, addCommentMutation])
 
   const handleEditComment = useCallback(
-    ({ commentId, commentText }) => {
-      return editCommentMutation.mutateAsync({ commentId, commentText })
+    ({ commentId, commentText, visibility: editVisibility }) => {
+      return editCommentMutation.mutateAsync({
+        commentId,
+        commentText,
+        visibility: editVisibility
+      })
     },
     [editCommentMutation]
   )
@@ -358,20 +405,26 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
     return commentsQuery.refetch()
   }, [commentsQuery])
 
-  // Utility functions
   const clearCommentInput = useCallback(() => {
     setCommentInput('')
   }, [])
 
   const canComment = useMemo(() => {
+    if (isDualMode) {
+      // Both gov and BCeID can comment in dual mode
+      return !!entityId && !!entityType
+    }
+    // Original behavior: require audience scope (gov role)
     return !!audienceScope && !!entityId && !!entityType
-  }, [audienceScope, entityId, entityType])
+  }, [audienceScope, entityId, entityType, isDualMode])
 
   return {
     // Data
     comments: commentsQuery.data || [],
     audienceScope,
     commentInput,
+    visibility,
+    allowInternalVisibility: hasInternalAudienceScopeRole,
 
     // Loading states
     isLoading: commentsQuery.isLoading,
@@ -396,6 +449,9 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
     handleCommentInputChange,
     clearCommentInput,
 
+    // Visibility management (dual mode)
+    handleVisibilityChange,
+
     // Utilities
     canComment,
 
@@ -415,3 +471,4 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
       })
   }
 }
+

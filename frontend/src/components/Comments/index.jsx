@@ -1,10 +1,10 @@
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
-import { useInternalComments } from '@/hooks/useInternalComments'
-import InternalCommentList from './InternalCommentList'
+import { useComments } from '@/hooks/useComments'
+import CommentList from './CommentList'
 import Loading from '@/components/Loading'
 
-const InternalComments = ({ entityType, entityId }) => {
+const Comments = ({ entityType, entityId, commentMode = 'internal-only' }) => {
   const { t } = useTranslation(['internalComment'])
   const {
     comments,
@@ -15,8 +15,11 @@ const InternalComments = ({ entityType, entityId }) => {
     isAddingComment,
     isEditingComment,
     commentInput,
-    handleCommentInputChange
-  } = useInternalComments(entityType, entityId)
+    handleCommentInputChange,
+    visibility,
+    handleVisibilityChange,
+    allowInternalVisibility
+  } = useComments(entityType, entityId, { commentMode })
 
   const showAddCommentBtn = entityId !== null
 
@@ -35,12 +38,12 @@ const InternalComments = ({ entityType, entityId }) => {
     await addComment()
   }
 
-  const handleEditComment = async (commentId, commentText) => {
-    await editComment({ commentId, commentText })
+  const handleEditComment = async (commentId, commentText, visibility) => {
+    await editComment({ commentId, commentText, visibility })
   }
 
   return (
-    <InternalCommentList
+    <CommentList
       comments={comments}
       onAddComment={handleAddComment}
       onEditComment={handleEditComment}
@@ -49,14 +52,22 @@ const InternalComments = ({ entityType, entityId }) => {
       isEditingComment={isEditingComment}
       commentInput={commentInput}
       onCommentInputChange={handleCommentInputChange}
+      commentMode={commentMode}
+      visibility={visibility}
+      onVisibilityChange={handleVisibilityChange}
+      allowInternalVisibility={allowInternalVisibility}
     />
   )
 }
 
-InternalComments.propTypes = {
+Comments.propTypes = {
   entityType: PropTypes.string.isRequired,
-  entityId: PropTypes.oneOfType([PropTypes.number, PropTypes.string, PropTypes.oneOf([null])]),
-  onCommentChange: PropTypes.func
+  entityId: PropTypes.oneOfType([
+    PropTypes.number,
+    PropTypes.string,
+    PropTypes.oneOf([null])
+  ]),
+  commentMode: PropTypes.oneOf(['internal-only', 'dual'])
 }
 
-export default InternalComments
+export default Comments

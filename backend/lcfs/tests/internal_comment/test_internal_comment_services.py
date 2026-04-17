@@ -1,10 +1,19 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from fastapi import HTTPException
 
 from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
-from lcfs.web.api.internal_comment.schema import EntityTypeEnum
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.internal_comment.schema import (
+    EntityTypeEnum,
+    AudienceScopeEnum,
+    CommentVisibilityEnum,
+    InternalCommentCreateSchema,
+    InternalCommentUpdateSchema,
+)
 from lcfs.web.api.internal_comment.services import InternalCommentService
 
 
@@ -203,3 +212,208 @@ async def test_copy_internal_comments_large_number_of_comments():
 
     # Verify flush was called
     mock_db.flush.assert_called_once()
+
+
+def _build_service_with_user_roles(role_names):
+    service = InternalCommentService()
+    service.request = MagicMock()
+    service.request.user = SimpleNamespace(
+        role_names=role_names,
+        keycloak_username="mockuser",
+    )
+    service.repo = MagicMock()
+    service.repo.create_internal_comment = AsyncMock()
+    service.repo.get_internal_comments = AsyncMock()
+    service.repo.get_internal_comment_by_id = AsyncMock()
+    service.repo.update_internal_comment = AsyncMock()
+    return service
+
+
+@pytest.mark.anyio
+async def test_create_internal_comment_non_gov_rejects_non_compliance_report():
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.TRANSFER,
+        entity_id=1,
+        comment="Supplier comment",
+        audience_scope=AudienceScopeEnum.ANALYST,
+        visibility=CommentVisibilityEnum.PUBLIC,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.create_internal_comment(payload)
+
+    assert exc.value.status_code == 403
+    service.repo.create_internal_comment.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_internal_comment_non_gov_rejects_internal_visibility():
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT,
+        entity_id=1,
+        comment="Supplier internal comment",
+        audience_scope=None,
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await service.create_internal_comment(payload)
+
+    assert exc.value.status_code == 403
+    service.repo.create_internal_comment.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_internal_comment_non_gov_public_forces_audience_scope_none():
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    service.repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=99,
+        comment="Public supplier comment",
+        audience_scope=None,
+        visibility="Public",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT,
+        entity_id=42,
+        comment="Public supplier comment",
+        audience_scope=AudienceScopeEnum.ANALYST,
+        visibility=CommentVisibilityEnum.PUBLIC,
+    )
+
+    await service.create_internal_comment(payload)
+
+    service.repo.create_internal_comment.assert_awaited_once()
+    created_comment_arg = service.repo.create_internal_comment.await_args.args[0]
+    assert created_comment_arg.visibility == "Public"
+    assert created_comment_arg.audience_scope is None
+
+
+@pytest.mark.anyio
+async def test_create_internal_comment_government_defaults_audience_scope_to_analyst():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.create_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=100,
+        comment="Internal gov comment",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentCreateSchema(
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT,
+        entity_id=42,
+        comment="Internal gov comment",
+        audience_scope=None,
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+
+    await service.create_internal_comment(payload)
+
+    service.repo.create_internal_comment.assert_awaited_once()
+    created_comment_arg = service.repo.create_internal_comment.await_args.args[0]
+    assert created_comment_arg.audience_scope == "Analyst"
+    assert created_comment_arg.visibility == "Internal"
+
+
+@pytest.mark.anyio
+async def test_get_internal_comments_non_gov_enforces_public_visibility_filter():
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    service.repo.get_internal_comments.return_value = []
+
+    await service.get_internal_comments(
+        EntityTypeEnum.COMPLIANCE_REPORT.value,
+        555,
+    )
+
+    service.repo.get_internal_comments.assert_awaited_once_with(
+        EntityTypeEnum.COMPLIANCE_REPORT.value,
+        555,
+        "Public",
+    )
+
+
+@pytest.mark.anyio
+async def test_get_internal_comments_non_gov_rejects_non_compliance_report():
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+
+    with pytest.raises(HTTPException) as exc:
+        await service.get_internal_comments(EntityTypeEnum.TRANSFER.value, 555)
+
+    assert exc.value.status_code == 403
+    service.repo.get_internal_comments.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_internal_comment_public_sets_audience_scope_to_none():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_internal_comment_by_id.return_value = SimpleNamespace(
+        internal_comment_id=8,
+        comment="existing",
+        audience_scope="Analyst",
+        visibility="Internal",
+    )
+    service.repo.update_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=8,
+        comment="updated",
+        audience_scope=None,
+        visibility="Public",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentUpdateSchema(
+        comment="updated",
+        visibility=CommentVisibilityEnum.PUBLIC,
+    )
+
+    await service.update_internal_comment(8, payload)
+
+    service.repo.update_internal_comment.assert_awaited_once_with(
+        internal_comment_id=8,
+        new_comment_text="updated",
+        visibility="Public",
+        audience_scope=None,
+    )
+
+
+@pytest.mark.anyio
+async def test_update_internal_comment_internal_without_scope_defaults_to_analyst():
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_internal_comment_by_id.return_value = SimpleNamespace(
+        internal_comment_id=9,
+        comment="existing",
+        audience_scope=None,
+        visibility="Internal",
+    )
+    service.repo.update_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=9,
+        comment="updated",
+        audience_scope="Analyst",
+        visibility="Internal",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentUpdateSchema(
+        comment="updated",
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+
+    await service.update_internal_comment(9, payload)
+
+    service.repo.update_internal_comment.assert_awaited_once_with(
+        internal_comment_id=9,
+        new_comment_text="updated",
+        visibility="Internal",
+        audience_scope="Analyst",
+    )
