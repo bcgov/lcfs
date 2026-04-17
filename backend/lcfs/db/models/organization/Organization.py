@@ -219,6 +219,11 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     charging_equipment_compliance_associations = relationship(
         "ComplianceReportChargingEquipment", back_populates="organization"
     )
+    ci_applications = relationship(
+        "CIApplication",
+        back_populates="organization",
+        lazy="selectin",
+    )
 
 
 @event.listens_for(Organization, "before_insert")
