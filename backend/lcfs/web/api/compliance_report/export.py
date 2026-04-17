@@ -755,6 +755,22 @@ class ComplianceReportExporter:
 
         rows = []
         for aa in data:
+            # Extract string values from ORM relationship objects — openpyxl
+            # cannot serialize ORM model instances directly.
+            allocation_type_value = (
+                aa.allocation_transaction_type.type
+                if aa.allocation_transaction_type
+                else None
+            )
+            fuel_type_value = aa.fuel_type.fuel_type if aa.fuel_type else None
+            fuel_category_value = (
+                aa.fuel_category.category if aa.fuel_category else None
+            )
+            provision_value = (
+                aa.provision_of_the_act.name if aa.provision_of_the_act else None
+            )
+            fuel_code_value = aa.fuel_code.fuel_code if aa.fuel_code else None
+
             if is_quarterly:
                 # Calculate total quantity for quarterly reports
                 total_quantity = (
@@ -765,16 +781,16 @@ class ComplianceReportExporter:
                 )
                 rows.append(
                     [
-                        aa.allocation_transaction_type,
+                        allocation_type_value,
                         aa.transaction_partner,
                         aa.postal_address,
                         aa.transaction_partner_email,
                         aa.transaction_partner_phone,
-                        aa.fuel_type,
+                        fuel_type_value,
                         aa.fuel_type_other,
-                        aa.fuel_category,
-                        aa.provision_of_the_act,
-                        aa.fuel_code,
+                        fuel_category_value,
+                        provision_value,
+                        fuel_code_value,
                         aa.ci_of_fuel,
                         aa.q1_quantity,
                         aa.q2_quantity,
@@ -788,16 +804,16 @@ class ComplianceReportExporter:
                 # Annual report format
                 rows.append(
                     [
-                        aa.allocation_transaction_type,
+                        allocation_type_value,
                         aa.transaction_partner,
                         aa.postal_address,
                         aa.transaction_partner_email,
                         aa.transaction_partner_phone,
-                        aa.fuel_type,
+                        fuel_type_value,
                         aa.fuel_type_other,
-                        aa.fuel_category,
-                        aa.provision_of_the_act,
-                        aa.fuel_code,
+                        fuel_category_value,
+                        provision_value,
+                        fuel_code_value,
                         aa.ci_of_fuel,
                         aa.quantity,
                         aa.units,
