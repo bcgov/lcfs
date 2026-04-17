@@ -79,12 +79,16 @@ export const ActivityLinksList = ({
         ROUTES.REPORTS.ADD.OTHER_USE_FUELS,
         false
       ),
-      createActivity(
-        'report:activityLists.exportFuels',
-        'report:activityLabels.exportFuels',
-        ROUTES.REPORTS.ADD.FUEL_EXPORTS,
-        false
-      )
+      ...(parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+        ? [
+            createActivity(
+              'report:activityLists.exportFuels',
+              'report:activityLabels.exportFuels',
+              ROUTES.REPORTS.ADD.FUEL_EXPORTS,
+              false
+            )
+          ]
+        : [])
     ],
     [t, navigate, compliancePeriod, complianceReportId]
   )
