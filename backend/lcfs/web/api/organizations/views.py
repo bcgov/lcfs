@@ -21,6 +21,9 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.db.models.organization.OrganizationStatus import OrgStatusEnum
 
+from .credit_market_service import OrganizationCreditMarketService
+from .link_key_service import OrganizationLinkKeyService
+from .penalty_service import OrganizationPenaltyService
 from .services import OrganizationsService
 from .schema import (
     OrganizationTypeSchema,
@@ -126,7 +129,8 @@ async def search_organizations(
 )
 @view_handler(["*"])
 async def get_credit_market_listings(
-    request: Request, service: OrganizationsService = Depends()
+    request: Request,
+    service: OrganizationCreditMarketService = Depends(),
 ):
     """
     Fetch organizations that have opted to display in the credit trading market.
@@ -144,7 +148,7 @@ async def get_credit_market_listings(
 async def get_credit_market_audit_logs(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
-    service: OrganizationsService = Depends(),
+    service: OrganizationCreditMarketService = Depends(),
 ):
     """
     Fetch paginated credit trading market audit logs (IDIR/internal visibility).
@@ -186,7 +190,9 @@ async def get_organization(
 )
 @view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
 async def get_penalty_analytics(
-    request: Request, organization_id: int, service: OrganizationsService = Depends()
+    request: Request,
+    organization_id: int,
+    service: OrganizationPenaltyService = Depends(),
 ):
     """
     Retrieve penalty analytics (automatic and discretionary) for the specified organization.
@@ -213,7 +219,7 @@ async def get_penalty_logs(
     request: Request,
     organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
-    service: OrganizationsService = Depends(),
+    service: OrganizationPenaltyService = Depends(),
 ):
     """Fetch paginated penalty log entries for an organization."""
     user = request.user
@@ -238,7 +244,7 @@ async def create_penalty_log(
     request: Request,
     organization_id: int,
     penalty_data: PenaltyLogCreateSchema,
-    service: OrganizationsService = Depends(),
+    service: OrganizationPenaltyService = Depends(),
 ):
     return await service.create_penalty_log(organization_id, penalty_data)
 
@@ -254,7 +260,7 @@ async def update_penalty_log(
     organization_id: int,
     penalty_log_id: int,
     penalty_data: PenaltyLogUpdateSchema,
-    service: OrganizationsService = Depends(),
+    service: OrganizationPenaltyService = Depends(),
 ):
     return await service.update_penalty_log(
         organization_id, penalty_log_id, penalty_data
@@ -270,7 +276,7 @@ async def delete_penalty_log(
     request: Request,
     organization_id: int,
     penalty_log_id: int,
-    service: OrganizationsService = Depends(),
+    service: OrganizationPenaltyService = Depends(),
 ):
     await service.delete_penalty_log(organization_id, penalty_log_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -518,7 +524,7 @@ async def get_current_org_early_issuance(
 async def update_current_org_credit_market_details(
     request: Request,
     credit_market_data: OrganizationCreditMarketUpdateSchema,
-    service: OrganizationsService = Depends(),
+    service: OrganizationCreditMarketService = Depends(),
 ):
     """
     Update credit market contact details for the current user's organization.
@@ -531,7 +537,6 @@ async def update_current_org_credit_market_details(
             detail="User is not associated with an organization",
         )
 
-    # Use the dedicated method to update only credit market fields
     return await service.update_organization_credit_market_details(
         organization_id, credit_market_data.model_dump(exclude_unset=True), request.user
     )
@@ -547,7 +552,7 @@ async def update_org_credit_market_details(
     request: Request,
     organization_id: int,
     credit_market_data: OrganizationCreditMarketUpdateSchema,
-    service: OrganizationsService = Depends(),
+    service: OrganizationCreditMarketService = Depends(),
 ):
     """
     Update credit market contact details for any organization (IDIR users only).
@@ -578,7 +583,9 @@ async def update_company_overview(
     This endpoint allows analysts, managers, and directors to update company overview information.
     """
     return await service.update_organization_company_overview(
-        organization_id, company_overview_data.model_dump(exclude_unset=True), request.user
+        organization_id,
+        company_overview_data.model_dump(exclude_unset=True),
+        request.user,
     )
 
 
@@ -591,7 +598,7 @@ async def update_company_overview(
 async def get_available_forms(
     request: Request,
     organization_id: int,
-    service: OrganizationsService = Depends(),
+    service: OrganizationLinkKeyService = Depends(),
 ):
     """
     Get available forms for link key generation.
@@ -608,7 +615,7 @@ async def get_available_forms(
 async def get_organization_link_keys(
     request: Request,
     organization_id: int,
-    service: OrganizationsService = Depends(),
+    service: OrganizationLinkKeyService = Depends(),
 ):
     """
     Get all link keys for an organization.
@@ -626,7 +633,7 @@ async def generate_organization_link_key(
     request: Request,
     organization_id: int,
     link_key_data: OrganizationLinkKeyCreateSchema,
-    service: OrganizationsService = Depends(),
+    service: OrganizationLinkKeyService = Depends(),
 ):
     """
     Generate a new secure link key for a specific form type.
@@ -646,7 +653,7 @@ async def regenerate_organization_link_key(
     request: Request,
     organization_id: int,
     form_id: int,
-    service: OrganizationsService = Depends(),
+    service: OrganizationLinkKeyService = Depends(),
 ):
     """
     Regenerate the link key for a specific form.
@@ -664,7 +671,7 @@ async def regenerate_organization_link_key(
 async def validate_link_key(
     request: Request,
     link_key: str,
-    service: OrganizationsService = Depends(),
+    service: OrganizationLinkKeyService = Depends(),
 ):
     """
     Validate a link key and return the associated organization and form type.
