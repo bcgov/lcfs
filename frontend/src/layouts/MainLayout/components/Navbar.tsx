@@ -16,13 +16,13 @@ type NavItem = {
 
 export const Navbar = () => {
   const { t } = useTranslation()
-  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
+  const { data: currentUser, hasAnyRole } = useCurrentUser()
   const theme = useTheme()
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
   // Nav Links
   const navMenuItems = useMemo<NavItem[]>(() => {
-    const isAdmin = hasRoles(roles.administrator)
+    const isAdmin = hasAnyRole(roles.administrator, roles.system_admin)
     const canSeeComplianceReports = hasAnyRole(
       roles.government,
       roles.signing_authority,
@@ -84,7 +84,7 @@ export const Navbar = () => {
       activeRoutes.push(...mobileRoutes)
     }
     return activeRoutes
-  }, [currentUser, t, isMobileView, hasRoles, hasAnyRole])
+  }, [currentUser, t, isMobileView, hasAnyRole])
 
   return (
     <BCNavbar
