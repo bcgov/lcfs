@@ -181,10 +181,10 @@ export const Login = () => {
                       variant="contained"
                       color="glacier"
                       aria-label={t('login.publicCreditCalculator')}
-                      onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
-                      id="link-public-credit-calculator"
+                      onClick={() => navigate(ROUTES.PUBLIC_DASHBOARD)}
+                      id="link-public-dashboard"
                       className="button"
-                      data-test="link-public-credit-calculator"
+                      data-test="link-public-dashboard"
                       size="large"
                       fullWidth
                     >

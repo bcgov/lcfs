@@ -409,6 +409,59 @@ class TestComplianceReportExporter:
         exporter.fse_repo.get_fse_reporting_list_paginated.assert_called()
 
     @pytest.mark.anyio
+    async def test_export_excludes_fuel_export_sheet_for_pre_2024_reports(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        """Test that fuel export sheet is excluded from export for compliance years before 2024."""
+        period_2023 = Mock()
+        period_2023.description = "2023"
+        mock_report_2023 = Mock()
+        mock_report_2023.compliance_report_id = 1
+        mock_report_2023.compliance_report_group_uuid = "test-uuid"
+        mock_report_2023.version = 0
+        mock_report_2023.reporting_frequency = ReportingFrequency.ANNUAL
+        mock_report_2023.organization = mock_annual_report.organization
+        mock_report_2023.current_status = mock_annual_report.current_status
+        mock_report_2023.compliance_period = period_2023
+
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_report_2023
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1)
+
+        # Fuel export loader is skipped for pre-2024 reports
+        exporter.ef_repo.get_effective_fuel_exports.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_export_includes_fuel_export_sheet_for_2024_and_later_reports(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        """Test that fuel export loader is called for compliance years 2024 and later."""
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1)
+
+        # Fuel export loader is called for 2024+ reports
+        exporter.ef_repo.get_effective_fuel_exports.assert_called()
+
+    @pytest.mark.anyio
     async def test_load_fuel_supply_data_annual(
         self,
         compliance_report_exporter,

@@ -5,6 +5,7 @@ export interface RouteHandle {
   title?: string | ((context: { params: Params; location: Location }) => string)
   crumb?: () => string
   mode?: 'add' | 'edit' | 'view'
+  hideBreadcrumb?: boolean
 }
 
 export interface AppRouteObject extends Omit<RouteObject, 'handle' | 'children'> {

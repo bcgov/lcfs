@@ -59,6 +59,10 @@ export const PublicBreadcrumb = ({
 
   // Default breadcrumb mappings for public pages
   const defaultBreadcrumbs: BreadcrumbMap = {
+    public: {
+      label: 'Public dashboard',
+      route: '/public'
+    },
     'credit-calculator': {
       label: 'Compliance unit calculator',
       route: '/credit-calculator'
@@ -67,10 +71,15 @@ export const PublicBreadcrumb = ({
       label: 'Calculation data',
       route: '/calculation-data'
     },
+    'approved-carbon-intensities': {
+      label: 'Approved carbon intensities',
+      route: '/approved-carbon-intensities'
+    },
     ...customBreadcrumbs
   }
 
   const pathnames = location.pathname.split('/').filter((x) => x)
+  const isPublicDashboard = location.pathname === '/public'
 
   const getBreadcrumbLabel = (name: string, index: number): string => {
     const customCrumb = defaultBreadcrumbs[name]
@@ -93,6 +102,21 @@ export const PublicBreadcrumb = ({
     return customCrumb?.route || `/${pathnames.slice(0, index + 1).join('/')}`
   }
 
+  const linkSx = {
+    cursor: 'pointer',
+    padding: 0,
+    '& .MuiChip-label': { color: 'link.main', overflow: 'initial', padding: 0 },
+    '& span': { padding: 0 },
+    '& span:hover': { textDecoration: 'underline' }
+  }
+
+  const currentSx = {
+    textTransform: 'none',
+    padding: 0,
+    '&>*': { padding: 0 },
+    backgroundColor: 'transparent'
+  }
+
   return (
     <BCBox sx={{ backgroundColor: '#fff', py: 1 }}>
       <Container maxWidth="lg" disableGutters>
@@ -106,72 +130,70 @@ export const PublicBreadcrumb = ({
             '&>ol': { gap: 2 }
           }}
         >
-          {/* Root breadcrumb */}
-          {pathnames.length > 0 && (
+          {/* Login root */}
+          <StyledBreadcrumb
+            to={rootPath}
+            component={Link}
+            label={rootLabel}
+            sx={linkSx}
+          />
+
+          {/* Public dashboard — link on sub-pages, plain text on the dashboard itself */}
+          {isPublicDashboard ? (
             <StyledBreadcrumb
-              to={rootPath}
+              component={Typography}
+              sx={currentSx}
+              label={
+                <BCTypography variant="body2" color="text.secondary">
+                  Public dashboard
+                </BCTypography>
+              }
+            />
+          ) : (
+            <StyledBreadcrumb
+              to="/public"
               component={Link}
-              label={rootLabel}
-              sx={{
-                cursor: 'pointer',
-                padding: 0,
-                '& .MuiChip-label': {
-                  color: 'link.main',
-                  overflow: 'initial',
-                  padding: 0
-                },
-                '& span': {
-                  padding: 0
-                },
-                '& span:hover': {
-                  textDecoration: 'underline'
-                }
-              }}
+              label="Public dashboard"
+              sx={linkSx}
             />
           )}
 
-          {/* Dynamic breadcrumbs based on path */}
-          {pathnames.map((name, index) => {
-            const isLast = index === pathnames.length - 1
-            const routeTo = getBreadcrumbRoute(name, index)
-            const displayName = getBreadcrumbLabel(name, index)
+          {/* Current page — only shown on sub-pages */}
+          {!isPublicDashboard &&
+            pathnames.map((name, index) => {
+              const isLast = index === pathnames.length - 1
+              const routeTo = getBreadcrumbRoute(name, index)
+              const displayName = getBreadcrumbLabel(name, index)
 
-            return isLast ? (
-              <StyledBreadcrumb
-                component={Typography}
-                sx={{
-                  textTransform: 'none',
-                  padding: 0,
-                  '&>*': { padding: 0 },
-                  backgroundColor: 'transparent'
-                }}
-                label={
-                  <BCTypography variant="body2" color="text.secondary">
-                    {displayName}
-                  </BCTypography>
-                }
-                key={name}
-              />
-            ) : (
-              <StyledBreadcrumb
-                to={routeTo}
-                key={name}
-                component={Link}
-                label={displayName}
-                sx={{
-                  padding: 0,
-                  cursor: 'pointer',
-                  '& .MuiChip-label': {
-                    color: 'link.main',
-                    overflow: 'initial'
-                  },
-                  '& span:hover': {
-                    textDecoration: 'underline'
+              return isLast ? (
+                <StyledBreadcrumb
+                  component={Typography}
+                  sx={currentSx}
+                  label={
+                    <BCTypography variant="body2" color="text.secondary">
+                      {displayName}
+                    </BCTypography>
                   }
-                }}
-              />
-            )
-          })}
+                  key={name}
+                />
+              ) : (
+                <StyledBreadcrumb
+                  to={routeTo}
+                  key={name}
+                  component={Link}
+                  label={displayName}
+                  sx={{
+                    padding: 0,
+                    cursor: 'pointer',
+                    '& .MuiChip-label': {
+                      color: 'link.main',
+                      overflow: 'initial'
+                    },
+                    '& span:hover': { textDecoration: 'underline' }
+                  }}
+                />
+              )
+            })}
         </Breadcrumbs>
       </Container>
     </BCBox>

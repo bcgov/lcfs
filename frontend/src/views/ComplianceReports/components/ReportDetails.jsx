@@ -436,6 +436,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         activity.key === 'finalSupplyEquipments' &&
         parseInt(compliancePeriod) < LEGISLATION_TRANSITION_YEAR
 
+      // Fuel exports are not applicable for compliance periods before 2024
+      const isFuelExportHiddenByYear =
+        activity.key === 'fuelExports' &&
+        parseInt(compliancePeriod) < LEGISLATION_TRANSITION_YEAR
+
       // For FSE section: show if organization has any charging equipment,
       // not just if there's FSE linked to the current report group.
       // This ensures users can add FSE to supplemental reports even when
@@ -449,6 +454,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       // OR (for FSE) if organization has charging equipment
       const shouldShow =
         !isFSEHiddenByYear &&
+        !isFuelExportHiddenByYear &&
         (hasRealData ||
           hasFSECapability ||
           activity.key === 'supportingDocs' ||
