@@ -526,7 +526,7 @@ class ChargingSiteRepository:
                 CompliancePeriod.compliance_period_id
                 == ComplianceReport.compliance_period_id,
             )
-            .where(ComplianceReportChargingEquipment.is_active == True)
+            .where(ComplianceReportChargingEquipment.is_active.is_(True))
             .group_by(
                 reporting_equipment.group_uuid,
                 reporting_equipment.version,
@@ -589,7 +589,6 @@ class ChargingSiteRepository:
                     ),
                 )
                 .where(
-                    ChargingEquipment.charging_site_id.in_(related_site_ids),
                     # In changelog view, include all groups (both active and deleted)
                     or_(
                         ~ChargingEquipment.group_uuid.in_(deleted_groups),
@@ -681,14 +680,7 @@ class ChargingSiteRepository:
 
         offset = (pagination.page - 1) * pagination.size
         query = query.offset(offset).limit(pagination.size)
-        print("Generated SQL Query:")
-        from sqlalchemy.dialects import postgresql
 
-        print(
-            query.compile(
-                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-            )
-        )
         result = await self.db.execute(query)
         rows = result.all()
         history_rows = []
