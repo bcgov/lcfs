@@ -128,6 +128,15 @@ export const ChargingSiteProfile = ({
 
           <BCTypography variant="body4">
             <BCTypography variant="label">
+              {t('cardLabels.allocatingOrganization')}:
+            </BCTypography>{' '}
+            {data?.allocatingOrganization?.name ||
+              data?.allocatingOrganizationName ||
+              'N/A'}
+          </BCTypography>
+
+          <BCTypography variant="body4">
+            <BCTypography variant="label">
               {t('cardLabels.notes')}:
             </BCTypography>{' '}
             {data?.notes}
@@ -143,6 +152,7 @@ export const ChargingSiteProfile = ({
           {data?.organization?.name || ''}
         </BCTypography>
       </Role>
+
 
       {(canSetValidated || canSubmitSite) && (
         <BCBox sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>

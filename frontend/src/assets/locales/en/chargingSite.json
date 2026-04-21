@@ -89,6 +89,7 @@
   "historyToggle": "Site/FSE history",
   "cardLabels": {
     "organization": "Organization",
+    "allocatingOrganization": "Allocating organization",
     "coordinates": "Coordinates",
     "status": "Status",
     "version": "Version number",
