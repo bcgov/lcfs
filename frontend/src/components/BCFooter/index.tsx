@@ -24,8 +24,8 @@ export interface BCFooterProps {
 }
 
 const defaultRepoDetails: RepoDetails = {
-  href: 'https://github.com/bcgov/lcfs/releases/tag/v1.3.0',
-  name: 'v1.3.0',
+  href: 'https://github.com/bcgov/lcfs/releases/tag/v1.3.1',
+  name: 'v1.3.1',
   id: 'footer-about-version',
   label: 'LCFS repository changelog'
 }
