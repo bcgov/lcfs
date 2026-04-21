@@ -1435,6 +1435,7 @@ class FinalSupplyEquipmentRepository:
                 latest_site.longitude.label("longitude"),
                 reporting_rows.c.compliance_notes,
                 ChargingEquipment.notes.label("equipment_notes"),
+                ChargingEquipmentStatus.status.label("status"),
             )
             .select_from(ChargingEquipment)
             .join(
@@ -1470,6 +1471,11 @@ class FinalSupplyEquipmentRepository:
                 LevelOfEquipment,
                 ChargingEquipment.level_of_equipment_id
                 == LevelOfEquipment.level_of_equipment_id,
+            )
+            .join(
+                ChargingEquipmentStatus,
+                ChargingEquipment.status_id
+                == ChargingEquipmentStatus.charging_equipment_status_id,
             )
             .join(
                 reporting_rows,
