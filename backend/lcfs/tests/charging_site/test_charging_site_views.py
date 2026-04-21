@@ -228,6 +228,23 @@ async def test_get_charging_site_success(
 
 
 @pytest.mark.anyio
+async def test_get_charging_site_history_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, valid_charging_site_schema
+):
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.get_charging_site_by_id_with_history"
+    ) as mock_get_site:
+        mock_get_site.return_value = valid_charging_site_schema
+
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        url = fastapi_app.url_path_for("get_charging_site", site_id=1)
+        response = await client.get(url, params={"history_mode": True})
+
+        assert response.status_code == 200
+        mock_get_site.assert_called_once_with(1)
+
+
+@pytest.mark.anyio
 async def test_get_charging_sites_unauthorized(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
@@ -267,6 +284,36 @@ async def test_get_charging_site_equipment_paginated_success(
         assert response.status_code == 200
         assert "equipments" in response.json()
         assert "pagination" in response.json()
+
+
+@pytest.mark.anyio
+async def test_get_charging_site_equipment_history_paginated_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    with patch(
+        "lcfs.web.api.charging_site.services.ChargingSiteService.get_charging_site_equipment_history_paginated"
+    ) as mock_get_equipment, patch(
+        "lcfs.web.api.charging_site.validation.ChargingSiteValidation.validate_organization_access"
+    ) as mock_validate:
+        mock_validate.return_value = None
+        mock_get_equipment.return_value = ChargingEquipmentPaginatedSchema(
+            equipments=[],
+            pagination=PaginationResponseSchema(
+                page=1, size=10, total=0, total_pages=0
+            ),
+        )
+
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        url = fastapi_app.url_path_for(
+            "get_charging_site_equipment_paginated", site_id=1
+        )
+        payload = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
+        response = await client.post(
+            url, json=payload, params={"history_mode": True}
+        )
+
+        assert response.status_code == 200
+        mock_get_equipment.assert_called_once()
 
 
 @pytest.mark.anyio

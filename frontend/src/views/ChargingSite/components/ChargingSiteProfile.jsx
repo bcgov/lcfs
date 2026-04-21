@@ -14,6 +14,7 @@ export const ChargingSiteProfile = ({
   data,
   hasAnyRole,
   hasRoles,
+  historyMode = false,
   isIDIR,
   refetch
 }) => {
@@ -41,9 +42,11 @@ export const ChargingSiteProfile = ({
   const isAnalyst = hasAnyRole?.(roles.analyst) ?? false
 
   // IDIR Analyst only: show "Set as validated" when site is Submitted (backend enforces Analyst)
-  const canSetValidated = isIDIR && isAnalyst && currentStatus === 'Submitted'
+  const canSetValidated =
+    !historyMode && isIDIR && isAnalyst && currentStatus === 'Submitted'
   // BCeID: show "Submit updates" for Compliance Reporting/Signing Authority only when Updated
-  const canSubmitSite = !isIDIR && isBCeIDCompliance && currentStatus === 'Updated'
+  const canSubmitSite =
+    !historyMode && !isIDIR && isBCeIDCompliance && currentStatus === 'Updated'
 
   const handleSetValidated = () => {
     if (!canSetValidated || !siteId) return
@@ -125,6 +128,15 @@ export const ChargingSiteProfile = ({
 
           <BCTypography variant="body4">
             <BCTypography variant="label">
+              {t('cardLabels.allocatingOrganization')}:
+            </BCTypography>{' '}
+            {data?.allocatingOrganization?.name ||
+              data?.allocatingOrganizationName ||
+              'N/A'}
+          </BCTypography>
+
+          <BCTypography variant="body4">
+            <BCTypography variant="label">
               {t('cardLabels.notes')}:
             </BCTypography>{' '}
             {data?.notes}
@@ -140,6 +152,7 @@ export const ChargingSiteProfile = ({
           {data?.organization?.name || ''}
         </BCTypography>
       </Role>
+
 
       {(canSetValidated || canSubmitSite) && (
         <BCBox sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
