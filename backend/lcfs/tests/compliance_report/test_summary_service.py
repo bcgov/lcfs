@@ -1129,6 +1129,88 @@ async def test_supplemental_report_uses_existing_summary_line_17(
 
 
 @pytest.mark.anyio
+async def test_reassessment_after_deadline_retains_prior_issuance_for_line_22(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo, mock_repo
+):
+    """
+    Regression test for bug #4235.
+
+    When a prior supplemental was assessed AFTER the compliance period end
+    (March 31, year + 1), its Adjustment transaction is excluded from Line 17.
+    However, the organization still holds those credits, so a new supplemental
+    that reduces the supply must not wipe the balance to zero or apply a
+    penalty as long as units remain.
+
+    Scenario (based on prod report 3400):
+      - Prior assessed v1 issued 795 credits (post-deadline -> NOT in Line 17).
+      - Current v2 proposes Line 18 = 567 -> Line 20 = -228.
+      - Expected Line 22 = 567 (remaining issued credits), Line 21 = 0.
+    """
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 1
+
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 2
+    compliance_report.organization_id = organization_id
+    compliance_report.compliance_period = MagicMock(description="2024")
+    compliance_report.compliance_report_group_uuid = "bug-4235-group"
+    compliance_report.compliance_report_id = 3400
+
+    mock_cr_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_cr_summary.line_17_non_banked_units_used = None
+    mock_cr_summary.is_locked = False
+    compliance_report.summary = mock_cr_summary
+
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 0
+    mock_summary_repo.get_received_compliance_units.return_value = 0
+    mock_summary_repo.get_issued_compliance_units.return_value = 0
+
+    mock_assessed_report = MagicMock()
+    mock_assessed_summary = MagicMock()
+    mock_assessed_summary.line_18_units_to_be_banked = 795
+    mock_assessed_summary.line_19_units_to_be_exported = 0
+    mock_assessed_report.summary = mock_assessed_summary
+    mock_repo.get_assessed_compliance_report_by_period.return_value = (
+        mock_assessed_report
+    )
+
+    # Line 17 excludes the prior issuance because the prior assessment was
+    # finalized after the period deadline.
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 0
+    # The new helper surfaces that post-deadline prior issuance (795).
+    mock_trxn_repo.get_group_adjustments_excluded_from_line_17.return_value = 795
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=567)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=0)
+    )
+
+    summary, penalty_units = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    line_values = _get_line_values(summary)
+    assert line_values[15] == 795
+    assert line_values[17] == 0
+    assert line_values[18] == 567
+    assert line_values[20] == -228  # 567 - 795
+    assert line_values[21] == 0  # no penalty: credits remain
+    assert line_values[22] == 567  # 0 + 795 (deferred) + (-228)
+
+    mock_trxn_repo.get_group_adjustments_excluded_from_line_17.assert_called_once_with(
+        "bug-4235-group", organization_id, 3400, compliance_period_start.year
+    )
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "penalty_payable, exp_row1, exp_row2, exp_row3",
     [
