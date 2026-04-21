@@ -521,6 +521,27 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
     assert "site_name ASC NULLS LAST" in compiled_sql
     assert "registration_number DESC NULLS LAST" in compiled_sql
+    assert "charging_equipment_status" in compiled_sql
+    assert "Decommissioned" in compiled_sql
+    assert "charging_equipment_compliance_id IS NOT NULL" in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_has_decommissioned_fse_in_report_true(repo, fake_db):
+    fake_db.scalar.return_value = 1
+
+    result = await repo.has_decommissioned_fse_in_report(10)
+
+    assert result is True
+
+
+@pytest.mark.anyio
+async def test_has_decommissioned_fse_in_report_false(repo, fake_db):
+    fake_db.scalar.return_value = 0
+
+    result = await repo.has_decommissioned_fse_in_report(10)
+
+    assert result is False
 
 
 @pytest.mark.anyio
