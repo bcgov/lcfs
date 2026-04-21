@@ -103,7 +103,7 @@ CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
     transfer_status.status,
-    (coalesce(transfer.transaction_effective_date, transfer_history.update_date) AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date calculated_effective_date,
+    (coalesce(transfer.transaction_effective_date AT TIME ZONE 'UTC', transfer_history.update_date) AT TIME ZONE 'America/Vancouver')::date AS calculated_effective_date,
     from_organization.name AS from_organization,
     to_organization.name AS to_organization,
     price_per_unit,
@@ -340,6 +340,7 @@ latest_equipment_versions AS (
         )
 )
 SELECT
+    distinct
     current_site.organization_id,
     ce.charging_equipment_id,
     ce.serial_number,
@@ -448,7 +449,7 @@ LEFT JOIN LATERAL (
                 ARRAY[]::varchar[]
             )
         )
-    ORDER BY eut.end_use_type_id ASC NULLS FIRST
+    ORDER BY cpo.display_order ASC NULLS FIRST
     LIMIT 1
 ) power_lookup ON TRUE;
 
@@ -576,7 +577,7 @@ matched_rows AS (
     ) x
     WHERE x.rn = 1
 )
-SELECT
+SELECT DISTINCT
     rc.organization_id,
     rc.compliance_report_id,
     rc.compliance_report_group_uuid,
