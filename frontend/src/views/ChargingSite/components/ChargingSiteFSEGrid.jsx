@@ -1,13 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Grid2 as Grid, Stack } from '@mui/material'
+import { Grid2 as Grid } from '@mui/material'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { chargingEquipmentColDefs, defaultColDef } from './_schema'
-
-import { defaultInitialPagination } from '@/constants/schedules'
+import { chargingEquipmentColDefs } from './_schema'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import {
@@ -16,10 +13,9 @@ import {
 } from '@/hooks/useChargingSite'
 import { equipmentButtonConfigFn, buildButtonContext } from './buttonConfig'
 import BCModal from '@/components/BCModal'
-import { Role } from '@/components/Role'
-import { govRoles, roles } from '@/constants/roles'
 import { BCAlert2 } from '@/components/BCAlert'
 import ROUTES from '@/routes/routes'
+import colors from '@/themes/base/colors'
 
 const initialPaginationOptions = {
   page: 1,
@@ -28,9 +24,110 @@ const initialPaginationOptions = {
   filters: []
 }
 
+const arrayOfStrings = (values = [], selector) =>
+  [...values]
+    .map((value) => (selector ? selector(value) : value))
+    .filter(Boolean)
+    .map(String)
+    .sort()
+
+const historyFieldConfig = {
+  status: (row) => row?.status?.status ?? '',
+  version: (row) => row?.version ?? '',
+  complianceYears: (row) => arrayOfStrings(row?.complianceYears),
+  serialNumber: (row) => row?.serialNumber ?? '',
+  manufacturer: (row) => row?.manufacturer ?? '',
+  model: (row) => row?.model ?? '',
+  levelOfEquipment: (row) => row?.levelOfEquipment?.name ?? '',
+  ports: (row) => row?.ports ?? '',
+  intendedUseTypes: (row) =>
+    arrayOfStrings(
+      row?.intendedUseTypes || row?.intendedUses,
+      (item) => item?.type || item
+    ),
+  intendedUserTypes: (row) =>
+    arrayOfStrings(
+      row?.intendedUserTypes || row?.intendedUsers,
+      (item) => item?.typeName || item
+    ),
+  latitude: (row) => row?.latitude ?? '',
+  longitude: (row) => row?.longitude ?? '',
+  notes: (row) => row?.notes ?? ''
+}
+
+const areValuesEqual = (left, right) => {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return JSON.stringify(left || []) === JSON.stringify(right || [])
+  }
+  return left === right
+}
+
+const buildHistoryRows = (equipments = [], expandedRows = new Set()) => {
+  const groups = new Map()
+
+  equipments.forEach((equipment) => {
+    const registrationNumber =
+      equipment.registrationNumber || `${equipment.chargingEquipmentId}`
+    const group = groups.get(registrationNumber) || []
+    group.push(equipment)
+    groups.set(registrationNumber, group)
+  })
+
+  return [...groups.entries()].flatMap(([registrationNumber, versions]) => {
+    const sortedVersions = [...versions].sort(
+      (a, b) => (b.version || 0) - (a.version || 0)
+    )
+    const currentVersion = sortedVersions[0]
+    const hasHistory = sortedVersions.length > 1
+    const isExpanded = expandedRows.has(registrationNumber)
+
+    const currentRow = {
+      ...currentVersion,
+      actionType: 'CURRENT',
+      diff: [],
+      hasHistory,
+      isHistoryGroupStart: true,
+      isHistoryGroupEnd: !hasHistory || !isExpanded,
+      isCurrentVersionRow: true,
+      isExpanded,
+      rowKey: `${registrationNumber}-${currentVersion.version}-current`
+    }
+
+    if (!hasHistory || !isExpanded) {
+      return [currentRow]
+    }
+
+    const historyRows = sortedVersions.slice(1).map((versionRow, index) => {
+      const compareTo = sortedVersions[index]
+      const diff = Object.entries(historyFieldConfig)
+        .filter(([, getter]) =>
+          !areValuesEqual(getter(versionRow), getter(compareTo))
+        )
+        .map(([field]) => field)
+
+      return {
+        ...versionRow,
+        actionType: 'UPDATE',
+        updated: false,
+        diff,
+        hasHistory: false,
+        isHistoryGroupStart: false,
+        isHistoryGroupEnd: index === sortedVersions.length - 2,
+        isCurrentVersionRow: false,
+        isHistoryVersion: true,
+        parentRegistrationNumber: registrationNumber,
+        rowKey: `${registrationNumber}-${versionRow.version}-history`
+      }
+    })
+
+    return [currentRow, ...historyRows]
+  })
+}
+
 export const ChargingSiteFSEGrid = ({
   hasAnyRole,
   hasRoles,
+  historyMode = false,
   isIDIR,
   currentUser
 }) => {
@@ -39,12 +136,11 @@ export const ChargingSiteFSEGrid = ({
   const location = useLocation()
   const gridRef = useRef(null)
   const alertRef = useRef(null)
+  const historyModeInitializedRef = useRef(false)
 
   const [modalData, setModalData] = useState(null)
   const [selectedRows, setSelectedRows] = useState([])
-  const [gridApi, setGridApi] = useState(null)
-  const [isAllSelected, setIsAllSelected] = useState(false)
-  const [selectedRowCount, setSelectedRowCount] = useState(0)
+  const [expandedHistoryRows, setExpandedHistoryRows] = useState(new Set())
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
@@ -52,7 +148,8 @@ export const ChargingSiteFSEGrid = ({
   const { siteId } = useParams()
   const equipmentQuery = useChargingSiteEquipmentPaginated(
     siteId,
-    paginationOptions
+    paginationOptions,
+    { historyMode }
   )
   const { data: equipmentData, isLoading, refetch } = equipmentQuery
 
@@ -60,19 +157,47 @@ export const ChargingSiteFSEGrid = ({
     useBulkUpdateEquipmentStatus()
 
   const equipmentList = equipmentData?.equipments || []
+  const visibleEquipmentRows = useMemo(() => {
+    if (!historyMode) return equipmentList
+    return buildHistoryRows(equipmentList, expandedHistoryRows)
+  }, [equipmentList, expandedHistoryRows, historyMode])
+
+  useEffect(() => {
+    if (!historyMode) {
+      historyModeInitializedRef.current = false
+      setExpandedHistoryRows(new Set())
+      return
+    }
+
+    if (historyModeInitializedRef.current || equipmentList.length === 0) {
+      return
+    }
+
+    setExpandedHistoryRows(
+      new Set(
+        equipmentList.map(
+          (equipment) =>
+            equipment.registrationNumber || `${equipment.chargingEquipmentId}`
+        )
+      )
+    )
+    historyModeInitializedRef.current = true
+  }, [historyMode, equipmentList])
 
   // Check if selected equipment can be submitted (only from Draft status)
   const canSubmit = useMemo(() => {
-    if (selectedRows.length === 0) return false
+    if (historyMode || selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
-    return selectedEquipment.every((eq) => eq.status.status === 'Draft' || eq.status.status === 'Updated')
-  }, [selectedRows, equipmentList])
+    return selectedEquipment.every(
+      (eq) => eq.status.status === 'Draft' || eq.status.status === 'Updated'
+    )
+  }, [historyMode, selectedRows, equipmentList])
 
   // Check if selected equipment can be returned to draft (only from Submitted status)
   const canReturnToDraft = useMemo(() => {
-    if (selectedRows.length === 0) return false
+    if (historyMode || selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
@@ -81,25 +206,25 @@ export const ChargingSiteFSEGrid = ({
         ? eq.status.status === 'Submitted'
         : eq.status.status === 'Submitted' || eq.status.status === 'Validated'
     )
-  }, [selectedRows, equipmentList, isIDIR])
+  }, [historyMode, selectedRows, equipmentList, isIDIR])
 
   // Check if selected equipment can be validated (only from Submitted status)
   const canValidate = useMemo(() => {
-    if (selectedRows.length === 0) return false
+    if (historyMode || selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
     return selectedEquipment.every((eq) => eq.status.status === 'Submitted')
-  }, [selectedRows, equipmentList])
+  }, [historyMode, selectedRows, equipmentList])
 
   // Check if selected equipment can be decommissioned (only from Validated status)
   const canSetToDecommission = useMemo(() => {
-    if (selectedRows.length === 0) return false
+    if (historyMode || selectedRows.length === 0) return false
     const selectedEquipment = equipmentList.filter((eq) =>
       selectedRows.includes(eq.chargingEquipmentId)
     )
     return selectedEquipment.every((eq) => eq.status.status === 'Validated')
-  }, [selectedRows, equipmentList])
+  }, [historyMode, selectedRows, equipmentList])
 
   // Handle row selection for bulk operations
   const handleSelectionChanged = useCallback((api) => {
@@ -154,11 +279,13 @@ export const ChargingSiteFSEGrid = ({
   const handlePaginationChange = useCallback((newPaginationOptions) => {
     setPaginationOptions(newPaginationOptions)
     setSelectedRows([])
+    setExpandedHistoryRows(new Set())
   }, [])
 
   // Clear all selections and filters
   const handleClearFilters = useCallback(() => {
     setSelectedRows([])
+    setExpandedHistoryRows(new Set())
     setPaginationOptions((prev) => ({
       ...prev,
       page: 1,
@@ -172,6 +299,18 @@ export const ChargingSiteFSEGrid = ({
     }
   }, [setPaginationOptions])
 
+  const handleToggleHistory = useCallback((registrationNumber) => {
+    setExpandedHistoryRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(registrationNumber)) {
+        next.delete(registrationNumber)
+      } else {
+        next.add(registrationNumber)
+      }
+      return next
+    })
+  }, [])
+
   // Navigate to create FSE page with siteId pre-selected
   const handleCreateFSE = useCallback(() => {
     navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
@@ -182,14 +321,10 @@ export const ChargingSiteFSEGrid = ({
     })
   }, [navigate, location.pathname, siteId])
 
-  // Export selected equipment
-  const handleExportSelected = useCallback(() => {
-    console.log('Exporting selected equipment:', selectedRows)
-  }, [selectedRows])
-
   // Bulk status update handlers
   const handleBulkStatusUpdate = useCallback(
     async (newStatus) => {
+      if (historyMode) return
       if (selectedRows.length === 0) return
 
       try {
@@ -228,33 +363,47 @@ export const ChargingSiteFSEGrid = ({
         setModalData(null)
       }
     },
-    [selectedRows, siteId, bulkUpdateStatus, handleClearFilters, equipmentList, navigate]
+    [
+      historyMode,
+      selectedRows,
+      siteId,
+      bulkUpdateStatus,
+      handleClearFilters,
+      equipmentList,
+      navigate
+    ]
   )
 
   const gridOptions = useMemo(
     () => ({
-      rowSelection: {
-        checkboxes: true,
-        mode: 'multiRow',
-        headerCheckbox: true,
-        isRowSelectable: (params) =>
-          params.data?.status?.status !== 'Submitted' || isIDIR
-      },
-      selectionColumnDef: {
-        suppressHeaderMenuButton: true,
-        pinned: 'left'
-      },
-      suppressRowClickSelection: true,
-      onSelectionChanged: (event) => handleSelectionChanged(event.api),
-      getRowId: (params) => params.data.chargingEquipmentId
+      rowSelection: historyMode
+        ? undefined
+        : {
+            checkboxes: true,
+            mode: 'multiRow',
+            headerCheckbox: true,
+            isRowSelectable: (params) =>
+              params.data?.status?.status !== 'Submitted' || isIDIR
+          },
+      selectionColumnDef: historyMode
+        ? undefined
+        : {
+            suppressHeaderMenuButton: true,
+            pinned: 'left'
+          },
+      suppressRowClickSelection: !historyMode,
+      onSelectionChanged: historyMode
+        ? undefined
+        : (event) => handleSelectionChanged(event.api),
+      getRowId: (params) => params.data?.rowKey || params.data.chargingEquipmentId
     }),
-    [handleSelectionChanged]
+    [handleSelectionChanged, historyMode, isIDIR]
   )
 
   const handleCellClicked = useCallback(
     (params) => {
       // For IDIR users, prevent navigation - they don't need edit access
-      if (isIDIR) {
+      if (isIDIR || historyMode) {
         return
       }
 
@@ -268,17 +417,8 @@ export const ChargingSiteFSEGrid = ({
         }
       })
     },
-    [navigate, siteId, isIDIR, location.pathname]
+    [navigate, siteId, isIDIR, historyMode, location.pathname]
   )
-
-  const handleNewFSE = useCallback(() => {
-    navigate(`${ROUTES.REPORTS.LIST}/fse/add`, {
-      state: {
-        returnTo: location.pathname,
-        chargingSiteId: siteId
-      }
-    })
-  }, [navigate, location.pathname, siteId])
 
   // Build context for button configuration
   const buttonContext = useMemo(() => {
@@ -321,10 +461,10 @@ export const ChargingSiteFSEGrid = ({
   ])
 
   // Get configured buttons based on user role and context
-  const availableButtons = useMemo(
-    () => equipmentButtonConfigFn(buttonContext),
-    [buttonContext]
-  )
+  const availableButtons = useMemo(() => {
+    if (historyMode) return []
+    return equipmentButtonConfigFn(buttonContext)
+  }, [buttonContext, historyMode])
 
   return (
     <>
@@ -332,12 +472,18 @@ export const ChargingSiteFSEGrid = ({
       <Grid size={12} sx={{ mt: { xs: 2, md: 4 } }}>
         <BCBox sx={{ mb: 3 }}>
           <BCTypography variant="h6" color="primary">
-            {isIDIR ? t('equipmentProcessingTitle') : t('gridTitle')}
+            {historyMode
+              ? t('historyGridTitle')
+              : isIDIR
+                ? t('equipmentProcessingTitle')
+                : t('gridTitle')}
           </BCTypography>
           <BCTypography variant="body4" color="text" mt={1} component="div">
-            {isIDIR
-              ? t('equipmentProcessingDescription')
-              : t('gridDescription')}
+            {historyMode
+              ? t('historyGridDescription')
+              : isIDIR
+                ? t('equipmentProcessingDescription')
+                : t('gridDescription')}
           </BCTypography>
         </BCBox>
         <BCModal
@@ -350,10 +496,11 @@ export const ChargingSiteFSEGrid = ({
           <Grid container spacing={2} sx={{ mb: 3 }}>
             {availableButtons.map((button) => (
               <Grid
-                item
-                xs={12}
-                sm={6}
-                md={12 / availableButtons.length}
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 12 / availableButtons.length
+                }}
                 key={button.id}
               >
                 <BCButton
@@ -381,16 +528,36 @@ export const ChargingSiteFSEGrid = ({
             alertRef={alertRef}
             columnDefs={chargingEquipmentColDefs(t, isIDIR, {
               enableSelection: false,
+              historyMode,
+              onToggleHistory: handleToggleHistory,
+              expandedRows: expandedHistoryRows,
               showIntendedUsers: true,
               showLocationFields: true,
+              showPorts: true,
               showNotes: true
             })}
-            queryData={equipmentQuery}
+            queryData={
+              historyMode
+                ? {
+                    ...equipmentQuery,
+                    data: {
+                      ...equipmentData,
+                      equipments: visibleEquipmentRows,
+                      pagination: {
+                        ...(equipmentData?.pagination || {}),
+                        total: visibleEquipmentRows.length
+                      }
+                    }
+                  }
+                : equipmentQuery
+            }
             dataKey="equipments"
-            getRowId={(params) => String(params.data.chargingEquipmentId)}
+            getRowId={(params) =>
+              String(params.data?.rowKey || params.data.chargingEquipmentId)
+            }
             paginationOptions={paginationOptions}
             onPaginationChange={handlePaginationChange}
-            onCellClicked={handleCellClicked}
+            onCellClicked={historyMode ? undefined : handleCellClicked}
             overlayNoRowsTemplate={t('chargingSite:noChargingEquipmentsFnd')}
             gridOptions={gridOptions}
             enableCopyButton={false}
@@ -406,6 +573,23 @@ export const ChargingSiteFSEGrid = ({
               resizable: true,
               minWidth: 100
             }}
+            getRowStyle={(params) =>
+              historyMode
+                ? {
+                    backgroundColor: params.data?.isHistoryVersion
+                      ? params.data?.diff?.length > 0
+                        ? colors.alerts.warning.background
+                        : '#f6f8fb'
+                      : undefined,
+                    borderTop: params.data?.isHistoryGroupStart
+                      ? `2px solid ${colors.grey[600]}`
+                      : undefined,
+                    borderBottom: params.data?.isHistoryGroupEnd
+                      ? `2px solid ${colors.grey[600]}`
+                      : undefined
+                  }
+                : undefined
+            }
           />
         </BCBox>
       </Grid>
