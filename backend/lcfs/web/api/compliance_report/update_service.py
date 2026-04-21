@@ -308,6 +308,20 @@ class ComplianceReportUpdateService:
                 report.organization_id,
             )
 
+        has_decommissioned_fse = (
+            await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
+                report.compliance_report_id,
+                only_active=True,
+            )
+        )
+        if has_decommissioned_fse:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "This draft report includes decommissioned FSE. Remove or deactivate those rows before submission."
+                ),
+            )
+
         # Auto-submit all FSE records in Draft or Updated status to Submitted status
         await self.charging_equipment_service.auto_submit_equipment_for_report(
             report.compliance_report_id, report.organization_id

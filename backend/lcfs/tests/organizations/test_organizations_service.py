@@ -4,6 +4,8 @@ import unittest
 from decimal import Decimal
 from types import SimpleNamespace
 from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.organizations.penalty_service import OrganizationPenaltyService
+from lcfs.web.api.organizations.link_key_service import OrganizationLinkKeyService
 from lcfs.web.api.organizations.schema import (
     OrganizationSummaryResponseSchema,
     OrganizationCreateSchema,
@@ -51,6 +53,20 @@ def organizations_service(mock_repo, mock_redis_service, mock_transaction_repo):
     service.repo = mock_repo
     service.redis_balance_service = mock_redis_service
     service.transaction_repo = mock_transaction_repo
+    return service
+
+
+@pytest.fixture
+def penalty_service(mock_repo):
+    service = OrganizationPenaltyService()
+    service.repo = mock_repo
+    return service
+
+
+@pytest.fixture
+def link_key_service(mock_repo):
+    service = OrganizationLinkKeyService()
+    service.repo = mock_repo
     return service
 
 
@@ -230,7 +246,7 @@ async def test_get_organization_names_passes_org_filters(
 
 @pytest.mark.anyio
 async def test_get_penalty_analytics_aggregates_values(
-    organizations_service, mock_repo
+    penalty_service, mock_repo
 ):
     """Ensure penalty analytics aggregates automatic and discretionary penalties correctly."""
 
@@ -292,7 +308,7 @@ async def test_get_penalty_analytics_aggregates_values(
         return_value=(summaries, penalty_logs)
     )
 
-    result = await organizations_service.get_penalty_analytics(organization_id=123)
+    result = await penalty_service.get_penalty_analytics(organization_id=123)
 
     assert isinstance(result, PenaltyAnalyticsResponseSchema)
     assert len(result.yearly_penalties) == 2
@@ -312,7 +328,7 @@ async def test_get_penalty_analytics_aggregates_values(
 
 
 @pytest.mark.anyio
-async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
+async def test_get_penalty_logs_paginated(penalty_service, mock_repo):
     pagination = PaginationRequestSchema(page=2, size=5, filters=[], sort_orders=[])
 
     mock_repo.get_penalty_logs_paginated = AsyncMock(
@@ -337,7 +353,7 @@ async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
         )
     )
 
-    result = await organizations_service.get_penalty_logs_paginated(
+    result = await penalty_service.get_penalty_logs_paginated(
         organization_id=99, pagination=pagination
     )
 
@@ -349,7 +365,7 @@ async def test_get_penalty_logs_paginated(organizations_service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_create_penalty_log(organizations_service, mock_repo):
+async def test_create_penalty_log(penalty_service, mock_repo):
     payload = PenaltyLogCreateSchema(
         compliance_period_id=10,
         contravention_type=ContraventionTypeEnum.SINGLE,
@@ -378,7 +394,7 @@ async def test_create_penalty_log(organizations_service, mock_repo):
 
     mock_repo.create_penalty_log = AsyncMock(return_value=penalty_model)
 
-    result = await organizations_service.create_penalty_log(1, payload)
+    result = await penalty_service.create_penalty_log(1, payload)
 
     assert result.penalty_log_id == 1
     assert result.compliance_year == "2024"
@@ -386,7 +402,7 @@ async def test_create_penalty_log(organizations_service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_update_penalty_log(organizations_service, mock_repo):
+async def test_update_penalty_log(penalty_service, mock_repo):
     payload = PenaltyLogUpdateSchema(
         compliance_period_id=11,
         contravention_type=ContraventionTypeEnum.CONTINUOUS,
@@ -430,7 +446,7 @@ async def test_update_penalty_log(organizations_service, mock_repo):
     mock_repo.get_penalty_log_by_id = AsyncMock(return_value=existing)
     mock_repo.update_penalty_log = AsyncMock(return_value=updated)
 
-    result = await organizations_service.update_penalty_log(1, 2, payload)
+    result = await penalty_service.update_penalty_log(1, 2, payload)
 
     assert result.penalty_log_id == 2
     assert result.contravention_type == ContraventionTypeEnum.CONTINUOUS.value
@@ -440,12 +456,12 @@ async def test_update_penalty_log(organizations_service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_delete_penalty_log(organizations_service, mock_repo):
+async def test_delete_penalty_log(penalty_service, mock_repo):
     existing = SimpleNamespace(penalty_log_id=3)
     mock_repo.get_penalty_log_by_id = AsyncMock(return_value=existing)
     mock_repo.delete_penalty_log = AsyncMock(return_value=True)
 
-    result = await organizations_service.delete_penalty_log(1, 3)
+    result = await penalty_service.delete_penalty_log(1, 3)
 
     assert result is None
     mock_repo.delete_penalty_log.assert_awaited_once_with(1, 3)
@@ -687,7 +703,7 @@ async def test_apply_organization_filters_with_registration_status_false_string(
 
 
 @pytest.mark.anyio
-async def test_get_available_forms_success(organizations_service):
+async def test_get_available_forms_success(link_key_service):
     """Test successful retrieval of available forms"""
     from lcfs.web.api.organizations.schema import AvailableFormsSchema
     from types import SimpleNamespace
@@ -702,12 +718,12 @@ async def test_get_available_forms_success(organizations_service):
         ),
     ]
 
-    organizations_service.repo.get_available_forms_for_link_keys = AsyncMock(
+    link_key_service.repo.get_available_forms_for_link_keys = AsyncMock(
         return_value=mock_forms
     )
 
     # Test the method
-    result = await organizations_service.get_available_forms()
+    result = await link_key_service.get_available_forms()
 
     assert isinstance(result, AvailableFormsSchema)
     assert len(result.forms) == 2
@@ -718,12 +734,12 @@ async def test_get_available_forms_success(organizations_service):
     assert result.forms[2]["name"] == "Form B"
     assert result.forms[2]["slug"] == "form-b"
 
-    organizations_service.repo.get_available_forms_for_link_keys.assert_called_once()
+    link_key_service.repo.get_available_forms_for_link_keys.assert_called_once()
 
 
 # Link Key Service Tests
 @pytest.mark.anyio
-async def test_get_organization_link_keys_success(organizations_service):
+async def test_get_organization_link_keys_success(link_key_service):
     """Test successful retrieval of organization link keys"""
     from lcfs.web.api.organizations.schema import OrganizationLinkKeysListSchema
 
@@ -743,15 +759,14 @@ async def test_get_organization_link_keys_success(organizations_service):
     mock_link_key.create_date = "2024-01-01"
     mock_link_key.update_date = "2024-01-01"
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_organization_link_keys = AsyncMock(
+    link_key_service.repo.get_organization_link_keys = AsyncMock(
         return_value=[mock_link_key]
     )
 
-    # Test the method
-    result = await organizations_service.get_organization_link_keys(organization_id)
+    result = await link_key_service.get_organization_link_keys(organization_id)
 
     assert isinstance(result, OrganizationLinkKeysListSchema)
     assert result.organization_id == organization_id
@@ -761,31 +776,30 @@ async def test_get_organization_link_keys_success(organizations_service):
     assert result.link_keys[0].form_name == "Test Form"
     assert result.link_keys[0].link_key == "test-key-123"
 
-    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
-    organizations_service.repo.get_organization_link_keys.assert_called_once_with(
+    link_key_service.repo.get_organization.assert_called_once_with(organization_id)
+    link_key_service.repo.get_organization_link_keys.assert_called_once_with(
         organization_id
     )
 
 
 @pytest.mark.anyio
-async def test_get_organization_link_keys_organization_not_found(organizations_service):
+async def test_get_organization_link_keys_organization_not_found(link_key_service):
     """Test get_organization_link_keys when organization doesn't exist"""
     from lcfs.web.exception.exceptions import DataNotFoundException
 
     organization_id = 999
 
-    organizations_service.repo.get_organization = AsyncMock(return_value=None)
+    link_key_service.repo.get_organization = AsyncMock(return_value=None)
 
-    # Test the method - should raise DataNotFoundException
     with pytest.raises(DataNotFoundException, match="Organization not found"):
-        await organizations_service.get_organization_link_keys(organization_id)
+        await link_key_service.get_organization_link_keys(organization_id)
 
-    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
-    organizations_service.repo.get_organization_link_keys.assert_not_called()
+    link_key_service.repo.get_organization.assert_called_once_with(organization_id)
+    link_key_service.repo.get_organization_link_keys.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_generate_link_key_success(organizations_service):
+async def test_generate_link_key_success(link_key_service):
     """Test successful link key generation"""
     from lcfs.web.api.organizations.schema import LinkKeyOperationResponseSchema
 
@@ -804,28 +818,22 @@ async def test_generate_link_key_success(organizations_service):
     mock_form.description = "A test form"
     mock_form.allows_anonymous = True
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
-    organizations_service.repo.get_link_key_by_form_id = AsyncMock(
-        return_value=None  # No existing key
-    )
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
+    link_key_service.repo.get_link_key_by_form_id = AsyncMock(return_value=None)
 
-    # Mock the created link key
     created_link_key = MagicMock()
     created_link_key.link_key = "generated-key-456"
-    organizations_service.repo.create_link_key = AsyncMock(
-        return_value=created_link_key
-    )
+    link_key_service.repo.create_link_key = AsyncMock(return_value=created_link_key)
 
     with patch(
-        "lcfs.web.api.organizations.services.generate_secure_link_key"
+        "lcfs.web.api.organizations.link_key_service.generate_secure_link_key"
     ) as mock_gen_key:
         mock_gen_key.return_value = "generated-key-456"
 
-        # Test the method
-        result = await organizations_service.generate_link_key(
+        result = await link_key_service.generate_link_key(
             organization_id, form_id, user
         )
 
@@ -835,19 +843,17 @@ async def test_generate_link_key_success(organizations_service):
     assert result.form_name == "Test Form"
     assert result.form_slug == "test-form"
 
-    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
-    organizations_service.repo.get_form_by_id.assert_called_once_with(form_id)
-    organizations_service.repo.get_link_key_by_form_id.assert_called_once_with(
+    link_key_service.repo.get_organization.assert_called_once_with(organization_id)
+    link_key_service.repo.get_form_by_id.assert_called_once_with(form_id)
+    link_key_service.repo.get_link_key_by_form_id.assert_called_once_with(
         organization_id, form_id
     )
-    organizations_service.repo.create_link_key.assert_called_once()
+    link_key_service.repo.create_link_key.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_generate_link_key_already_exists(organizations_service):
+async def test_generate_link_key_already_exists(link_key_service):
     """Test generate_link_key when link key already exists"""
-    from lcfs.web.exception.exceptions import DataNotFoundException
-
     organization_id = 1
     form_id = 1
 
@@ -860,23 +866,22 @@ async def test_generate_link_key_already_exists(organizations_service):
 
     mock_link_key = MagicMock()
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
-    organizations_service.repo.get_link_key_by_form_id = AsyncMock(
-        return_value=mock_link_key  # Existing key
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
+    link_key_service.repo.get_link_key_by_form_id = AsyncMock(
+        return_value=mock_link_key
     )
 
-    # Test the method - should raise ValueError
     with pytest.raises(ValueError, match="Link key already exists"):
-        await organizations_service.generate_link_key(organization_id, form_id)
+        await link_key_service.generate_link_key(organization_id, form_id)
 
-    organizations_service.repo.create_link_key.assert_not_called()
+    link_key_service.repo.create_link_key.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_generate_link_key_form_not_found(organizations_service):
+async def test_generate_link_key_form_not_found(link_key_service):
     """Test generate_link_key when form does not exist"""
     from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -886,19 +891,19 @@ async def test_generate_link_key_form_not_found(organizations_service):
     mock_organization = MagicMock()
     mock_organization.name = "Test Organization"
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=None)
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=None)
 
     with pytest.raises(DataNotFoundException, match="Form with ID 999 not found"):
-        await organizations_service.generate_link_key(organization_id, form_id)
+        await link_key_service.generate_link_key(organization_id, form_id)
 
-    organizations_service.repo.create_link_key.assert_not_called()
+    link_key_service.repo.create_link_key.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_generate_link_key_form_not_anonymous(organizations_service):
+async def test_generate_link_key_form_not_anonymous(link_key_service):
     """Test generate_link_key when form does not allow anonymous"""
     organization_id = 1
     form_id = 2
@@ -910,19 +915,19 @@ async def test_generate_link_key_form_not_anonymous(organizations_service):
     mock_form.allows_anonymous = False
     mock_form.name = "Private Form"
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
 
     with pytest.raises(ValueError, match="Form does not support anonymous access"):
-        await organizations_service.generate_link_key(organization_id, form_id)
+        await link_key_service.generate_link_key(organization_id, form_id)
 
-    organizations_service.repo.create_link_key.assert_not_called()
+    link_key_service.repo.create_link_key.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_regenerate_link_key_success(organizations_service):
+async def test_regenerate_link_key_success(link_key_service):
     """Test successful link key regeneration"""
     from lcfs.web.api.organizations.schema import LinkKeyOperationResponseSchema
 
@@ -940,28 +945,24 @@ async def test_regenerate_link_key_success(organizations_service):
     mock_link_key = MagicMock()
     mock_link_key.link_key = "old-key"
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
-    organizations_service.repo.get_link_key_by_form_id = AsyncMock(
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
+    link_key_service.repo.get_link_key_by_form_id = AsyncMock(
         return_value=mock_link_key
     )
 
-    # Mock the updated link key
     updated_link_key = MagicMock()
     updated_link_key.link_key = "regenerated-key-789"
-    organizations_service.repo.update_link_key = AsyncMock(
-        return_value=updated_link_key
-    )
+    link_key_service.repo.update_link_key = AsyncMock(return_value=updated_link_key)
 
     with patch(
-        "lcfs.web.api.organizations.services.generate_secure_link_key"
+        "lcfs.web.api.organizations.link_key_service.generate_secure_link_key"
     ) as mock_gen_key:
         mock_gen_key.return_value = "regenerated-key-789"
 
-        # Test the method
-        result = await organizations_service.regenerate_link_key(
+        result = await link_key_service.regenerate_link_key(
             organization_id, form_id, user
         )
 
@@ -971,16 +972,16 @@ async def test_regenerate_link_key_success(organizations_service):
     assert result.form_name == "Test Form"
     assert result.form_slug == "test-form"
 
-    organizations_service.repo.get_organization.assert_called_once_with(organization_id)
-    organizations_service.repo.get_form_by_id.assert_called_once_with(form_id)
-    organizations_service.repo.get_link_key_by_form_id.assert_called_once_with(
+    link_key_service.repo.get_organization.assert_called_once_with(organization_id)
+    link_key_service.repo.get_form_by_id.assert_called_once_with(form_id)
+    link_key_service.repo.get_link_key_by_form_id.assert_called_once_with(
         organization_id, form_id
     )
-    organizations_service.repo.update_link_key.assert_called_once()
+    link_key_service.repo.update_link_key.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_regenerate_link_key_no_existing_key(organizations_service):
+async def test_regenerate_link_key_no_existing_key(link_key_service):
     """Test regenerate_link_key when no existing link key found"""
     from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -993,23 +994,20 @@ async def test_regenerate_link_key_no_existing_key(organizations_service):
     mock_form = MagicMock()
     mock_form.name = "Test Form"
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
-    organizations_service.repo.get_link_key_by_form_id = AsyncMock(
-        return_value=None  # No existing key
-    )
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=mock_form)
+    link_key_service.repo.get_link_key_by_form_id = AsyncMock(return_value=None)
 
-    # Test the method - should raise DataNotFoundException
     with pytest.raises(DataNotFoundException, match="No link key found"):
-        await organizations_service.regenerate_link_key(organization_id, form_id)
+        await link_key_service.regenerate_link_key(organization_id, form_id)
 
-    organizations_service.repo.update_link_key.assert_not_called()
+    link_key_service.repo.update_link_key.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_regenerate_link_key_form_not_found(organizations_service):
+async def test_regenerate_link_key_form_not_found(link_key_service):
     """Test regenerate_link_key when form does not exist"""
     from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -1019,17 +1017,17 @@ async def test_regenerate_link_key_form_not_found(organizations_service):
     mock_organization = MagicMock()
     mock_organization.name = "Test Organization"
 
-    organizations_service.repo.get_organization = AsyncMock(
+    link_key_service.repo.get_organization = AsyncMock(
         return_value=mock_organization
     )
-    organizations_service.repo.get_form_by_id = AsyncMock(return_value=None)
+    link_key_service.repo.get_form_by_id = AsyncMock(return_value=None)
 
     with pytest.raises(DataNotFoundException, match="Form with ID 123 not found"):
-        await organizations_service.regenerate_link_key(organization_id, form_id)
+        await link_key_service.regenerate_link_key(organization_id, form_id)
 
 
 @pytest.mark.anyio
-async def test_validate_link_key_success(organizations_service):
+async def test_validate_link_key_success(link_key_service):
     """Test successful link key validation"""
     from lcfs.web.api.organizations.schema import LinkKeyValidationSchema
 
@@ -1038,7 +1036,6 @@ async def test_validate_link_key_success(organizations_service):
     mock_organization = MagicMock()
     mock_organization.name = "Test Organization"
 
-    # Mock link key record with organization
     mock_link_key_record = MagicMock()
     mock_link_key_record.organization_id = 1
     mock_link_key_record.form_id = 1
@@ -1046,12 +1043,11 @@ async def test_validate_link_key_success(organizations_service):
     mock_link_key_record.form_slug = "test-form"
     mock_link_key_record.organization = mock_organization
 
-    organizations_service.repo.get_link_key_by_key = AsyncMock(
+    link_key_service.repo.get_link_key_by_key = AsyncMock(
         return_value=mock_link_key_record
     )
 
-    # Test the method
-    result = await organizations_service.validate_link_key(link_key_value)
+    result = await link_key_service.validate_link_key(link_key_value)
 
     assert isinstance(result, LinkKeyValidationSchema)
     assert result.organization_id == 1
@@ -1061,22 +1057,19 @@ async def test_validate_link_key_success(organizations_service):
     assert result.organization_name == "Test Organization"
     assert result.is_valid is True
 
-    organizations_service.repo.get_link_key_by_key.assert_called_once_with(
-        link_key_value
-    )
+    link_key_service.repo.get_link_key_by_key.assert_called_once_with(link_key_value)
 
 
 @pytest.mark.anyio
-async def test_validate_link_key_invalid(organizations_service):
+async def test_validate_link_key_invalid(link_key_service):
     """Test link key validation with invalid key"""
     from lcfs.web.api.organizations.schema import LinkKeyValidationSchema
 
     link_key_value = "invalid-key-123"
 
-    organizations_service.repo.get_link_key_by_key = AsyncMock(return_value=None)
+    link_key_service.repo.get_link_key_by_key = AsyncMock(return_value=None)
 
-    # Test the method
-    result = await organizations_service.validate_link_key(link_key_value)
+    result = await link_key_service.validate_link_key(link_key_value)
 
     assert isinstance(result, LinkKeyValidationSchema)
     assert result.organization_id == 0
@@ -1086,9 +1079,7 @@ async def test_validate_link_key_invalid(organizations_service):
     assert result.organization_name == ""
     assert result.is_valid is False
 
-    organizations_service.repo.get_link_key_by_key.assert_called_once_with(
-        link_key_value
-    )
+    link_key_service.repo.get_link_key_by_key.assert_called_once_with(link_key_value)
 
 
 # Company Overview Service Tests

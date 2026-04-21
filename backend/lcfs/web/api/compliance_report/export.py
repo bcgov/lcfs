@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from fastapi import Depends
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Font, Alignment, Protection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from starlette.responses import StreamingResponse
@@ -144,7 +144,8 @@ class ComplianceReportExporter:
 
             # Process each result
             if data:
-                await self._add_sheet(wb, sheet_name, data)
+                locked_cols = {1} if sheet_name == FSE_EXPORT_SHEET else None
+                await self._add_sheet(wb, sheet_name, data, locked_columns=locked_cols)
 
         # Export to stream
         stream = io.BytesIO()
@@ -165,6 +166,7 @@ class ComplianceReportExporter:
         wb: Workbook,
         title: str,
         data: List[List[Union[str, int, float, datetime]]],
+        locked_columns: set[int] | None = None,
     ) -> None:
         """Add a data sheet to the workbook with proper formatting and table styling."""
         if not data or len(data) <= 1:  # Skip if no data found
@@ -215,6 +217,13 @@ class ComplianceReportExporter:
                 cell = ws.cell(row=total_row_idx, column=col_idx)
                 cell.font = Font(bold=True)
                 self._format_cell(cell, val)
+
+        # Lock specified columns and enable sheet protection
+        if locked_columns:
+            for ws_row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+                for cell in ws_row:
+                    cell.protection = Protection(locked=(cell.column in locked_columns))
+            ws.protection.sheet = True
 
         # Auto-size columns
         self._auto_size_columns(ws)
@@ -867,6 +876,7 @@ class ComplianceReportExporter:
 
             rows.append(
                 [
+                    row.get("status"),
                     row.get("organization_name") or organization_name,
                     row.get("allocating_organization_name"),
                     self._format_date(row.get("supply_from_date")),
