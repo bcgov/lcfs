@@ -7,6 +7,7 @@ from lcfs.db.models.compliance.NotionalTransfer import (
     ReceivedOrTransferredEnum,
 )
 from lcfs.tests.notional_transfer.conftest import create_mock_schema, create_mock_entity
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
@@ -20,7 +21,13 @@ from lcfs.web.exception.exceptions import ServiceException
 def notional_transfer_service():
     mock_repo = MagicMock(spec=NotionalTransferRepository)
     mock_fuel_repo = MagicMock()
-    service = NotionalTransferServices(repo=mock_repo, fuel_repo=mock_fuel_repo)
+    mock_compliance_report_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report_repo.has_supplemental_changes = AsyncMock(return_value=False)
+    service = NotionalTransferServices(
+        repo=mock_repo,
+        fuel_repo=mock_fuel_repo,
+        compliance_report_repo=mock_compliance_report_repo,
+    )
     return service, mock_repo, mock_fuel_repo
 
 

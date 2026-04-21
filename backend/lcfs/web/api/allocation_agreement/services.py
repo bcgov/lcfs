@@ -190,8 +190,12 @@ class AllocationAgreementServices:
                 updated=None,  # Assuming this is not mapped
             )
             allocation_agreements_response.append(aa_response)
+        was_edited = await self.compliance_report_repo.has_supplemental_changes(
+            compliance_report_id, AllocationAgreement
+        )
         return AllocationAgreementAllSchema(
-            allocation_agreements=allocation_agreements_response
+            allocation_agreements=allocation_agreements_response,
+            was_edited=was_edited,
         )
 
     @service_handler

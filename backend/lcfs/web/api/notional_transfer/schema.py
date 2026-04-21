@@ -98,6 +98,7 @@ class NotionalTransfersSchema(BaseSchema):
 
 class NotionalTransfersAllSchema(BaseSchema):
     notional_transfers: List[NotionalTransferSchema]
+    was_edited: bool = False
 
 
 class NotionalTransferFuelCategorySchema(BaseSchema):
