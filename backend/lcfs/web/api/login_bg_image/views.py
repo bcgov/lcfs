@@ -54,12 +54,12 @@ async def stream_image(
     response_model=List[LoginBgImageSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def get_all_images(
     request: Request,
     service: LoginBgImageService = Depends(),
 ) -> List[LoginBgImageSchema]:
-    """List all login background images. Administrator only."""
+    """List all login background images. System Admin only."""
     return await service.get_all()
 
 
@@ -68,7 +68,7 @@ async def get_all_images(
     response_model=LoginBgImageSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def upload_image(
     request: Request,
     file: UploadFile = File(...),
@@ -76,7 +76,7 @@ async def upload_image(
     caption: Optional[str] = Form(None),
     service: LoginBgImageService = Depends(),
 ) -> LoginBgImageSchema:
-    """Upload a new login background image. Administrator only."""
+    """Upload a new login background image. System Admin only."""
     return await service.upload(file, display_name, caption)
 
 
@@ -85,14 +85,14 @@ async def upload_image(
     response_model=LoginBgImageSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def update_image(
     request: Request,
     image_id: int,
     data: LoginBgImageUpdateSchema,
     service: LoginBgImageService = Depends(),
 ) -> LoginBgImageSchema:
-    """Update image display name and caption. Administrator only."""
+    """Update image display name and caption. System Admin only."""
     return await service.update(image_id, data)
 
 
@@ -101,13 +101,13 @@ async def update_image(
     response_model=LoginBgImageSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def activate_image(
     request: Request,
     image_id: int,
     service: LoginBgImageService = Depends(),
 ) -> LoginBgImageSchema:
-    """Set an image as the active login background. Administrator only."""
+    """Set an image as the active login background. System Admin only."""
     return await service.activate(image_id)
 
 
@@ -115,12 +115,12 @@ async def activate_image(
     "/{image_id}",
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def delete_image(
     request: Request,
     image_id: int,
     service: LoginBgImageService = Depends(),
 ):
-    """Delete a login background image. Administrator only."""
+    """Delete a login background image. System Admin only."""
     await service.delete(image_id)
     return {"message": "Image deleted successfully"}

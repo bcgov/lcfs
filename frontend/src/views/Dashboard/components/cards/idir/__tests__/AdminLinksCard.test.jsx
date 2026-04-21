@@ -21,6 +21,13 @@ vi.mock('@/utils/withRole', () => ({
   default: vi.fn((Component) => Component)
 }))
 
+const mockHasRoles = vi.fn()
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasRoles: mockHasRoles
+  })
+}))
+
 // Mock components
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   __esModule: true,
@@ -90,6 +97,11 @@ describe('AdminLinksCard Component', () => {
     vi.resetAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
     useTranslation.mockReturnValue({ t: mockT })
+    // Default: user has both Administrator and System Admin roles so all
+    // admin links (including the System Admin-only login background) show.
+    mockHasRoles.mockImplementation(
+      (role) => role === roles.administrator || role === roles.system_admin
+    )
   })
 
   it('renders the component with correct structure', () => {
@@ -235,5 +247,49 @@ describe('AdminLinksCard Component', () => {
 
     // Translation should be called again since component re-rendered
     expect(mockT).toHaveBeenCalled()
+  })
+
+  describe('Role-based link visibility', () => {
+    it('hides the login screen background link from administrators without system admin', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.administrator)
+
+      render(<AdminLinksCard />, { wrapper })
+
+      expect(screen.getByText('Manage Government Users')).toBeInTheDocument()
+      expect(screen.getByText('Add/Edit Organizations')).toBeInTheDocument()
+      expect(screen.getByText('User Activity')).toBeInTheDocument()
+      expect(
+        screen.queryByText('Login Screen Background')
+      ).not.toBeInTheDocument()
+
+      const listItemButtons = screen.getAllByTestId('mui-list-item-button')
+      expect(listItemButtons).toHaveLength(3)
+    })
+
+    it('shows only the login screen background link for system admins', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.system_admin)
+
+      render(<AdminLinksCard />, { wrapper })
+
+      expect(
+        screen.queryByText('Manage Government Users')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('Add/Edit Organizations')
+      ).not.toBeInTheDocument()
+      expect(screen.queryByText('User Activity')).not.toBeInTheDocument()
+      expect(screen.getByText('Login Screen Background')).toBeInTheDocument()
+
+      const listItemButtons = screen.getAllByTestId('mui-list-item-button')
+      expect(listItemButtons).toHaveLength(1)
+    })
+
+    it('renders nothing for government users without admin privileges', () => {
+      mockHasRoles.mockReturnValue(false)
+
+      const { container } = render(<AdminLinksCard />, { wrapper })
+
+      expect(container).toBeEmptyDOMElement()
+    })
   })
 })
