@@ -537,6 +537,7 @@ ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS = [
 ]
 
 FSE_EXPORT_COLUMNS = [
+    ExportColumn("Status"),
     ExportColumn("Organization"),
     ExportColumn("Allocating organization"),
     ExportColumn("Dates of supply from"),

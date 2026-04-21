@@ -295,6 +295,31 @@ async def test_handle_submitted_status_auto_submits_fse_records(
 
 
 @pytest.mark.anyio
+async def test_handle_submitted_status_rejects_decommissioned_fse(
+    compliance_report_update_service,
+    mock_user_has_roles,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(
+        return_value=True
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_update_service.handle_submitted_status(
+            mock_report, UserProfile()
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "decommissioned FSE" in exc_info.value.detail
+    compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_handle_submitted_status_with_existing_summary(
     compliance_report_update_service,
     mock_repo,

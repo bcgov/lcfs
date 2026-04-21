@@ -193,6 +193,7 @@ class AllocationAgreementSchema(AllocationAgreementCreateSchema):
 class AllocationAgreementAllSchema(BaseSchema):
     allocation_agreements: List[AllocationAgreementResponseSchema]
     pagination: Optional[PaginationResponseSchema] = {}
+    was_edited: bool = False
 
 
 class AllocationAgreementListSchema(BaseSchema):

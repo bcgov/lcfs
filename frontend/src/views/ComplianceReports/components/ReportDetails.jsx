@@ -135,27 +135,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     [editSupportingDocs, canEdit, t]
   )
 
-  const crMap = useMemo(() => {
-    if (!complianceReportData?.chain) return {}
-
-    const mapSet = {}
-    complianceReportData.chain.forEach((complianceReport) => {
-      mapSet[complianceReport.complianceReportId] = complianceReport.version
-    })
-    return mapSet
-  }, [complianceReportData?.chain])
-
-  const wasEdited = useCallback(
-    (data) => {
-      if (!data || !Array.isArray(data)) return false
-      return data.some(
-        (row) =>
-          crMap[row.complianceReportId] !== 0 &&
-          Object.prototype.hasOwnProperty.call(row, 'version')
-      )
-    },
-    [crMap]
-  )
+  // Backend-computed flag on the activity list response. Detects edits even
+  // when the only change was a deletion in a supplemental — those rows are
+  // filtered out of VIEW responses so we can't infer this client-side.
+  const wasEdited = useCallback((data) => Boolean(data?.wasEdited), [])
 
   const navigationHandlers = useMemo(
     () => ({
@@ -249,7 +232,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               label="Change log"
               disabled={
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
-                !wasEdited(data.fuelSupplies)
+                !wasEdited(data)
               }
               onComponent={
                 <FuelSupplyChangelog
@@ -296,7 +279,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               label="Change log"
               disabled={
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
-                !wasEdited(data.allocationAgreements)
+                !wasEdited(data)
               }
               onComponent={
                 <AllocationAgreementChangelog
@@ -325,7 +308,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               label="Change log"
               disabled={
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
-                !wasEdited(data.notionalTransfers)
+                !wasEdited(data)
               }
               onComponent={<NotionalTransferChangelog canEdit={canEdit} />}
               offComponent={
@@ -345,7 +328,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               label="Change log"
               disabled={
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
-                !wasEdited(data.otherUses)
+                !wasEdited(data)
               }
               onComponent={<OtherUsesChangelog canEdit={canEdit} />}
               offComponent={
@@ -365,7 +348,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               label="Change log"
               disabled={
                 !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
-                !wasEdited(data.fuelExports)
+                !wasEdited(data)
               }
               onComponent={<FuelExportChangelog canEdit={canEdit} />}
               offComponent={
@@ -436,6 +419,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         activity.key === 'finalSupplyEquipments' &&
         parseInt(compliancePeriod) < LEGISLATION_TRANSITION_YEAR
 
+      // Fuel exports are not applicable for compliance periods before 2024
+      const isFuelExportHiddenByYear =
+        activity.key === 'fuelExports' &&
+        parseInt(compliancePeriod) < LEGISLATION_TRANSITION_YEAR
+
       // For FSE section: show if organization has any charging equipment,
       // not just if there's FSE linked to the current report group.
       // This ensures users can add FSE to supplemental reports even when
@@ -449,6 +437,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       // OR (for FSE) if organization has charging equipment
       const shouldShow =
         !isFSEHiddenByYear &&
+        !isFuelExportHiddenByYear &&
         (hasRealData ||
           hasFSECapability ||
           activity.key === 'supportingDocs' ||
@@ -682,7 +671,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                     </IconButton>
                   </Role>
                 )}{' '}
-                {wasEdited(data?.[activity.key]) && !allRecordsDeleted && (
+                {wasEdited(data) && !allRecordsDeleted && (
                   <Chip
                     aria-label="changes were made since original report"
                     icon={<NewReleasesOutlined fontSize="small" />}

@@ -173,6 +173,7 @@ def mock_trxn_repo():
     repo = AsyncMock(spec=TransactionRepository)
     repo.calculate_available_balance_for_period = AsyncMock(return_value=2000)
     repo.delete_transaction = AsyncMock()
+    repo.get_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
     return repo
 
 
@@ -316,6 +317,7 @@ def compliance_report_update_service(
     mock_fse_repo.sync_reporting_associations_to_latest_equipment = AsyncMock(
         return_value=0
     )
+    mock_fse_repo.has_decommissioned_fse_in_report = AsyncMock(return_value=False)
     service._fse_repo = mock_fse_repo
     return service
 

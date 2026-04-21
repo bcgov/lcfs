@@ -191,6 +191,7 @@ class OtherUsesListSchema(BaseSchema):
 
 class OtherUsesAllSchema(BaseSchema):
     other_uses: List[OtherUsesSchema]
+    was_edited: bool = False
 
 
 class DeleteOtherUsesSchema(BaseSchema):
