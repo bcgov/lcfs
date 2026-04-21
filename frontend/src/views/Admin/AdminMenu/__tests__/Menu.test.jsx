@@ -6,8 +6,11 @@ import { AdminMenu } from '../Menu'
 const mockNavigate = vi.fn()
 const mockT = vi.fn((key) => key)
 
+const mockLocation = { pathname: '/admin/users' }
+
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => mockNavigate
+  useNavigate: () => mockNavigate,
+  useLocation: () => mockLocation
 }))
 
 vi.mock('react-i18next', () => ({
@@ -21,7 +24,8 @@ vi.mock('@/routes/routes', () => ({
       USER_ACTIVITY: '/admin/user-activity',
       USER_LOGIN_HISTORY: '/admin/user-login-history',
       AUDIT_LOG: { LIST: '/admin/audit-log' },
-      LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background'
+      LOGIN_SCREEN_BACKGROUND: '/admin/login-screen-background',
+      SEEDED_USER_ASSOCIATION: '/admin/seeded-user-association'
     }
   }
 }))
@@ -49,8 +53,8 @@ vi.mock('@mui/material', () => ({
     </div>
   )),
   Tabs: vi.fn(({ children, onChange, ...props }) => (
-    <div 
-      data-test="tabs" 
+    <div
+      data-test="tabs"
       data-orientation={props.orientation}
       data-value={props.value}
       onClick={(e) => onChange && onChange(e, 1)}
@@ -68,7 +72,7 @@ vi.mock('@mui/material', () => ({
 
 vi.mock('@/views/Admin/AdminMenu/components/AdminTabPanel', () => ({
   AdminTabPanel: vi.fn(({ children, value, index, ...props }) => (
-    <div 
+    <div
       data-test="admin-tab-panel"
       data-value={value}
       data-index={index}
@@ -80,31 +84,34 @@ vi.mock('@/views/Admin/AdminMenu/components/AdminTabPanel', () => ({
   ))
 }))
 
-vi.mock('@/components/Role', () => ({
-  Role: vi.fn(({ children, roles }) => (
-    <div data-test="role" data-roles={roles?.join(',')}>
-      {children}
-    </div>
-  ))
-}))
-
 vi.mock('@/views/Admin/AdminMenu', () => ({
   Users: vi.fn(() => <div data-test="users">Users Component</div>),
-  UserActivity: vi.fn(() => <div data-test="user-activity">UserActivity Component</div>),
-  UserLoginHistory: vi.fn(() => <div data-test="user-login-history">UserLoginHistory Component</div>),
+  UserActivity: vi.fn(() => (
+    <div data-test="user-activity">UserActivity Component</div>
+  )),
+  UserLoginHistory: vi.fn(() => (
+    <div data-test="user-login-history">UserLoginHistory Component</div>
+  )),
   AuditLog: vi.fn(() => <div data-test="audit-log">AuditLog Component</div>),
-  LoginScreenBackground: vi.fn(() => <div data-test="login-screen-background">LoginScreenBackground Component</div>)
+  LoginScreenBackground: vi.fn(() => (
+    <div data-test="login-screen-background">LoginScreenBackground Component</div>
+  )),
+  SeededUserAssociation: vi.fn(() => (
+    <div data-test="seeded-user-association">SeededUserAssociation Component</div>
+  ))
 }))
 
 vi.mock('@/constants/roles', () => ({
   roles: {
-    administrator: 'administrator'
+    administrator: 'Administrator',
+    system_admin: 'System Admin'
   }
 }))
 
+const mockHasRoles = vi.fn()
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    hasRoles: vi.fn(() => false),
+    hasRoles: mockHasRoles,
     hasAnyRole: vi.fn(() => false),
     data: null,
     isLoading: false
@@ -124,6 +131,10 @@ describe('AdminMenu Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockLocation.pathname = '/admin/users'
+    mockHasRoles.mockImplementation(
+      (role) => role === 'Administrator' || role === 'System Admin'
+    )
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
@@ -139,132 +150,149 @@ describe('AdminMenu Component', () => {
     })
   })
 
-  describe('Accessibility', () => {
-    it('renders tabs with correct accessibility attributes', () => {
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
+  describe('Component Rendering', () => {
+    it('renders without crashing', () => {
+      const { container } = render(<AdminMenu />)
+      expect(container.querySelector('[data-test="bc-box"]')).toBeTruthy()
+    })
+
+    it('renders tabs for both administrator and system admin when user has both roles', () => {
+      const { container } = render(<AdminMenu />)
+
       const tabs = container.querySelectorAll('[data-test="tab"]')
       expect(tabs).toHaveLength(5)
+    })
 
+    it('renders a tab panel for each visible tab', () => {
+      const { container } = render(<AdminMenu />)
+
+      const panels = container.querySelectorAll('[data-test="admin-tab-panel"]')
+      expect(panels).toHaveLength(5)
+    })
+
+    it('returns nothing when the user has no admin-related roles', () => {
+      mockHasRoles.mockReturnValue(false)
+      const { container } = render(<AdminMenu />)
+      expect(container.firstChild).toBeNull()
+    })
+
+    it('assigns sequential a11y ids to the rendered tabs', () => {
+      const { container } = render(<AdminMenu />)
+
+      const tabs = container.querySelectorAll('[data-test="tab"]')
       tabs.forEach((tab, index) => {
         expect(tab).toHaveAttribute('id', `full-width-tab-${index}`)
-        expect(tab).toHaveAttribute('aria-controls', `full-width-admin-tabs-${index}`)
+        expect(tab).toHaveAttribute(
+          'aria-controls',
+          `full-width-admin-tabs-${index}`
+        )
       })
     })
   })
 
-  describe('Component Rendering', () => {
-    it('renders without crashing', () => {
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      expect(container.querySelector('[data-test="bc-box"]')).toBeTruthy()
-    })
+  describe('Role-based tab visibility', () => {
+    it('shows only admin tabs for administrators without system admin', () => {
+      mockHasRoles.mockImplementation((role) => role === 'Administrator')
+      const { container } = render(<AdminMenu />)
 
-    it('renders with different tabIndex values', () => {
-      const { rerender, container } = render(<AdminMenu tabIndex={0} />)
-      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute('data-value', '0')
-
-      rerender(<AdminMenu tabIndex={1} />)
-      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute('data-value', '1')
-
-      rerender(<AdminMenu tabIndex={2} />)
-      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute('data-value', '2')
-
-      rerender(<AdminMenu tabIndex={3} />)
-      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute('data-value', '3')
-    })
-
-    it('renders all tab components', () => {
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
       const tabs = container.querySelectorAll('[data-test="tab"]')
-      expect(tabs).toHaveLength(5)
+      expect(tabs).toHaveLength(4)
+
+      expect(
+        container.querySelector('[data-test="login-screen-background"]')
+      ).toBeNull()
     })
 
-    it('renders all admin tab panels', () => {
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
-      const panels = container.querySelectorAll('[data-test="admin-tab-panel"]')
-      expect(panels).toHaveLength(5)
+    it('shows only the login screen background tab for system admins', () => {
+      mockLocation.pathname = '/admin/login-screen-background'
+      mockHasRoles.mockImplementation((role) => role === 'System Admin')
+      const { container } = render(<AdminMenu />)
+
+      const tabs = container.querySelectorAll('[data-test="tab"]')
+      expect(tabs).toHaveLength(1)
+
+      expect(
+        container.querySelector('[data-test="login-screen-background"]')
+      ).toBeTruthy()
+      expect(container.querySelector('[data-test="users"]')).toBeNull()
     })
   })
 
   describe('Responsive Behavior', () => {
     it('sets horizontal orientation for large screens', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 1300, configurable: true })
-      
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1300,
+        configurable: true
+      })
+
+      const { container } = render(<AdminMenu />)
+
       await act(async () => {
         fireEvent(window, new Event('resize'))
       })
-      
-      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute('data-orientation', 'horizontal')
+
+      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute(
+        'data-orientation',
+        'horizontal'
+      )
     })
 
     it('sets vertical orientation for small screens', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
-      
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
+      Object.defineProperty(window, 'innerWidth', {
+        value: 800,
+        configurable: true
+      })
+
+      const { container } = render(<AdminMenu />)
+
       await act(async () => {
         fireEvent(window, new Event('resize'))
       })
-      
-      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute('data-orientation', 'vertical')
+
+      expect(container.querySelector('[data-test="tabs"]')).toHaveAttribute(
+        'data-orientation',
+        'vertical'
+      )
     })
   })
 
   describe('Event Handling', () => {
     it('adds and removes resize event listener', () => {
-      const { unmount } = render(<AdminMenu tabIndex={0} />)
-      
-      expect(addEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function))
-      
+      const { unmount } = render(<AdminMenu />)
+
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function)
+      )
+
       unmount()
-      
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function))
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function)
+      )
     })
 
-    it('calls navigate when tab value changes', async () => {
+    it('navigates to the second tab when its index is selected', async () => {
       const user = userEvent.setup()
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
+      const { container } = render(<AdminMenu />)
+
       const tabs = container.querySelector('[data-test="tabs"]')
       await user.click(tabs)
-      
+
       expect(mockNavigate).toHaveBeenCalledWith('/admin/user-activity')
     })
   })
 
   describe('Translation Integration', () => {
     it('uses translation function for tab labels', () => {
-      render(<AdminMenu tabIndex={0} />)
-      
+      render(<AdminMenu />)
+
       expect(mockT).toHaveBeenCalledWith('Users')
       expect(mockT).toHaveBeenCalledWith('UserActivity')
       expect(mockT).toHaveBeenCalledWith('UserLoginHistory')
       expect(mockT).toHaveBeenCalledWith('AuditLog')
       expect(mockT).toHaveBeenCalledWith('LoginScreenBackground')
-    })
-  })
-
-  describe('Role-based Rendering', () => {
-    it('renders role component with administrator role', () => {
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
-      const roleComponent = container.querySelector('[data-test="role"]')
-      expect(roleComponent).toBeTruthy()
-      expect(roleComponent).toHaveAttribute('data-roles', 'administrator')
-    })
-
-    it('renders all child components within role-protected panels', () => {
-      const { container } = render(<AdminMenu tabIndex={0} />)
-      
-      expect(container.querySelector('[data-test="users"]')).toBeTruthy()
-      expect(container.querySelector('[data-test="user-activity"]')).toBeTruthy()
-      expect(container.querySelector('[data-test="user-login-history"]')).toBeTruthy()
-      expect(container.querySelector('[data-test="audit-log"]')).toBeTruthy()
-      expect(container.querySelector('[data-test="login-screen-background"]')).toBeTruthy()
     })
   })
 })
