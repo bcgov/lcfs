@@ -5,8 +5,10 @@
 export const ROUTES = {
   DASHBOARD: '/',
   API_DOCS: '/docs',
+  PUBLIC_DASHBOARD: '/public',
   CREDIT_CALCULATOR: '/credit-calculator',
   CALCULATION_DATA: '/calculation-data',
+  APPROVED_CARBON_INTENSITIES: '/approved-carbon-intensities',
   FILE_SUBMISSION: '/file-submissions',
 
   AUTH: {

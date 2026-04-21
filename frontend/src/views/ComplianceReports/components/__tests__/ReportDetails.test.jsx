@@ -694,6 +694,74 @@ describe('ReportDetails', () => {
     })
   })
 
+  describe('Fuel export section visibility by compliance year', () => {
+    it('shows fuel export accordion when compliance period is 2024 or later and has data', async () => {
+      mockUseParams.mockReturnValue({
+        compliancePeriod: '2024',
+        complianceReportId: '12345'
+      })
+      mockUseGetFuelExports.mockReturnValue({
+        data: { fuelExports: [{ fuelExportId: 1 }] },
+        isLoading: false,
+        error: null
+      })
+
+      render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('fuelExport:fuelExportTitle')
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('hides fuel export accordion when compliance period is before 2024 even with data', async () => {
+      mockUseParams.mockReturnValue({
+        compliancePeriod: '2023',
+        complianceReportId: '12345'
+      })
+      mockUseGetFuelExports.mockReturnValue({
+        data: { fuelExports: [{ fuelExportId: 1 }] },
+        isLoading: false,
+        error: null
+      })
+
+      render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('fuelExport:fuelExportTitle')
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it('hides fuel export accordion for 2022 compliance period', async () => {
+      mockUseParams.mockReturnValue({
+        compliancePeriod: '2022',
+        complianceReportId: '12345'
+      })
+      mockUseGetFuelExports.mockReturnValue({
+        data: { fuelExports: [{ fuelExportId: 1 }] },
+        isLoading: false,
+        error: null
+      })
+
+      render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+        wrapper
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('fuelExport:fuelExportTitle')
+        ).not.toBeInTheDocument()
+      })
+    })
+  })
+
   describe('FSE section visibility by compliance year', () => {
     it('shows FSE accordion when compliance period is 2024 or later and org has charging equipment', async () => {
       mockUseParams.mockReturnValue({

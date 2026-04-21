@@ -6,7 +6,10 @@ import structlog
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.exc import ProgrammingError
 
-from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance import (
+    FinalSupplyEquipment,
+    ComplianceReportChargingEquipment,
+)
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
@@ -34,6 +37,7 @@ logger = structlog.get_logger(__name__)
 
 class FinalSupplyEquipmentServices:
     DEFAULT_OPERATIONAL_HOURS = 24
+    DECOMMISSIONED_STATUS = "Decommissioned"
 
     def __init__(
         self,
@@ -324,6 +328,33 @@ class FinalSupplyEquipmentServices:
 
         return compliance_report
 
+    async def _validate_equipment_is_not_decommissioned(
+        self, charging_equipment_id: int
+    ) -> None:
+        latest_status = await self.repo.get_latest_equipment_status(charging_equipment_id)
+        if latest_status == self.DECOMMISSIONED_STATUS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Decommissioned FSE cannot be added to or used in draft compliance reports."
+                ),
+            )
+
+    async def _validate_reporting_record_is_not_decommissioned(
+        self, reporting_id: int
+    ) -> ComplianceReportChargingEquipment:
+        reporting_record = await self.repo.get_reporting_record_by_id(reporting_id)
+        if not reporting_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="FSE reporting record not found",
+            )
+
+        await self._validate_equipment_is_not_decommissioned(
+            reporting_record.charging_equipment_id
+        )
+        return reporting_record
+
     @service_handler
     async def delete_all(self, compliance_report_id: int):
         return await self.repo.delete_all(compliance_report_id)
@@ -499,6 +530,11 @@ class FinalSupplyEquipmentServices:
         """
         Create FSE compliance reporting data
         """
+        for item in data:
+            await self._validate_equipment_is_not_decommissioned(
+                item.charging_equipment_id
+            )
+
         # Convert Pydantic schemas to dict format for SQLAlchemy
         model_data = [item.model_dump() for item in data]
         return await self.repo.create_fse_reporting_batch(model_data)
@@ -510,6 +546,7 @@ class FinalSupplyEquipmentServices:
         """
         Update FSE compliance reporting data
         """
+        await self._validate_reporting_record_is_not_decommissioned(reporting_id)
         return await self.repo.update_fse_reporting(reporting_id, data.model_dump())
 
     @service_handler
@@ -536,6 +573,12 @@ class FinalSupplyEquipmentServices:
         if not data.reporting_ids:
             return {"updated": 0, "is_active": data.is_active}
 
+        if data.is_active:
+            for reporting_id in data.reporting_ids:
+                await self._validate_reporting_record_is_not_decommissioned(
+                    reporting_id
+                )
+
         updated_count = await self.repo.update_reporting_active_status(
             data.reporting_ids, data.is_active
         )
@@ -558,6 +601,10 @@ class FinalSupplyEquipmentServices:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Supply from and to dates are required",
             )
+
+        for equipment_id in data.equipment_ids:
+            await self._validate_equipment_is_not_decommissioned(equipment_id)
+
         updated_count = await self.repo.bulk_update_reporting_dates(data)
 
         return {"updated": updated_count}

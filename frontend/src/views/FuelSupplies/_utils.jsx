@@ -29,12 +29,12 @@ export const processFuelSupplyRowData = ({
         compliancePeriod,
         isNewSupplementalEntry:
           isSupplemental && item.complianceReportId === +complianceReportId,
-        id: uuid()
+        id: item.fuelSupplyId ? `fs-${item.fuelSupplyId}` : uuid()
       }))
 
   return [
     ...baseRowData,
-    { id: uuid(), complianceReportId, compliancePeriod }
+    { id: 'new-fuel-supply-draft-row', complianceReportId, compliancePeriod }
   ]
 }
 

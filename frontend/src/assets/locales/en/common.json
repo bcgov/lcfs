@@ -35,7 +35,15 @@
   "login": {
     "loginMessage": "Login with",
     "troubleMessage": "Trouble logging in?",
-    "publicCreditCalculator": "Public - Compliance unit calculator"
+    "publicCreditCalculator": "Public LCFS information"
+  },
+  "publicDashboard": {
+    "cardTitle": "LCFS program information",
+    "links": {
+      "calculator": "Compliance unit calculator",
+      "calculationData": "Calculation data",
+      "approvedCarbonIntensities": "Approved carbon intensities"
+    }
   },
   "layout": {
     "breadCrumbHome": "Home",
