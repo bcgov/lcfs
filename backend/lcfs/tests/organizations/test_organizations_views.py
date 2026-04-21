@@ -5,6 +5,12 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from lcfs.web.api.organizations.services import (
     OrganizationsService as ServiceDependency,
 )
+from lcfs.web.api.organizations.link_key_service import (
+    OrganizationLinkKeyService,
+)
+from lcfs.web.api.organizations.penalty_service import (
+    OrganizationPenaltyService,
+)
 from lcfs.db.models.user.Role import RoleEnum
 
 
@@ -72,7 +78,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -81,7 +87,7 @@ class TestOrganizationLinkKeyViews:
             )
 
             # Ensure FastAPI uses the mocked service
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -112,7 +118,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -120,7 +126,7 @@ class TestOrganizationLinkKeyViews:
                 sample_link_keys_list
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -149,7 +155,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -157,7 +163,7 @@ class TestOrganizationLinkKeyViews:
                 sample_link_key_operation_response
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -189,7 +195,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -197,7 +203,7 @@ class TestOrganizationLinkKeyViews:
                 sample_link_key_operation_response
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -229,13 +235,13 @@ class TestOrganizationLinkKeyViews:
         )
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
             mock_service_instance.validate_link_key.return_value = valid_response
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -262,7 +268,7 @@ class TestOrganizationLinkKeyViews:
         """Test link key validation with invalid key"""
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -272,7 +278,7 @@ class TestOrganizationLinkKeyViews:
             invalid_response.is_valid = False
             mock_service_instance.validate_link_key.return_value = invalid_response
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -309,13 +315,13 @@ class TestOrganizationLinkKeyViews:
         empty_forms = {"forms": {}}
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
             mock_service_instance.get_available_forms.return_value = empty_forms
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -340,7 +346,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -348,7 +354,7 @@ class TestOrganizationLinkKeyViews:
                 DataNotFoundException("Organization not found")
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -380,7 +386,7 @@ class TestOrganizationLinkKeyViews:
         }
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -388,7 +394,7 @@ class TestOrganizationLinkKeyViews:
                 empty_link_keys
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -423,7 +429,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -431,7 +437,7 @@ class TestOrganizationLinkKeyViews:
                 "Organization not found"
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -455,7 +461,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -463,7 +469,7 @@ class TestOrganizationLinkKeyViews:
                 "Link key already exists"
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -489,7 +495,7 @@ class TestOrganizationLinkKeyViews:
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -500,8 +506,8 @@ class TestOrganizationLinkKeyViews:
             fastapi_app.dependency_overrides[
                 __import__(
                     "lcfs.web.api.organizations.views",
-                    fromlist=["OrganizationsService"],
-                ).OrganizationsService
+                    fromlist=["OrganizationLinkKeyService"],
+                ).OrganizationLinkKeyService
             ] = lambda: mock_service_instance
 
             response = await client.put("/api/organizations/1/link-keys/1")
@@ -521,7 +527,7 @@ class TestOrganizationLinkKeyViews:
         """Test validate_link_key with empty key"""
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -556,7 +562,7 @@ class TestOrganizationLinkKeyViews:
         mock_user_profile.return_value = user_mock
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -565,7 +571,7 @@ class TestOrganizationLinkKeyViews:
             )
 
             # Ensure the route uses our mocked service
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -599,7 +605,7 @@ class TestOrganizationLinkKeyViews:
         mock_user_profile.return_value = user_mock
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationLinkKeyService"
         ) as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
@@ -607,7 +613,7 @@ class TestOrganizationLinkKeyViews:
                 sample_link_key_operation_response
             )
 
-            fastapi_app.dependency_overrides[ServiceDependency] = (
+            fastapi_app.dependency_overrides[OrganizationLinkKeyService] = (
                 lambda: mock_service_instance
             )
 
@@ -743,14 +749,14 @@ class TestPenaltyEndpointsOrgCheck:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 1})
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationPenaltyService"
         ) as mock_service_cls:
             mock_svc = AsyncMock()
             mock_service_cls.return_value = mock_svc
             mock_svc.get_penalty_analytics.return_value = MagicMock(
                 yearly_summaries=[], automatic_total=0, discretionary_total=0
             )
-            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+            fastapi_app.dependency_overrides[OrganizationPenaltyService] = lambda: mock_svc
 
             async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/penalties/analytics")
@@ -764,7 +770,7 @@ class TestPenaltyEndpointsOrgCheck:
         """Supplier cannot fetch penalty analytics for another org."""
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER], {"organization_id": 99})
 
-        with patch("lcfs.web.api.organizations.views.OrganizationsService"):
+        with patch("lcfs.web.api.organizations.views.OrganizationPenaltyService"):
             async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
                 response = await client.get("/api/organizations/1/penalties/analytics")
 
@@ -778,14 +784,14 @@ class TestPenaltyEndpointsOrgCheck:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         with patch(
-            "lcfs.web.api.organizations.views.OrganizationsService"
+            "lcfs.web.api.organizations.views.OrganizationPenaltyService"
         ) as mock_service_cls:
             mock_svc = AsyncMock()
             mock_service_cls.return_value = mock_svc
             mock_svc.get_penalty_analytics.return_value = MagicMock(
                 yearly_summaries=[], automatic_total=0, discretionary_total=0
             )
-            fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+            fastapi_app.dependency_overrides[OrganizationPenaltyService] = lambda: mock_svc
 
             async with AsyncClient(app=fastapi_app, base_url="http://test") as client:
                 response = await client.get("/api/organizations/5/penalties/analytics")

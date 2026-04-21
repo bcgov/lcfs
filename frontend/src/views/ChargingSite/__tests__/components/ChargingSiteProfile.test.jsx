@@ -41,7 +41,9 @@ describe('ChargingSiteProfile', () => {
     city: 'Vancouver',
     postalCode: 'V6B 1A1',
     notes: 'Test notes',
-    organization: { name: 'Test Organization' }
+    organization: { name: 'Test Organization' },
+    allocatingOrganization: { name: 'Allocating Org Ltd' },
+    allocatingOrganizationName: null
   }
 
   beforeEach(() => {
@@ -67,6 +69,46 @@ describe('ChargingSiteProfile', () => {
     render(<ChargingSiteProfile data={mockData} />, { wrapper })
     
     expect(screen.getByText('Test notes')).toBeInTheDocument()
+  })
+
+  it('displays allocating organization name when available', () => {
+    render(<ChargingSiteProfile data={mockData} />, { wrapper })
+
+    expect(screen.getByText('Allocating Org Ltd')).toBeInTheDocument()
+  })
+
+  it('falls back to allocatingOrganizationName string when nested object is absent', () => {
+    const dataWithNameOnly = {
+      ...mockData,
+      allocatingOrganization: null,
+      allocatingOrganizationName: 'Fallback Org'
+    }
+    render(<ChargingSiteProfile data={dataWithNameOnly} />, { wrapper })
+
+    expect(screen.getByText('Fallback Org')).toBeInTheDocument()
+  })
+
+  it('displays N/A when allocating organization is null', () => {
+    const dataWithoutAllocating = {
+      ...mockData,
+      allocatingOrganization: null,
+      allocatingOrganizationName: null
+    }
+    render(<ChargingSiteProfile data={dataWithoutAllocating} />, { wrapper })
+
+    expect(screen.getByText('N/A')).toBeInTheDocument()
+  })
+
+  it('renders allocating organization below site address', () => {
+    render(<ChargingSiteProfile data={mockData} />, { wrapper })
+
+    const addressText = screen.getByText('123 Main St, Vancouver, V6B 1A1')
+    const allocatingText = screen.getByText('Allocating Org Ltd')
+
+    expect(
+      addressText.compareDocumentPosition(allocatingText) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it('shows organization for government users', () => {

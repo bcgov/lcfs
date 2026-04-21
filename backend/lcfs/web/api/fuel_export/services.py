@@ -27,6 +27,7 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.base import ActionTypeEnum
+from lcfs.db.models.compliance.FuelExport import FuelExport
 
 logger = structlog.get_logger(__name__)
 
@@ -266,9 +267,14 @@ class FuelExportServices:
             )
         )
 
+        was_edited = await self.compliance_report_repo.has_supplemental_changes(
+            compliance_report_id, FuelExport
+        )
+
         return FuelExportsSchema(
             fuel_exports=fs_list if fs_list else [],
             total_compliance_units=total_compliance_units,
+            was_edited=was_edited,
         )
 
     @service_handler

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.other_uses.schema import (
@@ -15,7 +16,13 @@ from lcfs.web.api.other_uses.services import OtherUsesServices
 def other_uses_service():
     mock_repo = MagicMock(spec=OtherUsesRepository)
     mock_fuel_repo = MagicMock()
-    service = OtherUsesServices(repo=mock_repo, fuel_repo=mock_fuel_repo)
+    mock_compliance_report_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report_repo.has_supplemental_changes = AsyncMock(return_value=False)
+    service = OtherUsesServices(
+        repo=mock_repo,
+        fuel_repo=mock_fuel_repo,
+        compliance_report_repo=mock_compliance_report_repo,
+    )
     return service, mock_repo, mock_fuel_repo
 
 

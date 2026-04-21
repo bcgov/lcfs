@@ -2,7 +2,9 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.organizations.credit_market_service import (
+    OrganizationCreditMarketService,
+)
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.organization.CreditMarketAuditLog import CreditMarketAuditLog
 from lcfs.web.api.base import PaginationRequestSchema, SortOrder
@@ -31,10 +33,9 @@ class TestCreditMarketServices:
     @pytest.fixture
     def credit_market_service(self, mock_repo, mock_transaction_repo, mock_notification_service):
         """Create service instance with mocked dependencies"""
-        service = OrganizationsService()
+        service = OrganizationCreditMarketService()
         service.repo = mock_repo
         service.transaction_repo = mock_transaction_repo
-        service.redis_balance_service = AsyncMock()
         service.notification_service = mock_notification_service
         return service
 
@@ -286,33 +287,6 @@ class TestCreditMarketServices:
         mock_repo.get_credit_market_organizations.assert_called_once()
 
     @pytest.mark.anyio
-    async def test_get_organization_includes_balance_for_credit_market(
-        self, 
-        credit_market_service, 
-        mock_repo, 
-        sample_organization
-    ):
-        """Test that get_organization includes balance data for credit market validation"""
-        
-        mock_repo.get_organization.return_value = sample_organization
-        mock_repo.get_current_year_early_issuance.return_value = False
-        
-        # Mock balance calculations
-        credit_market_service.calculate_total_balance = AsyncMock(return_value=400)
-        credit_market_service.calculate_reserved_balance = AsyncMock(return_value=25)
-
-        result = await credit_market_service.get_organization(1)
-
-        # Verify balance calculations were called
-        credit_market_service.calculate_total_balance.assert_called_once_with(1)
-        credit_market_service.calculate_reserved_balance.assert_called_once_with(1)
-        
-        # Verify original org data is also included
-        assert result.organization_id == 1
-        assert result.credit_market_contact_name == "John Doe"
-        assert result.credits_to_sell == 100
-
-    @pytest.mark.anyio
     async def test_update_handles_database_error(
         self, 
         credit_market_service, 
@@ -368,32 +342,7 @@ class TestCreditMarketServices:
         assert isinstance(listing.display_in_credit_market, bool)
 
     @pytest.mark.anyio
-    async def test_balance_calculation_integration(
-        self, 
-        credit_market_service, 
-        mock_repo, 
-        sample_organization
-    ):
-        """Test integration with balance calculation for credit market features"""
-        
-        mock_repo.get_organization.return_value = sample_organization
-        mock_repo.get_current_year_early_issuance.return_value = False
-
-        # Mock balance calculations
-        credit_market_service.calculate_total_balance = AsyncMock(return_value=125)
-        credit_market_service.calculate_reserved_balance = AsyncMock(return_value=25)
-
-        result = await credit_market_service.get_organization(1)
-
-        # Verify balance calculations were integrated properly
-        credit_market_service.calculate_total_balance.assert_called_once_with(1)
-        credit_market_service.calculate_reserved_balance.assert_called_once_with(1)
-        
-        assert result.total_balance == 125
-        assert result.reserved_balance == 25
-
-    @pytest.mark.anyio
-    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    @patch('lcfs.web.api.organizations.credit_market_service.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_sent_on_new_listing(
         self, 
         credit_market_service, 
@@ -441,7 +390,7 @@ class TestCreditMarketServices:
         assert call_args.notification_data.related_organization_id == 1
 
     @pytest.mark.anyio
-    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    @patch('lcfs.web.api.organizations.credit_market_service.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_sent_when_credits_added_to_existing_listing(
         self, 
         credit_market_service, 
@@ -567,7 +516,7 @@ class TestCreditMarketServices:
         mock_notification_service.send_notification.assert_not_called()
 
     @pytest.mark.anyio
-    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    @patch('lcfs.web.api.organizations.credit_market_service.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_handles_errors_gracefully(
         self, 
         credit_market_service, 
@@ -619,7 +568,7 @@ class TestCreditMarketServices:
         mock_notification_service.send_notification.assert_called_once()
 
     @pytest.mark.anyio
-    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', False)
+    @patch('lcfs.web.api.organizations.credit_market_service.settings.feature_credit_market_notifications', False)
     async def test_credit_market_notification_not_sent_when_flag_disabled(
         self, 
         credit_market_service, 
@@ -662,7 +611,7 @@ class TestCreditMarketServices:
         mock_notification_service.send_notification.assert_not_called()
 
     @pytest.mark.anyio
-    @patch('lcfs.web.api.organizations.services.settings.feature_credit_market_notifications', True)
+    @patch('lcfs.web.api.organizations.credit_market_service.settings.feature_credit_market_notifications', True)
     async def test_credit_market_notification_skipped_for_idir_updates(
         self,
         credit_market_service,

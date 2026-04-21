@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException, Request
 from lcfs.db.models.user.UserProfile import UserProfile
@@ -60,6 +61,18 @@ def charging_site_service(mock_repo, mock_request):
 
 class TestChargingSiteService:
     """Test class for ChargingSiteService functionality"""
+
+    @staticmethod
+    def _organization(organization_id: int, name: str):
+        return SimpleNamespace(organization_id=organization_id, name=name)
+
+    @staticmethod
+    def _site_status(status_id: int, status: str, description: str | None = None):
+        return SimpleNamespace(
+            charging_site_status_id=status_id,
+            status=status,
+            description=description,
+        )
 
     @pytest.mark.anyio
     async def test_get_intended_user_types_success(
@@ -127,17 +140,11 @@ class TestChargingSiteService:
     ):
         """Test successful retrieval of charging site by ID"""
         # Create properly mocked site with all required string fields
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_allocating_org = self._organization(2, "Allocating Org")
 
-        mock_status = MagicMock()
-        mock_status.charging_site_status_id = 1
-        mock_status.status = "Draft"
+        mock_status = self._site_status(1, "Draft")
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
@@ -222,17 +229,11 @@ class TestChargingSiteService:
         mock_repo.create_charging_site.return_value = mock_site
 
         # Mock the retrieved site with all required fields
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_allocating_org = self._organization(2, "Allocating Org")
 
-        mock_status_obj = MagicMock()
-        mock_status_obj.charging_site_status_id = 1
-        mock_status_obj.status = "Draft"
+        mock_status_obj = self._site_status(1, "Draft")
 
         mock_retrieved_site = MagicMock(spec=ChargingSite)
         mock_retrieved_site.charging_site_id = 1
@@ -325,17 +326,11 @@ class TestChargingSiteService:
         mock_repo.charging_site_name_exists.return_value = False
 
         # Mock the updated site with all required fields
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_allocating_org = self._organization(2, "Allocating Org")
 
-        mock_status_obj = MagicMock()
-        mock_status_obj.charging_site_status_id = 1
-        mock_status_obj.status = "Draft"
+        mock_status_obj = self._site_status(1, "Draft")
 
         mock_updated_site = MagicMock(spec=ChargingSite)
         mock_updated_site.charging_site_id = 1
@@ -403,12 +398,8 @@ class TestChargingSiteService:
         mock_validated_status.status = "Validated"
 
         # Second call returns a site that must validate as ChargingSiteSchema
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_org = self._organization(1, "Test Org")
+        mock_allocating_org = self._organization(2, "Allocating Org")
         mock_updated_site = MagicMock(spec=ChargingSite)
         mock_updated_site.charging_site_id = 1
         mock_updated_site.group_uuid = "site-uuid-1"
@@ -574,9 +565,7 @@ class TestChargingSiteService:
         updated_status._sa_instance_state = MagicMock()
         mock_repo.get_charging_site_status_by_name.return_value = updated_status
 
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
         mock_updated_site = MagicMock(spec=ChargingSite)
         mock_updated_site.charging_site_id = 1
@@ -719,17 +708,11 @@ class TestChargingSiteService:
     async def test_get_cs_list_success(self, charging_site_service, mock_repo):
         """Test successful charging sites list retrieval"""
         # Create properly mocked site with all required fields
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_allocating_org = self._organization(2, "Allocating Org")
 
-        mock_status = MagicMock()
-        mock_status.charging_site_status_id = 1
-        mock_status.status = "Draft"
+        mock_status = self._site_status(1, "Draft")
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
@@ -769,17 +752,11 @@ class TestChargingSiteService:
     async def test_get_charging_sites_paginated(self, charging_site_service, mock_repo):
         """Test paginated charging sites retrieval"""
         # Create properly mocked site with all required fields
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_allocating_org = self._organization(2, "Allocating Org")
 
-        mock_status = MagicMock()
-        mock_status.charging_site_status_id = 1
-        mock_status.status = "Draft"
+        mock_status = self._site_status(1, "Draft")
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
@@ -948,9 +925,7 @@ class TestChargingSiteService:
         mock_status.status = "Draft"
         mock_status.description = "Draft status"
 
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
         mock_level = MagicMock()
         mock_level.level_of_equipment_id = 1
@@ -1028,17 +1003,11 @@ class TestChargingSiteService:
     ):
         """Test getting all charging sites paginated"""
         # Create properly mocked site with all required fields
-        mock_org = MagicMock()
-        mock_org.organization_id = 1
-        mock_org.name = "Test Org"
+        mock_org = self._organization(1, "Test Org")
 
-        mock_allocating_org = MagicMock()
-        mock_allocating_org.organization_id = 2
-        mock_allocating_org.name = "Allocating Org"
+        mock_allocating_org = self._organization(2, "Allocating Org")
 
-        mock_status = MagicMock()
-        mock_status.charging_site_status_id = 1
-        mock_status.status = "Draft"
+        mock_status = self._site_status(1, "Draft")
 
         mock_site = MagicMock(spec=ChargingSite)
         mock_site.charging_site_id = 1
