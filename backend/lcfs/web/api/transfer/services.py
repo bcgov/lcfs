@@ -1,6 +1,7 @@
 import json
 import structlog
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from fastapi import Depends, HTTPException
 from typing import List, Optional
 
@@ -484,7 +485,12 @@ class TransferServices:
             updated_transfer = await self.update_category(
                 transfer.transfer_id, category
             )
-            updated_transfer.transaction_effective_date = datetime.now(timezone.utc).replace(tzinfo=None)
+            # Store the Pacific calendar date the director clicked "Record"
+            # (matches IA/admin_adjustment convention and avoids UTC→PT date shifts
+            # on late-evening records near compliance period boundaries).
+            updated_transfer.transaction_effective_date = datetime.now(
+                ZoneInfo("America/Vancouver")
+            ).date()
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(

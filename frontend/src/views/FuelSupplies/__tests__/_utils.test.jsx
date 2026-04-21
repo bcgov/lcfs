@@ -92,16 +92,21 @@ describe('fuelSupplyUtils', () => {
       const result = actualUtils.processFuelSupplyRowData(params)
 
       expect(result).toHaveLength(3) // 2 existing + 1 empty row
+      // Saved rows use a stable `fs-<fuelSupplyId>` id so AG Grid can preserve
+      // scroll position and row state across re-fetches after saving.
       expect(result[0]).toEqual({
         fuelSupplyId: '1',
         fuelType: 'Diesel',
         complianceReportId: 123,
         compliancePeriod: '2024',
         isNewSupplementalEntry: false,
-        id: 'mock-uuid-123'
+        id: 'fs-1'
       })
+      expect(result[1].id).toBe('fs-2')
+      // The trailing empty draft row uses a stable sentinel id so AG Grid's
+      // immutable data mode can keep it identified across re-renders.
       expect(result[2]).toEqual({
-        id: 'mock-uuid-123',
+        id: 'new-fuel-supply-draft-row',
         complianceReportId: 123,
         compliancePeriod: '2024'
       })
