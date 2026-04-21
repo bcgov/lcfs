@@ -616,7 +616,7 @@ export const fuelSupplyColDefs = (
       minWidth: 60,
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: (params) => ({
-        options: ['L', 'kg', 'kWh', 'm³'],
+        options: ['L', 'kg', 'kWh', 'm³ (15°C and 1 atm)'],
         multiple: false,
         disableCloseOnSelect: false,
         freeSolo: false,

@@ -340,6 +340,7 @@ latest_equipment_versions AS (
         )
 )
 SELECT
+    distinct
     current_site.organization_id,
     ce.charging_equipment_id,
     ce.serial_number,
@@ -448,7 +449,7 @@ LEFT JOIN LATERAL (
                 ARRAY[]::varchar[]
             )
         )
-    ORDER BY eut.end_use_type_id ASC NULLS FIRST
+    ORDER BY cpo.display_order ASC NULLS FIRST
     LIMIT 1
 ) power_lookup ON TRUE;
 
@@ -576,7 +577,7 @@ matched_rows AS (
     ) x
     WHERE x.rn = 1
 )
-SELECT
+SELECT DISTINCT
     rc.organization_id,
     rc.compliance_report_id,
     rc.compliance_report_group_uuid,

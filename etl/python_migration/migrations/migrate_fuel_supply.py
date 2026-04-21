@@ -38,6 +38,7 @@ class FuelSupplyMigrator:
         self.unit_mapping = {
             # Map TFRS units to LCFS enum values
             "m³": "Cubic_metres",
+            "m³ (15°C and 1 atm)": "Cubic_metres",
             "L": "Litres",
             "kg": "Kilograms",
             "kWh": "Kilowatt_hour",
@@ -67,6 +68,7 @@ class FuelSupplyMigrator:
         self.unit_mapping = {
             # Map TFRS units to LCFS enum values
             "m³": "Cubic_metres",
+            "m³ (15°C and 1 atm)": "Cubic_metres",
             "L": "Litres",
             "kg": "Kilograms",
             "kWh": "Kilowatt_hour",
