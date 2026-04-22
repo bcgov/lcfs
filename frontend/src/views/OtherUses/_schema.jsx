@@ -24,6 +24,12 @@ import {
 } from '@/utils/renewableClaimUtils'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
+  'Approved fuel code - Section 6 (5) (c)'
+
+export const isFuelCodeProvision = (provision) =>
+  provision === PROVISION_APPROVED_FUEL_CODE ||
+  provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const otherUsesColDefs = (
   optionsData,
@@ -184,7 +190,7 @@ export const otherUsesColDefs = (
         (obj) => params.data.fuelType === obj.fuelType
       )
       return (
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+        isFuelCodeProvision(params.data.provisionOfTheAct) &&
         fuelType?.fuelCodes?.length > 0
       )
     },
@@ -198,7 +204,7 @@ export const otherUsesColDefs = (
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
-        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+        if (isFuelCodeProvision(params.data.provisionOfTheAct)) {
           const matchingFuelCode = fuelType?.fuelCodes?.find(
             (fuelCode) => originalFuelCode === fuelCode.fuelCode
           )

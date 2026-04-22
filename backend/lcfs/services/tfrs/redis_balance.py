@@ -1,5 +1,5 @@
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Depends
 from redis.asyncio import Redis
@@ -36,7 +36,7 @@ async def init_org_balance_cache(app: FastAPI):
             )
 
             # Get the current year
-            current_year = datetime.now().year
+            current_year = datetime.now(timezone.utc).year
             logger.info(f"Starting balance cache population for {current_year}")
 
             # Fetch all organizations
@@ -72,7 +72,7 @@ class RedisBalanceService:
         organization_id,
     ):
         # Get the current year
-        current_year = datetime.now().year
+        current_year = datetime.now(timezone.utc).year
         oldest_year = await self.transaction_repo.get_transaction_start_year()
 
         # Loop from the oldest year to the current year

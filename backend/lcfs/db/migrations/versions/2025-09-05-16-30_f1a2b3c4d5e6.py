@@ -30,7 +30,12 @@ def upgrade() -> None:
     accidentally dropped during the 2025-07-30 migration.
     """
 
-    # First ensure the refresh function exists
+    # First ensure the refresh function exists.
+    # NOTE: materialized views live in pg_matviews, NOT information_schema.tables.
+    # A previous version of this function used information_schema.tables which
+    # silently skipped the mv_credit_ledger refresh on every trigger fire,
+    # leaving the credit ledger stale after compliance report approvals and
+    # other transaction-producing events.
     op.execute(
         """
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
@@ -39,10 +44,9 @@ def upgrade() -> None:
             REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate;
             -- Check if mv_credit_ledger exists before refreshing
             IF EXISTS (
-                SELECT 1 FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'mv_credit_ledger' 
-                AND table_type = 'VIEW'
+                SELECT 1 FROM pg_matviews
+                WHERE schemaname = 'public'
+                AND matviewname = 'mv_credit_ledger'
             ) THEN
                 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_credit_ledger;
             END IF;

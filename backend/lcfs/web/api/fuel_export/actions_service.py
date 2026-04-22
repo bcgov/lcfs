@@ -81,7 +81,7 @@ class FuelExportActionService:
 
         # Calculate total energy if energy density is available
         calculated_energy = (
-            round(fuel_export.energy_density * fuel_export.quantity)
+            round(fuel_export.energy_density * fuel_export.quantity, 2)
             if fuel_export.energy_density
             else 0
         )

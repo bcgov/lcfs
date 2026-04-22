@@ -1,6 +1,6 @@
 from fastapi import Depends
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -136,8 +136,8 @@ class AdminAdjustmentRepository:
                 )
             )
         )
-        existing_history.create_date = datetime.now()
-        existing_history.update_date = datetime.now()
+        existing_history.create_date = datetime.now(timezone.utc)
+        existing_history.update_date = datetime.now(timezone.utc)
         existing_history.user_profile_id = history.user_profile_id
         existing_history.display_name = history.display_name
         self.db.add(existing_history)

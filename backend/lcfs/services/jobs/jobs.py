@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.services.tfrs.redis_balance import RedisBalanceService
@@ -127,7 +127,7 @@ async def submit_supplemental_report(report_id: int, app: FastAPI):
             # Create update schema
             update_schema = ComplianceReportUpdateSchema(
                 status="Submitted",
-                supplemental_note=f"Auto-submitted by system on {datetime.now().strftime('%Y-%m-%d')} due to 30+ day draft status",
+                supplemental_note=f"Auto-submitted by system on {datetime.now(timezone.utc).strftime('%Y-%m-%d')} due to 30+ day draft status",
             )
 
             # Update the report

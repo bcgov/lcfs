@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Depends
 from starlette.responses import StreamingResponse
@@ -123,7 +123,7 @@ class FuelCodeExporter:
         file_content = builder.build_spreadsheet()
 
         # Get the current date in YYYY-MM-DD format
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         filename = f"{FUEL_CODE_EXPORT_FILENAME}-{current_date}.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}

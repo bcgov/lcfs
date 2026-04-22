@@ -75,10 +75,10 @@ test_cases = [
         "rounded_compliance_units": 67,
     },
     {
-        "description": "Gasoline, default carbon intensity, m³",
+        "description": "Gasoline, default carbon intensity, m³ (15°C and 1 atm)",
         "input": {
             "quantity": 100000,
-            "units": "m³",
+            "units": "m³ (15°C and 1 atm)",
             "target_ci": 78.68,
             "ci_of_fuel": 63.91,
             "energy_density": 38.27,

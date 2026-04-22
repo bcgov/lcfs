@@ -259,9 +259,14 @@ class FuelSupplyServices:
             )
         )
 
+        was_edited = await self.compliance_report_repo.has_supplemental_changes(
+            compliance_report_id, FuelSupply
+        )
+
         return FuelSuppliesSchema(
             fuel_supplies=fs_list if fs_list else [],
             total_compliance_units=total_compliance_units,
+            was_edited=was_edited,
         )
 
     def map_entity_to_schema(self, fuel_supply: FuelSupply):

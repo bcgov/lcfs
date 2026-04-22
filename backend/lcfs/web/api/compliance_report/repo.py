@@ -1,6 +1,6 @@
 import asyncio
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends
 from sqlalchemy import (
     func,
@@ -126,7 +126,7 @@ class ComplianceReportRepository:
             .scalars()
             .all()
         )
-        current_year = str(datetime.now().year)
+        current_year = str(datetime.now(timezone.utc).year)
 
         # Check if the current year is already in the list of periods
         if not any(period.description == current_year for period in periods):
@@ -138,7 +138,7 @@ class ComplianceReportRepository:
             # Insert the current year if it doesn't exist
             new_period = CompliancePeriod(
                 description=current_year,
-                effective_date=datetime.now().date(),
+                effective_date=datetime.now(timezone.utc).date(),
                 display_order=max_display_order_value + 1,
             )
             self.db.add(new_period)
@@ -297,8 +297,8 @@ class ComplianceReportRepository:
             report.compliance_report_id, report.current_status_id
         )
         if history:
-            history.update_date = datetime.now()
-            history.create_date = datetime.now()
+            history.update_date = datetime.now(timezone.utc)
+            history.create_date = datetime.now(timezone.utc)
             history.status_id = report.current_status_id
             history.user_profile_id = user.user_profile_id
             history.display_name = f"{user.first_name} {user.last_name}"
@@ -684,6 +684,60 @@ class ComplianceReportRepository:
             return None
 
         return ComplianceReportBaseSchema.model_validate(compliance_report)
+
+    @repo_handler
+    async def has_supplemental_changes(
+        self, compliance_report_id: int, model: Type
+    ) -> bool:
+        """
+        Returns True if any record of the given activity model belongs to a
+        supplemental report (version > 0) in this report's chain. Detects
+        edits even when the only change was a deletion (which is filtered
+        out of normal VIEW responses).
+        """
+        supplemental_ids = await self.get_supplemental_report_ids_in_chain(
+            compliance_report_id
+        )
+        if not supplemental_ids:
+            return False
+        result = await self.db.execute(
+            select(model.compliance_report_id)
+            .where(model.compliance_report_id.in_(supplemental_ids))
+            .limit(1)
+        )
+        return result.scalar() is not None
+
+    @repo_handler
+    async def get_supplemental_report_ids_in_chain(
+        self, compliance_report_id: int
+    ) -> List[int]:
+        """
+        Return ids of compliance reports in the same chain (up to and including
+        this report's version) whose version > 0 — i.e. supplemental reports
+        that may have edited this chain. Used to flag activity sections as
+        edited even when the only change was a deletion.
+        """
+        anchor = await self.db.execute(
+            select(
+                ComplianceReport.compliance_report_group_uuid,
+                ComplianceReport.version,
+            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
+        )
+        row = anchor.first()
+        if not row or not row[0]:
+            return []
+        group_uuid, version = row
+
+        result = await self.db.execute(
+            select(ComplianceReport.compliance_report_id).where(
+                and_(
+                    ComplianceReport.compliance_report_group_uuid == group_uuid,
+                    ComplianceReport.version > 0,
+                    ComplianceReport.version <= version,
+                )
+            )
+        )
+        return [r[0] for r in result.all()]
 
     @repo_handler
     async def get_compliance_report_chain(self, group_uuid: str):

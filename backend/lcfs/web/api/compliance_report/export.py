@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from fastapi import Depends
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Font, Alignment, Protection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from starlette.responses import StreamingResponse
@@ -132,8 +132,8 @@ class ComplianceReportExporter:
 
         # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
-            # FSE is not applicable for compliance periods before 2024
-            if sheet_name == FSE_EXPORT_SHEET and compliance_year < 2024:
+            # FSE and Fuel Exports are not applicable for compliance periods before 2024
+            if sheet_name in (FSE_EXPORT_SHEET, EXPORT_FUEL_SHEET) and compliance_year < 2024:
                 continue
             if sheet_name == FSE_EXPORT_SHEET:
                 data = await loader(cid, is_quarterly, is_government)
@@ -144,7 +144,8 @@ class ComplianceReportExporter:
 
             # Process each result
             if data:
-                await self._add_sheet(wb, sheet_name, data)
+                locked_cols = {1} if sheet_name == FSE_EXPORT_SHEET else None
+                await self._add_sheet(wb, sheet_name, data, locked_columns=locked_cols)
 
         # Export to stream
         stream = io.BytesIO()
@@ -165,6 +166,7 @@ class ComplianceReportExporter:
         wb: Workbook,
         title: str,
         data: List[List[Union[str, int, float, datetime]]],
+        locked_columns: set[int] | None = None,
     ) -> None:
         """Add a data sheet to the workbook with proper formatting and table styling."""
         if not data or len(data) <= 1:  # Skip if no data found
@@ -215,6 +217,13 @@ class ComplianceReportExporter:
                 cell = ws.cell(row=total_row_idx, column=col_idx)
                 cell.font = Font(bold=True)
                 self._format_cell(cell, val)
+
+        # Lock specified columns and enable sheet protection
+        if locked_columns:
+            for ws_row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+                for cell in ws_row:
+                    cell.protection = Protection(locked=(cell.column in locked_columns))
+            ws.protection.sheet = True
 
         # Auto-size columns
         self._auto_size_columns(ws)
@@ -345,14 +354,18 @@ class ComplianceReportExporter:
                     self._format_cell(cell, val)
 
         end_row = ws.max_row
-        tab = Table(
-            displayName="RenewableTbl",
-            ref=f"A{header_row}:{get_column_letter(5)}{end_row}",
-        )
-        tab.tableStyleInfo = TableStyleInfo(
-            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
-        )
-        ws.add_table(tab)
+        # openpyxl rejects single-row tables (header-only). Skip the table wrap
+        # when the summary section has no data rows — e.g. historical/migrated
+        # reports that produce an empty summary.
+        if end_row > header_row:
+            tab = Table(
+                displayName="RenewableTbl",
+                ref=f"A{header_row}:{get_column_letter(5)}{end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+            )
+            ws.add_table(tab)
 
         # Add Low Carbon Fuel Target Summary
         ws.append(["", "", ""])
@@ -371,14 +384,15 @@ class ComplianceReportExporter:
                 cell.number_format = '"$"#,##0.00'
 
         end_row = ws.max_row
-        tab = Table(
-            displayName="LowCarbonTbl",
-            ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
-        )
-        tab.tableStyleInfo = TableStyleInfo(
-            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
-        )
-        ws.add_table(tab)
+        if end_row > header_row:
+            tab = Table(
+                displayName="LowCarbonTbl",
+                ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+            )
+            ws.add_table(tab)
 
         # Add Non-Compliance Penalty Summary
         ws.append(["", "", ""])
@@ -395,14 +409,15 @@ class ComplianceReportExporter:
             cell.number_format = '"$"#,##0.00'
 
         end_row = ws.max_row
-        tab = Table(
-            displayName="PenaltyTbl",
-            ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
-        )
-        tab.tableStyleInfo = TableStyleInfo(
-            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
-        )
-        ws.add_table(tab)
+        if end_row > header_row:
+            tab = Table(
+                displayName="PenaltyTbl",
+                ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+            )
+            tab.tableStyleInfo = TableStyleInfo(
+                name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+            )
+            ws.add_table(tab)
         self._auto_size_columns(ws)
 
     def _add_centered_title(self, ws, title: str, columns: int) -> None:
@@ -452,9 +467,9 @@ class ComplianceReportExporter:
             if compliance_year >= 2025:
                 is_canada_produced_value = "Yes" if fs.is_canada_produced else ""
 
-            # Format is_q1_supplied field - only show for 2025 (quarterly reports)
+            # Format is_q1_supplied field - only show for 2025
             is_q1_supplied_value = None
-            if compliance_year == 2025 and is_quarterly:
+            if compliance_year == 2025:
                 is_q1_supplied_value = "Yes" if fs.is_q1_supplied else ""
 
             if is_quarterly:
@@ -467,7 +482,7 @@ class ComplianceReportExporter:
                 )
                 rows.append(
                     [
-                        round(fs.compliance_units) if fs.compliance_units else None,
+                        round(fs.compliance_units) if fs.compliance_units is not None else None,
                         fs.fuel_type.fuel_type if fs.fuel_type else None,
                         fs.fuel_category.category if fs.fuel_category else None,
                         fs.end_use_type.type if fs.end_use_type else None,
@@ -497,7 +512,7 @@ class ComplianceReportExporter:
                 # Annual report format
                 rows.append(
                     [
-                        round(fs.compliance_units) if fs.compliance_units else None,
+                        round(fs.compliance_units) if fs.compliance_units is not None else None,
                         fs.fuel_type.fuel_type if fs.fuel_type else None,
                         fs.fuel_category.category if fs.fuel_category else None,
                         fs.end_use_type.type if fs.end_use_type else None,
@@ -508,6 +523,7 @@ class ComplianceReportExporter:
                         ),
                         fs.fuel_code.fuel_code if fs.fuel_code else None,
                         is_canada_produced_value,
+                        is_q1_supplied_value,
                         fs.quantity,
                         fs.units.value if fs.units else None,
                         fs.target_ci,
@@ -702,7 +718,7 @@ class ComplianceReportExporter:
         for ef in data:
             rows.append(
                 [
-                    round(ef.compliance_units),
+                    round(ef.compliance_units) if ef.compliance_units is not None else None,
                     ef.fuel_type.fuel_type if ef.fuel_type else None,
                     ef.fuel_category.category if ef.fuel_category else None,
                     ef.end_use_type.type if ef.end_use_type else None,
@@ -860,6 +876,7 @@ class ComplianceReportExporter:
 
             rows.append(
                 [
+                    row.get("status"),
                     row.get("organization_name") or organization_name,
                     row.get("allocating_organization_name"),
                     self._format_date(row.get("supply_from_date")),

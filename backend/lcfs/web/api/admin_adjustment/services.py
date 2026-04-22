@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.admin_adjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
@@ -229,6 +229,6 @@ class AdminAdjustmentServices:
 
         # Set effective date to today if the analyst left it blank
         if admin_adjustment.transaction_effective_date is None:
-            admin_adjustment.transaction_effective_date = datetime.now().date()
+            admin_adjustment.transaction_effective_date = datetime.now(timezone.utc).date()
 
         await self.repo.refresh_admin_adjustment(admin_adjustment)

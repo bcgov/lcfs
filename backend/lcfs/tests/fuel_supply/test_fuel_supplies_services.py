@@ -12,6 +12,7 @@ from lcfs.db.models import (
 )
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -58,9 +59,12 @@ def fuel_supply_action_service():
 def fuel_supply_service():
     mock_repo = MagicMock(spec=FuelSupplyRepository)
     mock_fuel_code_repo = MagicMock(spec=FuelCodeRepository)
+    mock_compliance_report_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report_repo.has_supplemental_changes = AsyncMock(return_value=False)
     service = FuelSupplyServices(
         repo=mock_repo,
         fuel_repo=mock_fuel_code_repo,
+        compliance_report_repo=mock_compliance_report_repo,
     )
     return service, mock_repo, mock_fuel_code_repo
 

@@ -33,7 +33,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeBulletinsSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
-from lcfs.web.core.decorators import view_handler
+from lcfs.web.core.decorators import view_handler, public_view_handler
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -178,7 +178,7 @@ async def export_fuel_codes(
     response_model=FuelCodeBulletinsSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@public_view_handler
 async def get_fuel_code_bulletins(
     request: Request,
     bulletin_type: Optional[str] = Query(

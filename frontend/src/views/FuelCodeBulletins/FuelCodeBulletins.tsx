@@ -7,7 +7,7 @@ import { BulletinMenuBar } from './components/BulletinMenuBar'
 import { CurrentFuelCodes } from './components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from './components/ArchivedFuelCodes'
 
-const FuelCodeBulletinsBase = () => {
+export const FuelCodeBulletinsBase = () => {
   const [activeTab, setActiveTab] = useState<string>('current')
 
   return (

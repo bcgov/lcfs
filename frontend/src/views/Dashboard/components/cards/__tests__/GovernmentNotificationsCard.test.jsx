@@ -20,10 +20,11 @@ vi.mock('notistack', async () => {
   }
 })
 
+const mockHasRoles = vi.fn()
 const mockHasAnyRole = vi.fn()
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    hasRoles: vi.fn(),
+    hasRoles: mockHasRoles,
     hasAnyRole: mockHasAnyRole
   })
 }))
@@ -78,7 +79,7 @@ const createWrapper = () => {
 describe('GovernmentNotificationsCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockHasAnyRole.mockReturnValue(false)
+    mockHasRoles.mockReturnValue(false)
     mockUseCurrentGovernmentNotification.mockReturnValue({
       data: null,
       isLoading: false
@@ -108,7 +109,7 @@ describe('GovernmentNotificationsCard', () => {
 
   describe('Access Control', () => {
     it('should not render card when no notification exists and user cannot edit', () => {
-      mockHasAnyRole.mockReturnValue(false)
+      mockHasRoles.mockReturnValue(false)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -122,7 +123,7 @@ describe('GovernmentNotificationsCard', () => {
     })
 
     it('should render empty state when no notification exists but user can edit', () => {
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -135,8 +136,8 @@ describe('GovernmentNotificationsCard', () => {
       ).toBeInTheDocument()
     })
 
-    it('should show edit button for compliance managers and directors', () => {
-      mockHasAnyRole.mockReturnValue(true)
+    it('should show edit button for system admins', () => {
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Test Notification',
@@ -152,7 +153,7 @@ describe('GovernmentNotificationsCard', () => {
     })
 
     it('should not show edit button for regular users', () => {
-      mockHasAnyRole.mockReturnValue(false)
+      mockHasRoles.mockReturnValue(false)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Test Notification',
@@ -316,7 +317,7 @@ describe('GovernmentNotificationsCard', () => {
 
   describe('Edit Mode', () => {
     beforeEach(() => {
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
     })
 
     it('should enter edit mode when edit button is clicked', async () => {
@@ -358,7 +359,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should show all notification type pills in edit mode', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -381,7 +382,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should select notification type when pill is clicked', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Test',
@@ -405,7 +406,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should update form fields when user types', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -433,7 +434,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should disable save button when title is empty', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -450,7 +451,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should disable save button when message is empty', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -470,7 +471,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should enable save button when both title and message are filled', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: null,
         isLoading: false
@@ -495,7 +496,7 @@ describe('GovernmentNotificationsCard', () => {
 
     it('should exit edit mode when cancel button is clicked', async () => {
       const user = userEvent.setup()
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Test',
@@ -529,7 +530,7 @@ describe('GovernmentNotificationsCard', () => {
 
   describe('Save Confirmation Dialog', () => {
     beforeEach(() => {
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
     })
 
     it('should show confirmation dialog when save button is clicked', async () => {
@@ -692,7 +693,7 @@ describe('GovernmentNotificationsCard', () => {
 
   describe('Success and Error Handling', () => {
     beforeEach(() => {
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
     })
 
     it('should show success snackbar on successful save', async () => {
@@ -928,7 +929,7 @@ describe('GovernmentNotificationsCard', () => {
 
   describe('Delete Functionality', () => {
     beforeEach(() => {
-      mockHasAnyRole.mockReturnValue(true)
+      mockHasRoles.mockReturnValue(true)
     })
 
     it('should show delete button when user can edit and notification exists', () => {
@@ -949,7 +950,7 @@ describe('GovernmentNotificationsCard', () => {
     })
 
     it('should not show delete button when user cannot edit', () => {
-      mockHasAnyRole.mockReturnValue(false)
+      mockHasRoles.mockReturnValue(false)
       mockUseCurrentGovernmentNotification.mockReturnValue({
         data: {
           notificationTitle: 'Test Notification',

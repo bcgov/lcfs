@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
@@ -7,6 +7,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
 )
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.dtos import ChangelogAllocationAgreementsDTO
 
@@ -65,8 +66,12 @@ def quarterly_allocation_agreement_schema():
 @pytest.fixture
 def service(mock_repo_full, mock_fuel_repo_full):
     """Create a service with mocked repositories for testing."""
+    mock_compliance_report_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report_repo.has_supplemental_changes = AsyncMock(return_value=False)
     return AllocationAgreementServices(
-        repo=mock_repo_full, fuel_repo=mock_fuel_repo_full
+        repo=mock_repo_full,
+        fuel_repo=mock_fuel_repo_full,
+        compliance_report_repo=mock_compliance_report_repo,
     )
 
 

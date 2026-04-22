@@ -149,6 +149,10 @@ class SpreadsheetBuilder:
 
                 self._auto_adjust_column_width_xlsx(writer, sheet.label)
 
+            # Force Excel to recalculate all cross-sheet references (including data
+            # validation sources) on first open, preventing blank dropdowns.
+            writer.book.calculation.fullCalcOnLoad = True
+
     def _write_sheet_to_excel(self, writer, sheet: SheetData):
         columns = [column.label for column in sheet["columns"]]
         df = pd.DataFrame(sheet["rows"], columns=columns)

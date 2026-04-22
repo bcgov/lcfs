@@ -12,7 +12,7 @@ set -e
 #
 # Example commands:
 # . data-transfer-enhanced.sh lcfs dev export 398cd4661173 compliance_report_history
-# . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-3509-postgresql-0 export 7392074e64b7
+# ./data-transfer-enhanced.sh lcfs lcfs-postgres-dev-3898-postgresql-0 export 74244337664e
 # . data-transfer-enhanced.sh tfrs prod import 398cd4661173
 # ./data-transfer-enhanced.sh lcfs prod import 20c56d49dd44
 

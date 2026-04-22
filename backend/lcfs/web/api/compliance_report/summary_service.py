@@ -602,6 +602,24 @@ class ComplianceReportSummaryService:
         compliance_data_service.set_period(
             int(compliance_report.compliance_period.description)
         )
+        # Historical/migrated reports may have a missing summary. Return a
+        # minimal empty schema rather than attempting to recalculate against
+        # non-existent summary state.
+        if summary_model is None:
+            empty_summary = ComplianceReportSummarySchema(
+                summary_id=0,
+                compliance_report_id=compliance_report.compliance_report_id,
+                is_locked=True,
+                quarter=None,
+                renewable_fuel_target_summary=[],
+                low_carbon_fuel_target_summary=[],
+                non_compliance_penalty_summary=[],
+                can_sign=False,
+                lines_6_and_8_locked=True,
+                lines_7_and_9_locked=True,
+            )
+            return empty_summary
+
         # For locked or non-editable reports, return the stored summary values
         # to avoid recalculating user-entered lines (e.g., Line 6).
         # Submitted reports should recalculate to reflect any underlying data changes.
@@ -1448,8 +1466,29 @@ class ComplianceReportSummaryService:
             - compliance_units_prev_issued_for_fuel_export
         )  # line 20 = line 18 + line 19 - line 15 - line 16
 
+        # Prior assessed supplementals in this group may have been finalized
+        # after the compliance period end date. Their Adjustment transactions
+        # are intentionally excluded from Line 17 (which is a period-end
+        # snapshot), but the organization still holds those credits. Include
+        # them when deriving Line 21/22 so the penalty and remaining balance
+        # reflect what the organization will actually hold after reassessment.
+        deferred_prior_issuance = 0
+        if compliance_report.version > 0 and compliance_report.compliance_report_group_uuid:
+            deferred_prior_issuance = int(
+                await self.trxn_repo.get_group_adjustments_excluded_from_line_17(
+                    compliance_report.compliance_report_group_uuid,
+                    organization_id,
+                    compliance_report.compliance_report_id,
+                    compliance_year,
+                )
+            )
+
+        effective_available_balance = (
+            available_balance_for_period + deferred_prior_issuance
+        )
+
         calculated_penalty_units = int(
-            available_balance_for_period
+            effective_available_balance
             + compliance_unit_balance_change_from_assessment
         )
         non_compliance_penalty_payable_units = (
@@ -1468,9 +1507,9 @@ class ComplianceReportSummaryService:
             else 0
         )  # line 21
 
-        available_balance_for_period_after_assessment = (  # line 22 = line 17 + line 20
+        available_balance_for_period_after_assessment = (  # line 22
             max(
-                available_balance_for_period
+                effective_available_balance
                 + compliance_unit_balance_change_from_assessment,
                 0,
             )

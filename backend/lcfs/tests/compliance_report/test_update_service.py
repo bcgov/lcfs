@@ -295,6 +295,31 @@ async def test_handle_submitted_status_auto_submits_fse_records(
 
 
 @pytest.mark.anyio
+async def test_handle_submitted_status_rejects_decommissioned_fse(
+    compliance_report_update_service,
+    mock_user_has_roles,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(
+        return_value=True
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_update_service.handle_submitted_status(
+            mock_report, UserProfile()
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "decommissioned FSE" in exc_info.value.detail
+    compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_handle_submitted_status_with_existing_summary(
     compliance_report_update_service,
     mock_repo,
@@ -1066,6 +1091,7 @@ async def test_handle_assessed_status_caps_to_pre_deadline(
     mock_report.is_non_assessment = False
     mock_report.compliance_period = MagicMock(description="2024")
     mock_report.transaction.compliance_units = -200
+    mock_report.transaction.transaction_action = TransactionActionEnum.Reserved
     mock_report.compliance_period = MagicMock(description="2024")
 
     mock_summary = MagicMock()
@@ -1078,9 +1104,6 @@ async def test_handle_assessed_status_caps_to_pre_deadline(
     compliance_report_update_service.org_service.calculate_available_balance.return_value = (
         500
     )
-    compliance_report_update_service.org_service.calculate_available_balance_for_period.return_value = (
-        200
-    )
 
     with patch(
         "lcfs.web.api.compliance_report.update_service.user_has_roles",
@@ -1090,12 +1113,16 @@ async def test_handle_assessed_status_caps_to_pre_deadline(
             mock_report, mock_user_profile_director
         )
 
-    compliance_report_update_service.org_service.calculate_available_balance.assert_not_awaited()
-    compliance_report_update_service.org_service.calculate_available_balance_for_period.assert_not_awaited()
+    # Now recalculates available balance for negative credit changes
+    compliance_report_update_service.org_service.calculate_available_balance.assert_awaited_once_with(
+        mock_report.organization_id
+    )
     assert (
         mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
     )
-    assert mock_report.transaction.compliance_units == -200
+    # available_balance=500, existing reserve=-200, so effective=500+200=700
+    # final_units = -min(300, max(700, 0)) = -300 (full amount, since enough balance)
+    assert mock_report.transaction.compliance_units == -300
     assert (
         mock_report.transaction.update_user
         == mock_user_profile_director.keycloak_username
@@ -1142,17 +1169,10 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
-    # Mock the new transaction that will be created
+    # Mock the transaction that will be created directly via trx_service.repo
     mock_transaction = MagicMock()
-    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
-
-    # This is needed to simulate the transaction being created
-    def side_effect_create_transaction(credit_change, report):
-        report.transaction = mock_transaction
-        return credit_change
-
-    compliance_report_update_service._create_or_update_reserve_transaction.side_effect = (
-        side_effect_create_transaction
+    compliance_report_update_service.trx_service.repo.create_transaction = AsyncMock(
+        return_value=mock_transaction
     )
 
     # Patch roles check to ensure it passes
@@ -1171,19 +1191,15 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
         mock_report.compliance_report_group_uuid
     )
 
-    # Verify we attempted to create a transaction with the correct credit change
-    compliance_report_update_service._create_or_update_reserve_transaction.assert_called_once_with(
-        500, mock_report
+    # Verify transaction was created directly as Adjustment (positive credit, no capping)
+    compliance_report_update_service.trx_service.repo.create_transaction.assert_called_once_with(
+        TransactionActionEnum.Adjustment,
+        500,
+        mock_report.organization_id,
     )
 
-    # Verify the transaction was marked as an adjustment and attributed to the director
-    assert (
-        mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
-    )
-    assert (
-        mock_report.transaction.update_user
-        == mock_user_profile_director.keycloak_username
-    )
+    # Verify the report's transaction was set
+    assert mock_report.transaction == mock_transaction
 
     # Verify the report was updated
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)

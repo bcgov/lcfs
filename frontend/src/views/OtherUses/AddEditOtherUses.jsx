@@ -18,7 +18,8 @@ import { v4 as uuid } from 'uuid'
 import {
   defaultColDef,
   otherUsesColDefs,
-  PROVISION_APPROVED_FUEL_CODE
+  PROVISION_APPROVED_FUEL_CODE,
+  isFuelCodeProvision
 } from './_schema'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
@@ -172,7 +173,7 @@ export const AddEditOtherUses = () => {
 
     if (!fuelType) return 0
 
-    if (data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+    if (isFuelCodeProvision(data.provisionOfTheAct)) {
       const fuelCode = fuelType.fuelCodes?.find(
         (item) => item.fuelCode === data.fuelCode
       )
@@ -305,7 +306,7 @@ export const AddEditOtherUses = () => {
       }
 
       // Auto-populate fuel code for approved fuel code scenarios
-      if (params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+      if (isFuelCodeProvision(params.node.data.provisionOfTheAct)) {
         const fuelCodeOptions =
           fuelType.fuelCodes?.map((code) => code.fuelCode) || []
         if (fuelCodeOptions.length === 1) {
