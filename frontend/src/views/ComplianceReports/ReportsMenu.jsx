@@ -27,9 +27,14 @@ export function ReportsMenu() {
   const location = useLocation()
   const { hasAnyRole, hasRoles } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
+  const hasComplianceReporting = hasRoles(roles.compliance_reporting)
   const canAccessChargingSitesTab =
-    isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_CHARGING_SITES)
-  const canAccessFseTab = isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_FSE)
+    isIDIR ||
+    (hasComplianceReporting &&
+      isFeatureEnabled(FEATURE_FLAGS.MANAGE_CHARGING_SITES))
+  const canAccessFseTab =
+    isIDIR ||
+    (hasComplianceReporting && isFeatureEnabled(FEATURE_FLAGS.MANAGE_FSE))
   const isSystemAdmin = hasRoles(roles.system_admin)
 
   const tabs = useMemo(() => {
@@ -107,7 +112,7 @@ export function ReportsMenu() {
   const renderContent = () => {
     if (location.pathname.includes('/charging-sites')) {
       return (
-        <Role roles={[...govRoles, roles.supplier]}>
+        <Role roles={[...govRoles, roles.compliance_reporting]}>
           <Outlet context={{ alertRef }} />
         </Role>
       )
@@ -115,7 +120,7 @@ export function ReportsMenu() {
 
     if (location.pathname.includes('/fse')) {
       return (
-        <Role roles={[...govRoles, roles.supplier]}>
+        <Role roles={[...govRoles, roles.compliance_reporting]}>
           <Outlet context={{ alertRef }} />
         </Role>
       )
