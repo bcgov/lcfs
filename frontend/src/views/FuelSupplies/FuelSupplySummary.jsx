@@ -6,6 +6,7 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
+import { useFuelSupplyColumnStore } from '@/stores/useFuelSupplyColumnStore'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,6 +23,9 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
   const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions(
     { compliancePeriod }
   )
+
+  const columnState = useFuelSupplyColumnStore((s) => s.columnState)
+  const setColumnState = useFuelSupplyColumnStore((s) => s.setColumnState)
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -115,7 +119,8 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
         defaultMaxWidth: 600
       },
       enableCellTextSelection: true,
-      ensureDomOrder: true
+      ensureDomOrder: true,
+      maintainColumnOrder: true
     }),
     [t]
   )
@@ -131,6 +136,17 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
       }
     }),
     [status]
+  )
+
+  const columnDefs = useMemo(
+    () =>
+      fuelSupplySummaryColDef(
+        isEarlyIssuance,
+        showFuelTypeOther,
+        parseInt(compliancePeriod),
+        optionsData
+      ),
+    [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData]
   )
 
   const getRowId = (params) => {
@@ -159,12 +175,7 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
         <BCGridViewer
           gridKey="fuel-supplies"
           gridRef={gridRef}
-          columnDefs={fuelSupplySummaryColDef(
-            isEarlyIssuance,
-            showFuelTypeOther,
-            parseInt(compliancePeriod),
-            optionsData
-          )}
+          columnDefs={columnDefs}
           queryData={paginatedData}
           dataKey="fuelSupplies"
           getRowId={getRowId}
@@ -180,6 +191,9 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
             }))
           }
           enablePageCaching={false}
+          suppressMovableColumns={false}
+          columnState={columnState}
+          onColumnStateChange={setColumnState}
         />
       </BCBox>
     </Grid2>

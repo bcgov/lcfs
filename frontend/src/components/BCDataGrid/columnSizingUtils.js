@@ -38,7 +38,8 @@ export const relaxColumnMinWidths = (api, columnApi, minWidth = 50) => {
   const currentDefs = api.getColumnDefs()
   if (!currentDefs?.length) return
 
-  const columnState = columnApi?.getColumnState?.() || []
+  const stateSource = columnApi ?? api
+  const columnState = stateSource?.getColumnState?.() || []
   const updatedDefs = currentDefs.map((col) => ({
     ...col,
     minWidth
@@ -46,7 +47,7 @@ export const relaxColumnMinWidths = (api, columnApi, minWidth = 50) => {
 
   api.setGridOption('columnDefs', updatedDefs)
 
-  if (columnState.length && columnApi?.applyColumnState) {
-    columnApi.applyColumnState({ state: columnState, applyOrder: true })
+  if (columnState.length && stateSource?.applyColumnState) {
+    stateSource.applyColumnState({ state: columnState, applyOrder: true })
   }
 }
