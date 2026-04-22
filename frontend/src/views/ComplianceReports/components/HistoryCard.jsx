@@ -99,7 +99,9 @@ export const HistoryCard = ({
     isGovernmentUser && canEditAssessmentStatement
 
   const renewablePenaltyAmountRaw =
-    report?.summary?.line11FossilDerivedBaseFuelTotal || 0
+    report?.summary?.line11NonCompliancePenaltyPayable ??
+    report?.summary?.line11FossilDerivedBaseFuelTotal ??
+    0
   const lowCarbonPenaltyAmountRaw =
     report?.summary?.line21NonCompliancePenaltyPayable || 0
 
@@ -180,7 +182,7 @@ export const HistoryCard = ({
               {t('report:assessmentLn1', {
                 name: report.organization.name,
                 hasMet:
-                  report.summary.line11FossilDerivedBaseFuelTotal <= 0
+                  renewablePenaltyAmountRaw <= 0
                     ? 'has met'
                     : 'has not met'
               })}
@@ -209,7 +211,7 @@ export const HistoryCard = ({
             {t('report:assessmentLn2', {
               name: report.organization.name,
               hasMet:
-                report.summary.line21NonCompliancePenaltyPayable <= 0
+                lowCarbonPenaltyAmountRaw <= 0
                   ? 'has met'
                   : 'has not met'
             })}

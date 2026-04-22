@@ -165,6 +165,23 @@ class ComplianceReportSummary(BaseModel, Auditable):
         )
 
     @property
+    def line_11_non_compliance_penalty_payable(self):
+        """
+        Return the effective renewable fuel penalty total shown in the summary.
+
+        For overridden reports, the director override is the user-visible value.
+        Otherwise, sum the calculated line 11 penalty columns.
+        """
+        if self.penalty_override_enabled and self.renewable_penalty_override is not None:
+            return self.renewable_penalty_override
+
+        return (
+            (self.line_11_non_compliance_penalty_gasoline or 0) +
+            (self.line_11_non_compliance_penalty_diesel or 0) +
+            (self.line_11_non_compliance_penalty_jet_fuel or 0)
+        )
+
+    @property
     def has_renewable_fuel_requirement(self):
         """
         Returns True if there is any renewable fuel requirement.
