@@ -4,11 +4,16 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import axios from 'axios'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
-import { ReactKeycloakProvider } from '@react-keycloak/web'
 import FormView from '../FormView'
 import { CONFIG } from '@/constants/config'
 
 vi.mock('axios')
+
+vi.mock('../registry', () => ({
+  FORM_COMPONENTS: {
+    'test-form': () => <div>Mock Form Component</div>
+  }
+}))
 
 let mockKeycloak = {
   authenticated: true,
@@ -24,7 +29,7 @@ const renderWithRouter = (path, keycloakOverride = {}) => {
   if (keycloakOverride) {
     mockKeycloak = { ...mockKeycloak, ...keycloakOverride }
   }
-  
+
   return render(
     <I18nextProvider i18n={i18n}>
       <MemoryRouter initialEntries={[path]}>
@@ -46,15 +51,15 @@ describe('FormView', () => {
 
   describe('Basic Rendering', () => {
     it('shows loading state initially', async () => {
-      axios.get.mockImplementation(() => new Promise(() => {})) // Never resolves
+      axios.get.mockImplementation(() => new Promise(() => {}))
       renderWithRouter('/forms/test-form')
-      
+
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
   })
 
   describe('Success States', () => {
-    it('renders form with complete data', async () => {
+    it('renders form name and description', async () => {
       const mockData = {
         name: 'Test Form',
         description: 'Test Description',
@@ -64,18 +69,13 @@ describe('FormView', () => {
         form_id: 'FORM123',
         slug: 'test-form'
       }
-      
+
       axios.get.mockResolvedValue({ data: mockData })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
         expect(screen.getByText('Test Form')).toBeInTheDocument()
         expect(screen.getByText('Test Description')).toBeInTheDocument()
-        expect(screen.getByText('Organization: Test Org')).toBeInTheDocument()
-        expect(screen.getByText('Status: Active')).toBeInTheDocument()
-        expect(screen.getByText('Form is ready')).toBeInTheDocument()
-        expect(screen.getByText((content) => content.includes('FORM123'))).toBeInTheDocument()
-        expect(screen.getByText((content) => content.includes('test-form'))).toBeInTheDocument()
       })
     })
 
@@ -88,10 +88,10 @@ describe('FormView', () => {
         form_id: 'FORM123',
         slug: 'test-form'
       }
-      
+
       axios.get.mockResolvedValue({ data: mockData })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
         expect(screen.getByText('Test Form')).toBeInTheDocument()
         expect(screen.queryByText(/Test Description/)).not.toBeInTheDocument()
@@ -107,13 +107,25 @@ describe('FormView', () => {
         form_id: 'FORM123',
         slug: 'test-form'
       }
-      
+
       axios.get.mockResolvedValue({ data: mockData })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
         expect(screen.getByText('Test Form')).toBeInTheDocument()
         expect(screen.queryByText(/Organization:/)).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows unsupported message for unknown form slug', async () => {
+      const mockData = { name: 'Unknown Form', status: 'Active' }
+      axios.get.mockResolvedValue({ data: mockData })
+      renderWithRouter('/forms/unknown-form')
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/is not yet supported/)
+        ).toBeInTheDocument()
       })
     })
   })
@@ -122,14 +134,13 @@ describe('FormView', () => {
     it('uses authenticated API endpoint when no linkKey', async () => {
       const mockData = { name: 'Auth Form', status: 'Active' }
       axios.get.mockResolvedValue({ data: mockData })
-      
+
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledWith(
           `${CONFIG.API_BASE}/forms/test-form`,
           {
-            timeout: 10000,
             headers: {
               Authorization: 'Bearer mock-token'
             }
@@ -141,15 +152,13 @@ describe('FormView', () => {
     it('uses anonymous API endpoint when linkKey provided', async () => {
       const mockData = { name: 'Anon Form', status: 'Active' }
       axios.get.mockResolvedValue({ data: mockData })
-      
+
       renderWithRouter('/forms/test-form/abc123')
-      
+
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledWith(
           `${CONFIG.API_BASE}/forms/test-form/abc123`,
-          {
-            timeout: 10000
-          }
+          {}
         )
       })
     })
@@ -157,15 +166,13 @@ describe('FormView', () => {
     it('handles unauthenticated keycloak for authenticated route', async () => {
       const mockData = { name: 'Test Form', status: 'Active' }
       axios.get.mockResolvedValue({ data: mockData })
-      
+
       renderWithRouter('/forms/test-form', { authenticated: false })
-      
+
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledWith(
           `${CONFIG.API_BASE}/forms/test-form`,
-          {
-            timeout: 10000
-          }
+          {}
         )
       })
     })
@@ -175,50 +182,45 @@ describe('FormView', () => {
     it('displays error for 404 with anonymous access', async () => {
       axios.get.mockRejectedValue({ response: { status: 404 } })
       renderWithRouter('/forms/test-form/invalid-key')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
-        expect(screen.getByText('Form not found or link key is invalid')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load form.')).toBeInTheDocument()
       })
     })
 
     it('displays error for 404 with authenticated access', async () => {
       axios.get.mockRejectedValue({ response: { status: 404 } })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
-        expect(screen.getByText('Form not found or link key is invalid')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load form.')).toBeInTheDocument()
       })
     })
 
     it('displays error for 401 with anonymous access', async () => {
       axios.get.mockRejectedValue({ response: { status: 401 } })
       renderWithRouter('/forms/test-form/key123')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
-        expect(screen.getByText('Authentication required - please check your link key')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load form.')).toBeInTheDocument()
       })
     })
 
     it('displays error for 401 with authenticated access', async () => {
       axios.get.mockRejectedValue({ response: { status: 401 } })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
-        expect(screen.getByText('Please log in to access this form')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load form.')).toBeInTheDocument()
       })
     })
 
     it('displays error for connection refused', async () => {
       axios.get.mockRejectedValue({ code: 'ECONNREFUSED' })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
-        expect(screen.getByText('Backend server is not running')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load form.')).toBeInTheDocument()
       })
     })
 
@@ -227,9 +229,8 @@ describe('FormView', () => {
         response: { data: { detail: 'Custom error message' } }
       })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
         expect(screen.getByText('Custom error message')).toBeInTheDocument()
       })
     })
@@ -237,9 +238,8 @@ describe('FormView', () => {
     it('displays generic error message', async () => {
       axios.get.mockRejectedValue({ message: 'Network error' })
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
         expect(screen.getByText('Network error')).toBeInTheDocument()
       })
     })
@@ -247,16 +247,14 @@ describe('FormView', () => {
     it('displays fallback error message', async () => {
       axios.get.mockRejectedValue({})
       renderWithRouter('/forms/test-form')
-      
+
       await waitFor(() => {
-        expect(screen.getByText('Form Access Error')).toBeInTheDocument()
-        expect(screen.getByText('Failed to load form')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load form.')).toBeInTheDocument()
       })
     })
   })
 
   describe('UseEffect Dependencies', () => {
-
     it('does not fetch when formSlug is undefined', async () => {
       render(
         <I18nextProvider i18n={i18n}>
@@ -267,12 +265,11 @@ describe('FormView', () => {
           </MemoryRouter>
         </I18nextProvider>
       )
-      
-      // Wait a bit to ensure useEffect doesn't trigger
+
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
       })
-      
+
       expect(axios.get).not.toHaveBeenCalled()
     })
   })

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ form_name }}</title>
+  <style>
+    @page {
+      size: Letter;
+      margin: 2cm 2.5cm 2.5cm;
+      @bottom-center {
+        content: "{{ organization_name }}  ·  Period {{ reporting_period }}  ·  {{ generated_date }}";
+        font-size: 7pt;
+        color: #999;
+      }
+    }
+    body  { font-family: Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; }
+    h1    { font-size: 16pt; margin: 6px 0 4px; }
+    h2    { font-size: 9pt; font-weight: bold; text-transform: uppercase;
+            margin: 14px 0 4px; border-bottom: 1px solid #111; padding-bottom: 2px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
+    td    { border: 1px solid #aaa; padding: 5px 10px; vertical-align: top; font-size: 9pt; }
+    .lbl  { font-weight: bold; width: 34%; }
+    .cert { border: 1px solid #aaa; padding: 10px 14px; margin-bottom: 14px; }
+    .notes { border: 1px solid #aaa; padding: 8px 12px; font-size: 9pt;
+             white-space: pre-wrap; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<p style="font-size:9pt; margin:0 0 4px;">Government of British Columbia &mdash; Low Carbon Fuels Act</p>
+<h1>{{ form_name }}</h1>
+<p style="font-size:8pt; color:#666; margin-bottom:10px;">
+  Reporting Period: <strong>{{ reporting_period }}</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Generated: {{ generated }}
+</p>
+<hr style="border:0; border-top:1px solid #111; margin-bottom:14px;">
+
+<h2>Organization Information</h2>
+<table>
+  <tr><td class="lbl">Organization</td><td>{{ organization_name }}</td></tr>
+  <tr><td class="lbl">Compliance Period</td><td>{{ reporting_period }}</td></tr>
+  <tr><td class="lbl">Declaration Type</td><td>{{ declaration_type }}</td></tr>
+</table>
+
+<h2>Contact</h2>
+<table>
+  <tr><td class="lbl">Name</td><td>{{ contact_name }}</td></tr>
+  <tr><td class="lbl">Email</td><td>{{ contact_email }}</td></tr>
+</table>
+
+<h2>Fuel Supply</h2>
+<table>
+  <tr><td class="lbl">Fuel Type</td><td>{{ fuel_type }}</td></tr>
+  <tr><td class="lbl">Quantity</td><td>{{ quantity }} {{ units }}</td></tr>
+</table>
+
+{% if notes %}
+<h2>Additional Notes</h2>
+<div class="notes">{{ notes }}</div>
+{% endif %}
+
+<h2>Certification</h2>
+<div class="cert">
+  <p style="font-style:italic; margin:0 0 8px;">
+    I, the undersigned authorized representative, hereby certify that the information
+    provided in this declaration is true, accurate, and complete to the best of my
+    knowledge. I understand that providing false or misleading information may result
+    in penalties under the Low Carbon Fuels Act.
+  </p>
+  <p style="font-weight:bold; margin:0;">
+    &#9745;&nbsp; Certified by {{ contact_name }} on {{ certified_date }}
+  </p>
+</div>
+
+<p style="color:#888; font-size:9pt; letter-spacing:1px; margin:20px 0 2px;">
+  ________________________________&nbsp;&nbsp;&nbsp;&nbsp;
+  ________________________________&nbsp;&nbsp;&nbsp;&nbsp;
+  ________________
+</p>
+<p style="font-size:7pt; color:#666; margin:0;">
+  Signature
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  Printed Name
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  Date
+</p>
+
+</body>
+</html>

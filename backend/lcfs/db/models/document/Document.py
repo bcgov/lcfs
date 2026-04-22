@@ -14,6 +14,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.compliance.ChargingSite import (
     charging_site_document_association,
 )
+from lcfs.db.models.ci_application.CIApplication import (
+    ci_application_document_association,
+)
 
 
 class Document(BaseModel, Auditable):
@@ -55,5 +58,10 @@ class Document(BaseModel, Auditable):
     charging_sites = relationship(
         "ChargingSite",
         secondary=charging_site_document_association,
+        back_populates="documents",
+    )
+    ci_applications = relationship(
+        "CIApplication",
+        secondary=ci_application_document_association,
         back_populates="documents",
     )
