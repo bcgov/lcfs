@@ -1,9 +1,10 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FuelSupplySummary } from '../FuelSupplySummary'
 import { wrapper } from '@/tests/utils/wrapper'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useFuelSupplyColumnStore } from '@/stores/useFuelSupplyColumnStore'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -24,12 +25,17 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
     suppressPagination,
     paginationOptions,
     onPaginationChange,
-    getRowId
+    getRowId,
+    suppressMovableColumns,
+    columnState,
+    onColumnStateChange
   }) => {
     // Simulate calling getRowId function to achieve function coverage
-    const mockRowId = getRowId && queryData?.data?.[dataKey]?.[0] ? 
-      getRowId({ data: queryData.data[dataKey][0] }) : 'no-row-id'
-    
+    const mockRowId =
+      getRowId && queryData?.data?.[dataKey]?.[0]
+        ? getRowId({ data: queryData.data[dataKey][0] })
+        : 'no-row-id'
+
     return (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>
@@ -41,11 +47,31 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
           {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
         </div>
         <div data-test="row-id">{mockRowId}</div>
-        <button 
-          data-test="trigger-pagination-change" 
-          onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}
+        <div data-test="suppress-movable-columns">
+          {String(suppressMovableColumns)}
+        </div>
+        <div data-test="column-state">
+          {columnState ? JSON.stringify(columnState) : 'null'}
+        </div>
+        <button
+          data-test="trigger-pagination-change"
+          onClick={() =>
+            onPaginationChange && onPaginationChange({ page: 2, size: 20 })
+          }
         >
           Change Page
+        </button>
+        <button
+          data-test="trigger-column-state-change"
+          onClick={() =>
+            onColumnStateChange &&
+            onColumnStateChange([
+              { colId: 'fuelType' },
+              { colId: 'complianceUnits' }
+            ])
+          }
+        >
+          Change Column State
         </button>
       </div>
     )
@@ -54,7 +80,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 
 // Mock the schema
 vi.mock('@/views/FuelSupplies/_schema.jsx', () => ({
-  fuelSupplySummaryColDef: (isEarlyIssuance, showFuelTypeOther, complianceYear, optionsData) => [
+  fuelSupplySummaryColDef: (
+    isEarlyIssuance,
+    showFuelTypeOther,
+    complianceYear,
+    optionsData
+  ) => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' }
   ]
@@ -88,6 +119,9 @@ vi.mock('@/hooks/useFuelSupply', () => ({
 describe('FuelSupplySummary', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    act(() => {
+      useFuelSupplyColumnStore.setState({ columnState: null })
+    })
   })
 
   it('renders the component with BCGridViewer', () => {
@@ -259,13 +293,27 @@ describe('FuelSupplySummary', () => {
   })
 
   describe('paginatedData useMemo', () => {
-
     it('applies ascending sort correctly', () => {
       const mockData = {
         fuelSupplies: [
-          { fuelSupplyId: 3, fuelType: 'Diesel', actionType: 'CREATE', quantity: 100 },
-          { fuelSupplyId: 1, fuelType: 'Gasoline', actionType: 'CREATE', quantity: 200 },
-          { fuelSupplyId: 2, fuelType: 'Biodiesel', actionType: 'CREATE', quantity: 150 }
+          {
+            fuelSupplyId: 3,
+            fuelType: 'Diesel',
+            actionType: 'CREATE',
+            quantity: 100
+          },
+          {
+            fuelSupplyId: 1,
+            fuelType: 'Gasoline',
+            actionType: 'CREATE',
+            quantity: 200
+          },
+          {
+            fuelSupplyId: 2,
+            fuelType: 'Biodiesel',
+            actionType: 'CREATE',
+            quantity: 150
+          }
         ]
       }
 
@@ -293,9 +341,24 @@ describe('FuelSupplySummary', () => {
     it('applies descending sort correctly', () => {
       const mockData = {
         fuelSupplies: [
-          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE', quantity: 100 },
-          { fuelSupplyId: 2, fuelType: 'Gasoline', actionType: 'CREATE', quantity: 200 },
-          { fuelSupplyId: 3, fuelType: 'Biodiesel', actionType: 'CREATE', quantity: 150 }
+          {
+            fuelSupplyId: 1,
+            fuelType: 'Diesel',
+            actionType: 'CREATE',
+            quantity: 100
+          },
+          {
+            fuelSupplyId: 2,
+            fuelType: 'Gasoline',
+            actionType: 'CREATE',
+            quantity: 200
+          },
+          {
+            fuelSupplyId: 3,
+            fuelType: 'Biodiesel',
+            actionType: 'CREATE',
+            quantity: 150
+          }
         ]
       }
 
@@ -319,7 +382,6 @@ describe('FuelSupplySummary', () => {
       render(<TestComponent />, { wrapper })
       expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
     })
-
   })
 
   describe('showFuelTypeOther logic', () => {
@@ -385,6 +447,78 @@ describe('FuelSupplySummary', () => {
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       expect(screen.getByTestId('row-id')).toHaveTextContent('123')
+    })
+  })
+
+  describe('column reordering', () => {
+    it('enables movable columns on the fuel supply grid', () => {
+      render(
+        <FuelSupplySummary
+          data={{ fuelSupplies: [] }}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      // suppressMovableColumns should explicitly be false to allow drag
+      expect(screen.getByTestId('suppress-movable-columns')).toHaveTextContent(
+        'false'
+      )
+    })
+
+    it('starts with no column state by default', () => {
+      render(
+        <FuelSupplySummary
+          data={{ fuelSupplies: [] }}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('column-state')).toHaveTextContent('null')
+    })
+
+    it('persists reordered column state to the session-scoped store', () => {
+      render(
+        <FuelSupplySummary
+          data={{ fuelSupplies: [] }}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(useFuelSupplyColumnStore.getState().columnState).toBeNull()
+
+      fireEvent.click(screen.getByTestId('trigger-column-state-change'))
+
+      expect(useFuelSupplyColumnStore.getState().columnState).toEqual([
+        { colId: 'fuelType' },
+        { colId: 'complianceUnits' }
+      ])
+    })
+
+    it('restores column state from the store on remount (same session)', () => {
+      act(() => {
+        useFuelSupplyColumnStore.setState({
+          columnState: [{ colId: 'complianceUnits' }, { colId: 'fuelType' }]
+        })
+      })
+
+      render(
+        <FuelSupplySummary
+          data={{ fuelSupplies: [] }}
+          status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+          isEarlyIssuance={false}
+        />,
+        { wrapper }
+      )
+
+      expect(screen.getByTestId('column-state')).toHaveTextContent(
+        JSON.stringify([{ colId: 'complianceUnits' }, { colId: 'fuelType' }])
+      )
     })
   })
 
@@ -512,7 +646,12 @@ describe('FuelSupplySummary', () => {
     it('handles filter with no filter value', () => {
       const mockData = {
         fuelSupplies: [
-          { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE', supplier: 'Company A' }
+          {
+            fuelSupplyId: 1,
+            fuelType: 'Diesel',
+            actionType: 'CREATE',
+            supplier: 'Company A'
+          }
         ]
       }
 
@@ -536,6 +675,5 @@ describe('FuelSupplySummary', () => {
       render(<TestComponent />, { wrapper })
       expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
     })
-
   })
 })
