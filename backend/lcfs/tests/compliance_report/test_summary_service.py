@@ -3093,3 +3093,156 @@ async def test_line_15_16_uses_assessed_report_values(
     # Line 16 should use assessed report's Line 19 value
     line_16 = next(row for row in result.low_carbon_fuel_target_summary if row.line == 16)
     assert line_16.value == 1000, f"Line 16 should be 1000 from assessed report, got {line_16.value}"
+
+
+def _make_summary_schema_with_penalties():
+    """Build a ComplianceReportSummarySchema with non-zero penalty rows for exemption tests."""
+    return ComplianceReportSummarySchema(
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(line=4, gasoline=100, diesel=200, jet_fuel=50),
+            ComplianceReportSummaryRowSchema(line=11, gasoline=300, diesel=400, jet_fuel=100, total_value=800),
+        ],
+        low_carbon_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(line=17, value=250),
+            ComplianceReportSummaryRowSchema(line=18, value=100),
+            ComplianceReportSummaryRowSchema(line=20, value=-500),
+            ComplianceReportSummaryRowSchema(
+                line=21,
+                value=300000,
+                description="Non-compliance penalty payable (500 units * $600 CAD per unit)",
+            ),
+            ComplianceReportSummaryRowSchema(line=22, value=-200),
+        ],
+        non_compliance_penalty_summary=[
+            ComplianceReportSummaryRowSchema(line=11, total_value=800),
+            ComplianceReportSummaryRowSchema(line=21, total_value=300000),
+            ComplianceReportSummaryRowSchema(line=None, total_value=300800),
+        ],
+    )
+
+
+def test_apply_exemption_overrides_zeros_renewable_penalty(
+    compliance_report_summary_service,
+):
+    summary = _make_summary_schema_with_penalties()
+    report = SimpleNamespace(
+        is_renewable_fuel_exempted=True, is_low_carbon_fuel_exempted=False
+    )
+
+    compliance_report_summary_service._apply_exemption_overrides(summary, report)
+
+    line_11_renewable = next(
+        r for r in summary.renewable_fuel_target_summary if r.line == 11
+    )
+    assert line_11_renewable.gasoline == 0
+    assert line_11_renewable.diesel == 0
+    assert line_11_renewable.jet_fuel == 0
+    assert line_11_renewable.total_value == 0
+
+    line_4_renewable = next(
+        r for r in summary.renewable_fuel_target_summary if r.line == 4
+    )
+    assert line_4_renewable.gasoline == 0
+
+    line_11_penalty = next(
+        r for r in summary.non_compliance_penalty_summary if r.line == 11
+    )
+    assert line_11_penalty.total_value == 0
+
+    total_row = next(
+        r for r in summary.non_compliance_penalty_summary if r.line is None
+    )
+    assert total_row.total_value == 300000
+
+    # Low-carbon rows should be untouched
+    line_21_low = next(
+        r for r in summary.low_carbon_fuel_target_summary if r.line == 21
+    )
+    assert line_21_low.value == 300000
+    assert "units" in line_21_low.description
+
+
+def test_apply_exemption_overrides_zeros_low_carbon_penalty_and_strips_description(
+    compliance_report_summary_service,
+):
+    summary = _make_summary_schema_with_penalties()
+    report = SimpleNamespace(
+        is_renewable_fuel_exempted=False, is_low_carbon_fuel_exempted=True
+    )
+
+    compliance_report_summary_service._apply_exemption_overrides(summary, report)
+
+    line_18 = next(r for r in summary.low_carbon_fuel_target_summary if r.line == 18)
+    line_20 = next(r for r in summary.low_carbon_fuel_target_summary if r.line == 20)
+    line_21 = next(r for r in summary.low_carbon_fuel_target_summary if r.line == 21)
+    line_22 = next(r for r in summary.low_carbon_fuel_target_summary if r.line == 22)
+
+    assert line_18.value == 0
+    assert line_20.value == 0
+    assert line_21.value == 0
+    assert line_22.value == 250  # max(line_17, 0)
+    assert "units" not in line_21.description
+    assert "CAD" not in line_21.description
+    assert line_21.description == "Non-compliance penalty payable"
+
+    line_21_penalty = next(
+        r for r in summary.non_compliance_penalty_summary if r.line == 21
+    )
+    assert line_21_penalty.total_value == 0
+
+    total_row = next(
+        r for r in summary.non_compliance_penalty_summary if r.line is None
+    )
+    assert total_row.total_value == 800  # only line 11 remains
+
+    # Renewable rows should be untouched
+    line_11_renewable = next(
+        r for r in summary.renewable_fuel_target_summary if r.line == 11
+    )
+    assert line_11_renewable.gasoline == 300
+
+
+def test_apply_exemption_overrides_zeros_total_when_both_exempted(
+    compliance_report_summary_service,
+):
+    summary = _make_summary_schema_with_penalties()
+    report = SimpleNamespace(
+        is_renewable_fuel_exempted=True, is_low_carbon_fuel_exempted=True
+    )
+
+    compliance_report_summary_service._apply_exemption_overrides(summary, report)
+
+    total_row = next(
+        r for r in summary.non_compliance_penalty_summary if r.line is None
+    )
+    assert total_row.total_value == 0
+
+
+def test_apply_exemption_overrides_no_op_without_flags(
+    compliance_report_summary_service,
+):
+    summary = _make_summary_schema_with_penalties()
+    report = SimpleNamespace(
+        is_renewable_fuel_exempted=False, is_low_carbon_fuel_exempted=False
+    )
+
+    compliance_report_summary_service._apply_exemption_overrides(summary, report)
+
+    total_row = next(
+        r for r in summary.non_compliance_penalty_summary if r.line is None
+    )
+    assert total_row.total_value == 300800
+
+
+def test_apply_exemption_overrides_handles_missing_report(
+    compliance_report_summary_service,
+):
+    summary = _make_summary_schema_with_penalties()
+
+    # Should not raise and should not mutate when no report is provided
+    compliance_report_summary_service._apply_exemption_overrides(summary, None)
+
+    total_row = next(
+        r for r in summary.non_compliance_penalty_summary if r.line is None
+    )
+    assert total_row.total_value == 300800
