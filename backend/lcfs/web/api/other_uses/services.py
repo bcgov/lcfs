@@ -160,8 +160,12 @@ class OtherUsesServices:
         Gets the list of other uses for a specific compliance report.
         """
         other_uses = await self.repo.get_other_uses(compliance_report_id, changelog)
+        was_edited = await self.compliance_report_repo.has_supplemental_changes(
+            compliance_report_id, OtherUses
+        )
         return OtherUsesAllSchema(
-            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses]
+            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses],
+            was_edited=was_edited,
         )
 
     @service_handler

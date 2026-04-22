@@ -9,6 +9,9 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.login_bg_image.services import LoginBgImageService
 from lcfs.web.api.login_bg_image.schema import LoginBgImageSchema
 
+# Every role except SYSTEM_ADMIN must be denied access to the login background
+UNAUTHORIZED_ROLES = [role for role in RoleEnum if role is not RoleEnum.SYSTEM_ADMIN]
+
 SAMPLE_SCHEMA_DATA = {
     "login_bg_image_id": 1,
     "image_key": "login-backgrounds/abc-uuid",
@@ -85,7 +88,7 @@ async def test_get_all_images_returns_list(
     set_mock_user,
     mock_login_bg_image_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+    set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
     mock_login_bg_image_service.get_all = AsyncMock(
         return_value=[make_schema(is_active=True), make_schema(login_bg_image_id=2, is_active=False)]
     )
@@ -103,13 +106,18 @@ async def test_get_all_images_returns_list(
 
 
 @pytest.mark.anyio
-async def test_get_all_images_forbidden_for_non_admin(
+@pytest.mark.parametrize(
+    "role",
+    UNAUTHORIZED_ROLES,
+)
+async def test_get_all_images_forbidden_for_non_system_admin(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
     mock_login_bg_image_service,
+    role,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [role])
     fastapi_app.dependency_overrides[LoginBgImageService] = (
         lambda: mock_login_bg_image_service
     )
@@ -132,7 +140,7 @@ async def test_upload_image_success(
     set_mock_user,
     mock_login_bg_image_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+    set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
     mock_login_bg_image_service.upload = AsyncMock(return_value=make_schema(is_active=False))
     fastapi_app.dependency_overrides[LoginBgImageService] = (
         lambda: mock_login_bg_image_service
@@ -152,13 +160,18 @@ async def test_upload_image_success(
 
 
 @pytest.mark.anyio
-async def test_upload_image_forbidden_for_non_admin(
+@pytest.mark.parametrize(
+    "role",
+    UNAUTHORIZED_ROLES,
+)
+async def test_upload_image_forbidden_for_non_system_admin(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
     mock_login_bg_image_service,
+    role,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [role])
     fastapi_app.dependency_overrides[LoginBgImageService] = (
         lambda: mock_login_bg_image_service
     )
@@ -185,7 +198,7 @@ async def test_update_image_success(
     set_mock_user,
     mock_login_bg_image_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+    set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
     updated = make_schema(display_name="Updated Name", caption="New caption")
     mock_login_bg_image_service.update = AsyncMock(return_value=updated)
     fastapi_app.dependency_overrides[LoginBgImageService] = (
@@ -215,7 +228,7 @@ async def test_activate_image_success(
     set_mock_user,
     mock_login_bg_image_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+    set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
     mock_login_bg_image_service.activate = AsyncMock(
         return_value=make_schema(is_active=True)
     )
@@ -243,7 +256,7 @@ async def test_delete_image_success(
     set_mock_user,
     mock_login_bg_image_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+    set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
     mock_login_bg_image_service.delete = AsyncMock(return_value=None)
     fastapi_app.dependency_overrides[LoginBgImageService] = (
         lambda: mock_login_bg_image_service
@@ -257,13 +270,18 @@ async def test_delete_image_success(
 
 
 @pytest.mark.anyio
-async def test_delete_image_forbidden_for_non_admin(
+@pytest.mark.parametrize(
+    "role",
+    UNAUTHORIZED_ROLES,
+)
+async def test_delete_image_forbidden_for_non_system_admin(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
     mock_login_bg_image_service,
+    role,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [role])
     fastapi_app.dependency_overrides[LoginBgImageService] = (
         lambda: mock_login_bg_image_service
     )

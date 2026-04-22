@@ -121,7 +121,13 @@ class NotionalTransferServices:
         notional_transfers = await self.repo.get_notional_transfers(
             compliance_report_id, changelog
         )
-        return NotionalTransfersAllSchema(notional_transfers=notional_transfers)
+        was_edited = await self.compliance_report_repo.has_supplemental_changes(
+            compliance_report_id, NotionalTransfer
+        )
+        return NotionalTransfersAllSchema(
+            notional_transfers=notional_transfers,
+            was_edited=was_edited,
+        )
 
     @service_handler
     async def get_notional_transfers_paginated(

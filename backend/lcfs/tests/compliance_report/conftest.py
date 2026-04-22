@@ -173,6 +173,7 @@ def mock_trxn_repo():
     repo = AsyncMock(spec=TransactionRepository)
     repo.calculate_available_balance_for_period = AsyncMock(return_value=2000)
     repo.delete_transaction = AsyncMock()
+    repo.get_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
     return repo
 
 

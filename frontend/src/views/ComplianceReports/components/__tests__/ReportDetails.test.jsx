@@ -414,12 +414,13 @@ describe('ReportDetails', () => {
       }
     })
 
-    // Mock data with version indicating it was edited
+    // Mock data with backend-set wasEdited flag
     mockUseGetFuelSupplies.mockReturnValue({
       data: {
         fuelSupplies: [
           { fuelSupplyId: 24, complianceReportId: '12346', version: 1 }
-        ]
+        ],
+        wasEdited: true
       },
       isLoading: false,
       error: null

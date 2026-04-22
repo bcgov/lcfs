@@ -68,8 +68,8 @@ const getTextContent = (html) => {
 const GovernmentNotificationsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { enqueueSnackbar } = useSnackbar()
-  const { hasRoles, hasAnyRole } = useCurrentUser()
-  const canEdit = hasAnyRole(roles.compliance_manager, roles.director)
+  const { hasRoles } = useCurrentUser()
+  const canEdit = hasRoles(roles.system_admin)
 
   const { data: notification, isLoading } = useCurrentGovernmentNotification()
   const updateMutation = useUpdateGovernmentNotification({

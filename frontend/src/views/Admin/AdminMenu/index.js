@@ -1,4 +1,5 @@
 export { AdminMenu } from './Menu'
+export { AdminLanding } from './AdminLanding'
 export { Users } from './components/Users'
 export { SeededUserAssociation } from './components/SeededUserAssociation'
 export { UserActivity } from './components/UserActivity'
