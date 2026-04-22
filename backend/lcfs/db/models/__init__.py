@@ -33,6 +33,7 @@ def load_all_models() -> None:
 
 # Explicit model imports from subdirectories
 from .admin_adjustment import *
+from .ci_application import *
 from .comment import *
 from .compliance import *
 from .document import *
