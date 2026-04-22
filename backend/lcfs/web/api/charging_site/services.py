@@ -23,6 +23,7 @@ from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.web.api.charging_site.schema import (
     ChargingEquipmentStatusSchema,
     ChargingSiteCreateSchema,
+    ChargingSiteHistoryVersionSchema,
     ChargingSiteSchema,
     ChargingSiteStatusEnum,
     ChargingSitesSchema,
@@ -242,6 +243,18 @@ class ChargingSiteService:
         return ChargingSiteSchema.model_validate(charging_site)
 
     @service_handler
+    async def get_charging_site_by_id_with_history(
+        self, site_id: int
+    ) -> ChargingSiteSchema:
+        current_site = await self.get_charging_site_by_id(site_id)
+        site_versions = await self.repo.get_charging_site_versions_by_id(site_id)
+        current_site.history = [
+            ChargingSiteHistoryVersionSchema.model_validate(site_version)
+            for site_version in site_versions
+        ]
+        return current_site
+
+    @service_handler
     async def update_charging_site_status_manual(
         self,
         charging_site_id: int,
@@ -384,6 +397,41 @@ class ChargingSiteService:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
+            ),
+        )
+
+    @service_handler
+    async def get_charging_site_equipment_history_paginated(
+        self, site_id: int, pagination: PaginationRequestSchema
+    ) -> ChargingEquipmentPaginatedSchema:
+        pagination = validate_pagination(pagination)
+        charging_site = await self.repo.get_charging_site_by_id(site_id)
+        if not charging_site:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Charging site with ID {site_id} not found",
+            )
+
+        equipment_records, total_count = (
+            await self.repo.get_equipment_history_for_charging_site_paginated(
+                charging_site.charging_site_id, pagination
+            )
+        )
+
+        equipment_list = [
+            ChargingEquipmentForSiteSchema.model_validate(equipment)
+            for equipment in equipment_records
+        ]
+
+        return ChargingEquipmentPaginatedSchema(
+            equipments=equipment_list,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size)
+                if pagination.size
+                else 1,
             ),
         )
 

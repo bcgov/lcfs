@@ -4,6 +4,9 @@ from unittest.mock import patch, MagicMock
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.government_notification.schema import GovernmentNotificationSchema
 
+# Every role except SYSTEM_ADMIN must be denied access to government
+UNAUTHORIZED_ROLES = [role for role in RoleEnum if role is not RoleEnum.SYSTEM_ADMIN]
+
 
 # Mock data for government notification
 mock_notification = GovernmentNotificationSchema(
@@ -52,16 +55,16 @@ async def test_get_current_notification_none(client, fastapi_app, set_mock_user)
 
 
 @pytest.mark.anyio
-async def test_update_notification_as_compliance_manager(
+async def test_update_notification_as_system_admin(
     client, fastapi_app, set_mock_user
 ):
-    """Test updating notification as compliance manager."""
+    """Test updating notification as system admin."""
     with patch(
         "lcfs.web.api.government_notification.views.GovernmentNotificationService.update_notification"
     ) as mock_update:
         mock_update.return_value = mock_notification
 
-        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_MANAGER])
+        set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
 
         url = fastapi_app.url_path_for("update_notification")
         payload = {
@@ -79,9 +82,12 @@ async def test_update_notification_as_compliance_manager(
 
 
 @pytest.mark.anyio
-async def test_update_notification_unauthorized(client, fastapi_app, set_mock_user):
-    """Test that analysts cannot update notifications."""
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+@pytest.mark.parametrize("role", UNAUTHORIZED_ROLES)
+async def test_update_notification_unauthorized(
+    client, fastapi_app, set_mock_user, role
+):
+    """Ensure only System Admin can update; other roles are forbidden."""
+    set_mock_user(fastapi_app, [role])
 
     url = fastapi_app.url_path_for("update_notification")
     payload = {
@@ -96,34 +102,16 @@ async def test_update_notification_unauthorized(client, fastapi_app, set_mock_us
 
 
 @pytest.mark.anyio
-async def test_delete_notification_as_compliance_manager(
+async def test_delete_notification_as_system_admin(
     client, fastapi_app, set_mock_user
 ):
-    """Test deleting notification as compliance manager."""
+    """Test deleting notification as system admin."""
     with patch(
         "lcfs.web.api.government_notification.views.GovernmentNotificationService.delete_notification"
     ) as mock_delete:
         mock_delete.return_value = True
 
-        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_MANAGER])
-
-        url = fastapi_app.url_path_for("delete_notification")
-        response = await client.delete(url)
-
-        assert response.status_code == 200
-        response_data = response.json()
-        assert response_data["message"] == "Government notification deleted successfully"
-
-
-@pytest.mark.anyio
-async def test_delete_notification_as_director(client, fastapi_app, set_mock_user):
-    """Test deleting notification as director."""
-    with patch(
-        "lcfs.web.api.government_notification.views.GovernmentNotificationService.delete_notification"
-    ) as mock_delete:
-        mock_delete.return_value = True
-
-        set_mock_user(fastapi_app, [RoleEnum.DIRECTOR])
+        set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
 
         url = fastapi_app.url_path_for("delete_notification")
         response = await client.delete(url)
@@ -141,7 +129,7 @@ async def test_delete_notification_none_exists(client, fastapi_app, set_mock_use
     ) as mock_delete:
         mock_delete.return_value = False
 
-        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_MANAGER])
+        set_mock_user(fastapi_app, [RoleEnum.SYSTEM_ADMIN])
 
         url = fastapi_app.url_path_for("delete_notification")
         response = await client.delete(url)
@@ -154,24 +142,12 @@ async def test_delete_notification_none_exists(client, fastapi_app, set_mock_use
 
 
 @pytest.mark.anyio
-async def test_delete_notification_unauthorized_analyst(
-    client, fastapi_app, set_mock_user
+@pytest.mark.parametrize("role", UNAUTHORIZED_ROLES)
+async def test_delete_notification_unauthorized(
+    client, fastapi_app, set_mock_user, role
 ):
-    """Test that analysts cannot delete notifications."""
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
-
-    url = fastapi_app.url_path_for("delete_notification")
-    response = await client.delete(url)
-
-    assert response.status_code == 403
-
-
-@pytest.mark.anyio
-async def test_delete_notification_unauthorized_supplier(
-    client, fastapi_app, set_mock_user
-):
-    """Test that suppliers cannot delete notifications."""
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    """Ensure only System Admin can delete; other roles are forbidden."""
+    set_mock_user(fastapi_app, [role])
 
     url = fastapi_app.url_path_for("delete_notification")
     response = await client.delete(url)

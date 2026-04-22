@@ -681,6 +681,57 @@ class TransactionRepository:
         return max(available_balance, 0)
 
     @repo_handler
+    async def get_group_adjustments_excluded_from_line_17(
+        self,
+        compliance_report_group_uuid: str,
+        organization_id: int,
+        exclude_report_id: int,
+        compliance_period: int,
+    ) -> int:
+        """
+        Sum Adjustment transactions that are linked to other compliance reports
+        in the same report group but are excluded from the Line 17 available
+        balance because their transaction was finalized (Reserved -> Adjustment)
+        after the compliance period end date (March 31, year + 1).
+
+        These represent compliance units the organization actually holds from
+        prior assessments that Line 17 does not capture because of the period-
+        end cutoff. They must be added back when deriving Line 21/22 so the
+        summary reflects the organization's true remaining balance.
+        """
+        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
+        compliance_period_end_local = datetime.strptime(
+            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
+        ).replace(
+            hour=23,
+            minute=59,
+            second=59,
+            microsecond=999999,
+            tzinfo=vancouver_timezone,
+        )
+
+        result = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+            .select_from(Transaction)
+            .join(
+                ComplianceReport,
+                Transaction.transaction_id == ComplianceReport.transaction_id,
+            )
+            .where(
+                and_(
+                    ComplianceReport.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
+                    ComplianceReport.compliance_report_id != exclude_report_id,
+                    Transaction.organization_id == organization_id,
+                    Transaction.transaction_action
+                    == TransactionActionEnum.Adjustment,
+                    Transaction.update_date > compliance_period_end_local,
+                )
+            )
+        )
+        return int(result or 0)
+
+    @repo_handler
     async def create_transaction(
         self,
         transaction_action: TransactionActionEnum,

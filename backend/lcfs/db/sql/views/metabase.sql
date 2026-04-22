@@ -919,6 +919,19 @@ GRANT SELECT ON vw_login_failures_analysis TO basic_lcfs_reporting_role;
 drop view if exists vw_fuel_supply_analytics_base;
 CREATE OR REPLACE VIEW vw_fuel_supply_analytics_base AS
 WITH
+  grouped_reports AS (
+    select distinct
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.VERSION,
+      cr.compliance_period_id,
+      cr.current_status_id,
+      cr.organization_id
+    FROM
+      compliance_report cr
+      JOIN vw_compliance_report_analytics_base vcrb ON cr.compliance_report_group_uuid = vcrb.compliance_report_group_uuid
+      AND cr.version <= vcrb.version
+  ),
   latest_fs AS (
     SELECT
       fs.group_uuid,
@@ -927,6 +940,7 @@ WITH
       fuel_supply fs
     WHERE
       action_type <> 'DELETE'
+      AND fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY
       fs.group_uuid
   ),
@@ -961,24 +975,6 @@ WITH
       JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
     GROUP BY
       fc.fuel_code_id
-  ),
-  grouped_reports AS (
-    SELECT
-      compliance_report_id,
-      compliance_report_group_uuid,
-      VERSION,
-      compliance_period_id,
-      current_status_id,
-      organization_id
-    FROM
-      compliance_report
-    WHERE
-      compliance_report_group_uuid IN (
-        SELECT
-          vcrb.compliance_report_group_uuid
-        FROM
-          vw_compliance_report_analytics_base vcrb
-      )
   )
 SELECT DISTINCT
   gr.compliance_report_group_uuid,
@@ -993,6 +989,10 @@ SELECT DISTINCT
   pa.description as provision_description,
   fs.compliance_units,
   fs.quantity,
+  fs.q1_quantity,
+  fs.q2_quantity,
+  fs.q3_quantity,
+  fs.q4_quantity,
   ft.units as fuel_units,
   fs.target_ci,
   fs.ci_of_fuel as rci,
@@ -3377,6 +3377,19 @@ GRANT SELECT ON vw_fuel_supply_analytics_base TO basic_lcfs_reporting_role;
 DROP VIEW IF EXISTS vw_fuel_export_analytics_base;
 CREATE OR REPLACE VIEW vw_fuel_export_analytics_base AS
 WITH
+  grouped_reports AS (
+    select distinct
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.VERSION,
+      cr.compliance_period_id,
+      cr.current_status_id,
+      cr.organization_id
+    FROM
+      compliance_report cr
+      JOIN vw_compliance_report_analytics_base vcrb ON cr.compliance_report_group_uuid = vcrb.compliance_report_group_uuid
+      AND cr.version <= vcrb.version
+  ),
   latest_fe AS (
     SELECT
       fe.group_uuid,
@@ -3385,6 +3398,7 @@ WITH
       fuel_export fe
     WHERE
       action_type <> 'DELETE'
+    AND fe.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY
       fe.group_uuid
   ),
@@ -3419,24 +3433,6 @@ WITH
       JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
     GROUP BY
       fc.fuel_code_id
-  ),
-  grouped_reports AS (
-    SELECT
-      compliance_report_id,
-      compliance_report_group_uuid,
-      VERSION,
-      compliance_period_id,
-      current_status_id,
-      organization_id
-    FROM
-      compliance_report
-    WHERE
-      compliance_report_group_uuid IN (
-        SELECT
-          vcrb.compliance_report_group_uuid
-        FROM
-          vw_compliance_report_analytics_base vcrb
-      )
   )
 SELECT DISTINCT
   gr.compliance_report_group_uuid,
@@ -3507,6 +3503,19 @@ grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
 DROP VIEW IF EXISTS vw_allocation_agreement_analytics_base;
 CREATE OR REPLACE VIEW vw_allocation_agreement_analytics_base AS
 WITH
+  grouped_reports AS (
+    select distinct
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.VERSION,
+      cr.compliance_period_id,
+      cr.current_status_id,
+      cr.organization_id
+    FROM
+      compliance_report cr
+      JOIN vw_compliance_report_analytics_base vcrb ON cr.compliance_report_group_uuid = vcrb.compliance_report_group_uuid
+      AND cr.version <= vcrb.version
+  ),
   latest_aa AS (
     SELECT
       aa.group_uuid,
@@ -3515,6 +3524,7 @@ WITH
       allocation_agreement aa
     WHERE
       action_type <> 'DELETE'
+    AND aa.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY
       aa.group_uuid
   ),
@@ -3549,24 +3559,6 @@ WITH
       JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
     GROUP BY
       fc.fuel_code_id
-  ),
-  grouped_reports AS (
-    SELECT
-      compliance_report_id,
-      compliance_report_group_uuid,
-      VERSION,
-      compliance_period_id,
-      current_status_id,
-      organization_id
-    FROM
-      compliance_report
-    WHERE
-      compliance_report_group_uuid IN (
-        SELECT
-          vcrb.compliance_report_group_uuid
-        FROM
-          vw_compliance_report_analytics_base vcrb
-      )
   )
 SELECT DISTINCT
   gr.compliance_report_group_uuid,
@@ -3637,10 +3629,25 @@ GRANT SELECT ON vw_allocation_agreement_analytics_base TO basic_lcfs_reporting_r
 -- ==========================================
 DROP VIEW IF EXISTS vw_allocation_agreement_base;
 CREATE OR REPLACE VIEW vw_allocation_agreement_base AS
-WITH latest_aa AS (
+WITH 
+  grouped_reports AS (
+    select distinct
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.VERSION,
+      cr.compliance_period_id,
+      cr.current_status_id,
+      cr.organization_id
+    FROM
+      compliance_report cr
+      JOIN vw_compliance_report_analytics_base vcrb ON cr.compliance_report_group_uuid = vcrb.compliance_report_group_uuid
+      AND cr.version <= vcrb.version
+  ),
+  latest_aa AS (
     SELECT DISTINCT ON (group_uuid) *
     FROM allocation_agreement
     WHERE action_type != 'DELETE'
+      AND compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     ORDER BY group_uuid, version DESC
 )
 SELECT
@@ -4020,12 +4027,26 @@ ORDER BY
 DROP VIEW IF EXISTS vw_fuel_supply_map CASCADE;
 CREATE OR REPLACE VIEW vw_fuel_supply_map AS
 WITH
+  grouped_reports AS (
+    select distinct
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.VERSION,
+      cr.compliance_period_id,
+      cr.current_status_id,
+      cr.organization_id
+    FROM
+      compliance_report cr
+      JOIN vw_compliance_report_analytics_base vcrb ON cr.compliance_report_group_uuid = vcrb.compliance_report_group_uuid
+      AND cr.version <= vcrb.version
+  ),
   latest_fs AS (
     SELECT
       fs.group_uuid,
       MAX(fs.version) AS max_version
     FROM fuel_supply fs
     WHERE action_type <> 'DELETE'
+    AND fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY fs.group_uuid
   ),
   selected_fs AS (

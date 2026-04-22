@@ -206,6 +206,7 @@ class FuelSuppliesSchema(BaseSchema):
     fuel_supplies: Optional[List[FuelSupplyResponseSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}
     total_compliance_units: Optional[int] = None
+    was_edited: bool = False
 
 
 # Organization Fuel Supply Schemas

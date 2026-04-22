@@ -30,7 +30,7 @@ export function ReportsMenu() {
   const canAccessChargingSitesTab =
     isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_CHARGING_SITES)
   const canAccessFseTab = isIDIR || isFeatureEnabled(FEATURE_FLAGS.MANAGE_FSE)
-  const isAdministrator = hasRoles(roles.administrator)
+  const isSystemAdmin = hasRoles(roles.system_admin)
 
   const tabs = useMemo(() => {
     const baseTabs = [
@@ -62,7 +62,7 @@ export function ReportsMenu() {
       })
     }
 
-    if (isAdministrator) {
+    if (isSystemAdmin) {
       baseTabs.push({
         key: 'reportOpenings',
         label: t('tabs.reportOpenings'),
@@ -71,7 +71,7 @@ export function ReportsMenu() {
     }
 
     return baseTabs
-  }, [canAccessChargingSitesTab, canAccessFseTab, isAdministrator, isIDIR, t])
+  }, [canAccessChargingSitesTab, canAccessFseTab, isSystemAdmin, isIDIR, t])
 
   const tabIndex = useMemo(() => {
     // Only select tab when on the exact index route, not on detail/nested pages
@@ -123,7 +123,7 @@ export function ReportsMenu() {
 
     if (location.pathname.includes('/report-openings')) {
       return (
-        <Role roles={[roles.administrator]}>
+        <Role roles={[roles.system_admin]}>
           <Outlet />
         </Role>
       )

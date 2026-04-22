@@ -1,6 +1,5 @@
-import { AdminMenu } from '@/views/Admin/AdminMenu'
+import { AdminMenu, AdminLanding } from '@/views/Admin/AdminMenu'
 import ROUTES from '../routes'
-import { Navigate } from 'react-router-dom'
 import { ViewAuditLog } from '@/views/Admin/AdminMenu/components/ViewAuditLog'
 import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 import { AppRouteObject } from '../types'
@@ -14,7 +13,7 @@ const seededRoute: AppRouteObject[] = isNonProdEnvironment
   ? [
       {
         path: ROUTES.ADMIN.SEEDED_USER_ASSOCIATION,
-        element: <AdminMenu tabIndex={5} />,
+        element: <AdminMenu />,
         handle: { title: 'Seeded user association' }
       }
     ]
@@ -23,27 +22,27 @@ const seededRoute: AppRouteObject[] = isNonProdEnvironment
 export const adminRoutes: AppRouteObject[] = [
   {
     path: ROUTES.ADMIN.MAIN,
-    element: <Navigate to={ROUTES.ADMIN.USERS.LIST} replace />,
+    element: <AdminLanding />,
     handle: { title: 'Administration' }
   },
   {
     path: ROUTES.ADMIN.USERS.LIST,
-    element: <AdminMenu tabIndex={0} />,
+    element: <AdminMenu />,
     handle: { title: 'Users' }
   },
   {
     path: ROUTES.ADMIN.USER_ACTIVITY,
-    element: <AdminMenu tabIndex={1} />,
+    element: <AdminMenu />,
     handle: { title: 'User activity' }
   },
   {
     path: ROUTES.ADMIN.USER_LOGIN_HISTORY,
-    element: <AdminMenu tabIndex={2} />,
+    element: <AdminMenu />,
     handle: { title: 'User login history' }
   },
   {
     path: ROUTES.ADMIN.AUDIT_LOG.LIST,
-    element: <AdminMenu tabIndex={3} />,
+    element: <AdminMenu />,
     handle: { title: 'Audit log' }
   },
   ...seededRoute,
@@ -64,7 +63,7 @@ export const adminRoutes: AppRouteObject[] = [
   },
   {
     path: ROUTES.ADMIN.LOGIN_SCREEN_BACKGROUND,
-    element: <AdminMenu tabIndex={4} />,
+    element: <AdminMenu />,
     handle: { title: 'Login screen background' }
   }
 ]
