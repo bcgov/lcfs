@@ -103,7 +103,7 @@ export const FSEProcessing = () => {
   const gridRef = useRef()
   const alertRef = useRef(null)
   const isProgrammaticSelection = useRef(false)
-  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
+  const { hasAnyRole } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
 
   // Alerts now use BCAlert2 via alertRef
@@ -453,16 +453,18 @@ export const FSEProcessing = () => {
                 Set selected as validated
               </BCButton>
 
-              <BCButton
-                variant="outlined"
-                color="warning"
-                size="medium"
-                startIcon={<FontAwesomeIcon icon={faUndo} />}
-                onClick={() => setShowReturnToDraftModal(true)}
-                disabled={selectedRows.length === 0 || !canReturnToDraft}
-              >
-                Return selected to draft
-              </BCButton>
+              {isIDIR && (
+                <BCButton
+                  variant="outlined"
+                  color="warning"
+                  size="medium"
+                  startIcon={<FontAwesomeIcon icon={faUndo} />}
+                  onClick={() => setShowReturnToDraftModal(true)}
+                  disabled={selectedRows.length === 0 || !canReturnToDraft}
+                >
+                  Return selected to draft
+                </BCButton>
+              )}
             </Stack>
 
             <ClearFiltersButton onClick={handleClearFilters} />
