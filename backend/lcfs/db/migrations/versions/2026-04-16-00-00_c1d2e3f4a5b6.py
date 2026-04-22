@@ -10,7 +10,7 @@ Implements the full Carbon Intensity (CI) application data model:
   - ci_application_history    — JSONB snapshot-based audit trail with status tracking
 
 Revision ID: c1d2e3f4a5b6
-Revises: e0f9a4a6316a
+Revises: b4e7f2a1c8d3
 Create Date: 2026-04-16 00:00:00.000000
 """
 
@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 
 # revision identifiers, used by Alembic.
 revision = "c1d2e3f4a5b6"
-down_revision = "e0f9a4a6316a"
+down_revision = "b4e7f2a1c8d3"
 branch_labels = None
 depends_on = None
 
