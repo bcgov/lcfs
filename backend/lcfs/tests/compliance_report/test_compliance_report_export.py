@@ -758,7 +758,8 @@ class TestComplianceReportExporter:
         aa1.fuel_type = Mock(fuel_type="Renewable Diesel")
         aa1.fuel_type_other = None
         aa1.fuel_category = Mock(category="Diesel")
-        aa1.provision_of_the_act = Mock(name="Section 19(b)(i)")
+        aa1.provision_of_the_act = Mock()
+        aa1.provision_of_the_act.name = "Section 19(b)(i)"
         aa1.fuel_code = Mock(fuel_code="FC002")
         aa1.ci_of_fuel = 20.5
         aa1.quantity = 8000
