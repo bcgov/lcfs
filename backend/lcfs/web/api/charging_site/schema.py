@@ -54,6 +54,7 @@ class ChargingSiteSchema(BaseSchema):
     update_date: Optional[datetime] = None
     create_user: Optional[str] = None
     update_user: Optional[str] = None
+    history: List["ChargingSiteHistoryVersionSchema"] = Field(default_factory=list)
 
 
 class DeleteChargingSiteResponseSchema(BaseSchema):
@@ -162,6 +163,8 @@ class ChargingEquipmentForSiteSchema(BaseSchema):
     longitude: Optional[float] = None
     notes: Optional[str] = None
     charging_site: Optional[ChargingSiteCreateSchema] = None
+    compliance_years: List[str] = Field(default_factory=list)
+    is_history_version: bool = False
 
     @classmethod
     def model_validate(cls, obj, **kwargs):
@@ -201,3 +204,32 @@ class EquipmentStatusEnum:
 class ChargingEquipmentPaginatedSchema(BaseSchema):
     equipments: List[ChargingEquipmentForSiteSchema]
     pagination: PaginationResponseSchema
+
+
+class ChargingSiteHistoryVersionSchema(BaseSchema):
+    charging_site_id: int
+    group_uuid: Optional[str] = None
+    organization_id: int
+    organization: Optional[OrganizationSchema] = None
+    allocating_organization_id: Optional[int] = None
+    allocating_organization: Optional[OrganizationSchema] = None
+    allocating_organization_name: Optional[str] = None
+    status_id: int
+    status: Optional[ChargingSiteStatusSchema] = None
+    version: int
+    site_code: str
+    site_name: str
+    street_address: str
+    city: str
+    postal_code: str
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+    documents: Optional[List[FileResponseSchema]] = Field(default_factory=list)
+    notes: Optional[str] = None
+    create_date: Optional[datetime] = None
+    update_date: Optional[datetime] = None
+    create_user: Optional[str] = None
+    update_user: Optional[str] = None
+
+
+ChargingSiteSchema.model_rebuild()

@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from fastapi import Depends
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Font, Alignment, Protection
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from starlette.responses import StreamingResponse
@@ -132,8 +132,8 @@ class ComplianceReportExporter:
 
         # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
-            # FSE is not applicable for compliance periods before 2024
-            if sheet_name == FSE_EXPORT_SHEET and compliance_year < 2024:
+            # FSE and Fuel Exports are not applicable for compliance periods before 2024
+            if sheet_name in (FSE_EXPORT_SHEET, EXPORT_FUEL_SHEET) and compliance_year < 2024:
                 continue
             if sheet_name == FSE_EXPORT_SHEET:
                 data = await loader(cid, is_quarterly, is_government)
@@ -144,7 +144,8 @@ class ComplianceReportExporter:
 
             # Process each result
             if data:
-                await self._add_sheet(wb, sheet_name, data)
+                locked_cols = {1} if sheet_name == FSE_EXPORT_SHEET else None
+                await self._add_sheet(wb, sheet_name, data, locked_columns=locked_cols)
 
         # Export to stream
         stream = io.BytesIO()
@@ -165,6 +166,7 @@ class ComplianceReportExporter:
         wb: Workbook,
         title: str,
         data: List[List[Union[str, int, float, datetime]]],
+        locked_columns: set[int] | None = None,
     ) -> None:
         """Add a data sheet to the workbook with proper formatting and table styling."""
         if not data or len(data) <= 1:  # Skip if no data found
@@ -215,6 +217,13 @@ class ComplianceReportExporter:
                 cell = ws.cell(row=total_row_idx, column=col_idx)
                 cell.font = Font(bold=True)
                 self._format_cell(cell, val)
+
+        # Lock specified columns and enable sheet protection
+        if locked_columns:
+            for ws_row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+                for cell in ws_row:
+                    cell.protection = Protection(locked=(cell.column in locked_columns))
+            ws.protection.sheet = True
 
         # Auto-size columns
         self._auto_size_columns(ws)
@@ -432,6 +441,24 @@ class ComplianceReportExporter:
             except Exception:
                 pass
         return str(val) if val else None
+
+    def _extract_display_value(self, value: Any, *attrs: str) -> Any:
+        """Extract a scalar display value from ORM relations, enums, or plain values."""
+        if value is None:
+            return None
+        if attrs:
+            for attr in attrs:
+                if hasattr(value, attr):
+                    attr_value = getattr(value, attr)
+                    if attr_value is not None:
+                        return attr_value
+        if hasattr(value, "value"):
+            enum_value = getattr(value, "value")
+            if enum_value is not None:
+                return enum_value
+        if isinstance(value, (str, int, float, decimal.Decimal, datetime)):
+            return value
+        return str(value)
 
     async def _load_fuel_supply_data(
         self, uuid, cid, version, is_quarterly
@@ -765,22 +792,6 @@ class ComplianceReportExporter:
 
         rows = []
         for aa in data:
-            # Extract string values from ORM relationship objects — openpyxl
-            # cannot serialize ORM model instances directly.
-            allocation_type_value = (
-                aa.allocation_transaction_type.type
-                if aa.allocation_transaction_type
-                else None
-            )
-            fuel_type_value = aa.fuel_type.fuel_type if aa.fuel_type else None
-            fuel_category_value = (
-                aa.fuel_category.category if aa.fuel_category else None
-            )
-            provision_value = (
-                aa.provision_of_the_act.name if aa.provision_of_the_act else None
-            )
-            fuel_code_value = aa.fuel_code.fuel_code if aa.fuel_code else None
-
             if is_quarterly:
                 # Calculate total quantity for quarterly reports
                 total_quantity = (
@@ -791,42 +802,46 @@ class ComplianceReportExporter:
                 )
                 rows.append(
                     [
-                        allocation_type_value,
+                        self._extract_display_value(
+                            aa.allocation_transaction_type, "type"
+                        ),
                         aa.transaction_partner,
                         aa.postal_address,
                         aa.transaction_partner_email,
                         aa.transaction_partner_phone,
-                        fuel_type_value,
+                        self._extract_display_value(aa.fuel_type, "fuel_type"),
                         aa.fuel_type_other,
-                        fuel_category_value,
-                        provision_value,
-                        fuel_code_value,
+                        self._extract_display_value(aa.fuel_category, "category"),
+                        self._extract_display_value(aa.provision_of_the_act, "name"),
+                        self._extract_display_value(aa.fuel_code, "fuel_code"),
                         aa.ci_of_fuel,
                         aa.q1_quantity,
                         aa.q2_quantity,
                         aa.q3_quantity,
                         aa.q4_quantity,
                         total_quantity if total_quantity > 0 else None,
-                        aa.units,
+                        self._extract_display_value(aa.units, "value"),
                     ]
                 )
             else:
                 # Annual report format
                 rows.append(
                     [
-                        allocation_type_value,
+                        self._extract_display_value(
+                            aa.allocation_transaction_type, "type"
+                        ),
                         aa.transaction_partner,
                         aa.postal_address,
                         aa.transaction_partner_email,
                         aa.transaction_partner_phone,
-                        fuel_type_value,
+                        self._extract_display_value(aa.fuel_type, "fuel_type"),
                         aa.fuel_type_other,
-                        fuel_category_value,
-                        provision_value,
-                        fuel_code_value,
+                        self._extract_display_value(aa.fuel_category, "category"),
+                        self._extract_display_value(aa.provision_of_the_act, "name"),
+                        self._extract_display_value(aa.fuel_code, "fuel_code"),
                         aa.ci_of_fuel,
                         aa.quantity,
-                        aa.units,
+                        self._extract_display_value(aa.units, "value"),
                     ]
                 )
 
@@ -893,6 +908,7 @@ class ComplianceReportExporter:
 
             rows.append(
                 [
+                    row.get("status"),
                     row.get("organization_name") or organization_name,
                     row.get("allocating_organization_name"),
                     self._format_date(row.get("supply_from_date")),

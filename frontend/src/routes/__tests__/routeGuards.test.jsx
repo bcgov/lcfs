@@ -89,7 +89,8 @@ vi.mock('@/views/Transactions', () => ({
 }))
 
 vi.mock('@/views/Admin/AdminMenu', () => ({
-  AdminMenu: ({ tabIndex }) => <div data-test={`admin-menu-${tabIndex}`}>Admin Menu {tabIndex}</div>
+  AdminMenu: () => <div data-test="admin-menu">Admin Menu</div>,
+  AdminLanding: () => <div data-test="admin-landing">Admin Landing</div>
 }))
 
 // Mock authentication
@@ -212,7 +213,7 @@ describe('Route Guards and Authentication', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
-        expect(screen.getByTestId('admin-menu-0')).toBeInTheDocument()
+        expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
@@ -295,7 +296,7 @@ describe('Route Guards and Authentication', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
-        expect(screen.getByTestId('admin-menu-0')).toBeInTheDocument()
+        expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
         expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
       })
     })

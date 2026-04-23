@@ -1,23 +1,21 @@
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
 import { useCallback, useRef, useState } from 'react'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { ChargingSiteProfile } from './ChargingSiteProfile'
 import BCBox from '@/components/BCBox'
-import { govRoles, roles } from '@/constants/roles'
-import Loading from '@/components/Loading'
-import ROUTES from '@/routes/routes'
-import { Grid2 } from '@mui/material'
+import { roles } from '@/constants/roles'
+import { Divider, FormControlLabel, Grid2, Switch } from '@mui/material'
 import ChargingSitesMap from './ChargingSitesMap'
 import { AddEditChargingSite } from '../AddEditChargingSite'
-import BCButton from '@/components/BCButton'
 
 export const ChargingSiteCard = ({
   addMode = false,
   data,
   hasAnyRole,
   hasRoles,
+  historyMode = false,
   isIDIR,
+  onHistoryModeChange,
   refetch,
   alertRef: alertRefProp
 }) => {
@@ -25,16 +23,21 @@ export const ChargingSiteCard = ({
   const alertRef = alertRefProp ?? localAlertRef
   const { t } = useTranslation('chargingSite')
   const [isEditMode, setIsEditMode] = useState(addMode)
-  const { siteId } = useParams()
 
-  const canEdit = hasRoles(roles.supplier) && data.status.status != 'Submitted'
-  const editButtonRoute = canEdit
-    ? ROUTES.REPORTS.CHARGING_SITE.EDIT.replace(':siteId', siteId)
-    : null
+  const canEdit =
+    !historyMode &&
+    hasRoles(roles.supplier) &&
+    data.status.status != 'Submitted'
 
   const handleEditClick = useCallback(() => {
     setIsEditMode(true)
   }, [])
+
+  const siteHistory = historyMode
+    ? data?.history?.length
+      ? data.history
+      : [data]
+    : []
 
   return (
     <BCBox sx={{ mt: 4, mb: -1 }}>
@@ -44,6 +47,16 @@ export const ChargingSiteCard = ({
           <BCWidgetCard
             title={t('cardTitle')}
             color="nav"
+            sx={{
+              maxHeight: 640,
+              display: 'flex',
+              flexDirection: 'column',
+              '& .MuiCardContent-root': {
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto'
+              }
+            }}
             editButton={
               canEdit && !isEditMode
                 ? {
@@ -64,14 +77,59 @@ export const ChargingSiteCard = ({
                   />
                 </>
               ) : (
-                <ChargingSiteProfile
-                  data={data}
-                  hasAnyRole={hasAnyRole}
-                  hasRoles={hasRoles}
-                  isIDIR={isIDIR}
-                  refetch={refetch}
-                  alertRef={alertRef}
-                />
+                <BCBox>
+                  <BCBox
+                    sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={historyMode}
+                          onChange={(event) =>
+                            onHistoryModeChange?.(event.target.checked)
+                          }
+                          inputProps={{ 'aria-label': t('historyToggle') }}
+                        />
+                      }
+                      label={t('historyToggle')}
+                      labelPlacement="start"
+                      sx={{
+                        mr: 0,
+                        '& .MuiSwitch-root': { mt: -0.6 }
+                      }}
+                    />
+                  </BCBox>
+                  {historyMode ? (
+                    <BCBox sx={{ pr: 1 }}>
+                      {siteHistory.map((siteVersion, index) => (
+                        <BCBox key={siteVersion.chargingSiteId}>
+                          <ChargingSiteProfile
+                            data={siteVersion}
+                            hasAnyRole={hasAnyRole}
+                            hasRoles={hasRoles}
+                            historyMode={historyMode}
+                            isIDIR={isIDIR}
+                            refetch={refetch}
+                            alertRef={alertRef}
+                          />
+                          {index < siteHistory.length - 1 && (
+                            <Divider sx={{ my: 1.5 }} />
+                          )}
+                        </BCBox>
+                      ))}
+                    </BCBox>
+                  ) : (
+                    <ChargingSiteProfile
+                      data={data}
+                      hasAnyRole={hasAnyRole}
+                      hasRoles={hasRoles}
+                      historyMode={historyMode}
+                      isIDIR={isIDIR}
+                      refetch={refetch}
+                      alertRef={alertRef}
+                    />
+                  )}
+                </BCBox>
               )
             }
           />

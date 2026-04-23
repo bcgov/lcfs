@@ -420,6 +420,59 @@ class TestComplianceReportExporter:
         exporter.fse_repo.get_fse_reporting_list_paginated.assert_called()
 
     @pytest.mark.anyio
+    async def test_export_excludes_fuel_export_sheet_for_pre_2024_reports(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        """Test that fuel export sheet is excluded from export for compliance years before 2024."""
+        period_2023 = Mock()
+        period_2023.description = "2023"
+        mock_report_2023 = Mock()
+        mock_report_2023.compliance_report_id = 1
+        mock_report_2023.compliance_report_group_uuid = "test-uuid"
+        mock_report_2023.version = 0
+        mock_report_2023.reporting_frequency = ReportingFrequency.ANNUAL
+        mock_report_2023.organization = mock_annual_report.organization
+        mock_report_2023.current_status = mock_annual_report.current_status
+        mock_report_2023.compliance_period = period_2023
+
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_report_2023
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1)
+
+        # Fuel export loader is skipped for pre-2024 reports
+        exporter.ef_repo.get_effective_fuel_exports.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_export_includes_fuel_export_sheet_for_2024_and_later_reports(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        """Test that fuel export loader is called for compliance years 2024 and later."""
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=-500
+        )
+
+        await exporter.export(1)
+
+        # Fuel export loader is called for 2024+ reports
+        exporter.ef_repo.get_effective_fuel_exports.assert_called()
+
+    @pytest.mark.anyio
     async def test_load_fuel_supply_data_annual(
         self,
         compliance_report_exporter,
@@ -698,6 +751,42 @@ class TestComplianceReportExporter:
         assert data_row[14] == 2000  # Q4 quantity
         assert data_row[15] == 8000  # Total quantity (sum of quarters)
         assert len(data_row) == len(expected_headers)
+
+    @pytest.mark.anyio
+    async def test_load_allocation_agreement_data_flattens_relationship_fields(
+        self,
+        compliance_report_exporter,
+    ):
+        """Allocation agreement export must flatten joined relations into scalar cell values."""
+        exporter = compliance_report_exporter
+
+        aa1 = Mock()
+        aa1.allocation_transaction_type = Mock(type="Allocated from")
+        aa1.transaction_partner = "Partner Corp"
+        aa1.postal_address = "456 Oak Ave, Victoria, BC"
+        aa1.transaction_partner_email = "partner@example.com"
+        aa1.transaction_partner_phone = "250-555-1234"
+        aa1.fuel_type = Mock(fuel_type="Renewable Diesel")
+        aa1.fuel_type_other = None
+        aa1.fuel_category = Mock(category="Diesel")
+        aa1.provision_of_the_act = Mock()
+        aa1.provision_of_the_act.name = "Section 19(b)(i)"
+        aa1.fuel_code = Mock(fuel_code="FC002")
+        aa1.ci_of_fuel = 20.5
+        aa1.quantity = 8000
+        aa1.units = Mock(value="L")
+
+        exporter.aa_repo.get_allocation_agreements.return_value = [aa1]
+
+        result = await exporter._load_allocation_agreement_data(1, False)
+
+        data_row = result[1]
+        assert data_row[0] == "Allocated from"
+        assert data_row[5] == "Renewable Diesel"
+        assert data_row[7] == "Diesel"
+        assert data_row[8] == "Section 19(b)(i)"
+        assert data_row[9] == "FC002"
+        assert data_row[12] == "L"
 
     @pytest.mark.anyio
     async def test_load_export_fuel_data(

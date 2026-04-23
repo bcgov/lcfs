@@ -85,8 +85,10 @@ class TestCreditMarketViews:
             mock_service_instance.get_credit_market_listings.return_value = mock_listings
             return mock_service_instance
         
-        from lcfs.web.api.organizations.services import OrganizationsService
-        fastapi_app.dependency_overrides[OrganizationsService] = mock_service_dependency
+        from lcfs.web.api.organizations.credit_market_service import (
+            OrganizationCreditMarketService,
+        )
+        fastapi_app.dependency_overrides[OrganizationCreditMarketService] = mock_service_dependency
 
         response = await client.get("/api/organizations/credit-market-listings")
 
@@ -109,7 +111,7 @@ class TestCreditMarketViews:
     ):
         """Test successful update of current organization's credit market details"""
         
-        with patch('lcfs.web.api.organizations.views.OrganizationsService') as mock_service:
+        with patch('lcfs.web.api.organizations.views.OrganizationCreditMarketService') as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
             
@@ -158,7 +160,7 @@ class TestCreditMarketViews:
     ):
         """Test update handles service errors appropriately"""
         
-        with patch('lcfs.web.api.organizations.views.OrganizationsService') as mock_service:
+        with patch('lcfs.web.api.organizations.views.OrganizationCreditMarketService') as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
             mock_service_instance.update_organization_credit_market_details.side_effect = Exception("Service error")
@@ -198,7 +200,7 @@ class TestCreditMarketViews:
     ):
         """Test IDIR endpoint updates credit market details and skips notifications"""
 
-        with patch('lcfs.web.api.organizations.views.OrganizationsService') as mock_service:
+        with patch('lcfs.web.api.organizations.views.OrganizationCreditMarketService') as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
 
@@ -253,8 +255,10 @@ class TestCreditMarketViews:
             mock_service_instance.get_credit_market_listings.return_value = mock_listings
             return mock_service_instance
         
-        from lcfs.web.api.organizations.services import OrganizationsService
-        fastapi_app.dependency_overrides[OrganizationsService] = mock_service_dependency
+        from lcfs.web.api.organizations.credit_market_service import (
+            OrganizationCreditMarketService,
+        )
+        fastapi_app.dependency_overrides[OrganizationCreditMarketService] = mock_service_dependency
 
         response = await client.get("/api/organizations/credit-market-listings")
 
@@ -275,7 +279,7 @@ class TestCreditMarketViews:
     ):
         """Test that update data is properly transformed and validated"""
         
-        with patch('lcfs.web.api.organizations.views.OrganizationsService') as mock_service:
+        with patch('lcfs.web.api.organizations.views.OrganizationCreditMarketService') as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
             
@@ -320,8 +324,10 @@ class TestCreditMarketViews:
             mock_service_instance.get_credit_market_listings.return_value = mock_listings
             return mock_service_instance
         
-        from lcfs.web.api.organizations.services import OrganizationsService
-        fastapi_app.dependency_overrides[OrganizationsService] = mock_service_dependency
+        from lcfs.web.api.organizations.credit_market_service import (
+            OrganizationCreditMarketService,
+        )
+        fastapi_app.dependency_overrides[OrganizationCreditMarketService] = mock_service_dependency
 
         response = await client.get("/api/organizations/credit-market-listings")
 
@@ -356,7 +362,7 @@ class TestCreditMarketViews:
             "credits_to_sell": 300
         }
         
-        with patch('lcfs.web.api.organizations.views.OrganizationsService') as mock_service:
+        with patch('lcfs.web.api.organizations.views.OrganizationCreditMarketService') as mock_service:
             mock_service_instance = AsyncMock()
             mock_service.return_value = mock_service_instance
             
@@ -390,8 +396,10 @@ class TestCreditMarketViews:
         def mock_service_dependency():
             return mock_service_instance
         
-        from lcfs.web.api.organizations.services import OrganizationsService
-        fastapi_app.dependency_overrides[OrganizationsService] = mock_service_dependency
+        from lcfs.web.api.organizations.credit_market_service import (
+            OrganizationCreditMarketService,
+        )
+        fastapi_app.dependency_overrides[OrganizationCreditMarketService] = mock_service_dependency
 
         response = await client.get("/api/organizations/credit-market-listings")
 
@@ -439,8 +447,10 @@ class TestCreditMarketViews:
             )
             return mock_service_instance
 
-        from lcfs.web.api.organizations.services import OrganizationsService
-        fastapi_app.dependency_overrides[OrganizationsService] = mock_service_dependency
+        from lcfs.web.api.organizations.credit_market_service import (
+            OrganizationCreditMarketService,
+        )
+        fastapi_app.dependency_overrides[OrganizationCreditMarketService] = mock_service_dependency
 
         response = await client.post(
             "/api/organizations/credit-market-audit-logs/list",

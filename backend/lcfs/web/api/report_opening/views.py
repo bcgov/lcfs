@@ -18,7 +18,7 @@ router = APIRouter()
     response_model=List[ReportOpeningSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR, RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SYSTEM_ADMIN, RoleEnum.SUPPLIER])
 async def list_report_openings(
     request: Request,
     service: ReportOpeningService = Depends(),
@@ -31,7 +31,7 @@ async def list_report_openings(
     response_model=List[ReportOpeningSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def update_report_openings(
     request: Request,
     payload: ReportOpeningUpdateRequest,

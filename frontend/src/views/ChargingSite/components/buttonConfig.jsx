@@ -297,14 +297,12 @@ const BUTTON_RULES = {
     [USER_TYPES.BCEID_USER]: [
       'createFSE',
       'selectAllDraft',
-      'returnSelectedToDraft',
       'clearFilters'
     ],
     [USER_TYPES.BCEID_MANAGER]: [
       'createFSE',
       'selectAllDraft',
       'setSelectedAsSubmitted',
-      'returnSelectedToDraft',
       'selectAllValidated',
       'setToDecommission',
       'clearFilters'

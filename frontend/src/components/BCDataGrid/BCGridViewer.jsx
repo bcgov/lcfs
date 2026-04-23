@@ -101,6 +101,9 @@ export const BCGridViewer = forwardRef(
       enableFloatingPagination = true,
       filterToolbarConfig = {},
       onClearFilters,
+      suppressMovableColumns,
+      columnState: controlledColumnState,
+      onColumnStateChange,
       ...props
     },
     ref
@@ -520,9 +523,9 @@ export const BCGridViewer = forwardRef(
         const filterState = JSON.parse(
           sessionStorage.getItem(`${gridKey}-filter`)
         )
-        const columnState = JSON.parse(
-          sessionStorage.getItem(`${gridKey}-column`)
-        )
+        const restoredColumnState =
+          controlledColumnState ??
+          JSON.parse(sessionStorage.getItem(`${gridKey}-column`))
 
         // Apply filters if they exist
         if (filterState) {
@@ -551,9 +554,9 @@ export const BCGridViewer = forwardRef(
         }
 
         // Apply column state
-        if (columnState) {
+        if (restoredColumnState) {
           params.api.applyColumnState({
-            state: columnState,
+            state: restoredColumnState,
             applyOrder: true
           })
         } else {
@@ -588,7 +591,8 @@ export const BCGridViewer = forwardRef(
         paginationOptions,
         onPaginationChange,
         cachePaginationOptions,
-        convertFilterModelToArray
+        convertFilterModelToArray,
+        controlledColumnState
       ]
     )
 
@@ -655,34 +659,50 @@ export const BCGridViewer = forwardRef(
       ]
     )
 
+    const persistColumnState = useCallback(
+      (columnState) => {
+        if (!columnState) return
+        if (onColumnStateChange) {
+          onColumnStateChange(columnState)
+        } else {
+          sessionStorage.setItem(
+            `${gridKey}-column`,
+            JSON.stringify(columnState)
+          )
+        }
+      },
+      [gridKey, onColumnStateChange]
+    )
+
     const handleSortChanged = useCallback(() => {
-      const sortTemp = gridRef.current?.api
-        .getColumnState()
-        .filter((col) => col.sort)
+      const columnState = gridRef.current?.api.getColumnState()
+      const sortTemp = columnState
+        ?.filter((col) => col.sort)
         .sort((a, b) => a.sortIndex - b.sortIndex)
-        .map((col) => {
-          return {
-            field: col.colId,
-            direction: col.sort
-          }
-        })
+        .map((col) => ({ field: col.colId, direction: col.sort }))
 
       const updatedOptions = { ...paginationOptions, sortOrders: sortTemp }
       onPaginationChange(updatedOptions)
       if (enablePageCaching) {
         cachePaginationOptions(updatedOptions)
       }
-      sessionStorage.setItem(
-        `${gridKey}-column`,
-        JSON.stringify(gridRef.current?.api.getColumnState())
-      )
+      persistColumnState(columnState)
     }, [
-      gridKey,
       onPaginationChange,
       paginationOptions,
       enablePageCaching,
-      cachePaginationOptions
+      cachePaginationOptions,
+      persistColumnState
     ])
+
+    const handleColumnMoved = useCallback(
+      (params) => {
+        if (params?.finished === false) return
+        const api = params?.api ?? gridRef?.current?.api
+        persistColumnState(api?.getColumnState?.())
+      },
+      [gridRef, persistColumnState]
+    )
 
     const handleRemoveFilterPill = useCallback(
       (field, valueToRemove) => {
@@ -958,9 +978,11 @@ export const BCGridViewer = forwardRef(
           onSortChanged={handleSortChanged}
           onFilterChanged={handleFilterChanged}
           onFirstDataRendered={onFirstDataRendered}
+          onColumnMoved={handleColumnMoved}
           onRowClicked={onRowClicked}
           getRowId={getRowId}
           autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
+          suppressMovableColumns={suppressMovableColumns ?? true}
           {...props}
         />
         {!suppressPagination && (

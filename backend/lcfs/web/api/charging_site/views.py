@@ -147,11 +147,14 @@ async def get_site_names(
 async def get_charging_site(
     request: Request,
     site_id: int = Path(..., description="Charging site ID"),
+    history_mode: bool = Query(False, description="Return all visible site versions"),
     service: ChargingSiteService = Depends(),
 ) -> ChargingSiteSchema:
     """
     Get a specific charging site with its attachments
     """
+    if history_mode:
+        return await service.get_charging_site_by_id_with_history(site_id)
     return await service.get_charging_site_by_id(site_id)
 
 
@@ -183,6 +186,9 @@ async def update_charging_site_status(
 async def get_charging_site_equipment_paginated(
     request: Request,
     site_id: int = Path(..., description="Charging site ID"),
+    history_mode: bool = Query(
+        False, description="Return all equipment versions for the charging site"
+    ),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: ChargingSiteService = Depends(),
     validate: ChargingSiteValidation = Depends(),
@@ -192,11 +198,15 @@ async def get_charging_site_equipment_paginated(
     Supports filtering, sorting, and pagination.
     """
     await validate.validate_organization_access(site_id)
-    if request.user.is_government:
+    if request.user.is_government and not history_mode:
         pagination.filters.append(
             FilterModel(
                 field="status", filter_type="text", type="not_equals", filter="Draft"
             )
+        )
+    if history_mode:
+        return await service.get_charging_site_equipment_history_paginated(
+            site_id, pagination
         )
     return await service.get_charging_site_equipment_paginated(site_id, pagination)
 

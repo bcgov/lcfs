@@ -1,5 +1,6 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
+import BCButton from '@/components/BCButton'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
@@ -22,6 +23,9 @@ import {
   useChargingEquipmentStatuses,
   useChargingSiteStatuses
 } from '@/hooks/useChargingSite'
+import { StyledChip } from '@/components/StyledChip'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
+import { ExpandLess, ExpandMore } from '@mui/icons-material'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -270,6 +274,9 @@ export const chargingSiteColDefs = (errors, warnings, gridReady) => {
 export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
   const {
     enableSelection = false,
+    historyMode = false,
+    onToggleHistory = null,
+    expandedRows = new Set(),
     showDateColumns = false,
     showIntendedUsers = false,
     showLocationFields = true,
@@ -280,6 +287,49 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
   } = options
 
   const cols = []
+
+  if (historyMode) {
+    cols.push({
+      field: '__historyToggle__',
+      headerName: '',
+      minWidth: 80,
+      maxWidth: 80,
+      pinned: 'left',
+      lockPinned: true,
+      sortable: false,
+      filter: false,
+      suppressHeaderMenuButton: true,
+      cellRenderer: (params) => {
+        if (!params.data?.isCurrentVersionRow || !params.data?.hasHistory)
+          return null
+
+        const isExpanded = expandedRows.has(params.data.registrationNumber)
+
+        return (
+          <BCButton
+            variant="text"
+            color="primary"
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggleHistory?.(params.data.registrationNumber)
+            }}
+            sx={{ minWidth: 0, px: 0.5 }}
+            title={
+              isExpanded
+                ? t('chargingSite:buttons.collapseHistory')
+                : t('chargingSite:buttons.expandHistory')
+            }
+          >
+            {isExpanded ? (
+              <ExpandLess sx={{ width: '1.2rem', height: '1.2rem' }} />
+            ) : (
+              <ExpandMore sx={{ width: '1.2rem', height: '1.2rem' }} />
+            )}
+          </BCButton>
+        )
+      }
+    })
+  }
 
   // Add checkbox selection column if enabled (for list view)
   if (enableSelection) {
@@ -323,6 +373,10 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       },
       { statusField: 'status', replaceUnderscores: false }
     ),
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'status'),
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -371,7 +425,12 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     headerName: t('chargingSite:fseColumnLabels.registrationNumber'),
     sortable: false,
     filter: false,
-    minWidth: 180
+    minWidth: 180,
+    cellRenderer: (params) => {
+      const value = params.value || ''
+      if (!params.data?.isHistoryVersion) return value
+      return `↳ ${value}`
+    }
   })
 
   // Version
@@ -380,28 +439,78 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     headerName: t('chargingSite:fseColumnLabels.version'),
     minWidth: 120,
     filter: false,
-    type: enableSelection ? 'numericColumn' : undefined
+    type: enableSelection ? 'numericColumn' : undefined,
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'version')
   })
+  if (historyMode) {
+    cols.push({
+      field: 'complianceYears',
+      headerName: t('chargingSite:fseColumnLabels.complianceYears'),
+      minWidth: 220,
+      sortable: false,
+      filter: false,
+      valueGetter: (params) => params.data?.complianceYears || [],
+      cellRenderer: (params) => {
+        const years = params.value || []
+        if (!years.length) return ''
+
+        return (
+          <>
+            {years.map((year) => (
+              <StyledChip
+                key={`${params.data?.chargingEquipmentId}-${year}`}
+                label={year}
+                sx={{
+                  backgroundColor: '#686666',
+                  color: '#fff',
+                  fontWeight: '400'
+                }}
+              />
+            ))}
+          </>
+        )
+      },
+      cellStyle: (params) =>
+        historyMode &&
+        params.data?.isHistoryVersion &&
+        changelogCellStyle(params, 'complianceYears')
+    })
+  }
 
   // Serial Number
   cols.push({
     field: 'serialNumber',
     headerName: t('chargingSite:fseColumnLabels.serialNumber'),
-    minWidth: 220
+    minWidth: 220,
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'serialNumber')
   })
 
   // Manufacturer
   cols.push({
     field: 'manufacturer',
     headerName: t('chargingSite:fseColumnLabels.manufacturer'),
-    minWidth: 320
+    minWidth: 320,
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'manufacturer')
   })
 
   // Model
   cols.push({
     field: 'model',
     headerName: t('chargingSite:fseColumnLabels.model'),
-    minWidth: 220
+    minWidth: 220,
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'model')
   })
 
   // Level of Equipment
@@ -413,14 +522,22 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
     valueGetter: (params) =>
       params.data.levelOfEquipment?.name ||
       params.data.levelOfEquipmentName ||
-      ''
+      '',
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'levelOfEquipment')
   })
   // ports
   cols.push({
     field: 'ports',
     headerName: t('chargingSite:fseColumnLabels.ports'),
     minWidth: 160,
-    sortable: false
+    sortable: false,
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'ports')
   })
 
   // Intended Uses
@@ -439,7 +556,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       return params.value.map((use) => use.type || use).join(', ')
     },
     cellRenderer: CommonArrayRenderer,
-    cellRendererParams: { disableLink: true }
+    cellRendererParams: { disableLink: true },
+    cellStyle: (params) =>
+      historyMode &&
+      params.data?.isHistoryVersion &&
+      changelogCellStyle(params, 'intendedUseTypes')
   })
 
   // Intended Users
@@ -460,7 +581,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
         return params.value.join(', ')
       },
       cellRenderer: CommonArrayRenderer,
-      cellRendererParams: { disableLink: true }
+      cellRendererParams: { disableLink: true },
+      cellStyle: (params) =>
+        historyMode &&
+        params.data?.isHistoryVersion &&
+        changelogCellStyle(params, 'intendedUserTypes')
     })
   }
   // Location fields (only for site view)
@@ -472,7 +597,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
         filter: false,
         headerName: t('chargingSite:fseColumnLabels.latitude'),
         minWidth: 150,
-        valueGetter: (params) => params.data?.latitude || ''
+        valueGetter: (params) => params.data?.latitude || '',
+        cellStyle: (params) =>
+          historyMode &&
+          params.data?.isHistoryVersion &&
+          changelogCellStyle(params, 'latitude')
       },
       {
         field: 'longitude',
@@ -480,7 +609,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
         filter: false,
         headerName: t('chargingSite:fseColumnLabels.longitude'),
         minWidth: 150,
-        valueGetter: (params) => params.data?.longitude || ''
+        valueGetter: (params) => params.data?.longitude || '',
+        cellStyle: (params) =>
+          historyMode &&
+          params.data?.isHistoryVersion &&
+          changelogCellStyle(params, 'longitude')
       }
     )
   }
@@ -512,7 +645,11 @@ export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
       field: 'notes',
       minWidth: 600,
       filter: false,
-      headerName: t('chargingSite:fseColumnLabels.notes')
+      headerName: t('chargingSite:fseColumnLabels.notes'),
+      cellStyle: (params) =>
+        historyMode &&
+        params.data?.isHistoryVersion &&
+        changelogCellStyle(params, 'notes')
     })
   }
 

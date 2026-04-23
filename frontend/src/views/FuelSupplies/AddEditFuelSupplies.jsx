@@ -72,7 +72,10 @@ export const AddEditFuelSupplies = () => {
     isFetched
   } = useFuelSupplyOptions({ compliancePeriod })
 
-  const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveFuelSupply(
+    { complianceReportId },
+    { invalidateListQuery: false }
+  )
 
   const { data: fuelSupplyData, isLoading: fuelSuppliesLoading } =
     useGetFuelSuppliesList({
@@ -141,22 +144,26 @@ export const AddEditFuelSupplies = () => {
     }
   }, [location?.state?.message, location?.state?.severity])
 
-  // Set row data
+  // Seed once per report; subsequent refetches must not reorder user-added rows.
+  const seededReportRef = useRef(null)
   useEffect(() => {
-    setRowData(processedRowData)
-  }, [processedRowData])
+    if (
+      seededReportRef.current !== complianceReportId &&
+      processedRowData.length > 0
+    ) {
+      setRowData(processedRowData)
+      seededReportRef.current = complianceReportId
+    }
+  }, [processedRowData, complianceReportId])
 
-  // Update column visibility
   useEffect(() => {
     const timeoutId = setTimeout(updateColumnsVisibility, 100)
     return () => clearTimeout(timeoutId)
   }, [updateColumnsVisibility])
 
-  // Grid event handlers
   const onGridReady = useCallback(async (params) => {
     setGridApi(params.api)
 
-    // Start editing the last row after a brief delay
     setTimeout(() => {
       const lastRowIndex = params.api.getLastDisplayedRowIndex()
       if (lastRowIndex >= 0) {
@@ -191,7 +198,6 @@ export const AddEditFuelSupplies = () => {
         handleFuelCategoryChange(params, optionsData, updateRowDataValues)
       }
 
-      // Trigger column visibility update and auto-size
       setTimeout(() => {
         updateColumnsVisibility()
         params.api?.autoSizeAllColumns?.()
@@ -200,8 +206,13 @@ export const AddEditFuelSupplies = () => {
     [optionsData, updateColumnsVisibility, updateRowDataValues]
   )
 
+  // Set by onAction('add') so onCellEditingStopped skips its own auto-append.
+  const manualAddRef = useRef(false)
+
   const onCellEditingStopped = useCallback(
     async (params) => {
+      const isNewRow = !params.node?.data?.fuelSupplyId // capture before save
+
       const updatedData = await processCellEditingComplete({
         params,
         validateFn: validateFuelSupply,
@@ -212,16 +223,41 @@ export const AddEditFuelSupplies = () => {
         setWarnings
       })
 
-      if (updatedData) {
-        params.node.updateData(updatedData)
+      if (!updatedData) return
+
+      // Backend always returns is_new_supplemental_entry: false; re-derive client-side.
+      if (isSupplemental) {
+        updatedData.isNewSupplementalEntry = true
+      }
+
+      params.node.updateData(updatedData)
+
+      if (isNewRow && updatedData.fuelSupplyId && params.api) {
+        if (!manualAddRef.current) {
+          const result = params.api.applyTransaction({
+            add: [{ id: uuid(), complianceReportId, compliancePeriod }]
+          })
+          setTimeout(() => {
+            const newNode = result?.add?.[0]
+            if (newNode?.rowIndex != null) {
+              params.api.ensureIndexVisible(newNode.rowIndex, 'bottom')
+            }
+          }, 0)
+        }
+        manualAddRef.current = false
       }
     },
-    [saveRow, t]
+    [saveRow, t, complianceReportId, compliancePeriod, isSupplemental]
   )
 
   const onAction = useCallback(
     async (action, params) => {
       try {
+        if (action === 'add') {
+          manualAddRef.current = true
+          return
+        }
+
         if (action === 'delete' || action === 'undo') {
           const success = await handleScheduleDelete(
             params,

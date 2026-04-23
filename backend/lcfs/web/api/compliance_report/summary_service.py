@@ -227,6 +227,8 @@ class ComplianceReportSummaryService:
         # DB Columns are not in the same order as display, so sort them
         summary.low_carbon_fuel_target_summary.sort(key=lambda row: row.line)
 
+        self._apply_exemption_overrides(summary, compliance_report)
+
         return summary
 
     def _extract_line_number(self, column_key: str) -> Optional[int]:
@@ -458,6 +460,81 @@ class ComplianceReportSummaryService:
             units="{:,}".format(int(penalty_value / penalty_rate)),
             rate=penalty_rate,
         )
+
+    def _apply_exemption_overrides(
+        self,
+        summary: ComplianceReportSummarySchema,
+        compliance_report: Optional[ComplianceReport],
+    ) -> None:
+        """
+        Zero out penalty-related summary rows when exemption flags are set on the
+        compliance report. This mirrors the zeroing performed by
+        `handle_exempted_status` but also applies when the report is in
+        "Recommended by analyst/manager" with exemption flags selected, so
+        penalties do not leak into the summary tables, descriptions, or exports
+        before the report reaches the Exempted status.
+        """
+        if not compliance_report:
+            return
+
+        # Compare against True explicitly — MagicMock-backed tests can make the
+        # attribute present but return a Mock object that is truthy by default.
+        is_renewable_exempted = (
+            getattr(compliance_report, "is_renewable_fuel_exempted", False) is True
+        )
+        is_low_carbon_exempted = (
+            getattr(compliance_report, "is_low_carbon_fuel_exempted", False) is True
+        )
+        if not (is_renewable_exempted or is_low_carbon_exempted):
+            return
+
+        def _line_num(row) -> Optional[int]:
+            try:
+                return int(row.line) if row.line is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        if is_renewable_exempted:
+            for row in summary.renewable_fuel_target_summary or []:
+                if _line_num(row) in (4, 11):
+                    row.gasoline = 0
+                    row.diesel = 0
+                    row.jet_fuel = 0
+                    row.total_value = 0
+
+        if is_low_carbon_exempted:
+            low_carbon_rows = summary.low_carbon_fuel_target_summary or []
+            line_17_value = 0
+            for row in low_carbon_rows:
+                if _line_num(row) == 17:
+                    line_17_value = row.value or 0
+                    break
+            for row in low_carbon_rows:
+                line_num = _line_num(row)
+                if line_num in (18, 20, 21):
+                    row.value = 0
+                if line_num == 21:
+                    row.description = LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[21][
+                        "description"
+                    ].split(" (")[0]
+                if line_num == 22:
+                    row.value = max(line_17_value, 0)
+
+        line_11_total = 0.0
+        line_21_total = 0.0
+        for row in summary.non_compliance_penalty_summary or []:
+            line_num = _line_num(row)
+            if line_num == 11:
+                if is_renewable_exempted:
+                    row.total_value = 0
+                line_11_total = row.total_value or 0
+            elif line_num == 21:
+                if is_low_carbon_exempted:
+                    row.total_value = 0
+                line_21_total = row.total_value or 0
+        for row in summary.non_compliance_penalty_summary or []:
+            if row.line is None:
+                row.total_value = float(line_11_total) + float(line_21_total)
 
     @service_handler
     async def update_compliance_report_summary(
@@ -907,6 +984,8 @@ class ComplianceReportSummaryService:
             can_sign,
             early_issuance_summary,
         )
+
+        self._apply_exemption_overrides(summary, compliance_report)
 
         # Check if Lines 7 and 9 should be locked (for draft/editable reports)
         lines_7_and_9_locked = await self._should_lock_lines_7_and_9(compliance_report)
@@ -1466,8 +1545,29 @@ class ComplianceReportSummaryService:
             - compliance_units_prev_issued_for_fuel_export
         )  # line 20 = line 18 + line 19 - line 15 - line 16
 
+        # Prior assessed supplementals in this group may have been finalized
+        # after the compliance period end date. Their Adjustment transactions
+        # are intentionally excluded from Line 17 (which is a period-end
+        # snapshot), but the organization still holds those credits. Include
+        # them when deriving Line 21/22 so the penalty and remaining balance
+        # reflect what the organization will actually hold after reassessment.
+        deferred_prior_issuance = 0
+        if compliance_report.version > 0 and compliance_report.compliance_report_group_uuid:
+            deferred_prior_issuance = int(
+                await self.trxn_repo.get_group_adjustments_excluded_from_line_17(
+                    compliance_report.compliance_report_group_uuid,
+                    organization_id,
+                    compliance_report.compliance_report_id,
+                    compliance_year,
+                )
+            )
+
+        effective_available_balance = (
+            available_balance_for_period + deferred_prior_issuance
+        )
+
         calculated_penalty_units = int(
-            available_balance_for_period
+            effective_available_balance
             + compliance_unit_balance_change_from_assessment
         )
         non_compliance_penalty_payable_units = (
@@ -1486,9 +1586,9 @@ class ComplianceReportSummaryService:
             else 0
         )  # line 21
 
-        available_balance_for_period_after_assessment = (  # line 22 = line 17 + line 20
+        available_balance_for_period_after_assessment = (  # line 22
             max(
-                available_balance_for_period
+                effective_available_balance
                 + compliance_unit_balance_change_from_assessment,
                 0,
             )
