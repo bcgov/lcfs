@@ -742,6 +742,42 @@ class TestComplianceReportExporter:
         assert len(data_row) == len(expected_headers)
 
     @pytest.mark.anyio
+    async def test_load_allocation_agreement_data_flattens_relationship_fields(
+        self,
+        compliance_report_exporter,
+    ):
+        """Allocation agreement export must flatten joined relations into scalar cell values."""
+        exporter = compliance_report_exporter
+
+        aa1 = Mock()
+        aa1.allocation_transaction_type = Mock(type="Allocated from")
+        aa1.transaction_partner = "Partner Corp"
+        aa1.postal_address = "456 Oak Ave, Victoria, BC"
+        aa1.transaction_partner_email = "partner@example.com"
+        aa1.transaction_partner_phone = "250-555-1234"
+        aa1.fuel_type = Mock(fuel_type="Renewable Diesel")
+        aa1.fuel_type_other = None
+        aa1.fuel_category = Mock(category="Diesel")
+        aa1.provision_of_the_act = Mock()
+        aa1.provision_of_the_act.name = "Section 19(b)(i)"
+        aa1.fuel_code = Mock(fuel_code="FC002")
+        aa1.ci_of_fuel = 20.5
+        aa1.quantity = 8000
+        aa1.units = Mock(value="L")
+
+        exporter.aa_repo.get_allocation_agreements.return_value = [aa1]
+
+        result = await exporter._load_allocation_agreement_data(1, False)
+
+        data_row = result[1]
+        assert data_row[0] == "Allocated from"
+        assert data_row[5] == "Renewable Diesel"
+        assert data_row[7] == "Diesel"
+        assert data_row[8] == "Section 19(b)(i)"
+        assert data_row[9] == "FC002"
+        assert data_row[12] == "L"
+
+    @pytest.mark.anyio
     async def test_load_export_fuel_data(
         self,
         compliance_report_exporter,
