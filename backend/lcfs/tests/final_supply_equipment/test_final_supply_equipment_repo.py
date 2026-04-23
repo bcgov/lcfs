@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
+from lcfs.db.models.compliance.ChargingEquipmentStatus import ChargingEquipmentStatus
 
 
 class FakeAsyncContextManager:
@@ -542,6 +544,26 @@ async def test_has_decommissioned_fse_in_report_false(repo, fake_db):
     result = await repo.has_decommissioned_fse_in_report(10)
 
     assert result is False
+
+
+@pytest.mark.anyio
+async def test_get_latest_equipment_status_uses_explicit_left_side(repo, fake_db):
+    fake_db.execute.return_value = FakeResult(["Submitted"])
+
+    result = await repo.get_latest_equipment_status(123)
+
+    assert result == "Submitted"
+
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "FROM charging_equipment JOIN charging_equipment_status" in compiled_sql
+    assert (
+        "charging_equipment.status_id = "
+        "charging_equipment_status.charging_equipment_status_id"
+    ) in compiled_sql
+    assert str(ChargingEquipment.__table__.name) in compiled_sql
+    assert str(ChargingEquipmentStatus.__table__.name) in compiled_sql
 
 
 @pytest.mark.anyio
