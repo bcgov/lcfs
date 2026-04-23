@@ -52,8 +52,9 @@ class PortsEnum(str, Enum):
 class SummarySchema(BaseSchema):
     summary_id: int
     is_locked: bool
-    line_11_fossil_derived_base_fuel_total: float
-    line_21_non_compliance_penalty_payable: float
+    line_11_non_compliance_penalty_payable: float = 0
+    line_11_fossil_derived_base_fuel_total: Optional[float] = 0
+    line_21_non_compliance_penalty_payable: float = 0
     total_renewable_fuel_supplied: Optional[float] = 0
     has_renewable_fuel_requirement: Optional[bool] = True
 
