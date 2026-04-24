@@ -857,8 +857,6 @@ def org_service_instance():
     service.transaction_repo.create_transaction = AsyncMock(
         return_value=dummy_transaction
     )
-    service.redis_balance_service = MagicMock()
-    service.redis_balance_service.populate_organization_redis_balance = AsyncMock()
     return service
 
 
