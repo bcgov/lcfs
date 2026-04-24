@@ -203,7 +203,6 @@ class ComplianceReportServices:
                 else "Early Issuance Report"
             ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
-            legacy_id=report_data.legacy_id,
             create_user=user.keycloak_username,
         )
 
@@ -315,7 +314,7 @@ class ComplianceReportServices:
 
     @service_handler
     async def create_supplemental_report(
-        self, original_report_id: int, user: UserProfile = None, legacy_id: int = None
+        self, original_report_id: int, user: UserProfile = None
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
@@ -344,15 +343,6 @@ class ComplianceReportServices:
             raise ServiceException(
                 "You do not have permission to create a supplemental report for this organization."
             )
-
-        # TODO this logic to be re-instated once TFRS is shutdown
-        # TFRS allows supplementals on previously un-accepted reports
-        # so we have to support this until LCFS and TFRS are no longer synced
-        # Validate that the status of the current report is 'Assessed'
-        # if current_report.current_status.status != ComplianceReportStatusEnum.Assessed:
-        #     raise ServiceException(
-        #         "A supplemental report can only be created if the current report's status is 'Assessed'."
-        #     )
 
         new_version = latest_report.version + 1
 
@@ -394,7 +384,6 @@ class ComplianceReportServices:
         # Create the new supplemental compliance report
         new_report = ComplianceReport(
             compliance_period_id=current_report.compliance_period_id,
-            legacy_id=legacy_id,
             organization_id=current_report.organization_id,
             current_status_id=draft_status.compliance_report_status_id,
             reporting_frequency=current_report.reporting_frequency,
