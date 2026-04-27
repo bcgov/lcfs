@@ -442,6 +442,24 @@ class ComplianceReportExporter:
                 pass
         return str(val) if val else None
 
+    def _extract_display_value(self, value: Any, *attrs: str) -> Any:
+        """Extract a scalar display value from ORM relations, enums, or plain values."""
+        if value is None:
+            return None
+        if attrs:
+            for attr in attrs:
+                if hasattr(value, attr):
+                    attr_value = getattr(value, attr)
+                    if attr_value is not None:
+                        return attr_value
+        if hasattr(value, "value"):
+            enum_value = getattr(value, "value")
+            if enum_value is not None:
+                return enum_value
+        if isinstance(value, (str, int, float, decimal.Decimal, datetime)):
+            return value
+        return str(value)
+
     async def _load_fuel_supply_data(
         self, uuid, cid, version, is_quarterly
     ) -> List[List[Any]]:
@@ -774,42 +792,46 @@ class ComplianceReportExporter:
                 )
                 rows.append(
                     [
-                        aa.allocation_transaction_type,
+                        self._extract_display_value(
+                            aa.allocation_transaction_type, "type"
+                        ),
                         aa.transaction_partner,
                         aa.postal_address,
                         aa.transaction_partner_email,
                         aa.transaction_partner_phone,
-                        aa.fuel_type,
+                        self._extract_display_value(aa.fuel_type, "fuel_type"),
                         aa.fuel_type_other,
-                        aa.fuel_category,
-                        aa.provision_of_the_act,
-                        aa.fuel_code,
+                        self._extract_display_value(aa.fuel_category, "category"),
+                        self._extract_display_value(aa.provision_of_the_act, "name"),
+                        self._extract_display_value(aa.fuel_code, "fuel_code"),
                         aa.ci_of_fuel,
                         aa.q1_quantity,
                         aa.q2_quantity,
                         aa.q3_quantity,
                         aa.q4_quantity,
                         total_quantity if total_quantity > 0 else None,
-                        aa.units,
+                        self._extract_display_value(aa.units, "value"),
                     ]
                 )
             else:
                 # Annual report format
                 rows.append(
                     [
-                        aa.allocation_transaction_type,
+                        self._extract_display_value(
+                            aa.allocation_transaction_type, "type"
+                        ),
                         aa.transaction_partner,
                         aa.postal_address,
                         aa.transaction_partner_email,
                         aa.transaction_partner_phone,
-                        aa.fuel_type,
+                        self._extract_display_value(aa.fuel_type, "fuel_type"),
                         aa.fuel_type_other,
-                        aa.fuel_category,
-                        aa.provision_of_the_act,
-                        aa.fuel_code,
+                        self._extract_display_value(aa.fuel_category, "category"),
+                        self._extract_display_value(aa.provision_of_the_act, "name"),
+                        self._extract_display_value(aa.fuel_code, "fuel_code"),
                         aa.ci_of_fuel,
                         aa.quantity,
-                        aa.units,
+                        self._extract_display_value(aa.units, "value"),
                     ]
                 )
 
