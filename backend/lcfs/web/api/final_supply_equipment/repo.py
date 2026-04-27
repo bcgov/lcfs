@@ -1073,6 +1073,7 @@ class FinalSupplyEquipmentRepository:
 
         stmt = (
             select(ChargingEquipmentStatus.status)
+            .select_from(ChargingEquipment)
             .join(
                 ChargingEquipmentStatus,
                 ChargingEquipment.status_id
