@@ -10,6 +10,8 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    ComplianceReportYearNavigationItemSchema,
+    ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
 )
 from lcfs.web.api.email.repo import CHESEmailRepository
@@ -325,6 +327,71 @@ async def test_get_compliance_report_by_id_not_found(
         response = await client.get(url)
 
         assert response.status_code == 404  # Not Found
+
+
+# get_compliance_report_year_navigation
+@pytest.mark.anyio
+async def test_get_compliance_report_year_navigation_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_report_year_navigation"
+    ) as mock_get_navigation, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+
+        mock_navigation = ComplianceReportYearNavigationSchema(
+            current_compliance_period="2025",
+            previous=ComplianceReportYearNavigationItemSchema(
+                compliance_report_id=5, compliance_period="2024"
+            ),
+            next=ComplianceReportYearNavigationItemSchema(
+                compliance_report_id=15, compliance_period="2026"
+            ),
+        )
+        mock_get_navigation.return_value = mock_navigation
+        mock_validate_organization_access.return_value = None
+
+        url = fastapi_app.url_path_for(
+            "get_compliance_report_year_navigation", report_id=10
+        )
+        response = await client.get(url)
+
+        assert response.status_code == 200
+        assert response.json() == json.loads(
+            mock_navigation.model_dump_json(by_alias=True)
+        )
+        mock_get_navigation.assert_called_once_with(10, mock.ANY)
+        mock_validate_organization_access.assert_called_once_with(10)
+
+
+@pytest.mark.anyio
+async def test_get_compliance_report_year_navigation_not_found(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_report_year_navigation"
+    ) as mock_get_navigation, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+
+        mock_validate_organization_access.return_value = None
+        mock_get_navigation.side_effect = DataNotFoundException(
+            "Compliance report not found."
+        )
+
+        url = fastapi_app.url_path_for(
+            "get_compliance_report_year_navigation", report_id=9999
+        )
+        response = await client.get(url)
+
+        assert response.status_code == 404
 
 
 # get_compliance_report_summary
