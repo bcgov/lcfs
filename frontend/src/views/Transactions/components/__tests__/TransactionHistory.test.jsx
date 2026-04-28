@@ -23,7 +23,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/utils/formatters.js', () => ({
+vi.mock('@/utils/formatters', () => ({
   formatDateWithTimezoneAbbr: vi.fn((date) => `Formatted: ${date}`)
 }))
 

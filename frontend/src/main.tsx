@@ -12,7 +12,12 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './i18n'
 
-// Polyfill Buffer for dependencies that require it (e.g., uuid)
+declare global {
+  interface Window {
+    Buffer: typeof Buffer
+  }
+}
+
 if (!window.Buffer) window.Buffer = Buffer
 
 export const queryClient = new QueryClient()

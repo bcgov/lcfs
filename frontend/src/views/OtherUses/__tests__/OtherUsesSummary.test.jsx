@@ -76,7 +76,7 @@ vi.mock('@/views/OtherUses/_schema.jsx', () => ({
 }))
 
 // Mock cell renderers
-vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+vi.mock('@/utils/grid/cellRenderers', () => ({
   LinkRenderer: () => <div data-test="link-renderer">Link Renderer</div>
 }))
 
