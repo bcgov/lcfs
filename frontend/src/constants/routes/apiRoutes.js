@@ -83,6 +83,7 @@ export const apiRoutes = {
   getComplianceReport: '/reports/:reportID',
   updateComplianceReport: '/reports/:reportID',
   deleteComplianceReport: '/reports/:reportID',
+  getComplianceReportNavigation: '/reports/:reportID/navigation',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
   exportComplianceReport: '/reports/:reportID/export',

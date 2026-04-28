@@ -39,6 +39,8 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportListSchema,
     ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
+    ComplianceReportYearNavigationItemSchema,
+    ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
@@ -928,6 +930,40 @@ class ComplianceReportServices:
         self, organization_id: int
     ) -> List[CompliancePeriodBaseSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)
+
+    @service_handler
+    async def get_report_year_navigation(
+        self, report_id: int, user: UserProfile
+    ) -> ComplianceReportYearNavigationSchema:
+        # Get previous/next reports for the same supplier and period.
+ 
+        current_report = await self.repo.get_compliance_report_by_id(report_id)
+        if current_report is None:
+            raise DataNotFoundException("Compliance report not found.")
+
+        current_period = current_report.compliance_period.description
+
+        previous_report, next_report = await self.repo.get_adjacent_year_reports(
+            organization_id=current_report.organization_id,
+            current_period_description=current_period,
+            user=user,
+        )
+
+        def _to_item(
+            report,
+        ) -> ComplianceReportYearNavigationItemSchema | None:
+            if report is None:
+                return None
+            return ComplianceReportYearNavigationItemSchema(
+                compliance_report_id=report.compliance_report_id,
+                compliance_period=report.compliance_period.description,
+            )
+
+        return ComplianceReportYearNavigationSchema(
+            current_compliance_period=current_period,
+            previous=_to_item(previous_report),
+            next=_to_item(next_report),
+        )
 
     def _model_to_dict(self, record) -> dict:
         """Safely convert a model to a dict, skipping lazy-loaded attributes that raise errors."""
