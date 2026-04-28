@@ -497,6 +497,16 @@ class FinalSupplyEquipmentRepository:
         return result.unique().scalars().all()
 
     @repo_handler
+    async def get_fse_count(self, report_id: int) -> int:
+        return (
+            await self.db.scalar(
+                select(func.count())
+                .select_from(FinalSupplyEquipment)
+                .where(FinalSupplyEquipment.compliance_report_id == report_id)
+            )
+        ) or 0
+
+    @repo_handler
     async def get_fse_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> tuple[Sequence[FinalSupplyEquipment], Any]:
@@ -1262,6 +1272,36 @@ class FinalSupplyEquipmentRepository:
         data = result.fetchall()
 
         return data, total or 0
+
+    @repo_handler
+    async def get_fse_reporting_count(
+        self,
+        organization_id: int,
+        compliance_report_id: int,
+        mode: str = "all",
+    ) -> int:
+        """
+        Return the count of reporting rows using the same source and filters as
+        the FSE reporting list shown in compliance report details.
+        """
+        vt = FSEReportingBasePrefView.__table__
+
+        conditions = [
+            vt.c.organization_id == organization_id,
+            vt.c.compliance_report_id == compliance_report_id,
+            sa.or_(
+                vt.c.charging_equipment_status != "Decommissioned",
+                vt.c.charging_equipment_compliance_id.is_not(None),
+            ),
+        ]
+
+        if mode == "summary":
+            conditions.append(vt.c.is_active.is_(True))
+
+        total = await self.db.scalar(
+            select(func.count()).select_from(vt).where(*conditions)
+        )
+        return total or 0
 
     @repo_handler
     async def get_effective_fse_reporting_rows_for_export(

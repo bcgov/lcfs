@@ -46,9 +46,8 @@ async def test_scheduler_lifecycle(mock_app):
         start_scheduler(mock_app)
         assert scheduler.running, "Scheduler should be running after start"
 
-        # Job is disabled per ticket #3752 - auto-submit functionality removed
-        # The scheduler should start but no jobs should be added
-        mock_add_job.assert_not_called()
+        mock_add_job.assert_called_once()
+        assert mock_add_job.call_args.kwargs["id"] == "reindex_compliance_report_tables"
 
         safe_shutdown_scheduler()
 
@@ -151,9 +150,11 @@ async def test_scheduler_adds_startup_job(mock_app):
             # Verify start was called
             mock_start.assert_called_once()
 
-            # DISABLED per ticket #3752 - auto-submit job commented out
-            # Verify no jobs are added when auto-submit is disabled
-            mock_add_job.assert_not_called()
+            mock_add_job.assert_called_once()
+            assert (
+                mock_add_job.call_args.kwargs["id"]
+                == "reindex_compliance_report_tables"
+            )
 
             # # Verify the job was added
             # mock_add_job.assert_called_once()
@@ -218,9 +219,11 @@ async def test_scheduler_startup_job_essentials(mock_app):
         # Verify scheduler.start was called
         mock_scheduler_instance.start.assert_called_once()
 
-        # DISABLED per ticket #3752 - auto-submit job commented out
-        # Verify no jobs are added when auto-submit is disabled
-        mock_scheduler_instance.add_job.assert_not_called()
+        mock_scheduler_instance.add_job.assert_called_once()
+        assert (
+            mock_scheduler_instance.add_job.call_args.kwargs["id"]
+            == "reindex_compliance_report_tables"
+        )
 
         # # Verify add_job was called with correct parameters
         # mock_scheduler_instance.add_job.assert_called_once()

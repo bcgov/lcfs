@@ -38,6 +38,16 @@ from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentSer
 
 logger = logging.getLogger(__name__)
 
+COMPLIANCE_REINDEX_TABLES = (
+    "compliance_report",
+    "fuel_supply",
+    "fuel_export",
+    "allocation_agreement",
+    "notional_transfer",
+    "other_uses",
+    "final_supply_equipment",
+)
+
 
 async def submit_supplemental_report(report_id: int, app: FastAPI):
     """
@@ -192,3 +202,27 @@ async def check_overdue_supplemental_reports(app: FastAPI):
             raise
 
     logger.info("Finished check for overdue supplemental reports.")
+
+
+async def reindex_compliance_report_tables(app: FastAPI):
+    """
+    Rebuild compliance-report related indexes during off-hours.
+
+    Uses PostgreSQL's CONCURRENTLY mode so report traffic can continue while
+    indexes are refreshed.
+    """
+    logger.info("Starting compliance-report table reindex job")
+    conn = await app.state.db_engine.connect()
+
+    try:
+        conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+        for table_name in COMPLIANCE_REINDEX_TABLES:
+            logger.info("Reindexing compliance table", table_name=table_name)
+            await conn.execute(text(f"REINDEX TABLE CONCURRENTLY {table_name}"))
+    except Exception:
+        logger.exception("Compliance-report table reindex job failed")
+        raise
+    finally:
+        await conn.close()
+
+    logger.info("Finished compliance-report table reindex job")
