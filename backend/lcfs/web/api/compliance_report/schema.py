@@ -303,7 +303,6 @@ class ComplianceReportCreateSchema(BaseSchema):
     compliance_period: str
     organization_id: int
     status: str
-    legacy_id: Optional[int] = None
     nickname: Optional[str] = None
 
 
