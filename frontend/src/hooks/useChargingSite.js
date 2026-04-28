@@ -33,7 +33,10 @@ export const useGetAllocationOrganizations = (options = {}) => {
   })
 }
 
-export const useGetChargingSiteById = (siteId, options = {}) => {
+export const useGetChargingSiteById = (
+  siteId,
+  { historyMode = false, ...options } = {}
+) => {
   const client = useApiService()
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -43,10 +46,13 @@ export const useGetChargingSiteById = (siteId, options = {}) => {
   } = options
 
   return useQuery({
-    queryKey: ['chargingSite', siteId],
+    queryKey: ['chargingSite', siteId, historyMode],
     queryFn: async () => {
       const response = await client.get(
-        apiRoutes.getChargingSite.replace(':siteId', siteId)
+        apiRoutes.getChargingSite.replace(':siteId', siteId),
+        {
+          params: historyMode ? { history_mode: true } : undefined
+        }
       )
       return response.data
     },
@@ -379,12 +385,17 @@ export const useBulkUpdateEquipmentStatus = (options = {}) => {
 export const useChargingSiteEquipmentPaginated = (
   siteId,
   paginationOptions,
-  options = {}
+  { historyMode = false, ...options } = {}
 ) => {
   const apiService = useApiService()
 
   return useQuery({
-    queryKey: ['charging-site-equipment-paginated', siteId, paginationOptions],
+    queryKey: [
+      'charging-site-equipment-paginated',
+      siteId,
+      paginationOptions,
+      historyMode
+    ],
     queryFn: async () => {
       // Validate siteId before making the API call
       if (!siteId || siteId === 'undefined') {
@@ -399,7 +410,9 @@ export const useChargingSiteEquipmentPaginated = (
         filters: paginationOptions?.filters ?? []
       }
 
-      const response = await apiService.post(url, payload)
+      const response = await apiService.post(url, payload, {
+        params: historyMode ? { history_mode: true } : undefined
+      })
 
       // For these tests, return data as-is
       return response.data

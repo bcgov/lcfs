@@ -1,14 +1,14 @@
 """Replace static audit trigger list with dynamic coverage
 
 Revision ID: e8f1d2c3b4a5
-Revises: c7e4d9a1b2f6
+Revises: a2b3c4d5e6f7
 Create Date: 2026-03-20 10:00:00.000000
 """
 
 from alembic import op
 
 revision = "e8f1d2c3b4a5"
-down_revision = "c7e4d9a1b2f6"
+down_revision = "a2b3c4d5e6f7"
 branch_labels = None
 depends_on = None
 

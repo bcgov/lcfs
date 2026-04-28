@@ -219,6 +219,58 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
     return decorator
 
 
+def public_view_handler(func):
+    """Handles try/except in the view layer for public (unauthenticated) endpoints."""
+
+    @wraps(func)
+    async def wrapper(request: Request, *args, **kwargs):
+        logger = structlog.get_logger(func.__module__)
+        request_var.set(request)
+        user = getattr(request, "user", None)
+        user_var.set(user)
+        session = (
+            request.state.session if hasattr(request.state, "session") else None
+        )
+        session_var.set(session)
+
+        try:
+            return await func(request, *args, **kwargs)
+        except ValueError as e:
+            source_info = get_source_info(func=func)
+            logger.error(str(e), source_info=source_info, exc_info=e)
+            raise HTTPException(status_code=400, detail=str(e))
+        except (DatabaseException, ServiceException) as e:
+            source_info = get_source_info(func=func)
+            logger.error(str(e), source_info=source_info, exc_info=e)
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        except HTTPException as e:
+            source_info = get_source_info(func=func)
+            logger.error(str(e), source_info=source_info, exc_info=e)
+            if e.status_code == 403:
+                raise HTTPException(status_code=403, detail="Forbidden resource")
+            raise
+        except DataNotFoundException:
+            raise HTTPException(status_code=404, detail="Not Found")
+        except VirusScanException:
+            raise HTTPException(
+                status_code=422,
+                detail="Viruses detected in file, please upload another",
+            )
+        except RequestValidationError as e:
+            raise e
+        except ValidationErrorException as e:
+            source_info = get_source_info(func=func)
+            logger.error(str(e), source_info=source_info, exc_info=e)
+            raise
+        except Exception as e:
+            context = extract_context()
+            log_unhandled_exception(logger, e, context, "view", func=func)
+            new_exception = HTTPException(status_code=500, detail="Internal Server Error")
+            raise new_exception.with_traceback(e.__traceback__)
+
+    return wrapper
+
+
 def service_handler(func):
     """Handles try except in the service layer"""
 

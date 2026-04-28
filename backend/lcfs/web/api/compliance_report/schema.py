@@ -52,8 +52,9 @@ class PortsEnum(str, Enum):
 class SummarySchema(BaseSchema):
     summary_id: int
     is_locked: bool
-    line_11_fossil_derived_base_fuel_total: float
-    line_21_non_compliance_penalty_payable: float
+    line_11_non_compliance_penalty_payable: float = 0
+    line_11_fossil_derived_base_fuel_total: Optional[float] = 0
+    line_21_non_compliance_penalty_payable: float = 0
     total_renewable_fuel_supplied: Optional[float] = 0
     has_renewable_fuel_requirement: Optional[bool] = True
 
@@ -287,11 +288,21 @@ class ChainedComplianceReportSchema(BaseSchema):
     has_government_reassessment_in_progress: Optional[bool] = False
 
 
+class ComplianceReportYearNavigationItemSchema(BaseSchema):
+    compliance_report_id: int
+    compliance_period: str
+
+
+class ComplianceReportYearNavigationSchema(BaseSchema):
+    current_compliance_period: str
+    previous: Optional[ComplianceReportYearNavigationItemSchema] = None
+    next: Optional[ComplianceReportYearNavigationItemSchema] = None
+
+
 class ComplianceReportCreateSchema(BaseSchema):
     compliance_period: str
     organization_id: int
     status: str
-    legacy_id: Optional[int] = None
     nickname: Optional[str] = None
 
 
@@ -413,6 +424,7 @@ FUEL_SUPPLY_COLUMNS = [
     ExportColumn("Determining carbon intensity"),
     ExportColumn("Fuel code"),
     ExportColumn("Fuel produced in Canada"),
+    ExportColumn("Supplied in Q1"),
     ExportColumn("Quantity supplied"),
     ExportColumn("Units"),
     ExportColumn("Target CI"),
@@ -536,6 +548,7 @@ ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS = [
 ]
 
 FSE_EXPORT_COLUMNS = [
+    ExportColumn("Status"),
     ExportColumn("Organization"),
     ExportColumn("Allocating organization"),
     ExportColumn("Dates of supply from"),

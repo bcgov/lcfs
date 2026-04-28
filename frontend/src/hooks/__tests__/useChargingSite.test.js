@@ -51,7 +51,31 @@ describe('useChargingSite', () => {
       })
 
       expect(result.current.data).toEqual(mockData)
-      expect(mockGet).toHaveBeenCalledWith('/charging-sites/1')
+      expect(mockGet).toHaveBeenCalledWith('/charging-sites/1', {
+        params: undefined
+      })
+    })
+
+    it('should request history mode when enabled', async () => {
+      const mockData = {
+        chargingSiteId: 1,
+        siteName: 'Test Charging Site',
+        history: [{ chargingSiteId: 1, version: 2 }]
+      }
+      mockGet.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(
+        () => useGetChargingSiteById(1, { historyMode: true }),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockGet).toHaveBeenCalledWith('/charging-sites/1', {
+        params: { history_mode: true }
+      })
     })
 
     it('should handle API errors', async () => {
@@ -396,7 +420,48 @@ describe('useChargingSite', () => {
       // Fixed: Use the correct API route with list-all suffix
       expect(mockPost).toHaveBeenCalledWith(
         '/charging-sites/1/equipment/list-all',
-        paginationOptions
+        paginationOptions,
+        { params: undefined }
+      )
+    })
+
+    it('should request equipment history mode when enabled', async () => {
+      const mockData = {
+        equipments: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          size: 10,
+          totalPages: 0
+        }
+      }
+      mockPost.mockResolvedValue({ data: mockData })
+
+      const paginationOptions = {
+        page: 1,
+        size: 10,
+        sortOrders: [],
+        filters: []
+      }
+
+      const { result } = renderHook(
+        () =>
+          useChargingSiteEquipmentPaginated(1, paginationOptions, {
+            historyMode: true
+          }),
+        {
+          wrapper
+        }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/charging-sites/1/equipment/list-all',
+        paginationOptions,
+        { params: { history_mode: true } }
       )
     })
 
@@ -435,7 +500,8 @@ describe('useChargingSite', () => {
       // Fixed: Use the correct API route with list-all suffix
       expect(mockPost).toHaveBeenCalledWith(
         '/charging-sites/1/equipment/list-all',
-        paginationOptions
+        paginationOptions,
+        { params: undefined }
       )
     })
 

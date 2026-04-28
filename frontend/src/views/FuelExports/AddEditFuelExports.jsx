@@ -174,7 +174,7 @@ export const AddEditFuelExports = () => {
           const category =
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
-            endUseTypes.length === 1 ? endUseTypes[0].type : null
+            endUseTypes.length === 1 ? endUseTypes[0]?.type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name
@@ -201,7 +201,7 @@ export const AddEditFuelExports = () => {
 
           // Set to null if multiple options, otherwise use first item
           const endUseValue =
-            endUseTypes.length === 1 ? endUseTypes[0].type : null
+            endUseTypes.length === 1 ? endUseTypes[0]?.type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name

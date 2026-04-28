@@ -92,12 +92,16 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             or path == "/api/health"
             or path == "/api/login-bg-images/active"
             or re.match(r"^/api/login-bg-images/\d+/stream$", path)
+            or path == "/api/fuel-codes/bulletins"
         ):
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Skip auth for anonymous form access via secure link keys
-        # Pattern: /api/forms/{form_slug}/{link_key}
-        if re.match(r"^/api/forms/[a-zA-Z0-9_-]{1,50}/[A-Za-z0-9_-]{16,128}/?$", path):
+        # Patterns: /api/forms/{form_slug}/{link_key}
+        #           /api/forms/{form_slug}/{link_key}/export
+        if re.match(
+            r"^/api/forms/[a-zA-Z0-9_-]{1,50}/[A-Za-z0-9_-]{16,128}(/export)?/?$", path
+        ):
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Lazily retrieve Redis, session, and settings from app state

@@ -39,7 +39,7 @@ const defaultReport = {
   currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
   history: [],
   summary: {
-    line11FossilDerivedBaseFuelTotal: 0,
+    line11NonCompliancePenaltyPayable: 0,
     line21NonCompliancePenaltyPayable: 0
   }
 }
@@ -224,7 +224,7 @@ describe('HistoryCard', () => {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
         history,
         summary: {
-          line11FossilDerivedBaseFuelTotal: 0,
+          line11NonCompliancePenaltyPayable: 0,
           line21NonCompliancePenaltyPayable: 0,
           totalRenewableFuelSupplied: 5000.0
         }
@@ -260,7 +260,7 @@ describe('HistoryCard', () => {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
         history,
         summary: {
-          line11FossilDerivedBaseFuelTotal: 0.0,
+          line11NonCompliancePenaltyPayable: 0.0,
           line21NonCompliancePenaltyPayable: 0.0,
           totalRenewableFuelSupplied: 5000.0
         }
@@ -295,7 +295,7 @@ describe('HistoryCard', () => {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history,
       summary: {
-        line11FossilDerivedBaseFuelTotal: 1.0,
+        line11NonCompliancePenaltyPayable: 1.0,
         line21NonCompliancePenaltyPayable: 1.0,
         totalRenewableFuelSupplied: 5000.0,
         hasRenewableFuelRequirement: true
@@ -339,7 +339,7 @@ describe('HistoryCard', () => {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history,
       summary: {
-        line11FossilDerivedBaseFuelTotal: 0,
+        line11NonCompliancePenaltyPayable: 0,
         line21NonCompliancePenaltyPayable: 5000,
         totalRenewableFuelSupplied: 5000.0
       }
@@ -377,7 +377,7 @@ describe('HistoryCard', () => {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       history,
       summary: {
-        line11FossilDerivedBaseFuelTotal: 1234.99,
+        line11NonCompliancePenaltyPayable: 1234.99,
         line21NonCompliancePenaltyPayable: 5000.99,
         totalRenewableFuelSupplied: 5000.0,
         hasRenewableFuelRequirement: true
@@ -411,7 +411,7 @@ describe('HistoryCard', () => {
       currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
       history,
       summary: {
-        line11FossilDerivedBaseFuelTotal: 0,
+        line11NonCompliancePenaltyPayable: 0,
         line21NonCompliancePenaltyPayable: 0,
         totalRenewableFuelSupplied: 5000.0
       }
@@ -420,6 +420,49 @@ describe('HistoryCard', () => {
     await waitFor(() => {
       expect(
         screen.queryByText(/has met renewable fuel targets/i)
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('prefers the effective renewable penalty over the stale legacy total in report history', async () => {
+    useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
+      data: { isGovernmentUser: true },
+      isLoading: false,
+      hasRoles: vi.fn(() => false)
+    })
+
+    const history = [
+      {
+        status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        createDate: '2024-10-01T10:00:00Z',
+        userProfile: { firstName: 'John', lastName: 'Doe' },
+        displayName: 'John Doe'
+      }
+    ]
+
+    renderComponent(
+      {
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history,
+        summary: {
+          line11NonCompliancePenaltyPayable: 0,
+          line11FossilDerivedBaseFuelTotal: 999999,
+          line21NonCompliancePenaltyPayable: 0,
+          totalRenewableFuelSupplied: 5000.0,
+          hasRenewableFuelRequirement: true
+        }
+      },
+      { defaultExpanded: true }
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Test Org has met renewable fuel targets set under section 9 of the Low Carbon Fuels Act.'
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(/failure to meet the renewable fuel target/i)
       ).not.toBeInTheDocument()
     })
   })

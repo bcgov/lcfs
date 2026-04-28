@@ -357,6 +357,75 @@ async def test_get_all_org_reported_years_unexpected_error(
         await compliance_report_service.get_all_org_reported_years(1)
 
 
+# get_report_year_navigation
+@pytest.mark.anyio
+async def test_get_report_year_navigation_returns_adjacent_years(
+    compliance_report_service, mock_repo
+):
+    current_report = MagicMock()
+    current_report.compliance_report_id = 10
+    current_report.organization_id = 42
+    current_report.compliance_period.description = "2025"
+
+    previous_report = MagicMock()
+    previous_report.compliance_report_id = 5
+    previous_report.compliance_period.description = "2024"
+
+    next_report = MagicMock()
+    next_report.compliance_report_id = 15
+    next_report.compliance_period.description = "2026"
+
+    mock_repo.get_compliance_report_by_id.return_value = current_report
+    mock_repo.get_adjacent_year_reports.return_value = (previous_report, next_report)
+
+    user = MagicMock()
+
+    result = await compliance_report_service.get_report_year_navigation(10, user)
+
+    assert result.current_compliance_period == "2025"
+    assert result.previous.compliance_report_id == 5
+    assert result.previous.compliance_period == "2024"
+    assert result.next.compliance_report_id == 15
+    assert result.next.compliance_period == "2026"
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(10)
+    mock_repo.get_adjacent_year_reports.assert_called_once_with(
+        organization_id=42,
+        current_period_description="2025",
+        user=user,
+    )
+
+
+@pytest.mark.anyio
+async def test_get_report_year_navigation_handles_missing_neighbors(
+    compliance_report_service, mock_repo
+):
+    current_report = MagicMock()
+    current_report.compliance_report_id = 10
+    current_report.organization_id = 42
+    current_report.compliance_period.description = "2018"
+
+    mock_repo.get_compliance_report_by_id.return_value = current_report
+    mock_repo.get_adjacent_year_reports.return_value = (None, None)
+
+    result = await compliance_report_service.get_report_year_navigation(
+        10, MagicMock()
+    )
+
+    assert result.current_compliance_period == "2018"
+    assert result.previous is None
+    assert result.next is None
+
+
+@pytest.mark.anyio
+async def test_get_report_year_navigation_report_not_found(
+    compliance_report_service, mock_repo
+):
+    mock_repo.get_compliance_report_by_id.return_value = None
+
+    with pytest.raises(DataNotFoundException):
+        await compliance_report_service.get_report_year_navigation(999, MagicMock())
+
+
 @pytest.mark.anyio
 async def test_create_supplemental_report_includes_summary_lines(
     compliance_report_service,

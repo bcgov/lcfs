@@ -54,6 +54,7 @@ class ComplianceSummaryUpdater:
     ) -> float:
         """Calculate Line 17 available balance using raw SQL"""
         try:
+            lcfs_cursor.execute("SAVEPOINT line17_calc")
             # Calculate compliance period end date
             vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
             compliance_period_end = datetime.strptime(
@@ -153,10 +154,12 @@ class ComplianceSummaryUpdater:
             lcfs_cursor.execute(line_17_query, params)
             result = lcfs_cursor.fetchone()
 
+            lcfs_cursor.execute("RELEASE SAVEPOINT line17_calc")
             self.stats["line_17_calculations"] += 1
             return float(result[0] if result and result[0] is not None else 0)
 
         except Exception as e:
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT line17_calc")
             logger.error(
                 f"Error calculating line 17 balance for org {organization_id}: {e}"
             )
@@ -302,6 +305,7 @@ class ComplianceSummaryUpdater:
     def parse_summary_data(self, snapshot: Dict, lcfs_cursor, report_version: int = 0) -> Optional[Dict]:
         """Enhanced parsing with Alembic migration logic"""
         try:
+            lcfs_cursor.execute("SAVEPOINT parse_summary")
             # Extract organization and compliance period info
             organization_id = snapshot.get("organization", {}).get("id", 0)
             compliance_period_start = snapshot.get("compliance_period", {}).get(
@@ -388,7 +392,6 @@ class ComplianceSummaryUpdater:
             net_fuel_supply_units = safe_decimal(summary_lines.get("25", 0))
             # TFRS Line 26 = Total banked credits used to offset outstanding debits
             line_26_banked_credits_offset = safe_decimal(summary_lines.get("26", 0))
-            line28_non_compliance = safe_decimal(summary_lines.get("28", 0))
 
             # Calculate fossil fuel totals
             fossil_gas = line1_gas
@@ -412,15 +415,17 @@ class ComplianceSummaryUpdater:
             # $600/unit for compliance periods 2023 and onward
             low_carbon_penalty_rate = Decimal("200") if compliance_period_year <= 2022 else Decimal("600")
 
-            # Penalty is based on Line 27 (Outstanding debit balance after banked credits offset)
-            # Line 27 = Line 25 + Line 26 (where Line 26 is banked credits used to offset)
-            # Always calculate from Line 25 + Line 26 since Line 27 can be incorrect in some snapshots
-            # (e.g., some 2023 reports show Line 27 = 0 when it should be negative)
-            outstanding_debit_balance = net_fuel_supply_units + line_26_banked_credits_offset
-
-            # Penalty units are the absolute value of outstanding debit (only if negative)
-            penalty_units = abs(min(outstanding_debit_balance, Decimal("0")))
-            line_21_non_compliance_penalty = penalty_units * low_carbon_penalty_rate
+            # Use TFRS Line 28 directly for the non-compliance penalty
+            # Line 28 in TFRS is the actual penalty amount assessed
+            # Only fall back to recalculation if Line 28 is not in the snapshot
+            line28_raw = summary_lines.get("28")
+            if line28_raw is not None:
+                line_21_non_compliance_penalty = safe_decimal(line28_raw) * low_carbon_penalty_rate
+            else:
+                # Fallback: recalculate from outstanding debit balance
+                outstanding_debit_balance = net_fuel_supply_units + line_26_banked_credits_offset
+                penalty_units = abs(min(outstanding_debit_balance, Decimal("0")))
+                line_21_non_compliance_penalty = penalty_units * low_carbon_penalty_rate
 
             # FIXED: Get Line 22 (closing balance) from TFRS snapshot line 29C
             # Line 29C = Available compliance unit balance after assessment
@@ -459,7 +464,7 @@ class ComplianceSummaryUpdater:
             # Use calculated penalty with correct rate based on compliance year
             total_payable = line11_gas + line11_diesel + line_21_non_compliance_penalty
 
-            return {
+            result = {
                 # Gasoline class data
                 "line_1_fossil_derived_base_fuel_gasoline": line1_gas,
                 "line_2_eligible_renewable_fuel_supplied_gasoline": line2_gas,
@@ -524,8 +529,11 @@ class ComplianceSummaryUpdater:
                 "line_21_non_compliance_penalty_payable": line_21_non_compliance_penalty,
                 "total_non_compliance_penalty_payable": total_payable,
             }
+            lcfs_cursor.execute("RELEASE SAVEPOINT parse_summary")
+            return result
 
         except Exception as e:
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT parse_summary")
             logger.error(f"Failed to parse summary data from snapshot: {e}")
             return None
 
@@ -596,6 +604,7 @@ class ComplianceSummaryUpdater:
         """
 
         try:
+            lcfs_cursor.execute("SAVEPOINT update_summary")
             params = [
                 MIGRATION_USER,  # update_user
                 # Gasoline class
@@ -661,9 +670,11 @@ class ComplianceSummaryUpdater:
             ]
 
             lcfs_cursor.execute(update_sql, params)
+            lcfs_cursor.execute("RELEASE SAVEPOINT update_summary")
             return lcfs_cursor.rowcount > 0
 
         except Exception as e:
+            lcfs_cursor.execute("ROLLBACK TO SAVEPOINT update_summary")
             logger.error(
                 f"Failed to update summary for compliance_report_id {lcfs_compliance_report_id}: {e}"
             )
@@ -680,6 +691,18 @@ class ComplianceSummaryUpdater:
                 with get_destination_connection() as lcfs_conn:
                     tfrs_cursor = tfrs_conn.cursor()
                     lcfs_cursor = lcfs_conn.cursor()
+
+                    # Ensure historical_snapshot column exists
+                    # (may be missing if Alembic migration 54d55e878dad was skipped in prod)
+                    lcfs_cursor.execute("""
+                        ALTER TABLE compliance_report_summary
+                        ADD COLUMN IF NOT EXISTS historical_snapshot jsonb;
+
+                        COMMENT ON COLUMN compliance_report_summary.historical_snapshot IS
+                        'Contains historical data from pre-2024 TFRS system for data retention and analysis purposes.';
+                    """)
+                    lcfs_conn.commit()
+                    logger.info("Ensured historical_snapshot column exists on compliance_report_summary")
 
                     # Load mappings
                     self.load_mappings(lcfs_cursor)

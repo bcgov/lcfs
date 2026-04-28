@@ -38,7 +38,7 @@ async def get_current_notification(
     response_model=GovernmentNotificationSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def update_notification(
     request: Request,
     notification_data: GovernmentNotificationUpdateSchema = Body(..., embed=False),
@@ -46,7 +46,7 @@ async def update_notification(
 ):
     """
     Updates the government notification.
-    Only Compliance Manager and Director IDIR users can perform this action.
+    Only System Admin users can perform this action.
     If no notification exists, it will be created.
     """
     return await service.update_notification(notification_data)
@@ -56,14 +56,14 @@ async def update_notification(
     "/",
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+@view_handler([RoleEnum.SYSTEM_ADMIN])
 async def delete_notification(
     request: Request,
     service: GovernmentNotificationService = Depends(),
 ):
     """
     Deletes the government notification.
-    Only Compliance Manager and Director IDIR users can perform this action.
+    Only System Admin users can perform this action.
     Returns a message indicating success or if no notification existed.
     """
     deleted = await service.delete_notification()

@@ -43,6 +43,7 @@ ALLOCATION_AGREEMENT_EXCLUDE_FIELDS = {
 }
 
 PROVISION_APPROVED_FUEL_CODE = "Fuel code - section 19 (b) (i)"
+PROVISION_APPROVED_FUEL_CODE_LEGACY = "Approved fuel code - Section 6 (5) (c)"
 
 
 class AllocationAgreementServices:
@@ -189,8 +190,12 @@ class AllocationAgreementServices:
                 updated=None,  # Assuming this is not mapped
             )
             allocation_agreements_response.append(aa_response)
+        was_edited = await self.compliance_report_repo.has_supplemental_changes(
+            compliance_report_id, AllocationAgreement
+        )
         return AllocationAgreementAllSchema(
-            allocation_agreements=allocation_agreements_response
+            allocation_agreements=allocation_agreements_response,
+            was_edited=was_edited,
         )
 
     @service_handler
@@ -337,7 +342,7 @@ class AllocationAgreementServices:
                 )
 
             if (
-                existing_allocation_agreement.provision_of_the_act.name
+                getattr(existing_allocation_agreement.provision_of_the_act, "name", None)
                 != allocation_agreement_data.provision_of_the_act
             ):
                 existing_allocation_agreement.provision_of_the_act = (
@@ -647,8 +652,8 @@ class AllocationAgreementServices:
             float: Carbon intensity value
         """
 
-        # Approved fuel code scenario
-        if provision_of_the_act == PROVISION_APPROVED_FUEL_CODE and fuel_code:
+        # Approved fuel code scenario (new or legacy provision)
+        if provision_of_the_act in (PROVISION_APPROVED_FUEL_CODE, PROVISION_APPROVED_FUEL_CODE_LEGACY) and fuel_code:
             return float(fuel_code.carbon_intensity or 0.0)
 
             # Unrecognized fuel type: use the category’s default carbon intensity

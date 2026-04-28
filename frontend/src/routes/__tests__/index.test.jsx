@@ -53,9 +53,8 @@ vi.mock('@/views/Dashboard', () => ({
 }))
 
 vi.mock('@/views/Admin/AdminMenu', () => ({
-  AdminMenu: ({ tabIndex }) => (
-    <div data-test={`admin-menu-${tabIndex}`}>Admin Menu {tabIndex}</div>
-  )
+  AdminMenu: () => <div data-test="admin-menu">Admin Menu</div>,
+  AdminLanding: () => <div data-test="admin-landing">Admin Landing</div>
 }))
 
 vi.mock('@/views/Admin/AdminMenu/components/ViewAuditLog', () => ({
@@ -380,7 +379,7 @@ describe('Router Configuration', () => {
       await waitFor(() => {
         expect(screen.getByTestId('main-layout')).toBeInTheDocument()
         // Note: Authentication redirect testing would require more complex integration setup
-        expect(screen.getByTestId('admin-menu-0')).toBeInTheDocument()
+        expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
@@ -482,10 +481,9 @@ describe('Router Configuration', () => {
       mockKeycloak.authenticated = true
     })
 
-    it('should redirect /admin to /admin/users', () => {
-      // Verify the /admin route exists and is configured as a redirect
-      // Note: Full navigation testing requires integration test setup due to
-      // AbortSignal compatibility issues between MSW and react-router data router
+    it('should resolve /admin to a role-aware landing page', () => {
+      // The /admin route delegates to a landing component that redirects
+      // based on whether the current user is an Administrator or System Admin.
       const mainLayoutRoute = router.routes.find(
         (route) => route.element?.type?.name === 'MainLayout'
       )
@@ -493,7 +491,7 @@ describe('Router Configuration', () => {
         (route) => route.path === '/admin'
       )
       expect(adminRoute).toBeDefined()
-      expect(adminRoute.element?.type?.name).toBe('Navigate')
+      expect(adminRoute.element).toBeDefined()
     })
 
     it('should render admin users tab', async () => {
@@ -501,7 +499,7 @@ describe('Router Configuration', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('admin-menu-0')).toBeInTheDocument()
+        expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
@@ -510,7 +508,7 @@ describe('Router Configuration', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('admin-menu-1')).toBeInTheDocument()
+        expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 
@@ -519,7 +517,7 @@ describe('Router Configuration', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('admin-menu-3')).toBeInTheDocument()
+        expect(screen.getByTestId('admin-menu')).toBeInTheDocument()
       })
     })
 

@@ -3,6 +3,14 @@
   "complianceReport": "Compliance report",
   "complianceReportEarlyIssuance": "Early issuance report - Quarter",
   "newReportBtn": "New compliance report",
+  "yearNavigator": {
+    "previous": "Previous report year",
+    "next": "Next report year",
+    "previousYear": "Go to {{year}} compliance report",
+    "nextYear": "Go to {{year}} compliance report",
+    "noPrevious": "No earlier compliance report available",
+    "noNext": "No later compliance report available"
+  },
   "reportColLabels": {
     "compliancePeriod": "Compliance period",
     "organization": "Organization",

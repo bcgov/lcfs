@@ -199,13 +199,13 @@ vi.mock('@/views/FuelCodes', () => ({
 }))
 
 vi.mock('@/views/Admin/AdminMenu', () => ({
-  AdminMenu: ({ tabIndex }) => {
+  AdminMenu: () => {
     const location = useLocation()
-    return (
-      <div data-test={`admin-menu-${tabIndex}`}>
-        Admin Menu {tabIndex} - {location.pathname}
-      </div>
-    )
+    return <div data-test="admin-menu">Admin Menu - {location.pathname}</div>
+  },
+  AdminLanding: () => {
+    const location = useLocation()
+    return <div data-test="admin-landing">Admin Landing - {location.pathname}</div>
   }
 }))
 

@@ -1,6 +1,7 @@
 import json
 import structlog
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from fastapi import Depends, HTTPException
 from typing import List, Optional
 
@@ -466,7 +467,10 @@ class TransferServices:
             transfer.transfer_category, "category"
         ):
             today = datetime.now(timezone.utc)
-            diff_seconds = today.timestamp() - transfer.agreement_date.timestamp()
+            agreement_dt = datetime.combine(
+                transfer.agreement_date, datetime.min.time(), tzinfo=timezone.utc
+            )
+            diff_seconds = today.timestamp() - agreement_dt.timestamp()
             # Define approximate thresholds in seconds
             ONE_DAY = 24 * 60 * 60
             SIX_MONTHS = 6 * 30 * ONE_DAY
@@ -481,7 +485,12 @@ class TransferServices:
             updated_transfer = await self.update_category(
                 transfer.transfer_id, category
             )
-            updated_transfer.transaction_effective_date = datetime.now(timezone.utc)
+            # Store the Pacific calendar date the director clicked "Record"
+            # (matches IA/admin_adjustment convention and avoids UTC→PT date shifts
+            # on late-evening records near compliance period boundaries).
+            updated_transfer.transaction_effective_date = datetime.now(
+                ZoneInfo("America/Vancouver")
+            ).date()
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(

@@ -14,6 +14,7 @@ import {
 } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
+  useComplianceReportYearNavigation,
   useDeleteComplianceReport,
   useUpdateComplianceReport,
   useCreateSupplementalReport,
@@ -36,6 +37,7 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { Fab, Stack, Tooltip, Box, Divider } from '@mui/material'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
+import { ReportYearNavigator } from '@/views/ComplianceReports/components/ReportYearNavigator.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
@@ -73,6 +75,11 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     useState(false)
 
   const { compliancePeriod, complianceReportId } = useParams()
+
+  const { data: yearNavigation, isLoading: isYearNavigationLoading } =
+    useComplianceReportYearNavigation(complianceReportId, {
+      enabled: !!complianceReportId && !isDeleted && !isDeleting
+    })
 
   // Get report data from store
   const reportData = useComplianceReportStore((state) =>
@@ -691,15 +698,31 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           </BCAlert>
         )}
         <BCBox pb={2}>
-          <BCTypography
-            data-test="compliance-report-header"
-            variant="h5"
-            color="primary"
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+            spacing={1}
           >
-            {qReport?.isQuarterly
-              ? `${reportCompliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
-              : `${reportCompliancePeriod} ${t('report:complianceReport')} - ${reportData?.report?.nickname}`}
-          </BCTypography>
+            <BCTypography
+              data-test="compliance-report-header"
+              variant="h5"
+              color="primary"
+            >
+              {qReport?.isQuarterly
+                ? `${reportCompliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
+                : `${reportCompliancePeriod} ${t('report:complianceReport')} - ${reportData?.report?.nickname}`}
+            </BCTypography>
+            <ReportYearNavigator
+              currentCompliancePeriod={
+                yearNavigation?.currentCompliancePeriod ||
+                reportCompliancePeriod
+              }
+              previous={yearNavigation?.previous}
+              next={yearNavigation?.next}
+              isLoading={isYearNavigationLoading}
+            />
+          </Stack>
           <BCTypography
             variant="h6"
             color="primary"

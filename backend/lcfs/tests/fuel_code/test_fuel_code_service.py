@@ -489,7 +489,7 @@ async def test_get_table_options_includes_gigajoules_unit():
         in result.facility_nameplate_capacity_units
     )
     assert result.facility_nameplate_capacity_units[0] == "L"
-    assert result.facility_nameplate_capacity_units[-1] == "m³"
+    assert result.facility_nameplate_capacity_units[-1] == "m³ (15°C and 1 atm)"
 
 
 @pytest.mark.anyio

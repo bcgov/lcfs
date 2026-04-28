@@ -86,11 +86,13 @@ class PostMigrationCleanup:
 
         try:
             # Find duplicates (keep the one with lowest ID)
+            # Include group_uuid and action_type to avoid false positives across version chains
             cursor.execute("""
                 WITH duplicates AS (
                     SELECT fs.fuel_supply_id,
                            ROW_NUMBER() OVER (
-                               PARTITION BY fs.compliance_report_id, fs.quantity,
+                               PARTITION BY fs.compliance_report_id, fs.group_uuid,
+                                            fs.action_type, fs.quantity,
                                             fs.fuel_type_id, fs.fuel_category_id,
                                             fs.ci_of_fuel
                                ORDER BY fs.fuel_supply_id
@@ -113,7 +115,8 @@ class PostMigrationCleanup:
                 WITH duplicates AS (
                     SELECT fs.fuel_supply_id,
                            ROW_NUMBER() OVER (
-                               PARTITION BY fs.compliance_report_id, fs.quantity,
+                               PARTITION BY fs.compliance_report_id, fs.group_uuid,
+                                            fs.action_type, fs.quantity,
                                             fs.fuel_type_id, fs.fuel_category_id,
                                             fs.ci_of_fuel
                                ORDER BY fs.fuel_supply_id
@@ -153,6 +156,7 @@ class PostMigrationCleanup:
                 JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
                 WHERE cp.description < '2024'
                 AND fs.quantity = 0
+                AND fs.action_type != 'DELETE'
             """)
             zero_count = cursor.fetchone()[0]
 
@@ -160,7 +164,7 @@ class PostMigrationCleanup:
                 logger.info("  No zero-quantity fuel_supply records found")
                 return 0, True
 
-            # Delete zero-quantity records
+            # Delete zero-quantity records (but preserve DELETE action records which legitimately have quantity=0)
             cursor.execute("""
                 DELETE FROM fuel_supply
                 WHERE fuel_supply_id IN (
@@ -170,6 +174,7 @@ class PostMigrationCleanup:
                     JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
                     WHERE cp.description < '2024'
                     AND fs.quantity = 0
+                    AND fs.action_type != 'DELETE'
                 )
             """)
 

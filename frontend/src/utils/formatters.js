@@ -281,6 +281,23 @@ export const formatNumberWithCommas = ({ value }) => {
 }
 
 /**
+ * Formats a number with commas and a fixed number of decimal places.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @param {number} decimals - Number of decimal places to show (default 2).
+ * @returns {string} - The formatted number with commas and fixed decimals.
+ */
+export const formatNumberWithDecimals = ({ value }, decimals = 2) => {
+  if (value == null || value === '') return ''
+  const num = Number(value)
+  if (!Number.isFinite(num)) return ''
+  return new Intl.NumberFormat('en-CA', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(num)
+}
+
+/**
  * Removes commas from a formatted number string.
  *
  * @param {string} value - The formatted number string.

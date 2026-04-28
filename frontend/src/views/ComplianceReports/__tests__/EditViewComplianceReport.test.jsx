@@ -29,7 +29,11 @@ vi.mock('@/hooks/useComplianceReports', () => ({
   useDeleteComplianceReport: vi.fn(),
   useCreateSupplementalReport: vi.fn(),
   useCreateAnalystAdjustment: vi.fn(),
-  useCreateIdirSupplementalReport: vi.fn()
+  useCreateIdirSupplementalReport: vi.fn(),
+  useComplianceReportYearNavigation: vi.fn(() => ({
+    data: undefined,
+    isLoading: false
+  }))
 }))
 
 vi.mock('react-hook-form', () => ({
@@ -140,6 +144,10 @@ vi.mock('@/views/ComplianceReports/components/AssessmentStatement.jsx', () => ({
 
 vi.mock('@/views/ComplianceReports/components/Introduction.jsx', () => ({
   Introduction: () => <div data-test="introduction" />
+}))
+
+vi.mock('@/views/ComplianceReports/components/ReportYearNavigator.jsx', () => ({
+  ReportYearNavigator: () => <div data-test="report-year-navigator" />
 }))
 
 vi.mock(

@@ -521,6 +521,27 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
     assert "site_name ASC NULLS LAST" in compiled_sql
     assert "registration_number DESC NULLS LAST" in compiled_sql
+    assert "charging_equipment_status" in compiled_sql
+    assert "Decommissioned" in compiled_sql
+    assert "charging_equipment_compliance_id IS NOT NULL" in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_has_decommissioned_fse_in_report_true(repo, fake_db):
+    fake_db.scalar.return_value = 1
+
+    result = await repo.has_decommissioned_fse_in_report(10)
+
+    assert result is True
+
+
+@pytest.mark.anyio
+async def test_has_decommissioned_fse_in_report_false(repo, fake_db):
+    fake_db.scalar.return_value = 0
+
+    result = await repo.has_decommissioned_fse_in_report(10)
+
+    assert result is False
 
 
 @pytest.mark.anyio
@@ -951,3 +972,43 @@ async def test_bulk_update_deactivate_takes_precedence_over_activate(repo, fake_
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "is_active" in compiled
     assert "false" in compiled.lower()
+
+
+@pytest.mark.anyio
+async def test_get_latest_equipment_status_returns_status(repo, fake_db):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = "Submitted"
+    fake_db.execute.return_value = result_mock
+
+    status_value = await repo.get_latest_equipment_status(charging_equipment_id=42)
+
+    assert status_value == "Submitted"
+    fake_db.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_latest_equipment_status_returns_none_when_not_found(repo, fake_db):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    fake_db.execute.return_value = result_mock
+
+    status_value = await repo.get_latest_equipment_status(charging_equipment_id=999)
+
+    assert status_value is None
+
+
+@pytest.mark.anyio
+async def test_get_latest_equipment_status_query_compiles(repo, fake_db):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    fake_db.execute.return_value = result_mock
+
+    await repo.get_latest_equipment_status(charging_equipment_id=1)
+
+    stmt = fake_db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "charging_equipment" in compiled
+    assert "charging_equipment_status" in compiled
+    assert "FROM charging_equipment JOIN charging_equipment_status" in compiled
+    assert "ORDER BY charging_equipment.version DESC" in compiled

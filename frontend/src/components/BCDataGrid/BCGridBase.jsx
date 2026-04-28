@@ -48,6 +48,7 @@ export const BCGridBase = forwardRef(
       paginationOptions,
       onPaginationChange,
       onRowClicked,
+      suppressMovableColumns = true,
       ...props
     },
     forwardedRef
@@ -280,7 +281,7 @@ export const BCGridBase = forwardRef(
         animateRows
         autoSizeStrategy={resolvedAutoSizeStrategy}
         suppressDragLeaveHidesColumns
-        suppressMovableColumns
+        suppressMovableColumns={suppressMovableColumns}
         suppressColumnMoveAnimation={false}
         suppressCsvExport={false}
         suppressColumnVirtualisation={true}

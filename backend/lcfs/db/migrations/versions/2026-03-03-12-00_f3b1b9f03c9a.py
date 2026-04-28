@@ -1,7 +1,7 @@
 """Create report_opening configuration table
 
 Revision ID: f3b1b9f03c9a
-Revises: 84d7cf6d1940
+Revises: 098cf79762b9
 Create Date: 2026-01-25 12:00:00.000000
 
 """
@@ -11,10 +11,11 @@ from datetime import datetime
 import sqlalchemy as sa
 from enum import Enum
 from alembic import op
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "f3b1b9f03c9a"
-down_revision = "84d7cf6d1940"
+down_revision = "098cf79762b9"
 branch_labels = None
 depends_on = None
 
@@ -31,7 +32,17 @@ enum_for_column = sa.Enum(
 )
 
 
+def table_exists(table_name):
+    """Check if a table exists in the database"""
+    bind = op.get_bind()
+    insp = inspect(bind)
+    return table_name in insp.get_table_names()
+
+
 def upgrade() -> None:
+    if table_exists("report_opening"):
+        return
+
     op.execute("DROP TYPE IF EXISTS supplemental_report_access_role_enum")
 
     op.create_table(
