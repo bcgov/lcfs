@@ -20,7 +20,6 @@ from lcfs.db.models.organization.OrganizationStatus import (
 from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.transaction import Transaction
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
-from lcfs.services.tfrs.redis_balance import RedisBalanceService
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -54,12 +53,10 @@ class OrganizationsService:
         request: Request = None,
         repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
-        redis_balance_service: RedisBalanceService = Depends(RedisBalanceService),
     ) -> None:
         self.request = (request,)
         self.repo = repo
         self.transaction_repo = transaction_repo
-        self.redis_balance_service = redis_balance_service
 
     async def _requires_bceid(self, organization_type_id: int) -> bool:
         """Check if organization type requires BCeID."""
@@ -612,10 +609,6 @@ class OrganizationsService:
 
         new_transaction = await self.transaction_repo.create_transaction(
             transaction_action, compliance_units, organization_id
-        )
-
-        await self.redis_balance_service.populate_organization_redis_balance(
-            organization_id
         )
 
         return new_transaction

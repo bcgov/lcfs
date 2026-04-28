@@ -30,7 +30,7 @@ lcfs
 │   ├── migrations  # Alembic migrations used to seed the database.
 │   └── models  # Package contains different models for ORMs.
 ├── __main__.py  # Startup script. Starts uvicorn.
-├── services  # Package for different external services such as rabbit or redis etc.
+├── services  # Package for different external services such as redis, S3, CHES, etc.
 ├── settings.py  # Main configuration settings for project.
 ├── static  # Static content.
 ├── tests  # Tests for project.
