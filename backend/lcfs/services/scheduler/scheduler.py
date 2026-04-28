@@ -74,6 +74,19 @@ def start_scheduler(app: FastAPI):
                 },
             )
 
+        if settings.compliance_reindex_run_on_startup:
+            scheduler.add_job(
+                reindex_compliance_report_tables,
+                "date",
+                run_date=datetime.now(utc),
+                id="reindex_compliance_report_tables_startup",
+                replace_existing=True,
+                args=[app],
+            )
+            logger.info(
+                "Added one-time startup job: 'reindex_compliance_report_tables_startup'"
+            )
+
 def shutdown_scheduler():
     """
     Shuts down the scheduler.

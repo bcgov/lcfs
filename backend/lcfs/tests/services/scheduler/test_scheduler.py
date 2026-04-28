@@ -9,6 +9,7 @@ from lcfs.services.scheduler.scheduler import (
     scheduler,
 )
 from lcfs.services.jobs.jobs import check_overdue_supplemental_reports
+from lcfs.settings import settings
 
 
 @pytest.fixture
@@ -235,6 +236,32 @@ async def test_scheduler_startup_job_essentials(mock_app):
         # kwargs = call_args[1] if len(call_args) > 1 else call_args.kwargs
         # assert kwargs.get("args") == [mock_app]
         # assert "id" in kwargs
+
+
+@pytest.mark.anyio
+async def test_scheduler_adds_one_time_startup_reindex_job_when_enabled(mock_app):
+    safe_shutdown_scheduler()
+
+    original_value = settings.compliance_reindex_run_on_startup
+    settings.compliance_reindex_run_on_startup = True
+
+    with patch.object(scheduler, "add_job") as mock_add_job, patch.object(
+        scheduler, "start"
+    ) as mock_start:
+        mock_start.return_value = None
+        scheduler._state = 1
+
+        try:
+            start_scheduler(mock_app)
+
+            assert mock_add_job.call_count == 2
+            added_job_ids = [call.kwargs["id"] for call in mock_add_job.call_args_list]
+            assert "reindex_compliance_report_tables" in added_job_ids
+            assert "reindex_compliance_report_tables_startup" in added_job_ids
+        finally:
+            settings.compliance_reindex_run_on_startup = original_value
+            scheduler._state = 0
+            safe_shutdown_scheduler()
 
 
 @pytest.mark.anyio
