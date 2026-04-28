@@ -23,15 +23,6 @@ jobs:
           REDIS_PASSWORD: development_only
         ports:
           - 6379:6379
-      rabbitmq:
-        image: rabbitmq:3-management
-        env:
-          RABBITMQ_DEFAULT_USER: lcfs
-          RABBITMQ_DEFAULT_PASS: development_only
-          RABBITMQ_DEFAULT_VHOST: lcfs
-        ports:
-          - 15672:15672
-          - 5672:5672
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -39,7 +30,7 @@ jobs:
         run: docker build -t backend-service -f ./backend/Dockerfile ./backend
 
       - name: Run Backend Service
-        run: docker run -d --name backend --network=host -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost -e LCFS_RABBITMQ_HOST=localhost -e LCFS_CHES_ENABLED=False backend-service
+        run: docker run -d --name backend --network=host -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost -e LCFS_CHES_ENABLED=False backend-service
 
       - name: Wait for DB to be Ready
         run: sleep 20

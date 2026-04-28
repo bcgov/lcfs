@@ -973,17 +973,6 @@ class ComplianceReportRepository:
         )
         return result.scalars().first()
 
-    async def get_compliance_report_by_legacy_id(self, legacy_id):
-        """
-        Retrieve a compliance report from the database by ID
-        """
-        result = await self.db.execute(
-            select(ComplianceReport)
-            .options(*self._get_base_report_options())
-            .where(ComplianceReport.legacy_id == legacy_id)
-        )
-        return result.scalars().unique().first()
-
     @repo_handler
     async def delete_compliance_report(self, compliance_report_id: int) -> bool:
         """
