@@ -101,7 +101,7 @@ export const BCGridViewer = forwardRef(
       enableFloatingPagination = true,
       filterToolbarConfig = {},
       onClearFilters,
-      suppressMovableColumns,
+      suppressMovableColumns = false,
       columnState: controlledColumnState,
       onColumnStateChange,
       ...props
@@ -982,7 +982,7 @@ export const BCGridViewer = forwardRef(
           onRowClicked={onRowClicked}
           getRowId={getRowId}
           autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
-          suppressMovableColumns={suppressMovableColumns ?? true}
+          suppressMovableColumns={suppressMovableColumns}
           {...props}
         />
         {!suppressPagination && (
