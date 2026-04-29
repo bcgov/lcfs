@@ -473,6 +473,38 @@ export const useCreateIdirSupplementalReport = (reportID, options = {}) => {
   })
 }
 
+export const useComplianceReportYearNavigation = (reportID, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['compliance-report-navigation', reportID],
+    queryFn: async () => {
+      if (!reportID) {
+        throw new Error('Report ID is required')
+      }
+      const path = apiRoutes.getComplianceReportNavigation.replace(
+        ':reportID',
+        reportID
+      )
+      const response = await client.get(path)
+      return response.data
+    },
+    enabled: enabled && !!reportID,
+    staleTime,
+    cacheTime,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 export const useGetComplianceReportList = (
   { page = 1, size = 10, sortOrders = [], filters = [] } = {},
   options = {}

@@ -23,6 +23,12 @@ class TransferValidation:
     async def government_update_transfer(
         self, request: Request, transfer_create: TransferCreateSchema
     ):
+        # Double-check government role in validation.
+        if not user_has_roles(request.user, [RoleEnum.GOVERNMENT]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Validation for authorization failed.",
+            )
         # Ensure only the valid statuses are passed.
         if transfer_create.current_status not in LCFS_Constants.GOV_TRANSFER_STATUSES:
             raise HTTPException(
@@ -42,7 +48,6 @@ class TransferValidation:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Validation for authorization failed.",
                 )
-            # TODO: Ensure the logged in user has the necessary permissions and roles.
 
     async def get_transfer(self, transfer: TransferSchema):
         if not transfer:

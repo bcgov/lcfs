@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from lcfs.services.redis.dependency import get_redis_client
-from lcfs.services.tfrs.redis_balance import RedisBalanceService
 from sqlalchemy import text
 from fastapi import FastAPI
 
@@ -96,10 +94,6 @@ async def submit_supplemental_report(report_id: int, app: FastAPI):
             org_service = OrganizationsService(
                 repo=org_repo,
                 transaction_repo=transaction_repo,
-                redis_balance_service=RedisBalanceService(
-                    transaction_repo=transaction_repo,
-                    redis_client=app.state.redis_client,
-                ),
             )
 
             trx_service = TransactionsService(repo=transaction_repo)

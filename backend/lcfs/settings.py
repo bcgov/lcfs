@@ -78,14 +78,6 @@ class Settings(BaseSettings):
     clamav_host: str = "clamav"
     clamav_port: int = 3310
 
-    # Variables for RabbitMQ
-    rabbitmq_host: str = "rabbitmq"
-    rabbitmq_port: int = 5672
-    rabbitmq_pass: str = "development_only"
-    rabbitmq_user: str = "lcfs"
-    rabbitmq_vhost: str = "lcfs"
-    rabbitmq_transaction_queue: str = "transaction_queue"
-
     ches_enabled: bool = False
     ches_auth_url: str = ""
     ches_email_url: str = ""
