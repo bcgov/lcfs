@@ -16,7 +16,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import aliased, joinedload
 from typing import List, Optional, TypedDict, Type, Sequence
 
 from lcfs.db.dependencies import get_async_db_session
@@ -807,6 +807,129 @@ class ComplianceReportRepository:
         )
 
     @repo_handler
+    async def get_adjacent_year_reports(
+        self,
+        organization_id: int,
+        current_period_description: str,
+        user: UserProfile,
+    ) -> tuple[Optional[ComplianceReport], Optional[ComplianceReport]]:
+        """
+        Returns (prev, next) compliance reports for an org by year, using latest visible per user role.
+        """
+        excluded_statuses: list[ComplianceReportStatusEnum] = []
+        if not user_has_roles(user, [RoleEnum.ANALYST]):
+            excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
+        if not user_has_roles(user, [RoleEnum.SUPPLIER]):
+            excluded_statuses.append(ComplianceReportStatusEnum.Draft)
+
+        status_ids: list[int] = []
+        for status in excluded_statuses:
+            status_row = await self.get_compliance_report_status_by_desc(status.value)
+            if status_row is not None:
+                status_ids.append(status_row.compliance_report_status_id)
+
+        # Hide in-progress government reassessments from the owning supplier
+        user_organization_id = (
+            user.organization.organization_id if user.organization else None
+        )
+        hide_gov_reassessments = (
+            user_organization_id is not None
+            and user_organization_id == organization_id
+        )
+
+        assessed_status_id: Optional[int] = None
+        if hide_gov_reassessments:
+            assessed_status = await self.get_compliance_report_status_by_desc(
+                ComplianceReportStatusEnum.Assessed.value
+            )
+            assessed_status_id = (
+                assessed_status.compliance_report_status_id
+                if assessed_status is not None
+                else None
+            )
+
+        # Pick latest version per group, excluding certain statuses and hidden reassessments.
+        inner = aliased(ComplianceReport)
+        version_conditions = [
+            inner.compliance_report_group_uuid
+            == ComplianceReport.compliance_report_group_uuid,
+        ]
+        if status_ids:
+            version_conditions.append(inner.current_status_id.notin_(status_ids))
+
+        max_version_subq = select(func.max(inner.version)).where(*version_conditions)
+        if hide_gov_reassessments and assessed_status_id is not None:
+            max_version_subq = max_version_subq.where(
+                or_(
+                    inner.current_status_id == assessed_status_id,
+                    inner.supplemental_initiator
+                    != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+                    inner.supplemental_initiator.is_(None),
+                )
+            )
+        max_version_subq = max_version_subq.scalar_subquery()
+
+        conditions = [
+            ComplianceReport.organization_id == organization_id,
+            ComplianceReport.version == max_version_subq,
+        ]
+        if status_ids:
+            conditions.append(ComplianceReport.current_status_id.notin_(status_ids))
+
+        query = (
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .where(and_(*conditions))
+        )
+
+        result = (await self.db.execute(query)).unique().scalars().all()
+
+        # Keep only the newest-version report per compliance period, in case
+        # several groups exist for the same year.
+        latest_by_year: dict[str, ComplianceReport] = {}
+        for report in result:
+            period = report.compliance_period.description
+            existing = latest_by_year.get(period)
+            if existing is None or (report.version or 0) > (existing.version or 0):
+                latest_by_year[period] = report
+
+        def _year_key(period: str) -> int:
+            try:
+                return int(period)
+            except (TypeError, ValueError):
+                return 0
+
+        try:
+            current_year = int(current_period_description)
+        except (TypeError, ValueError):
+            return None, None
+
+        previous_report: Optional[ComplianceReport] = None
+        next_report: Optional[ComplianceReport] = None
+        for period, report in latest_by_year.items():
+            year = _year_key(period)
+            if year < current_year:
+                if previous_report is None or year > _year_key(
+                    previous_report.compliance_period.description
+                ):
+                    previous_report = report
+            elif year > current_year:
+                if next_report is None or year < _year_key(
+                    next_report.compliance_period.description
+                ):
+                    next_report = report
+
+        return previous_report, next_report
+
+    @repo_handler
     async def get_latest_report_by_group_uuid(
         self, group_uuid: str
     ) -> Optional[ComplianceReport]:
@@ -849,17 +972,6 @@ class ComplianceReportRepository:
             )
         )
         return result.scalars().first()
-
-    async def get_compliance_report_by_legacy_id(self, legacy_id):
-        """
-        Retrieve a compliance report from the database by ID
-        """
-        result = await self.db.execute(
-            select(ComplianceReport)
-            .options(*self._get_base_report_options())
-            .where(ComplianceReport.legacy_id == legacy_id)
-        )
-        return result.scalars().unique().first()
 
     @repo_handler
     async def delete_compliance_report(self, compliance_report_id: int) -> bool:
