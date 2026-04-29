@@ -1,7 +1,7 @@
 """Add comment visibility to internal_comment
 
-Revision ID: a1b2c3d4e5f0
-Revises: 098cf79762b9
+Revision ID: f1a498fddcef
+Revises: c1d2e3f4a5b6
 Create Date: 2026-04-08 12:00:00.000000
 """
 
@@ -10,8 +10,8 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = "a1b2c3d4e5f0"
-down_revision = "098cf79762b9"
+revision = "f1a498fddcef"
+down_revision = "c1d2e3f4a5b6"
 branch_labels = None
 depends_on = None
 

@@ -275,7 +275,10 @@ class InternalCommentRepository:
             internal_comment.comment = new_comment_text
         if visibility is not None:
             internal_comment.visibility = visibility
-        internal_comment.audience_scope = audience_scope
+        if audience_scope is not None:
+            internal_comment.audience_scope = audience_scope
+        elif visibility is not None and str(visibility) == "Public":
+            internal_comment.audience_scope = None
         await self.db.flush()
         await self.db.refresh(internal_comment)
 

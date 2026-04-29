@@ -239,8 +239,6 @@ export const useComments = (entityType, entityId, options = {}) => {
       }
       if (typeof editVisibility === 'string') {
         payload.visibility = editVisibility
-        payload.audience_scope =
-          editVisibility === 'Public' ? null : audienceScope
       }
 
       const response = await apiService.put(

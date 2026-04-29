@@ -352,6 +352,19 @@ async def test_get_internal_comments_non_gov_rejects_non_compliance_report():
 
 
 @pytest.mark.anyio
+async def test_update_internal_comment_non_gov_is_forbidden():
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    payload = InternalCommentUpdateSchema(comment="should be rejected")
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_internal_comment(1, payload)
+
+    assert exc.value.status_code == 403
+    service.repo.get_internal_comment_by_id.assert_not_called()
+    service.repo.update_internal_comment.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_update_internal_comment_public_sets_audience_scope_to_none():
     service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
     service.repo.get_internal_comment_by_id.return_value = SimpleNamespace(

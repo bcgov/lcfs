@@ -11,6 +11,96 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
+const VisibilityToggle = ({
+  visibility,
+  onVisibilityChange,
+  align = 'right',
+  marginTop = 0.5,
+  radioMarginRight = -1.1
+}) => {
+  const { t } = useTranslation(['internalComment'])
+  const isLeft = align === 'left'
+
+  const radioLabelSx = {
+    m: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    flexDirection: 'row',
+    '& .MuiFormControlLabel-label': {
+      fontSize: '0.88rem',
+      fontWeight: 500,
+      lineHeight: 1.15
+    },
+    '& .MuiRadio-root': {
+      mr: radioMarginRight
+    }
+  }
+
+  return (
+    <BCBox
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: isLeft ? 'flex-start' : 'flex-end',
+        minWidth: 220,
+        mt: marginTop
+      }}
+    >
+      <Chip
+        label={
+          visibility === 'Public'
+            ? t('internalComment:public')
+            : t('internalComment:internal')
+        }
+        size="small"
+        sx={{
+          mb: 0.75,
+          color: '#fff',
+          bgcolor: visibility === 'Public' ? '#187a11' : '#063267',
+          minWidth: 92,
+          '& .MuiChip-label': {
+            fontSize: '0.88rem',
+            fontWeight: 600
+          }
+        }}
+      />
+      <RadioGroup
+        row
+        value={visibility}
+        onChange={(event) => onVisibilityChange?.(event.target.value)}
+        sx={{
+          columnGap: 1.1,
+          alignItems: 'center',
+          justifyContent: isLeft ? 'flex-start' : 'flex-end'
+        }}
+      >
+        <FormControlLabel
+          value="Internal"
+          labelPlacement="end"
+          control={<Radio size="small" sx={{ p: 0.25 }} />}
+          label={t('internalComment:internal')}
+          sx={radioLabelSx}
+        />
+        <FormControlLabel
+          value="Public"
+          labelPlacement="end"
+          control={<Radio size="small" sx={{ p: 0.25 }} />}
+          label={t('internalComment:public')}
+          sx={radioLabelSx}
+        />
+      </RadioGroup>
+    </BCBox>
+  )
+}
+
+VisibilityToggle.propTypes = {
+  visibility: PropTypes.oneOf(['Internal', 'Public']).isRequired,
+  onVisibilityChange: PropTypes.func,
+  align: PropTypes.oneOf(['left', 'right']),
+  marginTop: PropTypes.number,
+  radioMarginRight: PropTypes.number
+}
+
 const CommentForm = ({
   title,
   commentText = '',
@@ -56,85 +146,13 @@ const CommentForm = ({
           </BCTypography>
         )}
         {showVisibilityUnderTitle && (
-          <BCBox
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              minWidth: 220,
-              mt: 0.25
-            }}
-          >
-            <Chip
-              label={
-                visibility === 'Public'
-                  ? t('internalComment:public')
-                  : t('internalComment:internal')
-              }
-              size="small"
-              sx={{
-                mb: 0.75,
-                color: '#fff',
-                bgcolor: visibility === 'Public' ? '#187a11' : '#063267',
-                minWidth: 92,
-                '& .MuiChip-label': {
-                  fontSize: '0.88rem',
-                  fontWeight: 600
-                }
-              }}
-            />
-            <RadioGroup
-              row
-              value={visibility}
-              onChange={(event) => onVisibilityChange?.(event.target.value)}
-              sx={{
-                columnGap: 1.1,
-                alignItems: 'center',
-                justifyContent: 'flex-start'
-              }}
-            >
-              <FormControlLabel
-                value="Internal"
-                labelPlacement="end"
-                control={<Radio size="small" sx={{ p: 0.25 }} />}
-                label={t('internalComment:internal')}
-                sx={{
-                  m: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '0.88rem',
-                    fontWeight: 500,
-                    lineHeight: 1.15
-                  },
-                  '& .MuiRadio-root': {
-                    mr: -0.15
-                  }
-                }}
-              />
-              <FormControlLabel
-                value="Public"
-                labelPlacement="end"
-                control={<Radio size="small" sx={{ p: 0.25 }} />}
-                label={t('internalComment:public')}
-                sx={{
-                  m: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '0.88rem',
-                    fontWeight: 500,
-                    lineHeight: 1.15
-                  },
-                  '& .MuiRadio-root': {
-                    mr: -0.15
-                  }
-                }}
-              />
-            </RadioGroup>
-          </BCBox>
+          <VisibilityToggle
+            visibility={visibility}
+            onVisibilityChange={onVisibilityChange}
+            align="left"
+            marginTop={0.25}
+            radioMarginRight={-0.15}
+          />
         )}
       </BCBox>
       {!showVisibilityUnderTitle && (
@@ -153,85 +171,11 @@ const CommentForm = ({
             </BCTypography>
           )}
           {showVisibilityToggle && (
-          <BCBox
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: visibilityAlign === 'left' ? 'flex-start' : 'flex-end',
-              minWidth: 220,
-              mt: 0.5
-            }}
-          >
-            <Chip
-              label={
-                visibility === 'Public'
-                  ? t('internalComment:public')
-                  : t('internalComment:internal')
-              }
-              size="small"
-              sx={{
-                mb: 0.75,
-                color: '#fff',
-                bgcolor: visibility === 'Public' ? '#187a11' : '#063267',
-                minWidth: 92,
-                '& .MuiChip-label': {
-                  fontSize: '0.88rem',
-                  fontWeight: 600
-                }
-              }}
+            <VisibilityToggle
+              visibility={visibility}
+              onVisibilityChange={onVisibilityChange}
+              align={visibilityAlign}
             />
-            <RadioGroup
-              row
-              value={visibility}
-              onChange={(event) => onVisibilityChange?.(event.target.value)}
-              sx={{
-                columnGap: 1.1,
-                alignItems: 'center',
-                justifyContent: visibilityAlign === 'left' ? 'flex-start' : 'flex-end'
-              }}
-            >
-              <FormControlLabel
-                value="Internal"
-                labelPlacement="end"
-                control={<Radio size="small" sx={{ p: 0.25 }} />}
-                label={t('internalComment:internal')}
-                sx={{
-                  m: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '0.88rem',
-                    fontWeight: 500,
-                    lineHeight: 1.15
-                  },
-                  '& .MuiRadio-root': {
-                    mr: -1.1
-                  }
-                }}
-              />
-              <FormControlLabel
-                value="Public"
-                labelPlacement="end"
-                control={<Radio size="small" sx={{ p: 0.25 }} />}
-                label={t('internalComment:public')}
-                sx={{
-                  m: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '0.88rem',
-                    fontWeight: 500,
-                    lineHeight: 1.15
-                  },
-                  '& .MuiRadio-root': {
-                    mr: -1.1
-                  }
-                }}
-              />
-            </RadioGroup>
-          </BCBox>
           )}
         </BCBox>
       )}

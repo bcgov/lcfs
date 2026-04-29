@@ -511,7 +511,7 @@ describe('useComments', () => {
   })
 
   describe('Editing comments', () => {
-    it('should send null audience scope when setting visibility to Public', async () => {
+    it('should omit audience_scope when setting visibility to Public so the backend preserves existing scope semantics', async () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
       mockApiService.put.mockResolvedValue({
         data: {
@@ -540,12 +540,11 @@ describe('useComments', () => {
 
       expect(mockApiService.put).toHaveBeenCalledWith('/internal_comments/99', {
         comment: 'Updated public',
-        visibility: 'Public',
-        audience_scope: null
+        visibility: 'Public'
       })
     })
 
-    it('should send analyst audience scope when setting visibility to Internal for gov-only user', async () => {
+    it('should omit audience_scope when setting visibility to Internal so the backend preserves the original author scope', async () => {
       mockHasAnyRole.mockImplementation((role) => role === 'government')
       mockApiService.put.mockResolvedValue({
         data: {
@@ -574,8 +573,7 @@ describe('useComments', () => {
 
       expect(mockApiService.put).toHaveBeenCalledWith('/internal_comments/100', {
         comment: 'Updated internal',
-        visibility: 'Internal',
-        audience_scope: 'Analyst'
+        visibility: 'Internal'
       })
     })
   })
