@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     db_base: str = "lcfs"
     db_test: str = "lcfs_test"
     db_echo: bool = False
+    compliance_reindex_enabled: bool = True
+    compliance_reindex_months: str = "1,4,7,10"
+    compliance_reindex_day: int = 1
+    compliance_reindex_hour: int = 3
+    compliance_reindex_minute: int = 15
+    compliance_reindex_run_on_startup: bool = False
 
     # Variables for Redis
     redis_host: str = "localhost"

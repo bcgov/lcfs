@@ -200,6 +200,39 @@ export const useGetComplianceReportSummary = (reportID, options = {}) => {
   })
 }
 
+export const useComplianceReportScheduleOverview = (reportID, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['compliance-report-schedule-overview', reportID],
+    queryFn: async () => {
+      if (!reportID) {
+        throw new Error('Report ID is required')
+      }
+
+      const path = apiRoutes.getComplianceReportScheduleOverview.replace(
+        ':reportID',
+        reportID
+      )
+      const response = await client.get(path)
+      return response.data
+    },
+    enabled: enabled && !!reportID,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 export const useUpdateComplianceReportSummary = (reportID, options = {}) => {
   const client = useApiService()
   const queryClient = useQueryClient()
