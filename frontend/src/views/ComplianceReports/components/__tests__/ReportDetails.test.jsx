@@ -13,6 +13,7 @@ const mockUseParams = vi.fn(() => ({
 }))
 const mockUseCurrentUser = vi.fn()
 const mockUseComplianceReportWithCache = vi.fn()
+const mockUseComplianceReportScheduleOverview = vi.fn()
 const mockUseComplianceReportDocuments = vi.fn()
 const mockUseGetFuelSupplies = vi.fn()
 const mockUseGetFSEReportingList = vi.fn()
@@ -60,6 +61,8 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 vi.mock('@/hooks/useComplianceReports', () => ({
   useComplianceReportDocuments: () => mockUseComplianceReportDocuments(),
+  useComplianceReportScheduleOverview: () =>
+    mockUseComplianceReportScheduleOverview(),
   useComplianceReportWithCache: () => mockUseComplianceReportWithCache()
 }))
 
@@ -211,6 +214,35 @@ describe('ReportDetails', () => {
     error: null
   }
 
+  const defaultScheduleOverview = {
+    data: {
+      supportingDocs: { count: 0, activeCount: 0, deletedCount: 0 },
+      fuelSupplies: { count: 0, activeCount: 0, deletedCount: 0, wasEdited: false },
+      finalSupplyEquipments: {
+        count: 0,
+        activeCount: 0,
+        deletedCount: 0,
+        hasChargingEquipment: false
+      },
+      allocationAgreements: {
+        count: 0,
+        activeCount: 0,
+        deletedCount: 0,
+        wasEdited: false
+      },
+      notionalTransfers: {
+        count: 0,
+        activeCount: 0,
+        deletedCount: 0,
+        wasEdited: false
+      },
+      otherUses: { count: 0, activeCount: 0, deletedCount: 0, wasEdited: false },
+      fuelExports: { count: 0, activeCount: 0, deletedCount: 0, wasEdited: false }
+    },
+    isLoading: false,
+    error: null
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -222,6 +254,9 @@ describe('ReportDetails', () => {
     mockUseLocation.mockReturnValue({ state: {} })
     mockUseCurrentUser.mockReturnValue(defaultCurrentUser)
     mockUseComplianceReportWithCache.mockReturnValue(defaultComplianceReport)
+    mockUseComplianceReportScheduleOverview.mockReturnValue(
+      defaultScheduleOverview
+    )
     mockUseComplianceReportDocuments.mockReturnValue(emptyDataResponse)
     mockUseGetFuelSupplies.mockReturnValue({
       data: { fuelSupplies: [] },
@@ -369,6 +404,18 @@ describe('ReportDetails', () => {
       isLoading: false,
       error: null
     })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        fuelSupplies: {
+          count: 1,
+          activeCount: 1,
+          deletedCount: 0,
+          wasEdited: false
+        }
+      }
+    })
 
     render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
@@ -425,6 +472,18 @@ describe('ReportDetails', () => {
       isLoading: false,
       error: null
     })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        fuelSupplies: {
+          count: 1,
+          activeCount: 1,
+          deletedCount: 0,
+          wasEdited: true
+        }
+      }
+    })
 
     render(<ReportDetails currentStatus="Submitted" hasRoles={() => false} />, {
       wrapper
@@ -457,6 +516,18 @@ describe('ReportDetails', () => {
       isLoading: false,
       error: null
     })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        fuelSupplies: {
+          count: 2,
+          activeCount: 0,
+          deletedCount: 2,
+          wasEdited: true
+        }
+      }
+    })
 
     render(<ReportDetails currentStatus="Submitted" hasRoles={() => false} />, {
       wrapper
@@ -472,6 +543,18 @@ describe('ReportDetails', () => {
       data: { fuelSupplies: [{ fuelSupplyId: 24 }] },
       isLoading: false,
       error: new Error('Failed to load data')
+    })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        fuelSupplies: {
+          count: 1,
+          activeCount: 1,
+          deletedCount: 0,
+          wasEdited: false
+        }
+      }
     })
 
     render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
@@ -499,6 +582,18 @@ describe('ReportDetails', () => {
       data: { fuelSupplies: [{ fuelSupplyId: 24 }] },
       isLoading: false,
       error: null
+    })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        fuelSupplies: {
+          count: 1,
+          activeCount: 1,
+          deletedCount: 0,
+          wasEdited: false
+        }
+      }
     })
 
     render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
@@ -529,6 +624,18 @@ describe('ReportDetails', () => {
       data: { fuelSupplies: [{ fuelSupplyId: 24 }] },
       isLoading: false,
       error: null
+    })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        fuelSupplies: {
+          count: 1,
+          activeCount: 1,
+          deletedCount: 0,
+          wasEdited: false
+        }
+      }
     })
 
     render(
@@ -563,6 +670,13 @@ describe('ReportDetails', () => {
       ],
       isLoading: false,
       error: null
+    })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        supportingDocs: { count: 2, activeCount: 2, deletedCount: 0 }
+      }
     })
 
     render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
@@ -640,6 +754,13 @@ describe('ReportDetails', () => {
       isLoading: false,
       error: null
     })
+    mockUseComplianceReportScheduleOverview.mockReturnValue({
+      ...defaultScheduleOverview,
+      data: {
+        ...defaultScheduleOverview.data,
+        supportingDocs: { count: 1, activeCount: 1, deletedCount: 0 }
+      }
+    })
 
     rerender(<ReportDetails currentStatus="Draft" hasRoles={() => true} />)
 
@@ -706,6 +827,18 @@ describe('ReportDetails', () => {
         isLoading: false,
         error: null
       })
+      mockUseComplianceReportScheduleOverview.mockReturnValue({
+        ...defaultScheduleOverview,
+        data: {
+          ...defaultScheduleOverview.data,
+          fuelExports: {
+            count: 1,
+            activeCount: 1,
+            deletedCount: 0,
+            wasEdited: false
+          }
+        }
+      })
 
       render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
         wrapper
@@ -728,6 +861,18 @@ describe('ReportDetails', () => {
         isLoading: false,
         error: null
       })
+      mockUseComplianceReportScheduleOverview.mockReturnValue({
+        ...defaultScheduleOverview,
+        data: {
+          ...defaultScheduleOverview.data,
+          fuelExports: {
+            count: 1,
+            activeCount: 1,
+            deletedCount: 0,
+            wasEdited: false
+          }
+        }
+      })
 
       render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
         wrapper
@@ -749,6 +894,18 @@ describe('ReportDetails', () => {
         data: { fuelExports: [{ fuelExportId: 1 }] },
         isLoading: false,
         error: null
+      })
+      mockUseComplianceReportScheduleOverview.mockReturnValue({
+        ...defaultScheduleOverview,
+        data: {
+          ...defaultScheduleOverview.data,
+          fuelExports: {
+            count: 1,
+            activeCount: 1,
+            deletedCount: 0,
+            wasEdited: false
+          }
+        }
       })
 
       render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
@@ -777,6 +934,18 @@ describe('ReportDetails', () => {
         isLoading: false,
         error: null
       })
+      mockUseComplianceReportScheduleOverview.mockReturnValue({
+        ...defaultScheduleOverview,
+        data: {
+          ...defaultScheduleOverview.data,
+          finalSupplyEquipments: {
+            count: 0,
+            activeCount: 0,
+            deletedCount: 0,
+            hasChargingEquipment: true
+          }
+        }
+      })
 
       render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
         wrapper
@@ -802,6 +971,18 @@ describe('ReportDetails', () => {
         isLoading: false,
         error: null
       })
+      mockUseComplianceReportScheduleOverview.mockReturnValue({
+        ...defaultScheduleOverview,
+        data: {
+          ...defaultScheduleOverview.data,
+          finalSupplyEquipments: {
+            count: 0,
+            activeCount: 0,
+            deletedCount: 0,
+            hasChargingEquipment: true
+          }
+        }
+      })
 
       render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
         wrapper
@@ -826,6 +1007,18 @@ describe('ReportDetails', () => {
         },
         isLoading: false,
         error: null
+      })
+      mockUseComplianceReportScheduleOverview.mockReturnValue({
+        ...defaultScheduleOverview,
+        data: {
+          ...defaultScheduleOverview.data,
+          finalSupplyEquipments: {
+            count: 1,
+            activeCount: 1,
+            deletedCount: 0,
+            hasChargingEquipment: true
+          }
+        }
       })
 
       render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
