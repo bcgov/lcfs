@@ -11,6 +11,7 @@ from lcfs.web.api.compliance_report.export import ComplianceReportExporter
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
+    ComplianceReportScheduleOverviewSchema,
     ComplianceReportStatusSchema,
     ComplianceReportSummarySchema,
     ComplianceReportYearNavigationSchema,
@@ -117,6 +118,24 @@ async def get_compliance_report_by_id(
     await validate.validate_compliance_report_access(compliance_report)
 
     return await service.get_compliance_report_chain(report_id, request.user)
+
+
+@router.get(
+    "/{report_id}/schedule-overview",
+    response_model=ComplianceReportScheduleOverviewSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def get_compliance_report_schedule_overview(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> ComplianceReportScheduleOverviewSchema:
+    await validate.validate_organization_access(report_id)
+    return await service.get_schedule_overview(report_id)
 
 
 @router.get(
