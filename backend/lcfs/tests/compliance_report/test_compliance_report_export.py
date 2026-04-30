@@ -462,6 +462,37 @@ class TestComplianceReportExporter:
         exporter.ef_repo.get_effective_fuel_exports.assert_called()
 
     @pytest.mark.anyio
+    async def test_export_delegates_sheet_population_to_sheet_exporters(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+
+        summary_exporter = Mock()
+        summary_exporter.export_to_workbook = AsyncMock()
+        exporter.summary_exporter = summary_exporter
+
+        active_sheet_exporter = Mock()
+        active_sheet_exporter.supports.return_value = True
+        active_sheet_exporter.export_to_workbook = AsyncMock()
+
+        skipped_sheet_exporter = Mock()
+        skipped_sheet_exporter.supports.return_value = False
+        skipped_sheet_exporter.export_to_workbook = AsyncMock()
+
+        exporter.sheet_exporters = [active_sheet_exporter, skipped_sheet_exporter]
+
+        await exporter.export(1)
+
+        summary_exporter.export_to_workbook.assert_awaited_once()
+        active_sheet_exporter.supports.assert_called_once_with(2024)
+        active_sheet_exporter.export_to_workbook.assert_awaited_once()
+        skipped_sheet_exporter.supports.assert_called_once_with(2024)
+        skipped_sheet_exporter.export_to_workbook.assert_not_awaited()
+
+    @pytest.mark.anyio
     async def test_load_fuel_supply_data_annual(
         self,
         compliance_report_exporter,
