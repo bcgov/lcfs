@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 
 import copy
@@ -37,8 +38,12 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportScheduleOverviewItemSchema,
+    ComplianceReportScheduleOverviewSchema,
     ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
+    ComplianceReportYearNavigationItemSchema,
+    ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
@@ -154,6 +159,71 @@ class ComplianceReportServices:
         ]
 
     @service_handler
+    async def get_schedule_overview(
+        self, compliance_report_id: int
+    ) -> ComplianceReportScheduleOverviewSchema:
+        async def _build_versioned_item(model):
+            counts = await self.repo.get_effective_versioned_record_counts(
+                compliance_report_id, model
+            )
+            was_edited = await self.repo.has_supplemental_changes(
+                compliance_report_id, model
+            )
+            return ComplianceReportScheduleOverviewItemSchema(
+                count=counts["active_count"] + counts["deleted_count"],
+                active_count=counts["active_count"],
+                deleted_count=counts["deleted_count"],
+                was_edited=was_edited,
+            )
+
+        (
+            supporting_docs_count,
+            organization_id,
+            fuel_supplies,
+            allocation_agreements,
+            notional_transfers,
+            other_uses,
+            fuel_exports,
+        ) = await asyncio.gather(
+            self.repo.get_supporting_document_count(compliance_report_id),
+            self.repo.get_report_chain_organization_id(compliance_report_id),
+            _build_versioned_item(FuelSupply),
+            _build_versioned_item(AllocationAgreement),
+            _build_versioned_item(NotionalTransfer),
+            _build_versioned_item(OtherUses),
+            _build_versioned_item(FuelExport),
+        )
+
+        has_charging_equipment = False
+        fse_count = 0
+        if organization_id is not None:
+            has_charging_equipment, fse_count = await asyncio.gather(
+                self.fse_service.repo.has_charging_equipment_for_organization(
+                    organization_id
+                ),
+                self.fse_service.repo.get_fse_reporting_count(
+                    organization_id, compliance_report_id
+                ),
+            )
+
+        return ComplianceReportScheduleOverviewSchema(
+            supporting_docs=ComplianceReportScheduleOverviewItemSchema(
+                count=supporting_docs_count,
+                active_count=supporting_docs_count,
+            ),
+            fuel_supplies=fuel_supplies,
+            final_supply_equipments=ComplianceReportScheduleOverviewItemSchema(
+                count=fse_count,
+                active_count=fse_count,
+                has_charging_equipment=has_charging_equipment,
+            ),
+            allocation_agreements=allocation_agreements,
+            notional_transfers=notional_transfers,
+            other_uses=other_uses,
+            fuel_exports=fuel_exports,
+        )
+
+    @service_handler
     async def create_compliance_report(
         self,
         organization_id: int,
@@ -203,7 +273,6 @@ class ComplianceReportServices:
                 else "Early Issuance Report"
             ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
-            legacy_id=report_data.legacy_id,
             create_user=user.keycloak_username,
         )
 
@@ -315,7 +384,7 @@ class ComplianceReportServices:
 
     @service_handler
     async def create_supplemental_report(
-        self, original_report_id: int, user: UserProfile = None, legacy_id: int = None
+        self, original_report_id: int, user: UserProfile = None
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
@@ -344,15 +413,6 @@ class ComplianceReportServices:
             raise ServiceException(
                 "You do not have permission to create a supplemental report for this organization."
             )
-
-        # TODO this logic to be re-instated once TFRS is shutdown
-        # TFRS allows supplementals on previously un-accepted reports
-        # so we have to support this until LCFS and TFRS are no longer synced
-        # Validate that the status of the current report is 'Assessed'
-        # if current_report.current_status.status != ComplianceReportStatusEnum.Assessed:
-        #     raise ServiceException(
-        #         "A supplemental report can only be created if the current report's status is 'Assessed'."
-        #     )
 
         new_version = latest_report.version + 1
 
@@ -394,7 +454,6 @@ class ComplianceReportServices:
         # Create the new supplemental compliance report
         new_report = ComplianceReport(
             compliance_period_id=current_report.compliance_period_id,
-            legacy_id=legacy_id,
             organization_id=current_report.organization_id,
             current_status_id=draft_status.compliance_report_status_id,
             reporting_frequency=current_report.reporting_frequency,
@@ -939,6 +998,40 @@ class ComplianceReportServices:
         self, organization_id: int
     ) -> List[CompliancePeriodBaseSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)
+
+    @service_handler
+    async def get_report_year_navigation(
+        self, report_id: int, user: UserProfile
+    ) -> ComplianceReportYearNavigationSchema:
+        # Get previous/next reports for the same supplier and period.
+ 
+        current_report = await self.repo.get_compliance_report_by_id(report_id)
+        if current_report is None:
+            raise DataNotFoundException("Compliance report not found.")
+
+        current_period = current_report.compliance_period.description
+
+        previous_report, next_report = await self.repo.get_adjacent_year_reports(
+            organization_id=current_report.organization_id,
+            current_period_description=current_period,
+            user=user,
+        )
+
+        def _to_item(
+            report,
+        ) -> ComplianceReportYearNavigationItemSchema | None:
+            if report is None:
+                return None
+            return ComplianceReportYearNavigationItemSchema(
+                compliance_report_id=report.compliance_report_id,
+                compliance_period=report.compliance_period.description,
+            )
+
+        return ComplianceReportYearNavigationSchema(
+            current_compliance_period=current_period,
+            previous=_to_item(previous_report),
+            next=_to_item(next_report),
+        )
 
     def _model_to_dict(self, record) -> dict:
         """Safely convert a model to a dict, skipping lazy-loaded attributes that raise errors."""

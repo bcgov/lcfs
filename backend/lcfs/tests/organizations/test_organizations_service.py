@@ -38,20 +38,14 @@ def mock_repo():
 
 
 @pytest.fixture
-def mock_redis_service():
-    return MagicMock()
-
-
-@pytest.fixture
 def mock_transaction_repo():
     return MagicMock()
 
 
 @pytest.fixture
-def organizations_service(mock_repo, mock_redis_service, mock_transaction_repo):
+def organizations_service(mock_repo, mock_transaction_repo):
     service = OrganizationsService()
     service.repo = mock_repo
-    service.redis_balance_service = mock_redis_service
     service.transaction_repo = mock_transaction_repo
     return service
 

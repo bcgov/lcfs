@@ -31,9 +31,6 @@ async def add_notification_msg(*args, **kwargs):
     return None
 
 
-# TODO: add_notification_msg function needs to be implemented
-# from lcfs.services.rabbitmq.consumers import add_notification_msg
-
 logger = structlog.get_logger(__name__)
 
 

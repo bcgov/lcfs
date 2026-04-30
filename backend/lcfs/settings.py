@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     db_base: str = "lcfs"
     db_test: str = "lcfs_test"
     db_echo: bool = False
+    compliance_reindex_enabled: bool = True
+    compliance_reindex_months: str = "1,4,7,10"
+    compliance_reindex_day: int = 1
+    compliance_reindex_hour: int = 3
+    compliance_reindex_minute: int = 15
+    compliance_reindex_run_on_startup: bool = False
 
     # Variables for Redis
     redis_host: str = "localhost"
@@ -77,14 +83,6 @@ class Settings(BaseSettings):
     clamav_enabled: bool = False
     clamav_host: str = "clamav"
     clamav_port: int = 3310
-
-    # Variables for RabbitMQ
-    rabbitmq_host: str = "rabbitmq"
-    rabbitmq_port: int = 5672
-    rabbitmq_pass: str = "development_only"
-    rabbitmq_user: str = "lcfs"
-    rabbitmq_vhost: str = "lcfs"
-    rabbitmq_transaction_queue: str = "transaction_queue"
 
     ches_enabled: bool = False
     ches_auth_url: str = ""

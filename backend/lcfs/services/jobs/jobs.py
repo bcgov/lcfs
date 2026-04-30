@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from lcfs.services.redis.dependency import get_redis_client
-from lcfs.services.tfrs.redis_balance import RedisBalanceService
 from sqlalchemy import text
 from fastapi import FastAPI
 
@@ -39,6 +37,17 @@ from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 
 logger = logging.getLogger(__name__)
+
+COMPLIANCE_REINDEX_TABLES = (
+    "compliance_report",
+    "fuel_supply",
+    "fuel_export",
+    "allocation_agreement",
+    "notional_transfer",
+    "other_uses",
+    "final_supply_equipment",
+)
+COMPLIANCE_REINDEX_LOCK_ID = 60271451
 
 
 async def submit_supplemental_report(report_id: int, app: FastAPI):
@@ -96,10 +105,6 @@ async def submit_supplemental_report(report_id: int, app: FastAPI):
             org_service = OrganizationsService(
                 repo=org_repo,
                 transaction_repo=transaction_repo,
-                redis_balance_service=RedisBalanceService(
-                    transaction_repo=transaction_repo,
-                    redis_client=app.state.redis_client,
-                ),
             )
 
             trx_service = TransactionsService(repo=transaction_repo)
@@ -198,3 +203,45 @@ async def check_overdue_supplemental_reports(app: FastAPI):
             raise
 
     logger.info("Finished check for overdue supplemental reports.")
+
+
+async def reindex_compliance_report_tables(app: FastAPI):
+    """
+    Rebuild compliance-report related indexes during off-hours.
+
+    Uses PostgreSQL's CONCURRENTLY mode so report traffic can continue while
+    indexes are refreshed.
+    """
+    logger.info("Starting compliance-report table reindex job")
+    conn = await app.state.db_engine.connect()
+
+    try:
+        conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+        lock_acquired = await conn.scalar(
+            text("SELECT pg_try_advisory_lock(:lock_id)"),
+            {"lock_id": COMPLIANCE_REINDEX_LOCK_ID},
+        )
+
+        if not lock_acquired:
+            logger.info(
+                "Skipping compliance-report reindex job because another instance holds the lock"
+            )
+            return
+
+        for table_name in COMPLIANCE_REINDEX_TABLES:
+            logger.info("Reindexing compliance table: %s", table_name)
+            await conn.execute(text(f"REINDEX TABLE CONCURRENTLY {table_name}"))
+    except Exception:
+        logger.exception("Compliance-report table reindex job failed")
+        raise
+    finally:
+        try:
+            await conn.execute(
+                text("SELECT pg_advisory_unlock(:lock_id)"),
+                {"lock_id": COMPLIANCE_REINDEX_LOCK_ID},
+            )
+        except Exception:
+            logger.debug("Compliance-report reindex advisory unlock skipped")
+        await conn.close()
+
+    logger.info("Finished compliance-report table reindex job")
