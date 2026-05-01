@@ -280,6 +280,12 @@ export const ApplicationInformationStep = forwardRef(
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
                     SelectProps={{ displayEmpty: true }}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        paddingTop: '16.5px !important',
+                        paddingBottom: '16.5px !important'
+                      }
+                    }}
                   >
                     <MenuItem value="">
                       <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
