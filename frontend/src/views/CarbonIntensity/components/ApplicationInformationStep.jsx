@@ -281,9 +281,10 @@ export const ApplicationInformationStep = forwardRef(
                     disabled={readOnly}
                     SelectProps={{ displayEmpty: true }}
                     sx={{
-                      '& .MuiSelect-select': {
-                        paddingTop: '12px !important',
-                        paddingBottom: '12px !important'
+                      '& .MuiSelect-select.MuiOutlinedInput-input': {
+                        padding: '12px !important',
+                        minHeight: '1.4375em',
+                        boxSizing: 'content-box'
                       }
                     }}
                   >
