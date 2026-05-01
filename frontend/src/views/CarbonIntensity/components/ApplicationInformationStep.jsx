@@ -282,8 +282,8 @@ export const ApplicationInformationStep = forwardRef(
                     SelectProps={{ displayEmpty: true }}
                     sx={{
                       '& .MuiSelect-select': {
-                        paddingTop: '16.5px !important',
-                        paddingBottom: '16.5px !important'
+                        paddingTop: '12px !important',
+                        paddingBottom: '12px !important'
                       }
                     }}
                   >
