@@ -76,6 +76,18 @@ export const apiRoutes = {
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
 
+  // ci-applications (Carbon Intensity)
+  ciApplicationOptions: '/ci-applications/table-options',
+  getCIApplications: '/ci-applications/list',
+  getCIApplication: '/ci-applications/:ciApplicationId',
+  createCIApplication: '/ci-applications',
+  updateCIApplicationStep1: '/ci-applications/:ciApplicationId/step1',
+  updateCIApplicationStep2: '/ci-applications/:ciApplicationId/step2',
+  updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
+  submitCIApplication: '/ci-applications/:ciApplicationId/submit',
+  ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
+  deleteCIApplication: '/ci-applications/:ciApplicationId',
+
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',

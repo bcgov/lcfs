@@ -22,6 +22,7 @@ import creditMarketEn from '@/assets/locales/en/creditMarket.json'
 import chargingEquipmentEn from '@/assets/locales/en/chargingEquipment.json'
 import chargingSiteEn from '@/assets/locales/en/chargingSite.json'
 import bulletinEn from '@/assets/locales/en/bulletins.json'
+import carbonIntensityEn from '@/assets/locales/en/carbonIntensity.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
 const resources = {
@@ -51,7 +52,8 @@ const resources = {
     creditMarket: creditMarketEn,
     chargingEquipment: chargingEquipmentEn,
     chargingSite: chargingSiteEn,
-    bulletins: bulletinEn
+    bulletins: bulletinEn,
+    carbonIntensity: carbonIntensityEn
   }
 }
 
