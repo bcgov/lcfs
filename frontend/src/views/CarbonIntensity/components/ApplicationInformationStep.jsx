@@ -11,6 +11,8 @@ import {
   Stack,
   TextField
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers'
+import { format as formatDate, isValid as isValidDate, parseISO } from 'date-fns'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Grid2 from '@mui/material/Grid2'
@@ -18,6 +20,21 @@ import Grid2 from '@mui/material/Grid2'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import colors from '@/themes/base/colors'
+
+const DATE_FORMAT = 'yyyy-MM-dd'
+
+const stringToDate = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return isValidDate(value) ? value : null
+  const parsed = parseISO(value)
+  return isValidDate(parsed) ? parsed : null
+}
+
+const dateToString = (value) => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  return isValidDate(value) ? formatDate(value, DATE_FORMAT) : ''
+}
 
 const buildValidationSchema = (t) =>
   Yup.object({
@@ -310,17 +327,29 @@ export const ApplicationInformationStep = forwardRef(
                       )}
                     </BCTypography>
                   </InputLabel>
-                  <TextField
-                    {...field}
-                    id="proposedFuelCodeEffectiveDate"
-                    data-test="proposedFuelCodeEffectiveDate"
-                    type="date"
-                    variant="outlined"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
+                  <DatePicker
+                    value={stringToDate(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                    onClose={field.onBlur}
+                    format={DATE_FORMAT}
                     disabled={readOnly}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ width: { xs: '100%', sm: 240 } }}
+                    slotProps={{
+                      textField: {
+                        id: 'proposedFuelCodeEffectiveDate',
+                        name: field.name,
+                        inputRef: field.ref,
+                        onBlur: field.onBlur,
+                        variant: 'outlined',
+                        error: !!fieldState.error,
+                        helperText: fieldState.error?.message,
+                        InputLabelProps: { shrink: true },
+                        inputProps: {
+                          'data-test': 'proposedFuelCodeEffectiveDate',
+                          placeholder: 'yyyy-mm-dd'
+                        },
+                        sx: { width: { xs: '100%', sm: 240 } }
+                      }
+                    }}
                   />
                 </Box>
               )}
