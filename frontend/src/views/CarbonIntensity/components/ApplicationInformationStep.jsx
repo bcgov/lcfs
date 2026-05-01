@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Box,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -16,12 +17,7 @@ import Grid2 from '@mui/material/Grid2'
 
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-
-const RequiredHint = ({ children }) => (
-  <BCTypography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-    ({children})
-  </BCTypography>
-)
+import colors from '@/themes/base/colors'
 
 const buildValidationSchema = (t) =>
   Yup.object({
@@ -103,11 +99,16 @@ export const ApplicationInformationStep = forwardRef(
 
     const onSubmit = (values) => onSave?.(toApiPayload(values))
 
+    const optionalSuffix = ` ${t('carbonIntensity:labels.optional')}`
+    const requiredSuffix = ` ${t('carbonIntensity:labels.required')}`
+
     return (
       <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
         {organization && (
           <Box mb={3}>
-            <BCTypography variant="h6">{organization.name}</BCTypography>
+            <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
+              {organization.name}
+            </BCTypography>
             {organization.addressLine && (
               <BCTypography variant="body2">
                 {organization.addressLine}
@@ -122,7 +123,10 @@ export const ApplicationInformationStep = forwardRef(
           </Box>
         )}
 
-        <BCTypography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+        <BCTypography
+          variant="h6"
+          sx={{ pb: 2, color: colors.primary.main }}
+        >
           {t('carbonIntensity:step1.facilityLocationLabel')}
         </BCTypography>
 
@@ -132,23 +136,17 @@ export const ApplicationInformationStep = forwardRef(
               name="facilityCity"
               control={control}
               render={({ field, fieldState }) => (
-                <Box>
-                  <InputLabel htmlFor="facilityCity">
-                    <BCTypography variant="body2" component="span">
-                      {t('carbonIntensity:step1.city')}{' '}
-                    </BCTypography>
-                    <RequiredHint>
-                      {t('carbonIntensity:labels.optional').replace(
-                        /[()]/g,
-                        ''
-                      )}
-                    </RequiredHint>
+                <Box mb={2}>
+                  <InputLabel htmlFor="facilityCity" sx={{ pb: 1 }}>
+                    {t('carbonIntensity:step1.city')}
+                    {optionalSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityCity"
+                    data-test="facilityCity"
+                    variant="outlined"
                     fullWidth
-                    size="small"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -163,23 +161,17 @@ export const ApplicationInformationStep = forwardRef(
               name="facilityProvinceState"
               control={control}
               render={({ field, fieldState }) => (
-                <Box>
-                  <InputLabel htmlFor="facilityProvinceState">
-                    <BCTypography variant="body2" component="span">
-                      {t('carbonIntensity:step1.provinceState')}{' '}
-                    </BCTypography>
-                    <RequiredHint>
-                      {t('carbonIntensity:labels.optional').replace(
-                        /[()]/g,
-                        ''
-                      )}
-                    </RequiredHint>
+                <Box mb={2}>
+                  <InputLabel htmlFor="facilityProvinceState" sx={{ pb: 1 }}>
+                    {t('carbonIntensity:step1.provinceState')}
+                    {optionalSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityProvinceState"
+                    data-test="facilityProvinceState"
+                    variant="outlined"
                     fullWidth
-                    size="small"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -194,24 +186,18 @@ export const ApplicationInformationStep = forwardRef(
               name="facilityCountry"
               control={control}
               render={({ field, fieldState }) => (
-                <Box>
-                  <InputLabel htmlFor="facilityCountry">
-                    <BCTypography variant="body2" component="span">
-                      {t('carbonIntensity:step1.country')}{' '}
-                    </BCTypography>
-                    <RequiredHint>
-                      {t('carbonIntensity:labels.required').replace(
-                        /[()]/g,
-                        ''
-                      )}
-                    </RequiredHint>
+                <Box mb={2}>
+                  <InputLabel htmlFor="facilityCountry" sx={{ pb: 1 }}>
+                    {t('carbonIntensity:step1.country')}
+                    {requiredSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityCountry"
+                    data-test="facilityCountry"
                     required
+                    variant="outlined"
                     fullWidth
-                    size="small"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -222,36 +208,29 @@ export const ApplicationInformationStep = forwardRef(
           </Grid2>
         </Grid2>
 
-        <Grid2 container spacing={2} sx={{ mt: 2 }}>
+        <Grid2 container spacing={2}>
           <Grid2 size={{ xs: 12, md: 4 }}>
             <Controller
               name="facilityNameplateCapacity"
               control={control}
               render={({ field, fieldState }) => (
-                <Box>
-                  <InputLabel htmlFor="facilityNameplateCapacity">
-                    <BCTypography
-                      variant="body2"
-                      component="span"
-                      sx={{ fontWeight: 600 }}
-                    >
-                      {t('carbonIntensity:step1.facilityNameplate')}{' '}
-                    </BCTypography>
-                    <RequiredHint>
-                      {t('carbonIntensity:labels.required').replace(
-                        /[()]/g,
-                        ''
-                      )}
-                    </RequiredHint>
+                <Box mb={2}>
+                  <InputLabel
+                    htmlFor="facilityNameplateCapacity"
+                    sx={{ pb: 1 }}
+                  >
+                    {t('carbonIntensity:step1.facilityNameplate')}
+                    {requiredSuffix}:
                   </InputLabel>
                   <TextField
                     {...field}
                     id="facilityNameplateCapacity"
+                    data-test="facilityNameplateCapacity"
                     type="number"
                     inputProps={{ min: 1, step: 1 }}
                     required
+                    variant="outlined"
                     fullWidth
-                    size="small"
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
                     disabled={readOnly}
@@ -266,27 +245,24 @@ export const ApplicationInformationStep = forwardRef(
               name="facilityNameplateCapacityUnitId"
               control={control}
               render={({ field, fieldState }) => (
-                <Box>
-                  <InputLabel htmlFor="facilityNameplateCapacityUnitId">
-                    <BCTypography variant="body2" component="span">
-                      {t('carbonIntensity:step1.unitOfMeasure')}{' '}
-                    </BCTypography>
-                    <RequiredHint>
-                      {t('carbonIntensity:labels.required').replace(
-                        /[()]/g,
-                        ''
-                      )}
-                    </RequiredHint>
+                <Box mb={2}>
+                  <InputLabel
+                    htmlFor="facilityNameplateCapacityUnitId"
+                    sx={{ pb: 1 }}
+                  >
+                    {t('carbonIntensity:step1.unitOfMeasure')}
+                    {requiredSuffix}:
                   </InputLabel>
                   <FormControl
                     fullWidth
-                    size="small"
+                    variant="outlined"
                     error={!!fieldState.error}
                     disabled={readOnly}
                   >
                     <Select
                       {...field}
                       id="facilityNameplateCapacityUnitId"
+                      data-test="facilityNameplateCapacityUnitId"
                       value={field.value ?? ''}
                       displayEmpty
                     >
@@ -299,60 +275,63 @@ export const ApplicationInformationStep = forwardRef(
                         </MenuItem>
                       ))}
                     </Select>
+                    {fieldState.error && (
+                      <FormHelperText>
+                        {fieldState.error.message}
+                      </FormHelperText>
+                    )}
                   </FormControl>
-                  {fieldState.error && (
-                    <BCTypography variant="caption" color="error">
-                      {fieldState.error.message}
-                    </BCTypography>
-                  )}
                 </Box>
               )}
             />
           </Grid2>
         </Grid2>
 
-        <Box sx={{ mt: 3 }}>
-          <Controller
-            name="proposedFuelCodeEffectiveDate"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Box>
-                <InputLabel htmlFor="proposedFuelCodeEffectiveDate">
-                  <BCTypography
-                    variant="body2"
-                    component="span"
-                    sx={{ fontWeight: 600 }}
+        <Grid2 container spacing={2}>
+          <Grid2 size={{ xs: 12, md: 8 }}>
+            <Controller
+              name="proposedFuelCodeEffectiveDate"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Box mb={2}>
+                  <InputLabel
+                    htmlFor="proposedFuelCodeEffectiveDate"
+                    sx={{ pb: 1 }}
                   >
-                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}{' '}
-                  </BCTypography>
-                  <BCTypography
-                    variant="caption"
-                    component="span"
-                    color="text.secondary"
-                  >
-                    {t('carbonIntensity:step1.proposedFuelCodeEffectiveHelp')}
-                  </BCTypography>
-                </InputLabel>
-                <TextField
-                  {...field}
-                  id="proposedFuelCodeEffectiveDate"
-                  type="date"
-                  size="small"
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  disabled={readOnly}
-                  sx={{ width: 220 }}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Box>
-            )}
-          />
-        </Box>
+                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}
+                    {' '}
+                    <BCTypography
+                      variant="caption"
+                      component="span"
+                      color="text.secondary"
+                    >
+                      {t(
+                        'carbonIntensity:step1.proposedFuelCodeEffectiveHelp'
+                      )}
+                    </BCTypography>
+                  </InputLabel>
+                  <TextField
+                    {...field}
+                    id="proposedFuelCodeEffectiveDate"
+                    data-test="proposedFuelCodeEffectiveDate"
+                    type="date"
+                    variant="outlined"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    disabled={readOnly}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ width: { xs: '100%', sm: 240 } }}
+                  />
+                </Box>
+              )}
+            />
+          </Grid2>
+        </Grid2>
 
         <Stack
           direction="row"
           spacing={2}
-          sx={{ mt: 4 }}
+          sx={{ mt: 2 }}
           alignItems="center"
         >
           <BCButton
