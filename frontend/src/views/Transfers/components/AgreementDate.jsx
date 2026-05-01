@@ -38,9 +38,11 @@ export const AgreementDate = () => {
             max: maxDate,
             'data-test': 'transfer-agreement-date-input'
           }}
-          size="small"
+          variant="outlined"
           error={!!errors.agreementDate}
           helperText={errors.agreementDate?.message}
+          InputLabelProps={{ shrink: true }}
+          sx={{ minWidth: 220 }}
         />
       </Box>
     </LabelBox>
