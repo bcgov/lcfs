@@ -3,11 +3,8 @@ import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
-  FormControl,
-  FormHelperText,
   InputLabel,
   MenuItem,
-  Select,
   Stack,
   TextField
 } from '@mui/material'
@@ -270,34 +267,29 @@ export const ApplicationInformationStep = forwardRef(
                     {t('carbonIntensity:step1.unitOfMeasure')}
                     {requiredSuffix}:
                   </InputLabel>
-                  <FormControl
-                    fullWidth
+                  <TextField
+                    {...field}
+                    select
+                    id="facilityNameplateCapacityUnitId"
+                    data-test="facilityNameplateCapacityUnitId"
+                    value={field.value ?? ''}
+                    required
                     variant="outlined"
+                    fullWidth
                     error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
                     disabled={readOnly}
+                    SelectProps={{ displayEmpty: true }}
                   >
-                    <Select
-                      {...field}
-                      id="facilityNameplateCapacityUnitId"
-                      data-test="facilityNameplateCapacityUnitId"
-                      value={field.value ?? ''}
-                      displayEmpty
-                    >
-                      <MenuItem value="">
-                        <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
+                    <MenuItem value="">
+                      <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
+                    </MenuItem>
+                    {unitsOfMeasure.map((u) => (
+                      <MenuItem key={u.uomId} value={u.uomId}>
+                        {u.name}
                       </MenuItem>
-                      {unitsOfMeasure.map((u) => (
-                        <MenuItem key={u.uomId} value={u.uomId}>
-                          {u.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {fieldState.error && (
-                      <FormHelperText>
-                        {fieldState.error.message}
-                      </FormHelperText>
-                    )}
-                  </FormControl>
+                    ))}
+                  </TextField>
                 </Box>
               )}
             />
