@@ -22,6 +22,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import {
   useComplianceReportDocuments,
+  useComplianceReportScheduleOverview,
   useComplianceReportWithCache
 } from '@/hooks/useComplianceReports'
 import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
@@ -89,6 +90,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   const { compliancePeriod, complianceReportId } = useParams()
   const { data: complianceReportData, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
+  const {
+    data: scheduleOverview,
+    isLoading: scheduleOverviewLoading,
+    error: scheduleOverviewError
+  } = useComplianceReportScheduleOverview(complianceReportId)
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
   const [expanded, setExpanded] = useState([])
   const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
@@ -209,7 +215,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
             <SupportingDocumentSummary
               parentType="compliance_report"
               parentID={complianceReportId}
-              data={data}
+              data={data || []}
             />
             <DocumentUploadDialog
               parentID={complianceReportId}
@@ -227,7 +233,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.fuelSupplies,
         useFetch: useGetFuelSupplies,
         component: (data) =>
-          data.fuelSupplies.length > 0 && (
+          data?.fuelSupplies?.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
@@ -256,13 +262,13 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.finalSupplyEquipments,
         useFetch: useGetFSEReportingList,
         component: (data) =>
-          data.finalSupplyEquipments.length > 0 ? (
+          data?.finalSupplyEquipments?.length > 0 ? (
             <FinalSupplyEquipmentSummary
               status={currentStatus}
               data={data}
               organizationId={complianceReportData?.report?.organizationId}
             />
-          ) : data.hasChargingEquipment ? (
+          ) : data?.hasChargingEquipment ? (
             <BCTypography variant="body4" color="text">
               {t('finalSupplyEquipment:noFseLinkedToReport')}
             </BCTypography>
@@ -274,7 +280,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.allocationAgreements,
         useFetch: useGetAllAllocationAgreements,
         component: (data) =>
-          data?.allocationAgreements.length > 0 && (
+          data?.allocationAgreements?.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
@@ -303,7 +309,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.notionalTransfers,
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
-          data.notionalTransfers.length > 0 && (
+          data?.notionalTransfers?.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
@@ -323,7 +329,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.otherUses,
         useFetch: useGetAllOtherUses,
         component: (data) =>
-          data.otherUses.length > 0 && (
+          data?.otherUses?.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
@@ -372,6 +378,55 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     ]
   )
 
+  const getOverviewForActivity = useCallback(
+    (activityKey) => {
+      if (!scheduleOverview) return null
+
+      const overviewKeyMap = {
+        supportingDocs: 'supportingDocs',
+        fuelSupplies: 'fuelSupplies',
+        finalSupplyEquipments: 'finalSupplyEquipments',
+        allocationAgreements: 'allocationAgreements',
+        notionalTransfers: 'notionalTransfers',
+        otherUses: 'otherUses',
+        fuelExports: 'fuelExports'
+      }
+
+      return scheduleOverview[overviewKeyMap[activityKey]] ?? null
+    },
+    [scheduleOverview]
+  )
+
+  const shouldFetchActivityData = useCallback(
+    (activity, index) => {
+      const panelId = `panel${index}`
+      const overview = getOverviewForActivity(activity.key)
+      const expandedSchedule = location.state?.expandedSchedule
+      const hasKnownData = (overview?.count ?? 0) > 0
+      const hasFSECapability =
+        activity.key === 'finalSupplyEquipments' &&
+        overview?.hasChargingEquipment === true &&
+        currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
+
+      if (activity.key === 'supportingDocs') {
+        return expanded.includes(panelId) || hasKnownData
+      }
+
+      return (
+        expanded.includes(panelId) ||
+        expandedSchedule === activity.key ||
+        hasKnownData ||
+        hasFSECapability
+      )
+    },
+    [
+      expanded,
+      currentStatus,
+      getOverviewForActivity,
+      location.state?.expandedSchedule
+    ]
+  )
+
   const onExpand = useCallback(
     (panel) => (event, isExpanded) => {
       setExpanded((prev) =>
@@ -382,15 +437,22 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   )
 
   // Get data for all activities to determine visibility
-  const activityDataResults = activityList.map((activity) => {
-    const result = activity.useFetch(
-      complianceReportId,
-      {
-        changelog: reportInfo.isSupplemental
-      },
-      {},
-      complianceReportData?.report?.organizationId
-    )
+  const activityDataResults = activityList.map((activity, index) => {
+    const result =
+      activity.key === 'supportingDocs'
+        ? activity.useFetch(complianceReportId, {
+            enabled: shouldFetchActivityData(activity, index)
+          })
+        : activity.useFetch(
+            complianceReportId,
+            {
+              changelog: reportInfo.isSupplemental
+            },
+            {
+              enabled: shouldFetchActivityData(activity, index)
+            },
+            complianceReportData?.report?.organizationId
+          )
     return {
       activity,
       ...result
@@ -405,14 +467,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     activityList.forEach((activity, index) => {
       const panelId = `panel${index}`
       const dataResult = activityDataResults[index]
+      const overview = getOverviewForActivity(activity.key)
 
-      // check if they have actual data
       const scheduleData =
         activity.key === 'supportingDocs'
           ? dataResult?.data || []
           : dataResult?.data?.[activity.key] || []
-
-      const hasRealData = !isArrayEmpty(scheduleData)
+      const visibleCount = overview?.count ?? 0
+      const hasRealData = visibleCount > 0
 
       // FSE is not applicable for compliance periods before 2024
       const isFSEHiddenByYear =
@@ -430,7 +492,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       // FSE was deleted and recreated after the original report.
       const hasFSECapability =
         activity.key === 'finalSupplyEquipments' &&
-        dataResult?.data?.hasChargingEquipment === true &&
+        overview?.hasChargingEquipment === true &&
         currentStatus !== COMPLIANCE_REPORT_STATUSES.ASSESSED
 
       // Show if has data OR if in editing mode OR if it was recently edited
@@ -448,30 +510,31 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         hasData: hasRealData || hasFSECapability,
         activity,
         data: dataResult?.data,
-        isLoading: dataResult?.isLoading,
-        error: dataResult?.error,
-        scheduleData
+        isLoading:
+          activity.key === 'supportingDocs'
+            ? scheduleOverviewLoading || dataResult?.isLoading
+            : scheduleOverviewLoading || dataResult?.isLoading,
+        error: scheduleOverviewError || dataResult?.error,
+        scheduleData,
+        overview
       })
     })
     return accordionsData
   }, [
     activityList,
     activityDataResults,
-    t,
+    getOverviewForActivity,
     currentStatus,
     compliancePeriod,
-    location.state?.expandedSchedule
+    location.state?.expandedSchedule,
+    scheduleOverviewError,
+    scheduleOverviewLoading
   ])
 
-  // Auto-expand panels once data is loaded
+  // Auto-expand panels once overview metadata is loaded
   useEffect(() => {
     if (hasAutoExpanded) return
-
-    const allDataLoaded = activityDataResults.every(
-      (result) => !result.isLoading
-    )
-
-    if (allDataLoaded && accordionsWithData.size > 0) {
+    if (!scheduleOverviewLoading && accordionsWithData.size > 0) {
       const accordionsWithActualData = []
       const expandedSchedule = location.state?.expandedSchedule
 
@@ -501,10 +564,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       setHasAutoExpanded(true)
     }
   }, [
-    activityDataResults,
     accordionsWithData,
     hasAutoExpanded,
-    location.state?.expandedSchedule
+    location.state?.expandedSchedule,
+    scheduleOverviewLoading
   ])
 
   // Clear the expandedSchedule state after processing to prevent re-expansion on next visit
@@ -550,35 +613,24 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     []
   )
 
-  // Auto expand/collapse supporting docs section based on document presence
-  const SUPPORTING_DOCS_KEY = 'supportingDocs'
-
   const supportingDocsPanelId = useMemo(() => {
-    const idx = activityList.findIndex((a) => a.key === SUPPORTING_DOCS_KEY)
+    const idx = activityList.findIndex((a) => a.key === 'supportingDocs')
     return idx >= 0 ? `panel${idx}` : null
   }, [activityList])
-
-  // Derive current supporting-docs array from existing query result
-  const supportingDocsData = useMemo(() => {
-    const result = activityDataResults.find(
-      (r) => r.activity.key === SUPPORTING_DOCS_KEY
-    )
-    return result?.data ?? []
-  }, [activityDataResults])
 
   useEffect(() => {
     if (!supportingDocsPanelId) return
 
-    const hasDocs = !isArrayEmpty(supportingDocsData)
+    const hasDocs = (scheduleOverview?.supportingDocs?.count ?? 0) > 0
 
     setExpanded((prev) => {
       const isExpanded = prev.includes(supportingDocsPanelId)
-      if (hasDocs === isExpanded) return prev // no change
+      if (hasDocs === isExpanded) return prev
       return hasDocs
         ? [...prev, supportingDocsPanelId]
         : prev.filter((p) => p !== supportingDocsPanelId)
     })
-  }, [supportingDocsData, supportingDocsPanelId])
+  }, [scheduleOverview?.supportingDocs?.count, supportingDocsPanelId])
 
   return (
     <>
@@ -611,17 +663,23 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
           return null
         }
 
-        const { data, error, isLoading, scheduleData } = accordionInfo
-        const hasNoData = isArrayEmpty(scheduleData)
+        const { data, error, isLoading, scheduleData, overview } = accordionInfo
+        const hasNoData =
+          overview != null ? overview.count === 0 : isArrayEmpty(scheduleData)
         const isDisabled = !canEdit && hasNoData
+        const isEdited = overview?.wasEdited ?? wasEdited(data)
+        const isExpanded = expanded.includes(panelId)
+        const isDataPending =
+          isExpanded && !error && typeof data === 'undefined' && !hasNoData
 
         // Check if all records are marked as DELETE
         const allRecordsDeleted =
-          Array.isArray(scheduleData) &&
-          scheduleData.length > 0 &&
-          scheduleData.every((item) => item.actionType === 'DELETE')
+          overview != null
+            ? overview.activeCount === 0 && overview.deletedCount > 0
+            : Array.isArray(scheduleData) &&
+              scheduleData.length > 0 &&
+              scheduleData.every((item) => item.actionType === 'DELETE')
 
-        const isExpanded = expanded.includes(panelId)
         const showEditIcon = shouldShowEditIcon(activity.name)
 
         return (
@@ -671,7 +729,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                     </IconButton>
                   </Role>
                 )}{' '}
-                {wasEdited(data) && !allRecordsDeleted && (
+                {isEdited && !allRecordsDeleted && (
                   <Chip
                     aria-label="changes were made since original report"
                     icon={<NewReleasesOutlined fontSize="small" />}
@@ -711,7 +769,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
                   {t('report:allRecordsDeleted')}
                 </BCAlert>
               )}
-              {isLoading ? (
+              {isLoading || isDataPending ? (
                 <CircularProgress />
               ) : error ? (
                 <BCTypography color="error">Error loading data</BCTypography>
