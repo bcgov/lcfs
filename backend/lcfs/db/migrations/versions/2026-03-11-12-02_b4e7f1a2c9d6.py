@@ -26,7 +26,6 @@ depends_on = None
 
 # All fuel_supply views that must be recreated after column alter
 SECTIONS_TO_EXECUTE = [
-    "Fuel Supply Analytics Base View",
     "Fuel Supply Base View",
     "Compliance Report Fuel Supply Base View",
     "Fuel Supply Fuel Code Base View",

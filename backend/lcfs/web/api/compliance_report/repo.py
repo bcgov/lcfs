@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, joinedload
 from typing import List, Optional, TypedDict, Type, Sequence
 
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.comment import ComplianceReportInternalComment
@@ -707,6 +708,98 @@ class ComplianceReportRepository:
         )
         return result.scalar() is not None
 
+    async def _get_report_chain_anchor(self, compliance_report_id: int):
+        result = await self.db.execute(
+            select(
+                ComplianceReport.compliance_report_group_uuid,
+                ComplianceReport.version,
+                ComplianceReport.organization_id,
+            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
+        )
+        return result.first()
+
+    def _get_chain_report_ids_subquery(
+        self, compliance_report_group_uuid: str, version: int
+    ):
+        return select(ComplianceReport.compliance_report_id).where(
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.version <= version,
+            )
+        )
+
+    @repo_handler
+    async def get_supporting_document_count(self, compliance_report_id: int) -> int:
+        return (
+            await self.db.scalar(
+                select(func.count())
+                .select_from(compliance_report_document_association)
+                .where(
+                    compliance_report_document_association.c.compliance_report_id
+                    == compliance_report_id
+                )
+            )
+        ) or 0
+
+    @repo_handler
+    async def get_effective_versioned_record_counts(
+        self, compliance_report_id: int, model: Type
+    ) -> dict[str, int]:
+        anchor = await self._get_report_chain_anchor(compliance_report_id)
+        if not anchor or not anchor[0]:
+            return {"active_count": 0, "deleted_count": 0}
+
+        group_uuid, version, _ = anchor
+        chain_report_ids = self._get_chain_report_ids_subquery(group_uuid, version)
+
+        latest_version_per_group = (
+            select(
+                model.group_uuid,
+                func.max(model.version).label("max_version"),
+            )
+            .where(model.compliance_report_id.in_(chain_report_ids))
+            .group_by(model.group_uuid)
+            .subquery()
+        )
+
+        latest_records = (
+            select(model.action_type)
+            .join(
+                latest_version_per_group,
+                and_(
+                    model.group_uuid == latest_version_per_group.c.group_uuid,
+                    model.version == latest_version_per_group.c.max_version,
+                ),
+            )
+            .subquery()
+        )
+
+        counts = await self.db.execute(
+            select(
+                func.count().filter(
+                    latest_records.c.action_type != ActionTypeEnum.DELETE
+                ),
+                func.count().filter(
+                    latest_records.c.action_type == ActionTypeEnum.DELETE
+                ),
+            )
+        )
+        active_count, deleted_count = counts.one()
+        return {
+            "active_count": active_count or 0,
+            "deleted_count": deleted_count or 0,
+        }
+
+    @repo_handler
+    async def get_report_chain_organization_id(
+        self, compliance_report_id: int
+    ) -> Optional[int]:
+        anchor = await self._get_report_chain_anchor(compliance_report_id)
+        if not anchor:
+            return None
+        return anchor[2]
+
     @repo_handler
     async def get_supplemental_report_ids_in_chain(
         self, compliance_report_id: int
@@ -972,17 +1065,6 @@ class ComplianceReportRepository:
             )
         )
         return result.scalars().first()
-
-    async def get_compliance_report_by_legacy_id(self, legacy_id):
-        """
-        Retrieve a compliance report from the database by ID
-        """
-        result = await self.db.execute(
-            select(ComplianceReport)
-            .options(*self._get_base_report_options())
-            .where(ComplianceReport.legacy_id == legacy_id)
-        )
-        return result.scalars().unique().first()
 
     @repo_handler
     async def delete_compliance_report(self, compliance_report_id: int) -> bool:
