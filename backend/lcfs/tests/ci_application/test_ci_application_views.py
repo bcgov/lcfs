@@ -375,7 +375,7 @@ async def test_stub_endpoints_return_not_implemented(
 
 
 @pytest.mark.anyio
-async def test_government_decision_stub_requires_government(
+async def test_government_decision_stub_forbidden_for_non_government(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_user_role,
@@ -384,6 +384,13 @@ async def test_government_decision_stub_requires_government(
     response = await client.post("/api/ci-applications/10/decision", json={})
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+
+@pytest.mark.anyio
+async def test_government_decision_stub_returns_not_implemented_for_government(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
     set_user_role(RoleEnum.GOVERNMENT)
     response = await client.post("/api/ci-applications/10/decision", json={})
     assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
