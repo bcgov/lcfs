@@ -111,7 +111,7 @@ class ComplianceReportExporter:
         self, compliance_report_id: int, is_government: bool = True
     ) -> StreamingResponse:
         wb = Workbook()
-        wb.remove(wb.active)
+        default_sheet = wb.active
 
         # Get report data
         report = await self.cr_repo.get_compliance_report_by_id(
@@ -140,6 +140,10 @@ class ComplianceReportExporter:
                 report,
                 is_government=is_government,
             )
+
+        # Remove the placeholder worksheet once at least one exporter has added a real sheet.
+        if len(wb.worksheets) > 1 and default_sheet in wb.worksheets:
+            wb.remove(default_sheet)
 
         # Export to stream
         stream = io.BytesIO()

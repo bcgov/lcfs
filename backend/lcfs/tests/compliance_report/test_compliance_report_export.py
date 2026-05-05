@@ -1,5 +1,7 @@
 import pytest
+import io
 from unittest.mock import AsyncMock, Mock
+from openpyxl import load_workbook
 from starlette.responses import StreamingResponse
 
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
@@ -262,6 +264,12 @@ def compliance_report_exporter(
 class TestComplianceReportExporter:
     """Test cases for ComplianceReportExporter."""
 
+    async def _response_workbook(self, response: StreamingResponse):
+        content = b""
+        async for chunk in response.body_iterator:
+            content += chunk
+        return load_workbook(io.BytesIO(content))
+
     def test_column_definitions_initialization(self, compliance_report_exporter):
         """Test that column definitions are properly initialized for both annual and quarterly reports."""
         exporter = compliance_report_exporter
@@ -460,6 +468,27 @@ class TestComplianceReportExporter:
 
         # Fuel export loader is called for 2024+ reports
         exporter.ef_repo.get_effective_fuel_exports.assert_called()
+
+    @pytest.mark.anyio
+    async def test_export_skips_fuel_export_sheet_when_no_rows(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.ef_repo.get_effective_fuel_exports.return_value = []
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=0
+        )
+
+        response = await exporter.export(1)
+        workbook = await self._response_workbook(response)
+
+        assert "Export fuel" not in workbook.sheetnames
 
     @pytest.mark.anyio
     async def test_export_delegates_sheet_population_to_sheet_exporters(

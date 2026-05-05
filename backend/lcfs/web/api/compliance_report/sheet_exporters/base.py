@@ -117,10 +117,8 @@ class SheetExporterSupport:
         if not data or len(data) <= 1:
             return
 
-        ws = wb.create_sheet(title=title[:31])
         headers = data[0]
         rows = data[1:]
-        ws.append(headers)
 
         has_total_row = False
         if rows and len(rows) >= 2 and len(rows[-1]) > 1 and rows[-1][1] == "Total":
@@ -130,6 +128,12 @@ class SheetExporterSupport:
             total_row = rows[-1]
         else:
             data_rows = rows
+
+        if len(data_rows) == 0:
+            return
+
+        ws = wb.create_sheet(title=title[:31])
+        ws.append(headers)
 
         for row_idx, row in enumerate(data_rows, start=2):
             ws.append(row)
