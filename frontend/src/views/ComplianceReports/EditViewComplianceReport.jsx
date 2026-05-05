@@ -3,7 +3,7 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
-import InternalComments from '@/components/InternalComments'
+import Comments from '@/components/Comments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import {
@@ -838,7 +838,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                   methods={methods}
                 />
               )}
-              {/* Internal Comments */}
+              {/* Comments */}
               {isGovernmentUser && (
                 <BCBox mt={2}>
                   <BCTypography variant="h6" color="primary">
@@ -846,7 +846,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                   </BCTypography>
                   <BCBox>
                     <Role roles={govRoles}>
-                      <InternalComments
+                      <Comments
                         entityType="complianceReport"
                         entityId={parseInt(complianceReportId)}
                       />
