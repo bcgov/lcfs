@@ -75,6 +75,7 @@ export const apiRoutes = {
   getFuelCodes: '/fuel-codes/list',
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
+  exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
