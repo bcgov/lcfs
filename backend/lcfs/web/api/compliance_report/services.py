@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 
 import copy
@@ -37,6 +38,8 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportScheduleOverviewItemSchema,
+    ComplianceReportScheduleOverviewSchema,
     ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
     ComplianceReportYearNavigationItemSchema,
@@ -154,6 +157,71 @@ class ComplianceReportServices:
             CompliancePeriodBaseSchema.model_validate(period)
             for period in visible_periods
         ]
+
+    @service_handler
+    async def get_schedule_overview(
+        self, compliance_report_id: int
+    ) -> ComplianceReportScheduleOverviewSchema:
+        async def _build_versioned_item(model):
+            counts = await self.repo.get_effective_versioned_record_counts(
+                compliance_report_id, model
+            )
+            was_edited = await self.repo.has_supplemental_changes(
+                compliance_report_id, model
+            )
+            return ComplianceReportScheduleOverviewItemSchema(
+                count=counts["active_count"] + counts["deleted_count"],
+                active_count=counts["active_count"],
+                deleted_count=counts["deleted_count"],
+                was_edited=was_edited,
+            )
+
+        (
+            supporting_docs_count,
+            organization_id,
+            fuel_supplies,
+            allocation_agreements,
+            notional_transfers,
+            other_uses,
+            fuel_exports,
+        ) = await asyncio.gather(
+            self.repo.get_supporting_document_count(compliance_report_id),
+            self.repo.get_report_chain_organization_id(compliance_report_id),
+            _build_versioned_item(FuelSupply),
+            _build_versioned_item(AllocationAgreement),
+            _build_versioned_item(NotionalTransfer),
+            _build_versioned_item(OtherUses),
+            _build_versioned_item(FuelExport),
+        )
+
+        has_charging_equipment = False
+        fse_count = 0
+        if organization_id is not None:
+            has_charging_equipment, fse_count = await asyncio.gather(
+                self.fse_service.repo.has_charging_equipment_for_organization(
+                    organization_id
+                ),
+                self.fse_service.repo.get_fse_reporting_count(
+                    organization_id, compliance_report_id
+                ),
+            )
+
+        return ComplianceReportScheduleOverviewSchema(
+            supporting_docs=ComplianceReportScheduleOverviewItemSchema(
+                count=supporting_docs_count,
+                active_count=supporting_docs_count,
+            ),
+            fuel_supplies=fuel_supplies,
+            final_supply_equipments=ComplianceReportScheduleOverviewItemSchema(
+                count=fse_count,
+                active_count=fse_count,
+                has_charging_equipment=has_charging_equipment,
+            ),
+            allocation_agreements=allocation_agreements,
+            notional_transfers=notional_transfers,
+            other_uses=other_uses,
+            fuel_exports=fuel_exports,
+        )
 
     @service_handler
     async def create_compliance_report(
