@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from starlette.responses import StreamingResponse
@@ -10,7 +10,8 @@ from lcfs.web.api.fuel_code.bulletin_export import FuelCodeBulletinExporter
 
 @pytest.mark.anyio
 async def test_bulletin_export_success():
-    repo_mock = AsyncMock()
+    repo_mock = MagicMock()
+    repo_mock.get_fuel_code_bulletin_rows = AsyncMock()
     exporter = FuelCodeBulletinExporter(repo=repo_mock)
 
     pagination = PaginationRequestSchema(
@@ -62,7 +63,7 @@ async def test_bulletin_export_success():
 
 @pytest.mark.anyio
 async def test_bulletin_export_invalid_format():
-    repo_mock = AsyncMock()
+    repo_mock = MagicMock()
     exporter = FuelCodeBulletinExporter(repo=repo_mock)
 
     with pytest.raises(Exception) as exc_info:
