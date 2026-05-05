@@ -30,6 +30,12 @@ class CoProcessedEnumSchema(str, Enum):
     YesFCC = "Yes - FCC"
 
 
+def normalize_co_processed(value):
+    if value is None:
+        return CoProcessedEnumSchema.No
+    return value
+
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
@@ -203,6 +209,11 @@ class FuelCodeSchema(BaseSchema):
     is_notes_required: Optional[bool] = False
     can_edit_ci: Optional[bool] = True
 
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
+
 class FuelCodeHistorySchema(BaseSchema):
     fuel_code_history_id: int
     fuel_code_id: int
@@ -262,6 +273,11 @@ class FuelCodeBaseSchema(BaseSchema):
     feedstock_fuel_transport_modes: Optional[List[str]] = None
     notes: Optional[str] = None
 
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
+
 
 class FuelCodeCloneSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
@@ -299,6 +315,11 @@ class FuelCodeCloneSchema(BaseSchema):
     finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
         None
     )
+
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
 
 
 class FieldOptions(BaseSchema):
@@ -390,6 +411,11 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
 
     @model_validator(mode="before")
     @classmethod
