@@ -24,6 +24,12 @@ class FuelCodeStatusEnumSchema(str, Enum):
     Deleted = "Deleted"
 
 
+class CoProcessedEnumSchema(str, Enum):
+    No = "No"
+    YesDHT = "Yes - DHT"
+    YesFCC = "Yes - FCC"
+
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
@@ -174,6 +180,7 @@ class FuelCodeSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: Optional[str] = None
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
@@ -244,6 +251,7 @@ class FuelCodeBaseSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: Optional[str] = None
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
@@ -274,6 +282,7 @@ class FuelCodeCloneSchema(BaseSchema):
     feedstock: Optional[str] = None
     feedstock_location: Optional[str] = None
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: Optional[str] = None
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
@@ -359,6 +368,7 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: str
     fuel_production_facility_province_state: str
     fuel_production_facility_country: str

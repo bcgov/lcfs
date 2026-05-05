@@ -34,12 +34,9 @@ SECTIONS_TO_EXECUTE = [
     "BCeID User Statistics View",
     "Login Failures Analysis View",
     "Transaction Base View",
-    "Fuel Supply Fuel Code Base View",
-    "Fuel Supply Base View",
     "Compliance Report Fuel Supply Base View",
     "Compliance Report Chained View",  # Safe - doesn't reference organization_early_issuance_by_year
     "Allocation Agreement Chained View",  # Safe - doesn't reference organization_early_issuance_by_year
-    "Fuel Code Base View",
     # Excluded until organization_early_issuance_by_year table is created:
     # "Compliance Report Base View",  # References organization_early_issuance_by_year
     # "Allocation Agreement Base View",  # Depends on Compliance Report Base View
