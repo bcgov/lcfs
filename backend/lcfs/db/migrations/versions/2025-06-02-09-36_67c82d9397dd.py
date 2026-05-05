@@ -33,7 +33,6 @@ SECTIONS_TO_EXECUTE = [
     "BCeID Daily Login Summary View",
     "BCeID User Statistics View",
     "Login Failures Analysis View",
-    "Fuel Supply Analytics Base View",
     "Transaction Base View",
     "Fuel Supply Fuel Code Base View",
     "Fuel Supply Base View",

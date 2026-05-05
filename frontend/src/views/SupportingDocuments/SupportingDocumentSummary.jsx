@@ -8,11 +8,12 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
   const downloadDocument = useDownloadDocument(parentType, parentID)
   const { hasRoles } = useCurrentUser()
+  const files = Array.isArray(data) ? data : []
 
   return (
     <Box>
       <List component="div" sx={{ maxWidth: '100%', listStyleType: 'disc' }}>
-        {data.map((file) => (
+        {files.map((file) => (
           <Box
             sx={{ display: 'list-item', padding: '0', marginLeft: '1.2rem' }}
             key={file.documentId}

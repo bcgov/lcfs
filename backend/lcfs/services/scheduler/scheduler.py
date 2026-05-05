@@ -5,8 +5,13 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.asyncio import AsyncIOExecutor
 from pytz import utc
 from fastapi import FastAPI
+from zoneinfo import ZoneInfo
 
-from lcfs.services.jobs.jobs import check_overdue_supplemental_reports
+from lcfs.services.jobs.jobs import (
+    check_overdue_supplemental_reports,
+    reindex_compliance_report_tables,
+)
+from lcfs.settings import settings
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -46,6 +51,41 @@ def start_scheduler(app: FastAPI):
         #     args=[app]
         # )
         # logger.info("Added job: 'check_overdue_supplemental_reports' to run daily at midnight.")
+        if settings.compliance_reindex_enabled:
+            scheduler.add_job(
+                reindex_compliance_report_tables,
+                "cron",
+                month=settings.compliance_reindex_months,
+                day=settings.compliance_reindex_day,
+                hour=settings.compliance_reindex_hour,
+                minute=settings.compliance_reindex_minute,
+                timezone=ZoneInfo("America/Vancouver"),
+                id="reindex_compliance_report_tables",
+                replace_existing=True,
+                args=[app],
+            )
+            logger.info(
+                "Added job: 'reindex_compliance_report_tables'",
+                extra={
+                    "months": settings.compliance_reindex_months,
+                    "day": settings.compliance_reindex_day,
+                    "hour": settings.compliance_reindex_hour,
+                    "minute": settings.compliance_reindex_minute,
+                },
+            )
+
+        if settings.compliance_reindex_run_on_startup:
+            scheduler.add_job(
+                reindex_compliance_report_tables,
+                "date",
+                run_date=datetime.now(utc),
+                id="reindex_compliance_report_tables_startup",
+                replace_existing=True,
+                args=[app],
+            )
+            logger.info(
+                "Added one-time startup job: 'reindex_compliance_report_tables_startup'"
+            )
 
 def shutdown_scheduler():
     """
