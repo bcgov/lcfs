@@ -87,6 +87,7 @@ export const apiRoutes = {
   submitCIApplication: '/ci-applications/:ciApplicationId/submit',
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
   deleteCIApplication: '/ci-applications/:ciApplicationId',
+  ciApplicationDocuments: '/ci-applications/:ciApplicationId/documents',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',

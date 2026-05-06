@@ -23,6 +23,12 @@ from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import (
     compliance_report_document_association,
 )
+from lcfs.db.models.ci_application.CIApplication import (
+    CI_DOC_CATEGORIES,
+    CI_DOC_CATEGORY_SUPPORTING,
+    CIApplication,
+    ci_application_document_association,
+)
 from lcfs.db.models.document import Document
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
@@ -60,7 +66,14 @@ class DocumentService:
         self.charging_site_repo = charging_site_repo
 
     @repo_handler
-    async def upload_file(self, file, parent_id: int, parent_type, user=None):
+    async def upload_file(
+        self,
+        file,
+        parent_id: int,
+        parent_type,
+        user=None,
+        document_category: str | None = None,
+    ):
         if parent_type == "compliance_report":
             await self._verify_compliance_report_access(parent_id, user)
         elif parent_type == "administrativeAdjustment":
@@ -69,6 +82,15 @@ class DocumentService:
             await self._verify_initiative_agreement_access(parent_id, user)
         elif parent_type == "charging_site":
             await self._verify_charging_site_access(parent_id, user)
+        elif parent_type == "ci_application":
+            # Access checks for CI application uploads live in the
+            # ci_application validation layer; the views.py wrapper invokes
+            # them before delegating here.
+            if document_category and document_category not in CI_DOC_CATEGORIES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid document_category '{document_category}'.",
+                )
         else:
             raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
 
@@ -196,6 +218,20 @@ class DocumentService:
                 document_id=document.document_id,
             )
             await self.db.execute(stmt)
+        elif parent_type == "ci_application":
+            ci_application = await self.db.get(CIApplication, parent_id)
+            if not ci_application:
+                raise Exception("CI application not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            stmt = ci_application_document_association.insert().values(
+                ci_application_id=ci_application.ci_application_id,
+                document_id=document.document_id,
+                document_category=document_category or CI_DOC_CATEGORY_SUPPORTING,
+            )
+            await self.db.execute(stmt)
         else:
             raise ServiceException(f"Invalid Type {parent_type}")
 
@@ -314,6 +350,10 @@ class DocumentService:
                 charging_site_document_association,
                 "charging_site_id",
             ),
+            "ci_application": (
+                ci_application_document_association,
+                "ci_application_id",
+            ),
         }
 
         # Get the association table and column based on the parent_type
@@ -370,6 +410,10 @@ class DocumentService:
             "charging_site": (
                 charging_site_document_association,
                 "charging_site_id",
+            ),
+            "ci_application": (
+                ci_application_document_association,
+                "ci_application_id",
             ),
         }
 

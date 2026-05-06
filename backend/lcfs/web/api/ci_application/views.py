@@ -9,7 +9,7 @@ surface and OpenAPI contract are reserved while subsequent feature work
 fills them in.
 """
 
-from typing import Optional
+from typing import List, Optional
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Request, status
@@ -18,10 +18,12 @@ from fastapi.responses import JSONResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
+    CIApplicationDocumentSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
+    CIApplicationStep3Schema,
     CITableOptionsSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
@@ -193,11 +195,39 @@ async def update_ci_application_step2(
     return await service.update_step2(ci, data, request.user)
 
 
-@router.put("/{ci_application_id}/step3", status_code=status.HTTP_501_NOT_IMPLEMENTED)
+@router.get(
+    "/{ci_application_id}/documents",
+    response_model=List[CIApplicationDocumentSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def list_ci_application_documents(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> List[CIApplicationDocumentSchema]:
+    """List Step 3 uploads with their categories."""
+    await validate.validate_access(ci_application_id)
+    return await service.list_documents(ci_application_id)
+
+
+@router.put(
+    "/{ci_application_id}/step3",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
-async def update_ci_application_step3(request: Request, ci_application_id: int):
-    """Step 3 — Documents & GHGenius modelling. To be implemented."""
-    return _not_implemented("Step 3 (Documents & GHGenius modelling)")
+async def update_ci_application_step3(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationStep3Schema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    """Step 3 — Documents & GHGenius modelling. Validates required uploads."""
+    ci = await validate.validate_access(ci_application_id)
+    return await service.update_step3(ci, data, request.user)
 
 
 @router.post(

@@ -16,6 +16,10 @@ from fastapi import Depends, HTTPException, status
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import UserProfile
 from lcfs.db.models.ci_application import CIApplication, Pathway
+from lcfs.db.models.ci_application.CIApplication import (
+    CI_DOC_CATEGORY_GHGENIUS_MODEL,
+    CI_DOC_CATEGORY_TECHNICAL_REPORT,
+)
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -24,12 +28,14 @@ from lcfs.web.api.base import (
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
+    CIApplicationDocumentSchema,
     CIApplicationSchema,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
     CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
+    CIApplicationStep3Schema,
     CITableOptionsSchema,
     FuelCodeOptionSchema,
     FuelTypeOptionSchema,
@@ -418,6 +424,68 @@ class CIApplicationServices:
         )
 
         ci_application.pathway_description = data.pathway_description
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return _to_full_schema(ci)
+
+    # ------------------------------------------------------------------
+    # Step 3 — Documents & GHGenius modelling
+    # ------------------------------------------------------------------
+
+    @service_handler
+    async def list_documents(
+        self, ci_application_id: int
+    ) -> List[CIApplicationDocumentSchema]:
+        """All Step 3 uploads for an application, with their categories."""
+        rows = await self.repo.get_documents_with_categories(ci_application_id)
+        return [
+            CIApplicationDocumentSchema(
+                document_id=document.document_id,
+                file_name=document.file_name,
+                file_size=document.file_size,
+                document_category=category,
+                create_date=(
+                    document.create_date.isoformat() if document.create_date else None
+                ),
+                create_user=document.create_user,
+            )
+            for document, category in rows
+        ]
+
+    @service_handler
+    async def update_step3(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationStep3Schema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """
+        Persists the optional "other supporting" description and verifies
+        the mandatory uploads (Technical report + GHGenius model) are
+        present. Files are uploaded out-of-band via the generic document
+        endpoint with a category query param.
+        """
+        rows = await self.repo.get_documents_with_categories(
+            ci_application.ci_application_id
+        )
+        present_categories = {category for _, category in rows}
+        missing = []
+        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+            missing.append("Technical report")
+        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+            missing.append("GHGenius model")
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Missing required upload(s): " + ", ".join(missing) + "."
+                ),
+            )
+
+        ci_application.supporting_document_other = data.supporting_document_other
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)

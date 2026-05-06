@@ -458,3 +458,91 @@ async def test_pathway_input_rejects_inverted_dates():
             operating_data_from=date(2025, 12, 31),
             operating_data_to=date(2025, 1, 1),
         )
+
+
+# ---------------------------------------------------------------------------
+# Step 3 — Documents & GHGenius modelling
+# ---------------------------------------------------------------------------
+
+
+def _doc(document_id=1, file_name="tech-report.pdf", file_size=1024):
+    return SimpleNamespace(
+        document_id=document_id,
+        file_name=file_name,
+        file_size=file_size,
+        mime_type="application/pdf",
+        create_date=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        create_user="ci_applicant_user",
+    )
+
+
+@pytest.mark.anyio
+async def test_list_documents_returns_categorised_files(service, repo):
+    repo.get_documents_with_categories.return_value = [
+        (_doc(1, "tech.pdf"), "technical_report"),
+        (_doc(2, "model.xlsx"), "ghgenius_model"),
+    ]
+    result = await service.list_documents(10)
+    assert [d.document_category for d in result] == [
+        "technical_report",
+        "ghgenius_model",
+    ]
+    assert result[0].file_name == "tech.pdf"
+
+
+@pytest.mark.anyio
+async def test_update_step3_succeeds_when_required_present(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_documents_with_categories.return_value = [
+        (_doc(1), "technical_report"),
+        (_doc(2), "ghgenius_model"),
+    ]
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
+
+    assert ci.supporting_document_other == "Extra notes"
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_step3_rejects_when_technical_report_missing(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_documents_with_categories.return_value = [
+        (_doc(2), "ghgenius_model"),
+    ]
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(), mock_user
+        )
+    assert "Technical report" in str(exc.value)
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_step3_rejects_when_ghgenius_missing(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_documents_with_categories.return_value = [
+        (_doc(1), "technical_report"),
+    ]
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(), mock_user
+        )
+    assert "GHGenius" in str(exc.value)
+    repo.update.assert_not_called()

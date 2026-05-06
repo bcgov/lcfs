@@ -121,6 +121,90 @@ export const useUpdateCIApplicationStep2 = (ciApplicationId) => {
   })
 }
 
+export const useUpdateCIApplicationStep3 = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationStep3.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useGetCIApplicationDocuments = (ciApplicationId, options) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!ciApplicationId,
+    queryKey: ['ci-application-documents', String(ciApplicationId)],
+    queryFn: async () => {
+      return (
+        await client.get(
+          apiRoutes.ciApplicationDocuments.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          )
+        )
+      ).data
+    },
+    staleTime: 30 * 1000,
+    ...options
+  })
+}
+
+export const useUploadCIApplicationDocument = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ file, documentCategory }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('filename', file.name)
+      const path = `/documents/ci_application/${ciApplicationId}`
+      return (
+        await client.post(path, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          params: documentCategory
+            ? { document_category: documentCategory }
+            : undefined
+        })
+      ).data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['ci-application-documents', String(ciApplicationId)]
+      })
+    }
+  })
+}
+
+export const useDeleteCIApplicationDocument = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (documentId) => {
+      const path = `/documents/ci_application/${ciApplicationId}/${documentId}`
+      return (await client.delete(path)).data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['ci-application-documents', String(ciApplicationId)]
+      })
+    }
+  })
+}
+
 export const useDeleteCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
