@@ -26,16 +26,13 @@ let mockDocs = []
 const mockUpload = vi.fn().mockResolvedValue({})
 const mockDelete = vi.fn().mockResolvedValue({})
 
-vi.mock('@/hooks/useCIApplication', () => ({
-  useGetCIApplicationDocuments: vi.fn(() => ({
-    data: mockDocs,
-    isLoading: false
-  })),
-  useUploadCIApplicationDocument: vi.fn(() => ({
+vi.mock('@/hooks/useDocuments', () => ({
+  useDocuments: vi.fn(() => ({ data: mockDocs, isLoading: false })),
+  useUploadDocument: vi.fn(() => ({
     mutateAsync: mockUpload,
     isPending: false
   })),
-  useDeleteCIApplicationDocument: vi.fn(() => ({
+  useDeleteDocument: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
   }))
@@ -146,10 +143,9 @@ describe('DocumentsModellingStep', () => {
     fireEvent.change(screen.getByTestId('ci-step3-supporting-input'), {
       target: { files: [file] }
     })
+    // Shared validateFile utility surfaces "File type ... is not allowed".
     await waitFor(() =>
-      expect(
-        screen.getByText('carbonIntensity:step3.errors.unsupportedType')
-      ).toBeInTheDocument()
+      expect(screen.getByText(/is not allowed/i)).toBeInTheDocument()
     )
     expect(mockUpload).not.toHaveBeenCalled()
   })

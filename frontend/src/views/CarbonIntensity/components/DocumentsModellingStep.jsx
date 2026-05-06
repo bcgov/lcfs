@@ -19,30 +19,23 @@ import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import colors from '@/themes/base/colors'
 import {
-  useDeleteCIApplicationDocument,
-  useGetCIApplicationDocuments,
-  useUploadCIApplicationDocument
-} from '@/hooks/useCIApplication'
+  COMPLIANCE_REPORT_FILE_TYPES,
+  MAX_FILE_SIZE_BYTES
+} from '@/constants/common'
+import {
+  useDeleteDocument,
+  useDocuments,
+  useUploadDocument
+} from '@/hooks/useDocuments'
+import colors from '@/themes/base/colors'
+import { validateFile } from '@/utils/fileValidation'
 
 export const DOC_CATEGORY_TECHNICAL_REPORT = 'technical_report'
 export const DOC_CATEGORY_GHGENIUS_MODEL = 'ghgenius_model'
 export const DOC_CATEGORY_SUPPORTING = 'supporting'
 
-const ACCEPT_MIME = [
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/csv',
-  'text/plain'
-].join(',')
-
-const MAX_FILE_BYTES = 50 * 1024 * 1024
+const PARENT_TYPE = 'ci_application'
 
 const formatBytes = (bytes) => {
   if (bytes == null) return ''
@@ -51,10 +44,7 @@ const formatBytes = (bytes) => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-const formatDate = (iso) => {
-  if (!iso) return ''
-  return iso.slice(0, 10)
-}
+const formatDate = (iso) => (iso ? String(iso).slice(0, 10) : '')
 
 export const DocumentsModellingStep = ({
   ciApplication,
@@ -77,12 +67,18 @@ export const DocumentsModellingStep = ({
   )
   const [uploadError, setUploadError] = useState(null)
 
-  const { data: documents = [], isLoading: isLoadingDocs } =
-    useGetCIApplicationDocuments(ciApplicationId)
-  const { mutateAsync: uploadDoc, isPending: isUploading } =
-    useUploadCIApplicationDocument(ciApplicationId)
-  const { mutateAsync: deleteDoc, isPending: isDeletingDoc } =
-    useDeleteCIApplicationDocument(ciApplicationId)
+  const { data: documents = [], isLoading: isLoadingDocs } = useDocuments(
+    PARENT_TYPE,
+    ciApplicationId
+  )
+  const { mutateAsync: uploadDoc, isPending: isUploading } = useUploadDocument(
+    PARENT_TYPE,
+    ciApplicationId
+  )
+  const { mutateAsync: deleteDoc, isPending: isDeletingDoc } = useDeleteDocument(
+    PARENT_TYPE,
+    ciApplicationId
+  )
 
   const hasTechnicalReport = documents.some(
     (d) => d.documentCategory === DOC_CATEGORY_TECHNICAL_REPORT
@@ -91,27 +87,21 @@ export const DocumentsModellingStep = ({
     (d) => d.documentCategory === DOC_CATEGORY_GHGENIUS_MODEL
   )
 
-  const handlePickSupporting = () => {
-    setUploadError(null)
-    supportingFileRef.current?.click()
-  }
-  const handlePickGHGenius = () => {
-    setUploadError(null)
-    ghgeniusFileRef.current?.click()
-  }
-
   const handleFileChosen = async (event, category) => {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    if (file.size > MAX_FILE_BYTES) {
-      setUploadError(t('carbonIntensity:step3.errors.tooLarge'))
+
+    const result = validateFile(
+      file,
+      MAX_FILE_SIZE_BYTES,
+      COMPLIANCE_REPORT_FILE_TYPES
+    )
+    if (!result.isValid) {
+      setUploadError(result.errorMessage)
       return
     }
-    if (!ACCEPT_MIME.split(',').includes(file.type)) {
-      setUploadError(t('carbonIntensity:step3.errors.unsupportedType'))
-      return
-    }
+    setUploadError(null)
     try {
       await uploadDoc({ file, documentCategory: category })
     } catch (err) {
@@ -254,7 +244,7 @@ export const DocumentsModellingStep = ({
           variant="outlined"
           color="primary"
           startIcon={<CloudUploadIcon />}
-          onClick={handlePickSupporting}
+          onClick={() => supportingFileRef.current?.click()}
           disabled={readOnly || isUploading}
           data-test="ci-step3-upload-supporting"
         >
@@ -263,7 +253,7 @@ export const DocumentsModellingStep = ({
         <input
           ref={supportingFileRef}
           type="file"
-          accept={ACCEPT_MIME}
+          accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
           hidden
           onChange={(e) => handleFileChosen(e, supportingCategory)}
           data-test="ci-step3-supporting-input"
@@ -325,7 +315,7 @@ export const DocumentsModellingStep = ({
           variant="outlined"
           color="primary"
           startIcon={<CloudUploadIcon />}
-          onClick={handlePickGHGenius}
+          onClick={() => ghgeniusFileRef.current?.click()}
           disabled={readOnly || isUploading}
           data-test="ci-step3-upload-ghgenius"
         >
@@ -345,7 +335,7 @@ export const DocumentsModellingStep = ({
         <input
           ref={ghgeniusFileRef}
           type="file"
-          accept={ACCEPT_MIME}
+          accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
           hidden
           onChange={(e) => handleFileChosen(e, DOC_CATEGORY_GHGENIUS_MODEL)}
           data-test="ci-step3-ghgenius-input"

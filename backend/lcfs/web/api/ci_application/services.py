@@ -28,7 +28,6 @@ from lcfs.web.api.base import (
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
-    CIApplicationDocumentSchema,
     CIApplicationSchema,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
@@ -436,26 +435,6 @@ class CIApplicationServices:
     # ------------------------------------------------------------------
 
     @service_handler
-    async def list_documents(
-        self, ci_application_id: int
-    ) -> List[CIApplicationDocumentSchema]:
-        """All Step 3 uploads for an application, with their categories."""
-        rows = await self.repo.get_documents_with_categories(ci_application_id)
-        return [
-            CIApplicationDocumentSchema(
-                document_id=document.document_id,
-                file_name=document.file_name,
-                file_size=document.file_size,
-                document_category=category,
-                create_date=(
-                    document.create_date.isoformat() if document.create_date else None
-                ),
-                create_user=document.create_user,
-            )
-            for document, category in rows
-        ]
-
-    @service_handler
     async def update_step3(
         self,
         ci_application: CIApplication,
@@ -468,10 +447,9 @@ class CIApplicationServices:
         present. Files are uploaded out-of-band via the generic document
         endpoint with a category query param.
         """
-        rows = await self.repo.get_documents_with_categories(
-            ci_application.ci_application_id
+        present_categories = set(
+            await self.repo.get_document_categories(ci_application.ci_application_id)
         )
-        present_categories = {category for _, category in rows}
         missing = []
         if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
             missing.append("Technical report")

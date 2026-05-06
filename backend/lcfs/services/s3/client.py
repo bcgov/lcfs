@@ -426,25 +426,53 @@ class DocumentService:
         association_table, column_name = association_info
 
         # Construct the SQL statement dynamically
-        stmt = select(Document)
         if parent_type == "compliance_report":
             parent_ids = (
                 await self.compliance_report_repo.get_related_compliance_report_ids(
                     parent_id
                 )
             )
-            stmt = stmt.join(association_table).where(
-                getattr(association_table.c, column_name).in_(parent_ids)
-            ).distinct(Document.document_id)
-        else:
-            stmt = stmt.join(association_table).where(
-                getattr(association_table.c, column_name) == parent_id
+            stmt = (
+                select(Document)
+                .join(association_table)
+                .where(
+                    getattr(association_table.c, column_name).in_(parent_ids)
+                )
+                .distinct(Document.document_id)
             )
+            result = await self.db.execute(stmt)
+            return result.scalars().all()
 
-        # Execute the statement and fetch results
+        if parent_type == "ci_application":
+            # Project the join's document_category alongside Document so the
+            # API response can carry the Step 3 bucket without a separate
+            # endpoint.
+            stmt = (
+                select(Document, association_table.c.document_category)
+                .join(
+                    association_table,
+                    association_table.c.document_id == Document.document_id,
+                )
+                .where(
+                    getattr(association_table.c, column_name) == parent_id
+                )
+            )
+            result = await self.db.execute(stmt)
+            documents = []
+            for document, category in result.all():
+                # Pydantic's from_attributes reads attribute names verbatim,
+                # so stamp the join column onto the Document row.
+                document.document_category = category
+                documents.append(document)
+            return documents
+
+        stmt = (
+            select(Document)
+            .join(association_table)
+            .where(getattr(association_table.c, column_name) == parent_id)
+        )
         result = await self.db.execute(stmt)
-        documents = result.scalars().all()
-        return documents
+        return result.scalars().all()
 
     @repo_handler
     async def get_object(self, document_id: int):

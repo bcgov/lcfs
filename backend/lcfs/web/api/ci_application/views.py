@@ -9,7 +9,7 @@ surface and OpenAPI contract are reserved while subsequent feature work
 fills them in.
 """
 
-from typing import List, Optional
+from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Request, status
@@ -18,7 +18,6 @@ from fastapi.responses import JSONResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
-    CIApplicationDocumentSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStep1Schema,
@@ -193,23 +192,6 @@ async def update_ci_application_step2(
     """Step 2 — Proposed fuel pathways. Replaces the entire pathway set."""
     ci = await validate.validate_access(ci_application_id)
     return await service.update_step2(ci, data, request.user)
-
-
-@router.get(
-    "/{ci_application_id}/documents",
-    response_model=List[CIApplicationDocumentSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(["*"])
-async def list_ci_application_documents(
-    request: Request,
-    ci_application_id: int,
-    service: CIApplicationServices = Depends(),
-    validate: CIApplicationValidation = Depends(),
-) -> List[CIApplicationDocumentSchema]:
-    """List Step 3 uploads with their categories."""
-    await validate.validate_access(ci_application_id)
-    return await service.list_documents(ci_application_id)
 
 
 @router.put(

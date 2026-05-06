@@ -143,68 +143,6 @@ export const useUpdateCIApplicationStep3 = (ciApplicationId) => {
   })
 }
 
-export const useGetCIApplicationDocuments = (ciApplicationId, options) => {
-  const client = useApiService()
-  return useQuery({
-    enabled: !!ciApplicationId,
-    queryKey: ['ci-application-documents', String(ciApplicationId)],
-    queryFn: async () => {
-      return (
-        await client.get(
-          apiRoutes.ciApplicationDocuments.replace(
-            ':ciApplicationId',
-            ciApplicationId
-          )
-        )
-      ).data
-    },
-    staleTime: 30 * 1000,
-    ...options
-  })
-}
-
-export const useUploadCIApplicationDocument = (ciApplicationId) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ file, documentCategory }) => {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('filename', file.name)
-      const path = `/documents/ci_application/${ciApplicationId}`
-      return (
-        await client.post(path, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          params: documentCategory
-            ? { document_category: documentCategory }
-            : undefined
-        })
-      ).data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['ci-application-documents', String(ciApplicationId)]
-      })
-    }
-  })
-}
-
-export const useDeleteCIApplicationDocument = (ciApplicationId) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (documentId) => {
-      const path = `/documents/ci_application/${ciApplicationId}/${documentId}`
-      return (await client.delete(path)).data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['ci-application-documents', String(ciApplicationId)]
-      })
-    }
-  })
-}
-
 export const useDeleteCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()

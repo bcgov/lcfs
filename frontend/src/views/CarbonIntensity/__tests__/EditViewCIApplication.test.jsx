@@ -86,15 +86,6 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
-  useGetCIApplicationDocuments: vi.fn(() => ({ data: [], isLoading: false })),
-  useUploadCIApplicationDocument: vi.fn(() => ({
-    mutateAsync: vi.fn(),
-    isPending: false
-  })),
-  useDeleteCIApplicationDocument: vi.fn(() => ({
-    mutateAsync: vi.fn(),
-    isPending: false
-  })),
   useDeleteCIApplication: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false

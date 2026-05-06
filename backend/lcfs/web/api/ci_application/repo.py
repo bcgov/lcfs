@@ -28,7 +28,6 @@ from lcfs.db.models.ci_application import (
 from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
-from lcfs.db.models.document import Document
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
@@ -231,29 +230,23 @@ class CIApplicationRepository:
         return list(result.scalars().all())
 
     @repo_handler
-    async def get_documents_with_categories(
+    async def get_document_categories(
         self, ci_application_id: int
-    ) -> List[Tuple[Document, str]]:
+    ) -> List[str]:
         """
-        Returns ``(document, category)`` tuples for every file uploaded to
-        this CI application. The category lives on the M:N row, not on
-        Document, so we project both together.
+        Return just the ``document_category`` values currently linked to
+        this CI application. Used by Step 3's required-uploads check; we
+        deliberately don't pull Document rows so the validation stays cheap.
         """
         stmt = (
-            select(Document, ci_application_document_association.c.document_category)
-            .join(
-                ci_application_document_association,
-                ci_application_document_association.c.document_id
-                == Document.document_id,
-            )
+            select(ci_application_document_association.c.document_category)
             .where(
                 ci_application_document_association.c.ci_application_id
                 == ci_application_id
             )
-            .order_by(Document.create_date)
         )
         result = await self.db.execute(stmt)
-        return [(row[0], row[1]) for row in result.all()]
+        return [row[0] for row in result.all()]
 
     @repo_handler
     async def get_fuel_codes_by_ids(

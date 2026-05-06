@@ -267,17 +267,6 @@ class CIApplicationsListSchema(BaseSchema):
 # ---------------------------------------------------------------------------
 
 
-class CIApplicationDocumentSchema(BaseSchema):
-    """A document linked to a CI application, tagged with its Step 3 category."""
-
-    document_id: int
-    file_name: str
-    file_size: int
-    document_category: str
-    create_date: Optional[str] = None
-    create_user: Optional[str] = None
-
-
 class CIApplicationStep3Schema(BaseSchema):
     """
     Payload for ``PUT /ci-applications/{id}/step3``.
