@@ -29,10 +29,6 @@ export const Navbar = () => {
       roles.compliance_reporting
     )
     const canSeeFuelCodeBulletins = hasAnyRole(...nonGovRoles)
-    const canSeeCIApplications = hasAnyRole(
-      roles.ci_applicant,
-      roles.signing_authority
-    )
     const canSeeInitiativeAgreementsIdir = hasAnyRole(
       roles.ia_analyst,
       roles.ia_manager,
@@ -67,11 +63,6 @@ export const Navbar = () => {
         name: t('FuelCodes'),
         route: ROUTES.FUEL_CODES.BULLETINS,
         hide: !canSeeFuelCodeBulletins
-      },
-      {
-        name: t('carbonIntensity:ciApplications'),
-        route: ROUTES.CI_APPLICATIONS.LIST,
-        hide: !canSeeCIApplications
       },
       {
         name: t('InitiativeAgreements'),

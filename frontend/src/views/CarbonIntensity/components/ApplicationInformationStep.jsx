@@ -227,30 +227,45 @@ export const ApplicationInformationStep = forwardRef(
             <Controller
               name="facilityNameplateCapacity"
               control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel
-                    htmlFor="facilityNameplateCapacity"
-                    sx={{ pb: 1 }}
-                  >
-                    {t('carbonIntensity:step1.facilityNameplate')}
-                    {requiredSuffix}:
-                  </InputLabel>
-                  <TextField
-                    {...field}
-                    id="facilityNameplateCapacity"
-                    data-test="facilityNameplateCapacity"
-                    type="number"
-                    inputProps={{ min: 1, step: 1 }}
-                    required
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    disabled={readOnly}
-                  />
-                </Box>
-              )}
+              render={({ field, fieldState }) => {
+                const displayValue =
+                  field.value === '' || field.value === null || field.value === undefined
+                    ? ''
+                    : Number(field.value).toLocaleString('en-CA')
+                return (
+                  <Box mb={2}>
+                    <InputLabel
+                      htmlFor="facilityNameplateCapacity"
+                      sx={{ pb: 1 }}
+                    >
+                      {t('carbonIntensity:step1.facilityNameplate')}
+                      {requiredSuffix}:
+                    </InputLabel>
+                    <TextField
+                      id="facilityNameplateCapacity"
+                      data-test="facilityNameplateCapacity"
+                      // Free-form text so we can render thousands separators while
+                      // still capturing only digits on input.
+                      type="text"
+                      inputMode="numeric"
+                      name={field.name}
+                      inputRef={field.ref}
+                      onBlur={field.onBlur}
+                      value={displayValue}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/[^\d]/g, '')
+                        field.onChange(digits === '' ? '' : Number(digits))
+                      }}
+                      required
+                      variant="outlined"
+                      fullWidth
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      disabled={readOnly}
+                    />
+                  </Box>
+                )
+              }}
             />
           </Grid2>
 
@@ -332,6 +347,7 @@ export const ApplicationInformationStep = forwardRef(
                     onClose={field.onBlur}
                     format={DATE_FORMAT}
                     disabled={readOnly}
+                    disablePast
                     slotProps={{
                       textField: {
                         id: 'proposedFuelCodeEffectiveDate',

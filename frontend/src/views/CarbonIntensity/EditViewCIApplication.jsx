@@ -153,23 +153,19 @@ const EditViewCIApplicationBase = () => {
   }
 
   const organizationInfo = useMemo(() => {
+    // Loaded application — backend returns the full org block (name,
+    // operating name, email, phone) on `ci_application.organization`.
     if (ciApplication?.organization) return ciApplication.organization
+    // Add mode — the current user's `organization` is the
+    // OrganizationSummaryResponseSchema, which only carries name and
+    // operatingName. Show what we have; email/phone/address fill in
+    // after the draft is saved and re-fetched.
     if (currentUser?.organization) {
       const org = currentUser.organization
       return {
         organizationId: org.organizationId,
         name: org.name,
-        operatingName: org.operatingName,
-        email: org.email,
-        phone: org.phone,
-        addressLine: [
-          org.orgAddress?.streetAddress,
-          org.orgAddress?.city,
-          org.orgAddress?.provinceState,
-          org.orgAddress?.country
-        ]
-          .filter(Boolean)
-          .join(', ')
+        operatingName: org.operatingName
       }
     }
     return null
@@ -179,6 +175,9 @@ const EditViewCIApplicationBase = () => {
     return <Loading />
   }
 
+  const isDraft = ciApplication?.status?.status === 'Draft'
+  const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
+
   const stepBodies = {
     step1: (
       <ApplicationInformationStep
@@ -186,7 +185,7 @@ const EditViewCIApplicationBase = () => {
         organization={organizationInfo}
         unitsOfMeasure={tableOptions?.unitsOfMeasure || []}
         onSave={handleStep1Save}
-        onDelete={ciApplicationId ? openDeleteConfirmation : null}
+        onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
       />
     ),
@@ -253,14 +252,7 @@ const EditViewCIApplicationBase = () => {
 
 export const EditViewCIApplication = withRole(
   EditViewCIApplicationBase,
-  [
-    roles.ci_applicant,
-    roles.signing_authority,
-    roles.government,
-    roles.analyst,
-    roles.administrator,
-    roles.director
-  ],
+  [roles.ci_applicant, roles.signing_authority, roles.government],
   ROUTES.DASHBOARD
 )
 EditViewCIApplication.displayName = 'EditViewCIApplication'

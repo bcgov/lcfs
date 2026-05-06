@@ -135,14 +135,7 @@ const CIApplicationsBase = () => {
 
 export const CIApplications = withRole(
   CIApplicationsBase,
-  [
-    roles.ci_applicant,
-    roles.signing_authority,
-    roles.government,
-    roles.analyst,
-    roles.administrator,
-    roles.director
-  ],
+  [roles.ci_applicant, roles.signing_authority, roles.government],
   ROUTES.DASHBOARD
 )
 CIApplications.displayName = 'CIApplications'

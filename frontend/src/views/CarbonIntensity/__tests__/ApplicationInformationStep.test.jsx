@@ -176,7 +176,8 @@ describe('ApplicationInformationStep', () => {
     expect(document.getElementById('facilityCity').value).toBe('San Martin')
     expect(document.getElementById('facilityProvinceState').value).toBe('Santa Fe')
     expect(document.getElementById('facilityCountry').value).toBe('Argentina')
-    expect(document.getElementById('facilityNameplateCapacity').value).toBe('1500')
+    // Nameplate capacity is rendered with thousands separators.
+    expect(document.getElementById('facilityNameplateCapacity').value).toBe('1,500')
     expect(document.getElementById('proposedFuelCodeEffectiveDate').value).toBe(
       '2026-06-01'
     )
