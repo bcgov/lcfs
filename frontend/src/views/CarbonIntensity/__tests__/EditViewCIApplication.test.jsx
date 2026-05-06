@@ -78,11 +78,22 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: mockUpdate,
     isPending: false
   })),
+  useUpdateCIApplicationStep2: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useDeleteCIApplication: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
   }))
 }))
+
+vi.mock(
+  '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep',
+  () => ({
+    ProposedFuelPathwaysStep: () => <div data-test="step2-stub" />
+  })
+)
 
 // Stub the heavy step component so we can drive its props directly.
 vi.mock(

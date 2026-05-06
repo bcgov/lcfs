@@ -21,6 +21,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStep1Schema,
+    CIApplicationStep2Schema,
     CITableOptionsSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
@@ -174,11 +175,22 @@ def _not_implemented(step: str):
     )
 
 
-@router.put("/{ci_application_id}/step2", status_code=status.HTTP_501_NOT_IMPLEMENTED)
+@router.put(
+    "/{ci_application_id}/step2",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
-async def update_ci_application_step2(request: Request, ci_application_id: int):
-    """Step 2 — Proposed fuel pathways. To be implemented."""
-    return _not_implemented("Step 2 (Proposed fuel pathways)")
+async def update_ci_application_step2(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationStep2Schema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    """Step 2 — Proposed fuel pathways. Replaces the entire pathway set."""
+    ci = await validate.validate_access(ci_application_id)
+    return await service.update_step2(ci, data, request.user)
 
 
 @router.put("/{ci_application_id}/step3", status_code=status.HTTP_501_NOT_IMPLEMENTED)

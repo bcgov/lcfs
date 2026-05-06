@@ -24,7 +24,8 @@ import {
   useCreateCIApplication,
   useDeleteCIApplication,
   useGetCIApplication,
-  useUpdateCIApplicationStep1
+  useUpdateCIApplicationStep1,
+  useUpdateCIApplicationStep2
 } from '@/hooks/useCIApplication'
 
 import {
@@ -32,6 +33,7 @@ import {
   CIApplicationProgress
 } from './components/CIApplicationProgress'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
+import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
 
@@ -59,10 +61,12 @@ const EditViewCIApplicationBase = () => {
     useCreateCIApplication()
   const { mutateAsync: updateStep1, isPending: isUpdating } =
     useUpdateCIApplicationStep1(ciApplicationId)
+  const { mutateAsync: updateStep2, isPending: isUpdatingStep2 } =
+    useUpdateCIApplicationStep2(ciApplicationId)
   const { mutateAsync: deleteDraft, isPending: isDeleting } =
     useDeleteCIApplication()
 
-  const isSaving = isCreating || isUpdating
+  const isSaving = isCreating || isUpdating || isUpdatingStep2
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
@@ -78,6 +82,28 @@ const EditViewCIApplicationBase = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [])
+
+  const handleStep2Save = useCallback(
+    async (payload) => {
+      try {
+        await updateStep2(payload)
+        alertRef.current?.triggerAlert?.({
+          message: t('carbonIntensity:step2.saveSuccess'),
+          severity: 'success'
+        })
+        goToStep(2)
+      } catch (err) {
+        alertRef.current?.triggerAlert?.({
+          message:
+            err?.response?.data?.detail ||
+            err?.message ||
+            'Failed to save proposed fuel pathways.',
+          severity: 'error'
+        })
+      }
+    },
+    [updateStep2, goToStep, t]
+  )
 
   const handleStep1Save = useCallback(
     async (payload) => {
@@ -189,7 +215,17 @@ const EditViewCIApplicationBase = () => {
         isSaving={isSaving || isDeleting}
       />
     ),
-    step2: <StepStub titleKey="carbonIntensity:steps.step2" />,
+    step2: ciApplicationId ? (
+      <ProposedFuelPathwaysStep
+        ciApplication={ciApplication}
+        optionsData={tableOptions}
+        onSave={handleStep2Save}
+        onDelete={canDelete ? openDeleteConfirmation : null}
+        isSaving={isSaving || isDeleting}
+      />
+    ) : (
+      <StepStub titleKey="carbonIntensity:steps.step2" />
+    ),
     step3: <StepStub titleKey="carbonIntensity:steps.step3" />,
     step4: <StepStub titleKey="carbonIntensity:steps.step4" />,
     step5: <StepStub titleKey="carbonIntensity:steps.step5" />

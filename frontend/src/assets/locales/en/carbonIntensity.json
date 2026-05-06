@@ -38,6 +38,31 @@
       "uomRequired": "Unit of measure is required."
     }
   },
+  "step2": {
+    "title": "Proposed fuel pathways",
+    "saveAndProceed": "Save & proceed",
+    "saveSuccess": "Proposed fuel pathways saved.",
+    "action": "Action",
+    "applicationType": "Application type",
+    "proposedFuelCodeType": "Proposed fuel code type",
+    "operatingDataFrom": "Operating data collection from",
+    "operatingDataTo": "Operating data collection to",
+    "fuelCodeIteration": "Fuel code iteration",
+    "proposedCi": "Proposed CI (gCO2e/MJ)",
+    "fuelType": "Fuel type",
+    "feedstock": "Feedstock",
+    "feedstockRegion": "Feedstock region",
+    "feedstockTransportMode": "Feedstock transport mode",
+    "feedstockTransportDistance": "Feedstock transport distance (km)",
+    "coproducts": "Co-products",
+    "finishedFuelTransportMode": "Finished fuel transport mode",
+    "finishedFuelTransportDistance": "Finished fuel transport distance (km)",
+    "descriptionLabel": "Description of distinctive or unique characteristics of the fuel pathway(s) included in this application",
+    "descriptionHelp": "e.g. use of carbon capture and sequestration (CCS), novel energy sources for fuel production, upgrades made to facility (for fuel code renewal applications), etc.",
+    "validation": {
+      "atLeastOneRow": "At least one pathway is required."
+    }
+  },
   "stepStub": {
     "comingSoon": "This step is not yet available.",
     "description": "This part of the workflow will be implemented in a future task. The accordion above keeps your place in the wizard."
