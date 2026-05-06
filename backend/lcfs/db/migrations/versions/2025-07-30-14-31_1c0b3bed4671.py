@@ -27,7 +27,6 @@ SECTIONS_TO_EXECUTE = [
     "Allocation Agreement Chained View",
     "Allocation Agreement Base View With Early Issuance By Year",
     "Fuel Export Analytics Base View",
-    "Fuel Supply Analytics Base View",
     "Fuel Supply Base View",
     "Compliance Report Fuel Supply Base View",
     "Fuel Supply Fuel Code Base View",

@@ -994,6 +994,8 @@ SELECT DISTINCT
   fs.q3_quantity,
   fs.q4_quantity,
   ft.units as fuel_units,
+  fs.is_canada_produced,
+  fs.is_q1_supplied,
   fs.target_ci,
   fs.ci_of_fuel as rci,
   fs.uci,
@@ -3216,6 +3218,19 @@ GRANT SELECT ON vw_reports_waiting_review TO basic_lcfs_reporting_role;
 DROP VIEW IF EXISTS vw_fuel_supply_analytics_base;
 CREATE OR REPLACE VIEW vw_fuel_supply_analytics_base AS
 WITH
+  grouped_reports AS (
+    select distinct
+      cr.compliance_report_id,
+      cr.compliance_report_group_uuid,
+      cr.VERSION,
+      cr.compliance_period_id,
+      cr.current_status_id,
+      cr.organization_id
+    FROM
+      compliance_report cr
+      JOIN vw_compliance_report_analytics_base vcrb ON cr.compliance_report_group_uuid = vcrb.compliance_report_group_uuid
+      AND cr.version <= vcrb.version
+  ),
   latest_fs AS (
     SELECT
       fs.group_uuid,
@@ -3224,6 +3239,7 @@ WITH
       fuel_supply fs
     WHERE
       action_type <> 'DELETE'
+    AND fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY
       fs.group_uuid
   ),
@@ -3258,24 +3274,6 @@ WITH
       JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
     GROUP BY
       fc.fuel_code_id
-  ),
-  grouped_reports AS (
-    SELECT
-      compliance_report_id,
-      compliance_report_group_uuid,
-      VERSION,
-      compliance_period_id,
-      current_status_id,
-      organization_id
-    FROM
-      compliance_report
-    WHERE
-      compliance_report_group_uuid IN (
-        SELECT
-          vcrb.compliance_report_group_uuid
-        FROM
-          vw_compliance_report_analytics_base vcrb
-      )
   )
 SELECT DISTINCT
   gr.compliance_report_group_uuid,
@@ -3295,6 +3293,40 @@ SELECT DISTINCT
   fs.q3_quantity,
   fs.q4_quantity,
   ft.units as fuel_units,
+  CASE
+    WHEN lower(coalesce(fc.fuel_production_facility_country, '')) = 'canada'
+    THEN 'Yes'
+    WHEN cp.description::int = 2025
+      AND ft.renewable = true
+      AND lower(fcat.category::text) = 'diesel'
+      AND lower(ft.fuel_type::text) IN ('biodiesel', 'hdrd', 'other diesel fuel', 'other')
+      AND pa.description = 'Default carbon intensity - section 19 (b) (ii)'
+    THEN CASE
+      WHEN fs.is_canada_produced THEN 'Yes'
+      ELSE 'No'
+    END
+    ELSE NULL
+  END AS is_canada_produced,
+  CASE
+    WHEN cp.description::int = 2025
+      AND ft.renewable = true
+      AND lower(fcat.category::text) = 'diesel'
+      AND lower(ft.fuel_type::text) IN ('biodiesel', 'hdrd', 'other diesel fuel', 'other')
+      AND coalesce(fs.is_canada_produced, false) = false
+      AND (
+        pa.description = 'Default carbon intensity - section 19 (b) (ii)'
+        OR (
+          pa.description = 'Fuel code - section 19 (b) (i)'
+          AND lower(coalesce(fc.fuel_production_facility_country, '')) <> 'canada'
+        )
+      )
+    THEN CASE
+      WHEN fs.is_q1_supplied THEN 'Yes'
+      ELSE 'No'
+    END
+    ELSE NULL
+  END AS is_q1_supplied,
+
   fs.target_ci,
   fs.ci_of_fuel as rci,
   fs.uci,
