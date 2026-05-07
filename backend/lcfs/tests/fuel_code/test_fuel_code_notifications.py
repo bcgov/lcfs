@@ -74,6 +74,7 @@ def mock_fuel_code():
     fuel_code.feedstock = "Test Feedstock"
     fuel_code.feedstock_location = "Test Location"
     fuel_code.feedstock_misc = None
+    fuel_code.co_processed = "No"
     fuel_code.fuel_production_facility_city = "Vancouver"
     fuel_code.fuel_production_facility_province_state = "BC"
     fuel_code.fuel_production_facility_country = "Canada"
