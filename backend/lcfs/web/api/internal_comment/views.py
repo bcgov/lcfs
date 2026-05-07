@@ -2,7 +2,6 @@ import structlog
 from typing import List
 
 from fastapi import APIRouter, Body, Depends, status, Request, HTTPException
-from starlette import status
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
@@ -26,7 +25,7 @@ get_async_db = dependencies.get_async_db_session
     response_model=InternalCommentResponseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.CI_APPLICANT, RoleEnum.SUPPLIER])
 async def create_comment(
     request: Request,
     comment_data: InternalCommentCreateSchema,
@@ -51,7 +50,7 @@ async def create_comment(
     response_model=List[InternalCommentResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.CI_APPLICANT, RoleEnum.SUPPLIER])
 async def get_comments(
     request: Request,
     entity_type: str,
@@ -106,5 +105,5 @@ async def update_comment(
         )
 
     return await service.update_internal_comment(
-        internal_comment_id, comment_data.comment
+        internal_comment_id, comment_data
     )

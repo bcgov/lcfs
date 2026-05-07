@@ -1,16 +1,20 @@
 import structlog
-from typing import List
+from typing import List, Optional
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 
 from lcfs.web.core.decorators import service_handler
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
 from .repo import InternalCommentRepository
 from .schema import (
+    AudienceScopeEnum,
+    CommentVisibilityEnum,
     InternalCommentCreateSchema,
+    InternalCommentUpdateSchema,
     InternalCommentResponseSchema,
     EntityTypeEnum,
 )
@@ -40,6 +44,21 @@ class InternalCommentService:
         self.request = request
         self.repo = repo
 
+    def _is_government_user(self) -> bool:
+        return RoleEnum.GOVERNMENT in self.request.user.role_names
+
+    def _get_audience_scope_for_user(self) -> Optional[AudienceScopeEnum]:
+        role_names = self.request.user.role_names
+        if RoleEnum.DIRECTOR in role_names:
+            return AudienceScopeEnum.DIRECTOR
+        if RoleEnum.ANALYST in role_names:
+            return AudienceScopeEnum.ANALYST
+        if RoleEnum.COMPLIANCE_MANAGER in role_names:
+            return AudienceScopeEnum.COMPLIANCE_MANAGER
+        if RoleEnum.GOVERNMENT in role_names:
+            return AudienceScopeEnum.ANALYST
+        return None
+
     @service_handler
     async def create_internal_comment(
         self, data: InternalCommentCreateSchema
@@ -53,10 +72,31 @@ class InternalCommentService:
         Returns:
             InternalCommentResponseSchema: The created internal comment as a data transfer object.
         """
+        is_government_user = self._is_government_user()
+
+        # Keep legacy behavior for existing entities and enforce CI-specific visibility rules.
+        if not is_government_user:
+            if data.entity_type != EntityTypeEnum.COMPLIANCE_REPORT:
+                raise HTTPException(status_code=403, detail="Forbidden resource")
+            if data.visibility != CommentVisibilityEnum.PUBLIC:
+                raise HTTPException(status_code=403, detail="Forbidden resource")
+            data.audience_scope = None
+        elif (
+            data.visibility == CommentVisibilityEnum.INTERNAL
+            and data.audience_scope is None
+        ):
+            data.audience_scope = self._get_audience_scope_for_user()
+            if data.audience_scope is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="audience_scope is required for internal comments.",
+                )
+
         username = self.request.user.keycloak_username
         comment = InternalComment(
             comment=data.comment,
             audience_scope=data.audience_scope,
+            visibility=data.visibility,
             create_user=username,
         )
         created_comment = await self.repo.create_internal_comment(
@@ -66,7 +106,7 @@ class InternalCommentService:
 
     @service_handler
     async def get_internal_comments(
-        self, entity_type: str, entity_id: int
+        self, entity_type: str, entity_id: int, visibility_filter: Optional[str] = None
     ) -> List[InternalCommentResponseSchema]:
         """
         Retrieves internal comments associated with a specific entity, identified by
@@ -75,11 +115,20 @@ class InternalCommentService:
         Args:
             entity_type (str): The type of the associated entity.
             entity_id (int): The ID of the associated entity.
+            visibility_filter (str, optional): Filter by visibility (e.g., "Public" for BCeID users).
 
         Returns:
             List[InternalCommentResponseSchema]: A list of internal comments as data transfer objects.
         """
-        comments = await self.repo.get_internal_comments(entity_type, entity_id)
+        is_government_user = self._is_government_user()
+        if not is_government_user:
+            if entity_type != EntityTypeEnum.COMPLIANCE_REPORT:
+                raise HTTPException(status_code=403, detail="Forbidden resource")
+            visibility_filter = CommentVisibilityEnum.PUBLIC.value
+
+        comments = await self.repo.get_internal_comments(
+            entity_type, entity_id, visibility_filter
+        )
         return [
             InternalCommentResponseSchema.model_validate(comment)
             for comment in comments
@@ -103,7 +152,7 @@ class InternalCommentService:
 
     @service_handler
     async def update_internal_comment(
-        self, internal_comment_id: int, new_comment_text: str
+        self, internal_comment_id: int, data: InternalCommentUpdateSchema
     ) -> InternalCommentResponseSchema:
         """
         Updates the text of an existing internal comment, identified by its ID and the
@@ -111,13 +160,49 @@ class InternalCommentService:
 
         Args:
             internal_comment_id (int): The ID of the internal comment to be updated.
-            new_comment_text (str): The new text to update the comment with.
+            data (InternalCommentUpdateSchema): Partial update payload.
 
         Returns:
             InternalCommentResponseSchema: The updated internal comment as a data transfer object.
         """
+        if not self._is_government_user():
+            raise HTTPException(status_code=403, detail="Forbidden resource")
+
+        existing_comment = await self.repo.get_internal_comment_by_id(internal_comment_id)
+
+        current_visibility = existing_comment.visibility
+        if not isinstance(current_visibility, CommentVisibilityEnum):
+            current_visibility = CommentVisibilityEnum(str(current_visibility))
+        next_visibility = (
+            data.visibility if data.visibility is not None else current_visibility
+        )
+
+        if data.audience_scope is not None:
+            next_audience_scope = data.audience_scope
+        elif existing_comment.audience_scope is None:
+            next_audience_scope = None
+        elif isinstance(existing_comment.audience_scope, AudienceScopeEnum):
+            next_audience_scope = existing_comment.audience_scope
+        else:
+            next_audience_scope = AudienceScopeEnum(str(existing_comment.audience_scope))
+
+        if next_visibility == CommentVisibilityEnum.PUBLIC:
+            next_audience_scope = None
+        elif next_audience_scope is None:
+            next_audience_scope = self._get_audience_scope_for_user()
+            if next_audience_scope is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="audience_scope is required for internal comments.",
+                )
+
         updated_comment = await self.repo.update_internal_comment(
-            internal_comment_id, new_comment_text
+            internal_comment_id=internal_comment_id,
+            new_comment_text=data.comment,
+            visibility=next_visibility.value,
+            audience_scope=(
+                next_audience_scope.value if next_audience_scope is not None else None
+            ),
         )
         return InternalCommentResponseSchema.model_validate(updated_comment)
 
