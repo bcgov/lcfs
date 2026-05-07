@@ -295,10 +295,16 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
         // If Director is acting as another role, stay on the report page and show alert
         if (hasRoles(roles.director)) {
-          // Invalidate queries to refresh the report data
+          // Invalidate queries to refresh the report data. Cache key is
+          // kebab-case (`compliance-report`); the previous camelCase key
+          // here was a silent no-op, leaving stale data on the page.
           queryClient.invalidateQueries(['compliance-reports'])
-          queryClient.invalidateQueries(['complianceReport', complianceReportId])
-          
+          queryClient.invalidateQueries(['compliance-report', complianceReportId])
+          queryClient.invalidateQueries([
+            'compliance-report-summary',
+            complianceReportId
+          ])
+
           // Show success alert on the current page
           alertRef.current?.triggerAlert({
             message: t('report:savedSuccessText', {
@@ -323,6 +329,42 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       },
       onError: (error) => {
         setModalData(null)
+
+        // 409 from the backend means the report has already advanced
+        // (e.g. another tab / a previous click already submitted it). Treat
+        // it as a success-ish state: refresh caches and navigate the user
+        // to the list so they see the actual current state instead of a
+        // confusing "error" toast that pushes them to retry.
+        if (error?.response?.status === 409) {
+          queryClient.invalidateQueries(['compliance-reports'])
+          queryClient.invalidateQueries(['compliance-report', complianceReportId])
+          queryClient.invalidateQueries([
+            'compliance-report-summary',
+            complianceReportId
+          ])
+
+          if (!hasRoles(roles.director)) {
+            sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+            navigate(ROUTES.REPORTS.LIST, {
+              state: {
+                message:
+                  error?.response?.data?.detail ??
+                  t('report:alreadyAdvancedText'),
+                severity: 'info'
+              }
+            })
+            return
+          }
+
+          alertRef.current?.triggerAlert({
+            message:
+              error?.response?.data?.detail ??
+              t('report:alreadyAdvancedText'),
+            severity: 'info'
+          })
+          return
+        }
+
         alertRef.current?.triggerAlert({
           message: error.message,
           severity: 'error'

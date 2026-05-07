@@ -91,6 +91,7 @@
     "issueExemptionBtn": "Issue exemption"
   },
   "savedSuccessText": "Compliance report successfully {{status}}",
+  "alreadyAdvancedText": "This report has already been updated. Showing the latest version.",
   "supplementalCreatedSuccessText": "Supplemental report created successfully",
   "reportDeleteSuccessText": "Draft compliance report successfully deleted",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
