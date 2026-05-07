@@ -28,21 +28,30 @@ class AudienceScopeEnum(str, Enum):
     ANALYST = "Analyst"
 
 
+class CommentVisibilityEnum(str, Enum):
+    INTERNAL = "Internal"
+    PUBLIC = "Public"
+
+
 class InternalCommentCreateSchema(BaseSchema):
     entity_type: EntityTypeEnum
     entity_id: int
     comment: str
-    audience_scope: AudienceScopeEnum
+    audience_scope: Optional[AudienceScopeEnum] = None
+    visibility: CommentVisibilityEnum = CommentVisibilityEnum.INTERNAL
 
 
 class InternalCommentUpdateSchema(BaseSchema):
     comment: Optional[str] = None
+    audience_scope: Optional[AudienceScopeEnum] = None
+    visibility: Optional[CommentVisibilityEnum] = None
 
 
 class InternalCommentResponseSchema(BaseSchema):
     internal_comment_id: int
     comment: str
-    audience_scope: AudienceScopeEnum
+    audience_scope: Optional[AudienceScopeEnum] = None
+    visibility: CommentVisibilityEnum = CommentVisibilityEnum.INTERNAL
     create_user: Optional[str] = None
     create_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
