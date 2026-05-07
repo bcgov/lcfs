@@ -1,8 +1,8 @@
 """Add co_processed to fuel code
 
 Revision ID: e5f6a7b8c9d0
-Revises: d4f5e6a7b8c9
-Create Date: 2026-04-21 09:00:00.000000
+Revises: f1a498fddcef
+Create Date: 2026-04-29 09:00:00.000000
 """
 
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "e5f6a7b8c9d0"
-down_revision = "d4f5e6a7b8c9"
+down_revision = "f1a498fddcef"
 branch_labels = None
 depends_on = None
 
