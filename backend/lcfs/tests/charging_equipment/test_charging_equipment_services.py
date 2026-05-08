@@ -11,12 +11,14 @@ from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentFilterSchema,
     ChargingEquipmentUpdateSchema,
 )
+from lcfs.web.api.notification.services import NotificationService
 
 
 @pytest.fixture
 def mock_user():
     """Create a mock user."""
     user = MagicMock(spec=UserProfile)
+    user.user_profile_id = 101
     user.organization_id = 1
     user.is_government = False
     return user
@@ -26,6 +28,7 @@ def mock_user():
 def mock_government_user():
     """Create a mock government user."""
     user = MagicMock(spec=UserProfile)
+    user.user_profile_id = 202
     user.organization_id = None
     user.is_government = True
     return user
@@ -50,9 +53,17 @@ def mock_cache():
 
 
 @pytest.fixture
-def service(mock_repo, mock_db_session, mock_cache):
+def mock_notification_service():
+    """Create a mock notification service."""
+    return AsyncMock(spec=NotificationService)
+
+
+@pytest.fixture
+def service(mock_repo, mock_db_session, mock_cache, mock_notification_service):
     """Create service instance with mocked dependencies."""
-    service = ChargingEquipmentServices(repo=mock_repo)
+    service = ChargingEquipmentServices(
+        repo=mock_repo, notification_service=mock_notification_service
+    )
     # Inject mocked session and cache to align with tests
     service.db = mock_db_session
     service.cache = mock_cache
@@ -189,11 +200,10 @@ async def test_get_charging_equipment_by_id_unauthorized(
 
 
 @pytest.mark.anyio
-@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_create_charging_equipment_success(
-    mock_notification,
     service,
     mock_repo,
+    mock_notification_service,
     mock_user,
     valid_charging_equipment,
     valid_charging_equipment_create_schema,
@@ -214,7 +224,18 @@ async def test_create_charging_equipment_success(
         result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
     )
     mock_repo.create_charging_equipment.assert_called_once()
-    mock_notification.assert_called_once()
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
+    notification_payload = (
+        mock_notification_service.create_notification_messages_for_organization
+        .await_args.args[0]
+    )
+    assert notification_payload.type == "Created charging equipment"
+    assert notification_payload.message == "Created charging equipment TEST1-001"
+    assert notification_payload.related_transaction_id == "CE1"
+    assert notification_payload.origin_user_profile_id == mock_user.user_profile_id
 
 
 @pytest.mark.anyio
@@ -242,11 +263,10 @@ async def test_create_charging_equipment_duplicate_same_site_blocked(
 
 
 @pytest.mark.anyio
-@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_update_charging_equipment_success(
-    mock_notification,
     service,
     mock_repo,
+    mock_notification_service,
     mock_user,
     valid_charging_equipment,
     valid_charging_equipment_update_schema,
@@ -267,15 +287,23 @@ async def test_update_charging_equipment_success(
         result.charging_equipment_id == valid_charging_equipment.charging_equipment_id
     )
     mock_repo.update_charging_equipment.assert_called_once()
-    mock_notification.assert_called_once()
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
+    notification_payload = (
+        mock_notification_service.create_notification_messages_for_organization
+        .await_args.args[0]
+    )
+    assert notification_payload.type == "Updated charging equipment"
+    assert notification_payload.related_transaction_id == "CE1"
 
 
 @pytest.mark.anyio
-@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_update_charging_equipment_allows_duplicate_serial_at_different_site(
-    mock_notification,
     service,
     mock_repo,
+    mock_notification_service,
     mock_user,
     valid_charging_equipment,
 ):
@@ -303,7 +331,10 @@ async def test_update_charging_equipment_allows_duplicate_serial_at_different_si
             "serial_number": valid_charging_equipment.serial_number,
         },
     )
-    mock_notification.assert_called_once()
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
 
 
 @pytest.mark.anyio
@@ -379,9 +410,8 @@ async def test_update_charging_equipment_wrong_status(
 
 
 @pytest.mark.anyio
-@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_bulk_submit_equipment_success(
-    mock_notification, service, mock_repo, mock_user
+    service, mock_repo, mock_notification_service, mock_user
 ):
     """Test bulk submitting equipment successfully."""
     # Mock the repository responses
@@ -399,7 +429,16 @@ async def test_bulk_submit_equipment_success(
     mock_repo.bulk_update_status.assert_called_once_with(
         [1, 2], "Submitted", mock_user.organization_id
     )
-    mock_notification.assert_called_once()
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
+    notification_payload = (
+        mock_notification_service.create_notification_messages_for_organization
+        .await_args.args[0]
+    )
+    assert notification_payload.type == "Bulk submitted charging equipment"
+    assert notification_payload.related_transaction_id == "CE-BULK"
 
 
 @pytest.mark.anyio
@@ -419,9 +458,8 @@ async def test_bulk_submit_equipment_no_changes(service, mock_repo, mock_user):
 
 
 @pytest.mark.anyio
-@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_bulk_decommission_equipment_success(
-    mock_notification, service, mock_repo, mock_user
+    service, mock_repo, mock_notification_service, mock_user
 ):
     """Test bulk decommissioning equipment successfully."""
     # Mock the repository response
@@ -443,7 +481,10 @@ async def test_bulk_decommission_equipment_success(
     mock_repo.bulk_update_status.assert_called_once_with(
         [1, 2, 3], "Decommissioned", mock_user.organization_id
     )
-    mock_notification.assert_called_once()
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
 
 
 @pytest.mark.anyio
@@ -498,9 +539,8 @@ async def test_auto_validate_equipment_for_report_updates_sites(service, mock_re
 
 
 @pytest.mark.anyio
-@patch("lcfs.web.api.charging_equipment.services.add_notification_msg")
 async def test_delete_charging_equipment_success(
-    mock_notification, service, mock_repo, mock_user
+    service, mock_repo, mock_notification_service, mock_user
 ):
     """Test deleting charging equipment successfully."""
     # Mock the repository response
@@ -514,7 +554,67 @@ async def test_delete_charging_equipment_success(
     mock_repo.delete_charging_equipment.assert_called_once_with(
         1, mock_user.organization_id
     )
-    mock_notification.assert_called_once()
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
+    notification_payload = (
+        mock_notification_service.create_notification_messages_for_organization
+        .await_args.args[0]
+    )
+    assert notification_payload.type == "Deleted charging equipment"
+    assert notification_payload.related_transaction_id == "CE1"
+
+
+@pytest.mark.anyio
+async def test_bulk_validate_equipment_success(
+    service, mock_repo, mock_notification_service, mock_government_user
+):
+    """Test bulk validating equipment successfully."""
+    mock_repo.get_equipment_status_map.return_value = {1: "Submitted", 2: "Submitted"}
+    mock_repo.bulk_update_status.return_value = 2
+
+    result = await service.bulk_validate_equipment(mock_government_user, [1, 2])
+
+    assert result.success is True
+    assert result.affected_count == 2
+    mock_repo.bulk_update_status.assert_called_once_with([1, 2], "Validated", None)
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
+    notification_payload = (
+        mock_notification_service.create_notification_messages_for_organization
+        .await_args.args[0]
+    )
+    assert notification_payload.type == "Bulk validated charging equipment"
+
+
+@pytest.mark.anyio
+async def test_bulk_return_to_draft_success(
+    service, mock_repo, mock_notification_service, mock_government_user
+):
+    """Test bulk returning equipment to draft successfully."""
+    mock_repo.get_equipment_status_map.return_value = {1: "Submitted", 2: "Submitted"}
+    mock_repo.bulk_update_status.return_value = 2
+
+    result = await service.bulk_return_to_draft(mock_government_user, [1, 2])
+
+    assert result.success is True
+    assert result.affected_count == 2
+    mock_repo.bulk_update_status.assert_called_once_with([1, 2], "Draft", None)
+    mock_repo.revert_sites_to_draft_if_all_equipment_draft.assert_called_once_with(
+        [1, 2]
+    )
+    (
+        mock_notification_service.create_notification_messages_for_organization
+        .assert_awaited_once()
+    )
+    notification_payload = (
+        mock_notification_service.create_notification_messages_for_organization
+        .await_args.args[0]
+    )
+    assert notification_payload.type == "Bulk returned charging equipment to draft"
 
 
 @pytest.mark.anyio
