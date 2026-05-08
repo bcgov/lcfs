@@ -25,6 +25,7 @@ from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateUpdateSchema,
     FuelCodesSchema,
+    PaginationResponseSchema,
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
@@ -140,6 +141,33 @@ async def get_fuel_codes(
 ):
     """Endpoint to get list of fuel codes with pagination options"""
     return await service.search_fuel_codes(pagination)
+
+
+@router.post(
+    "/my-list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.CI_APPLICANT])
+async def get_my_fuel_codes(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: FuelCodeServices = Depends(),
+):
+    organization = getattr(request.user, "organization", None)
+    organization_name = getattr(organization, "name", None)
+    if not organization_name:
+        return FuelCodesSchema(
+            pagination=PaginationResponseSchema(
+                total=0,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=0,
+            ),
+            fuel_codes=[],
+        )
+
+    return await service.search_fuel_codes(
+        pagination, company_name=organization_name
+    )
 
 
 @router.post(

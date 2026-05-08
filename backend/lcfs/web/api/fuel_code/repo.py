@@ -542,19 +542,31 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_fuel_codes_paginated(
-        self, pagination: PaginationRequestSchema
+        self,
+        pagination: PaginationRequestSchema,
+        company_name: Optional[str] = None,
     ) -> tuple[Sequence[FuelCode], int]:
         """
         Queries fuel codes from the database with optional filters. Supports pagination and sorting.
 
         Args:
             pagination (dict): Pagination and sorting parameters.
+            company_name (Optional[str]): If provided, restricts results to fuel
+                codes whose ``company`` matches this value (case-insensitive).
+                Used to scope the "My fuel codes" listing to a single
+                organization.
 
         Returns:
             List[FuelCodeBaseSchema]: A list of fuel codes matching the query.
         """
         conditions = []
         query = select(FuelCodeListView)
+
+        if company_name:
+            conditions.append(
+                func.lower(FuelCodeListView.company) == company_name.lower()
+            )
+
         for filter in pagination.filters:
 
             filter_value = filter.filter

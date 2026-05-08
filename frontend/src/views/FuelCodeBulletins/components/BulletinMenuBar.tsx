@@ -1,4 +1,7 @@
+import { roles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { AppBar, Tab, Tabs } from '@mui/material'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface BulletinMenuBarProps {
@@ -6,15 +9,30 @@ interface BulletinMenuBarProps {
   onTabChange: (tab: string) => void
 }
 
-export const BulletinMenuBar = ({ activeTab, onTabChange }: BulletinMenuBarProps) => {
+export const BulletinMenuBar = ({
+  activeTab,
+  onTabChange
+}: BulletinMenuBarProps) => {
   const { t } = useTranslation(['bulletins'])
-  
-  const tabs = [
-    { value: 'current', label: t('tabs.current') },
-    { value: 'archived', label: t('tabs.archived') }
-  ]
+  const { hasRoles } = useCurrentUser()
+  const isCiApplicant = hasRoles(roles.ci_applicant)
 
-  const tabIndex = tabs.findIndex((tab) => tab.value === activeTab)
+  const tabs = useMemo(() => {
+    const allTabs = []
+    if (isCiApplicant) {
+      allTabs.push({ value: 'my', label: t('tabs.myFuelCodes') })
+    }
+    allTabs.push(
+      { value: 'current', label: t('tabs.current') },
+      { value: 'archived', label: t('tabs.archived') }
+    )
+    return allTabs
+  }, [t, isCiApplicant])
+
+  const tabIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.value === activeTab)
+  )
 
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     onTabChange(tabs[newValue].value)
@@ -32,7 +50,11 @@ export const BulletinMenuBar = ({ activeTab, onTabChange }: BulletinMenuBarProps
         aria-label="Fuel code bulletin type"
       >
         {tabs.map((tab) => (
-          <Tab key={tab.value} label={tab.label} />
+          <Tab
+            key={tab.value}
+            label={tab.label}
+            data-test={`fuel-codes-tab-${tab.value}`}
+          />
         ))}
       </Tabs>
     </AppBar>

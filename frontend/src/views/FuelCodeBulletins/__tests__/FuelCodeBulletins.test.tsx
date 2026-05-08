@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
+import { roles } from '@/constants/roles'
 import FuelCodeBulletins from '../FuelCodeBulletins'
 import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
@@ -13,12 +14,24 @@ vi.mock('@/utils/withRole', () => ({
   default: (Component: any) => Component
 }))
 
+let mockHasRolesImpl: (...names: string[]) => boolean = () => false
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    data: { roles: [] },
+    hasRoles: (...names: string[]) => mockHasRolesImpl(...names),
+    hasAnyRole: (...names: string[]) => mockHasRolesImpl(...names)
+  })
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, string>) => {
       const translations: Record<string, string> = {
         'tabs.current': 'Current',
         'tabs.archived': 'Archived',
+        'tabs.myFuelCodes': 'My fuel codes',
+        'fuelCode:myFuelCodesTitle': "My organization's fuel codes",
+        'fuelCode:noFuelCodesFound': 'No fuel codes found',
         'current.title': 'Approved carbon intensities - Current',
         'archived.title': 'Approved carbon intensities - Archived',
         'archived.description': 'Archived description',
@@ -42,7 +55,15 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/hooks/useFuelCode', () => ({
-  useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args)
+  useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args),
+  useGetMyFuelCodes: () => ({
+    data: { pagination: { total: 0, page: 1, size: 10 }, fuelCodes: [] },
+    isLoading: false,
+    isError: false,
+    error: null
+  }),
+  useFuelCodeStatuses: () => ({ data: [] }),
+  useTransportModes: () => ({ data: [] })
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -69,6 +90,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('FuelCodeBulletins UI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockHasRolesImpl = () => false
     mockUseFuelCodeBulletins.mockImplementation((bulletinType) => {
       if (bulletinType === 'current') {
         return {
@@ -172,6 +194,30 @@ describe('FuelCodeBulletins UI', () => {
 
     expect(
       screen.getByText('Current description after March 31, 2026')
+    ).toBeInTheDocument()
+  })
+
+  it('hides the "My fuel codes" tab from non-CI Applicants', () => {
+    render(<FuelCodeBulletins />, { wrapper })
+
+    expect(
+      screen.queryByRole('tab', { name: 'My fuel codes' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows the "My fuel codes" tab for CI Applicants and switches to it', async () => {
+    mockHasRolesImpl = (...names: string[]) =>
+      names.length > 0 && names.every((n) => n === roles.ci_applicant)
+
+    render(<FuelCodeBulletins />, { wrapper })
+
+    const myTab = screen.getByRole('tab', { name: 'My fuel codes' })
+    expect(myTab).toBeInTheDocument()
+
+    await userEvent.click(myTab)
+
+    expect(
+      screen.getByText("My organization's fuel codes")
     ).toBeInTheDocument()
   })
 

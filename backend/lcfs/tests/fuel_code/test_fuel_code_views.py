@@ -347,6 +347,138 @@ async def test_get_fuel_codes_forbidden(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+# get_my_fuel_codes (POST /my-list) - BCeID CI Applicant only
+@pytest.mark.anyio
+async def test_get_my_fuel_codes_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+    pagination_request_schema,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_codes"
+    ) as mock_search_fuel_codes:
+        set_user_role(RoleEnum.CI_APPLICANT)
+
+        mock_search_fuel_codes.return_value = {
+            "fuel_codes": [],
+            "pagination": {
+                "total": 0,
+                "page": 1,
+                "size": 10,
+                "total_pages": 0,
+            },
+        }
+
+        url = "/api/fuel-codes/my-list"
+        response = await client.post(
+            url, json=pagination_request_schema.dict(by_alias=True)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+        assert "fuelCodes" in result
+        assert "pagination" in result
+        mock_search_fuel_codes.assert_called_once_with(
+            pagination_request_schema, company_name="Test Organization"
+        )
+
+
+@pytest.mark.anyio
+async def test_get_my_fuel_codes_ignores_client_supplied_company_name(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+    pagination_request_schema,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_codes"
+    ) as mock_search_fuel_codes:
+        set_user_role(RoleEnum.CI_APPLICANT)
+
+        mock_search_fuel_codes.return_value = {
+            "fuel_codes": [],
+            "pagination": {"total": 0, "page": 1, "size": 10, "total_pages": 0},
+        }
+
+        body = pagination_request_schema.dict(by_alias=True)
+        body["company_name"] = "LCFS Org 99"
+        body["companyName"] = "LCFS Org 99"
+        body["company"] = "LCFS Org 99"
+        body["organization"] = "LCFS Org 99"
+
+        url = "/api/fuel-codes/my-list"
+        response = await client.post(url, json=body)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_search_fuel_codes.assert_called_once()
+        _, kwargs = mock_search_fuel_codes.call_args
+        assert kwargs == {"company_name": "Test Organization"}
+
+
+@pytest.mark.anyio
+async def test_get_my_fuel_codes_forbidden_for_government(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+    pagination_request_schema,
+):
+    set_user_role(RoleEnum.GOVERNMENT)
+    url = "/api/fuel-codes/my-list"
+    response = await client.post(
+        url, json=pagination_request_schema.dict(by_alias=True)
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_get_my_fuel_codes_forbidden_for_supplier_without_ci_applicant(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+    pagination_request_schema,
+):
+    set_user_role(RoleEnum.MANAGE_USERS)
+    url = "/api/fuel-codes/my-list"
+    response = await client.post(
+        url, json=pagination_request_schema.dict(by_alias=True)
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_get_my_fuel_codes_returns_empty_when_user_has_no_organization(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    pagination_request_schema,
+):
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.CI_APPLICANT],
+        user_details={
+            "organization_id": None,
+            "organization_name": None,
+        },
+    )
+
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_codes"
+    ) as mock_search_fuel_codes:
+        url = "/api/fuel-codes/my-list"
+        response = await client.post(
+            url, json=pagination_request_schema.dict(by_alias=True)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["fuelCodes"] == []
+        assert body["pagination"]["total"] == 0
+        mock_search_fuel_codes.assert_not_called()
+
+
 # get_fuel_code by ID
 @pytest.mark.anyio
 async def test_get_fuel_code_success(

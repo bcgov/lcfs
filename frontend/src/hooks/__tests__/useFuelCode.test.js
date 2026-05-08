@@ -12,6 +12,7 @@ import {
   useFuelCodeStatuses,
   useTransportModes,
   useGetFuelCodes,
+  useGetMyFuelCodes,
   useDownloadFuelCodes,
   useFuelCodeMutation,
   useFuelCodeBulletins
@@ -219,6 +220,70 @@ describe('useFuelCode', () => {
       mockPost.mockRejectedValue(mockError)
 
       const { result } = renderHook(() => useGetFuelCodes(), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true)
+      })
+
+      expect(result.current.error).toEqual(mockError)
+    })
+  })
+
+  describe('useGetMyFuelCodes', () => {
+    it('posts to /fuel-codes/my-list with default pagination', async () => {
+      const mockData = {
+        fuelCodes: [{ fuelCodeId: 9, fuelCode: 'BCLCF101.0' }],
+        pagination: { page: 1, size: 10, total: 1 }
+      }
+      mockPost.mockResolvedValue({ data: mockData })
+
+      const { result } = renderHook(() => useGetMyFuelCodes(), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual(mockData)
+      expect(mockPost).toHaveBeenCalledWith('/fuel-codes/my-list', {
+        page: 1,
+        size: 10,
+        sortOrders: [],
+        filters: []
+      })
+    })
+
+    it('forwards pagination, sort and filter params to the request body', async () => {
+      const params = {
+        page: 3,
+        size: 50,
+        sortOrders: [{ field: 'lastUpdated', direction: 'desc' }],
+        filters: [
+          {
+            field: 'status',
+            filterType: 'text',
+            type: 'equals',
+            filter: 'Approved'
+          }
+        ]
+      }
+      mockPost.mockResolvedValue({
+        data: { fuelCodes: [], pagination: { page: 3, size: 50, total: 0 } }
+      })
+
+      const { result } = renderHook(() => useGetMyFuelCodes(params), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockPost).toHaveBeenCalledWith('/fuel-codes/my-list', params)
+    })
+
+    it('surfaces API errors back through the query state', async () => {
+      const mockError = new Error('boom')
+      mockPost.mockRejectedValue(mockError)
+
+      const { result } = renderHook(() => useGetMyFuelCodes(), { wrapper })
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)

@@ -183,12 +183,16 @@ class FuelCodeServices:
 
     @service_handler
     async def search_fuel_codes(
-        self, pagination: PaginationRequestSchema
+        self,
+        pagination: PaginationRequestSchema,
+        company_name: str = None,
     ) -> FuelCodesSchema:
         """
         Gets the list of fuel codes.
         """
-        fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(pagination)
+        fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(
+            pagination, company_name=company_name
+        )
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
