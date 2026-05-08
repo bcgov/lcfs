@@ -63,6 +63,36 @@
       "atLeastOneRow": "At least one pathway is required."
     }
   },
+  "step3": {
+    "title": "Documents & GHGenius modelling",
+    "uploadedHeader": "Uploaded documents for application",
+    "noDocuments": "No documents uploaded yet.",
+    "supportingHeader": "Supporting documentation",
+    "uploadSupporting": "Upload supporting documentation",
+    "categoryTechnicalReport": "Technical report (required)",
+    "categorySupporting": "Other supporting document",
+    "notUploaded": "(not uploaded)",
+    "bullets": {
+      "technicalReport": "Technical report (required)",
+      "notification": "Notification of representation agreement form (optional, required if applicable)",
+      "other": "Other supporting documents — describe below (optional)"
+    },
+    "otherPlaceholder": "Brief description of other supporting documentation included",
+    "ghgeniusHeader": "GHGenius Modelling — Input & output tables",
+    "ghgeniusIntro": "Download the Excel template below and complete it with the required modelling input and output tables. When completed, upload the Excel spreadsheet.",
+    "uploadGHGenius": "Upload GHGenius model",
+    "downloadTemplate": "Download GHGenius Excel template",
+    "ghgeniusRequired": "GHGenius model upload is required.",
+    "saveAndProceed": "Save & proceed",
+    "saveSuccess": "Documents saved.",
+    "errors": {
+      "tooLarge": "File exceeds the 50 MB limit.",
+      "unsupportedType": "Unsupported file type. Allowed: PDF, Word, Excel, CSV, plain text, PNG, JPEG.",
+      "uploadFailed": "Upload failed.",
+      "deleteFailed": "Delete failed.",
+      "missingRequired": "Technical report and GHGenius model uploads are required."
+    }
+  },
   "stepStub": {
     "comingSoon": "This step is not yet available.",
     "description": "This part of the workflow will be implemented in a future task. The accordion above keeps your place in the wizard."

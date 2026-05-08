@@ -25,6 +25,9 @@ from lcfs.db.models.ci_application import (
     PathwayApplicationType,
     PathwayFuelCodeType,
 )
+from lcfs.db.models.ci_application.CIApplication import (
+    ci_application_document_association,
+)
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
@@ -225,6 +228,25 @@ class CIApplicationRepository:
             .order_by(Pathway.pathway_id)
         )
         return list(result.scalars().all())
+
+    @repo_handler
+    async def get_document_categories(
+        self, ci_application_id: int
+    ) -> List[str]:
+        """
+        Return just the ``document_category`` values currently linked to
+        this CI application. Used by Step 3's required-uploads check; we
+        deliberately don't pull Document rows so the validation stays cheap.
+        """
+        stmt = (
+            select(ci_application_document_association.c.document_category)
+            .where(
+                ci_application_document_association.c.ci_application_id
+                == ci_application_id
+            )
+        )
+        result = await self.db.execute(stmt)
+        return [row[0] for row in result.all()]
 
     @repo_handler
     async def get_fuel_codes_by_ids(

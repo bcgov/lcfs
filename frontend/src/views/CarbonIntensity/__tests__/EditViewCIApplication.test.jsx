@@ -82,11 +82,22 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useUpdateCIApplicationStep3: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useDeleteCIApplication: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
   }))
 }))
+
+vi.mock(
+  '@/views/CarbonIntensity/components/DocumentsModellingStep',
+  () => ({
+    DocumentsModellingStep: () => <div data-test="step3-stub" />
+  })
+)
 
 vi.mock(
   '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep',

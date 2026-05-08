@@ -22,6 +22,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
+    CIApplicationStep3Schema,
     CITableOptionsSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
@@ -193,11 +194,22 @@ async def update_ci_application_step2(
     return await service.update_step2(ci, data, request.user)
 
 
-@router.put("/{ci_application_id}/step3", status_code=status.HTTP_501_NOT_IMPLEMENTED)
+@router.put(
+    "/{ci_application_id}/step3",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
-async def update_ci_application_step3(request: Request, ci_application_id: int):
-    """Step 3 — Documents & GHGenius modelling. To be implemented."""
-    return _not_implemented("Step 3 (Documents & GHGenius modelling)")
+async def update_ci_application_step3(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationStep3Schema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    """Step 3 — Documents & GHGenius modelling. Validates required uploads."""
+    ci = await validate.validate_access(ci_application_id)
+    return await service.update_step3(ci, data, request.user)
 
 
 @router.post(

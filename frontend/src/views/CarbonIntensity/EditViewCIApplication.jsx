@@ -25,7 +25,8 @@ import {
   useDeleteCIApplication,
   useGetCIApplication,
   useUpdateCIApplicationStep1,
-  useUpdateCIApplicationStep2
+  useUpdateCIApplicationStep2,
+  useUpdateCIApplicationStep3
 } from '@/hooks/useCIApplication'
 
 import {
@@ -34,6 +35,7 @@ import {
 } from './components/CIApplicationProgress'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
 import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
+import { DocumentsModellingStep } from './components/DocumentsModellingStep'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
 
@@ -63,10 +65,13 @@ const EditViewCIApplicationBase = () => {
     useUpdateCIApplicationStep1(ciApplicationId)
   const { mutateAsync: updateStep2, isPending: isUpdatingStep2 } =
     useUpdateCIApplicationStep2(ciApplicationId)
+  const { mutateAsync: updateStep3, isPending: isUpdatingStep3 } =
+    useUpdateCIApplicationStep3(ciApplicationId)
   const { mutateAsync: deleteDraft, isPending: isDeleting } =
     useDeleteCIApplication()
 
-  const isSaving = isCreating || isUpdating || isUpdatingStep2
+  const isSaving =
+    isCreating || isUpdating || isUpdatingStep2 || isUpdatingStep3
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
@@ -82,6 +87,28 @@ const EditViewCIApplicationBase = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [])
+
+  const handleStep3Save = useCallback(
+    async (payload) => {
+      try {
+        await updateStep3(payload)
+        alertRef.current?.triggerAlert?.({
+          message: t('carbonIntensity:step3.saveSuccess'),
+          severity: 'success'
+        })
+        goToStep(3)
+      } catch (err) {
+        alertRef.current?.triggerAlert?.({
+          message:
+            err?.response?.data?.detail ||
+            err?.message ||
+            'Failed to save Step 3.',
+          severity: 'error'
+        })
+      }
+    },
+    [updateStep3, goToStep, t]
+  )
 
   const handleStep2Save = useCallback(
     async (payload) => {
@@ -226,7 +253,16 @@ const EditViewCIApplicationBase = () => {
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step2" />
     ),
-    step3: <StepStub titleKey="carbonIntensity:steps.step3" />,
+    step3: ciApplicationId ? (
+      <DocumentsModellingStep
+        ciApplication={ciApplication}
+        onSave={handleStep3Save}
+        onDelete={canDelete ? openDeleteConfirmation : null}
+        isSaving={isSaving || isDeleting}
+      />
+    ) : (
+      <StepStub titleKey="carbonIntensity:steps.step3" />
+    ),
     step4: <StepStub titleKey="carbonIntensity:steps.step4" />,
     step5: <StepStub titleKey="carbonIntensity:steps.step5" />
   }

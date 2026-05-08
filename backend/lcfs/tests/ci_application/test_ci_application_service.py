@@ -458,3 +458,62 @@ async def test_pathway_input_rejects_inverted_dates():
             operating_data_from=date(2025, 12, 31),
             operating_data_to=date(2025, 1, 1),
         )
+
+
+# ---------------------------------------------------------------------------
+# Step 3 — Documents & GHGenius modelling
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_update_step3_succeeds_when_required_present(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_document_categories.return_value = [
+        "technical_report",
+        "ghgenius_model",
+    ]
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
+
+    assert ci.supporting_document_other == "Extra notes"
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_step3_rejects_when_technical_report_missing(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_document_categories.return_value = ["ghgenius_model"]
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(), mock_user
+        )
+    assert "Technical report" in str(exc.value)
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_step3_rejects_when_ghgenius_missing(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_document_categories.return_value = ["technical_report"]
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(), mock_user
+        )
+    assert "GHGenius" in str(exc.value)
+    repo.update.assert_not_called()

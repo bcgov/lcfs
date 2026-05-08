@@ -260,3 +260,23 @@ class CIApplicationSchema(BaseSchema):
 class CIApplicationsListSchema(BaseSchema):
     ci_applications: List[CIApplicationBaseSchema]
     pagination: PaginationResponseSchema
+
+
+# ---------------------------------------------------------------------------
+# Step 3 — Documents & GHGenius modelling
+# ---------------------------------------------------------------------------
+
+
+class CIApplicationStep3Schema(BaseSchema):
+    """
+    Payload for ``PUT /ci-applications/{id}/step3``.
+
+    Files are uploaded one-at-a-time via the generic
+    ``/documents/ci_application/{id}`` endpoint with a
+    ``document_category`` query param. This call only persists the
+    optional free-text "other supporting" description and validates
+    that the mandatory Technical report and GHGenius model uploads
+    are in place.
+    """
+
+    supporting_document_other: Optional[str] = Field(default=None, max_length=1000)
