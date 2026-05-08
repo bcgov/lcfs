@@ -26,7 +26,6 @@ depends_on = None
 
 # All fuel_supply views that must be recreated after column alter
 SECTIONS_TO_EXECUTE = [
-    "Fuel Supply Analytics Base View",
     "Fuel Supply Base View",
     "Compliance Report Fuel Supply Base View",
     "Fuel Supply Fuel Code Base View",
@@ -52,7 +51,7 @@ def _recreate_fuel_supply_views():
 
 
 def upgrade() -> None:
-    _drop_fuel_supply_views()
+    # _drop_fuel_supply_views()
 
     op.alter_column(
         "fuel_supply",
@@ -63,11 +62,11 @@ def upgrade() -> None:
         comment="Energy content",
     )
 
-    _recreate_fuel_supply_views()
+    # _recreate_fuel_supply_views()
 
 
 def downgrade() -> None:
-    _drop_fuel_supply_views()
+    # _drop_fuel_supply_views()
 
     op.alter_column(
         "fuel_supply",
@@ -78,4 +77,4 @@ def downgrade() -> None:
         comment="Energy content",
     )
 
-    _recreate_fuel_supply_views()
+    # _recreate_fuel_supply_views()

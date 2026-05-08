@@ -288,6 +288,24 @@ class ChainedComplianceReportSchema(BaseSchema):
     has_government_reassessment_in_progress: Optional[bool] = False
 
 
+class ComplianceReportScheduleOverviewItemSchema(BaseSchema):
+    count: int = 0
+    active_count: int = 0
+    deleted_count: int = 0
+    was_edited: bool = False
+    has_charging_equipment: bool = False
+
+
+class ComplianceReportScheduleOverviewSchema(BaseSchema):
+    supporting_docs: ComplianceReportScheduleOverviewItemSchema
+    fuel_supplies: ComplianceReportScheduleOverviewItemSchema
+    final_supply_equipments: ComplianceReportScheduleOverviewItemSchema
+    allocation_agreements: ComplianceReportScheduleOverviewItemSchema
+    notional_transfers: ComplianceReportScheduleOverviewItemSchema
+    other_uses: ComplianceReportScheduleOverviewItemSchema
+    fuel_exports: ComplianceReportScheduleOverviewItemSchema
+
+
 class ComplianceReportYearNavigationItemSchema(BaseSchema):
     compliance_report_id: int
     compliance_period: str

@@ -27,7 +27,6 @@ SECTIONS_TO_EXECUTE = [
     "Allocation Agreement Chained View",
     "Allocation Agreement Base View With Early Issuance By Year",
     "Fuel Export Analytics Base View",
-    "Fuel Supply Analytics Base View",
     "Fuel Supply Base View",
     "Compliance Report Fuel Supply Base View",
     "Fuel Supply Fuel Code Base View",
@@ -347,10 +346,10 @@ def create_mv_credit_ledger_indexes():
 def recreate_materialized_views():
     """Recreate all materialized views and their indexes."""
     # Recreate views from metabase.sql
-    create_role_if_not_exists()
-    content = find_and_read_sql_file(sqlFile="metabase.sql")
-    sections = parse_sql_sections(content)
-    execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
+    # create_role_if_not_exists()
+    # content = find_and_read_sql_file(sqlFile="metabase.sql")
+    # sections = parse_sql_sections(content)
+    # execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
 
     # Recreate materialized views
     create_mv_transaction_aggregate()
