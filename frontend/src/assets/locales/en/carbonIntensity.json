@@ -93,6 +93,53 @@
       "missingRequired": "Technical report and GHGenius model uploads are required."
     }
   },
+  "step4": {
+    "title": "Sign & submit",
+    "summaryHeader": "Application information",
+    "documentsHeader": "Documents & GHGenius modelling",
+    "pathwaysHeader": "Proposed fuel pathways",
+    "signingAuthorityHeader": "Signing authority declaration",
+    "signingAuthorityLabel": "Signing authority:",
+    "titleLabel": "Title:",
+    "emailLabel": "Email:",
+    "consultantHeader": "Third-party consultant",
+    "consultantConsentLabel": "I consent to the Ministry communicating directly with a consultant/third-party to address questions or requests for additional information related to the Application or Technical report. Fill out form below.",
+    "consultantNameLabel": "Enter name",
+    "consultantCompanyLabel": "Company",
+    "consultantEmailLabel": "Email address",
+    "submit": "Submit application",
+    "submitSuccess": "Application submitted.",
+    "declarations": {
+      "informationTrue": "I certify that the information submitted is true and complete and the records regarding this application have been retained in accordance with the Low Carbon Fuels Act.",
+      "response8Weeks": "I acknowledge that requests for additional information and/or corrections must be responded to within 8 weeks. Failure to respond within this period may result in rejection of the application, requiring the applicant to restart the application process and resulting in a deferred Effective Date.",
+      "section206": "Pursuant to section 20(6) of the Low Carbon Fuels Act, I acknowledge my obligation to provide written notice to the Director if I become aware that the details of the fuel pathway(s) included in this application have changed or will change."
+    },
+    "validation": {
+      "allDeclarationsRequired": "All three declarations must be acknowledged before submitting.",
+      "consultantFieldsRequired": "Consultant name, company, and email are required when consenting to consultant communication.",
+      "consultantEmailInvalid": "Enter a valid consultant email address."
+    },
+    "submitConfirmTitle": "Submit application?",
+    "submitConfirmText": "Once submitted you will not be able to edit Steps 1-4. Continue?"
+  },
+  "step5": {
+    "title": "Government decision",
+    "intro": "Ministry staff will evaluate the application to ensure the methodology and assumptions made are acceptable, and that the carbon intensity can be reproduced. If an error or omission is identified in the application, the applicant will be asked to submit additional information.",
+    "responseExpectations": "Applicants must respond to requests for additional information and/or corrections within 8 weeks. Failure to respond within this period may result in rejection of the application.",
+    "commentsHeader": "Comments",
+    "addCommentLabel": "Comments to government staff to support your application (optional):",
+    "addComment": "Add comment",
+    "noComments": "No comments yet.",
+    "uploadEnabled": "Upload supporting documentation",
+    "uploadDisabledHelp": "If government requires additional documentation the button below will be enabled to add or replace documents to your application.",
+    "decisionHeader": "Record decision",
+    "completeBtn": "Mark as completed",
+    "withdrawBtn": "Mark as withdrawn",
+    "decisionSuccess": "Decision recorded.",
+    "commentSuccess": "Comment posted.",
+    "commentTooLong": "Comment must be 4000 characters or fewer.",
+    "commentRequired": "Comment cannot be empty."
+  },
   "stepStub": {
     "comingSoon": "This step is not yet available.",
     "description": "This part of the workflow will be implemented in a future task. The accordion above keeps your place in the wizard."

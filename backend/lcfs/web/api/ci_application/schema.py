@@ -1,18 +1,20 @@
 """
 Pydantic schemas for the Carbon Intensity (CI) application module.
 
-Steps 1 ("Application information") and 2 ("Proposed fuel pathways") are
-fully wired through the API. The remaining three steps (Documents &
-GHGenius modelling, Sign & submit, Government decision) are stubbed out
-at the view layer and will reuse / extend these schemas.
+All five wizard steps are wired through the API:
+  Step 1 — Application information
+  Step 2 — Proposed fuel pathways
+  Step 3 — Documents & GHGenius modelling
+  Step 4 — Sign & submit
+  Step 5 — Government decision (with comments thread)
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import EmailStr, Field, field_validator, model_validator
 
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 
@@ -251,10 +253,13 @@ class CIApplicationSchema(BaseSchema):
     # Reserved for later steps — surfaced on read so the UI can pre-fill any
     # values previously persisted by other developers / future steps.
     supporting_document_other: Optional[str] = None
+
+    # Step 4 — consultant + signing authority snapshot
     consultant_name: Optional[str] = None
     consultant_company: Optional[str] = None
     consultant_email: Optional[str] = None
     signature_user: Optional[str] = None
+    signature_date_time: Optional[datetime] = None
 
 
 class CIApplicationsListSchema(BaseSchema):
@@ -265,6 +270,91 @@ class CIApplicationsListSchema(BaseSchema):
 # ---------------------------------------------------------------------------
 # Step 3 — Documents & GHGenius modelling
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Step 4 — Sign & submit
+# ---------------------------------------------------------------------------
+
+
+class CIApplicationStep4Schema(BaseSchema):
+    """
+    Payload for ``POST /ci-applications/{id}/submit``.
+
+    The three declaration checkboxes are mandatory; the consultant block
+    is optional and only persisted when the signatory ticks the consent
+    checkbox in the UI. Signing authority identity is taken from the
+    authenticated user — the front-end never submits it.
+    """
+
+    declaration_information_true: bool = Field(...)
+    declaration_response_8_weeks: bool = Field(...)
+    declaration_section_20_6: bool = Field(...)
+
+    consultant_consent: bool = False
+    consultant_name: Optional[str] = Field(default=None, max_length=500)
+    consultant_company: Optional[str] = Field(default=None, max_length=500)
+    consultant_email: Optional[EmailStr] = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        for field in (
+            "declaration_information_true",
+            "declaration_response_8_weeks",
+            "declaration_section_20_6",
+        ):
+            if not getattr(self, field):
+                raise ValueError("All three declarations must be acknowledged.")
+        if self.consultant_consent:
+            if not self.consultant_name or not self.consultant_company or not self.consultant_email:
+                raise ValueError(
+                    "Consultant name, company, and email are required when "
+                    "consenting to consultant communication."
+                )
+        return self
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Government decision & comments
+# ---------------------------------------------------------------------------
+
+
+class CIApplicationDecisionSchema(BaseSchema):
+    """
+    Payload for ``POST /ci-applications/{id}/decision``.
+
+    Governments transition a Submitted application into one of the two
+    terminal states. An optional comment is captured alongside the
+    decision and surfaced in the comments thread.
+    """
+
+    status: CIApplicationStatusEnum
+    comment: Optional[str] = Field(default=None, max_length=4000)
+
+    @field_validator("status")
+    @classmethod
+    def _terminal_only(cls, value: CIApplicationStatusEnum):
+        if value not in {
+            CIApplicationStatusEnum.Completed,
+            CIApplicationStatusEnum.Withdrawn,
+        }:
+            raise ValueError("Decision status must be Completed or Withdrawn.")
+        return value
+
+
+class CIApplicationCommentInputSchema(BaseSchema):
+    text: str = Field(..., min_length=1, max_length=4000)
+
+
+class CIApplicationCommentSchema(BaseSchema):
+    """Comment surfaced in the Step 5 thread."""
+
+    comment_id: int
+    text: str
+    author_username: Optional[str] = None
+    author_display_name: Optional[str] = None
+    is_government: bool = False
+    create_date: Optional[datetime] = None
 
 
 class CIApplicationStep3Schema(BaseSchema):

@@ -346,51 +346,187 @@ async def test_delete_application_success(
 
 
 # ---------------------------------------------------------------------------
-# Stubbed steps 2-5 — surface reserved, returns 501
+# Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
 
 
+def _step4_payload(consultant_consent: bool = False):
+    payload = {
+        "declarationInformationTrue": True,
+        "declarationResponse8Weeks": True,
+        "declarationSection206": True,
+        "consultantConsent": consultant_consent,
+    }
+    if consultant_consent:
+        payload.update(
+            {
+                "consultantName": "Sam Anderson",
+                "consultantCompany": "Anderson Fuel Consultants",
+                "consultantEmail": "sam.anderson@afc.ar",
+            }
+        )
+    return payload
+
+
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "method,url",
-    [
-        ("put", "/api/ci-applications/10/step2"),
-        ("put", "/api/ci-applications/10/step3"),
-        ("post", "/api/ci-applications/10/submit"),
-    ],
-)
-async def test_stub_endpoints_return_not_implemented(
-    method,
-    url,
+async def test_submit_endpoint_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_user_role,
 ):
-    # Both ci_applicant and signing_authority can hit the supplier-side stubs
     set_user_role(RoleEnum.SIGNING_AUTHORITY)
-    response = await getattr(client, method)(url, json={})
-    assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-    body = response.json()
-    assert "not yet implemented" in body["message"].lower()
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.submit_application"
+    ) as svc:
+        svc.return_value = _ci_full_schema(10)
+        response = await client.post(
+            "/api/ci-applications/10/submit", json=_step4_payload()
+        )
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["ciApplicationId"] == 10
 
 
 @pytest.mark.anyio
-async def test_government_decision_stub_forbidden_for_non_government(
+async def test_submit_endpoint_forbidden_for_ci_applicant_only(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_user_role,
 ):
     set_user_role(RoleEnum.CI_APPLICANT)
-    response = await client.post("/api/ci-applications/10/decision", json={})
+    response = await client.post(
+        "/api/ci-applications/10/submit", json=_step4_payload()
+    )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.anyio
-async def test_government_decision_stub_returns_not_implemented_for_government(
+async def test_submit_endpoint_validation_error_when_declarations_incomplete(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.SIGNING_AUTHORITY)
+    payload = _step4_payload()
+    payload["declarationSection206"] = False
+    response = await client.post("/api/ci-applications/10/submit", json=payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Government decision & comments
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_decision_endpoint_forbidden_for_non_government(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    response = await client.post(
+        "/api/ci-applications/10/decision", json={"status": "Completed"}
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_decision_endpoint_government_can_complete(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_user_role,
 ):
     set_user_role(RoleEnum.GOVERNMENT)
-    response = await client.post("/api/ci-applications/10/decision", json={})
-    assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.record_decision"
+    ) as svc:
+        svc.return_value = _ci_full_schema(10)
+        response = await client.post(
+            "/api/ci-applications/10/decision",
+            json={"status": "Completed", "comment": "ok"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+async def test_decision_endpoint_rejects_non_terminal_status(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.GOVERNMENT)
+    response = await client.post(
+        "/api/ci-applications/10/decision", json={"status": "Submitted"}
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_list_comments_returns_thread(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.list_comments"
+    ) as svc:
+        svc.return_value = []
+        response = await client.get("/api/ci-applications/10/comments")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == []
+
+
+@pytest.mark.anyio
+async def test_add_comment_returns_201(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    from lcfs.web.api.ci_application.schema import CIApplicationCommentSchema
+
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.add_comment"
+    ) as svc:
+        svc.return_value = CIApplicationCommentSchema(
+            comment_id=1,
+            text="Hi",
+            author_username="ci_applicant_user",
+            author_display_name="Test User",
+            is_government=False,
+            create_date=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        )
+        response = await client.post(
+            "/api/ci-applications/10/comments", json={"text": "Hi"}
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        body = response.json()
+        assert body["text"] == "Hi"
+        assert body["isGovernment"] is False
+
+
+@pytest.mark.anyio
+async def test_add_comment_rejects_empty_text(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.CI_APPLICANT)
+    response = await client.post(
+        "/api/ci-applications/10/comments", json={"text": ""}
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

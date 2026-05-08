@@ -143,6 +143,96 @@ export const useUpdateCIApplicationStep3 = (ciApplicationId) => {
   })
 }
 
+export const useSubmitCIApplication = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      return (
+        await client.post(
+          apiRoutes.submitCIApplication.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useRecordCIDecision = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      return (
+        await client.post(
+          apiRoutes.ciApplicationDecision.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.invalidateQueries({
+        queryKey: ['ci-application-comments', String(ciApplicationId)]
+      })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useGetCIComments = (ciApplicationId, options) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!ciApplicationId,
+    queryKey: ['ci-application-comments', String(ciApplicationId)],
+    queryFn: async () => {
+      return (
+        await client.get(
+          apiRoutes.ciApplicationComments.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          )
+        )
+      ).data
+    },
+    staleTime: 30 * 1000,
+    ...options
+  })
+}
+
+export const useAddCIComment = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (text) => {
+      return (
+        await client.post(
+          apiRoutes.ciApplicationComments.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { text }
+        )
+      ).data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['ci-application-comments', String(ciApplicationId)]
+      })
+    }
+  })
+}
+
 export const useDeleteCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()

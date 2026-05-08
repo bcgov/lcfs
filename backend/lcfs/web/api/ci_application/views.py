@@ -1,15 +1,15 @@
 """
 Carbon Intensity (CI) application endpoints.
 
-Step 1 of the workflow ("Application information") is fully wired:
-table options, listing, detail, create, update, delete.
-
-The remaining steps live as stubs at the bottom of this file so the URL
-surface and OpenAPI contract are reserved while subsequent feature work
-fills them in.
+All five wizard steps are wired:
+  Step 1 — Application information
+  Step 2 — Proposed fuel pathways
+  Step 3 — Documents & GHGenius modelling
+  Step 4 — Sign & submit
+  Step 5 — Government decision (with comments thread)
 """
 
-from typing import Optional
+from typing import List, Optional
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Request, status
@@ -18,11 +18,15 @@ from fastapi.responses import JSONResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
+    CIApplicationCommentInputSchema,
+    CIApplicationCommentSchema,
+    CIApplicationDecisionSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
+    CIApplicationStep4Schema,
     CITableOptionsSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
@@ -163,17 +167,8 @@ async def delete_ci_application(
 
 
 # ---------------------------------------------------------------------------
-# Steps 2-5 — stubbed endpoints reserved for subsequent feature work.
-# Returning HTTP 501 keeps the OpenAPI surface stable while signalling
-# clearly that the implementation has not landed yet.
+# Step 2 — Proposed fuel pathways
 # ---------------------------------------------------------------------------
-
-
-def _not_implemented(step: str):
-    return JSONResponse(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content={"message": f"{step} is not yet implemented."},
-    )
 
 
 @router.put(
@@ -194,6 +189,11 @@ async def update_ci_application_step2(
     return await service.update_step2(ci, data, request.user)
 
 
+# ---------------------------------------------------------------------------
+# Step 3 — Documents & GHGenius modelling
+# ---------------------------------------------------------------------------
+
+
 @router.put(
     "/{ci_application_id}/step3",
     response_model=CIApplicationSchema,
@@ -212,21 +212,87 @@ async def update_ci_application_step3(
     return await service.update_step3(ci, data, request.user)
 
 
+# ---------------------------------------------------------------------------
+# Step 4 — Sign & submit
+# ---------------------------------------------------------------------------
+
+
 @router.post(
     "/{ci_application_id}/submit",
-    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SIGNING_AUTHORITY])
-async def submit_ci_application(request: Request, ci_application_id: int):
-    """Step 4 — Sign & submit. To be implemented."""
-    return _not_implemented("Step 4 (Sign & submit)")
+async def submit_ci_application(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationStep4Schema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    """
+    Step 4 — Sign & submit. Locks the application and transitions Draft
+    to Submitted. Restricted to signing authorities.
+    """
+    ci = await validate.validate_access(ci_application_id)
+    return await service.submit_application(ci, data, request.user)
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Government decision & comments thread
+# ---------------------------------------------------------------------------
 
 
 @router.post(
     "/{ci_application_id}/decision",
-    status_code=status.HTTP_501_NOT_IMPLEMENTED,
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.DIRECTOR])
-async def record_government_decision(request: Request, ci_application_id: int):
-    """Step 5 — Government decision. To be implemented."""
-    return _not_implemented("Step 5 (Government decision)")
+async def record_government_decision(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationDecisionSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    """Step 5 — Government decision (Completed or Withdrawn)."""
+    ci = await validate.validate_access(ci_application_id)
+    is_government = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
+    return await service.record_decision(ci, data, request.user, is_government)
+
+
+@router.get(
+    "/{ci_application_id}/comments",
+    response_model=List[CIApplicationCommentSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def list_ci_application_comments(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> List[CIApplicationCommentSchema]:
+    """Return the Step 5 comments thread for the application."""
+    await validate.validate_access(ci_application_id)
+    return await service.list_comments(ci_application_id)
+
+
+@router.post(
+    "/{ci_application_id}/comments",
+    response_model=CIApplicationCommentSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(["*"])
+async def add_ci_application_comment(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationCommentInputSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationCommentSchema:
+    """Add a comment to the Step 5 thread. Both BCEID and IDIR can post."""
+    ci = await validate.validate_access(ci_application_id)
+    is_government = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
+    return await service.add_comment(ci, data.text, request.user, is_government)

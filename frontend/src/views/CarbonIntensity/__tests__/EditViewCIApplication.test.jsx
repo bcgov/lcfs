@@ -38,7 +38,11 @@ let mockCurrentUser = {
   }
 }
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => mockCurrentUser
+  useCurrentUser: () => ({
+    ...mockCurrentUser,
+    hasRoles: vi.fn(() => false),
+    hasAnyRole: vi.fn(() => false)
+  })
 }))
 
 const mockNavigate = vi.fn()
@@ -86,6 +90,19 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useSubmitCIApplication: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
+  useRecordCIDecision: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
+  useGetCIComments: vi.fn(() => ({ data: [], isLoading: false })),
+  useAddCIComment: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue(null),
+    isPending: false
+  })),
   useDeleteCIApplication: vi.fn(() => ({
     mutateAsync: mockDelete,
     isPending: false
@@ -96,6 +113,20 @@ vi.mock(
   '@/views/CarbonIntensity/components/DocumentsModellingStep',
   () => ({
     DocumentsModellingStep: () => <div data-test="step3-stub" />
+  })
+)
+
+vi.mock(
+  '@/views/CarbonIntensity/components/SignAndSubmitStep',
+  () => ({
+    SignAndSubmitStep: () => <div data-test="step4-stub" />
+  })
+)
+
+vi.mock(
+  '@/views/CarbonIntensity/components/GovernmentDecisionStep',
+  () => ({
+    GovernmentDecisionStep: () => <div data-test="step5-stub" />
   })
 )
 

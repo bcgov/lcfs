@@ -264,3 +264,66 @@ def test_total_pages_helper():
     assert CIApplicationRepository.total_pages(21, 10) == 3
     # zero size guarded
     assert CIApplicationRepository.total_pages(10, 0) == 0
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Comment thread (history-table-backed)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_add_comment_persists_with_snapshot(repo, mock_db):
+    ci = _make_application()
+    history = await repo.add_comment(
+        ci,
+        text="Hello",
+        author_username="jzimmerman",
+        author_display_name="Jonathan Zimmerman",
+        is_government=False,
+    )
+    assert isinstance(history, CIApplicationHistory)
+    snap = history.ci_application_snapshot
+    assert snap["type"] == "comment"
+    assert snap["text"] == "Hello"
+    assert snap["author_username"] == "jzimmerman"
+    assert snap["is_government"] is False
+    mock_db.add.assert_called_once()
+    mock_db.flush.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_list_comments_filters_non_comment_history(repo, mock_db):
+    h1 = CIApplicationHistory(
+        ci_application_id=10,
+        ci_application_snapshot={
+            "type": "comment",
+            "text": "first",
+            "author_username": "u1",
+            "author_display_name": "User One",
+            "is_government": False,
+        },
+        group_uuid="abc",
+        version=0,
+    )
+    h1.ci_application_history_id = 1
+    h2 = CIApplicationHistory(  # status-change row, not a comment
+        ci_application_id=10,
+        ci_application_snapshot=None,
+        group_uuid="abc",
+        version=0,
+    )
+    h2.ci_application_history_id = 2
+    h3 = CIApplicationHistory(  # snapshot exists but is not a comment marker
+        ci_application_id=10,
+        ci_application_snapshot={"type": "decision"},
+        group_uuid="abc",
+        version=0,
+    )
+    h3.ci_application_history_id = 3
+
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = [h1, h2, h3]
+    mock_db.execute.return_value = result
+
+    items = await repo.list_comments(10)
+    assert [c.ci_application_history_id for c in items] == [1]

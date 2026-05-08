@@ -277,6 +277,65 @@ class CIApplicationRepository:
         return history
 
     # ------------------------------------------------------------------
+    # Step 5 — comment thread (stored as JSONB rows on history table)
+    #
+    # The migration introduces ``ci_application_history`` with a JSONB
+    # ``ci_application_snapshot`` column. We piggy-back the comments on
+    # the same table so Step 5 can ship without a new migration. Comment
+    # rows are distinguished by ``ci_application_snapshot.type ==
+    # 'comment'`` and carry the author identity and free-text body.
+    # Status-change history rows leave the snapshot as ``None`` (or do
+    # not set a ``type`` key) so the two views never collide.
+    # ------------------------------------------------------------------
+
+    COMMENT_SNAPSHOT_TYPE = "comment"
+
+    @repo_handler
+    async def add_comment(
+        self,
+        ci_application: CIApplication,
+        text: str,
+        author_username: str,
+        author_display_name: Optional[str],
+        is_government: bool,
+    ) -> CIApplicationHistory:
+        history = CIApplicationHistory(
+            ci_application_id=ci_application.ci_application_id,
+            status_id=ci_application.status_id,
+            ci_application_snapshot={
+                "type": self.COMMENT_SNAPSHOT_TYPE,
+                "text": text,
+                "author_username": author_username,
+                "author_display_name": author_display_name,
+                "is_government": is_government,
+            },
+            group_uuid=ci_application.group_uuid,
+            version=ci_application.version,
+        )
+        self.db.add(history)
+        await self.db.flush()
+        await self.db.refresh(history)
+        return history
+
+    @repo_handler
+    async def list_comments(
+        self, ci_application_id: int
+    ) -> List[CIApplicationHistory]:
+        result = await self.db.execute(
+            select(CIApplicationHistory)
+            .where(CIApplicationHistory.ci_application_id == ci_application_id)
+            .order_by(asc(CIApplicationHistory.create_date))
+        )
+        rows = list(result.scalars().all())
+        return [
+            r
+            for r in rows
+            if isinstance(r.ci_application_snapshot, dict)
+            and r.ci_application_snapshot.get("type")
+            == self.COMMENT_SNAPSHOT_TYPE
+        ]
+
+    # ------------------------------------------------------------------
     # Paginated listing
     # ------------------------------------------------------------------
 

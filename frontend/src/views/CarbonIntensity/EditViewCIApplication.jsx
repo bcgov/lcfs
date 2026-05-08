@@ -24,6 +24,7 @@ import {
   useCreateCIApplication,
   useDeleteCIApplication,
   useGetCIApplication,
+  useSubmitCIApplication,
   useUpdateCIApplicationStep1,
   useUpdateCIApplicationStep2,
   useUpdateCIApplicationStep3
@@ -36,6 +37,8 @@ import {
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
 import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
 import { DocumentsModellingStep } from './components/DocumentsModellingStep'
+import { SignAndSubmitStep } from './components/SignAndSubmitStep'
+import { GovernmentDecisionStep } from './components/GovernmentDecisionStep'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
 
@@ -67,11 +70,20 @@ const EditViewCIApplicationBase = () => {
     useUpdateCIApplicationStep2(ciApplicationId)
   const { mutateAsync: updateStep3, isPending: isUpdatingStep3 } =
     useUpdateCIApplicationStep3(ciApplicationId)
+  const { mutateAsync: submitApplication, isPending: isSubmitting } =
+    useSubmitCIApplication(ciApplicationId)
   const { mutateAsync: deleteDraft, isPending: isDeleting } =
     useDeleteCIApplication()
 
   const isSaving =
-    isCreating || isUpdating || isUpdatingStep2 || isUpdatingStep3
+    isCreating ||
+    isUpdating ||
+    isUpdatingStep2 ||
+    isUpdatingStep3 ||
+    isSubmitting
+
+  const { hasRoles } = useCurrentUser()
+  const isGovernment = !!hasRoles?.(roles.government)
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
@@ -87,6 +99,28 @@ const EditViewCIApplicationBase = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [])
+
+  const handleSubmitApplication = useCallback(
+    async (payload) => {
+      try {
+        await submitApplication(payload)
+        alertRef.current?.triggerAlert?.({
+          message: t('carbonIntensity:step4.submitSuccess'),
+          severity: 'success'
+        })
+        goToStep(4)
+      } catch (err) {
+        alertRef.current?.triggerAlert?.({
+          message:
+            err?.response?.data?.detail ||
+            err?.message ||
+            'Failed to submit application.',
+          severity: 'error'
+        })
+      }
+    },
+    [submitApplication, goToStep, t]
+  )
 
   const handleStep3Save = useCallback(
     async (payload) => {
@@ -229,6 +263,9 @@ const EditViewCIApplicationBase = () => {
   }
 
   const isDraft = ciApplication?.status?.status === 'Draft'
+  const isSubmittedOrTerminal =
+    ciApplication?.status?.status &&
+    ciApplication.status.status !== 'Draft'
   const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
 
   const stepBodies = {
@@ -263,8 +300,30 @@ const EditViewCIApplicationBase = () => {
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step3" />
     ),
-    step4: <StepStub titleKey="carbonIntensity:steps.step4" />,
-    step5: <StepStub titleKey="carbonIntensity:steps.step5" />
+    step4: ciApplicationId ? (
+      <SignAndSubmitStep
+        ciApplication={ciApplication}
+        currentUser={currentUser}
+        onSave={handleSubmitApplication}
+        onDelete={canDelete ? openDeleteConfirmation : null}
+        isSaving={isSaving || isDeleting}
+        readOnly={!isDraft}
+      />
+    ) : (
+      <StepStub titleKey="carbonIntensity:steps.step4" />
+    ),
+    step5: isSubmittedOrTerminal ? (
+      <GovernmentDecisionStep
+        ciApplication={ciApplication}
+        isGovernment={isGovernment}
+        readOnly={
+          ciApplication?.status?.status === 'Completed' ||
+          ciApplication?.status?.status === 'Withdrawn'
+        }
+      />
+    ) : (
+      <StepStub titleKey="carbonIntensity:steps.step5" />
+    )
   }
 
   return (

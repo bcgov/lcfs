@@ -1,13 +1,13 @@
 """
 Service layer for the Carbon Intensity (CI) application module.
 
-Currently exposes everything required to drive Step 1 of the wizard
-("Application information") plus the listing screen. The remaining
-steps will plug into ``update_step1`` -> ``update_step2`` etc. as they
-are introduced.
+Exposes the full Step 1-5 wizard: application information, proposed fuel
+pathways, documents & GHGenius modelling, sign & submit, and government
+decision (with the comments thread).
 """
 
 import uuid
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import structlog
@@ -28,6 +28,8 @@ from lcfs.web.api.base import (
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
+    CIApplicationCommentSchema,
+    CIApplicationDecisionSchema,
     CIApplicationSchema,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
@@ -35,6 +37,7 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
+    CIApplicationStep4Schema,
     CITableOptionsSchema,
     FuelCodeOptionSchema,
     FuelTypeOptionSchema,
@@ -143,6 +146,7 @@ def _to_full_schema(ci: CIApplication) -> CIApplicationSchema:
         consultant_company=ci.consultant_company,
         consultant_email=ci.consultant_email,
         signature_user=ci.signature_user,
+        signature_date_time=ci.signature_date_time,
     )
 
 
@@ -470,3 +474,196 @@ class CIApplicationServices:
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return _to_full_schema(ci)
+
+    # ------------------------------------------------------------------
+    # Step 4 — Sign & submit
+    # ------------------------------------------------------------------
+
+    @service_handler
+    async def submit_application(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationStep4Schema,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        """
+        Transition a Draft application to Submitted, persisting signature
+        and consultant info and validating that prior steps left the
+        record in a submittable state.
+        """
+        if ci_application.ci_application_status.status != CIApplicationStatusEnum.Draft.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only Draft applications can be submitted.",
+            )
+
+        # Sanity-check the prior steps. Step 1 is enforced by NOT NULL
+        # columns at the DB layer; we re-check Step 2 (at least one
+        # pathway) and Step 3 (technical report + GHGenius model) so
+        # signing authorities cannot bypass the wizard via the API.
+        if not (ci_application.pathways or []):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one fuel pathway is required before submission.",
+            )
+
+        from lcfs.db.models.ci_application.CIApplication import (
+            CI_DOC_CATEGORY_GHGENIUS_MODEL,
+            CI_DOC_CATEGORY_TECHNICAL_REPORT,
+        )
+
+        present_categories = set(
+            await self.repo.get_document_categories(ci_application.ci_application_id)
+        )
+        missing = []
+        if CI_DOC_CATEGORY_TECHNICAL_REPORT not in present_categories:
+            missing.append("Technical report")
+        if CI_DOC_CATEGORY_GHGENIUS_MODEL not in present_categories:
+            missing.append("GHGenius model")
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing required upload(s): " + ", ".join(missing) + ".",
+            )
+
+        submitted_status = await self.repo.get_status_by_name(
+            CIApplicationStatusEnum.Submitted.value
+        )
+        if not submitted_status:
+            raise DataNotFoundException("Submitted status is not configured.")
+
+        # Persist consultant info only when the signatory consented;
+        # otherwise wipe any previously-saved values defensively.
+        if data.consultant_consent:
+            ci_application.consultant_name = data.consultant_name
+            ci_application.consultant_company = data.consultant_company
+            ci_application.consultant_email = data.consultant_email
+        else:
+            ci_application.consultant_name = None
+            ci_application.consultant_company = None
+            ci_application.consultant_email = None
+
+        ci_application.signature_user = (
+            f"{user.first_name or ''} {user.last_name or ''}".strip()
+            or user.keycloak_username
+        )
+        ci_application.signature_date_time = datetime.now(timezone.utc)
+        ci_application.status_id = submitted_status.ci_application_status_id
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return _to_full_schema(ci)
+
+    # ------------------------------------------------------------------
+    # Step 5 — Government decision & comments
+    # ------------------------------------------------------------------
+
+    @service_handler
+    async def record_decision(
+        self,
+        ci_application: CIApplication,
+        data: CIApplicationDecisionSchema,
+        user: UserProfile,
+        is_government: bool,
+    ) -> CIApplicationSchema:
+        """
+        Government users transition a Submitted application to Completed
+        or Withdrawn. An optional comment is recorded as part of the
+        decision. The terminal state lock is enforced here so we never
+        re-decide an already-decided application.
+        """
+        if not is_government:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only government users can record a decision.",
+            )
+
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Submitted.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "A decision can only be recorded on Submitted applications."
+                ),
+            )
+
+        target_status = await self.repo.get_status_by_name(data.status.value)
+        if not target_status:
+            raise DataNotFoundException(
+                f"Status '{data.status.value}' is not configured."
+            )
+
+        ci_application.status_id = target_status.ci_application_status_id
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+
+        if data.comment:
+            await self.repo.add_comment(
+                ci_application,
+                text=data.comment,
+                author_username=user.keycloak_username,
+                author_display_name=(
+                    f"{user.first_name or ''} {user.last_name or ''}".strip()
+                    or user.keycloak_username
+                ),
+                is_government=True,
+            )
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return _to_full_schema(ci)
+
+    @service_handler
+    async def add_comment(
+        self,
+        ci_application: CIApplication,
+        text: str,
+        user: UserProfile,
+        is_government: bool,
+    ) -> CIApplicationCommentSchema:
+        history = await self.repo.add_comment(
+            ci_application,
+            text=text,
+            author_username=user.keycloak_username,
+            author_display_name=(
+                f"{user.first_name or ''} {user.last_name or ''}".strip()
+                or user.keycloak_username
+            ),
+            is_government=is_government,
+        )
+        snapshot = history.ci_application_snapshot or {}
+        return CIApplicationCommentSchema(
+            comment_id=history.ci_application_history_id,
+            text=snapshot.get("text", ""),
+            author_username=snapshot.get("author_username"),
+            author_display_name=snapshot.get("author_display_name"),
+            is_government=bool(snapshot.get("is_government")),
+            create_date=history.create_date,
+        )
+
+    @service_handler
+    async def list_comments(
+        self, ci_application_id: int
+    ) -> List[CIApplicationCommentSchema]:
+        rows = await self.repo.list_comments(ci_application_id)
+        out: List[CIApplicationCommentSchema] = []
+        for r in rows:
+            snapshot = r.ci_application_snapshot or {}
+            out.append(
+                CIApplicationCommentSchema(
+                    comment_id=r.ci_application_history_id,
+                    text=snapshot.get("text", ""),
+                    author_username=snapshot.get("author_username"),
+                    author_display_name=snapshot.get("author_display_name"),
+                    is_government=bool(snapshot.get("is_government")),
+                    create_date=r.create_date,
+                )
+            )
+        return out

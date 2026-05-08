@@ -97,6 +97,7 @@ def _ci_application(
         consultant_company=None,
         consultant_email=None,
         signature_user=None,
+        signature_date_time=None,
         update_date=datetime(2026, 5, 1, tzinfo=timezone.utc),
         create_date=datetime(2026, 4, 1, tzinfo=timezone.utc),
         group_uuid="abc",
@@ -517,3 +518,305 @@ async def test_update_step3_rejects_when_ghgenius_missing(
         )
     assert "GHGenius" in str(exc.value)
     repo.update.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Step 4 — Sign & submit
+# ---------------------------------------------------------------------------
+
+from fastapi import HTTPException
+
+
+def _step4_payload(**overrides):
+    from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
+    base = dict(
+        declaration_information_true=True,
+        declaration_response_8_weeks=True,
+        declaration_section_20_6=True,
+        consultant_consent=False,
+        consultant_name=None,
+        consultant_company=None,
+        consultant_email=None,
+    )
+    base.update(overrides)
+    return CIApplicationStep4Schema(**base)
+
+
+def _draft_ci_with_pathways():
+    """Draft CI with one pathway present (sentinel; the count check is all that matters)."""
+    ci = _ci_application(status=_status("Draft", 1))
+    ci.pathways = [True]
+    return ci
+
+
+def _reloaded_ci(ci):
+    """
+    Mimics the fresh ``get_by_id`` reload after persisting state changes:
+    a separate SimpleNamespace mirroring ``ci`` but with pathways
+    cleared, so the response serializer doesn't walk the sentinel
+    placeholder while leaving the in-test ``ci`` object untouched.
+    """
+    return SimpleNamespace(**{**ci.__dict__, "pathways": []})
+
+
+@pytest.mark.anyio
+async def test_step4_submit_validates_status_must_be_draft(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.pathways = [object()]
+    with pytest.raises(HTTPException) as exc:
+        await service.submit_application(ci, _step4_payload(), mock_user)
+    assert exc.value.status_code == 400
+    assert "Draft" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_step4_submit_requires_at_least_one_pathway(service, repo, mock_user):
+    ci = _ci_application(status=_status("Draft", 1))
+    ci.pathways = []
+    with pytest.raises(HTTPException) as exc:
+        await service.submit_application(ci, _step4_payload(), mock_user)
+    assert exc.value.status_code == 400
+    assert "pathway" in exc.value.detail.lower()
+
+
+@pytest.mark.anyio
+async def test_step4_submit_requires_required_documents(service, repo, mock_user):
+    ci = _draft_ci_with_pathways()
+    repo.get_document_categories.return_value = []  # nothing uploaded
+    with pytest.raises(HTTPException) as exc:
+        await service.submit_application(ci, _step4_payload(), mock_user)
+    assert exc.value.status_code == 400
+    assert "Technical report" in exc.value.detail
+    assert "GHGenius" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_step4_submit_succeeds_and_transitions_status(service, repo, mock_user):
+    ci = _draft_ci_with_pathways()
+    repo.get_document_categories.return_value = [
+        "technical_report",
+        "ghgenius_model",
+    ]
+    submitted = _status("Submitted", 2)
+    repo.get_status_by_name.return_value = submitted
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    mock_user.first_name = "Jonathan"
+    mock_user.last_name = "Zimmerman"
+
+    result = await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert ci.status_id == submitted.ci_application_status_id
+    assert ci.signature_user == "Jonathan Zimmerman"
+    assert ci.signature_date_time is not None
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    repo.add_history.assert_awaited_once()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step4_submit_persists_consultant_when_consented(
+    service, repo, mock_user
+):
+    ci = _draft_ci_with_pathways()
+    repo.get_document_categories.return_value = [
+        "technical_report",
+        "ghgenius_model",
+    ]
+    repo.get_status_by_name.return_value = _status("Submitted", 2)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    payload = _step4_payload(
+        consultant_consent=True,
+        consultant_name="Sam Anderson",
+        consultant_company="Anderson Fuel Consultants",
+        consultant_email="sam.anderson@afc.ar",
+    )
+
+    await service.submit_application(ci, payload, mock_user)
+
+    assert ci.consultant_name == "Sam Anderson"
+    assert ci.consultant_company == "Anderson Fuel Consultants"
+    assert ci.consultant_email == "sam.anderson@afc.ar"
+
+
+@pytest.mark.anyio
+async def test_step4_submit_clears_consultant_when_not_consented(
+    service, repo, mock_user
+):
+    ci = _draft_ci_with_pathways()
+    ci.consultant_name = "stale"
+    ci.consultant_company = "stale"
+    ci.consultant_email = "stale@example.com"
+    repo.get_document_categories.return_value = [
+        "technical_report",
+        "ghgenius_model",
+    ]
+    repo.get_status_by_name.return_value = _status("Submitted", 2)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert ci.consultant_name is None
+    assert ci.consultant_company is None
+    assert ci.consultant_email is None
+
+
+@pytest.mark.anyio
+async def test_step4_schema_requires_all_three_declarations():
+    import pydantic
+    from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
+    with pytest.raises(pydantic.ValidationError):
+        CIApplicationStep4Schema(
+            declaration_information_true=True,
+            declaration_response_8_weeks=False,
+            declaration_section_20_6=True,
+        )
+
+
+@pytest.mark.anyio
+async def test_step4_schema_requires_consultant_fields_when_consented():
+    import pydantic
+    from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
+    with pytest.raises(pydantic.ValidationError):
+        CIApplicationStep4Schema(
+            declaration_information_true=True,
+            declaration_response_8_weeks=True,
+            declaration_section_20_6=True,
+            consultant_consent=True,
+            consultant_name="",
+            consultant_company="",
+            consultant_email=None,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Government decision & comments thread
+# ---------------------------------------------------------------------------
+
+
+def _decision_payload(status_value="Completed", comment=None):
+    from lcfs.web.api.ci_application.schema import (
+        CIApplicationDecisionSchema,
+    )
+    return CIApplicationDecisionSchema(status=status_value, comment=comment)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_requires_government(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload(), mock_user, is_government=False
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_step5_decision_rejects_when_not_submitted(service, repo, mock_user):
+    ci = _ci_application(status=_status("Draft", 1))
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload(), mock_user, is_government=True
+        )
+    assert exc.value.status_code == 400
+    assert "Submitted" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_step5_decision_transitions_to_completed(service, repo, mock_user):
+    ci = _ci_application(status=_status("Submitted", 2))
+    completed = _status("Completed", 3)
+    repo.get_status_by_name.return_value = completed
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Completed"), mock_user, is_government=True
+    )
+
+    assert ci.status_id == completed.ci_application_status_id
+    repo.add_history.assert_awaited_once()
+    repo.add_comment.assert_not_awaited()  # no comment on this payload
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_records_comment_when_provided(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    repo.get_status_by_name.return_value = _status("Withdrawn", 4)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    await service.record_decision(
+        ci,
+        _decision_payload("Withdrawn", comment="See attached email."),
+        mock_user,
+        is_government=True,
+    )
+
+    repo.add_comment.assert_awaited_once()
+    kwargs = repo.add_comment.await_args.kwargs
+    assert kwargs["text"] == "See attached email."
+    assert kwargs["is_government"] is True
+
+
+@pytest.mark.anyio
+async def test_step5_decision_schema_rejects_non_terminal_status():
+    import pydantic
+    from lcfs.web.api.ci_application.schema import (
+        CIApplicationDecisionSchema,
+    )
+    with pytest.raises(pydantic.ValidationError):
+        CIApplicationDecisionSchema(status="Submitted")
+
+
+@pytest.mark.anyio
+async def test_step5_add_comment_returns_schema(service, repo, mock_user):
+    ci = _ci_application()
+    history = MagicMock()
+    history.ci_application_history_id = 77
+    history.ci_application_snapshot = {
+        "type": "comment",
+        "text": "Hi there",
+        "author_username": "ci_applicant_user",
+        "author_display_name": "Jane Doe",
+        "is_government": False,
+    }
+    history.create_date = datetime(2026, 5, 1, tzinfo=timezone.utc)
+    repo.add_comment.return_value = history
+
+    out = await service.add_comment(
+        ci, "Hi there", mock_user, is_government=False
+    )
+    assert out.comment_id == 77
+    assert out.text == "Hi there"
+    assert out.is_government is False
+    assert out.author_display_name == "Jane Doe"
+
+
+@pytest.mark.anyio
+async def test_step5_list_comments_filters_to_comment_rows(service, repo):
+    h1 = MagicMock()
+    h1.ci_application_history_id = 1
+    h1.ci_application_snapshot = {
+        "type": "comment",
+        "text": "first",
+        "author_username": "u1",
+        "author_display_name": "User One",
+        "is_government": False,
+    }
+    h1.create_date = datetime(2026, 5, 1, tzinfo=timezone.utc)
+    repo.list_comments.return_value = [h1]
+
+    out = await service.list_comments(10)
+    assert len(out) == 1
+    assert out[0].text == "first"
+    repo.list_comments.assert_awaited_once_with(10)
