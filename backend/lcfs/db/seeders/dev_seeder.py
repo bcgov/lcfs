@@ -30,6 +30,12 @@ from lcfs.db.seeders.seed_charging_power_output import seed_charging_power_outpu
 from lcfs.db.seeders.staging.test_allocation_agreement_seeder import (
     seed_test_allocation_agreements,
 )
+from lcfs.db.seeders.staging.test_charging_equipment_seeder import (
+    seed_test_charging_equipment,
+)
+from lcfs.db.seeders.staging.test_charging_site_seeder import (
+    seed_test_charging_sites,
+)
 from lcfs.db.seeders.staging.test_compliance_report_history_seeder import (
     seed_test_compliance_report_history,
 )
@@ -42,6 +48,7 @@ from lcfs.db.seeders.staging.test_compliance_report_seeder import (
 from lcfs.db.seeders.staging.test_compliance_report_summary_seeder import (
     seed_test_compliance_report_summaries,
 )
+from lcfs.db.seeders.staging.test_document_seeder import seed_test_documents
 from lcfs.db.seeders.staging.test_fuel_code_seeder import seed_test_fuel_codes
 from lcfs.db.seeders.staging.test_fuel_export_seeder import seed_test_fuel_exports
 from lcfs.db.seeders.staging.test_fuel_supply_seeder import seed_test_fuel_supplies
@@ -49,6 +56,10 @@ from lcfs.db.seeders.staging.test_notional_transfer_seeder import (
     seed_test_notional_transfers,
 )
 from lcfs.db.seeders.staging.test_other_uses_seeder import seed_test_other_uses
+from lcfs.db.seeders.staging.test_transfer_history_seeder import (
+    seed_test_transfer_history,
+)
+from lcfs.db.seeders.staging.test_transfer_seeder import seed_test_transfers
 from lcfs.db.seeders.staging.test_transaction_seeder import seed_test_transactions
 
 logger = structlog.get_logger(__name__)
@@ -75,6 +86,11 @@ async def update_sequences(session):
         "other_uses": "other_uses_id",
         "allocation_agreement": "allocation_agreement_id",
         "compliance_report_history": "compliance_report_history_id",
+        "charging_site": "charging_site_id",
+        "charging_equipment": "charging_equipment_id",
+        "document": "document_id",
+        "transfer": "transfer_id",
+        "transfer_history": "transfer_history_id",
     }
 
     for table, column in sequences.items():
@@ -112,7 +128,12 @@ async def seed_dev(session: AsyncSession):
     await seed_test_notional_transfers(session)
     await seed_test_other_uses(session)
     await seed_test_allocation_agreements(session)
+    await seed_test_charging_sites(session)
+    await seed_test_charging_equipment(session)
+    await seed_test_documents(session)
+    await seed_test_transfers(session)
     await seed_test_compliance_report_history(session)
+    await seed_test_transfer_history(session)
     await seed_finished_fuel_transfer_modes(session)
     await seed_feedstock_fuel_transfer_modes(session)
     await seed_notification_channel_subscriptions(session)
