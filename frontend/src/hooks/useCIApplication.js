@@ -99,6 +99,50 @@ export const useUpdateCIApplicationStep1 = (ciApplicationId) => {
   })
 }
 
+export const useUpdateCIApplicationStep2 = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationStep2.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useUpdateCIApplicationStep3 = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      return (
+        await client.put(
+          apiRoutes.updateCIApplicationStep3.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          payload
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
 export const useDeleteCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()

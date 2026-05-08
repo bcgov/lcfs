@@ -21,7 +21,17 @@ from lcfs.db.models.ci_application import (
     CIApplication,
     CIApplicationHistory,
     CIApplicationStatus,
+    Pathway,
+    PathwayApplicationType,
+    PathwayFuelCodeType,
 )
+from lcfs.db.models.ci_application.CIApplication import (
+    ci_application_document_association,
+)
+from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
+from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -62,6 +72,56 @@ class CIApplicationRepository:
         )
         return result.scalars().all()
 
+    @repo_handler
+    async def get_pathway_application_types(
+        self,
+    ) -> Sequence[PathwayApplicationType]:
+        result = await self.db.execute(
+            select(PathwayApplicationType).order_by(
+                PathwayApplicationType.display_order
+            )
+        )
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_pathway_fuel_code_types(self) -> Sequence[PathwayFuelCodeType]:
+        result = await self.db.execute(
+            select(PathwayFuelCodeType).order_by(PathwayFuelCodeType.display_order)
+        )
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_fuel_types(self) -> Sequence[FuelType]:
+        result = await self.db.execute(select(FuelType).order_by(FuelType.fuel_type))
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_transport_modes(self) -> Sequence[TransportMode]:
+        result = await self.db.execute(
+            select(TransportMode).order_by(TransportMode.transport_mode)
+        )
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_approved_fuel_codes(self) -> Sequence[FuelCode]:
+        """
+        Approved fuel codes the applicant can renew. Eagerly loads the
+        prefix (for display string assembly) and the fuel type (used to
+        auto-populate locked grid cells when a renewal row is selected).
+        """
+        result = await self.db.execute(
+            select(FuelCode)
+            .options(
+                selectinload(FuelCode.fuel_code_prefix),
+                selectinload(FuelCode.fuel_code_status),
+                selectinload(FuelCode.fuel_type),
+            )
+            .join(FuelCode.fuel_code_status)
+            .where(FuelCodeStatus.status == FuelCodeStatusEnum.Approved)
+            .order_by(FuelCode.fuel_code_id)
+        )
+        return result.scalars().all()
+
     # ------------------------------------------------------------------
     # CI application CRUD
     # ------------------------------------------------------------------
@@ -74,7 +134,19 @@ class CIApplicationRepository:
                 selectinload(CIApplication.organization),
                 selectinload(CIApplication.ci_application_status),
                 selectinload(CIApplication.facility_nameplate_capacity_unit),
-                selectinload(CIApplication.pathways),
+                selectinload(CIApplication.pathways).selectinload(
+                    Pathway.application_type
+                ),
+                selectinload(CIApplication.pathways).selectinload(
+                    Pathway.fuel_code_type
+                ),
+                selectinload(CIApplication.pathways).selectinload(Pathway.fuel_type),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.fuel_code)
+                .selectinload(FuelCode.fuel_code_prefix),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.fuel_code)
+                .selectinload(FuelCode.fuel_type),
             )
             .where(CIApplication.ci_application_id == ci_application_id)
         )
@@ -111,6 +183,81 @@ class CIApplicationRepository:
     async def delete(self, ci_application: CIApplication) -> None:
         await self.db.delete(ci_application)
         await self.db.flush()
+
+    @repo_handler
+    async def replace_pathways(
+        self,
+        ci_application_id: int,
+        pathways: List[Pathway],
+    ) -> List[Pathway]:
+        """
+        Replace the full set of pathways for a CI application.
+
+        Step 2 always submits the entire grid, so we delete existing rows
+        and insert the new ones in one unit of work. The application
+        owns its pathways via a delete-orphan cascade, so the simple
+        ``DELETE FROM pathway WHERE ci_application_id = :id`` mirrors
+        what an ORM-level removal would do without forcing the service
+        layer to load every existing row first.
+        """
+        from sqlalchemy import delete
+
+        await self.db.execute(
+            delete(Pathway).where(Pathway.ci_application_id == ci_application_id)
+        )
+        for pathway in pathways:
+            pathway.ci_application_id = ci_application_id
+            self.db.add(pathway)
+        await self.db.flush()
+        return pathways
+
+    @repo_handler
+    async def get_pathways(self, ci_application_id: int) -> List[Pathway]:
+        result = await self.db.execute(
+            select(Pathway)
+            .options(
+                selectinload(Pathway.application_type),
+                selectinload(Pathway.fuel_code_type),
+                selectinload(Pathway.fuel_type),
+                selectinload(Pathway.fuel_code).selectinload(
+                    FuelCode.fuel_code_prefix
+                ),
+                selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_type),
+            )
+            .where(Pathway.ci_application_id == ci_application_id)
+            .order_by(Pathway.pathway_id)
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
+    async def get_document_categories(
+        self, ci_application_id: int
+    ) -> List[str]:
+        """
+        Return just the ``document_category`` values currently linked to
+        this CI application. Used by Step 3's required-uploads check; we
+        deliberately don't pull Document rows so the validation stays cheap.
+        """
+        stmt = (
+            select(ci_application_document_association.c.document_category)
+            .where(
+                ci_application_document_association.c.ci_application_id
+                == ci_application_id
+            )
+        )
+        result = await self.db.execute(stmt)
+        return [row[0] for row in result.all()]
+
+    @repo_handler
+    async def get_fuel_codes_by_ids(
+        self, fuel_code_ids: Sequence[int]
+    ) -> List[FuelCode]:
+        if not fuel_code_ids:
+            return []
+        result = await self.db.execute(
+            select(FuelCode).where(FuelCode.fuel_code_id.in_(list(fuel_code_ids)))
+        )
+        return list(result.scalars().all())
 
     @repo_handler
     async def add_history(

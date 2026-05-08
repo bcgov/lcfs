@@ -15,7 +15,9 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationSchema,
     CIApplicationStatusEnum,
     CIApplicationStep1Schema,
+    CIApplicationStep2Schema,
     CITableOptionsSchema,
+    PathwayInputSchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -283,3 +285,235 @@ async def test_delete_draft_calls_repo(service, repo):
     ci = _ci_application()
     await service.delete_draft(ci)
     repo.delete.assert_awaited_once_with(ci)
+
+
+# ---------------------------------------------------------------------------
+# Step 2 — Proposed fuel pathways
+# ---------------------------------------------------------------------------
+
+
+def _pathway_app_type(ident=1, name="New"):
+    return SimpleNamespace(
+        pathway_application_type_id=ident,
+        type=name,
+        description=name,
+    )
+
+
+def _pathway_fc_type(ident=1, name="1-year provisional"):
+    return SimpleNamespace(
+        pathway_fuel_code_type_id=ident,
+        type=name,
+        description=name,
+    )
+
+
+def _fuel_type_obj(ident=1, name="Biodiesel"):
+    return SimpleNamespace(fuel_type_id=ident, fuel_type=name)
+
+
+def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF"):
+    return SimpleNamespace(
+        fuel_code_id=ident,
+        fuel_suffix=suffix,
+        carbon_intensity=23.23,
+        fuel_type_id=1,
+        fuel_type=_fuel_type_obj(),
+        feedstock="Corn",
+        feedstock_location="Ontario, CA",
+        fuel_code_prefix=SimpleNamespace(prefix=prefix),
+    )
+
+
+def _new_pathway_input(**overrides):
+    base = dict(
+        application_type_id=1,
+        fuel_code_type_id=1,
+        operating_data_from=date(2025, 1, 1),
+        operating_data_to=date(2025, 12, 31),
+        fuel_code_id=None,
+        proposed_ci=5.61,
+        fuel_type_id=1,
+        feedstock="Canola",
+        feedstock_region="Saskatchewan",
+        feedstock_transport_mode="Truck",
+        feedstock_transport_distance=100,
+        coproducts=None,
+        finished_fuel_transport_mode="Rail",
+        finished_fuel_transport_distance=200,
+    )
+    base.update(overrides)
+    return PathwayInputSchema(**base)
+
+
+def _stub_step2_lookups(repo, *, with_fuel_code=False):
+    repo.get_pathway_application_types.return_value = [
+        _pathway_app_type(1, "New"),
+        _pathway_app_type(2, "Renewal"),
+    ]
+    repo.get_pathway_fuel_code_types.return_value = [
+        _pathway_fc_type(1, "1-year provisional"),
+        _pathway_fc_type(2, "3-year"),
+    ]
+    repo.get_fuel_types.return_value = [_fuel_type_obj(1, "Biodiesel")]
+    repo.get_fuel_codes_by_ids.return_value = (
+        [_fuel_code_obj()] if with_fuel_code else []
+    )
+
+
+@pytest.mark.anyio
+async def test_update_step2_replaces_pathways_and_description(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    ci.pathways = []
+    _stub_step2_lookups(repo)
+    repo.replace_pathways.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input()],
+        pathway_description="Uses CCS",
+    )
+
+    result = await service.update_step2(ci, payload, mock_user)
+
+    repo.replace_pathways.assert_awaited_once()
+    args, _ = repo.replace_pathways.await_args
+    assert args[0] == ci.ci_application_id
+    new_rows = args[1]
+    assert len(new_rows) == 1
+    assert new_rows[0].application_type_id == 1
+    assert new_rows[0].create_user == "ci_applicant_user"
+    assert new_rows[0].action_type == ActionTypeEnum.CREATE
+
+    assert ci.pathway_description == "Uses CCS"
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_step2_rejects_renewal_without_fuel_code(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    _stub_step2_lookups(repo)
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input(application_type_id=2, fuel_code_id=None)],
+    )
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step2(ci, payload, mock_user)
+    assert "fuel code iteration" in str(exc.value)
+    repo.replace_pathways.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_step2_rejects_new_with_fuel_code(service, repo, mock_user):
+    ci = _ci_application()
+    _stub_step2_lookups(repo, with_fuel_code=True)
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input(application_type_id=1, fuel_code_id=42)],
+    )
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step2(ci, payload, mock_user)
+    assert "must not reference" in str(exc.value)
+    repo.replace_pathways.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_step2_renewal_with_valid_fuel_code(service, repo, mock_user):
+    ci = _ci_application()
+    ci.pathways = []
+    _stub_step2_lookups(repo, with_fuel_code=True)
+    repo.replace_pathways.return_value = []
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = CIApplicationStep2Schema(
+        pathways=[_new_pathway_input(application_type_id=2, fuel_code_id=42)],
+    )
+
+    result = await service.update_step2(ci, payload, mock_user)
+    assert isinstance(result, CIApplicationSchema)
+    repo.replace_pathways.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_step2_schema_requires_at_least_one_pathway():
+    import pydantic
+    with pytest.raises(pydantic.ValidationError):
+        CIApplicationStep2Schema(pathways=[])
+
+
+@pytest.mark.anyio
+async def test_pathway_input_rejects_inverted_dates():
+    import pydantic
+    with pytest.raises(pydantic.ValidationError):
+        _new_pathway_input(
+            operating_data_from=date(2025, 12, 31),
+            operating_data_to=date(2025, 1, 1),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Step 3 — Documents & GHGenius modelling
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_update_step3_succeeds_when_required_present(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_document_categories.return_value = [
+        "technical_report",
+        "ghgenius_model",
+    ]
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    payload = CIApplicationStep3Schema(supporting_document_other="Extra notes")
+    result = await service.update_step3(ci, payload, mock_user)
+
+    assert ci.supporting_document_other == "Extra notes"
+    assert ci.action_type == ActionTypeEnum.UPDATE
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_update_step3_rejects_when_technical_report_missing(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_document_categories.return_value = ["ghgenius_model"]
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(), mock_user
+        )
+    assert "Technical report" in str(exc.value)
+    repo.update.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_step3_rejects_when_ghgenius_missing(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    repo.get_document_categories.return_value = ["technical_report"]
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    with pytest.raises(Exception) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(), mock_user
+        )
+    assert "GHGenius" in str(exc.value)
+    repo.update.assert_not_called()

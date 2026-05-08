@@ -30,7 +30,27 @@ ci_application_document_association = Table(
         primary_key=True,
         comment="Foreign key to document",
     ),
+    Column(
+        "document_category",
+        String(50),
+        nullable=False,
+        comment=(
+            "Step 3 categorisation: 'technical_report', 'ghgenius_model', "
+            "or 'supporting'."
+        ),
+    ),
 )
+
+
+# Document category values for CI application uploads (Step 3).
+CI_DOC_CATEGORY_TECHNICAL_REPORT = "technical_report"
+CI_DOC_CATEGORY_GHGENIUS_MODEL = "ghgenius_model"
+CI_DOC_CATEGORY_SUPPORTING = "supporting"
+CI_DOC_CATEGORIES = {
+    CI_DOC_CATEGORY_TECHNICAL_REPORT,
+    CI_DOC_CATEGORY_GHGENIUS_MODEL,
+    CI_DOC_CATEGORY_SUPPORTING,
+}
 
 
 class CIApplication(BaseModel, Auditable, Versioning):
