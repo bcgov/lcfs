@@ -111,15 +111,21 @@ async def seed_dev(session: AsyncSession):
     """
     Function to seed the database with dev data.
     """
+    # Seed organization-related entities first to satisfy foreign key constraints
     await seed_organization_addresses(session)
     await seed_organization_attorney_addresses(session)
     await seed_organizations(session)
     await seed_organization_early_issuance(session)
-    await seed_test_transactions(session)
+    
+    # Seed user-related entities
     await seed_user_profiles(session)
     await seed_user_roles(session)
+    # seed transactions and adjustments
+    await seed_test_transactions(session)
     await seed_admin_adjustments(session)
+    # Seed fuel codes
     await seed_test_fuel_codes(session)
+    # Seed compliance-related entities
     await seed_test_compliance_reports(session)
     await seed_test_compliance_report_organization_snapshots(session)
     await seed_test_compliance_report_summaries(session)
@@ -130,14 +136,20 @@ async def seed_dev(session: AsyncSession):
     await seed_test_allocation_agreements(session)
     await seed_test_charging_sites(session)
     await seed_test_charging_equipment(session)
-    await seed_test_documents(session)
-    await seed_test_transfers(session)
     await seed_test_compliance_report_history(session)
+    
+    # Seed documents after compliance reports (dependency)
+    await seed_test_documents(session)
+
+    # Seed transfers and transactions
+    await seed_test_transfers(session)
     await seed_test_transfer_history(session)
+
+    # Seed remaining 
     await seed_finished_fuel_transfer_modes(session)
     await seed_feedstock_fuel_transfer_modes(session)
-    await seed_notification_channel_subscriptions(session)
     await seed_charging_power_output(session)
+    await seed_notification_channel_subscriptions(session)
 
     # Update sequences after all seeders have run
     await update_sequences(session)
