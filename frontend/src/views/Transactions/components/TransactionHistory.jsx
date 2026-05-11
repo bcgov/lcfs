@@ -3,7 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import dayjs from 'dayjs'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
 import { useTranslation } from 'react-i18next'
-import { formatDateWithTimezoneAbbr } from '@/utils/formatters.js'
+import { formatDateWithTimezoneAbbr } from '@/utils/formatters'
 
 dayjs.extend(localizedFormat)
 
