@@ -2557,6 +2557,90 @@ GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;
 -- ==========================================
 DROP VIEW IF EXISTS vw_fse_base CASCADE;
 CREATE OR REPLACE VIEW vw_fse_base AS
+WITH
+fse_intended_uses AS (
+    SELECT 
+        fse.final_supply_equipment_id,
+        STRING_AGG(DISTINCT eut.type, ', ' ORDER BY eut.type) AS intended_uses
+    FROM final_supply_equipment fse
+    LEFT JOIN final_supply_intended_use_association fsiua 
+        ON fse.final_supply_equipment_id = fsiua.final_supply_equipment_id
+    LEFT JOIN end_use_type eut 
+        ON fsiua.end_use_type_id = eut.end_use_type_id
+        AND eut.intended_use = true
+    GROUP BY fse.final_supply_equipment_id
+),
+fse_intended_users AS (
+    SELECT 
+        fse.final_supply_equipment_id,
+        STRING_AGG(DISTINCT eurt.type_name, ', ' ORDER BY eurt.type_name) AS intended_users
+    FROM final_supply_equipment fse
+    LEFT JOIN final_supply_intended_user_association fsiura 
+        ON fse.final_supply_equipment_id = fsiura.final_supply_equipment_id
+    LEFT JOIN end_user_type eurt 
+        ON fsiura.end_user_type_id = eurt.end_user_type_id
+        AND eurt.intended_use = true
+    GROUP BY fse.final_supply_equipment_id
+)
+SELECT 
+    o.name AS "Organization",
+    fse.supply_from_date AS "Supply From Date",
+    fse.supply_to_date AS "Supply To Date",
+    fse.kwh_usage AS "kWh Usage",
+    fse.serial_nbr AS "Serial #",
+    fse.manufacturer AS "Manufacturer",
+    fse.model AS "Model",
+    loe.name AS "Level of Equipment",
+    fse.ports AS "Ports",
+    COALESCE(fiu.intended_uses, '') AS "Intended Use",
+    COALESCE(fiur.intended_users, '') AS "Intended Users",
+    fse.street_address AS "Street Address",
+    fse.city AS "City",
+    fse.postal_code AS "Postal Code",
+    fse.latitude AS "Latitude",
+    fse.longitude AS "Longitude",
+    fse.notes AS "Notes"
+    
+FROM final_supply_equipment fse
+JOIN v_compliance_report vcr 
+    ON vcr.compliance_report_id = fse.compliance_report_id
+    AND vcr.is_latest = true
+JOIN compliance_report cr 
+    ON cr.compliance_report_id = fse.compliance_report_id
+JOIN compliance_report_status crs 
+    ON crs.compliance_report_status_id = cr.current_status_id
+    AND crs.status != 'Draft'  -- Exclude draft reports
+JOIN organization o 
+    ON o.organization_id = cr.organization_id
+JOIN compliance_period cp 
+    ON cp.compliance_period_id = cr.compliance_period_id
+LEFT JOIN level_of_equipment loe 
+    ON loe.level_of_equipment_id = fse.level_of_equipment_id
+LEFT JOIN fse_intended_uses fiu 
+    ON fiu.final_supply_equipment_id = fse.final_supply_equipment_id
+LEFT JOIN fse_intended_users fiur 
+    ON fiur.final_supply_equipment_id = fse.final_supply_equipment_id
+
+ORDER BY 
+    o.name,
+    cp.description DESC,
+    fse.supply_from_date,
+    fse.serial_nbr;
+
+GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_fse_info_org_year
+    ON final_supply_equipment (compliance_report_id);
+CREATE INDEX IF NOT EXISTS idx_fse_info_supply_dates
+    ON final_supply_equipment (supply_from_date, supply_to_date);
+CREATE INDEX IF NOT EXISTS idx_fse_info_location
+    ON final_supply_equipment (latitude, longitude);
+-- ==========================================
+-- FSE Base View YoY
+-- ==========================================
+DROP VIEW IF EXISTS vw_fse_base CASCADE;
+CREATE OR REPLACE VIEW vw_fse_base AS
 SELECT
     cp.compliance_period_id              AS "Compliance Period ID",
     cp.description                       AS "Compliance Year",

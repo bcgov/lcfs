@@ -47,6 +47,8 @@ class ViewCreator:
             "Compliance Reports Time Per Status",
             "Notional Transfer Base View",
             "Fuels for Other Use Data Model",
+            "FSE Reporting Base View",
+            "FSE Reporting Base Preferred View",
             # Level 2: Views depending on Level 1
             "Compliance Reports Analytics View",
             "BCeID Daily Login Summary View",
@@ -62,6 +64,7 @@ class ViewCreator:
             "Compliance Report Assignee Breakdown View",
             "Compliance Report Queue Flow View",
             "Final Supply Equipment Base View",
+            "FSE Base View YoY",
             "Electricity Allocation FSE Match Query",
             "Allocation Agreement Duplicate Check",
             "Final Supply Equipment Duplicate Check",
