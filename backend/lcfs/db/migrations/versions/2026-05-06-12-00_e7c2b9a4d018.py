@@ -7,7 +7,7 @@ single Document row stays uncategorised globally and only carries
 meaning in the context of a specific CI application.
 
 Revision ID: e7c2b9a4d018
-Revises: d4f5e6a7b8c9
+Revises: e5f6a7b8c9d0
 Create Date: 2026-05-06 12:00:00.000000
 """
 
@@ -16,7 +16,7 @@ from alembic import op
 
 
 revision = "e7c2b9a4d018"
-down_revision = "d4f5e6a7b8c9"
+down_revision = "e5f6a7b8c9d0"
 branch_labels = None
 depends_on = None
 
