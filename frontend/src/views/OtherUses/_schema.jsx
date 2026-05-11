@@ -11,7 +11,7 @@ import {
   decimalFormatter,
   formatNumberWithCommas as valueFormatter
 } from '@/utils/formatters'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
