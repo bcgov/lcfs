@@ -69,6 +69,27 @@ class NotificationRepository:
         await self.db.flush()
 
     @repo_handler
+    async def get_active_user_profile_ids_by_organization(
+        self, organization_id: Optional[int]
+    ) -> list[int]:
+        """
+        Return active user ids for a supplier organization or the government cohort.
+        """
+        from lcfs.db.models.user.UserProfile import UserProfile
+
+        query = select(UserProfile.user_profile_id).where(
+            UserProfile.is_active.is_(True)
+        )
+
+        if organization_id is None:
+            query = query.where(UserProfile.organization_id.is_(None))
+        else:
+            query = query.where(UserProfile.organization_id == organization_id)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    @repo_handler
     async def get_notification_messages_by_user(
         self, user_profile_id: int, is_read: Optional[bool] = None
     ) -> list[NotificationMessage]:

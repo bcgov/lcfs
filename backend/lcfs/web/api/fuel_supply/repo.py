@@ -172,40 +172,40 @@ class FuelSupplyRepository:
                 and_(
                     ProvisionOfTheAct.name != "Unknown",
                     or_(
+                        # 2024+ fossil-derived: Section 19 prescribed (ID 1) only
                         and_(
+                            current_year
+                            >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                             FuelType.fossil_derived == True,
-                            or_(
-                                # 2024+: fossil-derived pairs with Section 19 prescribed (ID 1)
-                                and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id == 1,
-                                    current_year
-                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
-                                ),
-                                # Pre-2024: fossil-derived pairs with Section 6 prescribed (IDs 4, 5)
-                                and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id.in_(
-                                        [4, 5]
-                                    ),
-                                    current_year
-                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
-                                ),
-                            ),
+                            ProvisionOfTheAct.provision_of_the_act_id == 1,
                         ),
+                        # 2024+ renewables: anything except Section 19 prescribed (1)
+                        # and "Fuel code - section 19 (b) (ii)" duplicate (8).
                         and_(
+                            current_year
+                            >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                             FuelType.fossil_derived == False,
-                            or_(
-                                and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id.notin_(
-                                        [1, 8]
-                                    ),
-                                    current_year
-                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
-                                ),
-                                and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id != 1,
-                                    current_year
-                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
-                                ),
+                            ProvisionOfTheAct.provision_of_the_act_id.notin_([1, 8]),
+                        ),
+                        # Pre-2024 petroleum-based fuel types (is_legacy=True
+                        # — Petroleum-based diesel/gasoline, Natural gas-based
+                        # gasoline): Section 6 prescribed (IDs 4, 5) only.
+                        and_(
+                            current_year
+                            < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                            FuelType.is_legacy == True,
+                            ProvisionOfTheAct.provision_of_the_act_id.in_([4, 5]),
+                        ),
+                        # Pre-2024 renewable fuel types (is_legacy=False, reused
+                        # across eras): all legacy provisions except the
+                        # petroleum-only Prescribed (4, 5) and the modern
+                        # Section 19 prescribed (1).
+                        and_(
+                            current_year
+                            < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                            FuelType.is_legacy == False,
+                            ProvisionOfTheAct.provision_of_the_act_id.notin_(
+                                [1, 4, 5]
                             ),
                         ),
                     ),
