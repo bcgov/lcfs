@@ -17,7 +17,7 @@ import { useApiService } from '@/services/useApiService'
 import { useOrganizationsList } from '@/hooks/useOrganizations'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
