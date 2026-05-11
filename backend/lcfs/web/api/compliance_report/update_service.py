@@ -197,13 +197,15 @@ class ComplianceReportUpdateService:
             # Add history record
             await self.repo.add_compliance_report_history(report, user)
 
-        # Handle notifications
-        await self._perform_notification_call(report, current_status, user)
+        # Handle notifications only for workflow transitions and return statuses (not for other edits)
+        return_status_values = [status.value for status in ReturnStatus]
+        if status_has_changed or current_status in return_status_values:
+            await self._perform_notification_call(report, current_status, user)
 
         return updated_report
 
     async def _perform_notification_call(self, report, status, user: UserProfile):
-        """Send notifications based on the current status of the transfer."""
+        """Send notifications based on the current status of the compliance report."""
         status_mapper = status.replace(" ", "_")
         notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
             (

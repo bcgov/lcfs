@@ -134,7 +134,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
 
             # check if the endpoint can be accessed
             if "*" in required_roles:
-                logger.warn(
+                logger.debug(
                     f"Endpoint {request.method} {request.url.path} is accessible by all roles"
                 )
             else:
