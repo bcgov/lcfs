@@ -7,11 +7,11 @@ const keycloak = new Keycloak({
   url: CONFIG.KEYCLOAK.AUTH_URL
 })
 
-export const getKeycloak = () => {
+export const getKeycloak = (): Keycloak => {
   return keycloak
 }
 
-export const logout = () => {
+export const logout = (): void => {
   // Clear all browser storage (filters, cached data, etc.)
   sessionStorage.clear()
   localStorage.clear()
@@ -26,14 +26,17 @@ export const logout = () => {
       console.error('Failed to clear query cache:', error)
     })
 
-  const idToken = keycloak.idToken || keycloak.tokenParsed?.idToken
+  const tokenParsed = keycloak.tokenParsed as
+    | { idToken?: string }
+    | undefined
+  const idToken = keycloak.idToken || tokenParsed?.idToken
 
   if (!idToken) {
     console.error('idToken is not available')
     return
   }
   const keycloakLogoutUrl =
-    keycloak.endpoints.logout() +
+    (keycloak as unknown as { endpoints: { logout: () => string } }).endpoints.logout() +
     '?post_logout_redirect_uri=' +
     CONFIG.KEYCLOAK.POST_LOGOUT_URL +
     '&client_id=' +
@@ -44,5 +47,5 @@ export const logout = () => {
   const url =
     CONFIG.KEYCLOAK.SM_LOGOUT_URL + encodeURIComponent(keycloakLogoutUrl)
 
-  window.location = url
+  window.location.href = url
 }

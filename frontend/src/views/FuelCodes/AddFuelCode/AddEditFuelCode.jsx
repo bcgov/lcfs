@@ -59,6 +59,7 @@ const createDefaultRow = (optionsData) => {
     prefixId: defaultPrefix?.fuelCodePrefixId || 1,
     prefix: defaultPrefix?.prefix || DEFAULT_PREFIX,
     fuelSuffix: defaultPrefix?.nextFuelCode,
+    coProcessed: 'No',
     isNewRow: true,
     modified: false
   }

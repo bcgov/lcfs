@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useMemo, useRef, useState } from 'react'
