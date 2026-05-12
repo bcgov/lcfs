@@ -310,6 +310,11 @@ class ComplianceReportUpdateService:
                 report.organization_id,
             )
 
+        if report.supplemental_initiator is None:
+            await self.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report(
+                report.compliance_report_id
+            )
+
         has_decommissioned_fse = (
             await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
                 report.compliance_report_id,

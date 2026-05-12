@@ -1133,12 +1133,47 @@ class FinalSupplyEquipmentRepository:
         return bool(await self.db.scalar(stmt))
 
     @repo_handler
+    async def deactivate_decommissioned_fse_for_report(
+        self, compliance_report_id: int
+    ) -> int:
+        """
+        Deactivate active FSE reporting rows when the current equipment status
+        has become Decommissioned.
+        """
+        vt = FSEReportingBasePrefView.__table__
+        decommissioned_reporting_ids = (
+            select(vt.c.charging_equipment_compliance_id)
+            .where(
+                vt.c.compliance_report_id == compliance_report_id,
+                vt.c.charging_equipment_compliance_id.is_not(None),
+                vt.c.charging_equipment_status == "Decommissioned",
+                vt.c.is_active.is_(True),
+            )
+            .subquery()
+        )
+
+        result = await self.db.execute(
+            update(ComplianceReportChargingEquipment)
+            .where(
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                    select(
+                        decommissioned_reporting_ids.c.charging_equipment_compliance_id
+                    )
+                )
+            )
+            .values(is_active=False)
+        )
+        await self.db.flush()
+        return result.rowcount or 0
+
+    @repo_handler
     async def get_fse_reporting_list_paginated(
         self,
         organization_id: int,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
         mode: str = "all",
+        include_decommissioned_attached: bool = True,
     ) -> tuple[list[dict], int]:
         """
         Get paginated charging equipment reporting rows from reporting views.
@@ -1184,11 +1219,16 @@ class FinalSupplyEquipmentRepository:
         conditions = [
             vt.c.organization_id == organization_id,
             vt.c.compliance_report_id == compliance_report_id,
-            sa.or_(
-                vt.c.charging_equipment_status != "Decommissioned",
-                vt.c.charging_equipment_compliance_id.is_not(None),
-            ),
         ]
+        if include_decommissioned_attached:
+            conditions.append(
+                sa.or_(
+                    vt.c.charging_equipment_status != "Decommissioned",
+                    vt.c.charging_equipment_compliance_id.is_not(None),
+                )
+            )
+        else:
+            conditions.append(vt.c.charging_equipment_status != "Decommissioned")
         if mode == "summary":
             conditions.append(vt.c.is_active.is_(True))
 
