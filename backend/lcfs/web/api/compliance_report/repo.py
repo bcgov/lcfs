@@ -653,6 +653,24 @@ class ComplianceReportRepository:
         return compliance_report
 
     @repo_handler
+    async def lock_compliance_report_row(self, report_id: int) -> Optional[int]:
+        """Take a row-level lock on the compliance_report row and return its
+        current persisted transaction_id.
+
+        Serialises concurrent handlers that mint a Reserved transaction for
+        the same report (incident 4368). Returns the freshly-read
+        transaction_id so the caller can detect a sibling writer that
+        already committed a Reserved row — using the in-memory ORM value
+        would defeat the lock, since it was loaded before we blocked.
+        """
+        result = await self.db.execute(
+            select(ComplianceReport.transaction_id)
+            .where(ComplianceReport.compliance_report_id == report_id)
+            .with_for_update()
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_compliance_report_schema_by_id(
         self, report_id: int
     ) -> ComplianceReportBaseSchema | None:
