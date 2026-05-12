@@ -15,14 +15,14 @@ import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import { isQuarterEditable } from '@/utils/grid/cellEditables'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 

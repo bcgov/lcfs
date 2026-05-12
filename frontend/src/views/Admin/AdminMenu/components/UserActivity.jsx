@@ -7,7 +7,7 @@ import {
   defaultSortModel
 } from '@/views/Admin/AdminMenu/components/_schema'
 import { useGetUserActivities } from '@/hooks/useUser'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
 import ROUTES, { buildPath } from '@/routes/routes.js'
