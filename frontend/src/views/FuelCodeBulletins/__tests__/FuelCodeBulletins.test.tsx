@@ -7,6 +7,7 @@ import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
 
 const mockUseFuelCodeBulletins = vi.fn()
+const mockDownloadMutate = vi.fn()
 const mockBCGridViewer = vi.fn()
 
 vi.mock('@/utils/withRole', () => ({
@@ -26,6 +27,9 @@ vi.mock('react-i18next', () => ({
           "Fuel codes with a 'C-' prefix represent fuels produced in Canada.",
         'common.noRowsFound': 'No bulletin rows found',
         'common.errorLoading': 'Failed to load fuel code bulletins.',
+        'common.downloadBtn': 'Download Excel',
+        'common.downloadingBtn': 'Downloading Excel',
+        'common.downloadError': 'Failed to download fuel code bulletin.',
         'columns.fuelCode': 'Fuel Code',
         'columns.fuel': 'Fuel',
         'columns.company': 'Company',
@@ -42,7 +46,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/hooks/useFuelCode', () => ({
-  useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args)
+  useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args),
+  useDownloadFuelCodeBulletins: () => ({
+    mutateAsync: mockDownloadMutate
+  })
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -69,6 +76,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('FuelCodeBulletins UI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockDownloadMutate.mockResolvedValue(undefined)
     mockUseFuelCodeBulletins.mockImplementation((bulletinType) => {
       if (bulletinType === 'current') {
         return {
@@ -186,5 +194,38 @@ describe('FuelCodeBulletins UI', () => {
     render(<ArchivedFuelCodes />, { wrapper })
 
     expect(screen.getByText('Backend unavailable')).toBeInTheDocument()
+  })
+
+  it('downloads current bulletin with current filters and sorting', async () => {
+    render(<CurrentFuelCodes />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download Excel' }))
+
+    await waitFor(() => {
+      expect(mockDownloadMutate).toHaveBeenCalledWith({
+        bulletinType: 'current',
+        format: 'xlsx',
+        body: {
+          page: 1,
+          size: 25,
+          sortOrders: [],
+          filters: []
+        }
+      })
+    })
+  })
+
+  it('shows download error when archived bulletin export fails', async () => {
+    mockDownloadMutate.mockRejectedValueOnce(new Error('Download failed'))
+
+    render(<ArchivedFuelCodes />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download Excel' }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Failed to download fuel code bulletin.')
+      ).toBeInTheDocument()
+    })
   })
 })

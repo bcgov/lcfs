@@ -118,10 +118,10 @@ class FuelCodeRepository:
         self,
         compliance_period_start: date,
         bulletin_type: str,
-        offset: int,
-        limit: int,
-        conditions: list,
-        sort_orders: list,
+        offset: int = 0,
+        limit: Optional[int] = None,
+        conditions: Optional[list] = None,
+        sort_orders: Optional[list] = None,
     ):
         """
         Returns paginated approved fuel code bulletin rows.
@@ -213,7 +213,11 @@ class FuelCodeRepository:
                 desc(FuelCodeListView.effective_date),
             ]
 
-        query = query.order_by(*order_by_clauses).offset(offset).limit(limit)
+        query = query.order_by(*order_by_clauses)
+        if offset:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
 
         result = await self.db.execute(query)
         total = await self.db.scalar(count_query)
