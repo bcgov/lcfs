@@ -19,7 +19,7 @@ import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,

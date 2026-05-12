@@ -144,9 +144,7 @@ async def test_update_compliance_report_no_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    compliance_report_update_service._perform_notification_call.assert_called_once_with(
-        mock_report, "Draft", mock.ANY
-    )
+    compliance_report_update_service._perform_notification_call.assert_not_called()
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
 
@@ -2444,3 +2442,46 @@ async def test_update_compliance_report_persists_exemption_flags(
     assert mock_report.is_renewable_fuel_exempted is True
     assert mock_report.is_low_carbon_fuel_exempted is True
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_does_not_notify(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+):
+    """Selecting non-assessment is an internal flag update, not a submission."""
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = None
+    mock_report.is_non_assessment = False
+
+    submitted_status = MagicMock(spec=ComplianceReportStatus)
+    submitted_status.status = ComplianceReportStatusEnum.Submitted
+
+    report_data = ComplianceReportUpdateSchema(
+        status="Submitted",
+        is_non_assessment=True,
+        supplemental_note="Not subject to assessment",
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = submitted_status
+    mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    await compliance_report_update_service.update_compliance_report(
+        report_id, report_data, UserProfile()
+    )
+
+    assert mock_report.is_non_assessment is True
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock.ANY, skip_can_sign_check=True
+    )
+    compliance_report_update_service._perform_notification_call.assert_not_called()

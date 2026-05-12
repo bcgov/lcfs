@@ -7,17 +7,16 @@
  * - Q2: active on Jul 1 (year)
  * - Q3: active on Oct 1 (year)
  * - Q4: active on Jan 1 (year + 1)
- *
- * @param {number} quarter - Quarter (1..4)
- * @param {string} compliancePeriod - Target year (e.g. 2025)
- * @returns {boolean} - Whether editing should be enabled for that quarter
  */
-export function isQuarterEditable(quarter, compliancePeriod) {
+export function isQuarterEditable(
+  quarter: number,
+  compliancePeriod: string | number
+): boolean {
   const now = new Date()
 
-  const year = Number.parseInt(compliancePeriod, 10)
+  const year = Number.parseInt(String(compliancePeriod), 10)
 
-  let activationDate
+  let activationDate: Date
   switch (quarter) {
     case 1:
       activationDate = new Date(year, 3, 1) // month is 0-based, so 3 -> April

@@ -98,7 +98,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock cell renderers
-vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+vi.mock('@/utils/grid/cellRenderers', () => ({
   OrgStatusRenderer: () => <span>Status Renderer</span>,
   OrgTypeRenderer: () => <span>Type Renderer</span>,
   LinkRenderer: () => <div data-test="link-renderer">Link</div>,

@@ -1,7 +1,7 @@
 """Fix transaction status view to include compliance report assessed statuse
 
 Revision ID: 2e2f6f7ff391
-Revises: fcba2790c890
+Revises: a1b2c3d4e5f6
 Create Date: 2025-06-27 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "2e2f6f7ff391"
-down_revision = "fcba2790c890"
+down_revision = "a1b2c3d4e5f6"
 branch_labels = None
 depends_on = None
 

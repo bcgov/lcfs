@@ -11,7 +11,7 @@ import localizedFormat from 'dayjs/plugin/localizedFormat'
 import duration from 'dayjs/plugin/duration'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { formatDateWithTimezoneAbbr } from '@/utils/formatters.js'
+import { formatDateWithTimezoneAbbr } from '@/utils/formatters'
 
 dayjs.extend(localizedFormat)
 dayjs.extend(duration)
