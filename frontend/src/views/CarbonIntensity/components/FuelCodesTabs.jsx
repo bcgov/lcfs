@@ -1,38 +1,88 @@
 import { Box, Tab, Tabs } from '@mui/material'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { roles, govRoles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ROUTES from '@/routes/routes'
 
-const TAB_DEFS = [
-  { key: 'ci', labelKey: 'carbonIntensity:tabs.ciApplications', path: ROUTES.CI_APPLICATIONS.LIST },
-  { key: 'mine', labelKey: 'carbonIntensity:tabs.myFuelCodes', path: ROUTES.FUEL_CODES.LIST },
-  { key: 'current', labelKey: 'carbonIntensity:tabs.currentFuelCodes', path: ROUTES.FUEL_CODES.BULLETINS },
-  { key: 'archived', labelKey: 'carbonIntensity:tabs.archivedFuelCodes', path: `${ROUTES.FUEL_CODES.BULLETINS}?type=archived` }
-]
+const BULLETINS_PATH = ROUTES.FUEL_CODES.BULLETINS
+
+const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
+const isArchivedQuery = (loc) =>
+  new URLSearchParams(loc.search).get('type') === 'archived'
+
+const buildTabs = ({ isCiApplicant, isSigningAuthority, isGovernment }) => {
+  const tabs = []
+  if (isCiApplicant || isSigningAuthority || isGovernment) {
+    tabs.push({
+      key: 'ci',
+      labelKey: 'carbonIntensity:tabs.ciApplications',
+      path: ROUTES.CI_APPLICATIONS.LIST,
+      isActive: (loc) => loc.pathname.startsWith(ROUTES.CI_APPLICATIONS.LIST)
+    })
+  }
+  if (isCiApplicant) {
+    tabs.push({
+      key: 'mine',
+      labelKey: 'carbonIntensity:tabs.myFuelCodes',
+      path: ROUTES.FUEL_CODES.LIST,
+      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.LIST
+    })
+  }
+  tabs.push(
+    {
+      key: 'current',
+      labelKey: 'carbonIntensity:tabs.currentFuelCodes',
+      path: BULLETINS_PATH,
+      isActive: (loc) => isOnBulletins(loc) && !isArchivedQuery(loc)
+    },
+    {
+      key: 'archived',
+      labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
+      path: `${BULLETINS_PATH}?type=archived`,
+      isActive: (loc) => isOnBulletins(loc) && isArchivedQuery(loc)
+    }
+  )
+  return tabs
+}
 
 export const FuelCodesTabs = () => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const navigate = useNavigate()
   const location = useLocation()
+  const { hasAnyRole } = useCurrentUser()
 
-  const activeIndex = (() => {
-    const idx = TAB_DEFS.findIndex((tab) =>
-      location.pathname.startsWith(tab.path.split('?')[0])
-    )
-    return idx === -1 ? 0 : idx
-  })()
+  const tabs = useMemo(
+    () =>
+      buildTabs({
+        isCiApplicant: hasAnyRole(roles.ci_applicant),
+        isSigningAuthority: hasAnyRole(roles.signing_authority),
+        isGovernment: hasAnyRole(...govRoles)
+      }),
+    [hasAnyRole]
+  )
+
+  const activeIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.isActive(location))
+  )
 
   return (
     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
       <Tabs
         value={activeIndex}
-        onChange={(_, idx) => navigate(TAB_DEFS[idx].path)}
+        onChange={(_, idx) => navigate(tabs[idx].path)}
         aria-label="Fuel codes navigation tabs"
         variant="scrollable"
         scrollButtons="auto"
       >
-        {TAB_DEFS.map((tab) => (
-          <Tab key={tab.key} label={t(tab.labelKey)} />
+        {tabs.map((tab) => (
+          <Tab
+            key={tab.key}
+            label={t(tab.labelKey)}
+            data-test={`fuel-codes-tab-${tab.key}`}
+          />
         ))}
       </Tabs>
     </Box>

@@ -199,3 +199,8 @@ class CIApplication(BaseModel, Auditable, Versioning):
         cascade="all, delete, delete-orphan",
         lazy="selectin",
     )
+    ci_application_internal_comments = relationship(
+        "CIApplicationInternalComment",
+        back_populates="ci_application",
+        cascade="all, delete, delete-orphan",
+    )

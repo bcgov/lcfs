@@ -21,6 +21,14 @@ export const isRenewalRow = (data, applicationTypes) => {
 const renderSelectPlaceholder = (params) =>
   params.value || <BCTypography variant="body4">Select</BCTypography>
 
+const renderTextPlaceholder = (params) =>
+  params.value || <BCTypography variant="body4">Enter value</BCTypography>
+
+const renderNumberPlaceholder = (params) =>
+  params.value !== null && params.value !== undefined && params.value !== ''
+    ? params.value
+    : <BCTypography variant="body4">Enter number</BCTypography>
+
 const cellErrorStyle = (params) => {
   const rowErrors = params.context?.errors?.[params.data?.id]
   if (rowErrors?.includes(params.colDef.field)) {
@@ -232,7 +240,7 @@ export const buildPathwayColDefs = ({
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: { precision: 2, showStepperButtons: false },
       type: 'numericColumn',
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: renderNumberPlaceholder,
       cellStyle: (params) => {
         const base = cellErrorStyle(params)
         if (isRenewal(params)) return { ...base, backgroundColor: '#f5f5f5' }
@@ -277,7 +285,7 @@ export const buildPathwayColDefs = ({
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: lockedOnRenewal,
       cellEditor: 'agTextCellEditor',
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: renderTextPlaceholder,
       minWidth: 220
     },
     {
@@ -286,7 +294,7 @@ export const buildPathwayColDefs = ({
       headerComponent: canEdit ? RequiredHeader : undefined,
       editable: lockedOnRenewal,
       cellEditor: 'agTextCellEditor',
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: renderTextPlaceholder,
       minWidth: 220
     },
     {
@@ -314,7 +322,7 @@ export const buildPathwayColDefs = ({
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: { precision: 0, min: 0, showStepperButtons: false },
       type: 'numericColumn',
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: renderNumberPlaceholder,
       minWidth: 240
     },
     {
@@ -322,7 +330,7 @@ export const buildPathwayColDefs = ({
       headerName: i18n.t('carbonIntensity:step2.coproducts'),
       editable: canEdit,
       cellEditor: 'agTextCellEditor',
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: renderTextPlaceholder,
       minWidth: 240
     },
     {
@@ -350,7 +358,7 @@ export const buildPathwayColDefs = ({
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: { precision: 0, min: 0, showStepperButtons: false },
       type: 'numericColumn',
-      cellRenderer: renderSelectPlaceholder,
+      cellRenderer: renderNumberPlaceholder,
       minWidth: 260
     }
   ].map((colDef) => ({
@@ -418,6 +426,28 @@ export const validatePathwayRow = (row, applicationTypes) => {
   }
   return errors
 }
+
+const FIELD_LABEL_KEYS = {
+  applicationTypeId: 'carbonIntensity:step2.applicationType',
+  fuelCodeTypeId: 'carbonIntensity:step2.proposedFuelCodeType',
+  operatingDataFrom: 'carbonIntensity:step2.operatingDataFrom',
+  operatingDataTo: 'carbonIntensity:step2.operatingDataTo',
+  fuelCodeId: 'carbonIntensity:step2.fuelCodeIteration',
+  proposedCi: 'carbonIntensity:step2.proposedCi',
+  fuelTypeId: 'carbonIntensity:step2.fuelType',
+  feedstock: 'carbonIntensity:step2.feedstock',
+  feedstockRegion: 'carbonIntensity:step2.feedstockRegion',
+  feedstockTransportMode: 'carbonIntensity:step2.feedstockTransportMode',
+  feedstockTransportDistance: 'carbonIntensity:step2.feedstockTransportDistance',
+  finishedFuelTransportMode: 'carbonIntensity:step2.finishedFuelTransportMode',
+  finishedFuelTransportDistance:
+    'carbonIntensity:step2.finishedFuelTransportDistance'
+}
+
+export const fieldLabels = (fields, t) =>
+  fields
+    .map((field) => (FIELD_LABEL_KEYS[field] ? t(FIELD_LABEL_KEYS[field]) : field))
+    .filter(Boolean)
 
 export const rowToApiPayload = (row) => ({
   pathwayId: row.pathwayId ?? null,

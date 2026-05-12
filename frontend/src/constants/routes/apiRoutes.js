@@ -86,7 +86,6 @@ export const apiRoutes = {
   updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
   submitCIApplication: '/ci-applications/:ciApplicationId/submit',
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
-  ciApplicationComments: '/ci-applications/:ciApplicationId/comments',
   deleteCIApplication: '/ci-applications/:ciApplicationId',
 
   // reports

@@ -21,6 +21,7 @@ from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_TECHNICAL_REPORT,
 )
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -28,7 +29,6 @@ from lcfs.web.api.base import (
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
-    CIApplicationCommentSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
     CIApplicationStatusEnum,
@@ -121,8 +121,12 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
     )
 
 
-def _to_full_schema(ci: CIApplication) -> CIApplicationSchema:
+def _to_full_schema(
+    ci: CIApplication,
+    signature_user_display_name: Optional[str] = None,
+) -> CIApplicationSchema:
     return CIApplicationSchema(
+        signature_user_display_name=signature_user_display_name,
         ci_application_id=ci.ci_application_id,
         organization_id=ci.organization_id,
         organization=_to_org_info(ci.organization),
@@ -141,6 +145,10 @@ def _to_full_schema(ci: CIApplication) -> CIApplicationSchema:
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
         pathway_description=ci.pathway_description,
         pathways=[_to_pathway_schema(p) for p in (getattr(ci, "pathways", None) or [])],
+        documents=[
+            FileResponseSchema.model_validate(d)
+            for d in (getattr(ci, "documents", None) or [])
+        ],
         supporting_document_other=ci.supporting_document_other,
         consultant_name=ci.consultant_name,
         consultant_company=ci.consultant_company,
@@ -170,8 +178,23 @@ class CIApplicationServices:
     def __init__(
         self,
         repo: CIApplicationRepository = Depends(CIApplicationRepository),
+        user_repo: UserRepository = Depends(UserRepository),
     ) -> None:
         self.repo = repo
+        self.user_repo = user_repo
+
+    async def _to_full_schema_with_user(
+        self, ci: CIApplication
+    ) -> CIApplicationSchema:
+        """Serialize a CI application, resolving the signing-authority's
+        Keycloak username to a human display name via the user profile.
+        """
+        display_name = None
+        if ci.signature_user:
+            display_name = await self.user_repo.get_full_name(ci.signature_user)
+            if display_name:
+                display_name = display_name.strip() or None
+        return _to_full_schema(ci, signature_user_display_name=display_name)
 
     # ------------------------------------------------------------------
     # Reference data
@@ -431,6 +454,13 @@ class CIApplicationServices:
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
 
+        # `replace_pathways` mutates the DB via a raw DELETE + db.add() pair
+        # without touching `ci_application.pathways`. The collection on the
+        # session-cached parent is therefore stale; re-querying via the
+        # identity map won't refresh an already-loaded relationship. Force a
+        # refresh so the response reflects what's actually in the database.
+        await self.repo.refresh_pathways(ci_application)
+
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return _to_full_schema(ci)
 
@@ -605,65 +635,11 @@ class CIApplicationServices:
         await self.repo.update(ci_application)
         await self.repo.add_history(ci_application)
 
-        if data.comment:
-            await self.repo.add_comment(
-                ci_application,
-                text=data.comment,
-                author_username=user.keycloak_username,
-                author_display_name=(
-                    f"{user.first_name or ''} {user.last_name or ''}".strip()
-                    or user.keycloak_username
-                ),
-                is_government=True,
-            )
+        # NOTE: the optional `data.comment` field is intentionally ignored —
+        # the Step 5 comment thread now lives in the shared internal_comments
+        # framework (entityType="ciApplication"). Government reviewers who
+        # want to attach a comment to a decision should post it through that
+        # widget before/after recording the decision.
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return _to_full_schema(ci)
-
-    @service_handler
-    async def add_comment(
-        self,
-        ci_application: CIApplication,
-        text: str,
-        user: UserProfile,
-        is_government: bool,
-    ) -> CIApplicationCommentSchema:
-        history = await self.repo.add_comment(
-            ci_application,
-            text=text,
-            author_username=user.keycloak_username,
-            author_display_name=(
-                f"{user.first_name or ''} {user.last_name or ''}".strip()
-                or user.keycloak_username
-            ),
-            is_government=is_government,
-        )
-        snapshot = history.ci_application_snapshot or {}
-        return CIApplicationCommentSchema(
-            comment_id=history.ci_application_history_id,
-            text=snapshot.get("text", ""),
-            author_username=snapshot.get("author_username"),
-            author_display_name=snapshot.get("author_display_name"),
-            is_government=bool(snapshot.get("is_government")),
-            create_date=history.create_date,
-        )
-
-    @service_handler
-    async def list_comments(
-        self, ci_application_id: int
-    ) -> List[CIApplicationCommentSchema]:
-        rows = await self.repo.list_comments(ci_application_id)
-        out: List[CIApplicationCommentSchema] = []
-        for r in rows:
-            snapshot = r.ci_application_snapshot or {}
-            out.append(
-                CIApplicationCommentSchema(
-                    comment_id=r.ci_application_history_id,
-                    text=snapshot.get("text", ""),
-                    author_username=snapshot.get("author_username"),
-                    author_display_name=snapshot.get("author_display_name"),
-                    is_government=bool(snapshot.get("is_government")),
-                    create_date=r.create_date,
-                )
-            )
-        return out

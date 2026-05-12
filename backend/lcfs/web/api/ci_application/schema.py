@@ -16,6 +16,7 @@ from typing import List, Optional
 
 from pydantic import EmailStr, Field, field_validator, model_validator
 
+from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 
 
@@ -254,11 +255,15 @@ class CIApplicationSchema(BaseSchema):
     # values previously persisted by other developers / future steps.
     supporting_document_other: Optional[str] = None
 
+    # Step 3 — uploaded documents (technical report, GHGenius model, etc.)
+    documents: List[FileResponseSchema] = Field(default_factory=list)
+
     # Step 4 — consultant + signing authority snapshot
     consultant_name: Optional[str] = None
     consultant_company: Optional[str] = None
     consultant_email: Optional[str] = None
     signature_user: Optional[str] = None
+    signature_user_display_name: Optional[str] = None
     signature_date_time: Optional[datetime] = None
 
 
@@ -342,19 +347,10 @@ class CIApplicationDecisionSchema(BaseSchema):
         return value
 
 
-class CIApplicationCommentInputSchema(BaseSchema):
-    text: str = Field(..., min_length=1, max_length=4000)
-
-
-class CIApplicationCommentSchema(BaseSchema):
-    """Comment surfaced in the Step 5 thread."""
-
-    comment_id: int
-    text: str
-    author_username: Optional[str] = None
-    author_display_name: Optional[str] = None
-    is_government: bool = False
-    create_date: Optional[datetime] = None
+# Note: the Step 5 comment thread now uses the shared internal_comments
+# system (lcfs.web.api.internal_comment). The CIApplicationComment*
+# schemas were removed when CI applications were migrated onto the shared
+# commenting framework — see /api/internal_comments/ciApplication/{id}.
 
 
 class CIApplicationStep3Schema(BaseSchema):

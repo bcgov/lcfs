@@ -18,7 +18,11 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import ROUTES from '@/routes/routes'
 
 import { useGetCIApplications } from '@/hooks/useCIApplication'
-import { ciApplicationsColDefs, defaultSortModel } from './_schema'
+import {
+  ciApplicationsColDefs,
+  defaultSortModel,
+  getResumeStep
+} from './_schema'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
 
 const initialPaginationOptions = {
@@ -64,7 +68,11 @@ const CIApplicationsBase = () => {
     () => ({
       cellRenderer: LinkRenderer,
       cellRendererParams: {
-        url: (data) => `${data.data.ciApplicationId}`
+        url: (data) => {
+          const row = data.data
+          const step = getResumeStep(row)
+          return `${row.ciApplicationId}?step=${step}`
+        }
       }
     }),
     []

@@ -6,6 +6,7 @@ import {
   FormControl,
   FormControlLabel,
   FormHelperText,
+  InputLabel,
   Stack,
   TextField
 } from '@mui/material'
@@ -206,33 +207,48 @@ export const SignAndSubmitStep = ({
             spacing={2}
             sx={{ mt: 2 }}
           >
-            <TextField
-              label={t('carbonIntensity:step4.consultantNameLabel')}
-              value={consultantName}
-              onChange={(e) => setConsultantName(e.target.value)}
-              disabled={readOnly}
-              fullWidth
-              size="small"
-              inputProps={{ 'data-test': 'ci-step4-consultant-name' }}
-            />
-            <TextField
-              label={t('carbonIntensity:step4.consultantCompanyLabel')}
-              value={consultantCompany}
-              onChange={(e) => setConsultantCompany(e.target.value)}
-              disabled={readOnly}
-              fullWidth
-              size="small"
-              inputProps={{ 'data-test': 'ci-step4-consultant-company' }}
-            />
-            <TextField
-              label={t('carbonIntensity:step4.consultantEmailLabel')}
-              value={consultantEmail}
-              onChange={(e) => setConsultantEmail(e.target.value)}
-              disabled={readOnly}
-              fullWidth
-              size="small"
-              inputProps={{ 'data-test': 'ci-step4-consultant-email' }}
-            />
+            <Box flex={1}>
+              <InputLabel htmlFor="ci-step4-consultant-name" sx={{ pb: 1 }}>
+                {t('carbonIntensity:step4.consultantNameLabel')}
+              </InputLabel>
+              <TextField
+                id="ci-step4-consultant-name"
+                value={consultantName}
+                onChange={(e) => setConsultantName(e.target.value)}
+                disabled={readOnly}
+                fullWidth
+                variant="outlined"
+                inputProps={{ 'data-test': 'ci-step4-consultant-name' }}
+              />
+            </Box>
+            <Box flex={1}>
+              <InputLabel htmlFor="ci-step4-consultant-company" sx={{ pb: 1 }}>
+                {t('carbonIntensity:step4.consultantCompanyLabel')}
+              </InputLabel>
+              <TextField
+                id="ci-step4-consultant-company"
+                value={consultantCompany}
+                onChange={(e) => setConsultantCompany(e.target.value)}
+                disabled={readOnly}
+                fullWidth
+                variant="outlined"
+                inputProps={{ 'data-test': 'ci-step4-consultant-company' }}
+              />
+            </Box>
+            <Box flex={1}>
+              <InputLabel htmlFor="ci-step4-consultant-email" sx={{ pb: 1 }}>
+                {t('carbonIntensity:step4.consultantEmailLabel')}
+              </InputLabel>
+              <TextField
+                id="ci-step4-consultant-email"
+                value={consultantEmail}
+                onChange={(e) => setConsultantEmail(e.target.value)}
+                disabled={readOnly}
+                fullWidth
+                variant="outlined"
+                inputProps={{ 'data-test': 'ci-step4-consultant-email' }}
+              />
+            </Box>
           </Stack>
         )}
         {errors.consultant && (

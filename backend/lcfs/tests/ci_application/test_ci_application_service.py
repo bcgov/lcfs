@@ -742,14 +742,16 @@ async def test_step5_decision_transitions_to_completed(service, repo, mock_user)
 
     assert ci.status_id == completed.ci_application_status_id
     repo.add_history.assert_awaited_once()
-    repo.add_comment.assert_not_awaited()  # no comment on this payload
     assert isinstance(result, CIApplicationSchema)
 
 
 @pytest.mark.anyio
-async def test_step5_decision_records_comment_when_provided(
+async def test_step5_decision_ignores_inline_comment_field(
     service, repo, mock_user
 ):
+    """The inline `comment` field on the decision payload is intentionally
+    dropped — comments now live in the shared internal_comments framework.
+    """
     ci = _ci_application(status=_status("Submitted", 2))
     repo.get_status_by_name.return_value = _status("Withdrawn", 4)
     repo.update.side_effect = lambda obj: obj
@@ -762,10 +764,8 @@ async def test_step5_decision_records_comment_when_provided(
         is_government=True,
     )
 
-    repo.add_comment.assert_awaited_once()
-    kwargs = repo.add_comment.await_args.kwargs
-    assert kwargs["text"] == "See attached email."
-    assert kwargs["is_government"] is True
+    # No legacy add_comment call should be made by the decision flow.
+    assert not hasattr(repo, "add_comment") or not repo.add_comment.await_count
 
 
 @pytest.mark.anyio
@@ -776,47 +776,3 @@ async def test_step5_decision_schema_rejects_non_terminal_status():
     )
     with pytest.raises(pydantic.ValidationError):
         CIApplicationDecisionSchema(status="Submitted")
-
-
-@pytest.mark.anyio
-async def test_step5_add_comment_returns_schema(service, repo, mock_user):
-    ci = _ci_application()
-    history = MagicMock()
-    history.ci_application_history_id = 77
-    history.ci_application_snapshot = {
-        "type": "comment",
-        "text": "Hi there",
-        "author_username": "ci_applicant_user",
-        "author_display_name": "Jane Doe",
-        "is_government": False,
-    }
-    history.create_date = datetime(2026, 5, 1, tzinfo=timezone.utc)
-    repo.add_comment.return_value = history
-
-    out = await service.add_comment(
-        ci, "Hi there", mock_user, is_government=False
-    )
-    assert out.comment_id == 77
-    assert out.text == "Hi there"
-    assert out.is_government is False
-    assert out.author_display_name == "Jane Doe"
-
-
-@pytest.mark.anyio
-async def test_step5_list_comments_filters_to_comment_rows(service, repo):
-    h1 = MagicMock()
-    h1.ci_application_history_id = 1
-    h1.ci_application_snapshot = {
-        "type": "comment",
-        "text": "first",
-        "author_username": "u1",
-        "author_display_name": "User One",
-        "is_government": False,
-    }
-    h1.create_date = datetime(2026, 5, 1, tzinfo=timezone.utc)
-    repo.list_comments.return_value = [h1]
-
-    out = await service.list_comments(10)
-    assert len(out) == 1
-    assert out[0].text == "first"
-    repo.list_comments.assert_awaited_once_with(10)

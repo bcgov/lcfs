@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Accordion,
   AccordionDetails,
@@ -35,6 +35,7 @@ import {
   CIApplicationProgress
 } from './components/CIApplicationProgress'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
+import { ApplicationSummary } from './components/ApplicationSummary'
 import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
 import { DocumentsModellingStep } from './components/DocumentsModellingStep'
 import { SignAndSubmitStep } from './components/SignAndSubmitStep'
@@ -58,9 +59,33 @@ const EditViewCIApplicationBase = () => {
   const { data: tableOptions, isLoading: isLoadingOptions } =
     useCIApplicationOptions()
 
-  const [expanded, setExpanded] = useState([STEP_KEYS[0]])
-  const [activeStep, setActiveStep] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const stepFromUrl = (() => {
+    const raw = Number.parseInt(searchParams.get('step') ?? '1', 10)
+    if (Number.isNaN(raw)) return 0
+    return Math.max(0, Math.min(STEP_KEYS.length - 1, raw - 1))
+  })()
+  const activeStep = stepFromUrl
+
+  const [expanded, setExpanded] = useState([STEP_KEYS[stepFromUrl]])
   const [modalData, setModalData] = useState(null)
+
+  // Sync the expanded accordion when the URL step changes after mount
+  // (back/forward navigation). Initial value is already correct via useState.
+  const didMount = useRef(false)
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true
+      return
+    }
+    setExpanded([STEP_KEYS[stepFromUrl]])
+  }, [stepFromUrl])
+
+  // Once a submitted/terminal application loads, surface the Government
+  // decision panel by default — the wizard accordions for Steps 1–4 are
+  // hidden in that state, so step1..step4 in `expanded` would render
+  // nothing visible. Runs once when the status flips to non-Draft.
+  const didSyncSubmittedExpanded = useRef(false)
 
   const { mutateAsync: createDraft, isPending: isCreating } =
     useCreateCIApplication()
@@ -91,14 +116,24 @@ const EditViewCIApplicationBase = () => {
     )
   }
 
-  const goToStep = useCallback((index) => {
-    const key = STEP_KEYS[index]
-    setActiveStep(index)
-    setExpanded([key])
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [])
+  const goToStep = useCallback(
+    (index) => {
+      const clamped = Math.max(0, Math.min(STEP_KEYS.length - 1, index))
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('step', String(clamped + 1))
+          return next
+        },
+        { replace: true }
+      )
+      setExpanded([STEP_KEYS[clamped]])
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    },
+    [setSearchParams]
+  )
 
   const handleSubmitApplication = useCallback(
     async (payload) => {
@@ -258,15 +293,25 @@ const EditViewCIApplicationBase = () => {
     return null
   }, [ciApplication, currentUser])
 
+  const isDraft = ciApplication?.status?.status === 'Draft'
+  const isSubmittedOrTerminal = Boolean(
+    ciApplication?.status?.status &&
+      ciApplication.status.status !== 'Draft'
+  )
+  const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
+
+  // Hooks must run on every render — keep this above the loading-state
+  // early return so hook order stays stable across renders.
+  useEffect(() => {
+    if (isSubmittedOrTerminal && !didSyncSubmittedExpanded.current) {
+      didSyncSubmittedExpanded.current = true
+      setExpanded(['step5', 'summary'])
+    }
+  }, [isSubmittedOrTerminal])
+
   if (isLoadingOptions || (!isAdd && isLoadingApplication)) {
     return <Loading />
   }
-
-  const isDraft = ciApplication?.status?.status === 'Draft'
-  const isSubmittedOrTerminal =
-    ciApplication?.status?.status &&
-    ciApplication.status.status !== 'Draft'
-  const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
 
   const stepBodies = {
     step1: (
@@ -277,6 +322,7 @@ const EditViewCIApplicationBase = () => {
         onSave={handleStep1Save}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
+        readOnly={!isAdd && !isDraft}
       />
     ),
     step2: ciApplicationId ? (
@@ -285,7 +331,11 @@ const EditViewCIApplicationBase = () => {
         optionsData={tableOptions}
         onSave={handleStep2Save}
         onDelete={canDelete ? openDeleteConfirmation : null}
+        onValidationError={(message) =>
+          alertRef.current?.triggerAlert?.({ message, severity: 'error' })
+        }
         isSaving={isSaving || isDeleting}
+        readOnly={!isDraft}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step2" />
@@ -296,6 +346,7 @@ const EditViewCIApplicationBase = () => {
         onSave={handleStep3Save}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
+        readOnly={!isDraft}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step3" />
@@ -345,24 +396,70 @@ const EditViewCIApplicationBase = () => {
         </Box>
       )}
 
-      {CI_APPLICATION_STEPS.map((step, index) => (
-        <Accordion
-          key={step.key}
-          expanded={expanded.includes(step.key)}
-          onChange={handleAccordionToggle(step.key)}
-          data-test={`ci-step-accordion-${step.key}`}
-          sx={{ mb: 1 }}
-        >
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {`${index + 1}. ${t(step.labelKey)}`}
-            </BCTypography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <BCBox p={1}>{stepBodies[step.key]}</BCBox>
-          </AccordionDetails>
-        </Accordion>
-      ))}
+      {/*
+        On submitted/terminal applications the editable Steps 1–4
+        collapse into a single read-only "Application information"
+        accordion below the Government decision panel, per the wireframe.
+        Drafts (and new applications) keep the full wizard.
+      */}
+      {isSubmittedOrTerminal ? (
+        <>
+          <Accordion
+            key="step5"
+            expanded={expanded.includes('step5')}
+            onChange={handleAccordionToggle('step5')}
+            data-test="ci-step-accordion-step5"
+            sx={{ mb: 1 }}
+          >
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                {t('carbonIntensity:steps.step5')}
+              </BCTypography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <BCBox p={1}>{stepBodies.step5}</BCBox>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            key="summary"
+            expanded={expanded.includes('summary')}
+            onChange={handleAccordionToggle('summary')}
+            defaultExpanded
+            data-test="ci-application-summary-accordion"
+            sx={{ mb: 1 }}
+          >
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                {t('carbonIntensity:summary.header')}
+              </BCTypography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <BCBox p={1}>
+                <ApplicationSummary ciApplication={ciApplication} />
+              </BCBox>
+            </AccordionDetails>
+          </Accordion>
+        </>
+      ) : (
+        CI_APPLICATION_STEPS.map((step, index) => (
+          <Accordion
+            key={step.key}
+            expanded={expanded.includes(step.key)}
+            onChange={handleAccordionToggle(step.key)}
+            data-test={`ci-step-accordion-${step.key}`}
+            sx={{ mb: 1 }}
+          >
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                {`${index + 1}. ${t(step.labelKey)}`}
+              </BCTypography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <BCBox p={1}>{stepBodies[step.key]}</BCBox>
+            </AccordionDetails>
+          </Accordion>
+        ))
+      )}
 
       <BCBox sx={{ mt: 4, p: 2, bgcolor: 'grey.50', border: 1, borderColor: 'divider' }}>
         <BCTypography variant="caption" color="text.secondary" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}>

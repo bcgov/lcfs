@@ -60,7 +60,9 @@
     "descriptionLabel": "Description of distinctive or unique characteristics of the fuel pathway(s) included in this application",
     "descriptionHelp": "e.g. use of carbon capture and sequestration (CCS), novel energy sources for fuel production, upgrades made to facility (for fuel code renewal applications), etc.",
     "validation": {
-      "atLeastOneRow": "At least one pathway is required."
+      "atLeastOneRow": "At least one pathway is required.",
+      "fixSpecificFields": "{{count}} pathway row(s) have missing or invalid values. Please complete: {{fields}}.",
+      "dateOrder": "Operating data collection end date must be on or after the start date. Please fix the dates and try again."
     }
   },
   "step3": {
@@ -68,6 +70,7 @@
     "uploadedHeader": "Uploaded documents for application",
     "noDocuments": "No documents uploaded yet.",
     "supportingHeader": "Supporting documentation",
+    "documentCategoryLabel": "Document category",
     "uploadSupporting": "Upload supporting documentation",
     "categoryTechnicalReport": "Technical report (required)",
     "categorySupporting": "Other supporting document",
@@ -103,7 +106,7 @@
     "titleLabel": "Title:",
     "emailLabel": "Email:",
     "consultantHeader": "Third-party consultant",
-    "consultantConsentLabel": "I consent to the Ministry communicating directly with a consultant/third-party to address questions or requests for additional information related to the Application or Technical report. Fill out form below.",
+    "consultantConsentLabel": "(optional) I consent to the Ministry communicating directly with a consultant/third-party to address questions or requests for additional information related to the Application or Technical report. Fill out form below.",
     "consultantNameLabel": "Enter name",
     "consultantCompanyLabel": "Company",
     "consultantEmailLabel": "Email address",
@@ -157,6 +160,23 @@
     "required": "(required)",
     "optional": "(optional)",
     "selectPlaceholder": "Select…"
+  },
+  "summary": {
+    "header": "Application information",
+    "facilityLocation": "Fuel production facility location:",
+    "facilityCapacity": "Facility nameplate capacity:",
+    "proposedEffectiveDate": "Proposed fuel code effective date:",
+    "signingAuthorityHeader": "Signing authority",
+    "signedLabel": "Signed:",
+    "signingAuthorityLabel": "Signing authority:",
+    "titleLabel": "Title:",
+    "emailLabel": "Email:",
+    "consultantContactLabel": "Third party consultant contact:",
+    "documentsHeader": "Documents & GHGenius modelling",
+    "pathwaysHeader": "Proposed fuel pathways",
+    "noPathways": "No pathways saved.",
+    "effectiveDateShort": "Proposed effective date",
+    "iteration": "Iteration"
   },
   "footer": "For security and privacy, please don't share personal information on this website.\nThis information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations."
 }

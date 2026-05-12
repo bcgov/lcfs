@@ -8,9 +8,22 @@ import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
 
 const mockUseFuelCodeBulletins = vi.fn()
 const mockBCGridViewer = vi.fn()
+let mockSearch = ''
 
 vi.mock('@/utils/withRole', () => ({
   default: (Component: any) => Component
+}))
+
+vi.mock('react-router-dom', async () => {
+  const actual: any = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useSearchParams: () => [new URLSearchParams(mockSearch), vi.fn()]
+  }
+})
+
+vi.mock('@/views/CarbonIntensity/components/FuelCodesTabs', () => ({
+  FuelCodesTabs: () => <div data-test="fuel-codes-tabs" />
 }))
 
 vi.mock('react-i18next', () => ({
@@ -69,6 +82,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('FuelCodeBulletins UI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSearch = ''
     mockUseFuelCodeBulletins.mockImplementation((bulletinType) => {
       if (bulletinType === 'current') {
         return {
@@ -111,7 +125,7 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
-  it('renders current bulletin by default and switches to archived tab', async () => {
+  it('renders current bulletin when no type query param is present', () => {
     render(<FuelCodeBulletins />, { wrapper })
 
     expect(
@@ -120,8 +134,12 @@ describe('FuelCodeBulletins UI', () => {
     expect(
       screen.getByTestId('bc-grid-viewer-current-fuel-codes-grid')
     ).toBeInTheDocument()
+  })
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Archived' }))
+  it('renders archived bulletin when ?type=archived is in the URL', () => {
+    mockSearch = '?type=archived'
+
+    render(<FuelCodeBulletins />, { wrapper })
 
     expect(
       screen.getByText('Approved carbon intensities - Archived')

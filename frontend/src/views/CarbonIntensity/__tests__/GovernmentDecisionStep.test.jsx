@@ -15,24 +15,28 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
-const mockAddComment = vi.fn().mockResolvedValue(null)
 const mockRecordDecision = vi.fn().mockResolvedValue(null)
-let mockComments = []
-let mockIsLoadingComments = false
 
 vi.mock('@/hooks/useCIApplication', () => ({
-  useGetCIComments: vi.fn(() => ({
-    data: mockComments,
-    isLoading: mockIsLoadingComments
-  })),
-  useAddCIComment: vi.fn(() => ({
-    mutateAsync: mockAddComment,
-    isPending: false
-  })),
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: mockRecordDecision,
     isPending: false
   }))
+}))
+
+const mockCommentsWidget = vi.fn()
+vi.mock('@/components/Comments', () => ({
+  default: (props) => {
+    mockCommentsWidget(props)
+    return (
+      <div
+        data-test="shared-comments-widget"
+        data-entity-type={props.entityType}
+        data-entity-id={String(props.entityId)}
+        data-comment-mode={props.commentMode}
+      />
+    )
+  }
 }))
 
 let mockUserRoles = [{ name: roles.ci_applicant }]
@@ -57,69 +61,36 @@ const baseCi = { ciApplicationId: 10, status: { status: 'Submitted' } }
 describe('GovernmentDecisionStep', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockComments = []
-    mockIsLoadingComments = false
     mockUserRoles = [{ name: roles.ci_applicant }]
   })
   afterEach(cleanup)
 
-  it('renders the empty thread placeholder when there are no comments', () => {
+  it('renders the shared Comments widget targeting this CI application', () => {
     render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
-    expect(screen.getByTestId('ci-step5-thread')).toBeInTheDocument()
+
+    const widget = screen.getByTestId('shared-comments-widget')
+    expect(widget).toBeInTheDocument()
+    expect(widget).toHaveAttribute('data-entity-type', 'ciApplication')
+    expect(widget).toHaveAttribute('data-entity-id', '10')
+    expect(widget).toHaveAttribute('data-comment-mode', 'dual')
+  })
+
+  it('renders the empty-thread placeholder when there is no application id', () => {
+    render(<GovernmentDecisionStep ciApplication={{}} />, { wrapper })
+
+    expect(
+      screen.queryByTestId('shared-comments-widget')
+    ).not.toBeInTheDocument()
     expect(
       screen.getByText('carbonIntensity:step5.noComments')
     ).toBeInTheDocument()
   })
 
-  it('renders comments from the thread', () => {
-    mockComments = [
-      {
-        commentId: 1,
-        text: 'Hello there',
-        authorDisplayName: 'Jane Doe',
-        authorUsername: 'jdoe',
-        isGovernment: false,
-        createDate: '2026-05-08T12:00:00Z'
-      },
-      {
-        commentId: 2,
-        text: 'Got it.',
-        authorDisplayName: 'Govt Analyst',
-        authorUsername: 'gov_analyst',
-        isGovernment: true,
-        createDate: '2026-05-08T13:00:00Z'
-      }
-    ]
-    render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
-    const items = screen.getAllByTestId('ci-step5-comment')
-    expect(items).toHaveLength(2)
-    expect(items[0].textContent).toContain('Jane Doe')
-    expect(items[0].textContent).toContain('Hello there')
-  })
-
-  it('rejects empty comment submissions', async () => {
-    render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
-    fireEvent.click(screen.getByTestId('ci-step5-add-comment-btn'))
-    await waitFor(() => {
-      expect(
-        screen.getByText('carbonIntensity:step5.commentRequired')
-      ).toBeInTheDocument()
-    })
-    expect(mockAddComment).not.toHaveBeenCalled()
-  })
-
-  it('posts a comment via the hook', async () => {
-    render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
-    fireEvent.change(screen.getByTestId('ci-step5-comment-input'), {
-      target: { value: 'A new note' }
-    })
-    fireEvent.click(screen.getByTestId('ci-step5-add-comment-btn'))
-    await waitFor(() => expect(mockAddComment).toHaveBeenCalledWith('A new note'))
-  })
-
   it('hides the decision panel for non-government users', () => {
     render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
-    expect(screen.queryByTestId('ci-step5-decision-panel')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-step5-decision-panel')
+    ).not.toBeInTheDocument()
   })
 
   it('shows the decision panel for government users and records Completed', async () => {
@@ -131,28 +102,19 @@ describe('GovernmentDecisionStep', () => {
     expect(screen.getByTestId('ci-step5-decision-panel')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('ci-step5-complete-btn'))
     await waitFor(() =>
-      expect(mockRecordDecision).toHaveBeenCalledWith({
-        status: 'Completed',
-        comment: null
-      })
+      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Completed' })
     )
   })
 
-  it('records Withdrawn with the typed comment as decision rationale', async () => {
+  it('records Withdrawn without an inline comment payload', async () => {
     mockUserRoles = [{ name: roles.government }]
     render(
       <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
       { wrapper }
     )
-    fireEvent.change(screen.getByTestId('ci-step5-comment-input'), {
-      target: { value: 'Insufficient information' }
-    })
     fireEvent.click(screen.getByTestId('ci-step5-withdraw-btn'))
     await waitFor(() =>
-      expect(mockRecordDecision).toHaveBeenCalledWith({
-        status: 'Withdrawn',
-        comment: 'Insufficient information'
-      })
+      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Withdrawn' })
     )
   })
 

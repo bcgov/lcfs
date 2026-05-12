@@ -12,6 +12,7 @@ import {
   apiToRow,
   buildPathwayColDefs,
   defaultColDef,
+  fieldLabels,
   rowToApiPayload,
   validatePathwayRow
 } from './_step2Schema'
@@ -40,6 +41,7 @@ export const ProposedFuelPathwaysStep = ({
   optionsData,
   onSave,
   onDelete,
+  onValidationError,
   isSaving = false,
   readOnly = false
 }) => {
@@ -71,19 +73,44 @@ export const ProposedFuelPathwaysStep = ({
     [optionsData, canEdit]
   )
 
-  const onCellValueChanged = useCallback((params) => {
-    setRowData((prev) =>
-      prev.map((row) => (row.id === params.data.id ? { ...params.data } : row))
-    )
-  }, [])
+  const onCellValueChanged = useCallback(
+    (params) => {
+      setRowData((prev) =>
+        prev.map((row) =>
+          row.id === params.data.id ? { ...params.data } : row
+        )
+      )
+      setErrors((prev) => {
+        if (!prev[params.data.id]) return prev
+        const applicationTypes = optionsData?.pathwayApplicationTypes || []
+        const remaining = validatePathwayRow(params.data, applicationTypes)
+        const next = { ...prev }
+        if (remaining.length) {
+          next[params.data.id] = remaining
+        } else {
+          delete next[params.data.id]
+        }
+        return next
+      })
+      params.api?.refreshCells({ rowNodes: [params.node], force: true })
+    },
+    [optionsData]
+  )
 
   const onAction = useCallback(async (action, params) => {
     switch (action) {
-      case 'add':
-        return { add: [createEmptyRow()] }
+      case 'add': {
+        const newRow = createEmptyRow()
+        // Mirror the grid transaction into React state — otherwise the next
+        // re-render makes ag-grid re-sync to the stale rowData prop and the
+        // newly-added row vanishes from the grid.
+        setRowData((prev) => [...prev, newRow])
+        return { add: [newRow] }
+      }
       case 'duplicate': {
         const original = params.data
         const copy = { ...original, id: uuid(), pathwayId: null }
+        setRowData((prev) => [...prev, copy])
         return { add: [copy] }
       }
       case 'delete':
@@ -108,24 +135,60 @@ export const ProposedFuelPathwaysStep = ({
   }
 
   const handleSave = async () => {
+    // Commit any open cell editor before reading row data, otherwise the
+    // value the user just typed isn't yet written back to node.data and
+    // validation falsely flags it as missing.
+    if (typeof gridRef.current?.api?.stopEditing === 'function') {
+      gridRef.current.api.stopEditing()
+    }
+
     const rows = collectGridRows()
     const applicationTypes = optionsData?.pathwayApplicationTypes || []
 
     if (!rows.length) {
-      setErrors({ _form: t('carbonIntensity:step2.validation.atLeastOneRow') })
+      const message = t('carbonIntensity:step2.validation.atLeastOneRow')
+      setErrors({ _form: message })
+      onValidationError?.(message)
       return
     }
 
     const newErrors = {}
+    let hasDateOrderIssue = false
     rows.forEach((row) => {
       const fieldErrors = validatePathwayRow(row, applicationTypes)
       if (fieldErrors.length) {
         newErrors[row.id] = fieldErrors
+        if (
+          row.operatingDataFrom &&
+          row.operatingDataTo &&
+          row.operatingDataTo < row.operatingDataFrom
+        ) {
+          hasDateOrderIssue = true
+        }
       }
     })
     if (Object.keys(newErrors).length) {
       setErrors(newErrors)
       gridRef.current?.api?.refreshCells({ force: true })
+
+      const missingFields = new Set()
+      Object.values(newErrors).forEach((fields) => {
+        fields.forEach((f) => {
+          // operatingDataTo can be both missing and "before from"; the dedicated
+          // dateOrder copy handles the latter, so don't double-name it.
+          if (!(f === 'operatingDataTo' && hasDateOrderIssue)) {
+            missingFields.add(f)
+          }
+        })
+      })
+      const labels = fieldLabels([...missingFields], t)
+      const message = hasDateOrderIssue
+        ? t('carbonIntensity:step2.validation.dateOrder')
+        : t('carbonIntensity:step2.validation.fixSpecificFields', {
+            count: Object.keys(newErrors).length,
+            fields: labels.join(', ')
+          })
+      onValidationError?.(message)
       return
     }
 

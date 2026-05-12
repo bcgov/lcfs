@@ -182,56 +182,17 @@ export const useRecordCIDecision = (ciApplicationId) => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
-      queryClient.invalidateQueries({
-        queryKey: ['ci-application-comments', String(ciApplicationId)]
-      })
+      // The Step 5 comment thread is invalidated by the shared
+      // <Comments /> widget itself when it posts. Nothing to do here.
       queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
     }
   })
 }
 
-export const useGetCIComments = (ciApplicationId, options) => {
-  const client = useApiService()
-  return useQuery({
-    enabled: !!ciApplicationId,
-    queryKey: ['ci-application-comments', String(ciApplicationId)],
-    queryFn: async () => {
-      return (
-        await client.get(
-          apiRoutes.ciApplicationComments.replace(
-            ':ciApplicationId',
-            ciApplicationId
-          )
-        )
-      ).data
-    },
-    staleTime: 30 * 1000,
-    ...options
-  })
-}
-
-export const useAddCIComment = (ciApplicationId) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (text) => {
-      return (
-        await client.post(
-          apiRoutes.ciApplicationComments.replace(
-            ':ciApplicationId',
-            ciApplicationId
-          ),
-          { text }
-        )
-      ).data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['ci-application-comments', String(ciApplicationId)]
-      })
-    }
-  })
-}
+// The Step 5 comment thread now uses the shared internal_comments
+// framework — see <Comments entityType="ciApplication" /> in
+// GovernmentDecisionStep. The legacy useGetCIComments / useAddCIComment
+// hooks were removed when CI applications were migrated onto it.
 
 export const useDeleteCIApplication = () => {
   const client = useApiService()

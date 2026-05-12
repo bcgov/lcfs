@@ -24,7 +24,11 @@ vi.mock('@react-keycloak/web', () => ({
 let mockUserRoles = [{ name: roles.ci_applicant }]
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    data: { roles: mockUserRoles, organization: { organizationId: 1 } }
+    data: { roles: mockUserRoles, organization: { organizationId: 1 } },
+    hasRoles: (...names) =>
+      names.every((n) => mockUserRoles.some((r) => r.name === n)),
+    hasAnyRole: (...names) =>
+      names.some((n) => mockUserRoles.some((r) => r.name === n))
   })
 }))
 

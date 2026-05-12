@@ -468,65 +468,8 @@ async def test_decision_endpoint_rejects_non_terminal_status(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-@pytest.mark.anyio
-async def test_list_comments_returns_thread(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_user_role,
-):
-    set_user_role(RoleEnum.CI_APPLICANT)
-    with patch(
-        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
-        new=AsyncMock(return_value=None),
-    ), patch(
-        "lcfs.web.api.ci_application.services.CIApplicationServices.list_comments"
-    ) as svc:
-        svc.return_value = []
-        response = await client.get("/api/ci-applications/10/comments")
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json() == []
-
-
-@pytest.mark.anyio
-async def test_add_comment_returns_201(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_user_role,
-):
-    set_user_role(RoleEnum.CI_APPLICANT)
-    from lcfs.web.api.ci_application.schema import CIApplicationCommentSchema
-
-    with patch(
-        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
-        new=AsyncMock(return_value=None),
-    ), patch(
-        "lcfs.web.api.ci_application.services.CIApplicationServices.add_comment"
-    ) as svc:
-        svc.return_value = CIApplicationCommentSchema(
-            comment_id=1,
-            text="Hi",
-            author_username="ci_applicant_user",
-            author_display_name="Test User",
-            is_government=False,
-            create_date=datetime(2026, 5, 1, tzinfo=timezone.utc),
-        )
-        response = await client.post(
-            "/api/ci-applications/10/comments", json={"text": "Hi"}
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-        body = response.json()
-        assert body["text"] == "Hi"
-        assert body["isGovernment"] is False
-
-
-@pytest.mark.anyio
-async def test_add_comment_rejects_empty_text(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_user_role,
-):
-    set_user_role(RoleEnum.CI_APPLICANT)
-    response = await client.post(
-        "/api/ci-applications/10/comments", json={"text": ""}
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+# The legacy /ci-applications/{id}/comments endpoints were retired when
+# CI applications were migrated onto the shared internal_comments
+# framework. The Step 5 thread now lives at
+# /api/internal_comments/ciApplication/{id}; see
+# lcfs/tests/internal_comment/ for the corresponding tests.

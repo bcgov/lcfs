@@ -15,7 +15,17 @@ export const CIApplicationProgress = ({ activeStep = 0 }) => {
     <Stepper
       activeStep={activeStep}
       alternativeLabel
-      sx={{ mb: 3, mt: 2 }}
+      sx={{
+        mb: 3,
+        mt: 2,
+        '& .MuiStepIcon-root': {
+          width: 32,
+          height: 32
+        },
+        '& .MuiStepIcon-text': {
+          fontSize: '0.875rem'
+        }
+      }}
     >
       {CI_APPLICATION_STEPS.map((s) => (
         <Step key={s.key}>

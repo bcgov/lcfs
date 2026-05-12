@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Box,
   IconButton,
+  InputLabel,
   Link,
   MenuItem,
   Stack,
@@ -222,23 +223,29 @@ export const DocumentsModellingStep = ({
         {t('carbonIntensity:step3.supportingHeader')}
       </BCTypography>
 
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-        <TextField
-          select
-          size="small"
-          value={supportingCategory}
-          onChange={(e) => setSupportingCategory(e.target.value)}
-          disabled={readOnly}
-          sx={{ minWidth: 280 }}
-          inputProps={{ 'data-test': 'ci-step3-supporting-category' }}
-        >
-          <MenuItem value={DOC_CATEGORY_TECHNICAL_REPORT}>
-            {t('carbonIntensity:step3.categoryTechnicalReport')}
-          </MenuItem>
-          <MenuItem value={DOC_CATEGORY_SUPPORTING}>
-            {t('carbonIntensity:step3.categorySupporting')}
-          </MenuItem>
-        </TextField>
+      <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ mb: 1 }}>
+        <Box sx={{ minWidth: 340 }}>
+          <InputLabel htmlFor="ci-step3-supporting-category" sx={{ pb: 1 }}>
+            {t('carbonIntensity:step3.documentCategoryLabel')}
+          </InputLabel>
+          <TextField
+            select
+            id="ci-step3-supporting-category"
+            value={supportingCategory}
+            onChange={(e) => setSupportingCategory(e.target.value)}
+            disabled={readOnly}
+            fullWidth
+            variant="outlined"
+            inputProps={{ 'data-test': 'ci-step3-supporting-category' }}
+          >
+            <MenuItem value={DOC_CATEGORY_TECHNICAL_REPORT}>
+              {t('carbonIntensity:step3.categoryTechnicalReport')}
+            </MenuItem>
+            <MenuItem value={DOC_CATEGORY_SUPPORTING}>
+              {t('carbonIntensity:step3.categorySupporting')}
+            </MenuItem>
+          </TextField>
+        </Box>
         <BCButton
           type="button"
           variant="outlined"
@@ -247,6 +254,7 @@ export const DocumentsModellingStep = ({
           onClick={() => supportingFileRef.current?.click()}
           disabled={readOnly || isUploading}
           data-test="ci-step3-upload-supporting"
+          sx={{ height: 56 }}
         >
           {t('carbonIntensity:step3.uploadSupporting')}
         </BCButton>

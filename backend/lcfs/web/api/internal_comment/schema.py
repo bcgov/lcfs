@@ -20,6 +20,7 @@ class EntityTypeEnum(str, Enum):
     ADMIN_ADJUSTMENT = "administrativeAdjustment"
     ASSESSMENT = "Assessment"
     COMPLIANCE_REPORT = "complianceReport"
+    CI_APPLICATION = "ciApplication"
 
 
 class AudienceScopeEnum(str, Enum):

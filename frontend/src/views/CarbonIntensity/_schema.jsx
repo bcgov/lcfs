@@ -47,3 +47,26 @@ export const ciApplicationsColDefs = (t) => [
 ]
 
 export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
+
+/**
+ * Map an application's status to the wizard step number (1-indexed) the user
+ * should land on when they re-open the row from the list.
+ *
+ * Step 1 is implicitly completed by the time the row exists (creating the
+ * draft requires the Step 1 fields), so Drafts resume at Step 2. Once
+ * submitted, the applicant is past the editable steps and should land on
+ * the Government decision panel.
+ */
+export const getResumeStep = (application) => {
+  const status = application?.status?.status
+  switch (status) {
+    case 'Draft':
+      return 2
+    case 'Submitted':
+    case 'Completed':
+    case 'Withdrawn':
+      return 5
+    default:
+      return 1
+  }
+}

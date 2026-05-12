@@ -9,7 +9,7 @@ All five wizard steps are wired:
   Step 5 — Government decision (with comments thread)
 """
 
-from typing import List, Optional
+from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Request, status
@@ -18,8 +18,6 @@ from fastapi.responses import JSONResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
-    CIApplicationCommentInputSchema,
-    CIApplicationCommentSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
@@ -262,37 +260,8 @@ async def record_government_decision(
     return await service.record_decision(ci, data, request.user, is_government)
 
 
-@router.get(
-    "/{ci_application_id}/comments",
-    response_model=List[CIApplicationCommentSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(["*"])
-async def list_ci_application_comments(
-    request: Request,
-    ci_application_id: int,
-    service: CIApplicationServices = Depends(),
-    validate: CIApplicationValidation = Depends(),
-) -> List[CIApplicationCommentSchema]:
-    """Return the Step 5 comments thread for the application."""
-    await validate.validate_access(ci_application_id)
-    return await service.list_comments(ci_application_id)
-
-
-@router.post(
-    "/{ci_application_id}/comments",
-    response_model=CIApplicationCommentSchema,
-    status_code=status.HTTP_201_CREATED,
-)
-@view_handler(["*"])
-async def add_ci_application_comment(
-    request: Request,
-    ci_application_id: int,
-    data: CIApplicationCommentInputSchema = Body(...),
-    service: CIApplicationServices = Depends(),
-    validate: CIApplicationValidation = Depends(),
-) -> CIApplicationCommentSchema:
-    """Add a comment to the Step 5 thread. Both BCEID and IDIR can post."""
-    ci = await validate.validate_access(ci_application_id)
-    is_government = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
-    return await service.add_comment(ci, data.text, request.user, is_government)
+# Step 5 comment thread is now served by the shared internal_comments
+# router at /api/internal_comments/{entityType}/{entityId} with
+# entityType="ciApplication". The legacy /comments endpoints on this
+# router were removed when CI applications were migrated onto the shared
+# commenting framework.

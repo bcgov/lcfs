@@ -3,13 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
 import {
-  useAddCIComment,
   useCIApplicationOptions,
   useCreateCIApplication,
   useDeleteCIApplication,
   useGetCIApplication,
   useGetCIApplications,
-  useGetCIComments,
   useRecordCIDecision,
   useSubmitCIApplication,
   useUpdateCIApplicationStep1
@@ -235,70 +233,27 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useRecordCIDecision', () => {
-    it('POSTs /ci-applications/:id/decision and invalidates comments + detail', async () => {
+    it('POSTs /ci-applications/:id/decision and invalidates the list cache', async () => {
       const completed = { ciApplicationId: 12, status: { status: 'Completed' } }
       mockPost.mockResolvedValue({ data: completed })
 
       const { result } = renderHook(() => useRecordCIDecision(12), { wrapper })
-      const out = await result.current.mutateAsync({
-        status: 'Completed',
-        comment: 'looks good'
-      })
+      const out = await result.current.mutateAsync({ status: 'Completed' })
+
       expect(mockPost).toHaveBeenCalledWith('/ci-applications/12/decision', {
-        status: 'Completed',
-        comment: 'looks good'
+        status: 'Completed'
       })
       expect(out).toEqual(completed)
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ['ci-application-comments', '12']
+        queryKey: ['ci-applications']
       })
     })
   })
 
-  // ------------------------------------------------------------------
-  // useGetCIComments
-  // ------------------------------------------------------------------
-
-  describe('useGetCIComments', () => {
-    it('GETs /ci-applications/:id/comments when an id is provided', async () => {
-      const comments = [{ commentId: 1, text: 'hi' }]
-      mockGet.mockResolvedValue({ data: comments })
-      const { result } = renderHook(() => useGetCIComments(7), { wrapper })
-      await waitFor(() => expect(result.current.isSuccess).toBe(true))
-      expect(mockGet).toHaveBeenCalledWith('/ci-applications/7/comments')
-      expect(result.current.data).toEqual(comments)
-    })
-
-    it('does not fetch without an id', () => {
-      const { result } = renderHook(() => useGetCIComments(undefined), {
-        wrapper
-      })
-      expect(result.current.fetchStatus).toBe('idle')
-      expect(mockGet).not.toHaveBeenCalled()
-    })
-  })
-
-  // ------------------------------------------------------------------
-  // useAddCIComment
-  // ------------------------------------------------------------------
-
-  describe('useAddCIComment', () => {
-    it('POSTs the text payload and invalidates the comments cache', async () => {
-      const created = { commentId: 99, text: 'hi' }
-      mockPost.mockResolvedValue({ data: created })
-
-      const { result } = renderHook(() => useAddCIComment(12), { wrapper })
-      const out = await result.current.mutateAsync('hi')
-
-      expect(mockPost).toHaveBeenCalledWith('/ci-applications/12/comments', {
-        text: 'hi'
-      })
-      expect(out).toEqual(created)
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ['ci-application-comments', '12']
-      })
-    })
-  })
+  // Step 5 comments now use the shared <Comments entityType="ciApplication" />
+  // widget via the internal_comments framework — see useComments. The
+  // legacy useGetCIComments / useAddCIComment hooks were removed along
+  // with the /ci-applications/{id}/comments endpoints.
 
   describe('useDeleteCIApplication', () => {
     it('DELETEs /ci-applications/:id and invalidates the list cache', async () => {
