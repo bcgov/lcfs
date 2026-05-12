@@ -172,6 +172,10 @@ async def test_handle_submitted_status_blocks_duplicate_when_reserved_exists(
     report.transaction_id = 100  # left behind by the first submit
     report.compliance_report_group_uuid = "test-uuid"
 
+    # The lock returns the persisted transaction_id — what the row-level
+    # lock acquires and what the idempotency guard then reads against.
+    mock_repo.lock_compliance_report_row.return_value = 100
+
     existing_reserve = MagicMock()
     existing_reserve.transaction_id = 100
     mock_trxn_repo.get_reserved_transaction_by_id.return_value = existing_reserve
@@ -192,6 +196,56 @@ async def test_handle_submitted_status_blocks_duplicate_when_reserved_exists(
     mock_trxn_repo.get_reserved_transaction_by_id.assert_called_once_with(
         100
     )
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_lock_resyncs_transaction_id(
+    compliance_report_update_service,
+    mock_user_has_roles,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Concurrent-race regression for incident 4368.
+
+    Two in-flight submit requests both read the report with
+    transaction_id=NULL. The first commits, the second blocks on the row
+    lock. When the second wakes up its in-memory `report.transaction_id`
+    is still NULL — but the lock returns the freshly-persisted value, and
+    the handler must trust *that* (not the stale ORM attribute) for the
+    idempotency check. Without this resync the second writer would mint
+    a duplicate Reserved row and leave the first one orphaned.
+    """
+    mock_user_has_roles.return_value = True
+
+    report_id = 1
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = report_id
+    report.organization_id = 1
+    report.transaction_id = None  # stale — loaded before the lock
+    report.compliance_report_group_uuid = "test-uuid"
+
+    # First writer already committed transaction 200; our lock acquisition
+    # returns that fresh value.
+    mock_repo.lock_compliance_report_row.return_value = 200
+
+    existing_reserve = MagicMock()
+    existing_reserve.transaction_id = 200
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = existing_reserve
+
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "test-user"
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.handle_submitted_status(
+            report, user
+        )
+
+    assert exc.value.status_code == 409
+    # The idempotency check must use the lock-returned id (200), not the
+    # stale in-memory None.
+    mock_trxn_repo.get_reserved_transaction_by_id.assert_called_once_with(200)
+    mock_trxn_repo.create_transaction.assert_not_called()
+    mock_repo.update_compliance_report.assert_not_called()
 
 
 @pytest.mark.anyio
