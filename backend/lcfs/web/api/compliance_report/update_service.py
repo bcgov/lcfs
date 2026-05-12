@@ -301,12 +301,23 @@ class ComplianceReportUpdateService:
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
+        # Serialise concurrent submissions of the same report. Without this
+        # lock the idempotency check below is a TOCTOU race: two in-flight
+        # requests both read transaction_id=NULL, both create a Reserved
+        # transaction, and the second UPDATE leaves the first row orphaned
+        # (incident 4368 follow-up — the original hotfix only closed the
+        # sequential repeat-click window). The lock returns the freshly
+        # persisted transaction_id; we sync it back onto the report so the
+        # rest of the handler can't act on a stale in-memory value.
+        persisted_transaction_id = await self.repo.lock_compliance_report_row(
+            report.compliance_report_id
+        )
+        report.transaction_id = persisted_transaction_id
+
         # Idempotency guard. If a Reserved transaction already exists for
         # this report, a prior submission already ran — re-running here
         # would mint a duplicate Reserved row, re-send notifications, and
-        # corrupt the org's available_balance. Incident 4368: a report
-        # ended up with 7 duplicate Reserved rows because repeat clicks on
-        # Sign-and-Submit each got a fresh handler run.
+        # corrupt the org's available_balance.
         existing_reserve = await self._fetch_reserved_transaction_for_report(
             report
         )
@@ -421,6 +432,17 @@ class ComplianceReportUpdateService:
         ):
             credit_change = report.summary.line_20_surplus_deficit_units
             if credit_change != 0:
+                # Same TOCTOU race as supplier submission — two analysts
+                # (or one analyst clicking twice) both reading
+                # transaction_id=NULL would each mint a Reserved row.
+                # Serialise via the same row lock and resync the
+                # in-memory transaction_id from the persisted value.
+                persisted_transaction_id = (
+                    await self.repo.lock_compliance_report_row(
+                        report.compliance_report_id
+                    )
+                )
+                report.transaction_id = persisted_transaction_id
                 await self._create_or_update_reserve_transaction(
                     credit_change, report
                 )
