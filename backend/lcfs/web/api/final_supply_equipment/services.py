@@ -11,6 +11,7 @@ from lcfs.db.models.compliance import (
     ComplianceReportChargingEquipment,
 )
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -355,6 +356,16 @@ class FinalSupplyEquipmentServices:
         )
         return reporting_record
 
+    def _should_refresh_decommissioned_fse(self, report: ComplianceReport) -> bool:
+        report_status = getattr(getattr(report, "current_status", None), "status", None)
+        if hasattr(report_status, "value"):
+            report_status = report_status.value
+
+        return (
+            report_status == ComplianceReportStatusEnum.Draft.value
+            and getattr(report, "supplemental_initiator", None) is None
+        )
+
     @service_handler
     async def delete_all(self, compliance_report_id: int):
         return await self.repo.delete_all(compliance_report_id)
@@ -501,9 +512,24 @@ class FinalSupplyEquipmentServices:
                 only_active=(mode == "summary"),
             )
 
-        data, total = await self.repo.get_fse_reporting_list_paginated(
-            organization_id, pagination, report.compliance_report_id, mode
-        )
+        refresh_decommissioned_fse = self._should_refresh_decommissioned_fse(report)
+        if refresh_decommissioned_fse:
+            await self.repo.deactivate_decommissioned_fse_for_report(
+                report.compliance_report_id
+            )
+
+        if refresh_decommissioned_fse:
+            data, total = await self.repo.get_fse_reporting_list_paginated(
+                organization_id,
+                pagination,
+                report.compliance_report_id,
+                mode,
+                include_decommissioned_attached=False,
+            )
+        else:
+            data, total = await self.repo.get_fse_reporting_list_paginated(
+                organization_id, pagination, report.compliance_report_id, mode
+            )
 
         processed_data = []
         for item in data:
