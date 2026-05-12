@@ -205,6 +205,7 @@ SELECT
     fc.feedstock,
     fc.feedstock_location,
     fc.feedstock_misc,
+    fc.co_processed,
     fc.fuel_production_facility_city,
     fc.fuel_production_facility_province_state,
     fc.fuel_production_facility_country,
@@ -1007,6 +1008,7 @@ SELECT DISTINCT
   fc.feedstock,
   fc.feedstock_location,
   fc.feedstock_misc,
+  fc.co_processed,
   fc.effective_date,
   fc.application_date,
   fc.approval_date,
@@ -1102,6 +1104,7 @@ SELECT
       "Fuel Code - fuel_code_id"."feedstock" AS "FC - id__feedstock",
       "Fuel Code - fuel_code_id"."feedstock_location" AS "FC - id__feedstock_location",
       "Fuel Code - fuel_code_id"."feedstock_misc" AS "FC - id__feedstock_misc",
+      "Fuel Code - fuel_code_id"."co_processed" AS "FC - id__co_processed",
       "Fuel Code - fuel_code_id"."fuel_production_facility_city" AS "FC - id__fuel_production_facility_city",
       "Fuel Code - fuel_code_id"."fuel_production_facility_province_state" AS "FC - id__fuel_production_facility_province_state",
       "Fuel Code - fuel_code_id"."fuel_production_facility_country" AS "FC - id__fuel_production_facility_country",
@@ -2259,6 +2262,7 @@ SELECT
     fc.feedstock,
     fc.feedstock_location,
     fc.feedstock_misc,
+    fc.co_processed,
     fc.fuel_production_facility_city,
     fc.fuel_production_facility_province_state,
     fc.fuel_production_facility_country,
@@ -2632,6 +2636,62 @@ CREATE INDEX IF NOT EXISTS idx_fse_info_supply_dates
     ON final_supply_equipment (supply_from_date, supply_to_date);
 CREATE INDEX IF NOT EXISTS idx_fse_info_location
     ON final_supply_equipment (latitude, longitude);
+-- ==========================================
+-- FSE Base View YoY
+-- ==========================================
+DROP VIEW IF EXISTS vw_fse_base CASCADE;
+CREATE OR REPLACE VIEW vw_fse_base AS
+SELECT
+    cp.compliance_period_id              AS "Compliance Period ID",
+    cp.description                       AS "Compliance Year",
+    o.organization_id                    AS "Organization ID",
+    o.name                               AS "Organization",
+    o.operating_name                     AS "Organization Operating Name",
+    fse.registration_number              AS "Registration Number",
+    vcr.compliance_report_id             AS "Compliance Report ID",
+    vcr.compliance_report_group_uuid     AS "Compliance Report Group UUID",
+    vcr.version                          AS "Report Version",
+    vcr.report_type                      AS "Report Type",
+    vcr.supplemental_initiator           AS "Supplemental Initiator",
+    vcr.report_status                    AS "Report Status",
+    fse.site_name                        AS "Site Name",
+    fse.supply_from_date                 AS "Supply From Date",
+    fse.supply_to_date                   AS "Supply To Date",
+    fse.kwh_usage                        AS "kWh Usage",
+    fse.serial_number                    AS "Serial #",
+    fse.manufacturer                     AS "Manufacturer",
+    fse.model                            AS "Model",
+    fse.level_of_equipment               AS "Level of Equipment",
+    fse.ports                            AS "Ports",
+    COALESCE(array_to_string(fse.intended_uses, ', '), '')  AS "Intended Use",
+    COALESCE(array_to_string(fse.intended_users, ', '), '') AS "Intended Users",
+    fse.allocating_organization_name     AS "Allocating Organization",
+    fse.street_address                   AS "Street Address",
+    fse.city                             AS "City",
+    fse.postal_code                      AS "Postal Code",
+    fse.latitude                         AS "Latitude",
+    fse.longitude                        AS "Longitude",
+    fse.power_output                     AS "Power Output (kW)",
+    fse.capacity_utilization_percent     AS "Capacity Utilization %",
+    fse.charging_equipment_status        AS "Charging Equipment Status",
+    fse.equipment_notes                  AS "Equipment Notes",
+    fse.compliance_notes                 AS "Compliance Notes"
+FROM v_fse_reporting_base_pref fse
+JOIN v_compliance_report vcr
+    ON vcr.compliance_report_group_uuid = fse.compliance_report_group_uuid
+   AND vcr.is_latest = true
+JOIN organization o
+    ON o.organization_id = vcr.organization_id
+JOIN compliance_period cp
+    ON cp.compliance_period_id = vcr.compliance_period_id
+WHERE vcr.report_status != 'Draft'
+ORDER BY
+    cp.description DESC,
+    o.name,
+    fse.supply_from_date,
+    fse.serial_number;
+
+GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Electricity Allocation FSE Match Query
 -- ==========================================
@@ -3366,6 +3426,7 @@ SELECT DISTINCT
   fc.feedstock,
   fc.feedstock_location,
   fc.feedstock_misc,
+  fc.co_processed,
   fc.effective_date,
   fc.application_date,
   fc.approval_date,
@@ -3491,6 +3552,7 @@ SELECT DISTINCT
   fc.feedstock,
   fc.feedstock_location,
   fc.feedstock_misc,
+  fc.co_processed,
   fc.effective_date,
   fc.application_date,
   fc.approval_date,
@@ -3621,6 +3683,7 @@ SELECT DISTINCT
   fc.feedstock,
   fc.feedstock_location,
   fc.feedstock_misc,
+  fc.co_processed,
   fc.effective_date,
   fc.application_date,
   fc.approval_date,

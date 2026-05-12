@@ -13,6 +13,8 @@ import BCTypography from '@/components/BCTypography'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { numberFormatter } from '@/utils/formatters'
 
+const CO_PROCESSED_OPTIONS = ['No', 'Yes - DHT', 'Yes - FCC']
+
 const cellErrorStyle = (params) => {
   if (
     params.data.validationMsg &&
@@ -415,6 +417,24 @@ export const fuelCodeColDefs = (
       openOnFocus: true
     },
     minWidth: 495
+  },
+  {
+    field: 'coProcessed',
+    editable: canEdit,
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.coProcessed'),
+    cellEditor: AutocompleteCellEditor,
+    suppressKeyboardEvent,
+    cellDataType: 'text',
+    cellRenderer: createCellRenderer('coProcessed'),
+    cellEditorParams: {
+      noLabel: true,
+      options: CO_PROCESSED_OPTIONS,
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
+    },
+    minWidth: 180
   },
   {
     field: 'fuelProductionFacilityCity',

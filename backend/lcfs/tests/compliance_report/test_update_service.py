@@ -144,10 +144,91 @@ async def test_update_compliance_report_no_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    compliance_report_update_service._perform_notification_call.assert_called_once_with(
-        mock_report, "Draft", mock.ANY
-    )
+    compliance_report_update_service._perform_notification_call.assert_not_called()
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_blocks_duplicate_when_reserved_exists(
+    compliance_report_update_service,
+    mock_user_has_roles,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Regression guard for incident 4368.
+
+    Repeat clicks on Sign-and-Submit each ran the full submitted handler,
+    minting one duplicate Reserved transaction per click.
+    handle_submitted_status must refuse to run a second time as soon as a
+    Reserved transaction already exists for the report — before any
+    notifications, FSE auto-submit, summary calc, or transaction creation.
+    """
+    mock_user_has_roles.return_value = True
+
+    report_id = 1
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = report_id
+    report.organization_id = 1
+    report.transaction_id = 100  # left behind by the first submit
+    report.compliance_report_group_uuid = "test-uuid"
+
+    existing_reserve = MagicMock()
+    existing_reserve.transaction_id = 100
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = existing_reserve
+
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "test-user"
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.handle_submitted_status(
+            report, user
+        )
+
+    assert exc.value.status_code == 409
+    # Critical: nothing downstream ran — no FSE auto-submit, no summary
+    # calc, no new transaction, no repo update.
+    mock_repo.update_compliance_report.assert_not_called()
+    mock_trxn_repo.create_transaction.assert_not_called()
+    mock_trxn_repo.get_reserved_transaction_by_id.assert_called_once_with(
+        100
+    )
+
+
+@pytest.mark.anyio
+async def test_create_or_update_reserve_uses_persisted_transaction(
+    compliance_report_update_service, mock_trxn_repo
+):
+    """Even if the in-memory `report.transaction` relationship is None
+    (stale identity map, cross-request reload), as long as report.transaction_id
+    points at a real Reserved row, the persisted row must be updated rather
+    than a new one inserted. This is the second line of defence for the
+    duplicate-submission bug."""
+    org_service = compliance_report_update_service.org_service
+    org_service.calculate_available_balance = AsyncMock(return_value=1_000_000)
+    org_service.adjust_balance = AsyncMock()
+    compliance_report_update_service._calculate_pre_deadline_balance = AsyncMock(
+        return_value=1_000_000
+    )
+
+    persisted = MagicMock()
+    persisted.transaction_id = 100
+    persisted.compliance_units = 50
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = persisted
+
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 1
+    report.organization_id = 1
+    report.transaction_id = 100
+    report.transaction = None  # stale relationship — the bug condition
+
+    await compliance_report_update_service._create_or_update_reserve_transaction(
+        credit_change=50, report=report
+    )
+
+    # Persisted row was updated, no new transaction created.
+    assert persisted.compliance_units == 50
+    org_service.adjust_balance.assert_not_called()
+    assert report.transaction is persisted
 
 
 @pytest.mark.anyio
@@ -2444,3 +2525,46 @@ async def test_update_compliance_report_persists_exemption_flags(
     assert mock_report.is_renewable_fuel_exempted is True
     assert mock_report.is_low_carbon_fuel_exempted is True
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_does_not_notify(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+):
+    """Selecting non-assessment is an internal flag update, not a submission."""
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = None
+    mock_report.is_non_assessment = False
+
+    submitted_status = MagicMock(spec=ComplianceReportStatus)
+    submitted_status.status = ComplianceReportStatusEnum.Submitted
+
+    report_data = ComplianceReportUpdateSchema(
+        status="Submitted",
+        is_non_assessment=True,
+        supplemental_note="Not subject to assessment",
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = submitted_status
+    mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    await compliance_report_update_service.update_compliance_report(
+        report_id, report_data, UserProfile()
+    )
+
+    assert mock_report.is_non_assessment is True
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock.ANY, skip_can_sign_check=True
+    )
+    compliance_report_update_service._perform_notification_call.assert_not_called()

@@ -13,6 +13,14 @@ audience_scope_enum = ENUM(
     create_type=False,
 )
 
+# ENUM for comment visibility
+comment_visibility_enum = ENUM(
+    "Internal",
+    "Public",
+    name="comment_visibility",
+    create_type=False,
+)
+
 
 class InternalComment(BaseModel, Auditable):
     __tablename__ = "internal_comment"
@@ -30,8 +38,14 @@ class InternalComment(BaseModel, Auditable):
     comment = Column(Text, nullable=True, comment="Text of the comment.")
     audience_scope = Column(
         audience_scope_enum,
-        nullable=False,
+        nullable=True,
         comment="Defines the audience scope for the comment, e.g., Director, Analyst, Compliance Manager",
+    )
+    visibility = Column(
+        comment_visibility_enum,
+        nullable=False,
+        server_default="Internal",
+        comment="Visibility scope: Internal (gov-only) or Public (visible to org users)",
     )
 
     # Relationships

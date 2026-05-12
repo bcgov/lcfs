@@ -1,5 +1,7 @@
 import pytest
+import io
 from unittest.mock import AsyncMock, Mock
+from openpyxl import load_workbook
 from starlette.responses import StreamingResponse
 
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
@@ -211,18 +213,29 @@ def mock_notional_transfer_data():
 
 @pytest.fixture
 def mock_allocation_agreement_data():
-    """Mock allocation agreement data for testing."""
+    """Mock allocation agreement data for testing.
+
+    The repo returns raw AllocationAgreement ORM objects, so each relationship
+    (allocation_transaction_type, fuel_type, fuel_category, provision_of_the_act,
+    fuel_code) is modelled here as a nested Mock whose string attribute mirrors
+    the real column on the related model.
+    """
     aa1 = Mock()
-    aa1.allocation_transaction_type = "Allocated to"
+    aa1.allocation_transaction_type = Mock()
+    aa1.allocation_transaction_type.type = "Allocated to"
     aa1.transaction_partner = "Partner Corp"
     aa1.postal_address = "456 Oak Ave, Victoria, BC"
     aa1.transaction_partner_email = "partner@example.com"
     aa1.transaction_partner_phone = "250-555-1234"
-    aa1.fuel_type = "Renewable Diesel"
+    aa1.fuel_type = Mock()
+    aa1.fuel_type.fuel_type = "Renewable Diesel"
     aa1.fuel_type_other = None
-    aa1.fuel_category = "Diesel"
-    aa1.provision_of_the_act = "Section 19(b)(i)"
-    aa1.fuel_code = "FC002"
+    aa1.fuel_category = Mock()
+    aa1.fuel_category.category = "Diesel"
+    aa1.provision_of_the_act = Mock()
+    aa1.provision_of_the_act.name = "Section 19(b)(i)"
+    aa1.fuel_code = Mock()
+    aa1.fuel_code.fuel_code = "FC002"
     aa1.ci_of_fuel = 20.5
     aa1.quantity = 8000
     aa1.q1_quantity = 2000
@@ -261,6 +274,12 @@ def compliance_report_exporter(
 
 class TestComplianceReportExporter:
     """Test cases for ComplianceReportExporter."""
+
+    async def _response_workbook(self, response: StreamingResponse):
+        content = b""
+        async for chunk in response.body_iterator:
+            content += chunk
+        return load_workbook(io.BytesIO(content))
 
     def test_column_definitions_initialization(self, compliance_report_exporter):
         """Test that column definitions are properly initialized for both annual and quarterly reports."""
@@ -460,6 +479,58 @@ class TestComplianceReportExporter:
 
         # Fuel export loader is called for 2024+ reports
         exporter.ef_repo.get_effective_fuel_exports.assert_called()
+
+    @pytest.mark.anyio
+    async def test_export_skips_fuel_export_sheet_when_no_rows(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+        exporter.ef_repo.get_effective_fuel_exports.return_value = []
+        exporter.summary_service.calculate_fuel_supply_compliance_units = AsyncMock(
+            return_value=1000
+        )
+        exporter.summary_service.calculate_fuel_export_compliance_units = AsyncMock(
+            return_value=0
+        )
+
+        response = await exporter.export(1)
+        workbook = await self._response_workbook(response)
+
+        assert "Export fuel" not in workbook.sheetnames
+
+    @pytest.mark.anyio
+    async def test_export_delegates_sheet_population_to_sheet_exporters(
+        self,
+        compliance_report_exporter,
+        mock_annual_report,
+    ):
+        exporter = compliance_report_exporter
+        exporter.cr_repo.get_compliance_report_by_id.return_value = mock_annual_report
+
+        summary_exporter = Mock()
+        summary_exporter.export_to_workbook = AsyncMock()
+        exporter.summary_exporter = summary_exporter
+
+        active_sheet_exporter = Mock()
+        active_sheet_exporter.supports.return_value = True
+        active_sheet_exporter.export_to_workbook = AsyncMock()
+
+        skipped_sheet_exporter = Mock()
+        skipped_sheet_exporter.supports.return_value = False
+        skipped_sheet_exporter.export_to_workbook = AsyncMock()
+
+        exporter.sheet_exporters = [active_sheet_exporter, skipped_sheet_exporter]
+
+        await exporter.export(1)
+
+        summary_exporter.export_to_workbook.assert_awaited_once()
+        active_sheet_exporter.supports.assert_called_once_with(2024)
+        active_sheet_exporter.export_to_workbook.assert_awaited_once()
+        skipped_sheet_exporter.supports.assert_called_once_with(2024)
+        skipped_sheet_exporter.export_to_workbook.assert_not_awaited()
 
     @pytest.mark.anyio
     async def test_load_fuel_supply_data_annual(

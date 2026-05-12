@@ -760,6 +760,29 @@ class TransactionRepository:
         return new_transaction
 
     @repo_handler
+    async def get_reserved_transaction_by_id(
+        self, transaction_id: int
+    ) -> "Transaction | None":
+        """Fetch a Reserved transaction by id, or None if it does not exist
+        or is not currently in Reserved state.
+
+        Used as the source of truth for the duplicate-submission idempotency
+        guard: when a compliance report claims a `transaction_id`, this
+        confirms (against the DB, not a stale ORM relationship) that it
+        points at a live Reserved row that should be updated rather than
+        replaced.
+        """
+        if not transaction_id:
+            return None
+        result = await self.db.execute(
+            select(Transaction).where(
+                Transaction.transaction_id == transaction_id,
+                Transaction.transaction_action == TransactionActionEnum.Reserved,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def reserve_transaction(self, transaction_id: int) -> bool:
         """
         Attempt to reserve a transaction by updating its transaction_action to Reserved.
