@@ -149,6 +149,89 @@ async def test_update_compliance_report_no_status_change(
 
 
 @pytest.mark.anyio
+async def test_handle_submitted_status_blocks_duplicate_when_reserved_exists(
+    compliance_report_update_service,
+    mock_user_has_roles,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Regression guard for incident 4368.
+
+    Repeat clicks on Sign-and-Submit each ran the full submitted handler,
+    minting one duplicate Reserved transaction per click.
+    handle_submitted_status must refuse to run a second time as soon as a
+    Reserved transaction already exists for the report — before any
+    notifications, FSE auto-submit, summary calc, or transaction creation.
+    """
+    mock_user_has_roles.return_value = True
+
+    report_id = 1
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = report_id
+    report.organization_id = 1
+    report.transaction_id = 100  # left behind by the first submit
+    report.compliance_report_group_uuid = "test-uuid"
+
+    existing_reserve = MagicMock()
+    existing_reserve.transaction_id = 100
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = existing_reserve
+
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "test-user"
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.handle_submitted_status(
+            report, user
+        )
+
+    assert exc.value.status_code == 409
+    # Critical: nothing downstream ran — no FSE auto-submit, no summary
+    # calc, no new transaction, no repo update.
+    mock_repo.update_compliance_report.assert_not_called()
+    mock_trxn_repo.create_transaction.assert_not_called()
+    mock_trxn_repo.get_reserved_transaction_by_id.assert_called_once_with(
+        100
+    )
+
+
+@pytest.mark.anyio
+async def test_create_or_update_reserve_uses_persisted_transaction(
+    compliance_report_update_service, mock_trxn_repo
+):
+    """Even if the in-memory `report.transaction` relationship is None
+    (stale identity map, cross-request reload), as long as report.transaction_id
+    points at a real Reserved row, the persisted row must be updated rather
+    than a new one inserted. This is the second line of defence for the
+    duplicate-submission bug."""
+    org_service = compliance_report_update_service.org_service
+    org_service.calculate_available_balance = AsyncMock(return_value=1_000_000)
+    org_service.adjust_balance = AsyncMock()
+    compliance_report_update_service._calculate_pre_deadline_balance = AsyncMock(
+        return_value=1_000_000
+    )
+
+    persisted = MagicMock()
+    persisted.transaction_id = 100
+    persisted.compliance_units = 50
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = persisted
+
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 1
+    report.organization_id = 1
+    report.transaction_id = 100
+    report.transaction = None  # stale relationship — the bug condition
+
+    await compliance_report_update_service._create_or_update_reserve_transaction(
+        credit_change=50, report=report
+    )
+
+    # Persisted row was updated, no new transaction created.
+    assert persisted.compliance_units == 50
+    org_service.adjust_balance.assert_not_called()
+    assert report.transaction is persisted
+
+
+@pytest.mark.anyio
 async def test_update_compliance_report_not_found(
     compliance_report_update_service, mock_repo
 ):
