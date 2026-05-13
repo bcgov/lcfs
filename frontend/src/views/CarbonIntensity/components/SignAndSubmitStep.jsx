@@ -121,43 +121,84 @@ export const SignAndSubmitStep = ({
         {t('carbonIntensity:step4.signingAuthorityHeader')}
       </BCTypography>
 
-      <Stack spacing={1} sx={{ mb: 3 }}>
+      <Stack spacing={2.5} sx={{ mb: 3 }}>
         <FormControl error={!!errors.declarations}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={decl1}
-                onChange={(e) => setDecl1(e.target.checked)}
-                disabled={readOnly}
-                inputProps={{ 'data-test': 'ci-step4-decl-1' }}
-              />
-            }
-            label={t('carbonIntensity:step4.declarations.informationTrue')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={decl2}
-                onChange={(e) => setDecl2(e.target.checked)}
-                disabled={readOnly}
-                inputProps={{ 'data-test': 'ci-step4-decl-2' }}
-              />
-            }
-            label={t('carbonIntensity:step4.declarations.response8Weeks')}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={decl3}
-                onChange={(e) => setDecl3(e.target.checked)}
-                disabled={readOnly}
-                inputProps={{ 'data-test': 'ci-step4-decl-3' }}
-              />
-            }
-            label={t('carbonIntensity:step4.declarations.section206')}
-          />
+          <Stack spacing={2}>
+            <FormControlLabel
+              sx={{ alignItems: 'flex-start', m: 0 }}
+              control={
+                <Checkbox
+                  checked={decl1}
+                  onChange={(e) => setDecl1(e.target.checked)}
+                  disabled={readOnly}
+                  sx={{ pt: 0, pb: 0 }}
+                  inputProps={{ 'data-test': 'ci-step4-decl-1' }}
+                />
+              }
+              label={
+                <BCTypography variant="body2" component="span">
+                  {t('carbonIntensity:step4.declarations.informationTrue')}{' '}
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    sx={{ fontStyle: 'italic', fontWeight: 700 }}
+                  >
+                    {t('carbonIntensity:step4.declarations.requiredSuffix')}
+                  </BCTypography>
+                </BCTypography>
+              }
+            />
+            <FormControlLabel
+              sx={{ alignItems: 'flex-start', m: 0 }}
+              control={
+                <Checkbox
+                  checked={decl2}
+                  onChange={(e) => setDecl2(e.target.checked)}
+                  disabled={readOnly}
+                  sx={{ pt: 0, pb: 0 }}
+                  inputProps={{ 'data-test': 'ci-step4-decl-2' }}
+                />
+              }
+              label={
+                <BCTypography variant="body2" component="span">
+                  {t('carbonIntensity:step4.declarations.response8Weeks')}{' '}
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    sx={{ fontStyle: 'italic', fontWeight: 700 }}
+                  >
+                    {t('carbonIntensity:step4.declarations.requiredSuffix')}
+                  </BCTypography>
+                </BCTypography>
+              }
+            />
+            <FormControlLabel
+              sx={{ alignItems: 'flex-start', m: 0 }}
+              control={
+                <Checkbox
+                  checked={decl3}
+                  onChange={(e) => setDecl3(e.target.checked)}
+                  disabled={readOnly}
+                  sx={{ pt: 0, pb: 0 }}
+                  inputProps={{ 'data-test': 'ci-step4-decl-3' }}
+                />
+              }
+              label={
+                <BCTypography variant="body2" component="span">
+                  {t('carbonIntensity:step4.declarations.section206')}{' '}
+                  <BCTypography
+                    component="span"
+                    variant="body2"
+                    sx={{ fontStyle: 'italic', fontWeight: 700 }}
+                  >
+                    {t('carbonIntensity:step4.declarations.requiredSuffix')}
+                  </BCTypography>
+                </BCTypography>
+              }
+            />
+          </Stack>
           {errors.declarations && (
-            <FormHelperText data-test="ci-step4-decl-error">
+            <FormHelperText data-test="ci-step4-decl-error" sx={{ mt: 1 }}>
               {errors.declarations}
             </FormHelperText>
           )}

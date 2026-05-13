@@ -6,6 +6,7 @@ import {
   InputLabel,
   Link,
   MenuItem,
+  Select,
   Stack,
   TextField,
   Tooltip
@@ -24,11 +25,13 @@ import {
   COMPLIANCE_REPORT_FILE_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '@/constants/common'
+import { apiRoutes } from '@/constants/routes'
 import {
   useDeleteDocument,
   useDocuments,
   useUploadDocument
 } from '@/hooks/useDocuments'
+import { useApiService } from '@/services/useApiService'
 import colors from '@/themes/base/colors'
 import { validateFile } from '@/utils/fileValidation'
 
@@ -56,6 +59,7 @@ export const DocumentsModellingStep = ({
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
+  const apiClient = useApiService()
 
   const supportingFileRef = useRef(null)
   const ghgeniusFileRef = useRef(null)
@@ -225,18 +229,22 @@ export const DocumentsModellingStep = ({
 
       <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ mb: 1 }}>
         <Box sx={{ minWidth: 340 }}>
-          <InputLabel htmlFor="ci-step3-supporting-category" sx={{ pb: 1 }}>
+          <InputLabel
+            htmlFor="ci-step3-supporting-category"
+            shrink={false}
+            sx={{ pb: 1, color: 'text.primary', position: 'static' }}
+          >
             {t('carbonIntensity:step3.documentCategoryLabel')}
           </InputLabel>
-          <TextField
-            select
+          <Select
             id="ci-step3-supporting-category"
             value={supportingCategory}
             onChange={(e) => setSupportingCategory(e.target.value)}
             disabled={readOnly}
+            displayEmpty
             fullWidth
-            variant="outlined"
             inputProps={{ 'data-test': 'ci-step3-supporting-category' }}
+            sx={{ height: 40 }}
           >
             <MenuItem value={DOC_CATEGORY_TECHNICAL_REPORT}>
               {t('carbonIntensity:step3.categoryTechnicalReport')}
@@ -244,17 +252,18 @@ export const DocumentsModellingStep = ({
             <MenuItem value={DOC_CATEGORY_SUPPORTING}>
               {t('carbonIntensity:step3.categorySupporting')}
             </MenuItem>
-          </TextField>
+          </Select>
         </Box>
         <BCButton
           type="button"
           variant="outlined"
           color="primary"
-          startIcon={<CloudUploadIcon />}
+          size="medium"
+          startIcon={<CloudUploadIcon sx={{ fontSize: '1.5rem !important' }} />}
           onClick={() => supportingFileRef.current?.click()}
           disabled={readOnly || isUploading}
           data-test="ci-step3-upload-supporting"
-          sx={{ height: 56 }}
+          sx={{ height: 40 }}
         >
           {t('carbonIntensity:step3.uploadSupporting')}
         </BCButton>
@@ -322,7 +331,8 @@ export const DocumentsModellingStep = ({
           type="button"
           variant="outlined"
           color="primary"
-          startIcon={<CloudUploadIcon />}
+          size="medium"
+          startIcon={<CloudUploadIcon sx={{ fontSize: '1.5rem !important' }} />}
           onClick={() => ghgeniusFileRef.current?.click()}
           disabled={readOnly || isUploading}
           data-test="ci-step3-upload-ghgenius"
@@ -333,9 +343,14 @@ export const DocumentsModellingStep = ({
           type="button"
           variant="outlined"
           color="primary"
-          startIcon={<FileDownloadIcon />}
-          href="/templates/ghgenius-input-output.xlsx"
-          download
+          size="medium"
+          startIcon={<FileDownloadIcon sx={{ fontSize: '1.5rem !important' }} />}
+          onClick={async () => {
+            await apiClient.download({
+              url: apiRoutes.ciApplicationGHGeniusTemplate,
+              method: 'get'
+            })
+          }}
           data-test="ci-step3-download-template"
         >
           {t('carbonIntensity:step3.downloadTemplate')}
@@ -349,6 +364,72 @@ export const DocumentsModellingStep = ({
           data-test="ci-step3-ghgenius-input"
         />
       </Stack>
+
+      <BCTypography
+        variant="body2"
+        sx={{ fontWeight: 600, mb: 1 }}
+        data-test="ci-step3-modelling-instructions-header"
+      >
+        {t('carbonIntensity:step3.modellingInstructions.header')}
+      </BCTypography>
+      <BCTypography variant="body2" sx={{ mb: 0.5 }}>
+        {t('carbonIntensity:step3.modellingInstructions.inputsIntro')}
+      </BCTypography>
+      <Box component="ul" sx={{ pl: 3, mb: 1.5 }}>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.inputs.region')}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.inputs.grouping')}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.inputs.ordering')}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.inputs.descriptors')}
+          </BCTypography>
+        </li>
+      </Box>
+      <BCTypography variant="body2" sx={{ mb: 0.5 }}>
+        {t('carbonIntensity:step3.modellingInstructions.outputsIntro')}
+      </BCTypography>
+      <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.outputs.copyFromTab')}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.outputs.columnLabel')}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.outputs.outOfModel')}
+          </BCTypography>
+        </li>
+        <li>
+          <BCTypography variant="body2">
+            {t('carbonIntensity:step3.modellingInstructions.outputs.sampleTable')}{' '}
+            <Link
+              href="https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-008.pdf"
+              target="_blank"
+              rel="noopener"
+              underline="always"
+            >
+              {t('carbonIntensity:step3.modellingInstructions.outputs.rlcfLink')}
+            </Link>
+          </BCTypography>
+        </li>
+      </Box>
 
       {!hasGHGeniusModel && (
         <BCTypography variant="body2" color="error" sx={{ mb: 2 }}>

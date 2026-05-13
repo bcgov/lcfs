@@ -86,6 +86,7 @@ export const apiRoutes = {
   updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
   submitCIApplication: '/ci-applications/:ciApplicationId/submit',
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
+  ciApplicationGHGeniusTemplate: '/ci-applications/ghgenius-template',
   deleteCIApplication: '/ci-applications/:ciApplicationId',
 
   // reports

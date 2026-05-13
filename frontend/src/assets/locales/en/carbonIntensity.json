@@ -86,6 +86,24 @@
     "uploadGHGenius": "Upload GHGenius model",
     "downloadTemplate": "Download GHGenius Excel template",
     "ghgeniusRequired": "GHGenius model upload is required.",
+    "modellingInstructions": {
+      "header": "Provide model inputs/outputs for each fuel pathway in the tables provided in the Excel template",
+      "inputsIntro": "For model inputs:",
+      "inputs": {
+        "region": "Ensure model region is stated for each model run",
+        "grouping": "Group inputs by the sheet they are located in (e.g. group together all inputs of the fuel production run entered in the Coprods sheet)",
+        "ordering": "Ensure that the inputs are ordered sequentially by their location in the respective sheet (e.g. cell AZ241 should be above cell AZ243)",
+        "descriptors": "Include GHGenius column and row descriptors in the description (e.g. instead of \"feedstock transport\" state \"corn oil rail distance\" which identifies the column \"corn oil\" and row \"rail\")"
+      },
+      "outputsIntro": "For model outputs:",
+      "outputs": {
+        "copyFromTab": "Where possible, copy results directly from the BC LCFS Tab in GHGenius",
+        "columnLabel": "Provide column label in the Results Location field for results pulled from GHGenius",
+        "outOfModel": "For results from out of model calculations state 'out of model calc.' in the Results Location field and ensure the calculations are included in the Technical Report",
+        "sampleTable": "A sample output table is provided in the Appendix of",
+        "rlcfLink": "RLCF-008 Carbon Intensity Applications"
+      }
+    },
     "saveAndProceed": "Save & proceed",
     "saveSuccess": "Documents saved.",
     "errors": {
@@ -113,6 +131,7 @@
     "submit": "Submit application",
     "submitSuccess": "Application submitted.",
     "declarations": {
+      "requiredSuffix": "(required)",
       "informationTrue": "I certify that the information submitted is true and complete and the records regarding this application have been retained in accordance with the Low Carbon Fuels Act.",
       "response8Weeks": "I acknowledge that requests for additional information and/or corrections must be responded to within 8 weeks. Failure to respond within this period may result in rejection of the application, requiring the applicant to restart the application process and resulting in a deferred Effective Date.",
       "section206": "Pursuant to section 20(6) of the Low Carbon Fuels Act, I acknowledge my obligation to provide written notice to the Director if I become aware that the details of the fuel pathway(s) included in this application have changed or will change."

@@ -38,6 +38,11 @@ vi.mock('@/hooks/useDocuments', () => ({
   }))
 }))
 
+const mockDownload = vi.fn().mockResolvedValue({})
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({ download: mockDownload, get: vi.fn(), post: vi.fn() })
+}))
+
 const baseCi = { ciApplicationId: 99, supportingDocumentOther: '' }
 
 describe('DocumentsModellingStep', () => {

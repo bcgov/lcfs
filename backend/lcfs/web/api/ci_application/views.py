@@ -9,13 +9,16 @@ All five wizard steps are wired:
   Step 5 — Government decision (with comments thread)
 """
 
+import io
 from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.utils.constants import FILE_MEDIA_TYPE
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationDecisionSchema,
@@ -88,6 +91,54 @@ async def list_ci_applications(
             )
         organization_id = org.organization_id
     return await service.list_ci_applications(pagination, organization_id)
+
+
+GHGENIUS_TEMPLATE_SHEETS = {
+    "Input tables": [
+        SpreadsheetColumn("Parameter", "text"),
+        SpreadsheetColumn("Value", "text"),
+        SpreadsheetColumn("Units", "text"),
+        SpreadsheetColumn("Notes", "text"),
+    ],
+    "Output tables": [
+        SpreadsheetColumn("Parameter", "text"),
+        SpreadsheetColumn("Value", "text"),
+        SpreadsheetColumn("Units", "text"),
+        SpreadsheetColumn("Notes", "text"),
+    ],
+}
+
+
+# IMPORTANT: this static-path route MUST be declared before the
+# ``GET /{ci_application_id}`` route below — otherwise FastAPI tries to
+# coerce "ghgenius-template" into an int path param and returns 422.
+@router.get(
+    "/ghgenius-template",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT])
+async def download_ghgenius_template(request: Request) -> StreamingResponse:
+    """Return the empty GHGenius input/output xlsx template used in Step 3."""
+    builder = SpreadsheetBuilder(file_format="xlsx")
+    for sheet_name, columns in GHGENIUS_TEMPLATE_SHEETS.items():
+        builder.add_sheet(
+            sheet_name=sheet_name,
+            columns=columns,
+            rows=[],
+            styles={"bold_headers": True},
+        )
+    file_content = builder.build_spreadsheet()
+    headers = {
+        "Content-Disposition": (
+            'attachment; filename="GHGenius-Input-Output-Template.xlsx"'
+        )
+    }
+    return StreamingResponse(
+        io.BytesIO(file_content),
+        media_type=FILE_MEDIA_TYPE["XLSX"].value,
+        headers=headers,
+    )
 
 
 @router.get(
