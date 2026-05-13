@@ -116,7 +116,11 @@ export const ApplicationSummary = ({ ciApplication }) => {
         />
         <Labelled
           label={t('carbonIntensity:summary.signingAuthorityLabel')}
-          value={ciApplication.signatureUser || ''}
+          value={
+            ciApplication.signatureUserDisplayName ||
+            ciApplication.signatureUser ||
+            ''
+          }
         />
         {hasConsultant && (
           <BCTypography variant="body2" data-test="ci-summary-consultant">

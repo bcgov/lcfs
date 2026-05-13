@@ -34,8 +34,15 @@ def repo():
 
 
 @pytest.fixture
-def service(repo):
-    return CIApplicationServices(repo=repo)
+def user_repo():
+    repo = AsyncMock()
+    repo.get_full_name = AsyncMock(return_value=None)
+    return repo
+
+
+@pytest.fixture
+def service(repo, user_repo):
+    return CIApplicationServices(repo=repo, user_repo=user_repo)
 
 
 @pytest.fixture

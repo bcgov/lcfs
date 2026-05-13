@@ -27,6 +27,7 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
 )
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
+from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
@@ -255,7 +256,7 @@ class CIApplicationServices:
         ci = await self.repo.get_by_id(ci_application_id)
         if not ci:
             raise DataNotFoundException("CI application not found.")
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
 
     # ------------------------------------------------------------------
     # Step 1 — create / update / delete draft
@@ -294,7 +295,7 @@ class CIApplicationServices:
         await self.repo.add_history(ci)
         # Reload with all relationships needed for the response.
         ci = await self.repo.get_by_id(ci.ci_application_id)
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
 
     @service_handler
     async def update_step1(
@@ -319,7 +320,7 @@ class CIApplicationServices:
 
         ci_application = await self.repo.update(ci_application)
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
 
     @service_handler
     async def delete_draft(self, ci_application: CIApplication) -> None:
@@ -462,7 +463,7 @@ class CIApplicationServices:
         await self.repo.refresh_pathways(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
 
     # ------------------------------------------------------------------
     # Step 3 — Documents & GHGenius modelling
@@ -503,7 +504,7 @@ class CIApplicationServices:
         await self.repo.update(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
 
     # ------------------------------------------------------------------
     # Step 4 — Sign & submit
@@ -586,7 +587,7 @@ class CIApplicationServices:
         await self.repo.add_history(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
 
     # ------------------------------------------------------------------
     # Step 5 — Government decision & comments
@@ -642,4 +643,4 @@ class CIApplicationServices:
         # widget before/after recording the decision.
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return _to_full_schema(ci)
+        return await self._to_full_schema_with_user(ci)
