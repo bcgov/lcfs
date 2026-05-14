@@ -1,5 +1,5 @@
 import { useState, forwardRef, type ReactNode, type Ref } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import Icon from '@mui/material/Icon'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -9,6 +9,12 @@ interface DefaultNavbarLinkProps {
   icon?: ReactNode | string
   name: string
   route: string
+  /**
+   * Additional path prefixes that should also mark this link as active.
+   * Useful for keeping a single top-level entry highlighted while the user
+   * moves between sibling sub-routes that share its tabbed surface.
+   */
+  activePaths?: string[]
   light?: boolean
   onClick?: () => void
   isMobileView?: boolean
@@ -21,6 +27,7 @@ const DefaultNavbarLink = forwardRef<HTMLAnchorElement, DefaultNavbarLinkProps>(
       icon,
       name,
       route,
+      activePaths,
       light = false,
       onClick,
       isMobileView = false,
@@ -29,10 +36,17 @@ const DefaultNavbarLink = forwardRef<HTMLAnchorElement, DefaultNavbarLinkProps>(
     ref
   ) => {
     const [hover, setHover] = useState(false)
+    const location = useLocation()
+    const matchesExtraPath =
+      activePaths?.some(
+        (p) => location.pathname === p || location.pathname.startsWith(`${p}/`)
+      ) ?? false
     return (
       <BCBox
         component={NavLink}
-        className="NavLink"
+        className={({ isActive }: { isActive: boolean }) =>
+          isActive || matchesExtraPath ? 'NavLink active' : 'NavLink'
+        }
         to={route}
         mx={1}
         mt={-0.1}

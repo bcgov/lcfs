@@ -42,7 +42,14 @@ export const Navbar = () => {
       { name: t('ComplianceReporting'), route: ROUTES.REPORTS.LIST },
       {
         name: t('FuelCodes'),
-        route: ROUTES.FUEL_CODES.LIST
+        route: ROUTES.FUEL_CODES.LIST,
+        // Keep "Fuel codes" highlighted across the tabbed surface
+        // (CI applications, My fuel codes, Current, Archived).
+        activePaths: [
+          ROUTES.FUEL_CODES.LIST,
+          ROUTES.FUEL_CODES.BULLETINS,
+          ROUTES.CI_APPLICATIONS.LIST
+        ]
       },
       {
         name: t('InitiativeAgreements'),
@@ -62,7 +69,14 @@ export const Navbar = () => {
       {
         name: t('FuelCodes'),
         route: ROUTES.FUEL_CODES.BULLETINS,
-        hide: !canSeeFuelCodeBulletins
+        hide: !canSeeFuelCodeBulletins,
+        // Keep "Fuel codes" highlighted across the tabbed surface
+        // (CI applications, My fuel codes, Current, Archived).
+        activePaths: [
+          ROUTES.FUEL_CODES.BULLETINS,
+          ROUTES.FUEL_CODES.LIST,
+          ROUTES.CI_APPLICATIONS.LIST
+        ]
       },
       {
         name: t('InitiativeAgreements'),

@@ -2,6 +2,7 @@ import { Box, Tab, Tabs } from '@mui/material'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { roles, govRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ROUTES from '@/routes/routes'
@@ -12,9 +13,17 @@ const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
 const isArchivedQuery = (loc) =>
   new URLSearchParams(loc.search).get('type') === 'archived'
 
-const buildTabs = ({ isCiApplicant, isSigningAuthority, isGovernment }) => {
+const buildTabs = ({
+  isCiApplicant,
+  isSigningAuthority,
+  isGovernment,
+  ciApplicationsEnabled
+}) => {
   const tabs = []
-  if (isCiApplicant || isSigningAuthority || isGovernment) {
+  if (
+    ciApplicationsEnabled &&
+    (isCiApplicant || isSigningAuthority || isGovernment)
+  ) {
     tabs.push({
       key: 'ci',
       labelKey: 'carbonIntensity:tabs.ciApplications',
@@ -53,14 +62,17 @@ export const FuelCodesTabs = () => {
   const location = useLocation()
   const { hasAnyRole } = useCurrentUser()
 
+  const ciApplicationsEnabled = isFeatureEnabled(FEATURE_FLAGS.CI_APPLICATIONS)
+
   const tabs = useMemo(
     () =>
       buildTabs({
         isCiApplicant: hasAnyRole(roles.ci_applicant),
         isSigningAuthority: hasAnyRole(roles.signing_authority),
-        isGovernment: hasAnyRole(...govRoles)
+        isGovernment: hasAnyRole(...govRoles),
+        ciApplicationsEnabled
       }),
-    [hasAnyRole]
+    [hasAnyRole, ciApplicationsEnabled]
   )
 
   const activeIndex = Math.max(
