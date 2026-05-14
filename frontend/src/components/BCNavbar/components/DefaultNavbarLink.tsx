@@ -37,16 +37,18 @@ const DefaultNavbarLink = forwardRef<HTMLAnchorElement, DefaultNavbarLinkProps>(
   ) => {
     const [hover, setHover] = useState(false)
     const location = useLocation()
-    const matchesExtraPath =
-      activePaths?.some(
-        (p) => location.pathname === p || location.pathname.startsWith(`${p}/`)
-      ) ?? false
+    // BCBox (MUI Box under the hood) doesn't forward NavLink's callback
+    // className signature, so derive the active state ourselves and pass a
+    // plain string. Matches NavLink's default behaviour (exact path or any
+    // descendant path) and additionally honours `activePaths`.
+    const pathMatches = (p: string) =>
+      location.pathname === p || location.pathname.startsWith(`${p}/`)
+    const isActive =
+      pathMatches(route) || (activePaths?.some(pathMatches) ?? false)
     return (
       <BCBox
         component={NavLink}
-        className={({ isActive }: { isActive: boolean }) =>
-          isActive || matchesExtraPath ? 'NavLink active' : 'NavLink'
-        }
+        className={isActive ? 'NavLink active' : 'NavLink'}
         to={route}
         mx={1}
         mt={-0.1}

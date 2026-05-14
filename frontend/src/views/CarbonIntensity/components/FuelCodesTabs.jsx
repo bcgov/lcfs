@@ -1,11 +1,12 @@
-import { Box, Tab, Tabs } from '@mui/material'
-import { useMemo } from 'react'
+import { AppBar, Tab, Tabs } from '@mui/material'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { roles, govRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ROUTES from '@/routes/routes'
+import breakpoints from '@/themes/base/breakpoints'
 
 const BULLETINS_PATH = ROUTES.FUEL_CODES.BULLETINS
 
@@ -80,14 +81,29 @@ export const FuelCodesTabs = () => {
     tabs.findIndex((tab) => tab.isActive(location))
   )
 
+  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
+  useEffect(() => {
+    const handleTabsOrientation = () => {
+      setTabsOrientation(
+        window.innerWidth < breakpoints.values.lg ? 'vertical' : 'horizontal'
+      )
+    }
+    window.addEventListener('resize', handleTabsOrientation)
+    handleTabsOrientation()
+    return () => window.removeEventListener('resize', handleTabsOrientation)
+  }, [])
+
   return (
-    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+    <AppBar position="static" sx={{ boxShadow: 'none', border: 'none', mb: 3 }}>
       <Tabs
+        sx={{
+          background: 'rgb(0, 0, 0, 0.08)',
+          width: { xs: '100%', md: '60%' }
+        }}
+        orientation={tabsOrientation}
         value={activeIndex}
         onChange={(_, idx) => navigate(tabs[idx].path)}
         aria-label="Fuel codes navigation tabs"
-        variant="scrollable"
-        scrollButtons="auto"
       >
         {tabs.map((tab) => (
           <Tab
@@ -97,7 +113,7 @@ export const FuelCodesTabs = () => {
           />
         ))}
       </Tabs>
-    </Box>
+    </AppBar>
   )
 }
 
