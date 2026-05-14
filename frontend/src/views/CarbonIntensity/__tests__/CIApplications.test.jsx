@@ -62,7 +62,8 @@ let mockListData = {
 }
 
 vi.mock('@/hooks/useCIApplication', () => ({
-  useGetCIApplications: vi.fn(() => mockListData)
+  useGetCIApplications: vi.fn(() => mockListData),
+  useCIApplicationStatuses: vi.fn(() => ({ data: [], isLoading: false }))
 }))
 
 // ---------------- Tests ----------------

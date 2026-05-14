@@ -29,21 +29,31 @@ const buildTabs = ({ isCiApplicant, isSigningAuthority, isGovernment }) => {
       path: ROUTES.FUEL_CODES.LIST,
       isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.LIST
     })
+  } else if (isGovernment) {
+    tabs.push({
+      key: 'manage',
+      labelKey: 'carbonIntensity:tabs.fuelCodes',
+      path: ROUTES.FUEL_CODES.LIST,
+      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.LIST
+    })
   }
-  tabs.push(
-    {
-      key: 'current',
-      labelKey: 'carbonIntensity:tabs.currentFuelCodes',
-      path: BULLETINS_PATH,
-      isActive: (loc) => isOnBulletins(loc) && !isArchivedQuery(loc)
-    },
-    {
-      key: 'archived',
-      labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
-      path: `${BULLETINS_PATH}?type=archived`,
-      isActive: (loc) => isOnBulletins(loc) && isArchivedQuery(loc)
-    }
-  )
+
+  if (!isGovernment) {
+    tabs.push(
+      {
+        key: 'current',
+        labelKey: 'carbonIntensity:tabs.currentFuelCodes',
+        path: BULLETINS_PATH,
+        isActive: (loc) => isOnBulletins(loc) && !isArchivedQuery(loc)
+      },
+      {
+        key: 'archived',
+        labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
+        path: `${BULLETINS_PATH}?type=archived`,
+        isActive: (loc) => isOnBulletins(loc) && isArchivedQuery(loc)
+      }
+    )
+  }
   return tabs
 }
 
@@ -63,10 +73,8 @@ export const FuelCodesTabs = () => {
     [hasAnyRole]
   )
 
-  const activeIndex = Math.max(
-    0,
-    tabs.findIndex((tab) => tab.isActive(location))
-  )
+  const matchedIndex = tabs.findIndex((tab) => tab.isActive(location))
+  const activeIndex = matchedIndex === -1 ? false : matchedIndex
 
   return (
     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>

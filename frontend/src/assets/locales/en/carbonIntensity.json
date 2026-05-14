@@ -1,11 +1,13 @@
 {
   "ciApplications": "CI applications",
+  "myOrgCIApplications": "My organization's CI applications",
   "carbonIntensityApplication": "Carbon intensity application",
   "newCIApplicationBtn": "New CI application",
   "noCIApplicationsFound": "No CI applications found",
   "tabs": {
     "ciApplications": "CI applications",
     "myFuelCodes": "My fuel codes",
+    "fuelCodes": "Fuel codes",
     "currentFuelCodes": "Current fuel codes",
     "archivedFuelCodes": "Archived fuel codes"
   },
@@ -169,11 +171,14 @@
   "columns": {
     "ciApplicationId": "ID",
     "status": "Status",
-    "facilityCountry": "Country",
-    "facilityCity": "City",
-    "facilityCapacity": "Nameplate capacity",
-    "proposedEffectiveDate": "Proposed effective date",
-    "lastUpdated": "Last updated"
+    "organization": "Organization",
+    "priorityScore": "Priority score",
+    "verification": "Verification",
+    "productionFacilityLocation": "Production facility Location",
+    "proposedEffectiveDate": "Proposed fuel code effective date",
+    "lastUpdated": "Last updated",
+    "assignedAnalyst": "Assigned analyst",
+    "lastComment": "Last comment"
   },
   "labels": {
     "required": "(required)",
