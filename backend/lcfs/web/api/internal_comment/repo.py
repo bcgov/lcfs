@@ -24,6 +24,9 @@ from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
 from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
+from lcfs.db.models.comment.CIApplicationInternalComment import (
+    CIApplicationInternalComment,
+)
 
 
 logger = structlog.get_logger(__name__)
@@ -93,6 +96,11 @@ class InternalCommentRepository:
                 compliance_report_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.CI_APPLICATION:
+            association = CIApplicationInternalComment(
+                ci_application_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
 
         # Add the association to the session and commit
         self.db.add(association)
@@ -142,6 +150,10 @@ class InternalCommentRepository:
             EntityTypeEnum.COMPLIANCE_REPORT: (
                 ComplianceReportInternalComment,
                 ComplianceReportInternalComment.compliance_report_id,
+            ),
+            EntityTypeEnum.CI_APPLICATION: (
+                CIApplicationInternalComment,
+                CIApplicationInternalComment.ci_application_id,
             ),
         }
 
@@ -319,6 +331,10 @@ class InternalCommentRepository:
             EntityTypeEnum.COMPLIANCE_REPORT: (
                 ComplianceReportInternalComment,
                 ComplianceReportInternalComment.compliance_report_id,
+            ),
+            EntityTypeEnum.CI_APPLICATION: (
+                CIApplicationInternalComment,
+                CIApplicationInternalComment.ci_application_id,
             ),
         }
 
