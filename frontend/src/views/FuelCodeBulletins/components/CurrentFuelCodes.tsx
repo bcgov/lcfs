@@ -4,6 +4,8 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { Stack } from '@mui/material'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { govRoles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildColumnDefs, formatDate, normalizeRows } from '../_schema'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
@@ -21,6 +23,8 @@ const initialPaginationOptions = {
 
 export const CurrentFuelCodes = () => {
   const { t } = useTranslation(['bulletins'])
+  const { hasAnyRole } = useCurrentUser()
+  const isIdirView = hasAnyRole(...govRoles)
   const gridRef = useRef<any>(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState('')
@@ -83,15 +87,19 @@ export const CurrentFuelCodes = () => {
       )}
 
       <BCTypography variant="h5" color="primary">
-        {t('current.title')}
+        {isIdirView ? t('current.idirTitle') : t('current.title')}
       </BCTypography>
 
-      <BCTypography variant="body2" color="text">
-        {t('current.description', { cutoffLabel })}
-      </BCTypography>
-      <BCTypography variant="body2" color="text">
-        {t('common.fuelCodePrefix')}
-      </BCTypography>
+      {!isIdirView && (
+        <>
+          <BCTypography variant="body2" color="text">
+            {t('current.description', { cutoffLabel })}
+          </BCTypography>
+          <BCTypography variant="body2" color="text">
+            {t('common.fuelCodePrefix')}
+          </BCTypography>
+        </>
+      )}
 
       <Stack direction="row">
         <DownloadButton

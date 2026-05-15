@@ -1,4 +1,5 @@
 {
+  "currentFuelCodes": "Current fuel codes",
   "newFuelCodeBtn": "New fuel code",
   "noFuelCodesFound": "No fuel codes found",
   "fuelCodeDownloadBtn": "Download as Excel",

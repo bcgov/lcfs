@@ -150,11 +150,18 @@ async def search_table_options_strings(
 async def get_fuel_codes(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
+    exclude_archived: bool = Query(
+        default=False,
+        alias="excludeArchived",
+        description="Omit Approved fuel codes outside the current compliance period.",
+    ),
     response: Response = None,
     service: FuelCodeServices = Depends(),
 ):
     """Endpoint to get list of fuel codes with pagination options"""
-    return await service.search_fuel_codes(pagination)
+    return await service.search_fuel_codes(
+        pagination, exclude_archived=exclude_archived
+    )
 
 
 @router.post(
@@ -164,6 +171,11 @@ async def get_fuel_codes(
 async def export_fuel_codes(
     request: Request,
     format: str = Query(default="xlsx", description="File export format"),
+    exclude_archived: bool = Query(
+        default=False,
+        alias="excludeArchived",
+        description="Omit Approved fuel codes outside the current compliance period.",
+    ),
     pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeExporter = Depends(),
 ):
@@ -185,7 +197,9 @@ async def export_fuel_codes(
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    return await exporter.export(format, pagination)
+    return await exporter.export(
+        format, pagination, exclude_archived=exclude_archived
+    )
 
 
 @router.post(

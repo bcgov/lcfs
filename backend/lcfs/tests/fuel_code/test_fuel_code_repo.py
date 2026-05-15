@@ -430,6 +430,77 @@ async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
     assert count == 1
 
 
+def _make_paginate_side_effect():
+    return [
+        MagicMock(scalar=MagicMock(return_value=0)),
+        MagicMock(
+            unique=MagicMock(
+                return_value=MagicMock(
+                    scalars=MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[]))
+                    )
+                )
+            )
+        ),
+    ]
+
+
+@pytest.mark.anyio
+async def test_get_fuel_codes_paginated_exclude_archived_filters_by_date(
+    fuel_code_repo, mock_db
+):
+    mock_db.execute.side_effect = _make_paginate_side_effect()
+    pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
+
+    result, count = await fuel_code_repo.get_fuel_codes_paginated(
+        pagination,
+        exclude_archived=True,
+        compliance_period_start=date(2026, 3, 31),
+    )
+
+    assert result == []
+    assert count == 0
+    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    assert "effective_date" in stmt_sql
+    assert "expiration_date" in stmt_sql
+
+
+@pytest.mark.anyio
+async def test_get_fuel_codes_paginated_no_date_filter_by_default(
+    fuel_code_repo, mock_db
+):
+    mock_db.execute.side_effect = _make_paginate_side_effect()
+    pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
+
+    await fuel_code_repo.get_fuel_codes_paginated(pagination)
+
+    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    # effective_date appears as a column name in the SELECT clause but should
+    # not appear as a WHERE-clause filter parameter when no date filter is active
+    assert ":effective_date_1" not in stmt_sql
+
+
+@pytest.mark.anyio
+async def test_get_fuel_codes_paginated_compliance_period_end_is_march_31(
+    fuel_code_repo, mock_db
+):
+    mock_db.execute.side_effect = _make_paginate_side_effect()
+    pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
+
+    await fuel_code_repo.get_fuel_codes_paginated(
+        pagination,
+        exclude_archived=True,
+        compliance_period_start=date(2025, 3, 31),
+    )
+
+    # SQLAlchemy uses parameter binding, so compile with literal_binds to
+    # verify the computed compliance_period_end date (2025+1 = 2026-03-31)
+    stmt = mock_db.execute.call_args_list[0].args[0]
+    compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+    stmt_sql = str(compiled)
+    assert "2026-03-31" in stmt_sql
+
+
 @pytest.mark.anyio
 async def test_get_fuel_code_statuses(fuel_code_repo, mock_db):
     fcs = FuelCodeStatus(fuel_code_status_id=1, status=FuelCodeStatusEnum.Approved)
