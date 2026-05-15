@@ -8,7 +8,7 @@ decision (with the comments thread).
 
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -29,6 +29,7 @@ from lcfs.web.api.base import (
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.ci_application.schema import (
+    AssignedAnalystSchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
@@ -42,6 +43,7 @@ from lcfs.web.api.ci_application.schema import (
     CITableOptionsSchema,
     FuelCodeOptionSchema,
     FuelTypeOptionSchema,
+    LatestCommentSchema,
     OrganizationInfoSchema,
     PathwayApplicationTypeSchema,
     PathwayFuelCodeTypeSchema,
@@ -159,10 +161,46 @@ def _to_full_schema(
     )
 
 
-def _to_list_item(ci: CIApplication) -> CIApplicationBaseSchema:
+def _initials(first: Optional[str], last: Optional[str]) -> Optional[str]:
+    first_part = (first or "").strip()
+    last_part = (last or "").strip()
+    if not first_part and not last_part:
+        return None
+    return f"{first_part[:1]}{last_part[:1]}".upper()
+
+
+def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
+    if user is None:
+        return None
+    first = getattr(user, "first_name", None)
+    last = getattr(user, "last_name", None)
+    full = " ".join(p for p in (first, last) if p).strip() or None
+    return AssignedAnalystSchema(
+        user_profile_id=user.user_profile_id,
+        first_name=first,
+        last_name=last,
+        initials=_initials(first, last),
+        full_name=full,
+    )
+
+
+def _to_list_item(
+    ci: CIApplication,
+    last_comment_entry: Optional[Tuple] = None,
+) -> CIApplicationBaseSchema:
+    last_comment: Optional[LatestCommentSchema] = None
+    if last_comment_entry is not None:
+        comment, full_name = last_comment_entry
+        last_comment = LatestCommentSchema(
+            comment=comment.comment,
+            full_name=full_name or None,
+            create_date=comment.create_date,
+        )
+
     return CIApplicationBaseSchema(
         ci_application_id=ci.ci_application_id,
         organization_id=ci.organization_id,
+        organization=_to_org_info(ci.organization),
         status=CIApplicationStatusSchema.model_validate(ci.ci_application_status),
         facility_city=ci.facility_city,
         facility_province_state=ci.facility_province_state,
@@ -172,6 +210,12 @@ def _to_list_item(ci: CIApplication) -> CIApplicationBaseSchema:
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
+        assigned_analyst=_to_assigned_analyst(
+            getattr(ci, "assigned_analyst", None)
+        ),
+        last_comment=last_comment,
+        priority_score=getattr(ci, "priority_score", None),
+        verification_level=getattr(ci, "verification_level", None),
     )
 
 
@@ -241,8 +285,23 @@ class CIApplicationServices:
         organization_id: Optional[int],
     ) -> CIApplicationsListSchema:
         items, total = await self.repo.list_paginated(pagination, organization_id)
+
+        latest_comments = (
+            await self.repo.get_latest_comments_by_ci_application_ids(
+                [ci.ci_application_id for ci in items]
+            )
+            if items
+            else {}
+        )
+
         return CIApplicationsListSchema(
-            ci_applications=[_to_list_item(ci) for ci in items],
+            ci_applications=[
+                _to_list_item(
+                    ci,
+                    last_comment_entry=latest_comments.get(ci.ci_application_id),
+                )
+                for ci in items
+            ],
             pagination=PaginationResponseSchema(
                 total=total,
                 page=pagination.page,

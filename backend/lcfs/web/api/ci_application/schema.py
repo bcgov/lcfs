@@ -60,6 +60,24 @@ class OrganizationInfoSchema(BaseSchema):
     address_line: Optional[str] = None
 
 
+class AssignedAnalystSchema(BaseSchema):
+    """IDIR analyst currently assigned to a CI application."""
+
+    user_profile_id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    initials: Optional[str] = None
+    full_name: Optional[str] = None
+
+
+class LatestCommentSchema(BaseSchema):
+    """Most-recent internal comment on a CI application, for the list grid."""
+
+    comment: Optional[str] = None
+    full_name: Optional[str] = None
+    create_date: Optional[datetime] = None
+
+
 class PathwayApplicationTypeSchema(BaseSchema):
     pathway_application_type_id: int
     type: str
@@ -218,6 +236,7 @@ class CIApplicationBaseSchema(BaseSchema):
 
     ci_application_id: int
     organization_id: int
+    organization: Optional[OrganizationInfoSchema] = None
     status: CIApplicationStatusSchema
     facility_city: Optional[str] = None
     facility_province_state: Optional[str] = None
@@ -227,6 +246,10 @@ class CIApplicationBaseSchema(BaseSchema):
     proposed_fuel_code_effective_date: Optional[date] = None
     update_date: Optional[str] = None
     create_date: Optional[str] = None
+    assigned_analyst: Optional[AssignedAnalystSchema] = None
+    last_comment: Optional[LatestCommentSchema] = None
+    priority_score: Optional[int] = None
+    verification_level: Optional[str] = None
 
 
 class CIApplicationSchema(BaseSchema):

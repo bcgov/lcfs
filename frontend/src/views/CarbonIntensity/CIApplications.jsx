@@ -12,7 +12,8 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import withRole from '@/utils/withRole'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import ROUTES from '@/routes/routes'
@@ -37,6 +38,8 @@ const CIApplicationsBase = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const gridRef = useRef(null)
+  const { hasAnyRole } = useCurrentUser()
+  const isGovernment = hasAnyRole(...govRoles)
 
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
@@ -45,6 +48,11 @@ const CIApplicationsBase = () => {
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const queryData = useGetCIApplications(paginationOptions)
+
+  const columnDefs = useMemo(
+    () => ciApplicationsColDefs(t, { isGovernment }),
+    [t, isGovernment]
+  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -89,7 +97,9 @@ const CIApplicationsBase = () => {
       )}
 
       <BCTypography variant="h5" color="primary" data-test="title">
-        {t('carbonIntensity:ciApplications')}
+        {isGovernment
+          ? t('carbonIntensity:ciApplications')
+          : t('carbonIntensity:myOrgCIApplications')}
       </BCTypography>
 
       <Stack
@@ -122,7 +132,7 @@ const CIApplicationsBase = () => {
         <BCGridViewer
           gridRef={gridRef}
           gridKey="ci-applications-grid"
-          columnDefs={ciApplicationsColDefs(t)}
+          columnDefs={columnDefs}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('carbonIntensity:noCIApplicationsFound')}
           defaultColDef={defaultColDef}

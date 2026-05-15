@@ -85,6 +85,18 @@ class CIApplication(BaseModel, Auditable, Versioning):
         comment="Organization submitting the CI application",
     )
 
+    # ---------- Assigned IDIR analyst ----------
+    assigned_analyst_id = Column(
+        Integer,
+        ForeignKey(
+            "user_profile.user_profile_id",
+            name="fk_ci_application_assigned_analyst_id_user_profile",
+        ),
+        nullable=True,
+        index=True,
+        comment="IDIR Analyst assigned to review this CI application.",
+    )
+
     # ---------- Facility location ----------
     facility_city = Column(
         String(500),
@@ -118,6 +130,18 @@ class CIApplication(BaseModel, Auditable, Versioning):
         ForeignKey("unit_of_measure.uom_id"),
         nullable=False,
         comment="Unit of measure for the facility nameplate capacity",
+    )
+
+    # ---------- Analyst triage (IDIR-only display) ----------
+    priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Analyst-facing triage score for the IDIR CI applications inbox.",
+    )
+    verification_level = Column(
+        String(50),
+        nullable=True,
+        comment="Verification level label (e.g. 'VX1 - Low', 'VX2 - High').",
     )
 
     # ---------- Fuel code / pathway ----------
@@ -175,6 +199,11 @@ class CIApplication(BaseModel, Auditable, Versioning):
     organization = relationship(
         "Organization",
         back_populates="ci_applications",
+        lazy="selectin",
+    )
+    assigned_analyst = relationship(
+        "UserProfile",
+        foreign_keys=[assigned_analyst_id],
         lazy="selectin",
     )
     facility_nameplate_capacity_unit = relationship(

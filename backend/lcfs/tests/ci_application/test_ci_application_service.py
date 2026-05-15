@@ -163,6 +163,7 @@ async def test_get_table_options_returns_lookup_data(service, repo):
 async def test_list_ci_applications_returns_pagination(service, repo):
     repo.list_paginated.return_value = ([_ci_application(), _ci_application(11)], 2)
     repo.total_pages = MagicMock(return_value=1)
+    repo.get_latest_comments_by_ci_application_ids.return_value = {}
 
     pagination = PaginationRequestSchema(page=1, size=10)
     result = await service.list_ci_applications(pagination, organization_id=1)
@@ -178,6 +179,7 @@ async def test_list_ci_applications_returns_pagination(service, repo):
 async def test_list_ci_applications_passes_org_id(service, repo):
     repo.list_paginated.return_value = ([], 0)
     repo.total_pages = MagicMock(return_value=0)
+    repo.get_latest_comments_by_ci_application_ids.return_value = {}
 
     pagination = PaginationRequestSchema(page=1, size=10)
     await service.list_ci_applications(pagination, organization_id=99)
