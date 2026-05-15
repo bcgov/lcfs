@@ -45,6 +45,14 @@ const FuelCodeStatusBadge = (props) => {
   )
 }
 
+const CO_PROCESSED_OPTIONS = ['No', 'Yes - DHT', 'Yes - FCC']
+const getCoProcessedOptions = () => ({
+  data: CO_PROCESSED_OPTIONS.map((value) => ({ coProcessed: value })),
+  isLoading: false,
+  isError: false,
+  error: null
+})
+
 export const fuelCodeColDefs = (t, status = null) => [
   {
     field: 'status',
@@ -164,6 +172,18 @@ export const fuelCodeColDefs = (t, status = null) => [
     field: 'feedstockMisc',
     headerName: t('fuelCode:fuelCodeColLabels.misc'),
     minWidth: 495
+  },
+  {
+    field: 'coProcessed',
+    headerName: t('fuelCode:fuelCodeColLabels.coProcessed'),
+    minWidth: 180,
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: getCoProcessedOptions,
+      valueKey: 'coProcessed',
+      labelKey: 'coProcessed'
+    },
+    suppressFloatingFilterButton: true
   },
   {
     field: 'fuelProductionFacilityCity',

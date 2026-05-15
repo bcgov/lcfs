@@ -1141,3 +1141,51 @@ async def test_get_fuel_code_bulletins_rejects_invalid_type(
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_export_fuel_code_bulletins_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.bulletin_export.FuelCodeBulletinExporter.export"
+    ) as mock_export:
+        set_user_role(RoleEnum.SUPPLIER)
+
+        def mock_generator():
+            yield b"mock,xlsx,data"
+
+        mock_response = StreamingResponse(
+            mock_generator(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="bulletins.xlsx"'},
+        )
+        mock_export.return_value = mock_response
+
+        response = await client.post(
+            "/api/fuel-codes/bulletins/export?bulletinType=current&format=xlsx",
+            json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_export.assert_called_once()
+    assert mock_export.call_args.args[0] == "current"
+    assert mock_export.call_args.args[1] == "xlsx"
+
+
+@pytest.mark.anyio
+async def test_export_fuel_code_bulletins_rejects_invalid_type(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.SUPPLIER)
+
+    response = await client.post(
+        "/api/fuel-codes/bulletins/export?bulletinType=invalid&format=xlsx",
+        json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

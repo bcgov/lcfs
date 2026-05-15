@@ -19,7 +19,10 @@
     "fuelCodePrefix": "Fuel codes with a 'C-' prefix represent fuels produced in Canada.",
     "cutoffDateInfo": "Current/archive split uses cutoff date {{date}}.",
     "noRowsFound": "No bulletin rows found",
-    "errorLoading": "Failed to load fuel code bulletins."
+    "errorLoading": "Failed to load fuel code bulletins.",
+    "downloadBtn": "Download Excel",
+    "downloadingBtn": "Downloading Excel",
+    "downloadError": "Failed to download fuel code bulletin."
   },
   "columns": {
     "fuelCode": "Fuel Code",

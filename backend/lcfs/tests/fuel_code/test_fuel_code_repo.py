@@ -60,6 +60,7 @@ def valid_fuel_code():
         feedstock="Corn",
         feedstock_location="USA",
         feedstock_misc="",
+        co_processed="No",
         fuel_production_facility_city="CityA",
         fuel_production_facility_province_state="ProvinceA",
         fuel_production_facility_country="CountryA",

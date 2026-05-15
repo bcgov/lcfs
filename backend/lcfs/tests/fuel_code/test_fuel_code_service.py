@@ -102,6 +102,7 @@ def create_mock_fuel_code_model():
             self.fuel_production_facility_city = "Victoria"
             self.fuel_production_facility_country = "Canada"
             self.fuel_production_facility_province_state = "BC"
+            self.co_processed = "No"
             self.last_updated = datetime(2023, 10, 1)
             self.feedstock_fuel_transport_modes = []
             self.finished_fuel_transport_modes = []

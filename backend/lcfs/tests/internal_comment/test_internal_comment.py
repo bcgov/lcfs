@@ -448,14 +448,26 @@ async def test_update_internal_comment_success(
 
 @pytest.mark.anyio
 async def test_update_internal_comment_unauthorized(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
 ):
     """
-    Test trying to update an internal comment the user is not authorized to update.
+    A user who is not the creator of the comment cannot update it, even if
+    their role is allowed at the route level (e.g. SUPPLIER on a CI
+    application comment). The endpoint's ownership check returns 403.
     """
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    # Prepare payload for the update attempt
+    internal_comment = InternalComment(
+        internal_comment_id=1,
+        comment="Original Comment",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",  # different from the mock user (mockuser)
+    )
+    await add_models([internal_comment])
+
     update_payload = {"comment": "Updated Comment"}
 
     url = fastapi_app.url_path_for("update_comment", internal_comment_id=1)

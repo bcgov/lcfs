@@ -16,7 +16,7 @@ import {
 import { reportsColDefs, defaultSortModel } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
 import BCButton from '@/components/BCButton'

@@ -1,15 +1,29 @@
-export const suppressKeyboardEvent = (params, options = {}) => {
+interface SuppressKeyboardOptions {
+  enableKeyboardRowNavigation?: boolean
+  onRowClicked?: (params: SuppressKeyboardEventParams) => void
+}
+
+interface SuppressKeyboardEventParams {
+  event: KeyboardEvent & { srcElement: HTMLElement }
+  node?: unknown
+  [key: string]: unknown
+}
+
+export const suppressKeyboardEvent = (
+  params: SuppressKeyboardEventParams,
+  options: SuppressKeyboardOptions = {}
+): boolean => {
   const e = params.event
   const { enableKeyboardRowNavigation = false, onRowClicked } = options
 
   if (e.code === 'Enter') {
-    const focusableChildrenOfParent = e.srcElement
+    const focusableChildrenOfParent = (e.srcElement as HTMLElement)
       .closest('.ag-cell')
-      .querySelectorAll(
+      ?.querySelectorAll(
         'button, [href], :not(.ag-hidden) > input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
 
-    if (focusableChildrenOfParent.length === 0) {
+    if (!focusableChildrenOfParent || focusableChildrenOfParent.length === 0) {
       if (enableKeyboardRowNavigation && onRowClicked && params.node) {
         const mockClickEvent = {
           ...e,
@@ -18,7 +32,9 @@ export const suppressKeyboardEvent = (params, options = {}) => {
         }
         onRowClicked({
           ...params,
-          event: mockClickEvent
+          event: mockClickEvent as unknown as KeyboardEvent & {
+            srcElement: HTMLElement
+          }
         })
         return true
       }
@@ -26,14 +42,14 @@ export const suppressKeyboardEvent = (params, options = {}) => {
     } else return true
   }
   if (e.code === 'Tab' || e.key === 'Tab' || e.code === 'ShiftLeft') {
-    // get focusable children of parent cell
-    const focusableChildrenOfParent = e.srcElement
+    const focusableChildrenOfParent = (e.srcElement as HTMLElement)
       .closest('.ag-cell')
-      .querySelectorAll(
+      ?.querySelectorAll(
         'button, [href], :not(.ag-hidden) > input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
 
     if (
+      !focusableChildrenOfParent ||
       focusableChildrenOfParent.length === 0 ||
       (e.shiftKey === false &&
         e.srcElement ===
@@ -47,7 +63,6 @@ export const suppressKeyboardEvent = (params, options = {}) => {
       e.srcElement ===
       focusableChildrenOfParent[focusableChildrenOfParent.length - 1]
     const isFirstElement = e.srcElement === focusableChildrenOfParent[0]
-    // Determine if we should suppress the Tab or Shift+Tab key event
     if (!e.shiftKey && isLastElement) {
       return false // Move to the next cell
     } else if (e.shiftKey && isFirstElement) {
@@ -59,19 +74,15 @@ export const suppressKeyboardEvent = (params, options = {}) => {
   return false // do not suppress by default
 }
 
-export function isEqual(value1, value2) {
-  // Check if both values are strictly equal
+export function isEqual(value1: unknown, value2: unknown): boolean {
   if (value1 === value2) return true
 
-  // Check if both values are null or undefined
   if (value1 == null || value2 == null) return false
 
-  // Check if both values are dates
   if (value1 instanceof Date && value2 instanceof Date) {
     return value1.getTime() === value2.getTime()
   }
 
-  // Check if both values are arrays
   if (Array.isArray(value1) && Array.isArray(value2)) {
     if (value1.length !== value2.length) return false
     for (let i = 0; i < value1.length; i++) {
@@ -80,18 +91,17 @@ export function isEqual(value1, value2) {
     return true
   }
 
-  // Check if both values are objects (but not arrays or dates)
   if (typeof value1 === 'object' && typeof value2 === 'object') {
-    const keys1 = Object.keys(value1)
-    const keys2 = Object.keys(value2)
+    const obj1 = value1 as Record<string, unknown>
+    const obj2 = value2 as Record<string, unknown>
+    const keys1 = Object.keys(obj1)
+    const keys2 = Object.keys(obj2)
     if (keys1.length !== keys2.length) return false
     for (const key of keys1) {
-      if (!keys2.includes(key) || !isEqual(value1[key], value2[key]))
-        return false
+      if (!keys2.includes(key) || !isEqual(obj1[key], obj2[key])) return false
     }
     return true
   }
 
-  // For other types (number, string, etc.)
   return false
 }

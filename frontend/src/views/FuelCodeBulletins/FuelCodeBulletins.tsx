@@ -1,33 +1,20 @@
-import { nonGovRoles, roles } from '@/constants/roles'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { nonGovRoles } from '@/constants/roles'
 import ROUTES from '@/routes/routes'
 import withRole from '@/utils/withRole'
-import { MyFuelCodes } from '@/views/FuelCodes'
+import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import { Stack } from '@mui/material'
-import { useState } from 'react'
-import { BulletinMenuBar } from './components/BulletinMenuBar'
+import { useSearchParams } from 'react-router-dom'
 import { CurrentFuelCodes } from './components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from './components/ArchivedFuelCodes'
 
 export const FuelCodeBulletinsBase = () => {
-  const [activeTab, setActiveTab] = useState<string>('current')
-  const { hasRoles } = useCurrentUser()
-  const isCiApplicant = hasRoles(roles.ci_applicant)
-
-  const renderActiveTab = () => {
-    if (activeTab === 'my' && isCiApplicant) {
-      return <MyFuelCodes />
-    }
-    if (activeTab === 'archived') {
-      return <ArchivedFuelCodes />
-    }
-    return <CurrentFuelCodes />
-  }
+  const [searchParams] = useSearchParams()
+  const isArchived = searchParams.get('type') === 'archived'
 
   return (
     <Stack spacing={2} sx={{ width: '100%' }}>
-      <BulletinMenuBar activeTab={activeTab} onTabChange={setActiveTab} />
-      {renderActiveTab()}
+      <FuelCodesTabs />
+      {isArchived ? <ArchivedFuelCodes /> : <CurrentFuelCodes />}
     </Stack>
   )
 }

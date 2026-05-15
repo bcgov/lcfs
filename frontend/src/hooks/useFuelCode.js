@@ -114,6 +114,25 @@ export const useFuelCodeBulletins = (bulletinType, paginationOptions, options) =
   })
 }
 
+export const useDownloadFuelCodeBulletins = (options) => {
+  const client = useApiService()
+  return useMutation({
+    mutationFn: async ({ bulletinType, format = 'xlsx', body }) => {
+      if (!bulletinType) {
+        throw new Error('bulletinType is required for bulletin download')
+      }
+
+      return await client.download({
+        url: apiRoutes.exportFuelCodeBulletins,
+        method: 'post',
+        params: { bulletinType, format },
+        data: body
+      })
+    },
+    ...options
+  })
+}
+
 export const useTransportModes = (options) => {
   const client = useApiService()
   return useQuery({

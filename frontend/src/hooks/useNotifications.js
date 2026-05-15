@@ -10,9 +10,11 @@ export const useNotificationsCount = (options) => {
       const response = await client.get(apiRoutes.getNotificationsCount)
       return response.data
     },
-    staleTime: 1 * 60 * 1000, // 1 minute
-    cacheTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 1 * 60 * 1000, // 1 minute
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     ...options
   })
 }

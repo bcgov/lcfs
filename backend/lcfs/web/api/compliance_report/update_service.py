@@ -37,6 +37,10 @@ from lcfs.web.api.organization_snapshot.schema import OrganizationSnapshotSchema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 
 # Import TYPE_CHECKING to avoid circular imports at runtime
 from typing import TYPE_CHECKING
@@ -193,13 +197,15 @@ class ComplianceReportUpdateService:
             # Add history record
             await self.repo.add_compliance_report_history(report, user)
 
-        # Handle notifications
-        await self._perform_notification_call(report, current_status, user)
+        # Handle notifications only for workflow transitions and return statuses (not for other edits)
+        return_status_values = [status.value for status in ReturnStatus]
+        if status_has_changed or current_status in return_status_values:
+            await self._perform_notification_call(report, current_status, user)
 
         return updated_report
 
     async def _perform_notification_call(self, report, status, user: UserProfile):
-        """Send notifications based on the current status of the transfer."""
+        """Send notifications based on the current status of the compliance report."""
         status_mapper = status.replace(" ", "_")
         notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
             (
@@ -296,6 +302,30 @@ class ComplianceReportUpdateService:
         )
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
+
+        # Idempotency guard. If a Reserved transaction already exists for
+        # this report, a prior submission already ran — re-running here
+        # would mint a duplicate Reserved row, re-send notifications, and
+        # corrupt the org's available_balance. Incident 4368: a report
+        # ended up with 7 duplicate Reserved rows because repeat clicks on
+        # Sign-and-Submit each got a fresh handler run.
+        existing_reserve = await self._fetch_reserved_transaction_for_report(
+            report
+        )
+        if existing_reserve is not None:
+            logger.warning(
+                "compliance_report.submit.duplicate_blocked",
+                report_id=report.compliance_report_id,
+                existing_transaction_id=existing_reserve.transaction_id,
+                user=user.keycloak_username,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "This report has already been submitted. "
+                    "Refresh the page to see the current state."
+                ),
+            )
 
         # Validate organization details are complete before submission
         await self._validate_organization_details_for_submission(
@@ -607,9 +637,21 @@ class ComplianceReportUpdateService:
             )
             units_to_reserve = -eligible_units
 
-        if report.transaction is not None:
-            # update existing transaction
-            report.transaction.compliance_units = units_to_reserve
+        # Defensive: never trust the in-memory relationship alone. If the
+        # report row already has a transaction_id pointing at a Reserved row,
+        # update *that* row instead of inserting a new one. This is the second
+        # line of defence against the duplicate-submission bug — even if a
+        # concurrent request bypasses the idempotency guard above, two writers
+        # racing here will both see the same persisted transaction_id and
+        # update the same row.
+        existing_transaction = await self._fetch_reserved_transaction_for_report(
+            report
+        )
+
+        if existing_transaction is not None:
+            existing_transaction.compliance_units = units_to_reserve
+            report.transaction = existing_transaction
+            report.transaction_id = existing_transaction.transaction_id
         elif credit_change != 0 and (
             effective_available_balance > 0 or credit_change > 0
         ):
@@ -621,6 +663,18 @@ class ComplianceReportUpdateService:
             )
 
         return units_to_reserve
+
+    async def _fetch_reserved_transaction_for_report(self, report):
+        """Return the persisted Reserved transaction for this report, if any.
+
+        Reads through the DB rather than the SQLAlchemy relationship so it
+        catches the case where a prior request already created a transaction
+        but this request loaded `report.transaction` as None (stale identity
+        map / unflushed session / cross-request reload).
+        """
+        return await self.trx_service.repo.get_reserved_transaction_by_id(
+            report.transaction_id
+        )
 
     async def _calculate_pre_deadline_balance(self, report: ComplianceReport) -> int:
         compliance_period = getattr(report, "compliance_period", None)

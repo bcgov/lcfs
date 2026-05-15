@@ -1,6 +1,4 @@
 import logging
-import os
-import debugpy
 import uuid
 import re
 
@@ -50,6 +48,8 @@ dev_origin_pattern = re.compile(
     r"^https://lcfs-dev-\d+\.apps\.silver\.devops\.gov\.bc\.ca$"
 )
 
+logger = structlog.get_logger(__name__)
+
 
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
     """
@@ -84,7 +84,7 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Check for specific paths that should skip authentication
-        path = request.url.path
+        path = request.url.path.rstrip("/")
 
         # Always skip auth for these paths
         if (
@@ -92,7 +92,11 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             or path == "/api/health"
             or path == "/api/login-bg-images/active"
             or re.match(r"^/api/login-bg-images/\d+/stream$", path)
-            or path == "/api/fuel-codes/bulletins"
+            or path
+            in {
+                "/api/fuel-codes/bulletins",
+                "/api/fuel-codes/bulletins/export",
+            }
         ):
             return AuthCredentials([]), UnauthenticatedUser()
 

@@ -16,6 +16,7 @@ from lcfs.web.api import (
     transfer,
     transaction,
     internal_comment,
+    ci_application,
     fuel_code,
     fuel_export,
     admin_adjustment,
@@ -73,6 +74,9 @@ api_router.include_router(
     internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
 )
 api_router.include_router(fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"])
+api_router.include_router(
+    ci_application.router, prefix="/ci-applications", tags=["ci_applications"]
+)
 api_router.include_router(
     fuel_export.router, prefix="/fuel-exports", tags=["fuel-exports"]
 )

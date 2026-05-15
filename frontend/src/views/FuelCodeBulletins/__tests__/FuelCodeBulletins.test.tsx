@@ -2,25 +2,29 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
-import { roles } from '@/constants/roles'
 import FuelCodeBulletins from '../FuelCodeBulletins'
 import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
 
 const mockUseFuelCodeBulletins = vi.fn()
+const mockDownloadMutate = vi.fn()
 const mockBCGridViewer = vi.fn()
+let mockSearch = ''
 
 vi.mock('@/utils/withRole', () => ({
   default: (Component: any) => Component
 }))
 
-let mockHasRolesImpl: (...names: string[]) => boolean = () => false
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: { roles: [] },
-    hasRoles: (...names: string[]) => mockHasRolesImpl(...names),
-    hasAnyRole: (...names: string[]) => mockHasRolesImpl(...names)
-  })
+vi.mock('react-router-dom', async () => {
+  const actual: any = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useSearchParams: () => [new URLSearchParams(mockSearch), vi.fn()]
+  }
+})
+
+vi.mock('@/views/CarbonIntensity/components/FuelCodesTabs', () => ({
+  FuelCodesTabs: () => <div data-test="fuel-codes-tabs" />
 }))
 
 vi.mock('react-i18next', () => ({
@@ -29,9 +33,6 @@ vi.mock('react-i18next', () => ({
       const translations: Record<string, string> = {
         'tabs.current': 'Current',
         'tabs.archived': 'Archived',
-        'tabs.myFuelCodes': 'My fuel codes',
-        'fuelCode:myFuelCodesTitle': "My organization's fuel codes",
-        'fuelCode:noFuelCodesFound': 'No fuel codes found',
         'current.title': 'Approved carbon intensities - Current',
         'archived.title': 'Approved carbon intensities - Archived',
         'archived.description': 'Archived description',
@@ -39,6 +40,9 @@ vi.mock('react-i18next', () => ({
           "Fuel codes with a 'C-' prefix represent fuels produced in Canada.",
         'common.noRowsFound': 'No bulletin rows found',
         'common.errorLoading': 'Failed to load fuel code bulletins.',
+        'common.downloadBtn': 'Download Excel',
+        'common.downloadingBtn': 'Downloading Excel',
+        'common.downloadError': 'Failed to download fuel code bulletin.',
         'columns.fuelCode': 'Fuel Code',
         'columns.fuel': 'Fuel',
         'columns.company': 'Company',
@@ -56,14 +60,9 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useFuelCode', () => ({
   useFuelCodeBulletins: (...args: any[]) => mockUseFuelCodeBulletins(...args),
-  useGetMyFuelCodes: () => ({
-    data: { pagination: { total: 0, page: 1, size: 10 }, fuelCodes: [] },
-    isLoading: false,
-    isError: false,
-    error: null
-  }),
-  useFuelCodeStatuses: () => ({ data: [] }),
-  useTransportModes: () => ({ data: [] })
+  useDownloadFuelCodeBulletins: () => ({
+    mutateAsync: mockDownloadMutate
+  })
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -90,7 +89,8 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('FuelCodeBulletins UI', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockHasRolesImpl = () => false
+    mockSearch = ''
+    mockDownloadMutate.mockResolvedValue(undefined)
     mockUseFuelCodeBulletins.mockImplementation((bulletinType) => {
       if (bulletinType === 'current') {
         return {
@@ -133,7 +133,7 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
-  it('renders current bulletin by default and switches to archived tab', async () => {
+  it('renders current bulletin when no type query param is present', () => {
     render(<FuelCodeBulletins />, { wrapper })
 
     expect(
@@ -142,8 +142,12 @@ describe('FuelCodeBulletins UI', () => {
     expect(
       screen.getByTestId('bc-grid-viewer-current-fuel-codes-grid')
     ).toBeInTheDocument()
+  })
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Archived' }))
+  it('renders archived bulletin when ?type=archived is in the URL', () => {
+    mockSearch = '?type=archived'
+
+    render(<FuelCodeBulletins />, { wrapper })
 
     expect(
       screen.getByText('Approved carbon intensities - Archived')
@@ -197,30 +201,6 @@ describe('FuelCodeBulletins UI', () => {
     ).toBeInTheDocument()
   })
 
-  it('hides the "My fuel codes" tab from non-CI Applicants', () => {
-    render(<FuelCodeBulletins />, { wrapper })
-
-    expect(
-      screen.queryByRole('tab', { name: 'My fuel codes' })
-    ).not.toBeInTheDocument()
-  })
-
-  it('shows the "My fuel codes" tab for CI Applicants and switches to it', async () => {
-    mockHasRolesImpl = (...names: string[]) =>
-      names.length > 0 && names.every((n) => n === roles.ci_applicant)
-
-    render(<FuelCodeBulletins />, { wrapper })
-
-    const myTab = screen.getByRole('tab', { name: 'My fuel codes' })
-    expect(myTab).toBeInTheDocument()
-
-    await userEvent.click(myTab)
-
-    expect(
-      screen.getByText("My organization's fuel codes")
-    ).toBeInTheDocument()
-  })
-
   it('renders API error message when archived bulletin fails', () => {
     mockUseFuelCodeBulletins.mockReturnValueOnce({
       data: { fuelCodes: [] },
@@ -232,5 +212,38 @@ describe('FuelCodeBulletins UI', () => {
     render(<ArchivedFuelCodes />, { wrapper })
 
     expect(screen.getByText('Backend unavailable')).toBeInTheDocument()
+  })
+
+  it('downloads current bulletin with current filters and sorting', async () => {
+    render(<CurrentFuelCodes />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download Excel' }))
+
+    await waitFor(() => {
+      expect(mockDownloadMutate).toHaveBeenCalledWith({
+        bulletinType: 'current',
+        format: 'xlsx',
+        body: {
+          page: 1,
+          size: 25,
+          sortOrders: [],
+          filters: []
+        }
+      })
+    })
+  })
+
+  it('shows download error when archived bulletin export fails', async () => {
+    mockDownloadMutate.mockRejectedValueOnce(new Error('Download failed'))
+
+    render(<ArchivedFuelCodes />, { wrapper })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download Excel' }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Failed to download fuel code bulletin.')
+      ).toBeInTheDocument()
+    })
   })
 })

@@ -1,4 +1,9 @@
 import BCBadge from '@/components/BCBadge'
+import type {
+  BCBadgeColor,
+  BCBadgeSize,
+  BCBadgeVariant
+} from '@/components/BCBadge/BCBadgeRoot'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { roles } from '@/constants/roles'
@@ -11,12 +16,48 @@ import {
 } from '@/constants/statuses'
 import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'
 import { Link, useLocation } from 'react-router-dom'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ReactElement,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import colors from '@/themes/base/colors'
 import { ArrowDropDown } from '@mui/icons-material'
 import { getCode } from 'country-list'
 
-export const TextRenderer = (props) => {
+// Loose typing because these renderers are consumed by AG Grid and many
+// consumers across the codebase pass through additional ad-hoc props.
+type RendererProps = {
+  value?: any
+  valueFormatted?: any
+  data?: any
+  node?: any
+  colDef?: any
+  api?: any
+  url?: (params: { data: any }) => string
+  isAbsolute?: boolean
+  isView?: boolean
+  state?: (data: any) => any
+  [key: string]: any
+}
+
+interface ChipConfig {
+  maxWidth?: number
+  [key: string]: unknown
+}
+
+interface ChipDescriptor {
+  text: string
+  width: number
+  maxWidth?: number
+  [key: string]: unknown
+}
+
+export const TextRenderer = (props: RendererProps): ReactElement => {
   return (
     <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
       {props.valueFormatted || props.value}
@@ -24,7 +65,7 @@ export const TextRenderer = (props) => {
   )
 }
 
-export const LinkRenderer = (props) => {
+export const LinkRenderer = (props: RendererProps): ReactElement => {
   const location = useLocation()
 
   const baseUrl = props.isAbsolute ? '' : `${location.pathname}/`
@@ -44,7 +85,7 @@ export const LinkRenderer = (props) => {
   )
 }
 
-export const SelectRenderer = (params) => {
+export const SelectRenderer = (params: RendererProps): ReactElement => {
   const cellParams = params.colDef?.cellEditorParams
 
   const options =
@@ -77,7 +118,7 @@ export const SelectRenderer = (params) => {
   )
 }
 
-export const MultiSelectRenderer = (params) => {
+export const MultiSelectRenderer = (params: RendererProps): ReactElement => {
   const cellParams = params.colDef?.cellEditorParams
 
   const options =
@@ -94,7 +135,9 @@ export const MultiSelectRenderer = (params) => {
   if (params.value && params.value !== '') {
     const value = Array.isArray(params.value)
       ? params.value?.map(
-          (item) => options.find((opt) => opt.value === item)?.label || item
+          (item: unknown) =>
+            options.find((opt: { value: unknown; label: unknown }) => opt.value === item)
+              ?.label || item
         )
       : params.value
     return <CommonArrayRenderer disableLink value={value} />
@@ -118,14 +161,25 @@ export const MultiSelectRenderer = (params) => {
   )
 }
 
-export const ConditionalLinkRenderer = (condition) => {
-  return (props) => {
+export const ConditionalLinkRenderer = (
+  condition: (props: RendererProps) => boolean
+) => {
+  return (props: RendererProps): ReactElement => {
     if (condition(props)) {
       return LinkRenderer(props)
     } else {
       return TextRenderer(props)
     }
   }
+}
+
+interface BaseStatusRendererProps {
+  isView?: boolean
+  value?: boolean
+  successText?: string
+  failureText?: string
+  successColor?: BCBadgeColor
+  failureColor?: BCBadgeColor
 }
 
 const BaseStatusRenderer = ({
@@ -135,7 +189,7 @@ const BaseStatusRenderer = ({
   failureText = 'Inactive',
   successColor = 'success',
   failureColor = 'smoky'
-}) => {
+}: BaseStatusRendererProps): ReactElement => {
   const badgeStyles = {
     ...(!isView ? { display: 'flex', justifyContent: 'center' } : {}),
     '& .MuiBadge-badge': {
@@ -164,11 +218,11 @@ const BaseStatusRenderer = ({
   )
 }
 
-export const StatusRenderer = (props) => (
+export const StatusRenderer = (props: RendererProps): ReactElement => (
   <BaseStatusRenderer isView={props.isView} value={props.data.isActive} />
 )
 
-export const LoginStatusRenderer = (props) => (
+export const LoginStatusRenderer = (props: RendererProps): ReactElement => (
   <BaseStatusRenderer
     isView={props.isView}
     value={props.data.isLoginSuccessful}
@@ -178,10 +232,24 @@ export const LoginStatusRenderer = (props) => (
   />
 )
 
-export const OrgStatusRenderer = (props) => {
+interface FilterPillProps {
+  rawValue?: unknown
+  value?: unknown
+}
+
+type FilterPillRenderer = (props: FilterPillProps) => ReactNode
+
+interface RendererWithFilterPill {
+  (props: RendererProps): ReactElement
+  filterPillRenderer?: FilterPillRenderer
+}
+
+export const OrgStatusRenderer: RendererWithFilterPill = (
+  props: RendererProps
+): ReactElement => {
   const location = useLocation()
   const statusArr = getAllOrganizationStatuses()
-  const statusColorArr = ['info', 'success', 'warning', 'error']
+  const statusColorArr: BCBadgeColor[] = ['info', 'success', 'warning', 'error']
   const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (
     <Link
@@ -218,11 +286,11 @@ export const OrgStatusRenderer = (props) => {
 }
 
 OrgStatusRenderer.filterPillRenderer = ({ rawValue }) => {
-  const statusValue = rawValue || ''
+  const statusValue = (rawValue as string) || ''
   if (!statusValue) return null
   const statusArr = getAllOrganizationStatuses()
-  const statusColorArr = ['info', 'success', 'warning', 'error']
-  const statusIndex = statusArr.indexOf(statusValue)
+  const statusColorArr: BCBadgeColor[] = ['info', 'success', 'warning', 'error']
+  const statusIndex = statusArr.indexOf(statusValue as never)
 
   return (
     <BCBadge
@@ -243,7 +311,7 @@ OrgStatusRenderer.filterPillRenderer = ({ rawValue }) => {
   )
 }
 
-const ORG_TYPE_COLOR_MAP = {
+const ORG_TYPE_COLOR_MAP: Record<string, BCBadgeColor> = {
   fuel_supplier: 'info',
   aggregator: 'warning',
   fuel_producer: 'success',
@@ -251,7 +319,10 @@ const ORG_TYPE_COLOR_MAP = {
   initiative_agreement_holder: 'primary'
 }
 
-const renderOrgTypeBadge = (text, color) => (
+const renderOrgTypeBadge = (
+  text: string,
+  color: BCBadgeColor
+): ReactElement => (
   <BCBadge
     badgeContent={text}
     color={color}
@@ -271,7 +342,9 @@ const renderOrgTypeBadge = (text, color) => (
   />
 )
 
-export const OrgTypeRenderer = (props) => {
+export const OrgTypeRenderer: RendererWithFilterPill = (
+  props: RendererProps
+): ReactElement => {
   const location = useLocation()
   const typeKey = props.data?.orgType?.orgType
   const label =
@@ -308,21 +381,25 @@ export const OrgTypeRenderer = (props) => {
 
 OrgTypeRenderer.filterPillRenderer = ({ rawValue }) => {
   if (!rawValue) return null
-  const color = ORG_TYPE_COLOR_MAP[rawValue] || 'dark'
-  const display = getOrgTypeDisplayLabel({ orgType: rawValue }) || rawValue
+  const color = ORG_TYPE_COLOR_MAP[rawValue as string] || 'dark'
+  const display =
+    getOrgTypeDisplayLabel({ orgType: rawValue as string }) ||
+    (rawValue as string)
   return renderOrgTypeBadge(display, color)
 }
 
-export const YesNoTextRenderer = (props) => (
+export const YesNoTextRenderer = (props: RendererProps): ReactElement => (
   <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
     {props.value ? 'Yes' : 'No'}
   </BCBox>
 )
 
-export const FuelCodeStatusRenderer = (props) => {
+export const FuelCodeStatusRenderer = (
+  props: RendererProps
+): ReactElement => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
-  const statusColorArr = ['info', 'info', 'success', 'error']
+  const statusColorArr: BCBadgeColor[] = ['info', 'info', 'success', 'error']
   const statusIndex = statusArr.indexOf(props.data?.status)
   return (
     <Link
@@ -358,7 +435,9 @@ export const FuelCodeStatusRenderer = (props) => {
   )
 }
 
-export const FuelCodePrefixRenderer = (params) => {
+export const FuelCodePrefixRenderer = (
+  params: RendererProps
+): ReactElement | string => {
   const location = useLocation()
   const prefix = params.data.prefix
   const countryName = params.data.fuelProductionFacilityCountry
@@ -366,7 +445,6 @@ export const FuelCodePrefixRenderer = (params) => {
 
   if (!countryCode) return prefix
 
-  // Use country flags API
   return (
     <Link
       to={params.node?.id && location.pathname + '/' + params?.node?.id}
@@ -384,7 +462,7 @@ export const FuelCodePrefixRenderer = (params) => {
   )
 }
 
-const TRANSFER_STATUS_TO_COLOR_MAP = {
+const TRANSFER_STATUS_TO_COLOR_MAP: Record<string, BCBadgeColor> = {
   [TRANSFER_STATUSES.NEW]: 'info',
   [TRANSFER_STATUSES.DRAFT]: 'info',
   [TRANSFER_STATUSES.SENT]: 'info',
@@ -400,8 +478,10 @@ const TRANSFER_STATUS_TO_COLOR_MAP = {
   [TRANSFER_STATUSES.DELETED]: 'error'
 }
 
-export const TransactionStatusRenderer = (props) => {
-  const buildBadge = (status) => (
+export const TransactionStatusRenderer: RendererWithFilterPill = (
+  props: RendererProps
+): ReactElement => {
+  const buildBadge = (status: string) => (
     <BCBadge
       badgeContent={status}
       color={TRANSFER_STATUS_TO_COLOR_MAP[status]}
@@ -449,8 +529,8 @@ TransactionStatusRenderer.filterPillRenderer = ({ rawValue }) => {
   if (!rawValue) return null
   return (
     <BCBadge
-      badgeContent={rawValue}
-      color={TRANSFER_STATUS_TO_COLOR_MAP[rawValue]}
+      badgeContent={rawValue as string}
+      color={TRANSFER_STATUS_TO_COLOR_MAP[rawValue as string]}
       variant="contained"
       size="lg"
       sx={{
@@ -465,7 +545,7 @@ TransactionStatusRenderer.filterPillRenderer = ({ rawValue }) => {
   )
 }
 
-const STATUS_TO_COLOR_MAP = {
+const STATUS_TO_COLOR_MAP: Record<string, BCBadgeColor> = {
   [COMPLIANCE_REPORT_STATUSES.DRAFT]: 'info',
   [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: 'info',
   [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: 'info',
@@ -477,11 +557,16 @@ const STATUS_TO_COLOR_MAP = {
   [COMPLIANCE_REPORT_STATUSES.REJECTED]: 'error'
 }
 
-export const ReportsStatusRenderer = (props) => {
+export const ReportsStatusRenderer: RendererWithFilterPill = (
+  props: RendererProps
+): ReactElement => {
   return (
     <Link
       to={
-        props.url && location.pathname + '/' + props.url({ data: props.data })
+        (props.url &&
+          location.pathname +
+            '/' +
+            props.url({ data: props.data })) as unknown as string
       }
       style={{ color: '#000' }}
     >
@@ -493,7 +578,7 @@ export const ReportsStatusRenderer = (props) => {
         }}
       >
         <BCBadge
-          badgeContent={props.data.reportStatus.replaceAll('_', ' ')}
+          badgeContent={props.data.reportStatus.replace(/_/g, ' ')}
           color={STATUS_TO_COLOR_MAP[props.data.reportStatus]}
           variant="contained"
           size="lg"
@@ -514,10 +599,10 @@ export const ReportsStatusRenderer = (props) => {
 ReportsStatusRenderer.filterPillRenderer = ({ rawValue }) => {
   if (!rawValue) return null
   const rawString = String(rawValue)
-  const displayValue = rawString.replaceAll('_', ' ')
+  const displayValue = rawString.replace(/_/g, ' ')
   const color =
     STATUS_TO_COLOR_MAP[rawString] ||
-    STATUS_TO_COLOR_MAP[rawString.replaceAll(' ', '_')] ||
+    STATUS_TO_COLOR_MAP[rawString.replace(/ /g, '_')] ||
     'info'
 
   return (
@@ -538,11 +623,14 @@ ReportsStatusRenderer.filterPillRenderer = ({ rawValue }) => {
   )
 }
 
-export const RoleSpanRenderer = (props) => (
+export const RoleSpanRenderer = (props: RendererProps): ReactElement => (
   <>
     {props.data.roles
-      .filter((r) => r.name !== roles.government && r.name !== roles.supplier)
-      .map((role) => (
+      .filter(
+        (r: { name: string }) =>
+          r.name !== roles.government && r.name !== roles.supplier
+      )
+      .map((role: { roleId: string | number; name: string; isGovernmentRole: boolean }) => (
         <BCBadge
           key={role.roleId}
           sx={{
@@ -562,6 +650,13 @@ export const RoleSpanRenderer = (props) => (
   </>
 )
 
+interface GenericChipRendererProps extends RendererProps {
+  disableLink?: boolean
+  renderChip?: (chip: ChipDescriptor) => ReactNode
+  renderOverflowChip?: (hiddenChipsCount: number) => ReactNode
+  chipConfig?: ChipConfig
+}
+
 const GenericChipRenderer = ({
   value,
   disableLink = false,
@@ -569,18 +664,18 @@ const GenericChipRenderer = ({
   renderOverflowChip = defaultRenderOverflowChip,
   chipConfig = {},
   ...props
-}) => {
+}: GenericChipRendererProps): ReactElement => {
   const location = useLocation()
   const { colDef, api } = props
-  const containerRef = useRef(null)
-  const [visibleChips, setVisibleChips] = useState([])
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [visibleChips, setVisibleChips] = useState<ChipDescriptor[]>([])
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
-  const options = useMemo(() => {
+  const options = useMemo<string[]>(() => {
     if (Array.isArray(value)) {
       return value
-        .map((item) => item?.label || item)
-        .filter((item) => item && item !== '')
+        .map((item: any) => item?.label || item)
+        .filter((item: any) => item && item !== '')
     }
 
     if (value?.label) {
@@ -597,12 +692,15 @@ const GenericChipRenderer = ({
     return []
   }, [value])
 
-  const calculateChipWidths = useCallback(() => {
+  const calculateChipWidths = useCallback((): {
+    visibleChips: ChipDescriptor[]
+    hiddenChipsCount: number
+  } => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
 
     const containerWidth = containerRef.current.offsetWidth || 200 // Fallback width
     let totalWidth = 0
-    const chipWidths = []
+    const chipWidths: ChipDescriptor[] = []
 
     for (let i = 0; i < options.length; i++) {
       const chipText = options[i]
@@ -634,14 +732,11 @@ const GenericChipRenderer = ({
     }
   }, [options])
 
-  // Initial render and resize handling
   useEffect(() => {
-    // Calculate and set chips on initial render
     const { visibleChips, hiddenChipsCount } = calculateChipWidths()
     setVisibleChips(visibleChips)
     setHiddenChipsCount(hiddenChipsCount)
 
-    // Resize listener
     const resizeObserver = new ResizeObserver(() => {
       const { visibleChips, hiddenChipsCount } = calculateChipWidths()
       setVisibleChips(visibleChips)
@@ -651,8 +746,7 @@ const GenericChipRenderer = ({
       resizeObserver.observe(containerRef.current)
     }
 
-    // Column resize listener for ag-Grid
-    const resizeListener = (event) => {
+    const resizeListener = (event: { column?: { getColId: () => string } }) => {
       const resizedColumn = event.column
       if (resizedColumn && resizedColumn.getColId() === colDef.field) {
         const { visibleChips, hiddenChipsCount } = calculateChipWidths()
@@ -664,7 +758,6 @@ const GenericChipRenderer = ({
     if (api) {
       api.addEventListener('columnResized', resizeListener)
 
-      // Cleanup
       return () => {
         api.removeEventListener('columnResized', resizeListener)
         resizeObserver.disconnect()
@@ -704,8 +797,7 @@ const GenericChipRenderer = ({
   )
 }
 
-// Default Render Chip Function for CommonArrayRenderer
-const defaultRenderChip = (chip) => (
+const defaultRenderChip = (chip: ChipDescriptor): ReactElement => (
   <span
     key={chip.text}
     style={{
@@ -727,11 +819,7 @@ const defaultRenderChip = (chip) => (
       textOverflow: 'ellipsis',
       overflow: 'hidden',
       flexShrink: 0,
-      transition: 'all 0.2s ease',
-      '&:hover': {
-        transform: 'scale(1.05)',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }
+      transition: 'all 0.2s ease'
     }}
     title={chip.text}
   >
@@ -739,8 +827,7 @@ const defaultRenderChip = (chip) => (
   </span>
 )
 
-// Default Overflow Chip for CommonArrayRenderer
-const defaultRenderOverflowChip = (hiddenChipsCount) =>
+const defaultRenderOverflowChip = (hiddenChipsCount: number): ReactNode =>
   hiddenChipsCount > 0 && (
     <span
       key="overflow-chip"
@@ -764,11 +851,7 @@ const defaultRenderOverflowChip = (hiddenChipsCount) =>
         overflow: 'hidden',
         flexShrink: 0,
         border: '1px solid rgba(0, 0, 0, 0.12)',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          backgroundColor: 'rgba(0, 0, 0, 0.12)',
-          transform: 'scale(1.05)'
-        }
+        transition: 'all 0.2s ease'
       }}
       title={`+${hiddenChipsCount} more`}
     >
@@ -776,8 +859,10 @@ const defaultRenderOverflowChip = (hiddenChipsCount) =>
     </span>
   )
 
-// Role Specific Render Chip Function
-const roleRenderChip = (chip, isGovernmentRole = false) => (
+const roleRenderChip = (
+  chip: ChipDescriptor,
+  isGovernmentRole = false
+): ReactElement => (
   <BCBadge
     key={chip.text}
     sx={{
@@ -795,8 +880,10 @@ const roleRenderChip = (chip, isGovernmentRole = false) => (
   />
 )
 
-// Role Specific Overflow Chip
-const roleRenderOverflowChip = (hiddenChipsCount, isGovernmentRole = false) =>
+const roleRenderOverflowChip = (
+  hiddenChipsCount: number,
+  isGovernmentRole = false
+): ReactNode =>
   hiddenChipsCount > 0 && (
     <span
       key="overflow-chip"
@@ -828,7 +915,9 @@ const roleRenderOverflowChip = (hiddenChipsCount, isGovernmentRole = false) =>
 
 export default GenericChipRenderer
 
-export const CommonArrayRenderer = (props) => (
+export const CommonArrayRenderer = (
+  props: GenericChipRendererProps
+): ReactElement => (
   <GenericChipRenderer
     {...props}
     renderChip={defaultRenderChip}
@@ -836,19 +925,21 @@ export const CommonArrayRenderer = (props) => (
   />
 )
 
-export const RoleRenderer = (props) => {
+export const RoleRenderer = (props: RendererProps): ReactElement => {
   const { value } = props
   const [isGovernmentRole, setIsGovernmentRole] = useState(false)
 
-  const filteredRoles = Array.isArray(value)
+  const filteredRoles: string[] = Array.isArray(value)
     ? value
-    : value
+    : (value as string)
         .split(',')
         .map((role) => role.trim())
-        .filter((role) => role !== roles.government && role !== roles.supplier)
+        .filter(
+          (role) => role !== roles.government && role !== roles.supplier
+        )
 
   useEffect(() => {
-    setIsGovernmentRole(value.includes(roles.government))
+    setIsGovernmentRole((value as string).includes(roles.government))
   }, [value])
 
   return (
@@ -863,20 +954,17 @@ export const RoleRenderer = (props) => {
   )
 }
 
-export const LastCommentRenderer = (props) => {
+export const LastCommentRenderer = (props: RendererProps): ReactElement => {
   const location = useLocation()
   const { lastComment } = props.data
 
-  // If no comment exists, return empty cell
   if (!lastComment || !lastComment.fullName) {
     return (
       <Link
         to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
         style={{ color: '#000' }}
       >
-        <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
-          {/* Empty cell but still clickable */}
-        </BCBox>
+        <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
       </Link>
     )
   }
@@ -922,11 +1010,27 @@ export const LastCommentRenderer = (props) => {
   )
 }
 
+interface CreateStatusRendererOptions {
+  statusField?: string
+  defaultColor?: BCBadgeColor
+  variant?: BCBadgeVariant
+  size?: BCBadgeSize
+  minWidth?: string
+  fontSize?: string
+  padding?: string
+  fontWeight?: string
+  textTransform?: string | null
+  replaceUnderscores?: boolean
+  margin?: number
+  enableLink?: boolean
+  urlGenerator?: ((args: { data: any; node: any }) => string) | null
+}
+
 export const createStatusRenderer = (
-  colorMap,
-  options = {},
-  value = undefined
-) => {
+  colorMap: Record<string, BCBadgeColor>,
+  options: CreateStatusRendererOptions = {},
+  value: string | undefined = undefined
+): RendererWithFilterPill => {
   const {
     statusField = 'status',
     defaultColor = 'info',
@@ -943,11 +1047,11 @@ export const createStatusRenderer = (
     urlGenerator = null
   } = options
 
-  const buildBadge = (statusValue) => {
+  const buildBadge = (statusValue: string): ReactNode => {
     if (!statusValue) return null
-    let displayText = statusValue
+    let displayText: string = statusValue
     if (replaceUnderscores && typeof displayText === 'string') {
-      displayText = displayText.replaceAll('_', ' ')
+      displayText = displayText.replace(/_/g, ' ')
     }
     const badgeColor = colorMap[statusValue] || defaultColor
 
@@ -970,13 +1074,16 @@ export const createStatusRenderer = (
     )
   }
 
-  const StatusRendererComponent = (props) => {
+  const StatusRendererComponent: RendererWithFilterPill = (
+    props: RendererProps
+  ): ReactElement => {
     const { data, node } = props
     const location = useLocation()
 
-    // Get the status value from the specified field path
-    let statusValue = statusField.includes('.')
-      ? statusField.split('.').reduce((obj, key) => obj?.[key], data)
+    let statusValue: any = statusField.includes('.')
+      ? statusField
+          .split('.')
+          .reduce<any>((obj, key) => obj?.[key], data)
       : data[statusField]
     if (
       statusValue &&
@@ -989,7 +1096,6 @@ export const createStatusRenderer = (
     if (value !== undefined) {
       statusValue = value
     }
-    // Get the display text
     const badgeNode = buildBadge(statusValue)
     const component = (
       <BCBox
@@ -1004,7 +1110,6 @@ export const createStatusRenderer = (
       </BCBox>
     )
 
-    // If link is enabled, wrap in Link
     if (enableLink) {
       const targetUrl = urlGenerator
         ? urlGenerator({ data, node })
@@ -1020,8 +1125,11 @@ export const createStatusRenderer = (
     return component
   }
 
-  StatusRendererComponent.filterPillRenderer = ({ rawValue, value: pillValue }) => {
-    const pillStatusValue = rawValue || pillValue
+  StatusRendererComponent.filterPillRenderer = ({
+    rawValue,
+    value: pillValue
+  }) => {
+    const pillStatusValue = (rawValue || pillValue) as string
     if (!pillStatusValue) {
       return null
     }

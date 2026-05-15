@@ -48,7 +48,10 @@ const BCModal = ({ open, onClose, data = null }) => {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        if (isLoading) return
+        onClose()
+      }}
       maxWidth="md"
       fullWidth
       data-test="modal"
@@ -57,6 +60,7 @@ const BCModal = ({ open, onClose, data = null }) => {
       <IconButton
         aria-label="close"
         onClick={onClose}
+        disabled={isLoading}
         sx={{
           position: 'absolute',
           right: 8,
@@ -96,6 +100,7 @@ const BCModal = ({ open, onClose, data = null }) => {
             }
             color={secondaryButtonColor ?? 'dark'}
             onClick={secondaryButtonAction ?? onClose}
+            disabled={isLoading}
             data-test="modal-btn-secondary"
           >
             {secondaryButtonText}

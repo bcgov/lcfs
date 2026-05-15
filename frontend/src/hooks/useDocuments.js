@@ -54,7 +54,16 @@ export const useUploadDocument = (parentType, parentID, options = {}) => {
   } = options
 
   return useMutation({
-    mutationFn: async (file) => {
+    mutationFn: async (input) => {
+      // Backwards compatible: callers can either pass a File directly
+      // (legacy signature) or a { file, documentCategory } object so
+      // CI applications can route uploads to a specific category bucket
+      // (technical_report / ghgenius_model / supporting).
+      const { file, documentCategory } =
+        input instanceof File || input instanceof Blob
+          ? { file: input, documentCategory: undefined }
+          : input || {}
+
       if (!file) {
         throw new Error('File is required for upload')
       }
@@ -74,6 +83,9 @@ export const useUploadDocument = (parentType, parentID, options = {}) => {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
+        params: documentCategory
+          ? { document_category: documentCategory }
+          : undefined,
         onUploadProgress: onUploadProgress
       })
     },

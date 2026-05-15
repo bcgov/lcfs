@@ -136,6 +136,12 @@ export const ROUTES = {
     MY_LIST: '/fuel-codes/my-fuel-codes'
   },
 
+  CI_APPLICATIONS: {
+    LIST: '/ci-applications',
+    ADD: '/ci-applications/add',
+    EDIT: '/ci-applications/:ciApplicationId'
+  },
+
   CHARGING_SITES: {
     EQUIPMENT_PROCESSING: '/charging-sites/:siteId/equipment-processing'
   },
