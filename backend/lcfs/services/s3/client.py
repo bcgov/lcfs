@@ -23,6 +23,12 @@ from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import (
     compliance_report_document_association,
 )
+from lcfs.db.models.ci_application.CIApplication import (
+    CI_DOC_CATEGORIES,
+    CI_DOC_CATEGORY_SUPPORTING,
+    CIApplication,
+    ci_application_document_association,
+)
 from lcfs.db.models.document import Document
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
@@ -60,7 +66,14 @@ class DocumentService:
         self.charging_site_repo = charging_site_repo
 
     @repo_handler
-    async def upload_file(self, file, parent_id: int, parent_type, user=None):
+    async def upload_file(
+        self,
+        file,
+        parent_id: int,
+        parent_type,
+        user=None,
+        document_category: str | None = None,
+    ):
         if parent_type == "compliance_report":
             await self._verify_compliance_report_access(parent_id, user)
         elif parent_type == "administrativeAdjustment":
@@ -69,6 +82,15 @@ class DocumentService:
             await self._verify_initiative_agreement_access(parent_id, user)
         elif parent_type == "charging_site":
             await self._verify_charging_site_access(parent_id, user)
+        elif parent_type == "ci_application":
+            # Access checks for CI application uploads live in the
+            # ci_application validation layer; the views.py wrapper invokes
+            # them before delegating here.
+            if document_category and document_category not in CI_DOC_CATEGORIES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid document_category '{document_category}'.",
+                )
         else:
             raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
 
@@ -196,6 +218,20 @@ class DocumentService:
                 document_id=document.document_id,
             )
             await self.db.execute(stmt)
+        elif parent_type == "ci_application":
+            ci_application = await self.db.get(CIApplication, parent_id)
+            if not ci_application:
+                raise Exception("CI application not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            stmt = ci_application_document_association.insert().values(
+                ci_application_id=ci_application.ci_application_id,
+                document_id=document.document_id,
+                document_category=document_category or CI_DOC_CATEGORY_SUPPORTING,
+            )
+            await self.db.execute(stmt)
         else:
             raise ServiceException(f"Invalid Type {parent_type}")
 
@@ -314,6 +350,10 @@ class DocumentService:
                 charging_site_document_association,
                 "charging_site_id",
             ),
+            "ci_application": (
+                ci_application_document_association,
+                "ci_application_id",
+            ),
         }
 
         # Get the association table and column based on the parent_type
@@ -371,6 +411,10 @@ class DocumentService:
                 charging_site_document_association,
                 "charging_site_id",
             ),
+            "ci_application": (
+                ci_application_document_association,
+                "ci_application_id",
+            ),
         }
 
         # Retrieve the association table and column based on the parent_type
@@ -382,25 +426,53 @@ class DocumentService:
         association_table, column_name = association_info
 
         # Construct the SQL statement dynamically
-        stmt = select(Document)
         if parent_type == "compliance_report":
             parent_ids = (
                 await self.compliance_report_repo.get_related_compliance_report_ids(
                     parent_id
                 )
             )
-            stmt = stmt.join(association_table).where(
-                getattr(association_table.c, column_name).in_(parent_ids)
-            ).distinct(Document.document_id)
-        else:
-            stmt = stmt.join(association_table).where(
-                getattr(association_table.c, column_name) == parent_id
+            stmt = (
+                select(Document)
+                .join(association_table)
+                .where(
+                    getattr(association_table.c, column_name).in_(parent_ids)
+                )
+                .distinct(Document.document_id)
             )
+            result = await self.db.execute(stmt)
+            return result.scalars().all()
 
-        # Execute the statement and fetch results
+        if parent_type == "ci_application":
+            # Project the join's document_category alongside Document so the
+            # API response can carry the Step 3 bucket without a separate
+            # endpoint.
+            stmt = (
+                select(Document, association_table.c.document_category)
+                .join(
+                    association_table,
+                    association_table.c.document_id == Document.document_id,
+                )
+                .where(
+                    getattr(association_table.c, column_name) == parent_id
+                )
+            )
+            result = await self.db.execute(stmt)
+            documents = []
+            for document, category in result.all():
+                # Pydantic's from_attributes reads attribute names verbatim,
+                # so stamp the join column onto the Document row.
+                document.document_category = category
+                documents.append(document)
+            return documents
+
+        stmt = (
+            select(Document)
+            .join(association_table)
+            .where(getattr(association_table.c, column_name) == parent_id)
+        )
         result = await self.db.execute(stmt)
-        documents = result.scalars().all()
-        return documents
+        return result.scalars().all()
 
     @repo_handler
     async def get_object(self, document_id: int):

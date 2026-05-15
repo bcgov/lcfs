@@ -1,13 +1,14 @@
 from http.client import HTTPException
 from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
 import structlog
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Query, Request, UploadFile
 from fastapi.params import File
 from starlette import status
 from starlette.responses import StreamingResponse
 
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.services.s3.schema import FileResponseSchema
@@ -15,6 +16,29 @@ from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.core.decorators import view_handler
+
+
+# Lazy-resolved CI validation: see note inside ``ci_application_validator``.
+async def ci_application_validator(
+    request: Request,
+    db=Depends(get_async_db_session),
+):
+    """
+    Resolve a CIApplicationValidation instance on-demand.
+
+    Eagerly importing CIApplicationValidation at module load reaches
+    the ci_application repo, which transitively re-enters this module
+    via ``Document -> compliance_report -> s3.client``. Doing the
+    import inside the request scope breaks that cycle and keeps
+    FastAPI's DI behaviour intact.
+    """
+    from lcfs.web.api.ci_application.repo import CIApplicationRepository
+    from lcfs.web.api.ci_application.validation import CIApplicationValidation
+
+    return CIApplicationValidation(
+        request=request, repo=CIApplicationRepository(db=db)
+    )
+
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -51,11 +75,19 @@ async def upload_file(
     parent_id: int,
     parent_type: str,
     file: UploadFile = File(...),
+    document_category: Optional[str] = Query(
+        None,
+        description=(
+            "Optional Step 3 categorisation for ci_application uploads: "
+            "'technical_report', 'ghgenius_model', or 'supporting'."
+        ),
+    ),
     document_service: DocumentService = Depends(),
     cr_validate: ComplianceReportValidation = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
     cs_validate: ChargingSiteValidation = Depends(),
+    ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -69,8 +101,15 @@ async def upload_file(
     if parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
 
+    if parent_type == "ci_application":
+        await ci_validate.validate_access(parent_id)
+
     document = await document_service.upload_file(
-        file, parent_id, parent_type, request.user
+        file,
+        parent_id,
+        parent_type,
+        request.user,
+        document_category=document_category,
     )
     return FileResponseSchema.model_validate(document)
 
@@ -89,6 +128,7 @@ async def stream_document(
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
     cs_validate: ChargingSiteValidation = Depends(),
+    ci_validate=Depends(ci_application_validator),
 ):
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -101,6 +141,9 @@ async def stream_document(
 
     if parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
+
+    if parent_type == "ci_application":
+        await ci_validate.validate_access(parent_id)
 
     file, document = await document_service.get_object(document_id)
 
@@ -127,6 +170,7 @@ async def delete_file(
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
     cs_validate: ChargingSiteValidation = Depends(),
+    ci_validate=Depends(ci_application_validator),
 ):
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -136,6 +180,8 @@ async def delete_file(
         await aa_validate.validate_organization_access(parent_id)
     elif parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
+    elif parent_type == "ci_application":
+        await ci_validate.validate_access(parent_id)
     else:
         raise HTTPException(403, "Unable to verify authorization for document download")
 
