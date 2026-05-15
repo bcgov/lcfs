@@ -55,7 +55,11 @@ async def test_export_success():
     expected_pagination = PaginationRequestSchema(
         page=1, size=10000, filters=[], sort_orders=[]
     )
-    repo_mock.get_fuel_codes_paginated.assert_called_once_with(expected_pagination)
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(
+        expected_pagination,
+        exclude_archived=False,
+        compliance_period_start=None,
+    )
 
     # Verify file content
     headers = await response.body_iterator.__anext__()

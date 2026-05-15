@@ -15,6 +15,14 @@ vi.mock('@/utils/withRole', () => ({
   default: (Component: any) => Component
 }))
 
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasAnyRole: () => false,
+    data: null,
+    isLoading: false
+  })
+}))
+
 vi.mock('react-router-dom', async () => {
   const actual: any = await vi.importActual('react-router-dom')
   return {

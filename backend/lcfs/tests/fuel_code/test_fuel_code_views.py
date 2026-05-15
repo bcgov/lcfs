@@ -466,7 +466,9 @@ async def test_export_fuel_codes_success(
         )
 
     assert response.status_code == status.HTTP_200_OK
-    mock_export.assert_called_once_with("csv", pagination_request_schema)
+    mock_export.assert_called_once_with(
+        "csv", pagination_request_schema, exclude_archived=False
+    )
 
 
 @pytest.mark.anyio

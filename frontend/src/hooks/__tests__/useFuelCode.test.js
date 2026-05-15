@@ -185,12 +185,16 @@ describe('useFuelCode', () => {
       })
 
       expect(result.current.data).toEqual(mockData)
-      expect(mockPost).toHaveBeenCalledWith('/fuel-codes/list', {
-        page: 1,
-        size: 10,
-        sortOrders: [],
-        filters: []
-      })
+      expect(mockPost).toHaveBeenCalledWith(
+        '/fuel-codes/list',
+        {
+          page: 1,
+          size: 10,
+          sortOrders: [],
+          filters: []
+        },
+        { params: undefined }
+      )
     })
 
     it('should fetch fuel codes with custom parameters', async () => {
@@ -212,7 +216,9 @@ describe('useFuelCode', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(mockPost).toHaveBeenCalledWith('/fuel-codes/list', params)
+      expect(mockPost).toHaveBeenCalledWith('/fuel-codes/list', params, {
+        params: undefined
+      })
     })
 
     it('should handle API errors', async () => {
