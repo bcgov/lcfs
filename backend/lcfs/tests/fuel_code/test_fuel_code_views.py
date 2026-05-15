@@ -328,7 +328,36 @@ async def test_get_fuel_codes_success(
         assert isinstance(result, dict)
         assert "pagination" in result
         assert "fuelCodes" in result
-        mock_get_fuel_codes.assert_called_once_with(pagination_request_schema)
+        mock_get_fuel_codes.assert_called_once_with(
+            pagination_request_schema, exclude_archived=False
+        )
+
+
+@pytest.mark.anyio
+async def test_get_fuel_codes_with_exclude_archived(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+    pagination_request_schema,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_codes"
+    ) as mock_search:
+        set_user_role(RoleEnum.GOVERNMENT)
+        mock_search.return_value = {
+            "fuel_codes": [],
+            "pagination": {"total": 0, "page": 1, "size": 10, "total_pages": 0},
+        }
+
+        url = "/api/fuel-codes/list?excludeArchived=true"
+        response = await client.post(
+            url, json=pagination_request_schema.dict(by_alias=True)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_search.assert_called_once_with(
+            pagination_request_schema, exclude_archived=True
+        )
 
 
 @pytest.mark.anyio

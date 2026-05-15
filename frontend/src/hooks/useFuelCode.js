@@ -32,20 +32,30 @@ export const useGetFuelCode = (fuelCodeID, options) => {
 }
 
 export const useGetFuelCodes = (
-  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = [],
+    excludeArchived = false
+  } = {},
   options
 ) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['fuel-codes', page, size, sortOrders, filters],
+    queryKey: ['fuel-codes', page, size, sortOrders, filters, excludeArchived],
     queryFn: async () => {
       return (
-        await client.post(apiRoutes.getFuelCodes, {
-          page,
-          size,
-          sortOrders,
-          filters
-        })
+        await client.post(
+          apiRoutes.getFuelCodes,
+          {
+            page,
+            size,
+            sortOrders,
+            filters
+          },
+          { params: excludeArchived ? { excludeArchived: true } : undefined }
+        )
       ).data
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -161,7 +171,10 @@ export const useFuelCodeMutation = (options = {}) => {
           return await client.download({
             url: apiRoutes.exportFuelCodes,
             method: 'post',
-            params: { format: data.format },
+            params: {
+              format: data.format,
+              ...(data.excludeArchived ? { excludeArchived: true } : {})
+            },
             data: data.body
           })
 
