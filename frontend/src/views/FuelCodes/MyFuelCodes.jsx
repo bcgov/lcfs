@@ -6,6 +6,7 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useGetMyFuelCodes } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
+import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import Grid2 from '@mui/material/Grid2'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -57,6 +58,7 @@ const MyFuelCodesBase = () => {
 
   return (
     <Grid2 className="fuel-code-container" mx={-1}>
+      <FuelCodesTabs />
       <div>
         {alertMessage && (
           <BCAlert data-test="alert-box" severity={alertSeverity}>

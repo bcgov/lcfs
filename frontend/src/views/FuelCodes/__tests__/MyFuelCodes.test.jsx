@@ -63,6 +63,10 @@ vi.mock('@/components/BCBox', () => ({
   default: ({ children, ...props }) => <div {...props}>{children}</div>
 }))
 
+vi.mock('@/views/CarbonIntensity/components/FuelCodesTabs', () => ({
+  FuelCodesTabs: () => <div data-test="fuel-codes-tabs" />
+}))
+
 const mockNavigate = vi.fn()
 const mockLocationState = { state: null }
 vi.mock('react-router-dom', async (importOriginal) => {
