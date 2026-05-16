@@ -70,6 +70,13 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
         nullable=False,
         comment="Fuel type ID",
     )
+    organization_id = Column(
+        Integer,
+        ForeignKey("organization.organization_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Owning organisation; NULL for non-registered producers.",
+    )
     feedstock = Column(String(255), nullable=False, comment="Feedstock")
     feedstock_location = Column(
         String(1000), nullable=False, comment="Feedstock location"
@@ -114,6 +121,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
         "FuelCodePrefix", back_populates="fuel_codes", lazy="selectin"
     )
     fuel_type = relationship("FuelType", back_populates="fuel_codes", lazy="selectin")
+    organization = relationship("Organization", lazy="selectin")
 
     feedstock_fuel_transport_modes = relationship(
         "FeedstockFuelTransportMode",

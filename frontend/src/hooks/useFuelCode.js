@@ -54,6 +54,29 @@ export const useGetFuelCodes = (
   })
 }
 
+export const useGetMyFuelCodes = (
+  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['my-fuel-codes', page, size, sortOrders, filters],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getMyFuelCodes, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    ...options
+  })
+}
+
 export const useFuelCodeStatuses = (options) => {
   const client = useApiService()
   return useQuery({

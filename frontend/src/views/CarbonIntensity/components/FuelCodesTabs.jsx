@@ -36,8 +36,8 @@ const buildTabs = ({
     tabs.push({
       key: 'mine',
       labelKey: 'carbonIntensity:tabs.myFuelCodes',
-      path: ROUTES.FUEL_CODES.LIST,
-      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.LIST
+      path: ROUTES.FUEL_CODES.MY_LIST,
+      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.MY_LIST
     })
   }
   tabs.push(

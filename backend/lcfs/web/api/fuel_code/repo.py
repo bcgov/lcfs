@@ -52,6 +52,7 @@ from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
+from lcfs.db.models.organization.Organization import Organization
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     get_field_for_filter,
@@ -546,19 +547,29 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_fuel_codes_paginated(
-        self, pagination: PaginationRequestSchema
+        self,
+        pagination: PaginationRequestSchema,
+        organization_id: Optional[int] = None,
     ) -> tuple[Sequence[FuelCode], int]:
         """
-        Queries fuel codes from the database with optional filters. Supports pagination and sorting.
-
-        Args:
-            pagination (dict): Pagination and sorting parameters.
-
-        Returns:
-            List[FuelCodeBaseSchema]: A list of fuel codes matching the query.
+        Paginated fuel code listing. When ``organization_id`` is supplied
+        the result is scoped to that organisation (used by "My fuel codes").
         """
         conditions = []
         query = select(FuelCodeListView)
+
+        if organization_id is not None:
+            # The view doesn't expose organization_id; subquery against the
+            # underlying table so we filter on the FK rather than on the
+            # brittle company text column.
+            conditions.append(
+                FuelCodeListView.fuel_code_id.in_(
+                    select(FuelCode.fuel_code_id).where(
+                        FuelCode.organization_id == organization_id
+                    )
+                )
+            )
+
         for filter in pagination.filters:
 
             filter_value = filter.filter
@@ -710,11 +721,32 @@ class FuelCodeRepository:
         )
 
     @repo_handler
+    async def get_organization_by_name(self, name: str) -> Optional[int]:
+        """Return the organization_id whose name matches (case-insensitive), or None."""
+        result = await self.db.execute(
+            select(Organization.organization_id).where(
+                func.lower(Organization.name) == func.lower(name.strip())
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_distinct_company_names(self, company: str) -> List[str]:
         query = (
             select(distinct(FuelCode.company))
             .where(func.lower(FuelCode.company).like(func.lower(company + "%")))
             .order_by(FuelCode.company)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_organization_names_like(self, prefix: str) -> List[str]:
+        """Return registered organization names starting with prefix (case-insensitive)."""
+        query = (
+            select(Organization.name)
+            .where(func.lower(Organization.name).like(func.lower(prefix + "%")))
+            .order_by(Organization.name)
             .limit(10)
         )
         return (await self.db.execute(query)).scalars().all()

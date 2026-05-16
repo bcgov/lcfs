@@ -186,6 +186,12 @@ vi.mock('@/views/FuelCodes', () => ({
     const location = useLocation()
     return <div data-test="fuel-codes">Fuel Codes - {location.pathname}</div>
   },
+  MyFuelCodes: () => {
+    const location = useLocation()
+    return (
+      <div data-test="my-fuel-codes">My Fuel Codes - {location.pathname}</div>
+    )
+  },
   AddEditFuelCode: () => {
     const params = useParams()
     const location = useLocation()

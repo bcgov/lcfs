@@ -54,7 +54,26 @@ async def test_get_fuel_codes_success():
     assert isinstance(result.pagination, PaginationResponseSchema)
     assert len(result.fuel_codes) == 1
     assert result.fuel_codes[0].company == "XYZ Corp"
-    repo_mock.get_fuel_codes_paginated.assert_called_once_with(pagination)
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(
+        pagination, organization_id=None
+    )
+
+
+@pytest.mark.anyio
+async def test_search_fuel_codes_forwards_organization_id_to_repo():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+    repo_mock.get_fuel_codes_paginated.return_value = ([], 0)
+
+    pagination = PaginationRequestSchema(page=1, size=10)
+
+    result = await service.search_fuel_codes(pagination, organization_id=42)
+
+    assert result.fuel_codes == []
+    assert result.pagination.total == 0
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(
+        pagination, organization_id=42
+    )
 
 
 def create_mock_fuel_code_model():
@@ -154,8 +173,8 @@ async def test_create_fuel_code_success():
         fuel_production_facility_province_state="BC",
     )
 
-    # Mock repository methods called during creation
     repo_mock.validate_fuel_code.return_value = "001.0"
+    repo_mock.get_organization_by_name.return_value = None
 
     mock_prefix = MagicMock()
     mock_prefix.fuel_code_prefix_id = 1001
@@ -172,7 +191,6 @@ async def test_create_fuel_code_success():
     mock_status.status = FuelCodeStatusEnum.Draft
     repo_mock.get_fuel_status_by_status.return_value = mock_status
 
-    # Create a proper FuelCode mock
     mock_fuel_code = create_mock_fuel_code_model()
     repo_mock.create_fuel_code.return_value = mock_fuel_code
     repo_mock.create_fuel_code_history.return_value = None
@@ -532,6 +550,7 @@ async def test_convert_to_model_maps_gj_to_quantity_units_enum():
 
     repo_mock.get_transport_modes.return_value = []
     repo_mock.get_fuel_status_by_status.return_value = MagicMock()
+    repo_mock.get_organization_by_name.return_value = None
 
     # Act
     fuel_code = await service.convert_to_model(input_data, FuelCodeStatusEnum.Draft)
@@ -698,6 +717,7 @@ async def test_update_fuel_code_keeps_notification_when_expiration_date_unchange
     repo_mock.update_fuel_code.return_value = mock_fuel_code
     repo_mock.get_fuel_code_history.return_value = None
     repo_mock.create_fuel_code_history.return_value = None
+    repo_mock.get_organization_by_name.return_value = None
 
     # Act
     await service.update_fuel_code(mock_fuel_code_data)

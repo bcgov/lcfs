@@ -431,6 +431,69 @@ async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
+async def test_get_fuel_codes_paginated_filters_by_organization_id(
+    fuel_code_repo, mock_db
+):
+    fc = FuelCodeListView(fuel_code_id=1, fuel_suffix="101.0")
+    mock_db.execute.side_effect = [
+        MagicMock(scalar=MagicMock(return_value=1)),
+        MagicMock(
+            unique=MagicMock(
+                return_value=MagicMock(
+                    scalars=MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[fc]))
+                    )
+                )
+            )
+        ),
+    ]
+    pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
+    result, count = await fuel_code_repo.get_fuel_codes_paginated(
+        pagination, organization_id=42
+    )
+    assert len(result) == 1
+    assert count == 1
+
+    rendered_queries = [
+        str(call.args[0]) for call in mock_db.execute.call_args_list
+    ]
+    assert all(
+        "fuel_code.organization_id = " in q for q in rendered_queries
+    )
+    assert all(
+        "lower(vw_fuel_code_base.company)" not in q for q in rendered_queries
+    )
+
+
+@pytest.mark.anyio
+async def test_get_fuel_codes_paginated_skips_organization_filter_when_omitted(
+    fuel_code_repo, mock_db
+):
+    fc = FuelCodeListView(fuel_code_id=1, fuel_suffix="101.0")
+    mock_db.execute.side_effect = [
+        MagicMock(scalar=MagicMock(return_value=1)),
+        MagicMock(
+            unique=MagicMock(
+                return_value=MagicMock(
+                    scalars=MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[fc]))
+                    )
+                )
+            )
+        ),
+    ]
+    pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
+    await fuel_code_repo.get_fuel_codes_paginated(pagination)
+
+    rendered_queries = [
+        str(call.args[0]) for call in mock_db.execute.call_args_list
+    ]
+    assert all(
+        "fuel_code.organization_id = " not in q for q in rendered_queries
+    )
+
+
+@pytest.mark.anyio
 async def test_get_fuel_code_statuses(fuel_code_repo, mock_db):
     fcs = FuelCodeStatus(fuel_code_status_id=1, status=FuelCodeStatusEnum.Approved)
     mock_result = MagicMock()

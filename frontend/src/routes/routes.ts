@@ -132,7 +132,8 @@ export const ROUTES = {
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID',
     EXPORT: '/fuel-codes/export',
-    BULLETINS: '/fuel-codes-bulletins'
+    BULLETINS: '/fuel-codes-bulletins',
+    MY_LIST: '/fuel-codes/my-fuel-codes'
   },
 
   CI_APPLICATIONS: {
