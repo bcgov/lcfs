@@ -167,9 +167,10 @@ async def get_my_fuel_codes(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: FuelCodeServices = Depends(),
 ):
+    # Always derive scope from the session, never from the request body.
     organization = getattr(request.user, "organization", None)
-    organization_name = getattr(organization, "name", None)
-    if not organization_name:
+    organization_id = getattr(organization, "organization_id", None)
+    if organization_id is None:
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(
                 total=0,
@@ -181,7 +182,7 @@ async def get_my_fuel_codes(
         )
 
     return await service.search_fuel_codes(
-        pagination, company_name=organization_name
+        pagination, organization_id=organization_id
     )
 
 

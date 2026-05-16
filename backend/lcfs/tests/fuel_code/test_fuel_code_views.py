@@ -380,12 +380,12 @@ async def test_get_my_fuel_codes_success(
         assert "fuelCodes" in result
         assert "pagination" in result
         mock_search_fuel_codes.assert_called_once_with(
-            pagination_request_schema, company_name="Test Organization"
+            pagination_request_schema, organization_id=1
         )
 
 
 @pytest.mark.anyio
-async def test_get_my_fuel_codes_ignores_client_supplied_company_name(
+async def test_get_my_fuel_codes_ignores_client_supplied_organization(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_user_role,
@@ -402,6 +402,8 @@ async def test_get_my_fuel_codes_ignores_client_supplied_company_name(
         }
 
         body = pagination_request_schema.dict(by_alias=True)
+        body["organization_id"] = 99
+        body["organizationId"] = 99
         body["company_name"] = "LCFS Org 99"
         body["companyName"] = "LCFS Org 99"
         body["company"] = "LCFS Org 99"
@@ -413,7 +415,7 @@ async def test_get_my_fuel_codes_ignores_client_supplied_company_name(
         assert response.status_code == status.HTTP_200_OK
         mock_search_fuel_codes.assert_called_once()
         _, kwargs = mock_search_fuel_codes.call_args
-        assert kwargs == {"company_name": "Test Organization"}
+        assert kwargs == {"organization_id": 1}
 
 
 @pytest.mark.anyio

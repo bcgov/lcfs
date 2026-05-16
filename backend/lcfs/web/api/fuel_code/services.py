@@ -1,4 +1,6 @@
+import asyncio
 from datetime import date, datetime, timezone
+from typing import Optional
 import math
 import uuid
 
@@ -106,7 +108,15 @@ class FuelCodeServices:
 
     @service_handler
     async def search_company(self, company):
-        return await self.repo.get_distinct_company_names(company)
+        fuel_code_names, org_names = await asyncio.gather(
+            self.repo.get_distinct_company_names(company),
+            self.repo.get_organization_names_like(company),
+        )
+        # Merge: org names first (registered orgs are the preferred match),
+        # then any fuel-code company strings not already in the list.
+        seen = set(n.lower() for n in org_names)
+        merged = list(org_names) + [n for n in fuel_code_names if n.lower() not in seen]
+        return sorted(merged)[:10]
 
     @service_handler
     async def search_contact_name(self, company, contact_name):
@@ -185,13 +195,11 @@ class FuelCodeServices:
     async def search_fuel_codes(
         self,
         pagination: PaginationRequestSchema,
-        company_name: str = None,
+        organization_id: Optional[int] = None,
     ) -> FuelCodesSchema:
-        """
-        Gets the list of fuel codes.
-        """
+        """List fuel codes, optionally scoped to a single organisation."""
         fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(
-            pagination, company_name=company_name
+            pagination, organization_id=organization_id
         )
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(
@@ -246,6 +254,9 @@ class FuelCodeServices:
         )
         transport_modes = await self.repo.get_transport_modes()
         fuel_status = await self.repo.get_fuel_status_by_status(status)
+        organization_id = await self.repo.get_organization_by_name(
+            fuel_code_schema.company
+        )
         fuel_code = FuelCode(
             **fuel_code_schema.model_dump(
                 exclude={
@@ -269,6 +280,7 @@ class FuelCodeServices:
             prefix_id=prefix.fuel_code_prefix_id,
             fuel_type_id=fuel_type.fuel_type_id,
             facility_nameplate_capacity_unit=facility_nameplate_capacity_units_enum,
+            organization_id=organization_id,
         )
 
         fuel_code.feedstock_fuel_transport_modes = []
@@ -446,8 +458,12 @@ class FuelCodeServices:
             if not fuel_code_data.notes:
                 raise ValueError("Notes is required")
 
-        # Store original expiration_date to detect changes
         original_expiration_date = fuel_code.expiration_date
+
+        if fuel_code_data.company != fuel_code.company:
+            fuel_code.organization_id = await self.repo.get_organization_by_name(
+                fuel_code_data.company
+            )
 
         for field, value in fuel_code_data.model_dump(
             exclude={
