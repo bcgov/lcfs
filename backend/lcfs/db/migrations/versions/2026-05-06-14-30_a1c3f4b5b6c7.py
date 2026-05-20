@@ -1,7 +1,7 @@
 """Create vw_fse_base for year over year FSE comparison
 
 Revision ID: a1c3f4b5b6c7
-Revises: e5f6a7b8c9d0
+Revises: e7c2b9a4d018
 Create Date: 2026-05-06 14:30:00.000000
 """
 
@@ -13,7 +13,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "a1c3f4b5b6c7"
-down_revision = "e5f6a7b8c9d0"
+down_revision = "e7c2b9a4d018"
 branch_labels = None
 depends_on = None
 
