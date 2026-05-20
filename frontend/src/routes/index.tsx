@@ -14,6 +14,7 @@ import { miscRoutes } from './routeConfig/miscRoutes'
 import { transferRoutes } from './routeConfig/transferRoutes'
 import PublicLayout from '@/layouts/PublicLayout'
 import { fuelCodeRoutes } from './routeConfig/fuelCodeRoutes'
+import { ciApplicationRoutes } from './routeConfig/ciApplicationRoutes'
 import { publicPageRoutes } from './routeConfig/publicPageRoutes'
 import { PublicPageLayout } from '@/layouts/PublicPageLayout'
 import { initiativeAgreementRoutes } from './routeConfig/initiativeAgreementRoutes'
@@ -23,6 +24,7 @@ const allRoutes = [
   ...miscRoutes,
   ...adminRoutes,
   ...fuelCodeRoutes,
+  ...ciApplicationRoutes,
   ...organizationRoutes,
   ...transactionRoutes,
   ...transferRoutes,

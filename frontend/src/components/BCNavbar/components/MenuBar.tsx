@@ -48,6 +48,7 @@ const MenuBar = ({ routes, data }: MenuBarProps) => {
                   icon={route.icon}
                   name={route.name}
                   route={route.route}
+                  activePaths={route.activePaths}
                   light={false}
                 />
                 {index !== routes.length - 1 && (
