@@ -352,16 +352,43 @@ async def test_get_internal_comments_non_gov_rejects_non_compliance_report():
 
 
 @pytest.mark.anyio
-async def test_update_internal_comment_non_gov_is_forbidden():
+async def test_update_internal_comment_non_gov_clamps_to_public():
+    """
+    Non-government users (BCeID) may edit the text of their own comment,
+    but the service force-clamps visibility to Public and audience_scope
+    to None regardless of what the payload contains. Creator-ownership is
+    enforced upstream in the view.
+    """
     service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
-    payload = InternalCommentUpdateSchema(comment="should be rejected")
+    service.repo.get_internal_comment_by_id.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="existing",
+        audience_scope="Analyst",
+        visibility="Internal",
+    )
+    service.repo.update_internal_comment.return_value = SimpleNamespace(
+        internal_comment_id=1,
+        comment="updated text",
+        audience_scope=None,
+        visibility="Public",
+        create_user="mockuser",
+        create_date=None,
+        update_date=None,
+        full_name="Mock User",
+    )
+    payload = InternalCommentUpdateSchema(
+        comment="updated text",
+        visibility="Internal",  # smuggled — service should ignore
+        audience_scope="Analyst",  # smuggled — service should ignore
+    )
 
-    with pytest.raises(HTTPException) as exc:
-        await service.update_internal_comment(1, payload)
+    await service.update_internal_comment(1, payload)
 
-    assert exc.value.status_code == 403
-    service.repo.get_internal_comment_by_id.assert_not_called()
-    service.repo.update_internal_comment.assert_not_called()
+    service.repo.update_internal_comment.assert_awaited_once()
+    call_kwargs = service.repo.update_internal_comment.await_args.kwargs
+    assert call_kwargs["visibility"] == CommentVisibilityEnum.PUBLIC.value
+    assert call_kwargs["audience_scope"] is None
+    assert call_kwargs["new_comment_text"] == "updated text"
 
 
 @pytest.mark.anyio

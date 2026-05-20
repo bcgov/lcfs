@@ -34,7 +34,12 @@ class FakeDocumentService:
         ]
 
     async def upload_file(
-        self, file: UploadFile, parent_id: int, parent_type: str, user
+        self,
+        file: UploadFile,
+        parent_id: int,
+        parent_type: str,
+        user,
+        document_category=None,
     ):
         return {
             "document_id": 2,
