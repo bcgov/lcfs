@@ -410,19 +410,15 @@ class ComplianceSummaryUpdater:
                 # Fall back to Line 25 (net fuel supply units) for older reports without 29B
                 balance_chg_from_assessment = net_fuel_supply_units
 
-            # Calculate Line 21 non-compliance penalty with correct rate based on year
-            # $200/unit for compliance periods 2022 and prior
-            # $600/unit for compliance periods 2023 and onward
-            low_carbon_penalty_rate = Decimal("200") if compliance_period_year <= 2022 else Decimal("600")
-
-            # Use TFRS Line 28 directly for the non-compliance penalty
-            # Line 28 in TFRS is the actual penalty amount assessed
-            # Only fall back to recalculation if Line 28 is not in the snapshot
+            # TFRS Line 28 is already the assessed dollar penalty (units * rate
+            # computed inside TFRS); copy it through. Fall back to recomputing
+            # from outstanding debit balance only if Line 28 is missing from
+            # the snapshot. Rate: $200/unit for <=2022, $600/unit for >=2023.
             line28_raw = summary_lines.get("28")
             if line28_raw is not None:
-                line_21_non_compliance_penalty = safe_decimal(line28_raw) * low_carbon_penalty_rate
+                line_21_non_compliance_penalty = safe_decimal(line28_raw)
             else:
-                # Fallback: recalculate from outstanding debit balance
+                low_carbon_penalty_rate = Decimal("200") if compliance_period_year <= 2022 else Decimal("600")
                 outstanding_debit_balance = net_fuel_supply_units + line_26_banked_credits_offset
                 penalty_units = abs(min(outstanding_debit_balance, Decimal("0")))
                 line_21_non_compliance_penalty = penalty_units * low_carbon_penalty_rate
