@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/utils/formatters.js', () => ({
+vi.mock('@/utils/formatters', () => ({
   numberFormatter: (value) => {
     if (value == null) return ''
     const num = typeof value === 'object' ? value.value : value

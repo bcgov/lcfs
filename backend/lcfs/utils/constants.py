@@ -65,7 +65,9 @@ class LCFS_Constants:
     @classmethod
     def get_current_compliance_year(cls) -> str:
         """Get the current compliance year for early issuance"""
-        return str(int(cls.LEGISLATION_TRANSITION_YEAR) + 1)
+        from datetime import datetime
+
+        return str(datetime.now().year)
 
     # Export credit ledger
     CREDIT_LEDGER_EXPORT_MEDIA_TYPE = "application/vnd.ms-excel"

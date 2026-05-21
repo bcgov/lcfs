@@ -35,6 +35,7 @@ class FuelCodeListView(Base):
     feedstock = Column(String)
     feedstock_location = Column(String)
     feedstock_misc = Column(String)
+    co_processed = Column(String)
     fuel_production_facility_city = Column(String)
     fuel_production_facility_province_state = Column(String)
     fuel_production_facility_country = Column(String)

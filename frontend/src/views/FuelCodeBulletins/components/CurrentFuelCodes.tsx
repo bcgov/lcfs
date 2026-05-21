@@ -1,11 +1,15 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { Alert, Stack } from '@mui/material'
+import { DownloadButton } from '@/components/DownloadButton'
+import { Stack } from '@mui/material'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { buildColumnDefs, formatDate, normalizeRows } from '../_schema'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { useFuelCodeBulletins } from '@/hooks/useFuelCode'
+import {
+  useDownloadFuelCodeBulletins,
+  useFuelCodeBulletins
+} from '@/hooks/useFuelCode'
 import BCAlert from '@/components/BCAlert'
 
 const initialPaginationOptions = {
@@ -18,9 +22,12 @@ const initialPaginationOptions = {
 export const CurrentFuelCodes = () => {
   const { t } = useTranslation(['bulletins'])
   const gridRef = useRef<any>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
+  const { mutateAsync: downloadBulletins } = useDownloadFuelCodeBulletins()
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'current',
@@ -44,11 +51,34 @@ export const CurrentFuelCodes = () => {
     ? formatDate(data.cutoffDate)
     : t('current.cutoffLabel')
 
+  const handleDownload = async () => {
+    setIsDownloading(true)
+    setDownloadError('')
+
+    try {
+      await downloadBulletins({
+        bulletinType: 'current',
+        format: 'xlsx',
+        body: {
+          page: 1,
+          size: paginationOptions.size || 25,
+          sortOrders: paginationOptions.sortOrders || [],
+          filters: paginationOptions.filters || []
+        }
+      })
+    } catch (error) {
+      console.error('Error downloading current fuel code bulletin:', error)
+      setDownloadError(t('common.downloadError'))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return (
     <Stack spacing={2}>
-      {isError && (
+      {(isError || downloadError) && (
         <BCAlert severity="error">
-          {error?.message || t('common.errorLoading')}
+          {downloadError || error?.message || t('common.errorLoading')}
         </BCAlert>
       )}
 
@@ -62,6 +92,16 @@ export const CurrentFuelCodes = () => {
       <BCTypography variant="body2" color="text">
         {t('common.fuelCodePrefix')}
       </BCTypography>
+
+      <Stack direction="row">
+        <DownloadButton
+          onDownload={handleDownload}
+          isDownloading={isDownloading}
+          label={t('common.downloadBtn')}
+          downloadLabel={t('common.downloadingBtn')}
+          dataTest="current-fuel-codes-download-btn"
+        />
+      </Stack>
 
       <BCBox sx={{ width: '100%' }}>
         <BCGridViewer

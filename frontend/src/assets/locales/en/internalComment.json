@@ -8,6 +8,9 @@
   "commentToDirector": "Comments to the director to support your recommendation (optional):",
   "commentToAnalyst": "Comments to the analyst (optional):",
   "commentToComplianceManager": "Comments to the compliance manager (optional):",
-  "edit": "Edit comment",
-  "edited": "Edited"
+  "commentToOrganization": "Comments to the organization:",
+  "edit": "Edit",
+  "edited": "Edited",
+  "internal": "Internal",
+  "public": "Public"
 }

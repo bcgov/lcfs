@@ -6,6 +6,19 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 
 logger = structlog.get_logger(__name__)
 
+
+def derive_co_processed(misc: str | None) -> str:
+    """Infer the structured co-processed value from legacy misc text."""
+    if not misc:
+        return "No"
+
+    normalized = misc.strip().lower()
+    if "dht" in normalized:
+        return "Yes - DHT"
+    if "fcc" in normalized:
+        return "Yes - FCC"
+    return "No"
+
 # Base template for the common fields
 base_fuel_data = {
     "fuel_status_id": 2,
@@ -17,6 +30,7 @@ base_fuel_data = {
     "feedstock": "feedstock",
     "feedstock_location": "123 main street",
     "feedstock_misc": "misc data",
+    "co_processed": derive_co_processed("misc data"),
     "fuel_production_facility_city": "Vancouver",
     "fuel_production_facility_province_state": "British Columbia",
     "fuel_production_facility_country": "Canada",
