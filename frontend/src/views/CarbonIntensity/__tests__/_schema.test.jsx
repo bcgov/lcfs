@@ -7,7 +7,8 @@ import {
 } from '@/views/CarbonIntensity/_schema'
 
 vi.mock('@/hooks/useCIApplication', () => ({
-  useCIApplicationStatuses: () => ({ data: [] })
+  useCIApplicationStatuses: () => ({ data: [] }),
+  useGetCIApplicationAnalysts: () => ({ data: [] })
 }))
 
 const t = (key) => key
@@ -80,6 +81,14 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(comment.sortable).toBe(false)
     expect(typeof analyst.cellRenderer).toBe('function')
     expect(typeof comment.cellRenderer).toBe('function')
+  })
+
+  it('passes onRefresh through to the assigned analyst cell renderer', () => {
+    const onRefresh = vi.fn()
+    const cols = ciApplicationsColDefs(t, { isGovernment: true, onRefresh })
+    const analyst = cols.find((c) => c.field === 'assignedAnalyst')
+
+    expect(analyst.cellRendererParams).toMatchObject({ onRefresh })
   })
 })
 

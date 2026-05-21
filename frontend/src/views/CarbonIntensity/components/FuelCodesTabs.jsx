@@ -1,4 +1,4 @@
-import { Box, Tab, Tabs } from '@mui/material'
+import { AppBar, Box, Tab, Tabs } from '@mui/material'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -77,22 +77,24 @@ export const FuelCodesTabs = () => {
   const activeIndex = matchedIndex === -1 ? false : matchedIndex
 
   return (
-    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-      <Tabs
-        value={activeIndex}
-        onChange={(_, idx) => navigate(tabs[idx].path)}
-        aria-label="Fuel codes navigation tabs"
-        variant="scrollable"
-        scrollButtons="auto"
-      >
-        {tabs.map((tab) => (
-          <Tab
-            key={tab.key}
-            label={t(tab.labelKey)}
-            data-test={`fuel-codes-tab-${tab.key}`}
-          />
-        ))}
-      </Tabs>
+    <Box sx={{ bgcolor: 'background.paper' }}>
+      <AppBar position="static" sx={{ boxShadow: 'none', border: 'none', width: '60%' }}>
+        <Tabs
+          value={activeIndex}
+          onChange={(_, idx) => navigate(tabs[idx].path)}
+          aria-label="Fuel codes navigation tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          {tabs.map((tab) => (
+            <Tab
+              key={tab.key}
+              label={t(tab.labelKey)}
+              data-test={`fuel-codes-tab-${tab.key}`}
+            />
+          ))}
+        </Tabs>
+      </AppBar>
     </Box>
   )
 }

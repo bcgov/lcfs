@@ -12,7 +12,8 @@ export const useCIApplicationOptions = (options) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.options,
-    queryFn: async () => (await client.get(apiRoutes.ciApplicationOptions)).data,
+    queryFn: async () =>
+      (await client.get(apiRoutes.ciApplicationOptions)).data,
     staleTime: 60 * 60 * 1000, // 1 hour — lookup data
     gcTime: 60 * 60 * 1000,
     ...options
@@ -195,6 +196,104 @@ export const useRecordCIDecision = (ciApplicationId) => {
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
       // The Step 5 comment thread is invalidated by the shared
       // <Comments /> widget itself when it posts. Nothing to do here.
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useGetCIApplicationAnalysts = (options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['ci-application-analysts'],
+    queryFn: async () =>
+      (await client.get(apiRoutes.ciApplicationAnalysts)).data,
+    staleTime: 60 * 60 * 1000,
+    ...options
+  })
+}
+
+export const useAssignCIApplicationAnalyst = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (assignedAnalystId) => {
+      return (
+        await client.put(
+          apiRoutes.assignCIApplicationAnalyst.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { assignedAnalystId }
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useCompleteCIApplicationVerification1 = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ preliminaryRiskAssessment, priorityScore }) => {
+      return (
+        await client.post(
+          apiRoutes.completeCIApplicationVerification1.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { preliminaryRiskAssessment, priorityScore }
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useCompleteCIApplicationVerification2 = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ preliminaryRiskAssessment, priorityScore } = {}) => {
+      return (
+        await client.post(
+          apiRoutes.completeCIApplicationVerification2.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { preliminaryRiskAssessment, priorityScore }
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useRecommendCIApplication = (ciApplicationId) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      return (
+        await client.post(
+          apiRoutes.recommendCIApplication.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          )
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
       queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
     }
   })

@@ -1,5 +1,3 @@
-import { Box, Chip, Tooltip } from '@mui/material'
-
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import {
@@ -7,7 +5,12 @@ import {
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { dateFormatter } from '@/utils/formatters'
-import { useCIApplicationStatuses } from '@/hooks/useCIApplication'
+import {
+  useCIApplicationStatuses,
+  useGetCIApplicationAnalysts
+} from '@/hooks/useCIApplication'
+import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
+import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
 const ANALYST_CHIP_SX = {
   bgcolor: '#606060',
@@ -37,26 +40,6 @@ const PillCell = ({ children }) => (
     {children}
   </BCBox>
 )
-
-const AssignedAnalystRenderer = ({ data }) => {
-  const analyst = data?.assignedAnalyst
-  if (!analyst?.initials) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <span>-</span>
-      </Box>
-    )
-  }
-  return (
-    <PillCell>
-      <Tooltip
-        title={analyst.fullName || `${analyst.firstName || ''} ${analyst.lastName || ''}`.trim()}
-      >
-        <Chip label={analyst.initials} size="small" sx={ANALYST_CHIP_SX} />
-      </Tooltip>
-    </PillCell>
-  )
-}
 
 const LastCommentRenderer = ({ data }) => {
   const last = data?.lastComment
@@ -109,8 +92,9 @@ const productionFacilityLocation = (data) => {
 const statusCol = (t) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
+  cellRenderer: CIApplicationStatusRenderer,
   valueGetter: (params) => params.data?.status?.status,
-  minWidth: 140,
+  minWidth: 110,
   sortable: false,
   floatingFilterComponent: BCSelectFloatingFilter,
   floatingFilterComponentParams: {
@@ -124,6 +108,7 @@ const statusCol = (t) => ({
 const idCol = (t) => ({
   field: 'ciApplicationId',
   headerName: t('carbonIntensity:columns.ciApplicationId'),
+  valueFormatter: (params) => `CI${params.value}`,
   minWidth: 90,
   maxWidth: 110,
   sortable: true,
@@ -200,16 +185,35 @@ const verificationCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-const assignedAnalystCol = (t) => ({
+const assignedAnalystCol = (t, onRefresh) => ({
   field: 'assignedAnalyst',
   headerName: t('carbonIntensity:columns.assignedAnalyst'),
   minWidth: 170,
   valueGetter: ({ data }) => data?.assignedAnalyst?.initials || '',
-  cellRenderer: AssignedAnalystRenderer,
+  cellRenderer: CIAssignedAnalystCell,
+  cellRendererParams: {
+    onRefresh
+  },
+  sortable: false,
   filter: 'agTextColumnFilter',
-  filterParams: TEXT_FILTER_PARAMS,
+  filterParams: {
+    textFormatter: (value) => value || '',
+    textCustomComparator: (filter, value, filterText) => {
+      // Handle filtering by initials
+      const cleanValue = (value || '').toLowerCase()
+      const cleanFilter = filterText.toLowerCase()
+      return cleanValue.includes(cleanFilter)
+    },
+    buttons: ['clear']
+  },
+  floatingFilterComponent: BCSelectFloatingFilter,
+  floatingFilterComponentParams: {
+    optionsQuery: useGetCIApplicationAnalysts,
+    valueKey: 'initials',
+    labelKey: 'fullName'
+  },
   suppressFloatingFilterButton: true,
-  sortable: false
+  suppressHeaderFilterButton: true
 })
 
 const lastCommentCol = (t) => ({
@@ -242,7 +246,10 @@ const lastCommentCol = (t) => ({
  * filterable by string contains; tighten to an enum / FK lookup once
  * the verification workflow is specced.
  */
-export const ciApplicationsColDefs = (t, { isGovernment = false } = {}) => {
+export const ciApplicationsColDefs = (
+  t,
+  { isGovernment = false, onRefresh } = {}
+) => {
   if (!isGovernment) {
     return [
       statusCol(t),
@@ -258,7 +265,7 @@ export const ciApplicationsColDefs = (t, { isGovernment = false } = {}) => {
     organizationCol(t),
     priorityScoreCol(t),
     verificationCol(t),
-    assignedAnalystCol(t),
+    assignedAnalystCol(t, onRefresh),
     lastCommentCol(t),
     proposedEffectiveCol(t),
     productionFacilityLocationCol(t),

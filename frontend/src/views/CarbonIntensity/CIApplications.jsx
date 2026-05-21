@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Stack } from '@mui/material'
@@ -49,9 +49,13 @@ const CIApplicationsBase = () => {
 
   const queryData = useGetCIApplications(paginationOptions)
 
+  const handleRefresh = useCallback(() => {
+    queryData.refetch()
+  }, [queryData.refetch])
+
   const columnDefs = useMemo(
-    () => ciApplicationsColDefs(t, { isGovernment }),
-    [t, isGovernment]
+    () => ciApplicationsColDefs(t, { isGovernment, onRefresh: handleRefresh }),
+    [t, isGovernment, handleRefresh]
   )
 
   useEffect(() => {
@@ -96,7 +100,7 @@ const CIApplicationsBase = () => {
         </BCAlert>
       )}
 
-      <BCTypography variant="h5" color="primary" data-test="title">
+      <BCTypography variant="h5" color="primary" data-test="title" mt={2}>
         {isGovernment
           ? t('carbonIntensity:ciApplications')
           : t('carbonIntensity:myOrgCIApplications')}
@@ -107,7 +111,7 @@ const CIApplicationsBase = () => {
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
-        mt={1}
+        mt={4}
         mb={2}
       >
         <Role roles={[roles.ci_applicant, roles.signing_authority]}>

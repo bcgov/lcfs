@@ -112,7 +112,9 @@ const EditViewCIApplicationBase = () => {
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
-      isOpen ? Array.from(new Set([...prev, key])) : prev.filter((k) => k !== key)
+      isOpen
+        ? Array.from(new Set([...prev, key]))
+        : prev.filter((k) => k !== key)
     )
   }
 
@@ -295,8 +297,7 @@ const EditViewCIApplicationBase = () => {
 
   const isDraft = ciApplication?.status?.status === 'Draft'
   const isSubmittedOrTerminal = Boolean(
-    ciApplication?.status?.status &&
-      ciApplication.status.status !== 'Draft'
+    ciApplication?.status?.status && ciApplication.status.status !== 'Draft'
   )
   const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
 
@@ -382,11 +383,19 @@ const EditViewCIApplicationBase = () => {
       <FuelCodesTabs />
       <FloatingAlert ref={alertRef} />
 
-      <BCTypography variant="h5" color="primary" data-test="title">
+      <BCTypography
+        variant="h5"
+        color="primary"
+        data-test="title"
+        my={2}
+      >
         {t('carbonIntensity:carbonIntensityApplication')}
       </BCTypography>
 
-      <CIApplicationProgress activeStep={activeStep} />
+      <CIApplicationProgress
+        activeStep={activeStep}
+        ciApplication={ciApplication}
+      />
 
       {!isAdd && ciApplication?.status?.status && (
         <Box mb={2}>
@@ -461,8 +470,21 @@ const EditViewCIApplicationBase = () => {
         ))
       )}
 
-      <BCBox sx={{ mt: 4, p: 2, bgcolor: 'grey.50', border: 1, borderColor: 'divider' }}>
-        <BCTypography variant="caption" color="text.secondary" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}>
+      <BCBox
+        sx={{
+          mt: 4,
+          p: 2,
+          bgcolor: 'grey.50',
+          border: 1,
+          borderColor: 'divider'
+        }}
+      >
+        <BCTypography
+          variant="caption"
+          color="text.secondary"
+          component="pre"
+          sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}
+        >
           {t('carbonIntensity:footer')}
         </BCTypography>
       </BCBox>

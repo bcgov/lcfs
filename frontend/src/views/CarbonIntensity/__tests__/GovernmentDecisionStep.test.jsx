@@ -16,8 +16,23 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockRecordDecision = vi.fn().mockResolvedValue(null)
+const mockCompleteVerification1 = vi.fn().mockResolvedValue(null)
+const mockCompleteVerification2 = vi.fn().mockResolvedValue(null)
+const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
+  useCompleteCIApplicationVerification1: vi.fn(() => ({
+    mutateAsync: mockCompleteVerification1,
+    isPending: false
+  })),
+  useCompleteCIApplicationVerification2: vi.fn(() => ({
+    mutateAsync: mockCompleteVerification2,
+    isPending: false
+  })),
+  useRecommendCIApplication: vi.fn(() => ({
+    mutateAsync: mockRecommendToDirector,
+    isPending: false
+  })),
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: mockRecordDecision,
     isPending: false
@@ -44,13 +59,9 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: { roles: mockUserRoles },
     hasRoles: (...names) =>
-      names.every((name) =>
-        mockUserRoles.some((r) => r.name === name)
-      ),
+      names.every((name) => mockUserRoles.some((r) => r.name === name)),
     hasAnyRole: (...names) =>
-      names.some((name) =>
-        mockUserRoles.some((r) => r.name === name)
-      )
+      names.some((name) => mockUserRoles.some((r) => r.name === name))
   })
 }))
 
@@ -93,16 +104,19 @@ describe('GovernmentDecisionStep', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows the decision panel for government users and records Completed', async () => {
+  it('shows the workflow panel for government users and completes verification 1', async () => {
     mockUserRoles = [{ name: roles.government }]
     render(
       <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
       { wrapper }
     )
     expect(screen.getByTestId('ci-step5-decision-panel')).toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('ci-step5-complete-btn'))
+    fireEvent.click(screen.getByTestId('ci-verification-1-complete-btn'))
     await waitFor(() =>
-      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Completed' })
+      expect(mockCompleteVerification1).toHaveBeenCalledWith({
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: undefined
+      })
     )
   })
 
@@ -118,19 +132,27 @@ describe('GovernmentDecisionStep', () => {
     )
   })
 
-  it('disables the upload button when no upload handler is wired', () => {
-    render(<GovernmentDecisionStep ciApplication={baseCi} />, { wrapper })
-    expect(screen.getByTestId('ci-step5-upload-btn')).toBeDisabled()
+  it('disables the documentation request button when no upload handler is wired', () => {
+    mockUserRoles = [{ name: roles.government }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
   })
 
-  it('enables the upload button when an upload handler is provided', () => {
+  it('enables the documentation request button when an upload handler is provided', () => {
+    mockUserRoles = [{ name: roles.government }]
     render(
       <GovernmentDecisionStep
         ciApplication={baseCi}
+        isGovernment={true}
         onDocumentUploadClick={() => {}}
       />,
       { wrapper }
     )
-    expect(screen.getByTestId('ci-step5-upload-btn')).not.toBeDisabled()
+    expect(
+      screen.getByTestId('ci-request-documentation-btn')
+    ).not.toBeDisabled()
   })
 })
