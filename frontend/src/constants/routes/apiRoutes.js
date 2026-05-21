@@ -116,6 +116,7 @@ export const apiRoutes = {
   getNotionalTransfers: '/notional-transfers/list',
   getAllNotionalTransfers: '/notional-transfers/list-all',
   saveNotionalTransfer: '/notional-transfers/save',
+  importNotionalTransfers: '/notional-transfers/import',
 
   // other-uses
   saveOtherUses: '/other-uses/save',
