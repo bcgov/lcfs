@@ -58,11 +58,17 @@ async def validation_error_exception_handler_no_details(
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):
-    content = dict(exc.detail) if isinstance(exc.detail, dict) else {"detail": exc.detail}
+    content = (
+        dict(exc.detail) if isinstance(exc.detail, dict) else {"detail": exc.detail}
+    )
     ref = _reference_number()
     if ref:
         content["reference_number"] = ref
-    return JSONResponse(status_code=exc.status_code, content=content)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=content,
+        headers=exc.headers or None,
+    )
 
 
 async def global_exception_handler(request: Request, exc: Exception):

@@ -70,12 +70,73 @@ It's configured using .pre-commit-config.yaml file.
 
 By default it runs:
 
--   black (formats your code);
--   mypy (validates types);
--   isort (sorts imports in all files);
--   flake8 (spots possibe bugs);
+- black (formats your code);
+- mypy (validates types);
+- isort (sorts imports in all files);
+- flake8 (spots possibe bugs);
 
 You can read more about pre-commit here: https://pre-commit.com/
+
+## Rate limiting
+
+Public (unauthenticated) endpoints are protected by a Redis-backed
+fixed-window rate limiter that shares state across every replica via
+the existing `redis_url` connection. The limiter is wired into the
+`public_view_handler` decorator, so any route decorated with it is
+automatically capped at the global default
+(`LCFS_RATE_LIMIT_DEFAULT_TIMES` requests per
+`LCFS_RATE_LIMIT_DEFAULT_SECONDS` seconds, default `60 / 60`).
+
+Routes decorated with `view_handler` (i.e. all authenticated routes)
+are **not** rate-limited by default. Health (`/api/health`) and
+Prometheus (`/metrics`) endpoints are also exempt because they do not
+use `public_view_handler`.
+
+### Tighten a public route
+
+```python
+from lcfs.web.core.decorators import public_view_handler
+from lcfs.web.core.rate_limit import RateLimit
+
+@router.post("/expensive-export")
+@public_view_handler(rate_limit=RateLimit(times=5, seconds=60))
+async def expensive_export(request: Request, ...):
+    ...
+```
+
+### Key on user instead of IP (for authenticated public-ish routes)
+
+```python
+@public_view_handler(rate_limit=RateLimit(times=30, seconds=60, scope="user"))
+```
+
+`scope="user"` falls back to the IP when the request is anonymous.
+
+### Opt a route out entirely
+
+```python
+from lcfs.web.core.rate_limit import RATE_LIMIT_EXEMPT
+
+@public_view_handler(rate_limit=RATE_LIMIT_EXEMPT)
+async def cheap_endpoint(...):
+    ...
+```
+
+### Tuning knobs (env vars)
+
+| Variable                          | Default | Purpose                                                                                                                         |
+| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `LCFS_RATE_LIMIT_ENABLED`         | `True`  | Master kill-switch.                                                                                                             |
+| `LCFS_RATE_LIMIT_DEFAULT_TIMES`   | `60`    | Global per-window cap.                                                                                                          |
+| `LCFS_RATE_LIMIT_DEFAULT_SECONDS` | `60`    | Global window size, in seconds.                                                                                                 |
+| `LCFS_RATE_LIMIT_TRUSTED_PROXIES` | `""`    | Comma-separated CIDR list whose `X-Forwarded-For` is trusted. Set this to the OpenShift router subnet in deployed environments. |
+
+When `LCFS_RATE_LIMIT_TRUSTED_PROXIES` is empty the limiter always keys
+on the direct TCP peer, which prevents anonymous callers from spoofing
+their IP by setting their own `X-Forwarded-For` header.
+
+The limiter is best-effort: if Redis is unreachable the request is
+allowed through and a warning is logged, rather than failing closed.
 
 ## Migrations
 
@@ -87,11 +148,11 @@ The `migrate.sh` script is a versatile tool for managing database migrations in 
 
 ### Features
 
--   **Virtual Environment Management**: Automatically creates and manages a virtual environment for migration operations.
--   **Dependency Management**: Installs project dependencies using Poetry.
--   **Migration Generation**: Generates Alembic migration files based on SQLAlchemy model changes.
--   **Database Upgrade**: Upgrades the database schema to a specified revision or the latest version.
--   **Database Downgrade**: Reverts the database schema to a specified revision or to the base state.
+- **Virtual Environment Management**: Automatically creates and manages a virtual environment for migration operations.
+- **Dependency Management**: Installs project dependencies using Poetry.
+- **Migration Generation**: Generates Alembic migration files based on SQLAlchemy model changes.
+- **Database Upgrade**: Upgrades the database schema to a specified revision or the latest version.
+- **Database Downgrade**: Reverts the database schema to a specified revision or to the base state.
 
 ### Usage
 
@@ -135,10 +196,10 @@ Omit `[revision]` to revert to the base state.
 
 ### Notes
 
--   Ensure Python 3.9+ and Poetry are installed on your system.
--   The script assumes that it is located in the same directory as `alembic.ini`.
--   Always test migrations in a development environment before applying them to production.
--   The script automatically activates and deactivates the virtual environment as needed.
+- Ensure Python 3.9+ and Poetry are installed on your system.
+- The script assumes that it is located in the same directory as `alembic.ini`.
+- Always test migrations in a development environment before applying them to production.
+- The script automatically activates and deactivates the virtual environment as needed.
 
 ## Running Tests
 
@@ -160,15 +221,15 @@ Before running the tests, ensure the following prerequisites are met:
 
 The project's tests can be executed using the `pytest` command. Our testing framework is configured to handle the setup and teardown of the test environment automatically. Here's what happens when you run the tests:
 
--   **Test Database Setup**: A test database is automatically created. This is separate from your development or production databases to avoid any unintended data modifications.
+- **Test Database Setup**: A test database is automatically created. This is separate from your development or production databases to avoid any unintended data modifications.
 
--   **Database Migrations**: Alembic migrations are run against the test database to ensure it has the correct schema.
+- **Database Migrations**: Alembic migrations are run against the test database to ensure it has the correct schema.
 
--   **Data Seeding**: The `test_seeder` is used to populate the test database with necessary data for the tests.
+- **Data Seeding**: The `test_seeder` is used to populate the test database with necessary data for the tests.
 
--   **Test Execution**: All test cases are run against the configured test database.
+- **Test Execution**: All test cases are run against the configured test database.
 
--   **Teardown**: After the tests have completed, the test database is dropped to clean up the environment.
+- **Teardown**: After the tests have completed, the test database is dropped to clean up the environment.
 
 To run the tests, use the following command in your terminal:
 
@@ -178,5 +239,5 @@ poetry run pytest -s -v
 
 Options:
 
--   `-s`: Disables per-test capturing of stdout/stderr. This is useful for observing print statements and other console outputs in real time.
--   `-v`: Verbose mode. Provides detailed information about each test being run...
+- `-s`: Disables per-test capturing of stdout/stderr. This is useful for observing print statements and other console outputs in real time.
+- `-v`: Verbose mode. Provides detailed information about each test being run...
