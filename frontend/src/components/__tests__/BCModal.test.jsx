@@ -137,7 +137,8 @@ describe('Not Found Component', () => {
     )
 
     // Kick off the in-flight primary action.
-    fireEvent.click(screen.getByTestId('modal-btn-primary'))
+    const primaryBtn = screen.getByTestId('modal-btn-primary')
+    fireEvent.click(primaryBtn)
     await Promise.resolve()
     expect(primaryButtonAction).toHaveBeenCalledTimes(1)
 
@@ -149,6 +150,15 @@ describe('Not Found Component', () => {
 
     expect(onClose).not.toHaveBeenCalled()
     expect(secondaryButtonAction).not.toHaveBeenCalled()
+
+    // The primary button itself must also refuse a second activation
+    // while the first action is in flight. Without DOM-level disabled,
+    // a repeat click or Enter keypress would queue a second
+    // primaryButtonAction; on success of the first the navigation away
+    // to the list view would hide the duplicate from the user.
+    expect(primaryBtn).toBeDisabled()
+    fireEvent.click(primaryBtn)
+    expect(primaryButtonAction).toHaveBeenCalledTimes(1)
 
     // Settle the primary so the test doesn't leak the pending promise.
     resolvePrimary()
