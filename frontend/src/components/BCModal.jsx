@@ -137,7 +137,17 @@ const BCModal = ({ open, onClose, data = null }) => {
             autoFocus
             onClick={handlePrimaryButtonClick}
             isLoading={isLoading}
-            disabled={primaryButtonDisabled}
+            // `isLoading` swaps the children for a spinner but does NOT
+            // disable the underlying button. The JS guard in
+            // handlePrimaryButtonClick catches a repeat click *if* its
+            // closure has already seen isLoading=true, but a click queued
+            // before React commits, or an Enter keypress while focus is
+            // still on the action button, can land a second
+            // primaryButtonAction — onSuccess of the first then navigates
+            // the user to the list view, hiding the duplicate submission.
+            // DOM-level disabled is the only thing that suppresses those
+            // pre-commit and keyboard activations.
+            disabled={isLoading || primaryButtonDisabled}
             data-test="modal-btn-primary"
           >
             {primaryButtonText}
