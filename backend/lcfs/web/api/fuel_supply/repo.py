@@ -266,13 +266,20 @@ class FuelSupplyRepository:
             # - Exclude Jet fuel category (didn't exist before 2024)
             # - Exclude Fossil-derived fuel types (new in 2024, is_legacy=False but fossil_derived=True)
             # - Only show legacy provisions (Section 6 references, not Section 19)
-            query = query.where(
-                and_(
-                    FuelCategory.category != "Jet fuel",
-                    ~and_(FuelType.is_legacy == False, FuelType.fossil_derived == True),
-                    ProvisionOfTheAct.is_legacy == True,
+            # - Renewable naphtha (fuel_type_id=15) was first reportable in the
+            #   2022 compliance year; exclude it from 2019-2021 legacy reports.
+            renewable_naphtha_fuel_type_id = 15
+            renewable_naphtha_min_year = 2022
+            extra_filters = [
+                FuelCategory.category != "Jet fuel",
+                ~and_(FuelType.is_legacy == False, FuelType.fossil_derived == True),
+                ProvisionOfTheAct.is_legacy == True,
+            ]
+            if current_year < renewable_naphtha_min_year:
+                extra_filters.append(
+                    FuelType.fuel_type_id != renewable_naphtha_fuel_type_id
                 )
-            )
+            query = query.where(and_(*extra_filters))
 
         fuel_type_results = (await self.db.execute(query)).all()
 

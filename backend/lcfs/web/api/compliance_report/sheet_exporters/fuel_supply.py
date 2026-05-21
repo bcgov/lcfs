@@ -120,6 +120,9 @@ class FuelSupplySheetExporter(TabularSheetExporter):
                     ]
                 )
 
+        if not rows:
+            return [headers]
+
         total_compliance_units = (
             await self.summary_service.calculate_fuel_supply_compliance_units(report)
         )

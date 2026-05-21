@@ -13,6 +13,7 @@ import {
   useTransportModes,
   useGetFuelCodes,
   useDownloadFuelCodes,
+  useDownloadFuelCodeBulletins,
   useFuelCodeMutation,
   useFuelCodeBulletins
 } from '../useFuelCode'
@@ -282,6 +283,29 @@ describe('useFuelCode', () => {
           filters: []
         }
       )
+    })
+  })
+
+  describe('useDownloadFuelCodeBulletins', () => {
+    it('should call download with the bulletin export endpoint', async () => {
+      mockDownload.mockResolvedValue({ data: 'ok' })
+
+      const { result } = renderHook(() => useDownloadFuelCodeBulletins(), {
+        wrapper
+      })
+
+      await result.current.mutateAsync({
+        bulletinType: 'current',
+        format: 'xlsx',
+        body: { page: 1, size: 25, sortOrders: [], filters: [] }
+      })
+
+      expect(mockDownload).toHaveBeenCalledWith({
+        url: '/fuel-codes/bulletins/export',
+        method: 'post',
+        params: { bulletinType: 'current', format: 'xlsx' },
+        data: { page: 1, size: 25, sortOrders: [], filters: [] }
+      })
     })
   })
 
