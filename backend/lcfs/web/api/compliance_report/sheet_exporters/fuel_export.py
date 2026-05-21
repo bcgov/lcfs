@@ -65,6 +65,9 @@ class FuelExportSheetExporter(TabularSheetExporter):
                 ]
             )
 
+        if not rows:
+            return [headers]
+
         report = await self.cr_repo.get_compliance_report_by_id(report_id=cid)
         total_compliance_units = (
             await self.summary_service.calculate_fuel_export_compliance_units(report)
