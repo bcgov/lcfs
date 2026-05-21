@@ -300,6 +300,9 @@ const EditViewCIApplicationBase = () => {
     ciApplication?.status?.status && ciApplication.status.status !== 'Draft'
   )
   const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
+  const isDecisionReadOnly =
+    ciApplication?.status?.status === 'Completed' ||
+    ciApplication?.status?.status === 'Withdrawn'
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -364,18 +367,30 @@ const EditViewCIApplicationBase = () => {
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step4" />
     ),
-    step5: isSubmittedOrTerminal ? (
+    step5Decision: isSubmittedOrTerminal ? (
       <GovernmentDecisionStep
         ciApplication={ciApplication}
         isGovernment={isGovernment}
-        readOnly={
-          ciApplication?.status?.status === 'Completed' ||
-          ciApplication?.status?.status === 'Withdrawn'
-        }
+        readOnly={isDecisionReadOnly}
+        showComments={false}
+        showTitle={false}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step5" />
-    )
+    ),
+    step5Comments: isSubmittedOrTerminal ? (
+      <GovernmentDecisionStep
+        ciApplication={ciApplication}
+        isGovernment={isGovernment}
+        readOnly={isDecisionReadOnly}
+        showDecisionPanel={false}
+        showTitle={false}
+        showCommentsTitle={false}
+      />
+    ) : (
+      <StepStub titleKey="carbonIntensity:steps.step5" />
+    ),
+    step5: <StepStub titleKey="carbonIntensity:steps.step5" />
   }
 
   return (
@@ -383,12 +398,7 @@ const EditViewCIApplicationBase = () => {
       <FuelCodesTabs />
       <FloatingAlert ref={alertRef} />
 
-      <BCTypography
-        variant="h5"
-        color="primary"
-        data-test="title"
-        my={2}
-      >
+      <BCTypography variant="h5" color="primary" data-test="title" my={2}>
         {t('carbonIntensity:carbonIntensityApplication')}
       </BCTypography>
 
@@ -413,6 +423,11 @@ const EditViewCIApplicationBase = () => {
       */}
       {isSubmittedOrTerminal ? (
         <>
+          {isGovernment && (
+            <BCBox mb={3} data-test="ci-step5-decision-inline">
+              {stepBodies.step5Decision}
+            </BCBox>
+          )}
           <Accordion
             key="step5"
             expanded={expanded.includes('step5')}
@@ -422,11 +437,11 @@ const EditViewCIApplicationBase = () => {
           >
             <AccordionSummary expandIcon={<ExpandMore />}>
               <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t('carbonIntensity:steps.step5')}
+                {t('carbonIntensity:step5.commentsToOrganizationHeader')}
               </BCTypography>
             </AccordionSummary>
             <AccordionDetails>
-              <BCBox p={1}>{stepBodies.step5}</BCBox>
+              <BCBox p={1}>{stepBodies.step5Comments}</BCBox>
             </AccordionDetails>
           </Accordion>
           <Accordion

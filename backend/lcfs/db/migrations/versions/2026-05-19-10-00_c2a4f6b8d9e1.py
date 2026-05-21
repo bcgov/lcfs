@@ -177,5 +177,4 @@ def downgrade() -> None:
     op.drop_column("ci_application", "verification_2_user_id")
     op.drop_column("ci_application", "verification_1_date")
     op.drop_column("ci_application", "verification_1_user_id")
-    op.drop_column("ci_application", "priority_score")
     op.drop_column("ci_application", "preliminary_risk_assessment")

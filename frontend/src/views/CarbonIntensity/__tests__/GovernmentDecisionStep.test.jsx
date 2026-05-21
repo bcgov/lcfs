@@ -155,4 +155,44 @@ describe('GovernmentDecisionStep', () => {
       screen.getByTestId('ci-request-documentation-btn')
     ).not.toBeDisabled()
   })
+
+  it('can render only the decision panel for the submitted application page layout', () => {
+    mockUserRoles = [{ name: roles.government }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        showComments={false}
+        showTitle={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-step5-decision-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('ci-step5-comments')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('carbonIntensity:step5.title')
+    ).not.toBeInTheDocument()
+  })
+
+  it('can render only the comments section for the submitted application accordion', () => {
+    mockUserRoles = [{ name: roles.government }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        showDecisionPanel={false}
+        showCommentsTitle={false}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-step5-decision-panel')
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId('ci-step5-comments')).toBeInTheDocument()
+    expect(
+      screen.queryByText('carbonIntensity:step5.commentsToOrganizationHeader')
+    ).not.toBeInTheDocument()
+  })
 })

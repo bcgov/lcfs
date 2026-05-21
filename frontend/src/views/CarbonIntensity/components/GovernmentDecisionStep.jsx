@@ -33,7 +33,11 @@ export const GovernmentDecisionStep = ({
   ciApplication,
   isGovernment = false,
   readOnly = false,
-  onDocumentUploadClick = null
+  onDocumentUploadClick = null,
+  showDecisionPanel = true,
+  showComments = true,
+  showTitle = true,
+  showCommentsTitle = true
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
@@ -111,9 +115,11 @@ export const GovernmentDecisionStep = ({
 
   return (
     <Box>
-      <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
-        {t('carbonIntensity:step5.title')}
-      </BCTypography>
+      {showTitle && (
+        <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
+          {t('carbonIntensity:step5.title')}
+        </BCTypography>
+      )}
 
       {error && (
         <BCAlert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
@@ -130,7 +136,7 @@ export const GovernmentDecisionStep = ({
         </BCAlert>
       )}
 
-      {isGovernment && (
+      {showDecisionPanel && isGovernment && (
         <Role roles={[roles.government, roles.analyst, roles.director]}>
           <Box
             sx={{
@@ -324,25 +330,29 @@ export const GovernmentDecisionStep = ({
         </Role>
       )}
 
-      <Box sx={{ mb: 2 }} data-test="ci-step5-comments">
-        <BCTypography
-          variant="h6"
-          sx={{ fontWeight: 700, color: 'primary.main', mb: 2 }}
-        >
-          {t('carbonIntensity:step5.commentsToOrganizationHeader')}
-        </BCTypography>
-        {ciApplicationId ? (
-          <Comments
-            entityType="ciApplication"
-            entityId={ciApplicationId}
-            commentMode="dual"
-          />
-        ) : (
-          <BCTypography variant="body2" color="text.secondary">
-            {t('carbonIntensity:step5.noComments')}
-          </BCTypography>
-        )}
-      </Box>
+      {showComments && (
+        <Box sx={{ mb: 2 }} data-test="ci-step5-comments">
+          {showCommentsTitle && (
+            <BCTypography
+              variant="h6"
+              sx={{ fontWeight: 700, color: 'primary.main', mb: 2 }}
+            >
+              {t('carbonIntensity:step5.commentsToOrganizationHeader')}
+            </BCTypography>
+          )}
+          {ciApplicationId ? (
+            <Comments
+              entityType="ciApplication"
+              entityId={ciApplicationId}
+              commentMode="dual"
+            />
+          ) : (
+            <BCTypography variant="body2" color="text.secondary">
+              {t('carbonIntensity:step5.noComments')}
+            </BCTypography>
+          )}
+        </Box>
+      )}
     </Box>
   )
 }
