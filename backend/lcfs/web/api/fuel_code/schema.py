@@ -24,6 +24,18 @@ class FuelCodeStatusEnumSchema(str, Enum):
     Deleted = "Deleted"
 
 
+class CoProcessedEnumSchema(str, Enum):
+    No = "No"
+    YesDHT = "Yes - DHT"
+    YesFCC = "Yes - FCC"
+
+
+def normalize_co_processed(value):
+    if value is None:
+        return CoProcessedEnumSchema.No
+    return value
+
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
@@ -174,6 +186,7 @@ class FuelCodeSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: Optional[str] = None
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
@@ -195,6 +208,11 @@ class FuelCodeSchema(BaseSchema):
     action_type: Optional[str] = None
     is_notes_required: Optional[bool] = False
     can_edit_ci: Optional[bool] = True
+
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
 
 class FuelCodeHistorySchema(BaseSchema):
     fuel_code_history_id: int
@@ -244,6 +262,7 @@ class FuelCodeBaseSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: Optional[str] = None
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
@@ -253,6 +272,11 @@ class FuelCodeBaseSchema(BaseSchema):
     finished_fuel_transport_modes: Optional[List[str]] = None
     feedstock_fuel_transport_modes: Optional[List[str]] = None
     notes: Optional[str] = None
+
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
 
 
 class FuelCodeCloneSchema(BaseSchema):
@@ -274,6 +298,7 @@ class FuelCodeCloneSchema(BaseSchema):
     feedstock: Optional[str] = None
     feedstock_location: Optional[str] = None
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: Optional[str] = None
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
@@ -290,6 +315,11 @@ class FuelCodeCloneSchema(BaseSchema):
     finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
         None
     )
+
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
 
 
 class FieldOptions(BaseSchema):
@@ -359,6 +389,7 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
     fuel_production_facility_city: str
     fuel_production_facility_province_state: str
     fuel_production_facility_country: str
@@ -380,6 +411,11 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @field_validator("co_processed", mode="before")
+    @classmethod
+    def default_co_processed(cls, value):
+        return normalize_co_processed(value)
 
     @model_validator(mode="before")
     @classmethod

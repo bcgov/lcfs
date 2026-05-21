@@ -48,7 +48,7 @@ import { AddEditTransactionSchema } from './_schema.yup'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { useTransactionMutation } from './transactionMutation'
-import InternalComments from '@/components/InternalComments'
+import EntityComments from '@/components/Comments'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
@@ -413,7 +413,7 @@ export const AddEditViewTransaction = () => {
         {isEditable && transactionId && (
           <TransactionDocuments parentType={txnType} parentID={transactionId} />
         )}
-        {/* Internal Comments */}
+        {/* Comments */}
         {transactionId && (
           <BCBox mt={4}>
             <BCTypography variant="h6" color="primary">
@@ -421,7 +421,7 @@ export const AddEditViewTransaction = () => {
             </BCTypography>
             <BCBox>
               <Role roles={govRoles}>
-                <InternalComments
+                <EntityComments
                   entityType={txnType}
                   entityId={transactionId ?? null}
                   onCommentChange={handleCommentChange}

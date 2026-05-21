@@ -222,7 +222,7 @@ vi.mock('./_schema', () => ({
   usersColumnDefs: mockUsersColumnDefs
 }))
 
-vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+vi.mock('@/utils/grid/cellRenderers', () => ({
   LinkRenderer: () => <div data-test="link-renderer">Link</div>,
   LoginStatusRenderer: () => (
     <div data-test="login-status-renderer">Login Status</div>

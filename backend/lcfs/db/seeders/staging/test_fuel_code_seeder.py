@@ -11,6 +11,19 @@ from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportM
 logger = structlog.get_logger(__name__)
 
 
+def derive_co_processed(misc: str | None) -> str:
+    """Infer the structured co-processed value from legacy misc text."""
+    if not misc:
+        return "No"
+
+    normalized = misc.strip().lower()
+    if "dht" in normalized:
+        return "Yes - DHT"
+    if "fcc" in normalized:
+        return "Yes - FCC"
+    return "No"
+
+
 async def seed_test_fuel_codes(session):
     """
     Seeds comprehensive realistic fuel codes into the database from CSV file,
@@ -132,6 +145,7 @@ async def seed_test_fuel_codes(session):
             "feedstock": clean_str(row['Feedstock'], 'Feedstock'),
             "feedstock_location": clean_str(row['Feedstock location'], 'Location'),
             "feedstock_misc": clean_str(row['Misc'], ''),
+            "co_processed": derive_co_processed(clean_str(row['Misc'], '')),
             "fuel_production_facility_city": clean_str(row['Fuel production facility city'], 'City'),
             "fuel_production_facility_province_state": clean_str(row['Fuel production facility province/state'], 'Province'),
             "fuel_production_facility_country": clean_str(row['Fuel production facility country'], 'Country'),

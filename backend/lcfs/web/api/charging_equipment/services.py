@@ -5,7 +5,6 @@ from typing import List, Optional
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.compliance.ChargingEquipment import ChargingEquipment
@@ -23,12 +22,10 @@ from lcfs.web.api.charging_equipment.schema import (
     ChargingEquipmentStatusEnum,
     BulkActionResponseSchema,
 )
+from lcfs.web.api.notification.schema import NotificationMessageSchema
+from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.core.decorators import service_handler
-
-
-# Placeholder for notification integration so tests can patch this symbol
-async def add_notification_msg(*args, **kwargs):
-    return None
 
 
 logger = structlog.get_logger(__name__)
@@ -39,9 +36,46 @@ class ChargingEquipmentServices:
         self,
         repo: ChargingEquipmentRepository = Depends(),
         session: AsyncSession = Depends(get_async_db_session),
+        notification_service: NotificationService = Depends(NotificationService),
     ):
         self.repo = repo
-        self.db = session
+        self.db = getattr(repo, "db", session)
+        self.notification_service = notification_service
+        if not hasattr(
+            self.notification_service, "create_notification_messages_for_organization"
+        ):
+            self.notification_service = NotificationService(
+                repo=NotificationRepository(db=self.db)
+            )
+
+    async def _create_notification(
+        self,
+        *,
+        user: UserProfile,
+        action: str,
+        message: str,
+        related_entity_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+    ) -> None:
+        target_organization_id = organization_id
+        if target_organization_id is None:
+            target_organization_id = user.organization_id
+
+        related_transaction_id = (
+            f"CE{related_entity_id}" if related_entity_id is not None else "CE-BULK"
+        )
+        notification = NotificationMessageSchema(
+            type=action,
+            message=message,
+            related_organization_id=target_organization_id,
+            related_transaction_id=related_transaction_id,
+            origin_user_profile_id=getattr(user, "user_profile_id", None),
+        )
+
+        await self.notification_service.create_notification_messages_for_organization(
+            notification,
+            target_organization_id,
+        )
 
     @service_handler
     async def get_charging_equipment_list(
@@ -247,12 +281,9 @@ class ChargingEquipmentServices:
         # Create equipment
         equipment = await self.repo.create_charging_equipment(equipment_dict)
 
-        # Log action (tests patch this function)
-        await add_notification_msg(
-            action_type=ActionTypeEnum.CREATE,
+        await self._create_notification(
             action="Created charging equipment",
             message=f"Created charging equipment {equipment.registration_number}",
-            related_entity_type="ChargingEquipment",
             related_entity_id=equipment.charging_equipment_id,
             user=user,
         )
@@ -317,11 +348,9 @@ class ChargingEquipmentServices:
             charging_equipment_id, equipment_dict
         )
 
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
+        await self._create_notification(
             action="Updated charging equipment",
             message=f"Updated charging equipment {equipment.registration_number}",
-            related_entity_type="ChargingEquipment",
             related_entity_id=equipment.charging_equipment_id,
             user=user,
         )
@@ -385,11 +414,9 @@ class ChargingEquipmentServices:
             user.organization_id,
         )
 
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
+        await self._create_notification(
             action="Bulk submitted charging equipment",
             message=f"Submitted {affected_count} charging equipment",
-            related_entity_type="ChargingEquipment",
             user=user,
         )
 
@@ -440,11 +467,9 @@ class ChargingEquipmentServices:
                 ],
             )
 
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
+        await self._create_notification(
             action="Bulk decommissioned charging equipment",
             message=f"Decommissioned {affected_count} charging equipment",
-            related_entity_type="ChargingEquipment",
             user=user,
         )
 
@@ -487,11 +512,9 @@ class ChargingEquipmentServices:
                 detail="Equipment not found or cannot be deleted",
             )
 
-        await add_notification_msg(
-            action_type=ActionTypeEnum.DELETE,
+        await self._create_notification(
             action="Deleted charging equipment",
             message=f"Deleted charging equipment {charging_equipment_id}",
-            related_entity_type="ChargingEquipment",
             related_entity_id=charging_equipment_id,
             user=user,
         )
@@ -685,11 +708,9 @@ class ChargingEquipmentServices:
             "Validated",
         )
 
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
+        await self._create_notification(
             action="Bulk validated charging equipment",
             message=f"Validated {affected_count} charging equipment",
-            related_entity_type="ChargingEquipment",
             user=user,
         )
 
@@ -747,11 +768,9 @@ class ChargingEquipmentServices:
         # Revert parent charging sites to Draft if all their equipment is now Draft
         await self.repo.revert_sites_to_draft_if_all_equipment_draft(eligible_ids)
 
-        await add_notification_msg(
-            action_type=ActionTypeEnum.UPDATE,
+        await self._create_notification(
             action="Bulk returned charging equipment to draft",
             message=f"Returned {affected_count} charging equipment to draft",
-            related_entity_type="ChargingEquipment",
             user=user,
         )
 

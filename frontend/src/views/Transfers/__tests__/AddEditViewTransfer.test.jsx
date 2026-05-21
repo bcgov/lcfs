@@ -142,8 +142,8 @@ vi.mock('../components/SigningAuthority', () => ({
   default: () => <div data-test="signing-authority">SigningAuthority</div>
 }))
 
-vi.mock('@/components/InternalComments', () => ({
-  default: () => <div data-test="internal-comments">InternalComments</div>
+vi.mock('@/components/Comments', () => ({
+  default: () => <div data-test="entity-comments">Comments</div>
 }))
 
 vi.mock('../_schema', () => ({
