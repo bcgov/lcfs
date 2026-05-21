@@ -169,19 +169,36 @@ def write_workbook(path, org, year, cr_id, sheets, inputs, outputs, analyst, dir
     ws.freeze_panes = "A2"
     autosize(ws)
 
-    # Outputs tab — also pivot to wide form for readability
+    # Group outputs by sheet so we can append the derived Total + CI rows
+    # immediately after each sheet's components.
+    by_sheet = {}
+    for sid, desc, intensity in outputs:
+        by_sheet.setdefault(sid, []).append(
+            (desc, float(intensity) if intensity is not None else None)
+        )
+
+    # Outputs tab
     ws = wb.create_sheet("Outputs")
     headers = ["Sheet ID", "Component", "Intensity"]
     ws.append(headers)
     for c in ws[1]:
         c.font = bold
-    for row in outputs:
-        sheet_id, desc, intensity = row
-        ws.append([sheet_id, desc, float(intensity) if intensity is not None else None])
+    for sid in sorted(by_sheet.keys()):
+        total = 0.0
+        for desc, intensity in by_sheet[sid]:
+            ws.append([sid, desc, intensity])
+            if intensity is not None:
+                total += intensity
+        ws.append([sid, "Total (gCO2e/GJ)", total])
+        for c in ws[ws.max_row]:
+            c.font = bold
+        ws.append([sid, "Carbon Intensity (gCO2e/MJ)", total / 1000.0])
+        for c in ws[ws.max_row]:
+            c.font = bold
     ws.freeze_panes = "A2"
     autosize(ws)
 
-    # Pivot
+    # Pivot — components across columns, plus Total + CI as the rightmost two.
     ws = wb.create_sheet("Outputs (pivot)")
     components = []
     seen = set()
@@ -189,20 +206,26 @@ def write_workbook(path, org, year, cr_id, sheets, inputs, outputs, analyst, dir
         if desc not in seen:
             seen.add(desc)
             components.append(desc)
-    ws.append(["Sheet ID", "Feedstock", "Fuel type", "Fuel class"] + components)
+    ws.append(
+        ["Sheet ID", "Feedstock", "Fuel type", "Fuel class"]
+        + components
+        + ["Total (gCO2e/GJ)", "Carbon Intensity (gCO2e/MJ)"]
+    )
     for c in ws[1]:
         c.font = bold
     sheet_meta = {s[0]: (s[1], s[2], s[3]) for s in sheets}
-    by_sheet = {}
-    for sid, desc, intensity in outputs:
-        by_sheet.setdefault(sid, {})[desc] = (
-            float(intensity) if intensity is not None else None
-        )
-    for sid in sorted(by_sheet.keys()):
+    by_sheet_dict = {sid: dict(items) for sid, items in by_sheet.items()}
+    for sid in sorted(by_sheet_dict.keys()):
         meta = sheet_meta.get(sid, ("", "", ""))
         row = [sid, meta[0], meta[1], meta[2]]
+        total = 0.0
         for comp in components:
-            row.append(by_sheet[sid].get(comp))
+            v = by_sheet_dict[sid].get(comp)
+            row.append(v)
+            if v is not None:
+                total += v
+        row.append(total)
+        row.append(total / 1000.0)
         ws.append(row)
     ws.freeze_panes = "E2"
     autosize(ws)
