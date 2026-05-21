@@ -9,6 +9,7 @@ export interface FeatureFlagsConfig {
   manageChargingSites?: boolean
   manageFse?: boolean
   legacySupplementalLock?: boolean
+  ciApplications?: boolean
 }
 
 export interface KeycloakConfig {
@@ -74,7 +75,8 @@ export const FEATURE_FLAGS = {
   REPORTING_2025_ENABLED: 'reporting2025Enabled',
   MANAGE_CHARGING_SITES: 'manageChargingSites',
   MANAGE_FSE: 'manageFse',
-  LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock'
+  LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock',
+  CI_APPLICATIONS: 'ciApplications'
 } as const
 
 export type FeatureFlagValue =
@@ -127,6 +129,12 @@ export const CONFIG: AppConfig = {
     manageFse:
       window.lcfs_config.feature_flags.manageFse ?? !isProductionEnvironment,
     legacySupplementalLock:
-      window.lcfs_config.feature_flags.legacySupplementalLock ?? false
+      window.lcfs_config.feature_flags.legacySupplementalLock ?? false,
+    // CI applications is in active development — default ON for dev/test,
+    // OFF in prod until the feature is signed off and the tenant repo flag
+    // flips it on for production.
+    ciApplications:
+      window.lcfs_config.feature_flags.ciApplications ??
+      !isProductionEnvironment
   }
 }

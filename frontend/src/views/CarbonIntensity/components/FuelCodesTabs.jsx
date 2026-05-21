@@ -1,10 +1,12 @@
-import { AppBar, Box, Tab, Tabs } from '@mui/material'
-import { useMemo } from 'react'
+import { AppBar, Tab, Tabs } from '@mui/material'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { roles, govRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ROUTES from '@/routes/routes'
+import breakpoints from '@/themes/base/breakpoints'
 
 const BULLETINS_PATH = ROUTES.FUEL_CODES.BULLETINS
 
@@ -12,9 +14,17 @@ const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
 const isArchivedQuery = (loc) =>
   new URLSearchParams(loc.search).get('type') === 'archived'
 
-const buildTabs = ({ isCiApplicant, isSigningAuthority, isGovernment }) => {
+const buildTabs = ({
+  isCiApplicant,
+  isSigningAuthority,
+  isGovernment,
+  ciApplicationsEnabled
+}) => {
   const tabs = []
-  if (isCiApplicant || isSigningAuthority || isGovernment) {
+  if (
+    ciApplicationsEnabled &&
+    (isCiApplicant || isSigningAuthority || isGovernment)
+  ) {
     tabs.push({
       key: 'ci',
       labelKey: 'carbonIntensity:tabs.ciApplications',
@@ -63,39 +73,55 @@ export const FuelCodesTabs = () => {
   const location = useLocation()
   const { hasAnyRole } = useCurrentUser()
 
+  const ciApplicationsEnabled = isFeatureEnabled(FEATURE_FLAGS.CI_APPLICATIONS)
+
   const tabs = useMemo(
     () =>
       buildTabs({
         isCiApplicant: hasAnyRole(roles.ci_applicant),
         isSigningAuthority: hasAnyRole(roles.signing_authority),
-        isGovernment: hasAnyRole(...govRoles)
+        isGovernment: hasAnyRole(...govRoles),
+        ciApplicationsEnabled
       }),
-    [hasAnyRole]
+    [hasAnyRole, ciApplicationsEnabled]
   )
 
   const matchedIndex = tabs.findIndex((tab) => tab.isActive(location))
   const activeIndex = matchedIndex === -1 ? false : matchedIndex
 
+  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
+  useEffect(() => {
+    const handleTabsOrientation = () => {
+      setTabsOrientation(
+        window.innerWidth < breakpoints.values.lg ? 'vertical' : 'horizontal'
+      )
+    }
+    window.addEventListener('resize', handleTabsOrientation)
+    handleTabsOrientation()
+    return () => window.removeEventListener('resize', handleTabsOrientation)
+  }, [])
+
   return (
-    <Box sx={{ bgcolor: 'background.paper' }}>
-      <AppBar position="static" sx={{ boxShadow: 'none', border: 'none', width: '60%' }}>
-        <Tabs
-          value={activeIndex}
-          onChange={(_, idx) => navigate(tabs[idx].path)}
-          aria-label="Fuel codes navigation tabs"
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          {tabs.map((tab) => (
-            <Tab
-              key={tab.key}
-              label={t(tab.labelKey)}
-              data-test={`fuel-codes-tab-${tab.key}`}
-            />
-          ))}
-        </Tabs>
-      </AppBar>
-    </Box>
+    <AppBar position="static" sx={{ boxShadow: 'none', border: 'none', mb: 3 }}>
+      <Tabs
+        sx={{
+          background: 'rgb(0, 0, 0, 0.08)',
+          width: { xs: '100%', md: '60%' }
+        }}
+        orientation={tabsOrientation}
+        value={activeIndex}
+        onChange={(_, idx) => navigate(tabs[idx].path)}
+        aria-label="Fuel codes navigation tabs"
+      >
+        {tabs.map((tab) => (
+          <Tab
+            key={tab.key}
+            label={t(tab.labelKey)}
+            data-test={`fuel-codes-tab-${tab.key}`}
+          />
+        ))}
+      </Tabs>
+    </AppBar>
   )
 }
 
