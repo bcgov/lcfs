@@ -1,15 +1,8 @@
-"""Redis-backed rate limiting for FastAPI routes.
+"""Redis-backed fixed-window rate limiter
 
-Provides a shared, replica-safe fixed-window rate limiter that uses the
-application's existing Redis client. It is designed to plug into the
-``public_view_handler`` decorator so public endpoints get a sensible
-global cap, with per-route overrides available via the ``rate_limit``
-argument.
-
-The implementation intentionally uses a simple ``INCR`` + ``EXPIRE``
-fixed-window counter on Redis so that limits are shared across every
-FastAPI replica (e.g. multiple OpenShift pods) without requiring any
-new infrastructure.
+Uses the Redis client (shared across all pods) via a simple
+INCR/EXPIRE counter. Plugs into ``public_view_handler``; per-route
+overrides are available via the ``rate_limit`` argument.
 """
 
 from __future__ import annotations
@@ -120,15 +113,9 @@ async def enforce_rate_limit(
     request: Request,
     limit: Optional[RateLimit] = None,
 ) -> None:
-    """Enforce a rate limit for the current request.
+    """Raise HTTP 429 if the request exceeds its fixed-window counter in Redis.
 
-    Reads the Redis client from ``request.app.state.redis_client`` and
-    applies a fixed-window counter. If the limit is exceeded, raises
-    HTTP 429 with a ``Retry-After`` header and a descriptive body.
-
-    This is a best-effort limiter: if Redis is unavailable or errors,
-    the request is allowed through and a warning is logged. The goal is
-    to never take down the API because the limiter itself is degraded.
+    Best-effort: Redis errors allow the request through rather than failing closed.
     """
     if not settings.rate_limit_enabled:
         return
