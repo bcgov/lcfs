@@ -107,6 +107,64 @@ describe('Not Found Component', () => {
     expect(secondaryButtonAction).toHaveBeenCalled()
   })
 
+  it('blocks cancel / X / backdrop close while the primary action is in flight', async () => {
+    // Regression for the submission-duplicate flow (incident 4368):
+    // primaryButtonAction here mimics react-query's fire-and-forget
+    // `mutate()` — the modal doesn't await the real network call, so
+    // between setIsLoading(true) and the API completing, the secondary
+    // and close controls must refuse to dispatch onClose. Otherwise a
+    // user who clicks Submit then Cancel can close the modal and re-fire
+    // submit, minting a duplicate Reserved transaction.
+    const onClose = vi.fn()
+    const secondaryButtonAction = vi.fn()
+    let resolvePrimary
+    const primaryButtonAction = vi.fn(
+      () => new Promise((resolve) => { resolvePrimary = resolve })
+    )
+
+    render(
+      <BCModal
+        open={true}
+        onClose={onClose}
+        data={{
+          ...baseData,
+          primaryButtonText: 'Confirm',
+          primaryButtonAction,
+          secondaryButtonText: 'Cancel',
+          secondaryButtonAction
+        }}
+      />
+    )
+
+    // Kick off the in-flight primary action.
+    const primaryBtn = screen.getByTestId('modal-btn-primary')
+    fireEvent.click(primaryBtn)
+    await Promise.resolve()
+    expect(primaryButtonAction).toHaveBeenCalledTimes(1)
+
+    // While the action hangs, the X and Cancel must not close the modal
+    // or run the secondary action — both are belt-and-suspenders against
+    // the same duplicate-submission gap.
+    fireEvent.click(screen.getByTestId('modal-btn-close'))
+    fireEvent.click(screen.getByTestId('modal-btn-secondary'))
+
+    expect(onClose).not.toHaveBeenCalled()
+    expect(secondaryButtonAction).not.toHaveBeenCalled()
+
+    // The primary button itself must also refuse a second activation
+    // while the first action is in flight. Without DOM-level disabled,
+    // a repeat click or Enter keypress would queue a second
+    // primaryButtonAction; on success of the first the navigation away
+    // to the list view would hide the duplicate from the user.
+    expect(primaryBtn).toBeDisabled()
+    fireEvent.click(primaryBtn)
+    expect(primaryButtonAction).toHaveBeenCalledTimes(1)
+
+    // Settle the primary so the test doesn't leak the pending promise.
+    resolvePrimary()
+    await Promise.resolve()
+  })
+
   it('should render warningText when warningText is true', async () => {
     const warningText = 'This is a warning!'
     const data = {
