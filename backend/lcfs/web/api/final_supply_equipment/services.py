@@ -428,6 +428,10 @@ class FinalSupplyEquipmentServices:
         compliance period year as the default supply date range.
         """
         compliance_year = int(report.compliance_period.description)
+        # FSE reporting did not exist before 2024. Skip entirely so legacy reports
+        # do not create ComplianceReportChargingEquipment rows or mutate FSE data.
+        if compliance_year < 2024:
+            return {"created": 0}
         supply_from_date = date(compliance_year, 1, 1)
         supply_to_date = date(compliance_year, 12, 31)
 

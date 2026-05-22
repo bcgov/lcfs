@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from lcfs.db.models import LevelOfEquipment, Organization
 from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.final_supply_equipment.schema import (
     LevelOfEquipmentSchema,
@@ -379,6 +380,22 @@ async def test_copy_fse_between_reports(
     mock_repo.create_final_supply_equipment.assert_awaited_once()
     mock_repo.increment_seq_by_org_and_postal_code.assert_awaited_once()
     mock_org_repo.get_organization.assert_awaited_once_with(1)
+
+
+@pytest.mark.anyio
+async def test_copy_fse_to_new_report_skipped_for_legacy_year(service, mock_repo):
+    """FSE reporting didn't exist before 2024 — copy must be a no-op for legacy years."""
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 42
+    report.organization_id = 1
+    report.compliance_report_group_uuid = "group-legacy"
+    report.compliance_period = MagicMock(description="2023")
+
+    result = await service.copy_fse_to_new_report(report)
+
+    assert result == {"created": 0}
+    mock_repo.get_latest_active_equipments.assert_not_awaited()
+    mock_repo.create_fse_reporting_batch.assert_not_awaited()
 
 
 @pytest.mark.anyio

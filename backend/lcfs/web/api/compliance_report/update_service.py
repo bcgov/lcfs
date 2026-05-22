@@ -343,30 +343,35 @@ class ComplianceReportUpdateService:
             report.compliance_report_id
         )
 
-        if report.compliance_report_group_uuid:
-            await self.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment(
-                report.compliance_report_group_uuid,
-                report.organization_id,
-            )
+        # FSE reporting did not exist before 2024. Skip all FSE submission logic
+        # for legacy years so we do not mutate FSE data or block submission on
+        # validations that should not apply.
+        compliance_year = int(report.compliance_period.description)
+        if compliance_year >= 2024:
+            if report.compliance_report_group_uuid:
+                await self.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment(
+                    report.compliance_report_group_uuid,
+                    report.organization_id,
+                )
 
-        has_decommissioned_fse = (
-            await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
-                report.compliance_report_id,
-                only_active=True,
+            has_decommissioned_fse = (
+                await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
+                    report.compliance_report_id,
+                    only_active=True,
+                )
             )
-        )
-        if has_decommissioned_fse:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "This draft report includes decommissioned FSE. Remove or deactivate those rows before submission."
-                ),
-            )
+            if has_decommissioned_fse:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "This draft report includes decommissioned FSE. Remove or deactivate those rows before submission."
+                    ),
+                )
 
-        # Auto-submit all FSE records in Draft or Updated status to Submitted status
-        await self.charging_equipment_service.auto_submit_equipment_for_report(
-            report.compliance_report_id, report.organization_id
-        )
+            # Auto-submit all FSE records in Draft or Updated status to Submitted status
+            await self.charging_equipment_service.auto_submit_equipment_for_report(
+                report.compliance_report_id, report.organization_id
+            )
 
         # Ensure summary exists and snapshot user-entered lines before transaction creation
         calculated_summary = (

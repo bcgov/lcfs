@@ -348,6 +348,7 @@ async def test_handle_submitted_status_auto_submits_fse_records(
     mock_report.compliance_report_id = report_id
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.line_20_surplus_deficit_units = 100
 
@@ -438,6 +439,7 @@ async def test_handle_submitted_status_rejects_decommissioned_fse(
     mock_report.compliance_report_id = 1
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
 
     mock_user_has_roles.return_value = True
     compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(
@@ -451,6 +453,48 @@ async def test_handle_submitted_status_rejects_decommissioned_fse(
 
     assert exc_info.value.status_code == 400
     assert "decommissioned FSE" in exc_info.value.detail
+    compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_skips_fse_for_legacy_year(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    mock_summary_service,
+):
+    """Reports for 2023 and earlier predate FSE — all FSE submission logic must be skipped."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2023")
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = 0
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Any decommissioned-FSE noise should not block a legacy submission
+    compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(
+        return_value=True
+    )
+
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=0)
+    )
+    compliance_report_update_service.org_service = mock_org_service
+    mock_org_service.adjust_balance.return_value = MagicMock()
+
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment.assert_not_awaited()
+    compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report.assert_not_awaited()
     compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
 
 
