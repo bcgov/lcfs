@@ -75,7 +75,7 @@ async def get_table_options(
         RoleEnum.DIRECTOR,
     ]
 )
-async def get_available_analysts(
+async def get_available_ci_application_analysts(
     request: Request,
     service: CIApplicationServices = Depends(),
 ) -> list[CIApplicationUserSchema]:
