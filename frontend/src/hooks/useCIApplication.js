@@ -19,6 +19,17 @@ export const useCIApplicationOptions = (options) => {
   })
 }
 
+export const useCIApplicationStatuses = (options) => {
+  const query = useCIApplicationOptions({
+    select: (data) => data?.statuses ?? [],
+    ...options
+  })
+  return {
+    ...query,
+    data: query.data ?? []
+  }
+}
+
 export const useGetCIApplications = (
   { page = 1, size = 10, sortOrders = [], filters = [] } = {},
   options
