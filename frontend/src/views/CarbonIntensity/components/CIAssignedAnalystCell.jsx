@@ -83,7 +83,16 @@ export const CIAssignedAnalystCell = ({ data, onRefresh }) => {
   }
 
   return (
-    <FormControl size="small" variant="standard" sx={{ width: '100%' }}>
+    <FormControl
+      size="small"
+      variant="standard"
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center'
+      }}
+    >
       <Select
         value={currentAssignee?.userProfileId || ''}
         displayEmpty
@@ -101,12 +110,28 @@ export const CIAssignedAnalystCell = ({ data, onRefresh }) => {
         }}
         renderValue={() => renderChip(currentAssignee)}
         sx={{
-          '&:before': { borderBottom: 'none !important' },
+          height: '100%',
+          minHeight: '32px',
+          width: '100%',
           '& .MuiSelect-select': {
+            padding: '4px 8px',
+            fontSize: '12px',
+            height: '100%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            py: 0.5
+            minHeight: '24px'
+          },
+          '&:before': {
+            borderBottom: 'none !important',
+            content: '""'
+          },
+          '& .MuiInputBase-root': {
+            width: '100%',
+            height: '100%'
+          },
+          '& .MuiInput-root': {
+            height: '100%',
+            width: '100%'
           }
         }}
       >

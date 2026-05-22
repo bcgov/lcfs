@@ -102,7 +102,7 @@ const CIApplicationsBase = () => {
 
       <BCTypography variant="h5" color="primary" data-test="title" mt={2}>
         {isGovernment
-          ? t('carbonIntensity:ciApplications')
+          ? t('carbonIntensity:carbonIntensityApplication')
           : t('carbonIntensity:myOrgCIApplications')}
       </BCTypography>
 

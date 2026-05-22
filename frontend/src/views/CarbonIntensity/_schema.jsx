@@ -94,7 +94,7 @@ const statusCol = (t) => ({
   headerName: t('carbonIntensity:columns.status'),
   cellRenderer: CIApplicationStatusRenderer,
   valueGetter: (params) => params.data?.status?.status,
-  minWidth: 110,
+  minWidth: 140,
   sortable: false,
   floatingFilterComponent: BCSelectFloatingFilter,
   floatingFilterComponentParams: {
@@ -120,9 +120,9 @@ const idCol = (t) => ({
 const proposedEffectiveCol = (t) => ({
   field: 'proposedFuelCodeEffectiveDate',
   headerName: t('carbonIntensity:columns.proposedEffectiveDate'),
-  minWidth: 180,
+  minWidth: 300,
   valueFormatter: dateFormatter,
-  filter: 'agDateColumnFilter',
+  filter: BCDateFloatingFilter,
   filterParams: DATE_FILTER_PARAMS,
   floatingFilterComponent: BCDateFloatingFilter,
   suppressFloatingFilterButton: true
@@ -135,7 +135,7 @@ const productionFacilityLocationCol = (t) => ({
   field: 'productionFacilityLocation',
   headerName: t('carbonIntensity:columns.productionFacilityLocation'),
   valueGetter: ({ data }) => productionFacilityLocation(data),
-  minWidth: 220,
+  minWidth: 330,
   sortable: false,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,
@@ -145,10 +145,10 @@ const productionFacilityLocationCol = (t) => ({
 const lastUpdatedCol = (t) => ({
   field: 'updateDate',
   headerName: t('carbonIntensity:columns.lastUpdated'),
-  minWidth: 180,
+  minWidth: 220,
   valueFormatter: dateFormatter,
   sort: 'desc',
-  filter: 'agDateColumnFilter',
+  filter: BCDateFloatingFilter,
   filterParams: DATE_FILTER_PARAMS,
   floatingFilterComponent: BCDateFloatingFilter,
   suppressFloatingFilterButton: true
@@ -158,7 +158,7 @@ const organizationCol = (t) => ({
   field: 'organization.name',
   headerName: t('carbonIntensity:columns.organization'),
   valueGetter: (params) => params.data?.organization?.name,
-  minWidth: 220,
+  minWidth: 330,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,
   suppressFloatingFilterButton: true
@@ -169,7 +169,7 @@ const organizationCol = (t) => ({
 const priorityScoreCol = (t) => ({
   field: 'priorityScore',
   headerName: t('carbonIntensity:columns.priorityScore'),
-  minWidth: 140,
+  minWidth: 180,
   type: 'numericColumn',
   filter: 'agNumberColumnFilter',
   filterParams: NUMBER_FILTER_PARAMS,
@@ -179,7 +179,7 @@ const priorityScoreCol = (t) => ({
 const verificationCol = (t) => ({
   field: 'verificationLevel',
   headerName: t('carbonIntensity:columns.verification'),
-  minWidth: 160,
+  minWidth: 220,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,
   suppressFloatingFilterButton: true
@@ -188,7 +188,7 @@ const verificationCol = (t) => ({
 const assignedAnalystCol = (t, onRefresh) => ({
   field: 'assignedAnalyst',
   headerName: t('carbonIntensity:columns.assignedAnalyst'),
-  minWidth: 170,
+  minWidth: 180,
   valueGetter: ({ data }) => data?.assignedAnalyst?.initials || '',
   cellRenderer: CIAssignedAnalystCell,
   cellRendererParams: {
@@ -219,7 +219,7 @@ const assignedAnalystCol = (t, onRefresh) => ({
 const lastCommentCol = (t) => ({
   field: 'lastComment',
   headerName: t('carbonIntensity:columns.lastComment'),
-  minWidth: 150,
+  minWidth: 220,
   valueGetter: ({ data }) => data?.lastComment?.comment || '',
   cellRenderer: LastCommentRenderer,
   sortable: false,
