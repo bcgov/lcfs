@@ -105,7 +105,7 @@ describe('useDocuments', () => {
         queryFn: expect.any(Function),
         enabled: true,
         staleTime: 600000,
-        cacheTime: 900000,
+        gcTime: 900000,
         retry: 3,
         retryDelay: expect.any(Function)
       })
@@ -335,7 +335,7 @@ describe('useDocuments', () => {
         queryFn: expect.any(Function),
         enabled: true,
         staleTime: 600000,
-        cacheTime: 900000,
+        gcTime: 900000,
         retry: 3,
         retryDelay: expect.any(Function)
       })
