@@ -9,17 +9,53 @@ import ROUTES from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 
 const BULLETINS_PATH = ROUTES.FUEL_CODES.BULLETINS
+const FUEL_CODES_PATH = ROUTES.FUEL_CODES.LIST
 
 const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
-const isArchivedQuery = (loc) =>
-  new URLSearchParams(loc.search).get('type') === 'archived'
+const isOnInternalFuelCodes = (loc) => loc.pathname === FUEL_CODES_PATH
+const isOnFuelCodesArea = (loc) =>
+  isOnInternalFuelCodes(loc) || isOnBulletins(loc)
+const getTypeQuery = (loc) => new URLSearchParams(loc.search).get('type')
+const isArchivedQuery = (loc) => getTypeQuery(loc) === 'archived'
+const isCurrentQuery = (loc) => getTypeQuery(loc) === 'current'
+
+const INTERNAL_FUEL_CODES_TABS = [
+  {
+    key: 'fuelCodes',
+    labelKey: 'carbonIntensity:tabs.fuelCodes',
+    path: FUEL_CODES_PATH,
+    isActive: (loc) =>
+      isOnInternalFuelCodes(loc) && !isArchivedQuery(loc) && !isCurrentQuery(loc)
+  },
+  {
+    key: 'current',
+    labelKey: 'carbonIntensity:tabs.currentFuelCodes',
+    path: `${FUEL_CODES_PATH}?type=current`,
+    isActive: (loc) => isOnInternalFuelCodes(loc) && isCurrentQuery(loc)
+  },
+  {
+    key: 'archived',
+    labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
+    path: `${FUEL_CODES_PATH}?type=archived`,
+    isActive: (loc) => isOnInternalFuelCodes(loc) && isArchivedQuery(loc)
+  }
+]
 
 const buildTabs = ({
   isCiApplicant,
   isSigningAuthority,
   isGovernment,
-  ciApplicationsEnabled
+  ciApplicationsEnabled,
+  variant,
+  location
 }) => {
+  if (
+    variant === 'internal' ||
+    (isGovernment && isOnFuelCodesArea(location))
+  ) {
+    return INTERNAL_FUEL_CODES_TABS
+  }
+
   const tabs = []
   if (
     ciApplicationsEnabled &&
@@ -36,8 +72,8 @@ const buildTabs = ({
     tabs.push({
       key: 'mine',
       labelKey: 'carbonIntensity:tabs.myFuelCodes',
-      path: ROUTES.FUEL_CODES.LIST,
-      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.LIST
+      path: FUEL_CODES_PATH,
+      isActive: isOnInternalFuelCodes
     })
   } else if (isGovernment) {
     tabs.push({
@@ -67,7 +103,7 @@ const buildTabs = ({
   return tabs
 }
 
-export const FuelCodesTabs = () => {
+export const FuelCodesTabs = ({ variant = 'default' } = {}) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const navigate = useNavigate()
   const location = useLocation()
@@ -81,9 +117,11 @@ export const FuelCodesTabs = () => {
         isCiApplicant: hasAnyRole(roles.ci_applicant),
         isSigningAuthority: hasAnyRole(roles.signing_authority),
         isGovernment: hasAnyRole(...govRoles),
-        ciApplicationsEnabled
+        ciApplicationsEnabled,
+        variant,
+        location
       }),
-    [hasAnyRole, ciApplicationsEnabled]
+    [hasAnyRole, ciApplicationsEnabled, variant, location]
   )
 
   const matchedIndex = tabs.findIndex((tab) => tab.isActive(location))
