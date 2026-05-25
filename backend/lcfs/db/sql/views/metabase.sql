@@ -323,6 +323,25 @@ equipment_users AS (
     FROM charging_equipment_intended_user_association ceiu2
     JOIN end_user_type eut2 ON ceiu2.end_user_type_id = eut2.end_user_type_id
     GROUP BY ceiu2.charging_equipment_id
+),
+latest_crce AS (
+    SELECT *
+    FROM (
+        SELECT
+            crce.*,
+            ROW_NUMBER() OVER (
+                PARTITION BY
+                    crce.compliance_report_group_uuid,
+                    crce.charging_equipment_id,
+                    crce.charging_equipment_version,
+                    crce.organization_id
+                ORDER BY
+                    crce.version DESC,
+                    crce.charging_equipment_compliance_id DESC
+            ) AS rn
+        FROM compliance_report_charging_equipment crce
+    ) ranked_crce
+    WHERE ranked_crce.rn = 1
 )
 SELECT DISTINCT
     crce.organization_id,
@@ -342,6 +361,8 @@ SELECT DISTINCT
     crce.compliance_report_id,
     crce.compliance_report_group_uuid,
     crce.is_active,
+    crce.version,
+    crce.action_type,
     COALESCE(crce.charging_equipment_version, ce.version) AS charging_equipment_version,
     cs.street_address,
     cs.city,
@@ -364,7 +385,7 @@ SELECT DISTINCT
         ELSE ROUND((crce.kwh_usage::numeric / (power_lookup.power_output::numeric * 24 * ((crce.supply_to_date::date - crce.supply_from_date::date) + 1))) * 100)::integer
     END AS capacity_utilization_percent,
     ces.status AS charging_equipment_status
-FROM compliance_report_charging_equipment crce
+FROM latest_crce crce
 JOIN charging_equipment ce
     ON ce.charging_equipment_id = crce.charging_equipment_id
    AND ce.version = crce.charging_equipment_version
@@ -483,14 +504,14 @@ matched_rows AS (
                 PARTITION BY
                     v.organization_id,
                     v.compliance_report_group_uuid,
-                    ce.group_uuid
+                    v.charging_equipment_id,
+                    v.charging_equipment_version
                 ORDER BY
                     CASE
                         WHEN v.is_active IS TRUE THEN 0
                         ELSE 1
                     END,
-                    v.charging_equipment_version DESC,
-                    v.charging_equipment_id DESC,
+                    v.version DESC,
                     v.charging_equipment_compliance_id DESC
             ) AS rn
         FROM v_fse_reporting_base v
@@ -518,6 +539,8 @@ SELECT
     mr.compliance_notes,
     mr.charging_equipment_compliance_id,
     mr.is_active,
+    mr.version,
+    mr.action_type,
     COALESCE(mr.charging_equipment_version, fr.charging_equipment_version) AS charging_equipment_version,
     COALESCE(mr.street_address, fr.street_address) AS street_address,
     COALESCE(mr.city, fr.city) AS city,
@@ -542,7 +565,8 @@ JOIN fallback_rows fr
 LEFT JOIN matched_rows mr
     ON mr.organization_id = rc.organization_id
    AND mr.compliance_report_group_uuid = rc.compliance_report_group_uuid
-   AND mr.charging_equipment_group_uuid = fr.charging_equipment_group_uuid;
+   AND mr.charging_equipment_id = fr.charging_equipment_id
+   AND mr.charging_equipment_version = fr.charging_equipment_version;
 
 -- ==========================================
 -- Notional Transfer Base View
@@ -2833,6 +2857,8 @@ CREATE INDEX IF NOT EXISTS idx_fse_organization_name_norm
 
 -- ==========================================
 -- LEVEL 3: Views depending on Level 2 views
+-- ==========================================
+
 -- ==========================================
 -- Allocation Agreement Extended Base View (from HEAD)
 -- ==========================================

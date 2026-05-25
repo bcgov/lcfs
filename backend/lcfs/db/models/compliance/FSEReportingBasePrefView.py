@@ -31,6 +31,8 @@ class FSEReportingBasePrefView(Base):
     compliance_notes = Column(String)
     charging_equipment_compliance_id = Column(Integer)
     is_active = Column(Boolean)
+    version = Column(Integer)
+    action_type = Column(String)
     street_address = Column(String)
     city = Column(String)
     postal_code = Column(String)
