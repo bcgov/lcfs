@@ -52,7 +52,7 @@ const FuelCodesBase = () => {
     initialPaginationOptions
   )
 
-  const { t } = useTranslation(['common', 'fuelCodes'])
+  const { t } = useTranslation(['common', 'fuelCode'])
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()

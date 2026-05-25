@@ -9,7 +9,7 @@ const QUERY_KEYS = {
   detail: (id: any) => ['ci-application', String(id)]
 }
 
-export const useCIApplicationOptions = (options: QueryOptions<unknown>) => {
+export const useCIApplicationOptions = (options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.options,
@@ -18,6 +18,14 @@ export const useCIApplicationOptions = (options: QueryOptions<unknown>) => {
     gcTime: 60 * 60 * 1000,
     ...options
   })
+}
+
+export const useCIApplicationStatuses = (options: QueryOptions<unknown> = {}) => {
+  const result = useCIApplicationOptions(options)
+  return {
+    ...result,
+    data: result.data?.statuses ?? []
+  }
 }
 
 export const useGetCIApplications = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
