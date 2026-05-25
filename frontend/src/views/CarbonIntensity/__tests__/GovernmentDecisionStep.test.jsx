@@ -203,6 +203,18 @@ describe('GovernmentDecisionStep', () => {
     )
   })
 
+  it('records Draft when requesting pathway changes', async () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+    await waitFor(() =>
+      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Draft' })
+    )
+  })
+
   it('disables the documentation request button when no upload handler is wired', () => {
     mockUserRoles = [{ name: roles.analyst }]
     render(

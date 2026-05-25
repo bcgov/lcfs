@@ -871,10 +871,10 @@ class CIApplicationServices:
         is_government: bool,
     ) -> CIApplicationSchema:
         """
-        Government users transition a Submitted application to Completed
-        or Withdrawn. An optional comment is recorded as part of the
-        decision. The terminal state lock is enforced here so we never
-        re-decide an already-decided application.
+        Government-side workflow actions transition a CI application
+        between Draft, Submitted, Recommended, Completed, and Withdrawn
+        according to role-specific rules. The optional inline comment
+        remains ignored in favor of the shared internal_comments thread.
         """
         is_director = user_has_roles(user, [RoleEnum.DIRECTOR])
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
@@ -910,6 +910,19 @@ class CIApplicationServices:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Only Recommended applications can be returned to analysts.",
                 )
+        elif data.status == CIApplicationStatusEnum.Draft:
+            if not is_analyst:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only analysts can request CI pathway changes.",
+                )
+            if current_status != CIApplicationStatusEnum.Submitted.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Only Submitted applications can be returned to Draft for pathway changes."
+                    ),
+                )
         else:
             if current_status not in {
                 CIApplicationStatusEnum.Submitted.value,
@@ -933,6 +946,20 @@ class CIApplicationServices:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
         elif data.status == CIApplicationStatusEnum.Submitted:
+            ci_application.recommendation_user_id = None
+            ci_application.recommendation_date = None
+            ci_application.approval_user_id = None
+            ci_application.approval_date = None
+        elif data.status == CIApplicationStatusEnum.Draft:
+            ci_application.assigned_analyst_id = None
+            ci_application.preliminary_risk_assessment = None
+            ci_application.priority_score = None
+            ci_application.verification_1_user_id = None
+            ci_application.verification_1_date = None
+            ci_application.verification_2_user_id = None
+            ci_application.verification_2_date = None
+            ci_application.verification_2_risk_assessment = None
+            ci_application.verification_2_priority_score = None
             ci_application.recommendation_user_id = None
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None

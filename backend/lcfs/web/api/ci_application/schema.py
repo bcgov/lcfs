@@ -432,12 +432,13 @@ class CIApplicationDecisionSchema(BaseSchema):
     @classmethod
     def _terminal_only(cls, value: CIApplicationStatusEnum):
         if value not in {
+            CIApplicationStatusEnum.Draft,
             CIApplicationStatusEnum.Submitted,
             CIApplicationStatusEnum.Completed,
             CIApplicationStatusEnum.Withdrawn,
         }:
             raise ValueError(
-                "Decision status must be Submitted, Completed or Withdrawn."
+                "Decision status must be Draft, Submitted, Completed or Withdrawn."
             )
         return value
 

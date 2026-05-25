@@ -854,6 +854,65 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 
 @pytest.mark.anyio
+async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = 12
+    ci.preliminary_risk_assessment = "High"
+    ci.priority_score = 511
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    ci.verification_2_user_id = 33
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    ci.verification_2_priority_score = 426
+    ci.recommendation_user_id = 44
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    draft = _status("Draft", 1)
+    repo.get_status_by_name.return_value = draft
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Draft"), mock_user, is_government=True
+    )
+
+    assert ci.status_id == draft.ci_application_status_id
+    assert ci.assigned_analyst_id is None
+    assert ci.preliminary_risk_assessment is None
+    assert ci.priority_score is None
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
+    assert ci.approval_user_id is None
+    assert ci.approval_date is None
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_rejects_draft_pathway_change_for_non_analyst(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci = _ci_application(status=_status("Submitted", 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload("Draft"), mock_user, is_government=True
+        )
+
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
 async def test_step5_decision_transitions_to_completed(service, repo, mock_user):
     mock_user.role_names = {RoleEnum.DIRECTOR}
     ci = _ci_application(status=_status("Recommended", 3))

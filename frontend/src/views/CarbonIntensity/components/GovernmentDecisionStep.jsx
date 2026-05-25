@@ -346,6 +346,7 @@ export const GovernmentDecisionStep = ({
                     color="primary"
                     sx={workflowButtonSx}
                     disabled={readOnly}
+                    onClick={() => recordDecisionFor('Draft')}
                     data-test="ci-request-pathway-changes-btn"
                   >
                     {t('carbonIntensity:step5.requestPathwayChanges')}
