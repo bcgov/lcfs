@@ -22,18 +22,6 @@ branch_labels = None
 depends_on = None
 
 
-SECTIONS_TO_EXECUTE = [
-    "FSE Reporting Base View",
-    "FSE Reporting Base Preferred View",
-]
-
-
-def _refresh_fse_reporting_views() -> None:
-    content = find_and_read_sql_file(sqlFile="metabase.sql")
-    sections = parse_sql_sections(content)
-    execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
-
-
 def upgrade() -> None:
     op.drop_constraint(
         "uix_compliance_reporting_equipment_dates",
@@ -112,13 +100,8 @@ def upgrade() -> None:
         """
     )
 
-    _refresh_fse_reporting_views()
-
 
 def downgrade() -> None:
-    op.execute("DROP VIEW IF EXISTS v_fse_reporting_base_pref;")
-    op.execute("DROP VIEW IF EXISTS v_fse_reporting_base CASCADE;")
-
     op.drop_index(
         "ix_crce_reporting_revision_key",
         table_name="compliance_report_charging_equipment",
