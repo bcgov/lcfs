@@ -28,7 +28,6 @@ SECTIONS_TO_EXECUTE = [
     "Compliance Reports Analytics View",
     "Compliance Reports Waiting review",
     "Compliance reports time per status",
-    "Transfer base Analytics View",
     "User Login Analytics Base View",
     "BCeID Daily Login Summary View",
     "BCeID User Statistics View",
