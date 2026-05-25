@@ -149,7 +149,11 @@ async def test_table_options_success(
         body = response.json()
         assert "statuses" in body
         assert "unitsOfMeasure" in body
-        assert {s["status"] for s in body["statuses"]} == {"Draft", "Submitted"}
+        assert {s["status"] for s in body["statuses"]} == {
+            "Draft",
+            "Submitted",
+            "Recommended",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -470,7 +474,7 @@ async def test_decision_endpoint_rejects_non_terminal_status(
 ):
     set_user_role(RoleEnum.GOVERNMENT)
     response = await client.post(
-        "/api/ci-applications/10/decision", json={"status": "Submitted"}
+        "/api/ci-applications/10/decision", json={"status": "Recommended"}
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
