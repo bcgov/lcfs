@@ -2858,6 +2858,8 @@ CREATE INDEX IF NOT EXISTS idx_fse_organization_name_norm
 -- ==========================================
 -- LEVEL 3: Views depending on Level 2 views
 -- ==========================================
+
+-- ==========================================
 -- Allocation Agreement Extended Base View (from HEAD)
 -- ==========================================
 drop view if exists vw_allocation_agreement_extended_base;
