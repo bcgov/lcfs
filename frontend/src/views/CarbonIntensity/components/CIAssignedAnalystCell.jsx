@@ -26,6 +26,9 @@ export const CIAssignedAnalystCell = ({ data, onRefresh }) => {
     hasRoles?.('Government', 'Analyst') ||
     hasRoles?.('Government', 'Compliance Manager') ||
     hasRoles?.('Government', 'Director')
+  const isStatusLocked = ['Completed', 'Withdrawn'].includes(
+    data?.status?.status || ''
+  )
 
   const { data: analysts = [], isLoading } = useGetCIApplicationAnalysts({
     enabled: canAssign
@@ -56,7 +59,7 @@ export const CIAssignedAnalystCell = ({ data, onRefresh }) => {
     )
   }
 
-  if (!canAssign) {
+  if (!canAssign || isStatusLocked) {
     return (
       <Box
         display="flex"

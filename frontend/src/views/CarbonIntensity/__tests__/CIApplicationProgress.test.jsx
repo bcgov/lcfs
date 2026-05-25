@@ -156,6 +156,26 @@ describe('CIApplicationProgress', () => {
     })
   })
 
+  it('uses the assigned analyst for a pending verification 1 step when available', () => {
+    const steps = buildCIWorkflowSteps({
+      status: { status: 'Submitted' },
+      signatureUserDisplayName: 'Jane Submitter',
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      preliminaryRiskAssessment: 'Low',
+      assignedAnalyst: {
+        initials: 'AA',
+        fullName: 'Alex Analyst'
+      },
+      proposedFuelCodeEffectiveDate: '2026-06-01'
+    })
+
+    expect(steps.find((step) => step.key === 'verification1')).toMatchObject({
+      initials: 'AA',
+      tooltip: 'Alex Analyst',
+      state: 'pending'
+    })
+  })
+
   it('uses the assigned analyst only for pending verification steps', () => {
     const steps = buildCIWorkflowSteps({
       status: { status: 'Submitted' },

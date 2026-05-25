@@ -174,22 +174,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        """
-        DELETE FROM ci_application_status
-        WHERE status = 'Recommended'
-        """
-    )
-
-    op.execute(
-        """
-        UPDATE ci_application_status
-        SET display_order = display_order - 1,
-            update_user = 'system'
-        WHERE status IN ('Completed', 'Withdrawn')
-        """
-    )
-
     op.drop_constraint(
         op.f("fk_ci_application_approval_user_id_user_profile"),
         "ci_application",
