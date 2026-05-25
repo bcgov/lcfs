@@ -308,16 +308,7 @@ GRANT SELECT ON vw_compliance_reports_time_per_status TO basic_lcfs_reporting_ro
 -- ==========================================
 DROP VIEW IF EXISTS v_fse_reporting_base CASCADE;
 CREATE OR REPLACE VIEW v_fse_reporting_base as
-WITH latest_equipment AS (
-    SELECT
-        ce.charging_equipment_id,
-        ce.charging_site_id,
-        ce.group_uuid,
-        ce.version,
-        ROW_NUMBER() OVER (PARTITION BY ce.group_uuid ORDER BY ce.version DESC, ce.charging_equipment_id DESC) AS rn
-    FROM charging_equipment ce
-),
-equipment_uses AS (
+WITH equipment_uses AS (
     SELECT
         ceiu.charging_equipment_id,
         array_agg(eut.type ORDER BY eut.type) AS intended_uses
@@ -334,7 +325,7 @@ equipment_users AS (
     GROUP BY ceiu2.charging_equipment_id
 )
 SELECT DISTINCT
-    cs.organization_id,
+    crce.organization_id,
     ce.charging_equipment_id,
     ce.serial_number,
     ce.manufacturer,
@@ -363,59 +354,37 @@ SELECT DISTINCT
     cs.allocating_organization_name,
     eu.intended_uses,
     eus.intended_users,
-    (SELECT cpo.charger_power_output
-     FROM charging_power_output cpo
-     JOIN end_user_type eut_user ON cpo.end_user_type_id = eut_user.end_user_type_id
-     LEFT JOIN end_use_type eut ON cpo.end_use_type_id = eut.end_use_type_id
-     WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
-       AND eut_user.type_name = ANY(COALESCE(eus.intended_users, ARRAY[]::varchar[]))
-       AND (cpo.end_use_type_id IS NULL OR eut.type = ANY(COALESCE(eu.intended_uses, ARRAY[]::varchar[])))
-     ORDER BY cpo.display_order ASC NULLS FIRST
-     LIMIT 1
-    ) AS power_output,
+    power_lookup.power_output,
     CASE
         WHEN crce.kwh_usage IS NULL OR crce.supply_from_date IS NULL OR crce.supply_to_date IS NULL 
-             OR (SELECT cpo.charger_power_output
-                 FROM charging_power_output cpo
-                 JOIN end_user_type eut_user ON cpo.end_user_type_id = eut_user.end_user_type_id
-                 LEFT JOIN end_use_type eut ON cpo.end_use_type_id = eut.end_use_type_id
-                 WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
-                   AND eut_user.type_name = ANY(COALESCE(eus.intended_users, ARRAY[]::varchar[]))
-                   AND (cpo.end_use_type_id IS NULL OR eut.type = ANY(COALESCE(eu.intended_uses, ARRAY[]::varchar[])))
-                 ORDER BY cpo.display_order ASC NULLS FIRST
-                 LIMIT 1) IS NULL 
-             OR (SELECT cpo.charger_power_output
-                 FROM charging_power_output cpo
-                 JOIN end_user_type eut_user ON cpo.end_user_type_id = eut_user.end_user_type_id
-                 LEFT JOIN end_use_type eut ON cpo.end_use_type_id = eut.end_use_type_id
-                 WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
-                   AND eut_user.type_name = ANY(COALESCE(eus.intended_users, ARRAY[]::varchar[]))
-                   AND (cpo.end_use_type_id IS NULL OR eut.type = ANY(COALESCE(eu.intended_uses, ARRAY[]::varchar[])))
-                 ORDER BY cpo.display_order ASC NULLS FIRST
-                 LIMIT 1) <= 0 
+             OR power_lookup.power_output IS NULL
+             OR power_lookup.power_output <= 0
              OR crce.supply_to_date::date < crce.supply_from_date::date
         THEN NULL
-        ELSE ROUND((crce.kwh_usage::numeric / ((SELECT cpo.charger_power_output
-                 FROM charging_power_output cpo
-                 JOIN end_user_type eut_user ON cpo.end_user_type_id = eut_user.end_user_type_id
-                 LEFT JOIN end_use_type eut ON cpo.end_use_type_id = eut.end_use_type_id
-                 WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
-                   AND eut_user.type_name = ANY(COALESCE(eus.intended_users, ARRAY[]::varchar[]))
-                   AND (cpo.end_use_type_id IS NULL OR eut.type = ANY(COALESCE(eu.intended_uses, ARRAY[]::varchar[])))
-                 ORDER BY cpo.display_order ASC NULLS FIRST
-                 LIMIT 1)::numeric * 24 * ((crce.supply_to_date::date - crce.supply_from_date::date) + 1))) * 100)::integer
+        ELSE ROUND((crce.kwh_usage::numeric / (power_lookup.power_output::numeric * 24 * ((crce.supply_to_date::date - crce.supply_from_date::date) + 1))) * 100)::integer
     END AS capacity_utilization_percent,
     ces.status AS charging_equipment_status
-FROM latest_equipment le
-JOIN charging_equipment ce ON le.charging_equipment_id = ce.charging_equipment_id AND le.version = ce.version
+FROM compliance_report_charging_equipment crce
+JOIN charging_equipment ce
+    ON ce.charging_equipment_id = crce.charging_equipment_id
+   AND ce.version = crce.charging_equipment_version
 JOIN charging_site cs ON ce.charging_site_id = cs.charging_site_id 
     AND cs.version = (SELECT MAX(cs2.version) FROM charging_site cs2 WHERE cs2.group_uuid = cs.group_uuid)
 JOIN level_of_equipment loe ON ce.level_of_equipment_id = loe.level_of_equipment_id
 JOIN charging_equipment_status ces ON ce.status_id = ces.charging_equipment_status_id
-LEFT JOIN compliance_report_charging_equipment crce ON ce.charging_equipment_id = crce.charging_equipment_id AND ce.version = crce.charging_equipment_version
 LEFT JOIN equipment_uses eu ON ce.charging_equipment_id = eu.charging_equipment_id
 LEFT JOIN equipment_users eus ON ce.charging_equipment_id = eus.charging_equipment_id
-WHERE le.rn = 1;
+LEFT JOIN LATERAL (
+    SELECT cpo.charger_power_output AS power_output
+    FROM charging_power_output cpo
+    JOIN end_user_type eut_user ON cpo.end_user_type_id = eut_user.end_user_type_id
+    LEFT JOIN end_use_type eut ON cpo.end_use_type_id = eut.end_use_type_id
+        AND eut.type = ANY(COALESCE(eu.intended_uses, ARRAY[]::varchar[]))
+    WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
+      AND eut_user.type_name = ANY(COALESCE(eus.intended_users, ARRAY[]::varchar[]))
+    ORDER BY cpo.display_order ASC NULLS FIRST
+    LIMIT 1
+) power_lookup ON TRUE;
 
 -- ==========================================
 -- FSE Reporting Base Preferred View
@@ -429,117 +398,109 @@ WITH report_context AS (
         cr.compliance_report_group_uuid
     FROM compliance_report cr
 ),
-base_rows AS (
+latest_equipment AS (
     SELECT
-        v.*,
-        ce.group_uuid AS charging_equipment_group_uuid
-    FROM v_fse_reporting_base v
-    JOIN charging_equipment ce
-        ON ce.charging_equipment_id = v.charging_equipment_id
-       AND ce.version = v.charging_equipment_version
+        ce.charging_equipment_id,
+        ce.charging_site_id,
+        ce.group_uuid,
+        ce.version,
+        ROW_NUMBER() OVER (PARTITION BY ce.group_uuid ORDER BY ce.version DESC, ce.charging_equipment_id DESC) AS rn
+    FROM charging_equipment ce
+),
+equipment_uses AS (
+    SELECT
+        ceiu.charging_equipment_id,
+        array_agg(eut.type ORDER BY eut.type) AS intended_uses
+    FROM charging_equipment_intended_use_association ceiu
+    JOIN end_use_type eut ON ceiu.end_use_type_id = eut.end_use_type_id
+    GROUP BY ceiu.charging_equipment_id
+),
+equipment_users AS (
+    SELECT
+        ceiu2.charging_equipment_id,
+        array_agg(eut2.type_name ORDER BY eut2.type_name) AS intended_users
+    FROM charging_equipment_intended_user_association ceiu2
+    JOIN end_user_type eut2 ON ceiu2.end_user_type_id = eut2.end_user_type_id
+    GROUP BY ceiu2.charging_equipment_id
 ),
 fallback_rows AS (
-    SELECT *
-    FROM (
-        SELECT
-            br.organization_id,
-            br.charging_equipment_group_uuid,
-            br.charging_equipment_id,
-            br.serial_number,
-            br.manufacturer,
-            br.model,
-            br.registration_number,
-            br.site_name,
-            br.charging_site_id,
-            br.equipment_notes,
-            br.charging_equipment_version,
-            br.street_address,
-            br.city,
-            br.postal_code,
-            br.latitude,
-            br.longitude,
-            br.level_of_equipment,
-            br.level_of_equipment_id,
-            br.ports,
-            br.allocating_organization_name,
-            br.intended_uses,
-            br.intended_users,
-            br.power_output,
-            br.capacity_utilization_percent,
-            br.charging_equipment_status,
-            ROW_NUMBER() OVER (
-                PARTITION BY
-                    br.organization_id,
-                    br.charging_equipment_group_uuid
-                ORDER BY
-                    CASE
-                        WHEN br.is_active IS TRUE THEN 0
-                        ELSE 1
-                    END,
-                    br.charging_equipment_version DESC,
-                    br.charging_equipment_id DESC
-            ) AS rn
-        FROM base_rows br
-    ) x
-    WHERE x.rn = 1
+    SELECT
+        cs.organization_id,
+        ce.group_uuid AS charging_equipment_group_uuid,
+        ce.charging_equipment_id,
+        ce.serial_number,
+        ce.manufacturer,
+        ce.model,
+        (cs.site_code || '-' || ce.equipment_number) AS registration_number,
+        cs.site_name,
+        cs.charging_site_id,
+        ce.notes AS equipment_notes,
+        ce.version AS charging_equipment_version,
+        cs.street_address,
+        cs.city,
+        cs.postal_code,
+        cs.latitude,
+        cs.longitude,
+        loe.name AS level_of_equipment,
+        ce.level_of_equipment_id,
+        ce.ports,
+        cs.allocating_organization_name,
+        eu.intended_uses,
+        eus.intended_users,
+        power_lookup.power_output,
+        NULL::integer AS capacity_utilization_percent,
+        ces.status AS charging_equipment_status
+    FROM latest_equipment le
+    JOIN charging_equipment ce
+        ON le.charging_equipment_id = ce.charging_equipment_id
+       AND le.version = ce.version
+    JOIN charging_site cs ON ce.charging_site_id = cs.charging_site_id
+        AND cs.version = (SELECT MAX(cs2.version) FROM charging_site cs2 WHERE cs2.group_uuid = cs.group_uuid)
+    JOIN level_of_equipment loe ON ce.level_of_equipment_id = loe.level_of_equipment_id
+    JOIN charging_equipment_status ces ON ce.status_id = ces.charging_equipment_status_id
+    LEFT JOIN equipment_uses eu ON ce.charging_equipment_id = eu.charging_equipment_id
+    LEFT JOIN equipment_users eus ON ce.charging_equipment_id = eus.charging_equipment_id
+    LEFT JOIN LATERAL (
+        SELECT cpo.charger_power_output AS power_output
+        FROM charging_power_output cpo
+        JOIN end_user_type eut_user ON cpo.end_user_type_id = eut_user.end_user_type_id
+        LEFT JOIN end_use_type eut ON cpo.end_use_type_id = eut.end_use_type_id
+            AND eut.type = ANY(COALESCE(eu.intended_uses, ARRAY[]::varchar[]))
+        WHERE cpo.level_of_equipment_id = ce.level_of_equipment_id
+          AND eut_user.type_name = ANY(COALESCE(eus.intended_users, ARRAY[]::varchar[]))
+        ORDER BY cpo.display_order ASC NULLS FIRST
+        LIMIT 1
+    ) power_lookup ON TRUE
+    WHERE le.rn = 1
 ),
 matched_rows AS (
     SELECT *
     FROM (
         SELECT
-            br.organization_id,
-            br.compliance_report_id,
-            br.compliance_report_group_uuid,
-            br.charging_equipment_group_uuid,
-            br.charging_equipment_id,
-            br.serial_number,
-            br.manufacturer,
-            br.model,
-            br.registration_number,
-            br.site_name,
-            br.charging_site_id,
-            br.equipment_notes,
-            br.supply_from_date,
-            br.supply_to_date,
-            br.kwh_usage,
-            br.compliance_notes,
-            br.charging_equipment_compliance_id,
-            br.is_active,
-            br.charging_equipment_version,
-            br.street_address,
-            br.city,
-            br.postal_code,
-            br.latitude,
-            br.longitude,
-            br.level_of_equipment,
-            br.level_of_equipment_id,
-            br.ports,
-            br.allocating_organization_name,
-            br.intended_uses,
-            br.intended_users,
-            br.power_output,
-            br.capacity_utilization_percent,
-            br.charging_equipment_status,
+            v.*,
+            ce.group_uuid AS charging_equipment_group_uuid,
             ROW_NUMBER() OVER (
                 PARTITION BY
-                    br.organization_id,
-                    br.compliance_report_group_uuid,
-                    br.charging_equipment_group_uuid
+                    v.organization_id,
+                    v.compliance_report_group_uuid,
+                    ce.group_uuid
                 ORDER BY
                     CASE
-                        WHEN br.is_active IS TRUE THEN 0
+                        WHEN v.is_active IS TRUE THEN 0
                         ELSE 1
                     END,
-                    br.charging_equipment_version DESC,
-                    br.charging_equipment_id DESC,
-                    br.charging_equipment_compliance_id DESC
+                    v.charging_equipment_version DESC,
+                    v.charging_equipment_id DESC,
+                    v.charging_equipment_compliance_id DESC
             ) AS rn
-        FROM base_rows br
-        WHERE br.compliance_report_id IS NOT NULL
+        FROM v_fse_reporting_base v
+        JOIN charging_equipment ce
+            ON ce.charging_equipment_id = v.charging_equipment_id
+           AND ce.version = v.charging_equipment_version
     ) x
     WHERE x.rn = 1
 )
-SELECT DISTINCT
+SELECT
     rc.organization_id,
     rc.compliance_report_id,
     rc.compliance_report_group_uuid,

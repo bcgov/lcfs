@@ -7,8 +7,6 @@ from fastapi import HTTPException
 
 from lcfs.db.models import LevelOfEquipment, Organization
 from lcfs.db.models.compliance import FinalSupplyEquipment
-from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.final_supply_equipment.schema import (
     LevelOfEquipmentSchema,
@@ -496,7 +494,7 @@ async def test_get_fse_reporting_list_paginated_calculates_capacity(
 
 
 @pytest.mark.anyio
-async def test_get_fse_reporting_list_paginated_refreshes_original_draft(
+async def test_get_fse_reporting_list_paginated_does_not_refresh_decommissioned_rows(
     service, mock_repo, mock_comp_report_repo
 ):
     mock_repo.get_fse_reporting_list_paginated.return_value = ([], 0)
@@ -505,34 +503,6 @@ async def test_get_fse_reporting_list_paginated_refreshes_original_draft(
         compliance_report_group_uuid="uuid-1234",
         supplemental_initiator=None,
     )
-    mock_report.current_status.status = ComplianceReportStatusEnum.Draft
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = mock_report
-
-    pagination = MagicMock(page=1, size=10, filters=[])
-
-    await service.get_fse_reporting_list_paginated(1, pagination, 10, "all")
-
-    mock_repo.deactivate_decommissioned_fse_for_report.assert_awaited_once_with(10)
-    mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
-        1,
-        pagination,
-        10,
-        "all",
-        include_decommissioned_attached=False,
-    )
-
-
-@pytest.mark.anyio
-async def test_get_fse_reporting_list_paginated_skips_refresh_for_draft_supplemental(
-    service, mock_repo, mock_comp_report_repo
-):
-    mock_repo.get_fse_reporting_list_paginated.return_value = ([], 0)
-    mock_report = MagicMock(
-        compliance_report_id=10,
-        compliance_report_group_uuid="uuid-1234",
-        supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
-    )
-    mock_report.current_status.status = ComplianceReportStatusEnum.Draft
     mock_comp_report_repo.get_compliance_report_by_id.return_value = mock_report
 
     pagination = MagicMock(page=1, size=10, filters=[])
@@ -541,7 +511,10 @@ async def test_get_fse_reporting_list_paginated_skips_refresh_for_draft_suppleme
 
     mock_repo.deactivate_decommissioned_fse_for_report.assert_not_awaited()
     mock_repo.get_fse_reporting_list_paginated.assert_awaited_once_with(
-        1, pagination, 10, "all"
+        1,
+        pagination,
+        10,
+        "all",
     )
 
 
