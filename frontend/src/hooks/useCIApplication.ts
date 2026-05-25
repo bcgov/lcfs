@@ -20,6 +20,17 @@ export const useCIApplicationOptions = (options: QueryOptions<unknown>) => {
   })
 }
 
+export const useCIApplicationStatuses = (options?: QueryOptions<unknown>) => {
+  const query = useCIApplicationOptions({
+    select: (data: any) => data?.statuses ?? [],
+    ...options
+  })
+  return {
+    ...query,
+    data: query.data ?? []
+  }
+}
+
 export const useGetCIApplications = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
   const client = useApiService()
   return useQuery({

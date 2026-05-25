@@ -92,6 +92,58 @@ describe('FuelCodesTabs', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('shows the IDIR-only Fuel codes (manage) tab for government users', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.government)
+    render(<FuelCodesTabs />, { wrapper })
+
+    expect(
+      screen.getByText('carbonIntensity:tabs.fuelCodes')
+    ).toBeInTheDocument()
+  })
+
+  it('navigates to /fuel-codes when the IDIR Fuel codes tab is clicked', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.government)
+    render(<FuelCodesTabs />, { wrapper })
+
+    fireEvent.click(screen.getByText('carbonIntensity:tabs.fuelCodes'))
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
+  })
+
+  it('hides Current and Archived bulletin tabs from government users', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.government)
+    render(<FuelCodesTabs />, { wrapper })
+
+    expect(
+      screen.queryByText('carbonIntensity:tabs.currentFuelCodes')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('carbonIntensity:tabs.archivedFuelCodes')
+    ).not.toBeInTheDocument()
+  })
+
+  it('marks the Fuel codes (manage) tab active on /fuel-codes for IDIR', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.government)
+    mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+    render(<FuelCodesTabs />, { wrapper })
+
+    const tab = screen
+      .getByText('carbonIntensity:tabs.fuelCodes')
+      .closest('[role="tab"]')
+    expect(tab.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('shows CI applicants the My fuel codes tab (not the IDIR Fuel codes tab)', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.ci_applicant)
+    render(<FuelCodesTabs />, { wrapper })
+
+    expect(
+      screen.getByText('carbonIntensity:tabs.myFuelCodes')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('carbonIntensity:tabs.fuelCodes')
+    ).not.toBeInTheDocument()
+  })
+
   it('navigates to the corresponding route when a tab is clicked', () => {
     mockHasAnyRole = (...names) => names.includes(roles.ci_applicant)
     mockLocation = { pathname: ROUTES.FUEL_CODES.BULLETINS, search: '' }
@@ -141,5 +193,17 @@ describe('FuelCodesTabs', () => {
       .getByText('carbonIntensity:tabs.archivedFuelCodes')
       .closest('[role="tab"]')
     expect(tab.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('does not highlight any tab when the current path matches none', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.ci_applicant)
+    mockLocation = { pathname: '/some/other/route', search: '' }
+    render(<FuelCodesTabs />, { wrapper })
+
+    const allTabs = screen.getAllByRole('tab')
+    expect(allTabs.length).toBeGreaterThan(0)
+    for (const tab of allTabs) {
+      expect(tab.getAttribute('aria-selected')).toBe('false')
+    }
   })
 })

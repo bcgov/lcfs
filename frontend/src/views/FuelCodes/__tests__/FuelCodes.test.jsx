@@ -44,11 +44,16 @@ vi.mock('@react-keycloak/web', () => ({
 
 // Mock Current User
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: {
-      roles: [{ name: roles.government }, { name: roles.analyst }]
+  useCurrentUser: () => {
+    const userRoles = [{ name: roles.government }, { name: roles.analyst }]
+    return {
+      data: { roles: userRoles },
+      hasAnyRole: (...names) =>
+        names.some((n) => userRoles.some((r) => r.name === n)),
+      hasRoles: (...names) =>
+        names.every((n) => userRoles.some((r) => r.name === n))
     }
-  })
+  }
 }))
 
 // Mock BCGridViewer
@@ -66,7 +71,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock React Router
 const mockNavigate = vi.fn()
-const mockLocationState = { state: null }
+const mockLocationState = {
+  state: null,
+  pathname: ROUTES.FUEL_CODES.LIST,
+  search: ''
+}
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => mockLocationState,

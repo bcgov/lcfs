@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs, defaultSortModel } from './_schema'
 import { defaultInitialPagination } from '@/constants/schedules'
+import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 
 const convertToBackendFilters = (model = {}) =>
   Object.entries(model).map(([field, cfg]) => ({
@@ -122,6 +123,7 @@ const FuelCodesBase = () => {
 
   return (
     <Grid2 className="fuel-code-container" mx={-1}>
+      <FuelCodesTabs />
       <div>
         {alertMessage && (
           <BCAlert data-test="alert-box" severity={alertSeverity}>
