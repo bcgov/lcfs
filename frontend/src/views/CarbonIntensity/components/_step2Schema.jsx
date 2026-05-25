@@ -25,9 +25,11 @@ const renderTextPlaceholder = (params) =>
   params.value || <BCTypography variant="body4">Enter value</BCTypography>
 
 const renderNumberPlaceholder = (params) =>
-  params.value !== null && params.value !== undefined && params.value !== ''
-    ? params.value
-    : <BCTypography variant="body4">Enter number</BCTypography>
+  params.value !== null && params.value !== undefined && params.value !== '' ? (
+    params.value
+  ) : (
+    <BCTypography variant="body4">Enter number</BCTypography>
+  )
 
 const cellErrorStyle = (params) => {
   const rowErrors = params.context?.errors?.[params.data?.id]
@@ -58,10 +60,7 @@ const applyFuelCodeAutofill = (rowData, fuelCode) => {
   }
 }
 
-export const buildPathwayColDefs = ({
-  optionsData,
-  canEdit
-}) => {
+export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const applicationTypes = optionsData?.pathwayApplicationTypes || []
   const fuelCodeTypes = optionsData?.pathwayFuelCodeTypes || []
   const fuelTypes = optionsData?.fuelTypes || []
@@ -367,6 +366,131 @@ export const buildPathwayColDefs = ({
   }))
 }
 
+const formatSummaryDate = (value) => {
+  if (!value) return ''
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return String(value)
+    return d.toISOString().slice(0, 10)
+  } catch {
+    return String(value)
+  }
+}
+
+export const ciApplicationPathwaySummaryColDefs = ({
+  optionsData,
+  proposedFuelCodeEffectiveDate
+}) => {
+  const applicationTypes = optionsData?.pathwayApplicationTypes || []
+  const fuelCodeTypes = optionsData?.pathwayFuelCodeTypes || []
+  const fuelTypes = optionsData?.fuelTypes || []
+
+  const applicationTypeLabel = (data) =>
+    data?.applicationType?.type ||
+    applicationTypes.find(
+      (t) => t.pathwayApplicationTypeId === data?.applicationTypeId
+    )?.type ||
+    ''
+
+  const fuelCodeTypeLabel = (data) =>
+    data?.fuelCodeType?.type ||
+    fuelCodeTypes.find((t) => t.pathwayFuelCodeTypeId === data?.fuelCodeTypeId)
+      ?.type ||
+    ''
+
+  const fuelCodeLabel = (data) => data?.fuelCode?.fuelCode || ''
+
+  const fuelTypeLabel = (data) =>
+    data?.fuelType?.fuelType ||
+    fuelTypes.find((t) => t.fuelTypeId === data?.fuelTypeId)?.fuelType ||
+    ''
+
+  return [
+    {
+      field: 'applicationTypeId',
+      headerName: i18n.t('carbonIntensity:step2.applicationType'),
+      valueGetter: ({ data }) => applicationTypeLabel(data),
+      minWidth: 160
+    },
+    {
+      field: 'fuelCodeTypeId',
+      headerName: i18n.t('carbonIntensity:step2.proposedFuelCodeType'),
+      valueGetter: ({ data }) => fuelCodeTypeLabel(data),
+      minWidth: 200
+    },
+    {
+      field: 'operatingDataFrom',
+      headerName: i18n.t('carbonIntensity:step2.operatingDataFrom'),
+      valueGetter: ({ data }) =>
+        formatSummaryDate(
+          data?.operatingDataFrom ||
+            data?.operating_data_from ||
+            proposedFuelCodeEffectiveDate
+        ),
+      minWidth: 200
+    },
+    {
+      field: 'operatingDataTo',
+      headerName: i18n.t('carbonIntensity:step2.operatingDataTo'),
+      valueGetter: ({ data }) =>
+        formatSummaryDate(data?.operatingDataTo || data?.operating_data_to),
+      minWidth: 200
+    },
+    {
+      field: 'fuelCodeId',
+      headerName: i18n.t('carbonIntensity:step2.fuelCodeIteration'),
+      valueGetter: ({ data }) => fuelCodeLabel(data) || '—',
+      minWidth: 200
+    },
+    {
+      field: 'proposedCi',
+      headerName: i18n.t('carbonIntensity:step2.proposedCi'),
+      minWidth: 180
+    },
+    {
+      field: 'fuelTypeId',
+      headerName: i18n.t('carbonIntensity:step2.fuelType'),
+      valueGetter: ({ data }) => fuelTypeLabel(data),
+      minWidth: 220
+    },
+    {
+      field: 'feedstock',
+      headerName: i18n.t('carbonIntensity:step2.feedstock'),
+      minWidth: 220
+    },
+    {
+      field: 'feedstockRegion',
+      headerName: i18n.t('carbonIntensity:step2.feedstockRegion'),
+      minWidth: 220
+    },
+    {
+      field: 'feedstockTransportMode',
+      headerName: i18n.t('carbonIntensity:step2.feedstockTransportMode'),
+      minWidth: 240
+    },
+    {
+      field: 'feedstockTransportDistance',
+      headerName: i18n.t('carbonIntensity:step2.feedstockTransportDistance'),
+      minWidth: 240
+    },
+    {
+      field: 'coproducts',
+      headerName: i18n.t('carbonIntensity:step2.coproducts'),
+      minWidth: 240
+    },
+    {
+      field: 'finishedFuelTransportMode',
+      headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportMode'),
+      minWidth: 260
+    },
+    {
+      field: 'finishedFuelTransportDistance',
+      headerName: i18n.t('carbonIntensity:step2.finishedFuelTransportDistance'),
+      minWidth: 260
+    }
+  ]
+}
+
 export const defaultColDef = {
   editable: false,
   resizable: true,
@@ -438,7 +562,8 @@ const FIELD_LABEL_KEYS = {
   feedstock: 'carbonIntensity:step2.feedstock',
   feedstockRegion: 'carbonIntensity:step2.feedstockRegion',
   feedstockTransportMode: 'carbonIntensity:step2.feedstockTransportMode',
-  feedstockTransportDistance: 'carbonIntensity:step2.feedstockTransportDistance',
+  feedstockTransportDistance:
+    'carbonIntensity:step2.feedstockTransportDistance',
   finishedFuelTransportMode: 'carbonIntensity:step2.finishedFuelTransportMode',
   finishedFuelTransportDistance:
     'carbonIntensity:step2.finishedFuelTransportDistance'
@@ -446,7 +571,9 @@ const FIELD_LABEL_KEYS = {
 
 export const fieldLabels = (fields, t) =>
   fields
-    .map((field) => (FIELD_LABEL_KEYS[field] ? t(FIELD_LABEL_KEYS[field]) : field))
+    .map((field) =>
+      FIELD_LABEL_KEYS[field] ? t(FIELD_LABEL_KEYS[field]) : field
+    )
     .filter(Boolean)
 
 export const rowToApiPayload = (row) => ({
@@ -475,8 +602,7 @@ export const apiToRow = (pathway) => ({
   operatingDataFrom: pathway.operatingDataFrom,
   operatingDataTo: pathway.operatingDataTo,
   fuelCodeId: pathway.fuelCodeId,
-  proposedCi:
-    pathway.proposedCi != null ? Number(pathway.proposedCi) : null,
+  proposedCi: pathway.proposedCi != null ? Number(pathway.proposedCi) : null,
   fuelTypeId: pathway.fuelTypeId,
   feedstock: pathway.feedstock,
   feedstockRegion: pathway.feedstockRegion,

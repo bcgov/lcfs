@@ -1,7 +1,9 @@
 import dayjs from 'dayjs'
 import { Box, Stack, Tooltip, Typography, useTheme } from '@mui/material'
-import { Check } from '@mui/icons-material'
+import { Check, Close } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
 
 export const CI_APPLICATION_STEPS = [
   { key: 'step1', labelKey: 'carbonIntensity:steps.step1' },
@@ -44,10 +46,14 @@ const riskMeta = (risk, score) => {
     .join(' - ')
 }
 
-export const buildCIWorkflowSteps = (ciApplication = {}) => {
+export const buildCIWorkflowSteps = (
+  ciApplication = {},
+  { showInternalSteps = true } = {}
+) => {
   const status = ciApplication?.status?.status
   const isSubmitted = Boolean(ciApplication.signatureDateTime)
   const isApproved = status === 'Completed'
+  const isWithdrawn = status === 'Withdrawn'
   const risk = ciApplication.preliminaryRiskAssessment
   const showVerification2 = risk === 'Medium' || risk === 'High'
   const recommendationComplete = Boolean(ciApplication.recommendationDate)
@@ -55,6 +61,8 @@ export const buildCIWorkflowSteps = (ciApplication = {}) => {
 
   const submitterName =
     ciApplication.signatureUserDisplayName || ciApplication.signatureUser || ''
+  const verification1Complete = Boolean(ciApplication.verification1Date)
+  const verification2Complete = Boolean(ciApplication.verification2Date)
 
   const steps = [
     {
@@ -64,8 +72,11 @@ export const buildCIWorkflowSteps = (ciApplication = {}) => {
       state: isSubmitted ? 'completed' : 'pending',
       initials: getInitials(submitterName),
       tooltip: submitterName
-    },
-    {
+    }
+  ]
+
+  if (showInternalSteps) {
+    steps.push({
       key: 'verification1',
       label: 'Verification 1',
       date: ciApplication.verification1Date,
@@ -73,17 +84,17 @@ export const buildCIWorkflowSteps = (ciApplication = {}) => {
         ciApplication.preliminaryRiskAssessment,
         ciApplication.priorityScore
       ),
-      state: ciApplication.verification1Date ? 'completed' : 'pending',
-      initials:
-        getUserInitials(ciApplication.verification1User) ||
-        getUserInitials(ciApplication.assignedAnalyst),
-      tooltip:
-        getUserName(ciApplication.verification1User) ||
-        getUserName(ciApplication.assignedAnalyst)
-    }
-  ]
+      state: verification1Complete ? 'completed' : 'pending',
+      initials: verification1Complete
+        ? getUserInitials(ciApplication.verification1User)
+        : getUserInitials(ciApplication.assignedAnalyst),
+      tooltip: verification1Complete
+        ? getUserName(ciApplication.verification1User)
+        : getUserName(ciApplication.assignedAnalyst)
+    })
+  }
 
-  if (showVerification2) {
+  if (showInternalSteps && showVerification2) {
     steps.push({
       key: 'verification2',
       label: 'Verification 2',
@@ -92,17 +103,17 @@ export const buildCIWorkflowSteps = (ciApplication = {}) => {
         ciApplication.verification2RiskAssessment,
         ciApplication.verification2PriorityScore
       ),
-      state: ciApplication.verification2Date ? 'completed' : 'pending',
-      initials:
-        getUserInitials(ciApplication.verification2User) ||
-        getUserInitials(ciApplication.assignedAnalyst),
-      tooltip:
-        getUserName(ciApplication.verification2User) ||
-        getUserName(ciApplication.assignedAnalyst)
+      state: verification2Complete ? 'completed' : 'pending',
+      initials: verification2Complete
+        ? getUserInitials(ciApplication.verification2User)
+        : getUserInitials(ciApplication.assignedAnalyst),
+      tooltip: verification2Complete
+        ? getUserName(ciApplication.verification2User)
+        : getUserName(ciApplication.assignedAnalyst)
     })
   }
 
-  if (recommendationComplete) {
+  if (showInternalSteps && recommendationComplete) {
     steps.push({
       key: 'recommendation',
       label: 'Recommend to director',
@@ -121,6 +132,14 @@ export const buildCIWorkflowSteps = (ciApplication = {}) => {
       state: 'completed',
       initials: getUserInitials(ciApplication.approvalUser),
       tooltip: getUserName(ciApplication.approvalUser)
+    })
+  } else if (isWithdrawn) {
+    steps.push({
+      key: 'withdrawn',
+      label: 'Withdrawn',
+      date: ciApplication.updateDate,
+      state: 'completed',
+      icon: 'close'
     })
   } else {
     steps.push({
@@ -144,6 +163,7 @@ const WorkflowNode = ({ step, isLast }) => {
   const theme = useTheme()
   const completed = step.state === 'completed'
   const target = step.state === 'target'
+  const withdrawn = step.key === 'withdrawn'
   const connectorStyle = step.connectorStyle || (completed ? 'solid' : 'dotted')
 
   const circleStyles = {
@@ -152,10 +172,14 @@ const WorkflowNode = ({ step, isLast }) => {
     borderRadius: '50%',
     border: 2,
     borderColor: completed
-      ? theme.palette.primary.main
+      ? withdrawn
+        ? theme.palette.error.main
+        : theme.palette.primary.main
       : theme.palette.grey[400],
     bgcolor: completed
-      ? theme.palette.primary.main
+      ? withdrawn
+        ? theme.palette.error.main
+        : theme.palette.primary.main
       : target
         ? theme.palette.common.white
         : theme.palette.grey[300],
@@ -198,6 +222,8 @@ const WorkflowNode = ({ step, isLast }) => {
     />
   ) : step.initials ? (
     step.initials
+  ) : step.icon === 'close' ? (
+    <Close fontSize="small" />
   ) : completed ? (
     <Check fontSize="small" />
   ) : null
@@ -300,6 +326,7 @@ const WorkflowNode = ({ step, isLast }) => {
 
 export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
   const { t } = useTranslation(['carbonIntensity'])
+  const { hasAnyRole } = useCurrentUser()
 
   if (!ciApplication || ciApplication?.status?.status === 'Draft') {
     return (
@@ -320,7 +347,17 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
     )
   }
 
-  const workflowSteps = buildCIWorkflowSteps(ciApplication)
+  const showInternalSteps = Boolean(
+    hasAnyRole?.(
+      roles.government,
+      roles.analyst,
+      roles.compliance_manager,
+      roles.director
+    )
+  )
+  const workflowSteps = buildCIWorkflowSteps(ciApplication, {
+    showInternalSteps
+  })
 
   return (
     <Box sx={{ overflowX: 'auto', pb: 4, mb: 1, mt: 1 }}>

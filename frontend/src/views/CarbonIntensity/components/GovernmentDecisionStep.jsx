@@ -4,6 +4,7 @@ import {
   Box,
   FormControl,
   FormControlLabel,
+  OutlinedInput,
   Radio,
   RadioGroup,
   Stack
@@ -14,6 +15,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import { Role } from '@/components/Role'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import {
   useCompleteCIApplicationVerification1,
@@ -41,6 +43,7 @@ export const GovernmentDecisionStep = ({
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
+  const { hasAnyRole } = useCurrentUser()
 
   const { mutateAsync: recordDecision, isPending: isDeciding } =
     useRecordCIDecision(ciApplicationId)
@@ -53,6 +56,12 @@ export const GovernmentDecisionStep = ({
 
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const status = ciApplication?.status?.status
+  const isDirector = hasAnyRole?.(roles.director)
+  const isAnalyst = hasAnyRole?.(roles.analyst)
+  const isRecommended = status === 'Recommended'
+  const isApproved = status === 'Completed'
+  const isSubmitted = status === 'Submitted'
   const [riskAssessment, setRiskAssessment] = useState(
     ciApplication?.preliminaryRiskAssessment || 'Low'
   )
@@ -94,14 +103,21 @@ export const GovernmentDecisionStep = ({
     ciApplication?.preliminaryRiskAssessment === 'Medium' ||
     ciApplication?.preliminaryRiskAssessment === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
-  const showVerification1Panel = !ciApplication?.verification1Date
+  const showVerification1Panel =
+    isAnalyst && isSubmitted && !ciApplication?.verification1Date
   const showVerification2Panel =
+    isAnalyst &&
+    isSubmitted &&
     ciApplication?.verification1Date &&
     requiresVerification2 &&
     !ciApplication?.verification2Date
-  const showFinalActionPanel =
+  const showRecommendPanel =
+    isAnalyst &&
+    isSubmitted &&
     ciApplication?.verification1Date &&
-    (!requiresVerification2 || ciApplication?.verification2Date)
+    (!requiresVerification2 || ciApplication?.verification2Date) &&
+    !ciApplication?.recommendationDate
+  const showDirectorDecisionPanel = isDirector && isRecommended
   const activeVerificationLabel = showVerification2Panel
     ? 'Verification 2'
     : 'Verification 1'
@@ -140,7 +156,7 @@ export const GovernmentDecisionStep = ({
         <Role roles={[roles.government, roles.analyst, roles.director]}>
           <Box
             sx={{
-              bgcolor: 'grey.100',
+              bgcolor: 'background.grey',
               p: 2,
               mb: 3,
               borderRadius: 1
@@ -162,7 +178,7 @@ export const GovernmentDecisionStep = ({
                   sx={{ mb: 2 }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1.5}>
-                    <BCTypography variant="body1" sx={{ fontWeight: 700 }}>
+                    <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
                       {t('carbonIntensity:step5.riskAssessment')}:
                     </BCTypography>
                     <RadioGroup
@@ -171,20 +187,27 @@ export const GovernmentDecisionStep = ({
                       onChange={(event) =>
                         setRiskAssessment(event.target.value)
                       }
+                      spacing={2}
                     >
                       <FormControlLabel
+                        labelPlacement="start"
+                        sx={{ mr: 3 }}
                         value="Low"
                         control={<Radio size="small" />}
                         label="Low"
                         disabled={readOnly}
                       />
                       <FormControlLabel
+                        labelPlacement="start"
+                        sx={{ mr: 3 }}
                         value="Medium"
                         control={<Radio size="small" />}
                         label="Moderate"
                         disabled={readOnly}
                       />
                       <FormControlLabel
+                        labelPlacement="start"
+                        sx={{ mr: 3 }}
                         value="High"
                         control={<Radio size="small" />}
                         label="High"
@@ -193,13 +216,20 @@ export const GovernmentDecisionStep = ({
                     </RadioGroup>
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <BCTypography variant="body1" sx={{ fontWeight: 700 }}>
+                    <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
                       {t('carbonIntensity:step5.priorityScore')}:
                     </BCTypography>
-                    <Box
-                      component="input"
+                    <OutlinedInput
+                      type="number"
+                      min={0}
+                      max={1000}
                       value={priorityScore}
-                      onChange={(event) => setPriorityScore(event.target.value)}
+                      onChange={(event) => {
+                        let value = Number(event.target.value)
+                        if (value < 0) value = 0
+                        if (value > 1000) value = 1000
+                        setPriorityScore(value.toString())
+                      }}
                       disabled={readOnly}
                       sx={{
                         width: 106,
@@ -210,15 +240,19 @@ export const GovernmentDecisionStep = ({
                         color: 'primary.main',
                         fontWeight: 700,
                         fontSize: '1rem',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        '& input': {
+                          p: 0,
+                          textAlign: 'center'
+                        }
                       }}
                     />
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <BCTypography variant="body1" sx={{ fontWeight: 700 }}>
+                    <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
                       {t('carbonIntensity:step5.numberOfFuelPathways')}:
                     </BCTypography>
-                    <BCTypography variant="body1">
+                    <BCTypography variant="body2">
                       {fuelPathwayCount}
                     </BCTypography>
                   </Stack>
@@ -275,7 +309,7 @@ export const GovernmentDecisionStep = ({
                   {t('carbonIntensity:step5.verification2Complete')}
                 </BCButton>
               )}
-              {showFinalActionPanel && (
+              {showRecommendPanel && (
                 <BCButton
                   type="button"
                   variant="contained"
@@ -288,43 +322,73 @@ export const GovernmentDecisionStep = ({
                       t('carbonIntensity:step5.workflowSuccess')
                     )
                   }
-                  data-test="ci-generate-fuel-codes-btn"
+                  data-test="ci-recommend-to-director-btn"
                 >
-                  {t('carbonIntensity:step5.generateFuelCodes')}
+                  {t('carbonIntensity:step5.recommendToDirector')}
                 </BCButton>
               )}
-              <BCButton
-                type="button"
-                variant="outlined"
-                color="primary"
-                sx={workflowButtonSx}
-                disabled={readOnly || !onDocumentUploadClick}
-                onClick={onDocumentUploadClick || undefined}
-                data-test="ci-request-documentation-btn"
-              >
-                {t('carbonIntensity:step5.requestDocumentation')}
-              </BCButton>
-              <BCButton
-                type="button"
-                variant="outlined"
-                color="primary"
-                sx={workflowButtonSx}
-                disabled={readOnly}
-                data-test="ci-request-pathway-changes-btn"
-              >
-                {t('carbonIntensity:step5.requestPathwayChanges')}
-              </BCButton>
-              <BCButton
-                type="button"
-                variant="outlined"
-                color="error"
-                sx={workflowButtonSx}
-                disabled={readOnly || isDeciding}
-                onClick={() => recordDecisionFor('Withdrawn')}
-                data-test="ci-step5-withdraw-btn"
-              >
-                {t('carbonIntensity:step5.withdrawBtn')}
-              </BCButton>
+              {isAnalyst && isSubmitted && (
+                <>
+                  <BCButton
+                    type="button"
+                    variant="outlined"
+                    color="primary"
+                    sx={workflowButtonSx}
+                    disabled={readOnly || !onDocumentUploadClick}
+                    onClick={onDocumentUploadClick || undefined}
+                    data-test="ci-request-documentation-btn"
+                  >
+                    {t('carbonIntensity:step5.requestDocumentation')}
+                  </BCButton>
+                  <BCButton
+                    type="button"
+                    variant="outlined"
+                    color="primary"
+                    sx={workflowButtonSx}
+                    disabled={readOnly}
+                    data-test="ci-request-pathway-changes-btn"
+                  >
+                    {t('carbonIntensity:step5.requestPathwayChanges')}
+                  </BCButton>
+                  <BCButton
+                    type="button"
+                    variant="outlined"
+                    color="error"
+                    sx={workflowButtonSx}
+                    disabled={readOnly || isDeciding}
+                    onClick={() => recordDecisionFor('Withdrawn')}
+                    data-test="ci-step5-withdraw-btn"
+                  >
+                    {t('carbonIntensity:step5.withdrawBtn')}
+                  </BCButton>
+                </>
+              )}
+              {showDirectorDecisionPanel && (
+                <>
+                  <BCButton
+                    type="button"
+                    variant="contained"
+                    color="primary"
+                    sx={workflowButtonSx}
+                    disabled={readOnly || isDeciding}
+                    onClick={() => recordDecisionFor('Completed')}
+                    data-test="ci-approve-btn"
+                  >
+                    {t('carbonIntensity:step5.approveBtn')}
+                  </BCButton>
+                  <BCButton
+                    type="button"
+                    variant="outlined"
+                    color="primary"
+                    sx={workflowButtonSx}
+                    disabled={readOnly || isDeciding}
+                    onClick={() => recordDecisionFor('Submitted')}
+                    data-test="ci-return-to-analyst-btn"
+                  >
+                    {t('carbonIntensity:step5.returnToAnalyst')}
+                  </BCButton>
+                </>
+              )}
             </Stack>
           </Box>
         </Role>

@@ -54,6 +54,7 @@ from lcfs.web.api.ci_application.schema import (
     PathwaySchema,
     UnitOfMeasureSchema,
 )
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -67,12 +68,29 @@ logger = structlog.get_logger(__name__)
 def _to_org_info(organization) -> Optional[OrganizationInfoSchema]:
     if organization is None:
         return None
+    org_address = getattr(organization, "org_address", None)
+    address_line = None
+    if org_address is not None:
+        address_line = ", ".join(
+            filter(
+                None,
+                [
+                    getattr(org_address, "street_address", None),
+                    getattr(org_address, "address_other", None),
+                    getattr(org_address, "city", None),
+                    getattr(org_address, "province_state", None),
+                    getattr(org_address, "country", None),
+                    getattr(org_address, "postalCode_zipCode", None),
+                ],
+            )
+        )
     return OrganizationInfoSchema(
         organization_id=organization.organization_id,
         name=organization.name,
         operating_name=organization.operating_name,
         email=organization.email,
         phone=organization.phone,
+        address_line=address_line or None,
     )
 
 
@@ -87,6 +105,8 @@ def _to_fuel_code_option(fc: FuelCode) -> FuelCodeOptionSchema:
         fuel_type=fc.fuel_type.fuel_type if fc.fuel_type else None,
         feedstock=fc.feedstock,
         feedstock_location=fc.feedstock_location,
+        effective_date=fc.effective_date,
+        expiration_date=fc.expiration_date,
     )
 
 
@@ -314,8 +334,13 @@ class CIApplicationServices:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int],
+        exclude_draft: bool = False,
     ) -> CIApplicationsListSchema:
-        items, total = await self.repo.list_paginated(pagination, organization_id)
+        items, total = await self.repo.list_paginated(
+            pagination,
+            organization_id,
+            exclude_draft=exclude_draft,
+        )
 
         latest_comments = (
             await self.repo.get_latest_comments_by_ci_application_ids(
@@ -456,6 +481,11 @@ class CIApplicationServices:
         ci_application: CIApplication,
         user: UserProfile,
     ) -> CIApplicationSchema:
+        if not user_has_roles(user, [RoleEnum.ANALYST]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only analysts can recommend CI applications to directors.",
+            )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
         requires_verification_2 = risk in {
@@ -472,6 +502,14 @@ class CIApplicationServices:
 
         ci_application.recommendation_user_id = user.user_profile_id
         ci_application.recommendation_date = datetime.now(timezone.utc)
+        recommended_status = await self.repo.get_status_by_name(
+            CIApplicationStatusEnum.Recommended.value
+        )
+        if not recommended_status:
+            raise DataNotFoundException(
+                f"Status '{CIApplicationStatusEnum.Recommended.value}' is not configured."
+            )
+        ci_application.status_id = recommended_status.ci_application_status_id
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
@@ -838,20 +876,51 @@ class CIApplicationServices:
         decision. The terminal state lock is enforced here so we never
         re-decide an already-decided application.
         """
-        if not is_government:
+        is_director = user_has_roles(user, [RoleEnum.DIRECTOR])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_compliance_manager = user_has_roles(user, [RoleEnum.COMPLIANCE_MANAGER])
+
+        if not (is_government or is_director or is_analyst or is_compliance_manager):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only government users can record a decision.",
             )
 
-        if (
-            ci_application.ci_application_status.status
-            != CIApplicationStatusEnum.Submitted.value
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=("A decision can only be recorded on Submitted applications."),
-            )
+        current_status = ci_application.ci_application_status.status
+
+        if data.status == CIApplicationStatusEnum.Completed:
+            if not is_director:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only directors can approve CI applications.",
+                )
+            if current_status != CIApplicationStatusEnum.Recommended.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only Recommended applications can be approved.",
+                )
+        elif data.status == CIApplicationStatusEnum.Submitted:
+            if not is_director:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only directors can return CI applications to analysts.",
+                )
+            if current_status != CIApplicationStatusEnum.Recommended.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only Recommended applications can be returned to analysts.",
+                )
+        else:
+            if current_status not in {
+                CIApplicationStatusEnum.Submitted.value,
+                CIApplicationStatusEnum.Recommended.value,
+            }:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "A decision can only be recorded on Submitted or Recommended applications."
+                    ),
+                )
 
         target_status = await self.repo.get_status_by_name(data.status.value)
         if not target_status:
@@ -863,6 +932,11 @@ class CIApplicationServices:
         if data.status == CIApplicationStatusEnum.Completed:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
+        elif data.status == CIApplicationStatusEnum.Submitted:
+            ci_application.recommendation_user_id = None
+            ci_application.recommendation_date = None
+            ci_application.approval_user_id = None
+            ci_application.approval_date = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)

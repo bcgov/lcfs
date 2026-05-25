@@ -114,7 +114,11 @@ async def list_ci_applications(
                 },
             )
         organization_id = org.organization_id
-    return await service.list_ci_applications(pagination, organization_id)
+    return await service.list_ci_applications(
+        pagination,
+        organization_id,
+        exclude_draft=is_government,
+    )
 
 
 GHGENIUS_TEMPLATE_SHEETS = {

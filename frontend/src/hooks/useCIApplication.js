@@ -8,6 +8,32 @@ const QUERY_KEYS = {
   detail: (id) => ['ci-application', String(id)]
 }
 
+const updateCIApplicationListCaches = (queryClient, updatedCIApplication) => {
+  if (!updatedCIApplication?.ciApplicationId) return
+
+  queryClient.setQueriesData({ queryKey: ['ci-applications'] }, (current) => {
+    if (!current?.ciApplications) return current
+
+    return {
+      ...current,
+      ciApplications: current.ciApplications.map((item) =>
+        item.ciApplicationId === updatedCIApplication.ciApplicationId
+          ? {
+              ...item,
+              assignedAnalyst:
+                updatedCIApplication.assignedAnalyst ?? item.assignedAnalyst,
+              preliminaryRiskAssessment:
+                updatedCIApplication.preliminaryRiskAssessment ??
+                item.preliminaryRiskAssessment,
+              priorityScore:
+                updatedCIApplication.priorityScore ?? item.priorityScore
+            }
+          : item
+      )
+    }
+  })
+}
+
 export const useCIApplicationOptions = (options) => {
   const client = useApiService()
   return useQuery({
@@ -230,6 +256,7 @@ export const useAssignCIApplicationAnalyst = (ciApplicationId) => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
       queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+      updateCIApplicationListCaches(queryClient, data)
     }
   })
 }

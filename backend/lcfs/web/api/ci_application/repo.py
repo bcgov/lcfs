@@ -193,6 +193,9 @@ class CIApplicationRepository:
             select(CIApplication)
             .options(
                 selectinload(CIApplication.organization),
+                selectinload(CIApplication.organization).selectinload(
+                    Organization.org_address
+                ),
                 selectinload(CIApplication.ci_application_status),
                 selectinload(CIApplication.facility_nameplate_capacity_unit),
                 selectinload(CIApplication.assigned_analyst),
@@ -393,6 +396,7 @@ class CIApplicationRepository:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
+        exclude_draft: bool = False,
     ) -> Tuple[List[CIApplication], int]:
         """
         Returns ``(items, total_count)``. When ``organization_id`` is
@@ -402,6 +406,12 @@ class CIApplicationRepository:
         conditions = self._apply_filters(pagination)
         if organization_id is not None:
             conditions.append(CIApplication.organization_id == organization_id)
+        if exclude_draft:
+            conditions.append(
+                CIApplication.ci_application_status.has(
+                    CIApplicationStatus.status != "Draft"
+                )
+            )
 
         order_clauses = self._apply_sorting(pagination)
         offset = (pagination.page - 1) * pagination.size
@@ -416,6 +426,9 @@ class CIApplicationRepository:
             .options(
                 selectinload(CIApplication.ci_application_status),
                 selectinload(CIApplication.organization),
+                selectinload(CIApplication.organization).selectinload(
+                    Organization.org_address
+                ),
                 selectinload(CIApplication.assigned_analyst),
                 selectinload(CIApplication.assigned_analyst),
             )

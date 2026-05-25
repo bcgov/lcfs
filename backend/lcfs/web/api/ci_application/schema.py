@@ -28,6 +28,7 @@ from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 class CIApplicationStatusEnum(str, Enum):
     Draft = "Draft"
     Submitted = "Submitted"
+    Recommended = "Recommended"
     Completed = "Completed"
     Withdrawn = "Withdrawn"
 
@@ -140,6 +141,8 @@ class FuelCodeOptionSchema(BaseSchema):
     fuel_type: Optional[str] = None
     feedstock: Optional[str] = None
     feedstock_location: Optional[str] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
 
 
 class CITableOptionsSchema(BaseSchema):
@@ -429,10 +432,13 @@ class CIApplicationDecisionSchema(BaseSchema):
     @classmethod
     def _terminal_only(cls, value: CIApplicationStatusEnum):
         if value not in {
+            CIApplicationStatusEnum.Submitted,
             CIApplicationStatusEnum.Completed,
             CIApplicationStatusEnum.Withdrawn,
         }:
-            raise ValueError("Decision status must be Completed or Withdrawn.")
+            raise ValueError(
+                "Decision status must be Submitted, Completed or Withdrawn."
+            )
         return value
 
 

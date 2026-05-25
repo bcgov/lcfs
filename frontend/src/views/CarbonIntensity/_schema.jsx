@@ -290,6 +290,7 @@ export const getResumeStep = (application) => {
     case 'Draft':
       return 2
     case 'Submitted':
+    case 'Recommended':
     case 'Completed':
     case 'Withdrawn':
       return 5

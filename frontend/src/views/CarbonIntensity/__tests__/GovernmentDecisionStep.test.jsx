@@ -105,7 +105,7 @@ describe('GovernmentDecisionStep', () => {
   })
 
   it('shows the workflow panel for government users and completes verification 1', async () => {
-    mockUserRoles = [{ name: roles.government }]
+    mockUserRoles = [{ name: roles.analyst }]
     render(
       <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
       { wrapper }
@@ -120,8 +120,79 @@ describe('GovernmentDecisionStep', () => {
     )
   })
 
+  it('shows Recommend to director after low-risk verification 1 is complete', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Low',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByTestId('ci-recommend-to-director-btn')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:step5.recommendToDirector')
+    ).toBeInTheDocument()
+  })
+
+  it('shows only director actions on Recommended applications', () => {
+    mockUserRoles = [{ name: roles.director }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, status: { status: 'Recommended' } }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-approve-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('ci-return-to-analyst-btn')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-request-documentation-btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-step5-withdraw-btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides analyst verification and recommend controls after recommendation', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          status: { status: 'Recommended' },
+          verification1Date: '2026-05-19T12:00:00Z',
+          recommendationDate: '2026-05-20T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-verification-1-complete-btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-verification-2-complete-btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-recommend-to-director-btn')
+    ).not.toBeInTheDocument()
+  })
+
   it('records Withdrawn without an inline comment payload', async () => {
-    mockUserRoles = [{ name: roles.government }]
+    mockUserRoles = [{ name: roles.analyst }]
     render(
       <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
       { wrapper }
@@ -133,7 +204,7 @@ describe('GovernmentDecisionStep', () => {
   })
 
   it('disables the documentation request button when no upload handler is wired', () => {
-    mockUserRoles = [{ name: roles.government }]
+    mockUserRoles = [{ name: roles.analyst }]
     render(
       <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
       { wrapper }
@@ -142,7 +213,7 @@ describe('GovernmentDecisionStep', () => {
   })
 
   it('enables the documentation request button when an upload handler is provided', () => {
-    mockUserRoles = [{ name: roles.government }]
+    mockUserRoles = [{ name: roles.analyst }]
     render(
       <GovernmentDecisionStep
         ciApplication={baseCi}

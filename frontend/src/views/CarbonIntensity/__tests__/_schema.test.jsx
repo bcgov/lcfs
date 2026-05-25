@@ -148,7 +148,7 @@ describe('getResumeStep', () => {
     expect(getResumeStep({ status: { status: 'Draft' } })).toBe(2)
   })
 
-  it.each(['Submitted', 'Completed', 'Withdrawn'])(
+  it.each(['Submitted', 'Recommended', 'Completed', 'Withdrawn'])(
     'routes %s applications to the Step 5 decision panel',
     (status) => {
       expect(getResumeStep({ status: { status } })).toBe(5)
