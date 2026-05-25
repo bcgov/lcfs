@@ -631,13 +631,48 @@ async def test_create_fse_reporting_batch(repo, fake_db):
 async def test_update_fse_reporting(repo, fake_db):
     """Test updating FSE reporting"""
     data = {"kwh_usage": 1500.0, "notes": "Updated notes"}
+    existing_record = MagicMock(compliance_report_id=10)
+    records_result = MagicMock()
+    records_result.scalars.return_value.first.return_value = existing_record
+    fake_db.execute.side_effect = [records_result, MagicMock()]
 
     result = await repo.update_fse_reporting(1, data)
 
     assert result["id"] == 1
     assert result["kwh_usage"] == 1500.0
     assert result["notes"] == "Updated notes"
-    fake_db.execute.assert_called_once()
+    assert fake_db.execute.await_count == 2
+    fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_does_not_move_report_association(repo, fake_db):
+    """Updating usage must not re-point the FSE association to another report."""
+    existing_record = MagicMock(compliance_report_id=3814)
+    records_result = MagicMock()
+    records_result.scalars.return_value.first.return_value = existing_record
+    fake_db.execute.side_effect = [records_result, MagicMock()]
+    data = {
+        "kwh_usage": 1500.0,
+        "compliance_report_id": 3814,
+        "compliance_report_group_uuid": "report-group",
+        "organization_id": 7,
+        "charging_equipment_id": 57070,
+        "charging_equipment_version": 2,
+    }
+
+    result = await repo.update_fse_reporting(1, data)
+
+    assert result == {"id": 1, "kwh_usage": 1500.0}
+    stmt = fake_db.execute.call_args_list[1][0][0]
+    compiled_sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    assert "kwh_usage" in compiled_sql
+    assert "compliance_report_id" not in compiled_sql
+    assert "compliance_report_group_uuid" not in compiled_sql
+    assert "organization_id" not in compiled_sql
+    assert "charging_equipment_id" not in compiled_sql
+    assert "charging_equipment_version" not in compiled_sql
     fake_db.flush.assert_called_once()
 
 
@@ -689,14 +724,20 @@ async def test_bulk_update_reporting_dates(repo, fake_db):
 @pytest.mark.anyio
 async def test_update_reporting_active_status(repo, fake_db):
     """Test updating reporting active status"""
+    mock_record = MagicMock(
+        charging_equipment_compliance_id=1,
+        compliance_report_id=10,
+    )
+    records_result = MagicMock()
+    records_result.scalars.return_value.all.return_value = [mock_record]
     mock_result = MagicMock()
-    mock_result.rowcount = 4
-    fake_db.execute.return_value = mock_result
+    mock_result.rowcount = 1
+    fake_db.execute.side_effect = [records_result, mock_result]
 
-    result = await repo.update_reporting_active_status([1, 2, 3, 4], False)
+    result = await repo.update_reporting_active_status([1], False, 10)
 
-    assert result == 4
-    fake_db.execute.assert_called_once()
+    assert result == 1
+    assert fake_db.execute.await_count == 2
     fake_db.flush.assert_called_once()
 
 

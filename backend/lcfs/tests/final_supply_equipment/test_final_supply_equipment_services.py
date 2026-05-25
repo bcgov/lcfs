@@ -614,14 +614,14 @@ async def test_update_fse_reporting_active_status(service, mock_repo):
     mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.update_reporting_active_status.return_value = 3
 
-    data = MagicMock(reporting_ids=[1, 2, 3], is_active=False)
+    data = MagicMock(reporting_ids=[1, 2, 3], is_active=False, compliance_report_id=10)
     result = await service.update_fse_reporting_active_status(data)
 
     assert result["updated"] == 3
     assert result["is_active"] is False
     assert "deactivated" in result["message"]
     mock_repo.update_reporting_active_status.assert_awaited_once_with(
-        [1, 2, 3], False
+        [1, 2, 3], False, 10
     )
 
 
