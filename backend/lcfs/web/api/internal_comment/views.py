@@ -73,7 +73,7 @@ async def get_comments(
 
 
 @router.put("/{internal_comment_id}", response_model=InternalCommentResponseSchema)
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.CI_APPLICANT, RoleEnum.SUPPLIER])
 async def update_comment(
     request: Request,
     internal_comment_id: int,

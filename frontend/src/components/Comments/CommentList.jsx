@@ -3,9 +3,7 @@ import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
 import Tooltip from '@mui/material/Tooltip'
-import IconButton from '@mui/material/IconButton'
 import Chip from '@mui/material/Chip'
-import EditIcon from '@mui/icons-material/Edit'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useTranslation } from 'react-i18next'
 import CommentForm from './CommentForm'
@@ -234,36 +232,49 @@ const CommentList = ({
                       alignItems: 'center'
                     }}
                   >
-                    <BCBox sx={{ display: 'flex', alignItems: 'center' }}>
+                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <BCTypography variant="body2" color="text" component="span">
                         <CommentTimestamp
                           createDate={comment.createDate}
                           updateDate={comment.updateDate}
                         />
                       </BCTypography>
-                    </BCBox>
-                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {isGov && currentUser.keycloakUsername === comment.createUser && (
-                        <Tooltip title={t('internalComment:edit')} arrow>
-                          <IconButton
-                            onClick={() =>
+                      {currentUser?.keycloakUsername === comment.createUser && (
+                        <BCTypography
+                          variant="body2"
+                          component="a"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            startEditing(
+                              comment.internalCommentId,
+                              comment.comment,
+                              comment.visibility || 'Internal'
+                            )
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
                               startEditing(
                                 comment.internalCommentId,
                                 comment.comment,
                                 comment.visibility || 'Internal'
                               )
                             }
-                            sx={{
-                              color: '#003366',
-                              transform: 'scale(1.2)',
-                              marginTop: '2px'
-                            }}
-                            aria-label={t('internalComment:edit')}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                          }}
+                          sx={{
+                            color: '#003366',
+                            cursor: 'pointer',
+                            textDecoration: 'underline'
+                          }}
+                          aria-label={t('internalComment:edit')}
+                          data-test="comment-edit-link"
+                        >
+                          [{t('internalComment:edit')}]
+                        </BCTypography>
                       )}
+                    </BCBox>
+                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {isDualMode && isGov && comment.visibility && (
                         <Chip
                           label={
