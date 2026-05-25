@@ -545,6 +545,49 @@ async def test_has_decommissioned_fse_in_report_false(repo, fake_db):
 
 
 @pytest.mark.anyio
+async def test_deactivate_decommissioned_fse_for_report(repo, fake_db):
+    execute_result = MagicMock()
+    execute_result.rowcount = 2
+    fake_db.execute.return_value = execute_result
+
+    result = await repo.deactivate_decommissioned_fse_for_report(10)
+
+    assert result == 2
+    fake_db.flush.assert_awaited_once()
+
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+    assert "UPDATE compliance_report_charging_equipment" in compiled_sql
+    assert "charging_equipment_status = 'Decommissioned'" in compiled_sql
+    assert "is_active IS true" in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_get_fse_reporting_list_paginated_excludes_decommissioned_when_requested(
+    repo, fake_db
+):
+    data_result = MagicMock()
+    data_result.fetchall.return_value = []
+
+    fake_db.scalar.return_value = 0
+    fake_db.execute.return_value = data_result
+
+    pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
+    await repo.get_fse_reporting_list_paginated(
+        1,
+        pagination,
+        10,
+        "all",
+        include_decommissioned_attached=False,
+    )
+
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+    assert "charging_equipment_status != 'Decommissioned'" in compiled_sql
+    assert "charging_equipment_compliance_id IS NOT NULL" not in compiled_sql
+
+
+@pytest.mark.anyio
 async def test_get_fse_for_bulk_update_template_uses_site_then_registration_sort(
     repo, fake_db
 ):
