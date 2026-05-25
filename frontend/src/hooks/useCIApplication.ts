@@ -9,7 +9,7 @@ const QUERY_KEYS = {
   detail: (id: any) => ['ci-application', String(id)]
 }
 
-export const useCIApplicationOptions = (options: QueryOptions<unknown>) => {
+export const useCIApplicationOptions = (options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.options,
@@ -20,14 +20,11 @@ export const useCIApplicationOptions = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useCIApplicationStatuses = (options?: QueryOptions<unknown>) => {
-  const query = useCIApplicationOptions({
-    select: (data: any) => data?.statuses ?? [],
-    ...options
-  })
+export const useCIApplicationStatuses = (options: QueryOptions<unknown> = {}) => {
+  const result = useCIApplicationOptions(options)
   return {
-    ...query,
-    data: query.data ?? []
+    ...result,
+    data: result.data?.statuses ?? []
   }
 }
 
