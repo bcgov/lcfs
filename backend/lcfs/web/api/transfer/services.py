@@ -485,12 +485,18 @@ class TransferServices:
             updated_transfer = await self.update_category(
                 transfer.transfer_id, category
             )
+            updated_transfer.a1 = category == "A" and self.is_a1_transfer(transfer)
             # Store the Pacific calendar date the director clicked "Record"
             # (matches IA/admin_adjustment convention and avoids UTC→PT date shifts
             # on late-evening records near compliance period boundaries).
             updated_transfer.transaction_effective_date = datetime.now(
                 ZoneInfo("America/Vancouver")
             ).date()
+        else:
+            transfer.a1 = (
+                transfer.transfer_category.category == TransferCategoryEnum.A
+                or transfer.transfer_category.category == TransferCategoryEnum.A.value
+            ) and self.is_a1_transfer(transfer)
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
@@ -521,8 +527,28 @@ class TransferServices:
     def is_valid_category(self, category: str) -> bool:
         return category in (item.value for item in TransferCategoryEnum)
 
+    def is_a1_transfer(self, transfer: Transfer) -> bool:
+        if not transfer.agreement_date:
+            return False
+
+        agreement_date = (
+            transfer.agreement_date.date()
+            if isinstance(transfer.agreement_date, datetime)
+            else transfer.agreement_date
+        )
+        record_date = datetime.now(ZoneInfo("America/Vancouver")).date()
+        days_to_record = (record_date - agreement_date).days
+        return 0 <= days_to_record <= 30
+
     @service_handler
-    async def update_category(self, transfer_id: int, category: Optional[str] = None):
+    async def update_category(
+        self,
+        transfer_id: int,
+        category: Optional[str] = None,
+        a1: Optional[bool] = None,
+        user: Optional[UserProfile] = None,
+        enforce_director_override: bool = False,
+    ):
         new_category = None
 
         if category != None:
@@ -535,6 +561,27 @@ class TransferServices:
 
         transfer = await self.repo.get_transfer_by_id(transfer_id)
 
+        if enforce_director_override:
+            if user is None or not user_has_roles(user, [RoleEnum.DIRECTOR]):
+                raise HTTPException(status_code=403, detail="Forbidden.")
+            if transfer.current_status.status not in (
+                TransferStatusEnum.Recorded,
+                TransferStatusEnum.Recorded.value,
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Credit category overrides are only allowed for recorded transfers.",
+                )
+            if a1 and category != TransferCategoryEnum.A.value:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A1 can only be selected with category A.",
+                )
+
         transfer.transfer_category = new_category
+        if a1 is not None:
+            transfer.a1 = a1
+
+        await self.repo.update_transfer(transfer)
 
         return transfer
