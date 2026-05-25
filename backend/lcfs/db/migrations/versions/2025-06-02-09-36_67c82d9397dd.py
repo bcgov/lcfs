@@ -33,7 +33,6 @@ SECTIONS_TO_EXECUTE = [
     "BCeID Daily Login Summary View",
     "BCeID User Statistics View",
     "Login Failures Analysis View",
-    "Transaction Base View",
     "Compliance Report Fuel Supply Base View",
     "Compliance Report Chained View",  # Safe - doesn't reference organization_early_issuance_by_year
     "Allocation Agreement Chained View",  # Safe - doesn't reference organization_early_issuance_by_year
@@ -85,7 +84,6 @@ def downgrade():
             "vw_bceid_user_statistics",
             "vw_bceid_daily_login_summary",
             "vw_user_login_analytics_base",
-            "vw_transfer_base",
             "vw_compliance_reports_time_per_status",
             "vw_reports_waiting_review",
             "vw_compliance_report_analytics_base",

@@ -46,7 +46,7 @@ class Transfer(BaseModel, Auditable):
     transfer_category_id = Column(
         Integer, ForeignKey("transfer_category.transfer_category_id")
     )
-    a1 = Column(
+    is_a1_category = Column(
         Boolean,
         nullable=False,
         default=False,

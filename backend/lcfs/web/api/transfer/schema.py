@@ -64,7 +64,7 @@ class TransferSchema(BaseSchema):
     comments: Optional[List[TransferCommentSchema]] = None
     current_status: TransferStatusSchema
     transfer_category: Optional[TransferCategorySchema] = None
-    a1: bool = False
+    is_a1_category: bool = False
     transfer_history: Optional[List[TransferHistorySchema]] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
     model_config = ConfigDict(extra="ignore", from_attributes=True)
@@ -90,7 +90,7 @@ class TransferCreateSchema(BaseSchema):
 
 class TransferCategoryUpdateSchema(BaseSchema):
     category: Optional[str] = None
-    a1: Optional[bool] = None
+    is_a1_category: Optional[bool] = None
 
 
 class CreateTransferHistorySchema(BaseSchema):

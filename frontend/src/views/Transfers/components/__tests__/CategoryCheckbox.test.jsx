@@ -89,7 +89,7 @@ describe('CategoryCheckbox Component', () => {
 
   it('should display A1 as checked when transfer is flagged A1', () => {
     useTransfer.mockReturnValue({
-      data: { transferCategory: { category: 'A' }, a1: true },
+      data: { transferCategory: { category: 'A' }, isA1Category: true },
       isFetching: false
     })
 
@@ -101,7 +101,7 @@ describe('CategoryCheckbox Component', () => {
 
   it('should display A1 as unchecked when transfer is not flagged A1', () => {
     useTransfer.mockReturnValue({
-      data: { transferCategory: { category: 'A' }, a1: false },
+      data: { transferCategory: { category: 'A' }, isA1Category: false },
       isFetching: false
     })
 
@@ -113,7 +113,7 @@ describe('CategoryCheckbox Component', () => {
 
   it('should confirm and call updateCategory with A1 false when unchecking A1', () => {
     useTransfer.mockReturnValue({
-      data: { transferCategory: { category: 'A' }, a1: true },
+      data: { transferCategory: { category: 'A' }, isA1Category: true },
       isFetching: false
     })
 
@@ -123,12 +123,15 @@ describe('CategoryCheckbox Component', () => {
     fireEvent.click(checkbox)
     fireEvent.click(screen.getByText('Yes'))
 
-    expect(mutateMock).toHaveBeenCalledWith({ category: 'A', a1: false })
+    expect(mutateMock).toHaveBeenCalledWith({
+      category: 'A',
+      isA1Category: false
+    })
   })
 
   it('should confirm and call updateCategory with category A when checking A1', () => {
     useTransfer.mockReturnValue({
-      data: { transferCategory: { category: 'B' }, a1: false },
+      data: { transferCategory: { category: 'B' }, isA1Category: false },
       isFetching: false
     })
 
@@ -138,12 +141,15 @@ describe('CategoryCheckbox Component', () => {
     fireEvent.click(checkbox)
     fireEvent.click(screen.getByText('Yes'))
 
-    expect(mutateMock).toHaveBeenCalledWith({ category: 'A', a1: true })
+    expect(mutateMock).toHaveBeenCalledWith({
+      category: 'A',
+      isA1Category: true
+    })
   })
 
   it('should clear A1 when selecting category B', () => {
     useTransfer.mockReturnValue({
-      data: { transferCategory: { category: 'A' }, a1: true },
+      data: { transferCategory: { category: 'A' }, isA1Category: true },
       isFetching: false
     })
 
@@ -152,7 +158,10 @@ describe('CategoryCheckbox Component', () => {
     fireEvent.click(screen.getByTestId('category-radio-B'))
     fireEvent.click(screen.getByText('Yes'))
 
-    expect(mutateMock).toHaveBeenCalledWith({ category: 'B', a1: false })
+    expect(mutateMock).toHaveBeenCalledWith({
+      category: 'B',
+      isA1Category: false
+    })
   })
 
   it('should set loading state appropriately during fetch', () => {

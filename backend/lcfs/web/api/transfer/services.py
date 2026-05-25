@@ -485,7 +485,9 @@ class TransferServices:
             updated_transfer = await self.update_category(
                 transfer.transfer_id, category
             )
-            updated_transfer.a1 = category == "A" and self.is_a1_transfer(transfer)
+            updated_transfer.is_a1_category = category == "A" and self.is_a1_transfer(
+                transfer
+            )
             # Store the Pacific calendar date the director clicked "Record"
             # (matches IA/admin_adjustment convention and avoids UTC→PT date shifts
             # on late-evening records near compliance period boundaries).
@@ -493,7 +495,7 @@ class TransferServices:
                 ZoneInfo("America/Vancouver")
             ).date()
         else:
-            transfer.a1 = (
+            transfer.is_a1_category = (
                 transfer.transfer_category.category == TransferCategoryEnum.A
                 or transfer.transfer_category.category == TransferCategoryEnum.A.value
             ) and self.is_a1_transfer(transfer)
@@ -538,14 +540,14 @@ class TransferServices:
         )
         record_date = datetime.now(ZoneInfo("America/Vancouver")).date()
         days_to_record = (record_date - agreement_date).days
-        return 0 <= days_to_record <= 30
+        return 0 <= days_to_record < 30
 
     @service_handler
     async def update_category(
         self,
         transfer_id: int,
         category: Optional[str] = None,
-        a1: Optional[bool] = None,
+        is_a1_category: Optional[bool] = None,
         user: Optional[UserProfile] = None,
         enforce_director_override: bool = False,
     ):
@@ -572,15 +574,15 @@ class TransferServices:
                     status_code=400,
                     detail="Credit category overrides are only allowed for recorded transfers.",
                 )
-            if a1 and category != TransferCategoryEnum.A.value:
+            if is_a1_category and category != TransferCategoryEnum.A.value:
                 raise HTTPException(
                     status_code=400,
                     detail="A1 can only be selected with category A.",
                 )
 
         transfer.transfer_category = new_category
-        if a1 is not None:
-            transfer.a1 = a1
+        if is_a1_category is not None:
+            transfer.is_a1_category = is_a1_category
 
         await self.repo.update_transfer(transfer)
 

@@ -70,10 +70,14 @@ async def update_category(
 ):
     if isinstance(payload, str) or payload is None:
         category = payload
-        a1 = None
+        is_a1_category = None
     else:
         category = payload.category
-        a1 = payload.a1
+        is_a1_category = payload.is_a1_category
     return await service.update_category(
-        transfer_id, category, a1=a1, user=request.user, enforce_director_override=True
+        transfer_id,
+        category,
+        is_a1_category=is_a1_category,
+        user=request.user,
+        enforce_director_override=True,
     )

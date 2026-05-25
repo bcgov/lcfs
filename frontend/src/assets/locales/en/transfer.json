@@ -84,7 +84,7 @@
   "zeroDollarInstructionText": "If proposing a zero-dollar transfer, use the comment box below to provide an explanation for this value.",
   "categoryOverrideLabel": "Credit transfer category",
   "categoryOverrideConfirmTitle": "Confirm category update",
-  "categoryOverrideConfirmText": "Update this transfer to Category {{category}} with A1 set to {{a1}}?",
+  "categoryOverrideConfirmText": "Update this transfer to Category {{category}} with A1 set to {{isA1Category}}?",
   "categoryA1Label": "Category A1 ( < 1 month)",
   "categoryCheckbox": "A1 - agreement reached in less than 30 days",
   "director": "Director",

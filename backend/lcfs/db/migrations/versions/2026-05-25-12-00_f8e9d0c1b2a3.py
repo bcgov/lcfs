@@ -18,7 +18,7 @@ def upgrade() -> None:
     op.add_column(
         "transfer",
         sa.Column(
-            "a1",
+            "is_a1_category",
             sa.Boolean(),
             nullable=False,
             server_default=sa.false(),
@@ -29,8 +29,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("DROP VIEW IF EXISTS vw_transfer_base CASCADE;")
-    op.drop_column("transfer", "a1")
-    op.execute("""
+    op.drop_column("transfer", "is_a1_category")
+    op.execute(
+        """
         CREATE OR REPLACE VIEW vw_transfer_base AS
         SELECT
             transfer.transfer_id,
@@ -57,4 +58,5 @@ def downgrade() -> None:
             AND status = 'Recorded';
 
         GRANT SELECT ON vw_transfer_base TO basic_lcfs_reporting_role;
-        """)
+        """
+    )

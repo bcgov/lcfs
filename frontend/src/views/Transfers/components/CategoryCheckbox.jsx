@@ -40,7 +40,7 @@ export const CategoryCheckbox = ({ isDisabled = false }) => {
   }, [isFetching, setLoading])
 
   const currentCategory = transferData?.transferCategory?.category || ''
-  const isA1 = !!transferData?.a1
+  const isA1Category = !!transferData?.isA1Category
   const categoryOptions = [
     { value: 'A', label: 'Category A ( < 6 months)' },
     { value: 'B', label: 'Category B (6 - 12 months)' },
@@ -48,8 +48,11 @@ export const CategoryCheckbox = ({ isDisabled = false }) => {
     { value: 'D', label: 'Category D (below market value)' }
   ]
 
-  const requestUpdate = (category, a1 = isA1) => {
-    setPendingUpdate({ category, a1: category === 'A' ? a1 : false })
+  const requestUpdate = (category, nextIsA1Category = isA1Category) => {
+    setPendingUpdate({
+      category,
+      isA1Category: category === 'A' ? nextIsA1Category : false
+    })
   }
 
   return (
@@ -64,7 +67,7 @@ export const CategoryCheckbox = ({ isDisabled = false }) => {
               <BCTypography variant="body2">
                 {t('categoryOverrideConfirmText', {
                   category: pendingUpdate.category,
-                  a1: pendingUpdate.a1 ? 'Yes' : 'No'
+                  isA1Category: pendingUpdate.isA1Category ? 'Yes' : 'No'
                 })}
               </BCTypography>
             ),
@@ -92,7 +95,7 @@ export const CategoryCheckbox = ({ isDisabled = false }) => {
             control={
               <Checkbox
                 data-test="checkbox"
-                checked={isA1}
+                checked={isA1Category}
                 onChange={(event) => requestUpdate('A', event.target.checked)}
                 disabled={isDisabled}
               />
