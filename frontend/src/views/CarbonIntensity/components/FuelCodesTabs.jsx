@@ -41,6 +41,21 @@ const INTERNAL_FUEL_CODES_TABS = [
   }
 ]
 
+const GOVERNMENT_BULLETINS_TABS = [
+  {
+    key: 'current',
+    labelKey: 'carbonIntensity:tabs.currentFuelCodes',
+    path: FUEL_CODES_PATH,
+    isActive: (loc) => isOnBulletins(loc)
+  },
+  {
+    key: 'archived',
+    labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
+    path: `${FUEL_CODES_PATH}?type=archived`,
+    isActive: () => false
+  }
+]
+
 const buildTabs = ({
   isCiApplicant,
   isSigningAuthority,
@@ -49,10 +64,11 @@ const buildTabs = ({
   variant,
   location
 }) => {
-  if (
-    variant === 'internal' ||
-    (isGovernment && isOnFuelCodesArea(location))
-  ) {
+  if (isGovernment && isOnBulletins(location)) {
+    return GOVERNMENT_BULLETINS_TABS
+  }
+
+  if (variant === 'internal' || (isGovernment && isOnInternalFuelCodes(location))) {
     return INTERNAL_FUEL_CODES_TABS
   }
 
