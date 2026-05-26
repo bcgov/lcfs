@@ -6,6 +6,7 @@ import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
+import { CONFIG } from '@/constants/config'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -34,6 +35,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 describe('FuelCodesTabs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    CONFIG.feature_flags.ciApplications = true
     mockLocation = { pathname: ROUTES.CI_APPLICATIONS.LIST, search: '' }
     mockHasAnyRole = () => false
   })

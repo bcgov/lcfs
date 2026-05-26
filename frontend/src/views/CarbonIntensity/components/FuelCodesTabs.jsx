@@ -63,12 +63,14 @@ const buildTabs = ({
   variant,
   location
 }) => {
-  const includeCiApplications =
+  const canAccessCiApplications =
     ciApplicationsEnabled &&
     (isCiApplicant || isSigningAuthority || isGovernment)
 
   if (isGovernment && isOnBulletins(location)) {
-    return buildInternalFuelCodesTabs({ includeCiApplications })
+    return buildInternalFuelCodesTabs({
+      includeCiApplications: ciApplicationsEnabled
+    })
   }
 
   if (
@@ -76,11 +78,13 @@ const buildTabs = ({
     (isGovernment &&
       (isOnInternalFuelCodes(location) || isOnCIApplications(location)))
   ) {
-    return buildInternalFuelCodesTabs({ includeCiApplications })
+    return buildInternalFuelCodesTabs({
+      includeCiApplications: ciApplicationsEnabled
+    })
   }
 
   const tabs = []
-  if (includeCiApplications) {
+  if (canAccessCiApplications) {
     tabs.push(ciApplicationsTab)
   }
   if (isCiApplicant) {
