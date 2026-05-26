@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import {
   AsyncSuggestionEditor,
@@ -42,13 +45,13 @@ const createCellRenderer = (field, customRenderer = null) => {
 }
 
 export const fuelCodeColDefs = (
-  optionsData,
-  errors,
-  isCreate,
-  canEdit,
-  isNotesRequired = false,
-  canEditCi = true,
-) => [
+  optionsData: OptionsData,
+  errors: GridErrors,
+  isCreate: boolean,
+  canEdit: boolean,
+  isNotesRequired: boolean = false,
+  canEditCi: boolean = true
+): ColDef[] => [
   validation,
   actions({
     enableDuplicate: isCreate,

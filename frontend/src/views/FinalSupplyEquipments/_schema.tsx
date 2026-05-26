@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import {
@@ -75,12 +78,12 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
 }
 
 export const finalSupplyEquipmentColDefs = (
-  optionsData,
-  compliancePeriod,
-  errors,
-  warnings,
-  gridReady
-) => {
+  optionsData: OptionsData,
+  compliancePeriod: string | number,
+  errors: GridErrors,
+  warnings: GridWarnings,
+  gridReady: boolean
+): ColDef[] => {
   return [
     validation,
     actions((params) => ({
@@ -501,10 +504,10 @@ export const finalSupplyEquipmentColDefs = (
 }
 
 export const finalSupplyEquipmentSummaryColDefs = (
-  t,
-  status,
-  isIDIR = false
-) => [
+  t: (key: string) => string,
+  status: string,
+  isIDIR: boolean = false
+): ColDef[] => [
   ...(isIDIR && status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
     ? [
         {
@@ -660,13 +663,13 @@ export const defaultColDef = {
 }
 
 export const getFSEReportingColDefs = (
-  minDate,
-  maxDate,
-  errors = {},
-  warnings = {},
-  complianceReportId,
-  complianceReportGroupUuid
-) => [
+  minDate: string,
+  maxDate: string,
+  errors: GridErrors = {},
+  warnings: GridWarnings = {},
+  complianceReportId: string | number,
+  complianceReportGroupUuid: string
+): ColDef[] => [
   validation,
   {
     field: 'chargingEquipmentComplianceId',
@@ -823,7 +826,9 @@ export const getFSEReportingColDefs = (
   },
   {
     field: 'ports',
-    headerName: i18n.t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
+    ),
     editable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),

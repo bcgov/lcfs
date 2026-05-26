@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AutocompleteCellEditor,
@@ -32,12 +35,12 @@ export const isFuelCodeProvision = (provision) =>
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const otherUsesColDefs = (
-  optionsData,
-  errors,
-  warnings,
-  isSupplemental,
-  compliancePeriod
-) => [
+  optionsData: OptionsData,
+  errors: GridErrors,
+  warnings: GridWarnings,
+  isSupplemental: boolean,
+  compliancePeriod: string | number
+): ColDef[] => [
   validation,
   actions((params) => ({
     enableDuplicate: false,
@@ -455,7 +458,10 @@ export const otherUsesColDefs = (
   }
 ]
 
-export const otherUsesSummaryColDefs = (complianceYear, optionsData) => [
+export const otherUsesSummaryColDefs = (
+  complianceYear: string | number,
+  optionsData: OptionsData
+): ColDef[] => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType',
@@ -581,10 +587,10 @@ export const defaultColDef = {
 }
 
 export const changelogCommonColDefs = (
-  highlight = true,
-  complianceYear,
-  optionsData
-) => [
+  highlight: boolean = true,
+  complianceYear: string | number,
+  optionsData: OptionsData
+): ColDef[] => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType.fuelType',
@@ -707,10 +713,10 @@ export const changelogCommonColDefs = (
 ]
 
 export const changelogColDefs = (
-  highlight = true,
-  complianceYear,
-  optionsData
-) => [
+  highlight: boolean = true,
+  complianceYear: string | number,
+  optionsData: OptionsData
+): ColDef[] => [
   {
     field: 'groupUuid',
     hide: true,

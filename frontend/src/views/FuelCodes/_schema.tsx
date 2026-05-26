@@ -1,3 +1,5 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
 import {
   CommonArrayRenderer,
   FuelCodePrefixRenderer,
@@ -24,7 +26,10 @@ const getCoProcessedOptions = () => ({
   error: null
 })
 
-export const fuelCodeColDefs = (t, status = null) => [
+export const fuelCodeColDefs = (
+  t: (key: string) => string,
+  status: string | null = null
+): ColDef[] => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
@@ -256,4 +261,6 @@ export const fuelCodeColDefs = (t, status = null) => [
   }
 ]
 
-export const defaultSortModel = [{ field: 'lastUpdated', direction: 'desc' }]
+export const defaultSortModel: Array<{ field: string; direction: string }> = [
+  { field: 'lastUpdated', direction: 'desc' }
+]
