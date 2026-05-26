@@ -144,10 +144,145 @@ async def test_update_compliance_report_no_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    compliance_report_update_service._perform_notification_call.assert_called_once_with(
-        mock_report, "Draft", mock.ANY
-    )
+    compliance_report_update_service._perform_notification_call.assert_not_called()
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_blocks_duplicate_when_reserved_exists(
+    compliance_report_update_service,
+    mock_user_has_roles,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Regression guard for incident 4368.
+
+    Repeat clicks on Sign-and-Submit each ran the full submitted handler,
+    minting one duplicate Reserved transaction per click.
+    handle_submitted_status must refuse to run a second time as soon as a
+    Reserved transaction already exists for the report — before any
+    notifications, FSE auto-submit, summary calc, or transaction creation.
+    """
+    mock_user_has_roles.return_value = True
+
+    report_id = 1
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = report_id
+    report.organization_id = 1
+    report.transaction_id = 100  # left behind by the first submit
+    report.compliance_report_group_uuid = "test-uuid"
+
+    # The lock returns the persisted transaction_id — what the row-level
+    # lock acquires and what the idempotency guard then reads against.
+    mock_repo.lock_compliance_report_row.return_value = 100
+
+    existing_reserve = MagicMock()
+    existing_reserve.transaction_id = 100
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = existing_reserve
+
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "test-user"
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.handle_submitted_status(
+            report, user
+        )
+
+    assert exc.value.status_code == 409
+    # Critical: nothing downstream ran — no FSE auto-submit, no summary
+    # calc, no new transaction, no repo update.
+    mock_repo.update_compliance_report.assert_not_called()
+    mock_trxn_repo.create_transaction.assert_not_called()
+    mock_trxn_repo.get_reserved_transaction_by_id.assert_called_once_with(
+        100
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_lock_resyncs_transaction_id(
+    compliance_report_update_service,
+    mock_user_has_roles,
+    mock_repo,
+    mock_trxn_repo,
+):
+    """Concurrent-race regression for incident 4368.
+
+    Two in-flight submit requests both read the report with
+    transaction_id=NULL. The first commits, the second blocks on the row
+    lock. When the second wakes up its in-memory `report.transaction_id`
+    is still NULL — but the lock returns the freshly-persisted value, and
+    the handler must trust *that* (not the stale ORM attribute) for the
+    idempotency check. Without this resync the second writer would mint
+    a duplicate Reserved row and leave the first one orphaned.
+    """
+    mock_user_has_roles.return_value = True
+
+    report_id = 1
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = report_id
+    report.organization_id = 1
+    report.transaction_id = None  # stale — loaded before the lock
+    report.compliance_report_group_uuid = "test-uuid"
+
+    # First writer already committed transaction 200; our lock acquisition
+    # returns that fresh value.
+    mock_repo.lock_compliance_report_row.return_value = 200
+
+    existing_reserve = MagicMock()
+    existing_reserve.transaction_id = 200
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = existing_reserve
+
+    user = MagicMock(spec=UserProfile)
+    user.keycloak_username = "test-user"
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.handle_submitted_status(
+            report, user
+        )
+
+    assert exc.value.status_code == 409
+    # The idempotency check must use the lock-returned id (200), not the
+    # stale in-memory None.
+    mock_trxn_repo.get_reserved_transaction_by_id.assert_called_once_with(200)
+    mock_trxn_repo.create_transaction.assert_not_called()
+    mock_repo.update_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_or_update_reserve_uses_persisted_transaction(
+    compliance_report_update_service, mock_trxn_repo
+):
+    """Even if the in-memory `report.transaction` relationship is None
+    (stale identity map, cross-request reload), as long as report.transaction_id
+    points at a real Reserved row, the persisted row must be updated rather
+    than a new one inserted. This is the second line of defence for the
+    duplicate-submission bug."""
+    org_service = compliance_report_update_service.org_service
+    org_service.calculate_available_balance = AsyncMock(return_value=1_000_000)
+    org_service.adjust_balance = AsyncMock()
+    compliance_report_update_service._calculate_pre_deadline_balance = AsyncMock(
+        return_value=1_000_000
+    )
+
+    persisted = MagicMock()
+    persisted.transaction_id = 100
+    persisted.compliance_units = 50
+    mock_trxn_repo.get_reserved_transaction_by_id.return_value = persisted
+
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 1
+    report.organization_id = 1
+    report.transaction_id = 100
+    report.transaction = None  # stale relationship — the bug condition
+
+    await compliance_report_update_service._create_or_update_reserve_transaction(
+        credit_change=50, report=report
+    )
+
+    # Persisted row was updated, no new transaction created.
+    assert persisted.compliance_units == 50
+    org_service.adjust_balance.assert_not_called()
+    assert report.transaction is persisted
 
 
 @pytest.mark.anyio
@@ -317,6 +452,66 @@ async def test_handle_submitted_status_rejects_decommissioned_fse(
     assert exc_info.value.status_code == 400
     assert "decommissioned FSE" in exc_info.value.detail
     compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original_report(
+    compliance_report_update_service,
+    mock_user_has_roles,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.supplemental_initiator = None
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=0)
+    )
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._validate_organization_details_for_submission = (
+        AsyncMock()
+    )
+
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_awaited_once_with(
+        1
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_skips_decommissioned_refresh_for_supplemental(
+    compliance_report_update_service,
+    mock_user_has_roles,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.supplemental_initiator = SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=0)
+    )
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._validate_organization_details_for_submission = (
+        AsyncMock()
+    )
+
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -2444,3 +2639,46 @@ async def test_update_compliance_report_persists_exemption_flags(
     assert mock_report.is_renewable_fuel_exempted is True
     assert mock_report.is_low_carbon_fuel_exempted is True
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_does_not_notify(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+):
+    """Selecting non-assessment is an internal flag update, not a submission."""
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 456
+    mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = None
+    mock_report.is_non_assessment = False
+
+    submitted_status = MagicMock(spec=ComplianceReportStatus)
+    submitted_status.status = ComplianceReportStatusEnum.Submitted
+
+    report_data = ComplianceReportUpdateSchema(
+        status="Submitted",
+        is_non_assessment=True,
+        supplemental_note="Not subject to assessment",
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = submitted_status
+    mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
+
+    await compliance_report_update_service.update_compliance_report(
+        report_id, report_data, UserProfile()
+    )
+
+    assert mock_report.is_non_assessment is True
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock.ANY, skip_can_sign_check=True
+    )
+    compliance_report_update_service._perform_notification_call.assert_not_called()

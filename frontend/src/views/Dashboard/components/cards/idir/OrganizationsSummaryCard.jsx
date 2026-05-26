@@ -3,7 +3,7 @@ import { Box, MenuItem, Select } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import { useOrganizationNames } from '@/hooks/useOrganizations.js'
-import { numberFormatter } from '@/utils/formatters.js'
+import { numberFormatter } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
 
 const OrganizationsSummaryCard = () => {

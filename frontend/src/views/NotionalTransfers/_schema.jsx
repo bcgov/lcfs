@@ -14,11 +14,11 @@ import {
   formatNumberWithCommas,
   formatNumberWithCommas as valueFormatter
 } from '@/utils/formatters'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import { isQuarterEditable } from '@/utils/grid/cellEditables'
 import { NEW_REGULATION_YEAR } from '@/constants/common'
 import { isNotionalTransferRenewableClaimEditable } from '@/utils/renewableClaimUtils'
 

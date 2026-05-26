@@ -75,6 +75,20 @@ export const apiRoutes = {
   getFuelCodes: '/fuel-codes/list',
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
+  exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
+
+  // ci-applications (Carbon Intensity)
+  ciApplicationOptions: '/ci-applications/table-options',
+  getCIApplications: '/ci-applications/list',
+  getCIApplication: '/ci-applications/:ciApplicationId',
+  createCIApplication: '/ci-applications',
+  updateCIApplicationStep1: '/ci-applications/:ciApplicationId/step1',
+  updateCIApplicationStep2: '/ci-applications/:ciApplicationId/step2',
+  updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
+  submitCIApplication: '/ci-applications/:ciApplicationId/submit',
+  ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
+  ciApplicationGHGeniusTemplate: '/ci-applications/ghgenius-template',
+  deleteCIApplication: '/ci-applications/:ciApplicationId',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
@@ -102,6 +116,7 @@ export const apiRoutes = {
   getNotionalTransfers: '/notional-transfers/list',
   getAllNotionalTransfers: '/notional-transfers/list-all',
   saveNotionalTransfer: '/notional-transfers/save',
+  importNotionalTransfers: '/notional-transfers/import',
 
   // other-uses
   saveOtherUses: '/other-uses/save',

@@ -30,7 +30,27 @@ ci_application_document_association = Table(
         primary_key=True,
         comment="Foreign key to document",
     ),
+    Column(
+        "document_category",
+        String(50),
+        nullable=False,
+        comment=(
+            "Step 3 categorisation: 'technical_report', 'ghgenius_model', "
+            "or 'supporting'."
+        ),
+    ),
 )
+
+
+# Document category values for CI application uploads (Step 3).
+CI_DOC_CATEGORY_TECHNICAL_REPORT = "technical_report"
+CI_DOC_CATEGORY_GHGENIUS_MODEL = "ghgenius_model"
+CI_DOC_CATEGORY_SUPPORTING = "supporting"
+CI_DOC_CATEGORIES = {
+    CI_DOC_CATEGORY_TECHNICAL_REPORT,
+    CI_DOC_CATEGORY_GHGENIUS_MODEL,
+    CI_DOC_CATEGORY_SUPPORTING,
+}
 
 
 class CIApplication(BaseModel, Auditable, Versioning):
@@ -63,6 +83,18 @@ class CIApplication(BaseModel, Auditable, Versioning):
         ForeignKey("organization.organization_id"),
         nullable=False,
         comment="Organization submitting the CI application",
+    )
+
+    # ---------- Assigned IDIR analyst ----------
+    assigned_analyst_id = Column(
+        Integer,
+        ForeignKey(
+            "user_profile.user_profile_id",
+            name="fk_ci_application_assigned_analyst_id_user_profile",
+        ),
+        nullable=True,
+        index=True,
+        comment="IDIR Analyst assigned to review this CI application.",
     )
 
     # ---------- Facility location ----------
@@ -98,6 +130,18 @@ class CIApplication(BaseModel, Auditable, Versioning):
         ForeignKey("unit_of_measure.uom_id"),
         nullable=False,
         comment="Unit of measure for the facility nameplate capacity",
+    )
+
+    # ---------- Analyst triage (IDIR-only display) ----------
+    priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Analyst-facing triage score for the IDIR CI applications inbox.",
+    )
+    verification_level = Column(
+        String(50),
+        nullable=True,
+        comment="Verification level label (e.g. 'VX1 - Low', 'VX2 - High').",
     )
 
     # ---------- Fuel code / pathway ----------
@@ -157,6 +201,11 @@ class CIApplication(BaseModel, Auditable, Versioning):
         back_populates="ci_applications",
         lazy="selectin",
     )
+    assigned_analyst = relationship(
+        "UserProfile",
+        foreign_keys=[assigned_analyst_id],
+        lazy="selectin",
+    )
     facility_nameplate_capacity_unit = relationship(
         "UnitOfMeasure",
         lazy="selectin",
@@ -178,4 +227,9 @@ class CIApplication(BaseModel, Auditable, Versioning):
         back_populates="ci_application",
         cascade="all, delete, delete-orphan",
         lazy="selectin",
+    )
+    ci_application_internal_comments = relationship(
+        "CIApplicationInternalComment",
+        back_populates="ci_application",
+        cascade="all, delete, delete-orphan",
     )

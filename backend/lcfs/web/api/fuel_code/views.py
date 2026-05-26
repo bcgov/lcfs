@@ -21,6 +21,7 @@ from starlette.responses import StreamingResponse
 from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.fuel_code.bulletin_export import FuelCodeBulletinExporter
 from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateUpdateSchema,
@@ -38,6 +39,20 @@ from lcfs.web.core.decorators import view_handler, public_view_handler
 router = APIRouter()
 logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
+
+
+def resolve_bulletin_type(
+    bulletin_type: Optional[str], bulletin_type_snake: Optional[str]
+) -> str:
+    resolved_bulletin_type = (bulletin_type or bulletin_type_snake or "").strip().lower()
+
+    if resolved_bulletin_type not in {"current", "archived"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Query parameter bulletinType (or bulletin_type) must be 'current' or 'archived'.",
+        )
+
+    return resolved_bulletin_type
 
 
 @router.get(
@@ -135,11 +150,18 @@ async def search_table_options_strings(
 async def get_fuel_codes(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
+    exclude_archived: bool = Query(
+        default=False,
+        alias="excludeArchived",
+        description="Omit Approved fuel codes outside the current compliance period.",
+    ),
     response: Response = None,
     service: FuelCodeServices = Depends(),
 ):
     """Endpoint to get list of fuel codes with pagination options"""
-    return await service.search_fuel_codes(pagination)
+    return await service.search_fuel_codes(
+        pagination, exclude_archived=exclude_archived
+    )
 
 
 @router.post(
@@ -149,6 +171,11 @@ async def get_fuel_codes(
 async def export_fuel_codes(
     request: Request,
     format: str = Query(default="xlsx", description="File export format"),
+    exclude_archived: bool = Query(
+        default=False,
+        alias="excludeArchived",
+        description="Omit Approved fuel codes outside the current compliance period.",
+    ),
     pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeExporter = Depends(),
 ):
@@ -170,7 +197,9 @@ async def export_fuel_codes(
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    return await exporter.export(format, pagination)
+    return await exporter.export(
+        format, pagination, exclude_archived=exclude_archived
+    )
 
 
 @router.post(
@@ -193,15 +222,35 @@ async def get_fuel_code_bulletins(
     service: FuelCodeServices = Depends(),
 ) -> FuelCodeBulletinsSchema:
     """Fetch paginated Bulletin 12 (current) or Bulletin 12a (archived) fuel code data."""
-    resolved_bulletin_type = (bulletin_type or bulletin_type_snake or "").strip().lower()
-
-    if resolved_bulletin_type not in {"current", "archived"}:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Query parameter bulletinType (or bulletin_type) must be 'current' or 'archived'.",
-        )
+    resolved_bulletin_type = resolve_bulletin_type(
+        bulletin_type, bulletin_type_snake
+    )
 
     return await service.get_fuel_code_bulletins(resolved_bulletin_type, pagination)
+
+
+@router.post(
+    "/bulletins/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@public_view_handler
+async def export_fuel_code_bulletins(
+    request: Request,
+    format: str = Query(default="xlsx", description="File export format"),
+    bulletin_type: Optional[str] = Query(
+        None, alias="bulletinType", description="Type: 'current' or 'archived'"
+    ),
+    bulletin_type_snake: Optional[str] = Query(
+        None, alias="bulletin_type", description="Type: 'current' or 'archived'"
+    ),
+    pagination: PaginationRequestSchema | None = Body(None),
+    exporter: FuelCodeBulletinExporter = Depends(),
+):
+    resolved_bulletin_type = resolve_bulletin_type(
+        bulletin_type, bulletin_type_snake
+    )
+    return await exporter.export(resolved_bulletin_type, format, pagination)
 
 
 @router.get(

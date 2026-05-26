@@ -118,10 +118,10 @@ class FuelCodeRepository:
         self,
         compliance_period_start: date,
         bulletin_type: str,
-        offset: int,
-        limit: int,
-        conditions: list,
-        sort_orders: list,
+        offset: int = 0,
+        limit: Optional[int] = None,
+        conditions: Optional[list] = None,
+        sort_orders: Optional[list] = None,
     ):
         """
         Returns paginated approved fuel code bulletin rows.
@@ -213,7 +213,11 @@ class FuelCodeRepository:
                 desc(FuelCodeListView.effective_date),
             ]
 
-        query = query.order_by(*order_by_clauses).offset(offset).limit(limit)
+        query = query.order_by(*order_by_clauses)
+        if offset:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
 
         result = await self.db.execute(query)
         total = await self.db.scalar(count_query)
@@ -542,18 +546,36 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_fuel_codes_paginated(
-        self, pagination: PaginationRequestSchema
+        self,
+        pagination: PaginationRequestSchema,
+        exclude_archived: bool = False,
+        compliance_period_start: Optional[date] = None,
     ) -> tuple[Sequence[FuelCode], int]:
         """
-        Queries fuel codes from the database with optional filters. Supports pagination and sorting.
+        Queries fuel codes from the database with optional filters, pagination, and sorting.
 
-        Args:
-            pagination (dict): Pagination and sorting parameters.
-
-        Returns:
-            List[FuelCodeBaseSchema]: A list of fuel codes matching the query.
+        When exclude_archived is True, Approved fuel codes outside the current compliance
+        period are omitted. Non-Approved codes (Draft, Recommended, Deleted) are unaffected.
         """
         conditions = []
+
+        if exclude_archived and compliance_period_start is not None:
+            compliance_period_end = date(compliance_period_start.year + 1, 3, 31)
+            is_current_approved = and_(
+                FuelCodeListView.effective_date < compliance_period_end,
+                or_(
+                    FuelCodeListView.expiration_date.is_(None),
+                    FuelCodeListView.expiration_date > compliance_period_start,
+                ),
+            )
+            conditions.append(
+                or_(
+                    cast(FuelCodeListView.status, String)
+                    != FuelCodeStatusEnum.Approved.value,
+                    is_current_approved,
+                )
+            )
+
         query = select(FuelCodeListView)
         for filter in pagination.filters:
 

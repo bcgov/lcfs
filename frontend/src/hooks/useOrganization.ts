@@ -1,0 +1,752 @@
+import { apiRoutes } from '@/constants/routes'
+import { useApiService } from '@/services/useApiService'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCurrentUser } from './useCurrentUser'
+import { roles } from '@/constants/roles'
+import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+
+// Default cache configuration
+const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
+const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
+const BALANCE_STALE_TIME = 2 * 60 * 1000 // 2 minutes (more frequent updates for financial data)
+const USER_DATA_STALE_TIME = 10 * 60 * 1000 // 10 minutes (user data changes less frequently)
+
+export const useOrganization = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization', id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(`/organizations/${id}`)
+      return response.data
+    },
+    enabled: enabled && !!id,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useOrganizationPenaltyAnalytics = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-penalty-analytics', id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(
+        `/organizations/${id}/penalties/analytics`
+      )
+      return response.data
+    },
+    enabled: enabled && !!id,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useOrganizationPenaltyLogs = (orgID: number | string | undefined | null, paginationOptions: PaginationParams, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const { enabled = true, ...restOptions } = options
+
+  return useQuery({
+    queryKey: ['organization-penalty-logs', id, paginationOptions],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const path = apiRoutes.organizationPenaltyLogsList.replace(
+        ':orgID',
+        id
+      )
+      const response = await client.post(path, paginationOptions)
+      return response.data
+    },
+    enabled: enabled && !!id && !!paginationOptions,
+    staleTime: DEFAULT_STALE_TIME,
+    gcTime: DEFAULT_CACHE_TIME,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useSaveOrganizationPenaltyLog = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+
+      const basePath = apiRoutes.organizationPenaltyLogs.replace(':orgID', String(orgID ?? ''))
+
+      if (data.deleted) {
+        if (!data.penaltyLogId) {
+          return { data: {} }
+        }
+        const deletePath = apiRoutes.organizationPenaltyLog
+          .replace(':orgID', String(orgID ?? ''))
+          .replace(':penaltyLogId', String(data.penaltyLogId ?? ''))
+        return await client.delete(deletePath)
+      }
+
+      if (data.penaltyLogId) {
+        const updatePath = apiRoutes.organizationPenaltyLog
+          .replace(':orgID', String(orgID ?? ''))
+          .replace(':penaltyLogId', String(data.penaltyLogId ?? ''))
+        return await client.put(updatePath, data)
+      }
+
+      return await client.post(basePath, data)
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization-penalty-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['organization-penalty-analytics'] })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization-penalty-logs'] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useOrganizationTypes = (options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-types'],
+    queryFn: async () => {
+      const response = await client.get('/organizations/types/')
+      return response.data
+    },
+    enabled,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useOrganizationUser = (orgID: number | string | undefined | null, userID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = USER_DATA_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-user', orgID, userID],
+    queryFn: async () => {
+      if (!orgID || !userID) {
+        throw new Error('Organization ID and User ID are required')
+      }
+      const response = await client.get(
+        `/organization/${orgID}/users/${userID}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!orgID && !!userID,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useOrganizationBalance = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+  const { hasRoles } = useCurrentUser()
+  const hasAccess = hasRoles(roles.government)
+
+  const {
+    staleTime = BALANCE_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-balance', orgID],
+    queryFn: async () => {
+      if (!hasAccess) {
+        return null
+      }
+      if (!orgID) {
+        return {}
+      }
+      const response = await client.get(`/organizations/balances/${orgID}`)
+      return response.data
+    },
+    enabled: enabled && hasAccess && !!orgID,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useCurrentOrgBalance = (options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = BALANCE_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['current-org-balance'],
+    queryFn: async () => {
+      const response = await client.get(`/organizations/current/balances`)
+      return response.data
+    },
+    enabled,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useGetOrgComplianceReportReportedYears = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['org-compliance-reports', id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('Organization ID is required')
+      }
+      const path = apiRoutes.getOrgComplianceReportReportedYears.replace(
+        ':orgID',
+        id
+      )
+      const response = await client.get(path)
+      return response.data
+    },
+    enabled: enabled && !!id,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+/**
+ * Hook to check if the current organization has early issuance enabled for a specific compliance year.
+ * Used to determine if an organization can create compliance reports for future years (e.g., 2026).
+ *
+ * TEMPORARY SOLUTION - Issue #3730
+ * This hook is part of a temporary approach to gate 2026 compliance year access.
+ * A more robust long-term solution should be implemented to support future years
+ * dynamically (e.g., backend-driven configuration per compliance period).
+ */
+export const useOrgEarlyIssuance = (complianceYear: string | number | undefined, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['org-early-issuance', complianceYear],
+    queryFn: async () => {
+      if (!complianceYear) {
+        throw new Error('Compliance year is required')
+      }
+      const response = await client.get(
+        `/organizations/current/early-issuance/${complianceYear}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!complianceYear,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+// Mutation hooks for updating organization data
+export const useUpdateOrganization = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (clearCache) {
+        queryClient.removeQueries({ queryKey: ['organization', orgID] })
+      } else {
+        queryClient.setQueryData(['organization', orgID], data.data)
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization'] })
+        queryClient.invalidateQueries({ queryKey: ['current-org-balance'] })
+        queryClient.invalidateQueries({ queryKey: ['credit-market-listings'] })
+      }
+
+      queryClient.refetchQueries({ queryKey: ['credit-market-listings'] })
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization', orgID] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useUpdateOrganizationUser = (orgID: number | string | undefined | null, userID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!orgID || !userID) {
+        throw new Error('Organization ID and User ID are required')
+      }
+      return await client.put(`/organization/${orgID}/users/${userID}`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (clearCache) {
+        queryClient.removeQueries({ queryKey: ['organization-user', orgID, userID] })
+      } else {
+        queryClient.setQueryData(
+          ['organization-user', orgID, userID],
+          data.data
+        )
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization-user'] })
+        queryClient.invalidateQueries({ queryKey: ['organization', orgID] })
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization-user', orgID, userID] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// Mutation hook for updating current organization's credit market details
+export const useUpdateCurrentOrgCreditMarket = (options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const { data: currentUser } = useCurrentUser()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      return await client.put('/organizations/current/credit-market', data)
+    },
+    onSuccess: (data, variables, context) => {
+      const orgId = currentUser?.organization?.organizationId
+
+      if (clearCache && orgId) {
+        queryClient.removeQueries({ queryKey: ['organization', orgId] })
+      } else if (orgId) {
+        queryClient.setQueryData(['organization', orgId], data.data)
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization'] })
+        queryClient.invalidateQueries({ queryKey: ['current-org-balance'] })
+        queryClient.invalidateQueries({ queryKey: ['credit-market-listings'] })
+      }
+
+      queryClient.refetchQueries({ queryKey: ['credit-market-listings'] })
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      const orgId = currentUser?.organization?.organizationId
+      if (orgId) {
+        queryClient.invalidateQueries({ queryKey: ['organization', orgId] })
+      }
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// Mutation hook for updating any organization's credit market details (IDIR users)
+export const useUpdateOrganizationCreditMarket = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/credit-market`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (orgID) {
+        if (clearCache) {
+          queryClient.removeQueries({ queryKey: ['organization', orgID] })
+        } else {
+          queryClient.setQueryData(['organization', orgID], data.data)
+        }
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization'] })
+        queryClient.invalidateQueries({ queryKey: ['credit-market-listings'] })
+      }
+
+      queryClient.refetchQueries({ queryKey: ['credit-market-listings'] })
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      if (orgID) {
+        queryClient.invalidateQueries({ queryKey: ['organization', orgID] })
+      }
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// Mutation hook for updating company overview details
+export const useUpdateCompanyOverview = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/company-overview`, data)
+    },
+    onSuccess: (data, variables, context) => {
+      if (clearCache) {
+        queryClient.removeQueries({ queryKey: ['organization', orgID] })
+      } else {
+        queryClient.setQueryData(['organization', orgID], data.data)
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization'] })
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization', orgID] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useCreditMarketListings = (options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = 1 * 60 * 1000, // 1 minute
+    gcTime = 1 * 60 * 1000, // 1 minute
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['credit-market-listings'],
+    queryFn: async () => {
+      const response = await client.get('/organizations/credit-market-listings')
+      return response.data
+    },
+    enabled,
+    staleTime,
+    gcTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useCreditMarketAuditLogs = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['credit-market-audit-logs', page, size, sortOrders, filters],
+    queryFn: async () =>
+      (
+        await client.post(apiRoutes.creditMarketAuditLogsList, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data,
+    ...options
+  })
+}
+
+// Link Key Management Hooks
+export const useAvailableFormTypes = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['available-form-types', orgID],
+    queryFn: async () => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(`/organizations/${orgID}/forms`)
+      return response.data
+    },
+    enabled: enabled && !!orgID,
+    staleTime,
+    gcTime,
+    ...restOptions
+  })
+}
+
+export const useOrganizationLinkKeys = (orgID: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-link-keys', orgID],
+    queryFn: async () => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(`/organizations/${orgID}/link-keys`)
+      return response.data
+    },
+    enabled: enabled && !!orgID,
+    staleTime,
+    gcTime,
+    ...restOptions
+  })
+}
+
+export const useGenerateLinkKey = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async ({ formId }: any) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.post(`/organizations/${orgID}/link-keys`, {
+        form_id: formId
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization-link-keys', orgID] })
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useRegenerateLinkKey = (orgID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (formId: any) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      if (!formId) {
+        throw new Error('Form ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/link-keys/${formId}`)
+    },
+    onSuccess: (data, variables, context) => {
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries({ queryKey: ['organization-link-keys', orgID] })
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useValidateLinkKey = (linkKey: string | undefined | null, options: QueryOptions<unknown> = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['validate-link-key', linkKey],
+    queryFn: async () => {
+      if (!linkKey) {
+        throw new Error('Link key is required')
+      }
+      const response = await client.get(
+        `/organizations/validate-link-key/${linkKey}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!linkKey,
+    staleTime,
+    gcTime,
+    retry: 1, // Don't retry validation failures
+    ...restOptions
+  })
+}

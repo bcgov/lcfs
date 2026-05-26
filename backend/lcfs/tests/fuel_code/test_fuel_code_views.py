@@ -328,7 +328,36 @@ async def test_get_fuel_codes_success(
         assert isinstance(result, dict)
         assert "pagination" in result
         assert "fuelCodes" in result
-        mock_get_fuel_codes.assert_called_once_with(pagination_request_schema)
+        mock_get_fuel_codes.assert_called_once_with(
+            pagination_request_schema, exclude_archived=False
+        )
+
+
+@pytest.mark.anyio
+async def test_get_fuel_codes_with_exclude_archived(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+    pagination_request_schema,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_codes"
+    ) as mock_search:
+        set_user_role(RoleEnum.GOVERNMENT)
+        mock_search.return_value = {
+            "fuel_codes": [],
+            "pagination": {"total": 0, "page": 1, "size": 10, "total_pages": 0},
+        }
+
+        url = "/api/fuel-codes/list?excludeArchived=true"
+        response = await client.post(
+            url, json=pagination_request_schema.dict(by_alias=True)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_search.assert_called_once_with(
+            pagination_request_schema, exclude_archived=True
+        )
 
 
 @pytest.mark.anyio
@@ -437,7 +466,9 @@ async def test_export_fuel_codes_success(
         )
 
     assert response.status_code == status.HTTP_200_OK
-    mock_export.assert_called_once_with("csv", pagination_request_schema)
+    mock_export.assert_called_once_with(
+        "csv", pagination_request_schema, exclude_archived=False
+    )
 
 
 @pytest.mark.anyio
@@ -1005,6 +1036,54 @@ async def test_get_fuel_code_bulletins_rejects_invalid_type(
     set_user_role(RoleEnum.SUPPLIER)
     response = await client.post(
         "/api/fuel-codes/bulletins?bulletinType=invalid",
+        json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_export_fuel_code_bulletins_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    with patch(
+        "lcfs.web.api.fuel_code.bulletin_export.FuelCodeBulletinExporter.export"
+    ) as mock_export:
+        set_user_role(RoleEnum.SUPPLIER)
+
+        def mock_generator():
+            yield b"mock,xlsx,data"
+
+        mock_response = StreamingResponse(
+            mock_generator(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="bulletins.xlsx"'},
+        )
+        mock_export.return_value = mock_response
+
+        response = await client.post(
+            "/api/fuel-codes/bulletins/export?bulletinType=current&format=xlsx",
+            json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_export.assert_called_once()
+    assert mock_export.call_args.args[0] == "current"
+    assert mock_export.call_args.args[1] == "xlsx"
+
+
+@pytest.mark.anyio
+async def test_export_fuel_code_bulletins_rejects_invalid_type(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.SUPPLIER)
+
+    response = await client.post(
+        "/api/fuel-codes/bulletins/export?bulletinType=invalid&format=xlsx",
         json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
     )
 

@@ -22,11 +22,6 @@ down_revision = "84d7cf6d1940"
 branch_labels = None
 depends_on = None
 
-SECTIONS_TO_EXECUTE = [
-    "FSE Reporting Base View",
-    "FSE Reporting Base Preferred View",
-]
-
 
 def upgrade() -> None:
     """
@@ -221,9 +216,6 @@ def upgrade() -> None:
     )
 
     create_role_if_not_exists()
-    content = find_and_read_sql_file(sqlFile="metabase.sql")
-    sections = parse_sql_sections(content)
-    execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
 
 
 def downgrade() -> None:

@@ -32,6 +32,7 @@ async def test_export_success():
             feedstock="Corn oil",
             feedstock_location="Canada",
             feedstock_misc=None,
+            co_processed="No",
             fuel_production_facility_city="Victoria",
             fuel_production_facility_province_state="BC",
             fuel_production_facility_country="Canada",
@@ -54,17 +55,21 @@ async def test_export_success():
     expected_pagination = PaginationRequestSchema(
         page=1, size=10000, filters=[], sort_orders=[]
     )
-    repo_mock.get_fuel_codes_paginated.assert_called_once_with(expected_pagination)
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(
+        expected_pagination,
+        exclude_archived=False,
+        compliance_period_start=None,
+    )
 
     # Verify file content
     headers = await response.body_iterator.__anext__()
     file_content = await response.body_iterator.__anext__()
     assert (
-        b"Status,Prefix,Fuel code,Carbon intensity,EDRMS#,Company,Contact name,Contact email,Application date,Approval date,Effective date,Expiry date,Fuel,Feedstock,Feedstock location,Misc,Fuel production facility city,Fuel production facility province/state,Fuel production facility country,Facility nameplate capacity,Unit,Feedstock transport mode,Finished fuel transport mode,Former company,Notes\n"
+        b"Status,Prefix,Fuel code,Carbon intensity,EDRMS#,Company,Contact name,Contact email,Application date,Approval date,Effective date,Expiry date,Fuel,Feedstock,Feedstock location,Misc,Co-processed,Fuel production facility city,Fuel production facility province/state,Fuel production facility country,Facility nameplate capacity,Unit,Feedstock transport mode,Finished fuel transport mode,Former company,Notes\n"
         in headers
     )
     assert (
-        b"Draft,BCLCF,001.0,10.5,EDRMS-123,XYZ Corp,John Doe,john.doe@example.com,2023-10-01,2023-11-01,2023-12-01,2024-01-01,Diesel,Corn oil,Canada,,Victoria,BC,Canada,1000,MW,Pipeline,Truck,,\n"
+        b"Draft,BCLCF,001.0,10.5,EDRMS-123,XYZ Corp,John Doe,john.doe@example.com,2023-10-01,2023-11-01,2023-12-01,2024-01-01,Diesel,Corn oil,Canada,,No,Victoria,BC,Canada,1000,MW,Pipeline,Truck,,\n"
         in file_content
     )
 

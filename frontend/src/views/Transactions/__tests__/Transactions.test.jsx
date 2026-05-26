@@ -289,7 +289,7 @@ vi.mock('@/routes/routes', () => ({
   }
 }))
 
-vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+vi.mock('@/utils/grid/cellRenderers', () => ({
   ConditionalLinkRenderer: (shouldRenderLink) => (props) => {
     const canRender = shouldRenderLink(props)
     return (

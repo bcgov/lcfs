@@ -61,3 +61,6 @@ class InternalComment(BaseModel, Auditable):
     compliance_report_internal_comments = relationship(
         "ComplianceReportInternalComment", back_populates="internal_comment"
     )
+    ci_application_internal_comments = relationship(
+        "CIApplicationInternalComment", back_populates="internal_comment"
+    )

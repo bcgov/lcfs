@@ -76,7 +76,10 @@ class InternalCommentService:
 
         # Keep legacy behavior for existing entities and enforce CI-specific visibility rules.
         if not is_government_user:
-            if data.entity_type != EntityTypeEnum.COMPLIANCE_REPORT:
+            if data.entity_type not in (
+                EntityTypeEnum.COMPLIANCE_REPORT,
+                EntityTypeEnum.CI_APPLICATION,
+            ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             if data.visibility != CommentVisibilityEnum.PUBLIC:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
@@ -122,7 +125,10 @@ class InternalCommentService:
         """
         is_government_user = self._is_government_user()
         if not is_government_user:
-            if entity_type != EntityTypeEnum.COMPLIANCE_REPORT:
+            if entity_type not in (
+                EntityTypeEnum.COMPLIANCE_REPORT,
+                EntityTypeEnum.CI_APPLICATION,
+            ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             visibility_filter = CommentVisibilityEnum.PUBLIC.value
 
@@ -165,26 +171,36 @@ class InternalCommentService:
         Returns:
             InternalCommentResponseSchema: The updated internal comment as a data transfer object.
         """
-        if not self._is_government_user():
-            raise HTTPException(status_code=403, detail="Forbidden resource")
+        is_government_user = self._is_government_user()
 
         existing_comment = await self.repo.get_internal_comment_by_id(internal_comment_id)
 
         current_visibility = existing_comment.visibility
         if not isinstance(current_visibility, CommentVisibilityEnum):
             current_visibility = CommentVisibilityEnum(str(current_visibility))
-        next_visibility = (
-            data.visibility if data.visibility is not None else current_visibility
-        )
 
-        if data.audience_scope is not None:
-            next_audience_scope = data.audience_scope
-        elif existing_comment.audience_scope is None:
+        # Non-government users (BCeID) may only edit the text of their own
+        # Public comment — they cannot flip a comment to Internal or set
+        # an audience scope, regardless of what the payload contains. The
+        # creator-ownership check is enforced upstream in the view.
+        if not is_government_user:
+            next_visibility = CommentVisibilityEnum.PUBLIC
             next_audience_scope = None
-        elif isinstance(existing_comment.audience_scope, AudienceScopeEnum):
-            next_audience_scope = existing_comment.audience_scope
         else:
-            next_audience_scope = AudienceScopeEnum(str(existing_comment.audience_scope))
+            next_visibility = (
+                data.visibility if data.visibility is not None else current_visibility
+            )
+
+            if data.audience_scope is not None:
+                next_audience_scope = data.audience_scope
+            elif existing_comment.audience_scope is None:
+                next_audience_scope = None
+            elif isinstance(existing_comment.audience_scope, AudienceScopeEnum):
+                next_audience_scope = existing_comment.audience_scope
+            else:
+                next_audience_scope = AudienceScopeEnum(
+                    str(existing_comment.audience_scope)
+                )
 
         if next_visibility == CommentVisibilityEnum.PUBLIC:
             next_audience_scope = None

@@ -124,11 +124,15 @@ class FuelSupplyServices:
                 )
                 else None
             )
-            # Only add provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
-            if (
-                row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)"
-                and fuel_code
-            ) or row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)":
+            # Only add fuel-code provisions (modern "Fuel code - section 19 (b) (i)"
+            # or legacy "Approved fuel code - Section 6 (5) (c)") when a fuel_code
+            # is actually available; otherwise the dropdown option would be selectable
+            # with no backing codes to choose from.
+            is_fuel_code_provision = row_data["provision_of_the_act"] in (
+                "Fuel code - section 19 (b) (i)",
+                "Approved fuel code - Section 6 (5) (c)",
+            )
+            if (is_fuel_code_provision and fuel_code) or not is_fuel_code_provision:
                 (
                     existing_fuel_type.provisions.append(provision)
                     if not next(
@@ -192,16 +196,15 @@ class FuelSupplyServices:
                     energy_density=round(row_data["energy_density"] or 0, 2),
                     unit=unit,
                 )
-            # Only include provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
+            # Only include fuel-code provisions (modern + legacy) when a fuel_code
+            # is actually available — see comment above.
+            is_fuel_code_provision = row_data["provision_of_the_act"] in (
+                "Fuel code - section 19 (b) (i)",
+                "Approved fuel code - Section 6 (5) (c)",
+            )
             provisions = (
                 [provision]
-                if (
-                    row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)"
-                    and fuel_code
-                )
-                or (
-                    row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)"
-                )
+                if (is_fuel_code_provision and fuel_code) or not is_fuel_code_provision
                 else []
             )
             # Create a new fuel type and append

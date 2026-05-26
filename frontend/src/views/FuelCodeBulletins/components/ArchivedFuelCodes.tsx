@@ -1,11 +1,17 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import { DownloadButton } from '@/components/DownloadButton'
 import { Stack } from '@mui/material'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { govRoles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildColumnDefs, normalizeRows } from '../_schema'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { useFuelCodeBulletins } from '@/hooks/useFuelCode'
+import {
+  useDownloadFuelCodeBulletins,
+  useFuelCodeBulletins
+} from '@/hooks/useFuelCode'
 import BCAlert from '@/components/BCAlert'
 
 const initialPaginationOptions = {
@@ -17,10 +23,15 @@ const initialPaginationOptions = {
 
 export const ArchivedFuelCodes = () => {
   const { t } = useTranslation(['bulletins'])
+  const { hasAnyRole } = useCurrentUser()
+  const isIdirView = hasAnyRole(...govRoles)
   const gridRef = useRef<any>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
+  const { mutateAsync: downloadBulletins } = useDownloadFuelCodeBulletins()
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'archived',
@@ -41,23 +52,60 @@ export const ArchivedFuelCodes = () => {
     [data, isLoading, isError, error]
   )
 
+  const handleDownload = async () => {
+    setIsDownloading(true)
+    setDownloadError('')
+
+    try {
+      await downloadBulletins({
+        bulletinType: 'archived',
+        format: 'xlsx',
+        body: {
+          page: 1,
+          size: paginationOptions.size || 25,
+          sortOrders: paginationOptions.sortOrders || [],
+          filters: paginationOptions.filters || []
+        }
+      })
+    } catch (error) {
+      console.error('Error downloading archived fuel code bulletin:', error)
+      setDownloadError(t('common.downloadError'))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return (
     <Stack spacing={2}>
-      {isError && (
+      {(isError || downloadError) && (
         <BCAlert severity="error">
-          {error?.message || t('common.errorLoading')}
+          {downloadError || error?.message || t('common.errorLoading')}
         </BCAlert>
       )}
       <BCTypography variant="h5" color="primary">
-        {t('archived.title')}
+        {isIdirView ? t('archived.idirTitle') : t('archived.title')}
       </BCTypography>
 
-      <BCTypography variant="body2" color="text">
-        {t('archived.description')}
-      </BCTypography>
-      <BCTypography variant="body2" color="text">
-        {t('common.fuelCodePrefix')}
-      </BCTypography>
+      {!isIdirView && (
+        <>
+          <BCTypography variant="body2" color="text">
+            {t('archived.description')}
+          </BCTypography>
+          <BCTypography variant="body2" color="text">
+            {t('common.fuelCodePrefix')}
+          </BCTypography>
+        </>
+      )}
+
+      <Stack direction="row">
+        <DownloadButton
+          onDownload={handleDownload}
+          isDownloading={isDownloading}
+          label={t('common.downloadBtn')}
+          downloadLabel={t('common.downloadingBtn')}
+          dataTest="archived-fuel-codes-download-btn"
+        />
+      </Stack>
 
       <BCBox sx={{ width: '100%' }}>
         <BCGridViewer
