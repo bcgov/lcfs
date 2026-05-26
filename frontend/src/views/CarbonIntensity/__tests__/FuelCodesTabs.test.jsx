@@ -113,9 +113,15 @@ describe('FuelCodesTabs', () => {
       }
     })
 
-    it('shows only Current and Archived tabs (no CI applications / My fuel codes)', () => {
+    it('shows the merged Fuel Codes tab set', () => {
       render(<FuelCodesTabs />, { wrapper })
 
+      expect(
+        screen.getByText('carbonIntensity:tabs.ciApplications')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.fuelCodes')
+      ).toBeInTheDocument()
       expect(
         screen.getByText('carbonIntensity:tabs.currentFuelCodes')
       ).toBeInTheDocument()
@@ -123,26 +129,29 @@ describe('FuelCodesTabs', () => {
         screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
       ).toBeInTheDocument()
       expect(
-        screen.queryByText('carbonIntensity:tabs.ciApplications')
-      ).not.toBeInTheDocument()
-      expect(
         screen.queryByText('carbonIntensity:tabs.myFuelCodes')
       ).not.toBeInTheDocument()
     })
 
-    it('defaults to Current tab active when on the bulletins page', () => {
+    it('marks the Archived tab active when on the archived bulletins page', () => {
       render(<FuelCodesTabs />, { wrapper })
 
       const tab = screen
-        .getByText('carbonIntensity:tabs.currentFuelCodes')
+        .getByText('carbonIntensity:tabs.archivedFuelCodes')
         .closest('[role="tab"]')
       expect(tab.getAttribute('aria-selected')).toBe('true')
     })
 
     it('Archived tab navigates to /fuel-codes?type=archived', () => {
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.BULLETINS,
+        search: ''
+      }
       render(<FuelCodesTabs />, { wrapper })
 
-      fireEvent.click(screen.getByText('carbonIntensity:tabs.archivedFuelCodes'))
+      fireEvent.click(
+        screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
+      )
       expect(mockNavigate).toHaveBeenCalledWith(
         `${ROUTES.FUEL_CODES.LIST}?type=archived`
       )
@@ -154,10 +163,13 @@ describe('FuelCodesTabs', () => {
       mockHasAnyRole = (...names) => names.includes(roles.government)
     })
 
-    it('renders Fuel codes, Current and Archived tabs (no CI applications / My fuel codes)', () => {
+    it('renders CI applications, Fuel codes, Current and Archived tabs (no My fuel codes)', () => {
       mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
       render(<FuelCodesTabs variant="internal" />, { wrapper })
 
+      expect(
+        screen.getByText('carbonIntensity:tabs.ciApplications')
+      ).toBeInTheDocument()
       expect(
         screen.getByText('carbonIntensity:tabs.fuelCodes')
       ).toBeInTheDocument()
@@ -167,9 +179,6 @@ describe('FuelCodesTabs', () => {
       expect(
         screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
       ).toBeInTheDocument()
-      expect(
-        screen.queryByText('carbonIntensity:tabs.ciApplications')
-      ).not.toBeInTheDocument()
       expect(
         screen.queryByText('carbonIntensity:tabs.myFuelCodes')
       ).not.toBeInTheDocument()
@@ -239,11 +248,32 @@ describe('FuelCodesTabs', () => {
       mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
       render(<FuelCodesTabs variant="internal" />, { wrapper })
 
-      fireEvent.click(screen.getByText('carbonIntensity:tabs.archivedFuelCodes'))
+      fireEvent.click(
+        screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
+      )
       expect(mockNavigate).toHaveBeenCalledWith(
         `${ROUTES.FUEL_CODES.LIST}?type=archived`
       )
     })
+
+    it('CI applications tab navigates to /ci-applications', () => {
+      mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      fireEvent.click(screen.getByText('carbonIntensity:tabs.ciApplications'))
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
+    })
+  })
+
+  it('shows CI applications on the internal Fuel Codes tab set even when no role matches govRoles', () => {
+    mockHasAnyRole = () => false
+    mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+
+    render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+    expect(
+      screen.getByText('carbonIntensity:tabs.ciApplications')
+    ).toBeInTheDocument()
   })
 
   it('navigates to the corresponding route when a tab is clicked', () => {

@@ -1,7 +1,7 @@
 """Add CI application internal workflow tracking fields.
 
 Revision ID: c2a4f6b8d9e1
-Revises: c1a2b3c4d5e6
+Revises: f8e9d0c1b2a3
 Create Date: 2026-05-19 10:00:00.000000
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision = "c2a4f6b8d9e1"
-down_revision = "c1a2b3c4d5e6"
+down_revision = "f8e9d0c1b2a3"
 branch_labels = None
 depends_on = None
 

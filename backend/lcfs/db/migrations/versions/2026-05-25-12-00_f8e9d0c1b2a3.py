@@ -1,7 +1,7 @@
 """Add versioning to compliance report charging equipment
 
 Revision ID: f8e9d0c1b2a3
-Revises: c2a4f6b8d9e1
+Revises: c1a2b3c4d5e6
 Create Date: 2026-05-25 12:00:00.000000
 """
 
@@ -9,8 +9,9 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
+
 revision = "f8e9d0c1b2a3"
-down_revision = "c2a4f6b8d9e1"
+down_revision = "c1a2b3c4d5e6"
 branch_labels = None
 depends_on = None
 
