@@ -13,12 +13,13 @@ import { roles } from '@/constants/roles'
 import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
 
-// Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => {
       const translations = {
         FuelCodes: 'Fuel codes',
+        'fuelCode:fuelCodes': 'Fuel codes',
+        'fuelCode:currentFuelCodes': 'Current fuel codes',
         'fuelCode:newFuelCodeBtn': 'New fuel code',
         'fuelCode:fuelCodeDownloadBtn': 'Download fuel codes information',
         'fuelCode:fuelCodeDownloadingMsg': 'Downloading fuel codes information',
@@ -31,7 +32,6 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock Keycloak
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
     keycloak: {
@@ -42,21 +42,17 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-// Mock Current User
+const mockUserRoleNames = [roles.government, roles.analyst]
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => {
-    const userRoles = [{ name: roles.government }, { name: roles.analyst }]
-    return {
-      data: { roles: userRoles },
-      hasAnyRole: (...names) =>
-        names.some((n) => userRoles.some((r) => r.name === n)),
-      hasRoles: (...names) =>
-        names.every((n) => userRoles.some((r) => r.name === n))
-    }
-  }
+  useCurrentUser: () => ({
+    data: {
+      roles: mockUserRoleNames.map((name) => ({ name }))
+    },
+    hasAnyRole: (...names) => names.some((n) => mockUserRoleNames.includes(n)),
+    hasRoles: (...names) => names.every((n) => mockUserRoleNames.includes(n))
+  })
 }))
 
-// Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({ gridRef, columnDefs, queryData, dataKey, className }) => (
     <div
@@ -69,7 +65,6 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   )
 }))
 
-// Mock React Router
 const mockNavigate = vi.fn()
 const mockLocationState = {
   state: null,
@@ -82,7 +77,6 @@ vi.mock('react-router-dom', () => ({
   useSearchParams: () => [new URLSearchParams(), vi.fn()]
 }))
 
-// Mock useFuelCode hooks
 let mockDownloadMutate = vi.fn()
 let mockGetFuelCodesData = {
   data: {
@@ -122,15 +116,12 @@ vi.mock('@/hooks/useFuelCode', () => ({
   }))
 }))
 
-// Mock BCBox to prevent jsx prop warnings
 vi.mock('@/components/BCBox', () => ({
   default: ({ children, jsx, ...props }) => <div {...props}>{children}</div>
 }))
 
-// Import the component internals for direct testing
 import { FuelCodes as FuelCodesComponent } from '@/views/FuelCodes/FuelCodes.jsx'
 
-// Create mock grid ref with AG Grid API methods
 const createMockGridRef = (filterModel = {}, columnState = []) => ({
   current: {
     api: {
@@ -261,6 +252,11 @@ describe('FuelCodes Component Tests', () => {
       expect(title.textContent).toBe('Fuel codes')
     })
 
+    it('should render the Current fuel codes tab strip', () => {
+      render(<FuelCodes />, { wrapper })
+      expect(screen.getByRole('tablist')).toBeInTheDocument()
+    })
+
     it('should render grid viewer with correct props', () => {
       render(<FuelCodes />, { wrapper })
       const gridContainer = screen.getByTestId('bc-grid-container')
@@ -354,6 +350,7 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith({
           format: 'xlsx',
+          excludeArchived: false,
           body: {
             page: 1,
             size: 10000,
@@ -446,6 +443,7 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith({
           format: 'xlsx',
+          excludeArchived: false,
           body: expect.objectContaining({
             page: 1,
             size: 10000,
@@ -465,6 +463,7 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith({
           format: 'xlsx',
+          excludeArchived: false,
           body: {
             page: 1,
             size: 10000,
@@ -477,6 +476,20 @@ describe('FuelCodes Component Tests', () => {
             ]
           }
         })
+      })
+    })
+
+    it('should pass excludeArchived: false on the default (Fuel codes) tab', async () => {
+      mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
+      render(<FuelCodes />, { wrapper })
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
+
+      fireEvent.click(downloadButton)
+
+      await waitFor(() => {
+        expect(mockDownloadMutate).toHaveBeenCalledWith(
+          expect.objectContaining({ excludeArchived: false })
+        )
       })
     })
   })
@@ -504,7 +517,6 @@ describe('FuelCodes Component Tests', () => {
       }
 
       render(<FuelCodes />, { wrapper })
-      // The grid container should still be rendered - error handling is done by BCGridViewer
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
@@ -529,8 +541,6 @@ describe('FuelCodes Component Tests', () => {
   describe('Component State Management', () => {
     it('should initialize with correct default state', () => {
       render(<FuelCodes />, { wrapper })
-      
-      // Verify initial rendering without errors
       expect(screen.getByTestId('title')).toBeInTheDocument()
       expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
     })
@@ -658,7 +668,7 @@ describe('FuelCodes Component Tests', () => {
   describe('Translation Integration', () => {
     it('should use translation keys for all text content', () => {
       render(<FuelCodes />, { wrapper })
-      
+
       expect(screen.getByText('Fuel codes')).toBeInTheDocument()
       expect(screen.getByText('New fuel code')).toBeInTheDocument()
       expect(screen.getByText('Download fuel codes information')).toBeInTheDocument()

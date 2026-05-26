@@ -477,4 +477,6 @@ class TestListCiApplications:
 
         pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[], filters=[])
         await service.list_ci_applications(pagination, organization_id=42)
-        repo.list_paginated.assert_awaited_once_with(pagination, 42)
+        repo.list_paginated.assert_awaited_once_with(
+            pagination, 42, exclude_draft=False
+        )

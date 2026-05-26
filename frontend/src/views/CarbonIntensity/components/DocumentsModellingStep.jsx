@@ -55,7 +55,9 @@ export const DocumentsModellingStep = ({
   onSave,
   onDelete,
   isSaving = false,
-  readOnly = false
+  readOnly = false,
+  showTitle = true,
+  showSaveControls = true
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
@@ -80,10 +82,8 @@ export const DocumentsModellingStep = ({
     PARENT_TYPE,
     ciApplicationId
   )
-  const { mutateAsync: deleteDoc, isPending: isDeletingDoc } = useDeleteDocument(
-    PARENT_TYPE,
-    ciApplicationId
-  )
+  const { mutateAsync: deleteDoc, isPending: isDeletingDoc } =
+    useDeleteDocument(PARENT_TYPE, ciApplicationId)
 
   const hasTechnicalReport = documents.some(
     (d) => d.documentCategory === DOC_CATEGORY_TECHNICAL_REPORT
@@ -143,9 +143,11 @@ export const DocumentsModellingStep = ({
 
   return (
     <Box>
-      <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
-        {t('carbonIntensity:step3.title')}
-      </BCTypography>
+      {showTitle && (
+        <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
+          {t('carbonIntensity:step3.title')}
+        </BCTypography>
+      )}
 
       {/* Uploaded documents list */}
       <BCBox
@@ -190,7 +192,9 @@ export const DocumentsModellingStep = ({
               <BCTypography variant="body2">
                 {formatBytes(doc.fileSize)}
               </BCTypography>
-              <BCTypography variant="body2">{doc.createUser || ''}</BCTypography>
+              <BCTypography variant="body2">
+                {doc.createUser || ''}
+              </BCTypography>
               <BCTypography variant="body2">
                 {formatDate(doc.createDate)}
               </BCTypography>
@@ -344,7 +348,9 @@ export const DocumentsModellingStep = ({
           variant="outlined"
           color="primary"
           size="medium"
-          startIcon={<FileDownloadIcon sx={{ fontSize: '1.5rem !important' }} />}
+          startIcon={
+            <FileDownloadIcon sx={{ fontSize: '1.5rem !important' }} />
+          }
           onClick={async () => {
             await apiClient.download({
               url: apiRoutes.ciApplicationGHGeniusTemplate,
@@ -393,7 +399,9 @@ export const DocumentsModellingStep = ({
         </li>
         <li>
           <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.inputs.descriptors')}
+            {t(
+              'carbonIntensity:step3.modellingInstructions.inputs.descriptors'
+            )}
           </BCTypography>
         </li>
       </Box>
@@ -403,29 +411,39 @@ export const DocumentsModellingStep = ({
       <Box component="ul" sx={{ pl: 3, mb: 2 }}>
         <li>
           <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.outputs.copyFromTab')}
+            {t(
+              'carbonIntensity:step3.modellingInstructions.outputs.copyFromTab'
+            )}
           </BCTypography>
         </li>
         <li>
           <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.outputs.columnLabel')}
+            {t(
+              'carbonIntensity:step3.modellingInstructions.outputs.columnLabel'
+            )}
           </BCTypography>
         </li>
         <li>
           <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.outputs.outOfModel')}
+            {t(
+              'carbonIntensity:step3.modellingInstructions.outputs.outOfModel'
+            )}
           </BCTypography>
         </li>
         <li>
           <BCTypography variant="body2">
-            {t('carbonIntensity:step3.modellingInstructions.outputs.sampleTable')}{' '}
+            {t(
+              'carbonIntensity:step3.modellingInstructions.outputs.sampleTable'
+            )}{' '}
             <Link
               href="https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-008.pdf"
               target="_blank"
               rel="noopener"
               underline="always"
             >
-              {t('carbonIntensity:step3.modellingInstructions.outputs.rlcfLink')}
+              {t(
+                'carbonIntensity:step3.modellingInstructions.outputs.rlcfLink'
+              )}
             </Link>
           </BCTypography>
         </li>
@@ -437,30 +455,32 @@ export const DocumentsModellingStep = ({
         </BCTypography>
       )}
 
-      <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
-        <BCButton
-          type="button"
-          variant="contained"
-          color="primary"
-          onClick={handleSaveAndProceed}
-          disabled={!canProceed || isSaving || isUploading}
-          data-test="ci-step3-save-btn"
-        >
-          {t('carbonIntensity:step3.saveAndProceed')}
-        </BCButton>
-        {ciApplicationId && onDelete && (
+      {showSaveControls && (
+        <Stack direction="row" spacing={2} sx={{ mt: 2 }} alignItems="center">
           <BCButton
             type="button"
-            variant="outlined"
-            color="error"
-            onClick={onDelete}
-            disabled={readOnly || isSaving}
-            data-test="ci-step3-delete-btn"
+            variant="contained"
+            color="primary"
+            onClick={handleSaveAndProceed}
+            disabled={!canProceed || isSaving || isUploading}
+            data-test="ci-step3-save-btn"
           >
-            {t('carbonIntensity:step1.deleteDraft')}
+            {t('carbonIntensity:step3.saveAndProceed')}
           </BCButton>
-        )}
-      </Stack>
+          {ciApplicationId && onDelete && (
+            <BCButton
+              type="button"
+              variant="outlined"
+              color="error"
+              onClick={onDelete}
+              disabled={readOnly || isSaving}
+              data-test="ci-step3-delete-btn"
+            >
+              {t('carbonIntensity:step1.deleteDraft')}
+            </BCButton>
+          )}
+        </Stack>
+      )}
     </Box>
   )
 }

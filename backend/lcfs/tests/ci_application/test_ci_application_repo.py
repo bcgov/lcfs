@@ -230,6 +230,25 @@ async def test_list_paginated_scopes_to_organization(repo, mock_db):
 
 
 @pytest.mark.anyio
+async def test_list_paginated_excludes_draft_for_government(repo, mock_db):
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 0
+    items_result = MagicMock()
+    items_result.scalars.return_value.all.return_value = []
+    mock_db.execute.side_effect = [count_result, items_result]
+
+    pagination = PaginationRequestSchema(page=1, size=10, sort_orders=[], filters=[])
+    items, total = await repo.list_paginated(
+        pagination,
+        organization_id=None,
+        exclude_draft=True,
+    )
+
+    assert total == 0
+    assert items == []
+
+
+@pytest.mark.anyio
 async def test_list_paginated_applies_filters_and_sorting(repo, mock_db):
     """Confirms filter / sort args are accepted and reach the SQL builder."""
     count_result = MagicMock()
