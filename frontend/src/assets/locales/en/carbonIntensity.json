@@ -9,8 +9,8 @@
     "ciApplications": "CI applications",
     "myFuelCodes": "My fuel codes",
     "fuelCodes": "Fuel codes",
-    "currentFuelCodes": "Current fuel codes",
-    "archivedFuelCodes": "Archived fuel codes"
+    "currentFuelCodes": "Current",
+    "archivedFuelCodes": "Archived"
   },
   "steps": {
     "step1": "Application information",
