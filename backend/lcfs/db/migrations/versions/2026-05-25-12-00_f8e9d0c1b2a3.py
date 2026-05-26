@@ -9,12 +9,6 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-from lcfs.db.dependencies import (
-    execute_sql_sections,
-    find_and_read_sql_file,
-    parse_sql_sections,
-)
-
 
 revision = "f8e9d0c1b2a3"
 down_revision = "c1a2b3c4d5e6"

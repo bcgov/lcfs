@@ -1,5 +1,3 @@
-import { Box, Chip, Tooltip } from '@mui/material'
-
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import {
@@ -7,7 +5,12 @@ import {
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { dateFormatter } from '@/utils/formatters'
-import { useCIApplicationStatuses } from '@/hooks/useCIApplication'
+import {
+  useCIApplicationStatuses,
+  useGetCIApplicationAnalysts
+} from '@/hooks/useCIApplication'
+import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
+import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
 const ANALYST_CHIP_SX = {
   bgcolor: '#606060',
@@ -37,26 +40,6 @@ const PillCell = ({ children }) => (
     {children}
   </BCBox>
 )
-
-const AssignedAnalystRenderer = ({ data }) => {
-  const analyst = data?.assignedAnalyst
-  if (!analyst?.initials) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <span>-</span>
-      </Box>
-    )
-  }
-  return (
-    <PillCell>
-      <Tooltip
-        title={analyst.fullName || `${analyst.firstName || ''} ${analyst.lastName || ''}`.trim()}
-      >
-        <Chip label={analyst.initials} size="small" sx={ANALYST_CHIP_SX} />
-      </Tooltip>
-    </PillCell>
-  )
-}
 
 const LastCommentRenderer = ({ data }) => {
   const last = data?.lastComment
@@ -109,6 +92,7 @@ const productionFacilityLocation = (data) => {
 const statusCol = (t) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
+  cellRenderer: CIApplicationStatusRenderer,
   valueGetter: (params) => params.data?.status?.status,
   minWidth: 140,
   sortable: false,
@@ -124,6 +108,7 @@ const statusCol = (t) => ({
 const idCol = (t) => ({
   field: 'ciApplicationId',
   headerName: t('carbonIntensity:columns.ciApplicationId'),
+  valueFormatter: (params) => `CI${params.value}`,
   minWidth: 90,
   maxWidth: 110,
   sortable: true,
@@ -135,9 +120,9 @@ const idCol = (t) => ({
 const proposedEffectiveCol = (t) => ({
   field: 'proposedFuelCodeEffectiveDate',
   headerName: t('carbonIntensity:columns.proposedEffectiveDate'),
-  minWidth: 180,
+  minWidth: 300,
   valueFormatter: dateFormatter,
-  filter: 'agDateColumnFilter',
+  filter: BCDateFloatingFilter,
   filterParams: DATE_FILTER_PARAMS,
   floatingFilterComponent: BCDateFloatingFilter,
   suppressFloatingFilterButton: true
@@ -150,7 +135,7 @@ const productionFacilityLocationCol = (t) => ({
   field: 'productionFacilityLocation',
   headerName: t('carbonIntensity:columns.productionFacilityLocation'),
   valueGetter: ({ data }) => productionFacilityLocation(data),
-  minWidth: 220,
+  minWidth: 330,
   sortable: false,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,
@@ -160,10 +145,10 @@ const productionFacilityLocationCol = (t) => ({
 const lastUpdatedCol = (t) => ({
   field: 'updateDate',
   headerName: t('carbonIntensity:columns.lastUpdated'),
-  minWidth: 180,
+  minWidth: 220,
   valueFormatter: dateFormatter,
   sort: 'desc',
-  filter: 'agDateColumnFilter',
+  filter: BCDateFloatingFilter,
   filterParams: DATE_FILTER_PARAMS,
   floatingFilterComponent: BCDateFloatingFilter,
   suppressFloatingFilterButton: true
@@ -173,7 +158,7 @@ const organizationCol = (t) => ({
   field: 'organization.name',
   headerName: t('carbonIntensity:columns.organization'),
   valueGetter: (params) => params.data?.organization?.name,
-  minWidth: 220,
+  minWidth: 330,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,
   suppressFloatingFilterButton: true
@@ -184,7 +169,7 @@ const organizationCol = (t) => ({
 const priorityScoreCol = (t) => ({
   field: 'priorityScore',
   headerName: t('carbonIntensity:columns.priorityScore'),
-  minWidth: 140,
+  minWidth: 180,
   type: 'numericColumn',
   filter: 'agNumberColumnFilter',
   filterParams: NUMBER_FILTER_PARAMS,
@@ -194,28 +179,47 @@ const priorityScoreCol = (t) => ({
 const verificationCol = (t) => ({
   field: 'verificationLevel',
   headerName: t('carbonIntensity:columns.verification'),
-  minWidth: 160,
+  minWidth: 220,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,
   suppressFloatingFilterButton: true
 })
 
-const assignedAnalystCol = (t) => ({
+const assignedAnalystCol = (t, onRefresh) => ({
   field: 'assignedAnalyst',
   headerName: t('carbonIntensity:columns.assignedAnalyst'),
-  minWidth: 170,
+  minWidth: 180,
   valueGetter: ({ data }) => data?.assignedAnalyst?.initials || '',
-  cellRenderer: AssignedAnalystRenderer,
+  cellRenderer: CIAssignedAnalystCell,
+  cellRendererParams: {
+    onRefresh
+  },
+  sortable: false,
   filter: 'agTextColumnFilter',
-  filterParams: TEXT_FILTER_PARAMS,
+  filterParams: {
+    textFormatter: (value) => value || '',
+    textCustomComparator: (filter, value, filterText) => {
+      // Handle filtering by initials
+      const cleanValue = (value || '').toLowerCase()
+      const cleanFilter = filterText.toLowerCase()
+      return cleanValue.includes(cleanFilter)
+    },
+    buttons: ['clear']
+  },
+  floatingFilterComponent: BCSelectFloatingFilter,
+  floatingFilterComponentParams: {
+    optionsQuery: useGetCIApplicationAnalysts,
+    valueKey: 'initials',
+    labelKey: 'fullName'
+  },
   suppressFloatingFilterButton: true,
-  sortable: false
+  suppressHeaderFilterButton: true
 })
 
 const lastCommentCol = (t) => ({
   field: 'lastComment',
   headerName: t('carbonIntensity:columns.lastComment'),
-  minWidth: 150,
+  minWidth: 220,
   valueGetter: ({ data }) => data?.lastComment?.comment || '',
   cellRenderer: LastCommentRenderer,
   sortable: false,
@@ -242,7 +246,10 @@ const lastCommentCol = (t) => ({
  * filterable by string contains; tighten to an enum / FK lookup once
  * the verification workflow is specced.
  */
-export const ciApplicationsColDefs = (t, { isGovernment = false } = {}) => {
+export const ciApplicationsColDefs = (
+  t,
+  { isGovernment = false, onRefresh } = {}
+) => {
   if (!isGovernment) {
     return [
       statusCol(t),
@@ -258,7 +265,7 @@ export const ciApplicationsColDefs = (t, { isGovernment = false } = {}) => {
     organizationCol(t),
     priorityScoreCol(t),
     verificationCol(t),
-    assignedAnalystCol(t),
+    assignedAnalystCol(t, onRefresh),
     lastCommentCol(t),
     proposedEffectiveCol(t),
     productionFacilityLocationCol(t),
@@ -283,6 +290,7 @@ export const getResumeStep = (application) => {
     case 'Draft':
       return 2
     case 'Submitted':
+    case 'Recommended':
     case 'Completed':
     case 'Withdrawn':
       return 5

@@ -40,6 +40,11 @@ def _table_options() -> CITableOptionsSchema:
                 status=CIApplicationStatusEnum.Submitted,
                 description="Submitted",
             ),
+            CIApplicationStatusSchema(
+                ci_application_status_id=3,
+                status=CIApplicationStatusEnum.Recommended,
+                description="Recommended",
+            ),
         ],
         units_of_measure=[
             UnitOfMeasureSchema(uom_id=1, name="Litres", description="Litres"),
@@ -144,7 +149,11 @@ async def test_table_options_success(
         body = response.json()
         assert "statuses" in body
         assert "unitsOfMeasure" in body
-        assert {s["status"] for s in body["statuses"]} == {"Draft", "Submitted"}
+        assert {s["status"] for s in body["statuses"]} == {
+            "Draft",
+            "Submitted",
+            "Recommended",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +181,7 @@ async def test_list_returns_org_scoped_for_supplier(
         # Supplier scope: organization_id should be passed through (not None)
         called_args = mock.await_args
         assert called_args.args[1] == 1
+        assert called_args.kwargs["exclude_draft"] is False
 
 
 @pytest.mark.anyio
@@ -191,6 +201,7 @@ async def test_list_returns_all_for_government(
         assert response.status_code == status.HTTP_200_OK
         # Government scope: organization_id should be None
         assert mock.await_args.args[1] is None
+        assert mock.await_args.kwargs["exclude_draft"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -463,7 +474,7 @@ async def test_decision_endpoint_rejects_non_terminal_status(
 ):
     set_user_role(RoleEnum.GOVERNMENT)
     response = await client.post(
-        "/api/ci-applications/10/decision", json={"status": "Submitted"}
+        "/api/ci-applications/10/decision", json={"status": "Recommended"}
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
