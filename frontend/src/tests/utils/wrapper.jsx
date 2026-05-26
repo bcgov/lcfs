@@ -1,5 +1,7 @@
 import theme from '@/themes'
 import { CssBaseline, ThemeProvider } from '@mui/material'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 // import { ReactKeycloakProvider } from '@react-keycloak/web'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter as Router } from 'react-router-dom'
@@ -21,7 +23,9 @@ export const wrapper = ({ children }) => (
   <QueryClientProvider client={testQueryClient}>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>{children}</Router>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Router>{children}</Router>
+      </LocalizationProvider>
     </ThemeProvider>
   </QueryClientProvider>
   // </ReactKeycloakProvider>

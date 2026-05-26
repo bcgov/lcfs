@@ -157,6 +157,33 @@ class NotificationService:
         return await self.repo.create_notification_message(notification)
 
     @service_handler
+    async def create_notification_messages_for_organization(
+        self,
+        notification_data: NotificationMessageSchema,
+        organization_id: Optional[int],
+    ) -> int:
+        """
+        Create the same in-app notification for every active user in the target scope.
+        """
+        user_profile_ids = await self.repo.get_active_user_profile_ids_by_organization(
+            organization_id
+        )
+        if not user_profile_ids:
+            return 0
+
+        notifications = [
+            NotificationMessage(
+                **notification_data.model_dump(
+                    exclude={"deleted", "related_user_profile_id"}
+                ),
+                related_user_profile_id=user_profile_id,
+            )
+            for user_profile_id in user_profile_ids
+        ]
+        await self.repo.create_notification_messages(notifications)
+        return len(notifications)
+
+    @service_handler
     async def update_notification(self, notification_data: NotificationMessageSchema):
         """
         Update an existing notification.

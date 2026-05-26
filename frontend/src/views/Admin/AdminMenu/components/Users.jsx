@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { apiRoutes } from '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
 import { usersColumnDefs } from './_schema'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { useUsersList } from '@/hooks/useUser'
 
 export const Users = () => {

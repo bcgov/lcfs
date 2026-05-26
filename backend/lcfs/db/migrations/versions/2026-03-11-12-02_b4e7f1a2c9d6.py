@@ -51,7 +51,7 @@ def _recreate_fuel_supply_views():
 
 
 def upgrade() -> None:
-    _drop_fuel_supply_views()
+    # _drop_fuel_supply_views()
 
     op.alter_column(
         "fuel_supply",
@@ -62,11 +62,11 @@ def upgrade() -> None:
         comment="Energy content",
     )
 
-    _recreate_fuel_supply_views()
+    # _recreate_fuel_supply_views()
 
 
 def downgrade() -> None:
-    _drop_fuel_supply_views()
+    # _drop_fuel_supply_views()
 
     op.alter_column(
         "fuel_supply",
@@ -77,4 +77,4 @@ def downgrade() -> None:
         comment="Energy content",
     )
 
-    _recreate_fuel_supply_views()
+    # _recreate_fuel_supply_views()

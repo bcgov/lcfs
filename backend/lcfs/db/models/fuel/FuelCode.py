@@ -75,6 +75,12 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
         String(1000), nullable=False, comment="Feedstock location"
     )
     feedstock_misc = Column(String(500), nullable=True, comment="Feedstock misc")
+    co_processed = Column(
+        String(50),
+        nullable=False,
+        server_default="No",
+        comment="Whether the fuel is co-processed",
+    )
 
     fuel_production_facility_city = Column(
         String(1000), nullable=True, comment="City of the fuel production"

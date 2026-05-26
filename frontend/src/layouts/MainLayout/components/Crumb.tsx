@@ -132,7 +132,8 @@ const Crumb = () => {
       route: '/transactions'
     },
     'admin-adjustment': { label: 'Transactions', route: '/transactions' },
-    'org-admin-adjustment': { label: 'Transactions', route: '/transactions' }
+    'org-admin-adjustment': { label: 'Transactions', route: '/transactions' },
+    'ci-applications': { label: 'CI applications', route: '/ci-applications' }
   }
 
   return (

@@ -18,7 +18,7 @@ import {
 } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
-import { dateFormatter, numberFormatter } from '@/utils/formatters.js'
+import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import {
   useChargingEquipmentStatuses,
   useChargingSiteStatuses

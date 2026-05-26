@@ -35,7 +35,7 @@ vi.mock('@/constants/schedules', () => ({
 }))
 
 // Mock LinkRenderer
-vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+vi.mock('@/utils/grid/cellRenderers', () => ({
   LinkRenderer: 'LinkRenderer'
 }))
 

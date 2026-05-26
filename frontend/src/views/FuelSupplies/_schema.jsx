@@ -17,14 +17,14 @@ import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import { isQuarterEditable } from '@/utils/grid/cellEditables'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   isEligibleRenewableFuel,

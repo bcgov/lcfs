@@ -79,7 +79,7 @@ vi.mock('./components/LinkKeyManagement', () => ({
 // Now import the other modules
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 import { OrganizationProfile } from '../OrganizationProfile.jsx'
-import * as formatters from '@/utils/formatters.js'
+import * as formatters from '@/utils/formatters'
 import * as addressUtils from '@/utils/constructAddress.js'
 
 // Component mocks

@@ -1,0 +1,46 @@
+import { Buffer } from 'buffer'
+import { KeycloakProvider } from '@/components/KeycloakProvider'
+import { AuthorizationProvider } from '@/contexts/AuthorizationContext'
+import { ErrorOverlay } from '@/components/ErrorOverlay/ErrorOverlay'
+import theme from '@/themes'
+import { CssBaseline, ThemeProvider } from '@mui/material'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { SnackbarProvider } from 'notistack'
+import { createRoot } from 'react-dom/client'
+import App from './App'
+import './i18n'
+
+declare global {
+  interface Window {
+    Buffer: typeof Buffer
+  }
+}
+
+if (!window.Buffer) window.Buffer = Buffer
+
+export const queryClient = new QueryClient()
+const root = document.getElementById('root')
+
+if (root) {
+  createRoot(root).render(
+    <main>
+      <KeycloakProvider>
+        <AuthorizationProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider theme={theme}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <SnackbarProvider>
+                  <CssBaseline />
+                  <ErrorOverlay />
+                  <App />
+                </SnackbarProvider>
+              </LocalizationProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </AuthorizationProvider>
+      </KeycloakProvider>
+    </main>
+  )
+}
