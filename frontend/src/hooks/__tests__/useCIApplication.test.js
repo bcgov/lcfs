@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
 import {
+  useAssignCIApplicationAnalyst,
   useCIApplicationOptions,
   useCreateCIApplication,
   useDeleteCIApplication,
@@ -17,6 +18,7 @@ vi.mock('@/services/useApiService')
 
 const mockInvalidateQueries = vi.fn()
 const mockSetQueryData = vi.fn()
+const mockSetQueriesData = vi.fn()
 
 vi.mock('@tanstack/react-query', async () => {
   const actual = await vi.importActual('@tanstack/react-query')
@@ -24,7 +26,8 @@ vi.mock('@tanstack/react-query', async () => {
     ...actual,
     useQueryClient: () => ({
       invalidateQueries: mockInvalidateQueries,
-      setQueryData: mockSetQueryData
+      setQueryData: mockSetQueryData,
+      setQueriesData: mockSetQueriesData
     })
   }
 })
@@ -56,7 +59,9 @@ describe('useCIApplication hooks', () => {
       const data = { statuses: [], unitsOfMeasure: [] }
       mockGet.mockResolvedValue({ data })
 
-      const { result } = renderHook(() => useCIApplicationOptions(), { wrapper })
+      const { result } = renderHook(() => useCIApplicationOptions(), {
+        wrapper
+      })
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(result.current.data).toEqual(data)
@@ -66,7 +71,9 @@ describe('useCIApplication hooks', () => {
     it('surfaces errors', async () => {
       const err = new Error('boom')
       mockGet.mockRejectedValue(err)
-      const { result } = renderHook(() => useCIApplicationOptions(), { wrapper })
+      const { result } = renderHook(() => useCIApplicationOptions(), {
+        wrapper
+      })
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.error).toBe(err)
     })
@@ -92,14 +99,18 @@ describe('useCIApplication hooks', () => {
     })
 
     it('passes through custom pagination', async () => {
-      mockPost.mockResolvedValue({ data: { ciApplications: [], pagination: {} } })
+      mockPost.mockResolvedValue({
+        data: { ciApplications: [], pagination: {} }
+      })
       const params = {
         page: 3,
         size: 25,
         sortOrders: [{ field: 'updateDate', direction: 'desc' }],
         filters: [{ field: 'facilityCountry', filter: 'Canada' }]
       }
-      const { result } = renderHook(() => useGetCIApplications(params), { wrapper })
+      const { result } = renderHook(() => useGetCIApplications(params), {
+        wrapper
+      })
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(mockPost).toHaveBeenCalledWith('/ci-applications/list', params)
     })
@@ -128,7 +139,9 @@ describe('useCIApplication hooks', () => {
     })
 
     it('does not fetch when id is null', () => {
-      const { result } = renderHook(() => useGetCIApplication(null), { wrapper })
+      const { result } = renderHook(() => useGetCIApplication(null), {
+        wrapper
+      })
       expect(result.current.fetchStatus).toBe('idle')
       expect(mockGet).not.toHaveBeenCalled()
     })
@@ -177,7 +190,9 @@ describe('useCIApplication hooks', () => {
       const { result } = renderHook(() => useUpdateCIApplicationStep1(12), {
         wrapper
       })
-      const out = await result.current.mutateAsync({ facilityCountry: 'Canada' })
+      const out = await result.current.mutateAsync({
+        facilityCountry: 'Canada'
+      })
 
       expect(mockPut).toHaveBeenCalledWith('/ci-applications/12/step1', {
         facilityCountry: 'Canada'
@@ -186,7 +201,43 @@ describe('useCIApplication hooks', () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ['ci-applications']
       })
-      expect(mockSetQueryData).toHaveBeenCalledWith(['ci-application', '12'], updated)
+      expect(mockSetQueryData).toHaveBeenCalledWith(
+        ['ci-application', '12'],
+        updated
+      )
+    })
+  })
+
+  describe('useAssignCIApplicationAnalyst', () => {
+    it('PUTs /ci-applications/:id/assign and updates detail and list caches', async () => {
+      const updated = {
+        ciApplicationId: 12,
+        assignedAnalyst: null,
+        preliminaryRiskAssessment: 'Low',
+        priorityScore: 120
+      }
+      mockPut.mockResolvedValue({ data: updated })
+
+      const { result } = renderHook(() => useAssignCIApplicationAnalyst(12), {
+        wrapper
+      })
+      const out = await result.current.mutateAsync(null)
+
+      expect(mockPut).toHaveBeenCalledWith('/ci-applications/12/assign', {
+        assignedAnalystId: null
+      })
+      expect(out).toEqual(updated)
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['ci-applications']
+      })
+      expect(mockSetQueryData).toHaveBeenCalledWith(
+        ['ci-application', '12'],
+        updated
+      )
+      expect(mockSetQueriesData).toHaveBeenCalledWith(
+        { queryKey: ['ci-applications'] },
+        expect.any(Function)
+      )
     })
   })
 
@@ -257,7 +308,9 @@ describe('useCIApplication hooks', () => {
 
   describe('useDeleteCIApplication', () => {
     it('DELETEs /ci-applications/:id and invalidates the list cache', async () => {
-      mockDelete.mockResolvedValue({ data: { message: 'CI application deleted.' } })
+      mockDelete.mockResolvedValue({
+        data: { message: 'CI application deleted.' }
+      })
       const { result } = renderHook(() => useDeleteCIApplication(), { wrapper })
 
       await result.current.mutateAsync(50)

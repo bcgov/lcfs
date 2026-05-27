@@ -9,6 +9,7 @@ import pytest
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationsListSchema,
@@ -49,6 +50,8 @@ def service(repo, user_repo):
 def mock_user():
     user = MagicMock()
     user.keycloak_username = "ci_applicant_user"
+    user.user_profile_id = 123
+    user.role_names = set()
     return user
 
 
@@ -72,6 +75,14 @@ def _organization(org_id=1, name="Fuel Producer Ltd."):
         operating_name=f"{name} (DBA)",
         email="hello@example.com",
         phone="+1 555 0100",
+        org_address=SimpleNamespace(
+            street_address="123 Main St",
+            address_other="Suite 200",
+            city="Victoria",
+            province_state="BC",
+            country="Canada",
+            postalCode_zipCode="V8V 1A1",
+        ),
     )
 
 
@@ -137,8 +148,9 @@ async def test_get_table_options_returns_lookup_data(service, repo):
     repo.get_statuses.return_value = [
         _status("Draft", 1),
         _status("Submitted", 2),
-        _status("Completed", 3),
-        _status("Withdrawn", 4),
+        _status("Recommended", 3),
+        _status("Completed", 4),
+        _status("Withdrawn", 5),
     ]
     repo.get_units_of_measure.return_value = [_uom(1, "Litres"), _uom(2, "Kilograms")]
 
@@ -148,6 +160,7 @@ async def test_get_table_options_returns_lookup_data(service, repo):
     assert [s.status for s in result.statuses] == [
         CIApplicationStatusEnum.Draft,
         CIApplicationStatusEnum.Submitted,
+        CIApplicationStatusEnum.Recommended,
         CIApplicationStatusEnum.Completed,
         CIApplicationStatusEnum.Withdrawn,
     ]
@@ -184,7 +197,25 @@ async def test_list_ci_applications_passes_org_id(service, repo):
     pagination = PaginationRequestSchema(page=1, size=10)
     await service.list_ci_applications(pagination, organization_id=99)
 
-    repo.list_paginated.assert_awaited_once_with(pagination, 99)
+    repo.list_paginated.assert_awaited_once_with(
+        pagination, 99, exclude_draft=False
+    )
+
+
+@pytest.mark.anyio
+async def test_list_ci_applications_passes_exclude_draft(service, repo):
+    repo.list_paginated.return_value = ([], 0)
+    repo.total_pages = MagicMock(return_value=0)
+    repo.get_latest_comments_by_ci_application_ids.return_value = {}
+
+    pagination = PaginationRequestSchema(page=1, size=10)
+    await service.list_ci_applications(
+        pagination, organization_id=None, exclude_draft=True
+    )
+
+    repo.list_paginated.assert_awaited_once_with(
+        pagination, None, exclude_draft=True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +232,10 @@ async def test_get_ci_application_returns_full_schema(service, repo):
     assert result.facility_country == "Argentina"
     assert result.organization is not None
     assert result.organization.name == "Fuel Producer Ltd."
+    assert (
+        result.organization.address_line
+        == "123 Main St, Suite 200, Victoria, BC, Canada, V8V 1A1"
+    )
     assert result.facility_nameplate_capacity_unit.name == "Litres"
 
 
@@ -726,20 +761,162 @@ async def test_step5_decision_requires_government(service, repo, mock_user):
 
 
 @pytest.mark.anyio
-async def test_step5_decision_rejects_when_not_submitted(service, repo, mock_user):
+async def test_step5_decision_rejects_approval_when_not_recommended(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.DIRECTOR}
     ci = _ci_application(status=_status("Draft", 1))
     with pytest.raises(HTTPException) as exc:
         await service.record_decision(
             ci, _decision_payload(), mock_user, is_government=True
         )
     assert exc.value.status_code == 400
-    assert "Submitted" in exc.value.detail
+    assert "Recommended" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_recommend_to_director_transitions_status_to_recommended(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = "Low"
+    ci.verification_1_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    recommended = _status("Recommended", 3)
+    repo.get_status_by_name.return_value = recommended
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.recommend_to_director(ci, mock_user)
+
+    assert ci.status_id == recommended.ci_application_status_id
+    assert ci.recommendation_date is not None
+    repo.get_status_by_name.assert_awaited_with("Recommended")
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_recommend_to_director_requires_analyst_role(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = "Low"
+    ci.verification_1_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.recommend_to_director(ci, mock_user)
+
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_step5_decision_accepts_recommended_status(service, repo, mock_user):
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci = _ci_application(status=_status("Recommended", 3))
+    completed = _status("Completed", 4)
+    repo.get_status_by_name.return_value = completed
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Completed"), mock_user, is_government=True
+    )
+
+    assert ci.status_id == completed.ci_application_status_id
+    assert ci.approval_date is not None
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_can_return_recommended_to_submitted(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci = _ci_application(status=_status("Recommended", 3))
+    ci.recommendation_user_id = 55
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    submitted = _status("Submitted", 2)
+    repo.get_status_by_name.return_value = submitted
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Submitted"), mock_user, is_government=False
+    )
+
+    assert ci.status_id == submitted.ci_application_status_id
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = 12
+    ci.preliminary_risk_assessment = "High"
+    ci.priority_score = 511
+    ci.verification_1_user_id = 22
+    ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
+    ci.verification_2_user_id = 33
+    ci.verification_2_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "Medium"
+    ci.verification_2_priority_score = 426
+    ci.recommendation_user_id = 44
+    ci.recommendation_date = datetime(2026, 5, 21, tzinfo=timezone.utc)
+    draft = _status("Draft", 1)
+    repo.get_status_by_name.return_value = draft
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Draft"), mock_user, is_government=True
+    )
+
+    assert ci.status_id == draft.ci_application_status_id
+    assert ci.assigned_analyst_id is None
+    assert ci.preliminary_risk_assessment is None
+    assert ci.priority_score is None
+    assert ci.verification_1_user_id is None
+    assert ci.verification_1_date is None
+    assert ci.verification_2_user_id is None
+    assert ci.verification_2_date is None
+    assert ci.verification_2_risk_assessment is None
+    assert ci.verification_2_priority_score is None
+    assert ci.recommendation_user_id is None
+    assert ci.recommendation_date is None
+    assert ci.approval_user_id is None
+    assert ci.approval_date is None
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_rejects_draft_pathway_change_for_non_analyst(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci = _ci_application(status=_status("Submitted", 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload("Draft"), mock_user, is_government=True
+        )
+
+    assert exc.value.status_code == 403
 
 
 @pytest.mark.anyio
 async def test_step5_decision_transitions_to_completed(service, repo, mock_user):
-    ci = _ci_application(status=_status("Submitted", 2))
-    completed = _status("Completed", 3)
+    mock_user.role_names = {RoleEnum.DIRECTOR}
+    ci = _ci_application(status=_status("Recommended", 3))
+    completed = _status("Completed", 4)
     repo.get_status_by_name.return_value = completed
     repo.update.side_effect = lambda obj: obj
     repo.add_history.return_value = MagicMock()
@@ -784,4 +961,4 @@ async def test_step5_decision_schema_rejects_non_terminal_status():
         CIApplicationDecisionSchema,
     )
     with pytest.raises(pydantic.ValidationError):
-        CIApplicationDecisionSchema(status="Submitted")
+        CIApplicationDecisionSchema(status="Recommended")

@@ -16,6 +16,7 @@ from fastapi import Depends, HTTPException, status
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import UserProfile
 from lcfs.db.models.ci_application import CIApplication, Pathway
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.ci_application.CIApplication import (
     CI_DOC_CATEGORY_GHGENIUS_MODEL,
     CI_DOC_CATEGORY_TECHNICAL_REPORT,
@@ -33,6 +34,8 @@ from lcfs.web.api.ci_application.schema import (
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
+    CIApplicationUserSchema,
+    CIRiskAssessmentEnum,
     CIApplicationStatusEnum,
     CIApplicationStatusSchema,
     CIApplicationsListSchema,
@@ -51,6 +54,7 @@ from lcfs.web.api.ci_application.schema import (
     PathwaySchema,
     UnitOfMeasureSchema,
 )
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -64,12 +68,29 @@ logger = structlog.get_logger(__name__)
 def _to_org_info(organization) -> Optional[OrganizationInfoSchema]:
     if organization is None:
         return None
+    org_address = getattr(organization, "org_address", None)
+    address_line = None
+    if org_address is not None:
+        address_line = ", ".join(
+            filter(
+                None,
+                [
+                    getattr(org_address, "street_address", None),
+                    getattr(org_address, "address_other", None),
+                    getattr(org_address, "city", None),
+                    getattr(org_address, "province_state", None),
+                    getattr(org_address, "country", None),
+                    getattr(org_address, "postalCode_zipCode", None),
+                ],
+            )
+        )
     return OrganizationInfoSchema(
         organization_id=organization.organization_id,
         name=organization.name,
         operating_name=organization.operating_name,
         email=organization.email,
         phone=organization.phone,
+        address_line=address_line or None,
     )
 
 
@@ -84,6 +105,8 @@ def _to_fuel_code_option(fc: FuelCode) -> FuelCodeOptionSchema:
         fuel_type=fc.fuel_type.fuel_type if fc.fuel_type else None,
         feedstock=fc.feedstock,
         feedstock_location=fc.feedstock_location,
+        effective_date=fc.effective_date,
+        expiration_date=fc.expiration_date,
     )
 
 
@@ -106,7 +129,9 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
         operating_data_from=pathway.operating_data_from,
         operating_data_to=pathway.operating_data_to,
         fuel_code_id=pathway.fuel_code_id,
-        fuel_code=_to_fuel_code_option(pathway.fuel_code) if pathway.fuel_code else None,
+        fuel_code=(
+            _to_fuel_code_option(pathway.fuel_code) if pathway.fuel_code else None
+        ),
         proposed_ci=pathway.proposed_ci,
         fuel_type_id=pathway.fuel_type_id,
         fuel_type=(
@@ -158,6 +183,33 @@ def _to_full_schema(
         consultant_email=ci.consultant_email,
         signature_user=ci.signature_user,
         signature_date_time=ci.signature_date_time,
+        preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
+        priority_score=getattr(ci, "priority_score", None),
+        assigned_analyst=CIApplicationUserSchema.model_validate(
+            getattr(ci, "assigned_analyst", None)
+        ),
+        verification_1_user=CIApplicationUserSchema.model_validate(
+            getattr(ci, "verification_1_user", None)
+        ),
+        verification_1_date=getattr(ci, "verification_1_date", None),
+        verification_2_user=CIApplicationUserSchema.model_validate(
+            getattr(ci, "verification_2_user", None)
+        ),
+        verification_2_date=getattr(ci, "verification_2_date", None),
+        verification_2_risk_assessment=getattr(
+            ci, "verification_2_risk_assessment", None
+        ),
+        verification_2_priority_score=getattr(
+            ci, "verification_2_priority_score", None
+        ),
+        recommendation_user=CIApplicationUserSchema.model_validate(
+            getattr(ci, "recommendation_user", None)
+        ),
+        recommendation_date=getattr(ci, "recommendation_date", None),
+        approval_user=CIApplicationUserSchema.model_validate(
+            getattr(ci, "approval_user", None)
+        ),
+        approval_date=getattr(ci, "approval_date", None),
     )
 
 
@@ -208,6 +260,7 @@ def _to_list_item(
         facility_nameplate_capacity=ci.facility_nameplate_capacity,
         facility_nameplate_capacity_unit_id=ci.facility_nameplate_capacity_unit_id,
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
+        preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
         assigned_analyst=_to_assigned_analyst(
@@ -228,9 +281,7 @@ class CIApplicationServices:
         self.repo = repo
         self.user_repo = user_repo
 
-    async def _to_full_schema_with_user(
-        self, ci: CIApplication
-    ) -> CIApplicationSchema:
+    async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
         """Serialize a CI application, resolving the signing-authority's
         Keycloak username to a human display name via the user profile.
         """
@@ -283,8 +334,13 @@ class CIApplicationServices:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int],
+        exclude_draft: bool = False,
     ) -> CIApplicationsListSchema:
-        items, total = await self.repo.list_paginated(pagination, organization_id)
+        items, total = await self.repo.list_paginated(
+            pagination,
+            organization_id,
+            exclude_draft=exclude_draft,
+        )
 
         latest_comments = (
             await self.repo.get_latest_comments_by_ci_application_ids(
@@ -316,6 +372,161 @@ class CIApplicationServices:
         if not ci:
             raise DataNotFoundException("CI application not found.")
         return await self._to_full_schema_with_user(ci)
+
+    async def _validate_analyst_eligibility(self, assigned_analyst_id: int) -> None:
+        assigned_analyst = await self.repo.get_user_by_id(assigned_analyst_id)
+        if not assigned_analyst:
+            raise DataNotFoundException("Assigned analyst not found.")
+
+        role_names = [user_role.role.name for user_role in assigned_analyst.user_roles]
+        is_idir_user = assigned_analyst.organization_id is None
+        if RoleEnum.ANALYST not in role_names or not is_idir_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assigned user must be an active IDIR analyst.",
+            )
+
+    @service_handler
+    async def get_available_analysts(self) -> List[CIApplicationUserSchema]:
+        analysts = await self.repo.get_active_idir_analysts()
+        return [CIApplicationUserSchema.model_validate(analyst) for analyst in analysts]
+
+    @service_handler
+    async def assign_analyst_to_application(
+        self,
+        ci_application: CIApplication,
+        assigned_analyst_id: Optional[int],
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        if assigned_analyst_id:
+            await self._validate_analyst_eligibility(assigned_analyst_id)
+
+        ci_application.assigned_analyst_id = assigned_analyst_id
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def complete_verification_1(
+        self,
+        ci_application: CIApplication,
+        risk_assessment: CIRiskAssessmentEnum,
+        priority_score: Optional[int],
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        self._require_submitted_workflow(ci_application)
+        ci_application.preliminary_risk_assessment = risk_assessment.value
+        ci_application.priority_score = priority_score
+        ci_application.verification_1_user_id = user.user_profile_id
+        ci_application.verification_1_date = datetime.now(timezone.utc)
+        ci_application.assigned_analyst_id = None
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def complete_verification_2(
+        self,
+        ci_application: CIApplication,
+        risk_assessment: Optional[CIRiskAssessmentEnum],
+        priority_score: Optional[int],
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        self._require_submitted_workflow(ci_application)
+        if ci_application.preliminary_risk_assessment not in {
+            CIRiskAssessmentEnum.Medium.value,
+            CIRiskAssessmentEnum.High.value,
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification 2 is only required for Medium or High risk applications.",
+            )
+        if not ci_application.verification_1_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification 1 must be completed first.",
+            )
+
+        ci_application.verification_2_risk_assessment = (
+            risk_assessment.value
+            if risk_assessment is not None
+            else ci_application.preliminary_risk_assessment
+        )
+        ci_application.verification_2_priority_score = (
+            priority_score
+            if priority_score is not None
+            else ci_application.priority_score
+        )
+        ci_application.verification_2_user_id = user.user_profile_id
+        ci_application.verification_2_date = datetime.now(timezone.utc)
+        ci_application.assigned_analyst_id = None
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def recommend_to_director(
+        self,
+        ci_application: CIApplication,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        if not user_has_roles(user, [RoleEnum.ANALYST]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only analysts can recommend CI applications to directors.",
+            )
+        self._require_submitted_workflow(ci_application)
+        risk = ci_application.preliminary_risk_assessment
+        requires_verification_2 = risk in {
+            CIRiskAssessmentEnum.Medium.value,
+            CIRiskAssessmentEnum.High.value,
+        }
+        if not ci_application.verification_1_date or (
+            requires_verification_2 and not ci_application.verification_2_date
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required verification steps must be completed first.",
+            )
+
+        ci_application.recommendation_user_id = user.user_profile_id
+        ci_application.recommendation_date = datetime.now(timezone.utc)
+        recommended_status = await self.repo.get_status_by_name(
+            CIApplicationStatusEnum.Recommended.value
+        )
+        if not recommended_status:
+            raise DataNotFoundException(
+                f"Status '{CIApplicationStatusEnum.Recommended.value}' is not configured."
+            )
+        ci_application.status_id = recommended_status.ci_application_status_id
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    def _require_submitted_workflow(self, ci_application: CIApplication) -> None:
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Submitted.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Workflow actions can only be recorded on Submitted applications.",
+            )
 
     # ------------------------------------------------------------------
     # Step 1 — create / update / delete draft
@@ -505,9 +716,7 @@ class CIApplicationServices:
             for row in data.pathways
         ]
 
-        await self.repo.replace_pathways(
-            ci_application.ci_application_id, new_rows
-        )
+        await self.repo.replace_pathways(ci_application.ci_application_id, new_rows)
 
         ci_application.pathway_description = data.pathway_description
         ci_application.update_user = user.keycloak_username
@@ -552,9 +761,7 @@ class CIApplicationServices:
         if missing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Missing required upload(s): " + ", ".join(missing) + "."
-                ),
+                detail=("Missing required upload(s): " + ", ".join(missing) + "."),
             )
 
         ci_application.supporting_document_other = data.supporting_document_other
@@ -581,7 +788,10 @@ class CIApplicationServices:
         and consultant info and validating that prior steps left the
         record in a submittable state.
         """
-        if ci_application.ci_application_status.status != CIApplicationStatusEnum.Draft.value:
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Draft.value
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only Draft applications can be submitted.",
@@ -661,27 +871,69 @@ class CIApplicationServices:
         is_government: bool,
     ) -> CIApplicationSchema:
         """
-        Government users transition a Submitted application to Completed
-        or Withdrawn. An optional comment is recorded as part of the
-        decision. The terminal state lock is enforced here so we never
-        re-decide an already-decided application.
+        Government-side workflow actions transition a CI application
+        between Draft, Submitted, Recommended, Completed, and Withdrawn
+        according to role-specific rules. The optional inline comment
+        remains ignored in favor of the shared internal_comments thread.
         """
-        if not is_government:
+        is_director = user_has_roles(user, [RoleEnum.DIRECTOR])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_compliance_manager = user_has_roles(user, [RoleEnum.COMPLIANCE_MANAGER])
+
+        if not (is_government or is_director or is_analyst or is_compliance_manager):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only government users can record a decision.",
             )
 
-        if (
-            ci_application.ci_application_status.status
-            != CIApplicationStatusEnum.Submitted.value
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "A decision can only be recorded on Submitted applications."
-                ),
-            )
+        current_status = ci_application.ci_application_status.status
+
+        if data.status == CIApplicationStatusEnum.Completed:
+            if not is_director:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only directors can approve CI applications.",
+                )
+            if current_status != CIApplicationStatusEnum.Recommended.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only Recommended applications can be approved.",
+                )
+        elif data.status == CIApplicationStatusEnum.Submitted:
+            if not is_director:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only directors can return CI applications to analysts.",
+                )
+            if current_status != CIApplicationStatusEnum.Recommended.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only Recommended applications can be returned to analysts.",
+                )
+        elif data.status == CIApplicationStatusEnum.Draft:
+            if not is_analyst:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only analysts can request CI pathway changes.",
+                )
+            if current_status != CIApplicationStatusEnum.Submitted.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Only Submitted applications can be returned to Draft for pathway changes."
+                    ),
+                )
+        else:
+            if current_status not in {
+                CIApplicationStatusEnum.Submitted.value,
+                CIApplicationStatusEnum.Recommended.value,
+            }:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "A decision can only be recorded on Submitted or Recommended applications."
+                    ),
+                )
 
         target_status = await self.repo.get_status_by_name(data.status.value)
         if not target_status:
@@ -690,6 +942,28 @@ class CIApplicationServices:
             )
 
         ci_application.status_id = target_status.ci_application_status_id
+        if data.status == CIApplicationStatusEnum.Completed:
+            ci_application.approval_user_id = user.user_profile_id
+            ci_application.approval_date = datetime.now(timezone.utc)
+        elif data.status == CIApplicationStatusEnum.Submitted:
+            ci_application.recommendation_user_id = None
+            ci_application.recommendation_date = None
+            ci_application.approval_user_id = None
+            ci_application.approval_date = None
+        elif data.status == CIApplicationStatusEnum.Draft:
+            ci_application.assigned_analyst_id = None
+            ci_application.preliminary_risk_assessment = None
+            ci_application.priority_score = None
+            ci_application.verification_1_user_id = None
+            ci_application.verification_1_date = None
+            ci_application.verification_2_user_id = None
+            ci_application.verification_2_date = None
+            ci_application.verification_2_risk_assessment = None
+            ci_application.verification_2_priority_score = None
+            ci_application.recommendation_user_id = None
+            ci_application.recommendation_date = None
+            ci_application.approval_user_id = None
+            ci_application.approval_date = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)

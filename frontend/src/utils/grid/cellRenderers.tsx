@@ -136,8 +136,9 @@ export const MultiSelectRenderer = (params: RendererProps): ReactElement => {
     const value = Array.isArray(params.value)
       ? params.value?.map(
           (item: unknown) =>
-            options.find((opt: { value: unknown; label: unknown }) => opt.value === item)
-              ?.label || item
+            options.find(
+              (opt: { value: unknown; label: unknown }) => opt.value === item
+            )?.label || item
         )
       : params.value
     return <CommonArrayRenderer disableLink value={value} />
@@ -394,9 +395,7 @@ export const YesNoTextRenderer = (props: RendererProps): ReactElement => (
   </BCBox>
 )
 
-export const FuelCodeStatusRenderer = (
-  props: RendererProps
-): ReactElement => {
+export const FuelCodeStatusRenderer = (props: RendererProps): ReactElement => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
   const statusColorArr: BCBadgeColor[] = ['info', 'info', 'success', 'error']
@@ -630,23 +629,29 @@ export const RoleSpanRenderer = (props: RendererProps): ReactElement => (
         (r: { name: string }) =>
           r.name !== roles.government && r.name !== roles.supplier
       )
-      .map((role: { roleId: string | number; name: string; isGovernmentRole: boolean }) => (
-        <BCBadge
-          key={role.roleId}
-          sx={{
-            '& .MuiBadge-badge': {
-              fontWeight: 'regular',
-              fontSize: '0.9rem',
-              padding: '0.4em 0.6em'
-            },
-            margin: '2px'
-          }}
-          badgeContent={role.name}
-          color={role.isGovernmentRole ? 'primary' : 'secondary'}
-          variant="outlined"
-          size="md"
-        />
-      ))}
+      .map(
+        (role: {
+          roleId: string | number
+          name: string
+          isGovernmentRole: boolean
+        }) => (
+          <BCBadge
+            key={role.roleId}
+            sx={{
+              '& .MuiBadge-badge': {
+                fontWeight: 'regular',
+                fontSize: '0.9rem',
+                padding: '0.4em 0.6em'
+              },
+              margin: '2px'
+            }}
+            badgeContent={role.name}
+            color={role.isGovernmentRole ? 'primary' : 'secondary'}
+            variant="outlined"
+            size="md"
+          />
+        )
+      )}
   </>
 )
 
@@ -934,9 +939,7 @@ export const RoleRenderer = (props: RendererProps): ReactElement => {
     : (value as string)
         .split(',')
         .map((role) => role.trim())
-        .filter(
-          (role) => role !== roles.government && role !== roles.supplier
-        )
+        .filter((role) => role !== roles.government && role !== roles.supplier)
 
   useEffect(() => {
     setIsGovernmentRole((value as string).includes(roles.government))
@@ -1081,9 +1084,7 @@ export const createStatusRenderer = (
     const location = useLocation()
 
     let statusValue: any = statusField.includes('.')
-      ? statusField
-          .split('.')
-          .reduce<any>((obj, key) => obj?.[key], data)
+      ? statusField.split('.').reduce<any>((obj, key) => obj?.[key], data)
       : data[statusField]
     if (
       statusValue &&
@@ -1146,6 +1147,19 @@ export const ChargingSiteStatusRenderer = createStatusRenderer(
     Validated: 'success',
     Updated: 'info',
     Decommissioned: 'error'
+  },
+  {
+    statusField: 'status.status'
+  }
+)
+
+export const CIApplicationStatusRenderer = createStatusRenderer(
+  {
+    Draft: 'info',
+    Submitted: 'warning',
+    Approved: 'success',
+    Completed: 'success',
+    Withdrawn: 'error'
   },
   {
     statusField: 'status.status'

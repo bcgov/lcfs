@@ -87,6 +87,13 @@ export const apiRoutes = {
   updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
   submitCIApplication: '/ci-applications/:ciApplicationId/submit',
   ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
+  ciApplicationAnalysts: '/ci-applications/analysts',
+  assignCIApplicationAnalyst: '/ci-applications/:ciApplicationId/assign',
+  completeCIApplicationVerification1:
+    '/ci-applications/:ciApplicationId/verification-1',
+  completeCIApplicationVerification2:
+    '/ci-applications/:ciApplicationId/verification-2',
+  recommendCIApplication: '/ci-applications/:ciApplicationId/recommend',
   ciApplicationGHGeniusTemplate: '/ci-applications/ghgenius-template',
   deleteCIApplication: '/ci-applications/:ciApplicationId',
 
@@ -116,6 +123,7 @@ export const apiRoutes = {
   getNotionalTransfers: '/notional-transfers/list',
   getAllNotionalTransfers: '/notional-transfers/list-all',
   saveNotionalTransfer: '/notional-transfers/save',
+  importNotionalTransfers: '/notional-transfers/import',
 
   // other-uses
   saveOtherUses: '/other-uses/save',

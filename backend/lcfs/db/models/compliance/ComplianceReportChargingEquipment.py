@@ -1,5 +1,5 @@
 import uuid
-from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.base import ActionTypeEnum, BaseModel, Auditable
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -11,6 +11,8 @@ from sqlalchemy import (
     DateTime,
     UniqueConstraint,
     Boolean,
+    Enum,
+    text,
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -31,6 +33,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
             "charging_equipment_version",
             "supply_from_date",
             "supply_to_date",
+            "version",
             name="uix_compliance_reporting_equipment_dates",
         ),
         UniqueConstraint(
@@ -38,6 +41,7 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
             "charging_equipment_id",
             "charging_equipment_version",
             "organization_id",
+            "version",
             name="uix_compliance_reporting_period_by_org",
         ),
         CheckConstraint(
@@ -90,6 +94,19 @@ class ComplianceReportChargingEquipment(BaseModel, Auditable):
         nullable=False,
         comment="Reference to organization",
         index=True,
+    )
+    version = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+        comment="Version number for this report-equipment association within its reporting group",
+    )
+    action_type = Column(
+        Enum(ActionTypeEnum, name="actiontypeenum"),
+        nullable=False,
+        server_default=text("'CREATE'"),
+        comment="Action type for this report-equipment association version",
     )
 
     # Required data columns

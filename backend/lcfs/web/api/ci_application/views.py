@@ -21,9 +21,13 @@ from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
+    CIApplicationAnalystAssignmentSchema,
     CIApplicationDecisionSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
+    CIApplicationUserSchema,
+    CIApplicationVerification1Schema,
+    CIApplicationVerification2Schema,
     CIApplicationStep1Schema,
     CIApplicationStep2Schema,
     CIApplicationStep3Schema,
@@ -58,6 +62,26 @@ async def get_table_options(
     return await service.get_table_options()
 
 
+@router.get(
+    "/analysts",
+    response_model=list[CIApplicationUserSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def get_available_ci_application_analysts(
+    request: Request,
+    service: CIApplicationServices = Depends(),
+) -> list[CIApplicationUserSchema]:
+    return await service.get_available_analysts()
+
+
 # ---------------------------------------------------------------------------
 # Listing & detail
 # ---------------------------------------------------------------------------
@@ -90,7 +114,11 @@ async def list_ci_applications(
                 },
             )
         organization_id = org.organization_id
-    return await service.list_ci_applications(pagination, organization_id)
+    return await service.list_ci_applications(
+        pagination,
+        organization_id,
+        exclude_draft=is_government,
+    )
 
 
 GHGENIUS_TEMPLATE_SHEETS = {
@@ -309,6 +337,109 @@ async def record_government_decision(
     ci = await validate.validate_access(ci_application_id)
     is_government = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
     return await service.record_decision(ci, data, request.user, is_government)
+
+
+@router.put(
+    "/{ci_application_id}/assign",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def assign_analyst_to_ci_application(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationAnalystAssignmentSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.assign_analyst_to_application(
+        ci, data.assigned_analyst_id, request.user
+    )
+
+
+@router.post(
+    "/{ci_application_id}/verification-1",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def complete_ci_application_verification_1(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationVerification1Schema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.complete_verification_1(
+        ci, data.preliminary_risk_assessment, data.priority_score, request.user
+    )
+
+
+@router.post(
+    "/{ci_application_id}/verification-2",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def complete_ci_application_verification_2(
+    request: Request,
+    ci_application_id: int,
+    data: CIApplicationVerification2Schema = Body(
+        default=CIApplicationVerification2Schema()
+    ),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.complete_verification_2(
+        ci, data.preliminary_risk_assessment, data.priority_score, request.user
+    )
+
+
+@router.post(
+    "/{ci_application_id}/recommend",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def recommend_ci_application_to_director(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.recommend_to_director(ci, request.user)
 
 
 # Step 5 comment thread is now served by the shared internal_comments

@@ -16,6 +16,10 @@ from lcfs.db.models.compliance import (
     CompliancePeriod,
     AllocationAgreement,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.db.models.compliance.ChargingSite import (
     ChargingSite,
     latest_charging_site_version_subquery,
@@ -717,6 +721,44 @@ class ChargingSiteRepository:
         result = await self.db.execute(stmt)
         updated_ids = [row[0] for row in result.fetchall()]
         return updated_ids
+
+    @repo_handler
+    async def deactivate_fse_for_decommissioned_equipment(
+        self, equipment_ids: List[int]
+    ) -> int:
+        """
+        Deactivate active FSE reporting rows on original draft reports when their
+        charging equipment has been decommissioned.
+        """
+        if not equipment_ids:
+            return 0
+
+        report_ids = (
+            select(ComplianceReport.compliance_report_id)
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(
+                ComplianceReportStatus.status == ComplianceReportStatusEnum.Draft,
+                ComplianceReport.supplemental_initiator.is_(None),
+            )
+        )
+
+        result = await self.db.execute(
+            update(ComplianceReportChargingEquipment)
+            .where(
+                ComplianceReportChargingEquipment.charging_equipment_id.in_(
+                    equipment_ids
+                ),
+                ComplianceReportChargingEquipment.compliance_report_id.in_(report_ids),
+                ComplianceReportChargingEquipment.is_active.is_(True),
+            )
+            .values(is_active=False)
+        )
+        await self.db.flush()
+        return result.rowcount or 0
 
     @repo_handler
     async def get_charging_sites(

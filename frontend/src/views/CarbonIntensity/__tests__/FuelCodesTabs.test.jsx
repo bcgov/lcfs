@@ -6,6 +6,7 @@ import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
+import { CONFIG } from '@/constants/config'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -34,6 +35,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 describe('FuelCodesTabs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    CONFIG.feature_flags.ciApplications = true
     mockLocation = { pathname: ROUTES.CI_APPLICATIONS.LIST, search: '' }
     mockHasAnyRole = () => false
   })
@@ -92,47 +94,7 @@ describe('FuelCodesTabs', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows the IDIR-only Fuel codes (manage) tab for government users', () => {
-    mockHasAnyRole = (...names) => names.includes(roles.government)
-    render(<FuelCodesTabs />, { wrapper })
-
-    expect(
-      screen.getByText('carbonIntensity:tabs.fuelCodes')
-    ).toBeInTheDocument()
-  })
-
-  it('navigates to /fuel-codes when the IDIR Fuel codes tab is clicked', () => {
-    mockHasAnyRole = (...names) => names.includes(roles.government)
-    render(<FuelCodesTabs />, { wrapper })
-
-    fireEvent.click(screen.getByText('carbonIntensity:tabs.fuelCodes'))
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
-  })
-
-  it('hides Current and Archived bulletin tabs from government users', () => {
-    mockHasAnyRole = (...names) => names.includes(roles.government)
-    render(<FuelCodesTabs />, { wrapper })
-
-    expect(
-      screen.queryByText('carbonIntensity:tabs.currentFuelCodes')
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByText('carbonIntensity:tabs.archivedFuelCodes')
-    ).not.toBeInTheDocument()
-  })
-
-  it('marks the Fuel codes (manage) tab active on /fuel-codes for IDIR', () => {
-    mockHasAnyRole = (...names) => names.includes(roles.government)
-    mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
-    render(<FuelCodesTabs />, { wrapper })
-
-    const tab = screen
-      .getByText('carbonIntensity:tabs.fuelCodes')
-      .closest('[role="tab"]')
-    expect(tab.getAttribute('aria-selected')).toBe('true')
-  })
-
-  it('shows CI applicants the My fuel codes tab (not the IDIR Fuel codes tab)', () => {
+  it('shows CI applicants the My fuel codes tab (not the internal Fuel codes tab)', () => {
     mockHasAnyRole = (...names) => names.includes(roles.ci_applicant)
     render(<FuelCodesTabs />, { wrapper })
 
@@ -142,6 +104,178 @@ describe('FuelCodesTabs', () => {
     expect(
       screen.queryByText('carbonIntensity:tabs.fuelCodes')
     ).not.toBeInTheDocument()
+  })
+
+  describe('government user on bulletins page (route-based internal detection)', () => {
+    beforeEach(() => {
+      mockHasAnyRole = (...names) => names.includes(roles.government)
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.BULLETINS,
+        search: '?type=archived'
+      }
+    })
+
+    it('shows the merged Fuel Codes tab set', () => {
+      render(<FuelCodesTabs />, { wrapper })
+
+      expect(
+        screen.getByText('carbonIntensity:tabs.ciApplications')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.fuelCodes')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.currentFuelCodes')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('carbonIntensity:tabs.myFuelCodes')
+      ).not.toBeInTheDocument()
+    })
+
+    it('marks the Archived tab active when on the archived bulletins page', () => {
+      render(<FuelCodesTabs />, { wrapper })
+
+      const tab = screen
+        .getByText('carbonIntensity:tabs.archivedFuelCodes')
+        .closest('[role="tab"]')
+      expect(tab.getAttribute('aria-selected')).toBe('true')
+    })
+
+    it('Archived tab navigates to /fuel-codes?type=archived', () => {
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.BULLETINS,
+        search: ''
+      }
+      render(<FuelCodesTabs />, { wrapper })
+
+      fireEvent.click(
+        screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
+      )
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `${ROUTES.FUEL_CODES.LIST}?type=archived`
+      )
+    })
+  })
+
+  describe('variant="internal" (IDIR Fuel codes page)', () => {
+    beforeEach(() => {
+      mockHasAnyRole = (...names) => names.includes(roles.government)
+    })
+
+    it('renders CI applications, Fuel codes, Current and Archived tabs (no My fuel codes)', () => {
+      mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      expect(
+        screen.getByText('carbonIntensity:tabs.ciApplications')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.fuelCodes')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.currentFuelCodes')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('carbonIntensity:tabs.myFuelCodes')
+      ).not.toBeInTheDocument()
+    })
+
+    it('marks the Fuel codes tab active on /fuel-codes (no type param)', () => {
+      mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      const tab = screen
+        .getByText('carbonIntensity:tabs.fuelCodes')
+        .closest('[role="tab"]')
+      expect(tab.getAttribute('aria-selected')).toBe('true')
+    })
+
+    it('marks the Current tab active on /fuel-codes?type=current', () => {
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.LIST,
+        search: '?type=current'
+      }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      const tab = screen
+        .getByText('carbonIntensity:tabs.currentFuelCodes')
+        .closest('[role="tab"]')
+      expect(tab.getAttribute('aria-selected')).toBe('true')
+    })
+
+    it('marks the Archived tab active on /fuel-codes?type=archived', () => {
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.LIST,
+        search: '?type=archived'
+      }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      const tab = screen
+        .getByText('carbonIntensity:tabs.archivedFuelCodes')
+        .closest('[role="tab"]')
+      expect(tab.getAttribute('aria-selected')).toBe('true')
+    })
+
+    it('Fuel codes tab navigates to /fuel-codes', () => {
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.LIST,
+        search: '?type=archived'
+      }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      fireEvent.click(screen.getByText('carbonIntensity:tabs.fuelCodes'))
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
+    })
+
+    it('Current tab navigates to /fuel-codes?type=current', () => {
+      mockLocation = {
+        pathname: ROUTES.FUEL_CODES.LIST,
+        search: '?type=archived'
+      }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      fireEvent.click(screen.getByText('carbonIntensity:tabs.currentFuelCodes'))
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `${ROUTES.FUEL_CODES.LIST}?type=current`
+      )
+    })
+
+    it('Archived tab navigates to /fuel-codes?type=archived', () => {
+      mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      fireEvent.click(
+        screen.getByText('carbonIntensity:tabs.archivedFuelCodes')
+      )
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `${ROUTES.FUEL_CODES.LIST}?type=archived`
+      )
+    })
+
+    it('CI applications tab navigates to /ci-applications', () => {
+      mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+      render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+      fireEvent.click(screen.getByText('carbonIntensity:tabs.ciApplications'))
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
+    })
+  })
+
+  it('shows CI applications on the internal Fuel Codes tab set even when no role matches govRoles', () => {
+    mockHasAnyRole = () => false
+    mockLocation = { pathname: ROUTES.FUEL_CODES.LIST, search: '' }
+
+    render(<FuelCodesTabs variant="internal" />, { wrapper })
+
+    expect(
+      screen.getByText('carbonIntensity:tabs.ciApplications')
+    ).toBeInTheDocument()
   })
 
   it('navigates to the corresponding route when a tab is clicked', () => {
