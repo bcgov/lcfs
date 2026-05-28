@@ -176,12 +176,18 @@ class AllocationAgreementCreateSchema(BaseSchema):
     @model_validator(mode="before")
     @classmethod
     def check_fuel_code_required(cls, values):
+        # Deletions reuse this schema but may carry incomplete rows (e.g. a
+        # duplicate line the user never finished). Skip required-field checks.
+        if isinstance(values, dict) and values.get("deleted"):
+            return values
         return fuel_code_required_label(values)
 
     @model_validator(mode="before")
     @classmethod
     def check_quantity_required(cls, values):
-        if isinstance(values, DeleteAllocationAgreementResponseSchema):
+        # Deletions reuse this schema but may carry incomplete rows (e.g. a
+        # duplicate line with no quantity). Quantity is irrelevant on delete.
+        if isinstance(values, dict) and values.get("deleted"):
             return values
         return fuel_quantity_required(values)
 
