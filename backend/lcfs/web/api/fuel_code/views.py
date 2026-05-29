@@ -44,7 +44,9 @@ get_async_db = dependencies.get_async_db_session
 def resolve_bulletin_type(
     bulletin_type: Optional[str], bulletin_type_snake: Optional[str]
 ) -> str:
-    resolved_bulletin_type = (bulletin_type or bulletin_type_snake or "").strip().lower()
+    resolved_bulletin_type = (
+        (bulletin_type or bulletin_type_snake or "").strip().lower()
+    )
 
     if resolved_bulletin_type not in {"current", "archived"}:
         raise HTTPException(
@@ -197,9 +199,7 @@ async def export_fuel_codes(
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    return await exporter.export(
-        format, pagination, exclude_archived=exclude_archived
-    )
+    return await exporter.export(format, pagination, exclude_archived=exclude_archived)
 
 
 @router.post(
@@ -216,15 +216,11 @@ async def get_fuel_code_bulletins(
     bulletin_type_snake: Optional[str] = Query(
         None, alias="bulletin_type", description="Type: 'current' or 'archived'"
     ),
-    pagination: PaginationRequestSchema = Body(
-        PaginationRequestSchema(), embed=False
-    ),
+    pagination: PaginationRequestSchema = Body(PaginationRequestSchema(), embed=False),
     service: FuelCodeServices = Depends(),
 ) -> FuelCodeBulletinsSchema:
     """Fetch paginated Bulletin 12 (current) or Bulletin 12a (archived) fuel code data."""
-    resolved_bulletin_type = resolve_bulletin_type(
-        bulletin_type, bulletin_type_snake
-    )
+    resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
 
     return await service.get_fuel_code_bulletins(resolved_bulletin_type, pagination)
 
@@ -244,13 +240,17 @@ async def export_fuel_code_bulletins(
     bulletin_type_snake: Optional[str] = Query(
         None, alias="bulletin_type", description="Type: 'current' or 'archived'"
     ),
+    idir: bool = Query(
+        default=False,
+        description="If true, export the full IDIR column set.",
+    ),
     pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeBulletinExporter = Depends(),
 ):
-    resolved_bulletin_type = resolve_bulletin_type(
-        bulletin_type, bulletin_type_snake
+    resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
+    return await exporter.export(
+        resolved_bulletin_type, format, pagination, is_idir=idir
     )
-    return await exporter.export(resolved_bulletin_type, format, pagination)
 
 
 @router.get(

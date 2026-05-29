@@ -9,10 +9,13 @@ import ROUTES from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 
 const BULLETINS_PATH = ROUTES.FUEL_CODES.BULLETINS
+const APPROVED_CI_PATH = ROUTES.APPROVED_CARBON_INTENSITIES
 const FUEL_CODES_PATH = ROUTES.FUEL_CODES.LIST
 const CI_APPLICATIONS_PATH = ROUTES.CI_APPLICATIONS.LIST
 
 const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
+const isOnApprovedCI = (loc) => loc.pathname === APPROVED_CI_PATH
+const isOnBulletinsOrPublic = (loc) => isOnBulletins(loc) || isOnApprovedCI(loc)
 const isOnInternalFuelCodes = (loc) => loc.pathname === FUEL_CODES_PATH
 const isOnCIApplications = (loc) =>
   loc.pathname.startsWith(CI_APPLICATIONS_PATH)
@@ -104,18 +107,21 @@ const buildTabs = ({
   }
 
   if (!isGovernment) {
+    const basePath = isOnApprovedCI(location)
+      ? APPROVED_CI_PATH
+      : BULLETINS_PATH
     tabs.push(
       {
         key: 'current',
         labelKey: 'carbonIntensity:tabs.currentFuelCodes',
-        path: BULLETINS_PATH,
-        isActive: (loc) => isOnBulletins(loc) && !isArchivedQuery(loc)
+        path: basePath,
+        isActive: (loc) => isOnBulletinsOrPublic(loc) && !isArchivedQuery(loc)
       },
       {
         key: 'archived',
         labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
-        path: `${BULLETINS_PATH}?type=archived`,
-        isActive: (loc) => isOnBulletins(loc) && isArchivedQuery(loc)
+        path: `${basePath}?type=archived`,
+        isActive: (loc) => isOnBulletinsOrPublic(loc) && isArchivedQuery(loc)
       }
     )
   }

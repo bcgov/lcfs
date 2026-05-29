@@ -143,6 +143,25 @@ class FuelCodeRepository:
             FuelCodeListView.carbon_intensity,
             FuelCodeListView.effective_date,
             FuelCodeListView.expiration_date,
+            FuelCodeListView.status,
+            FuelCodeListView.edrms,
+            FuelCodeListView.contact_name,
+            FuelCodeListView.contact_email,
+            FuelCodeListView.application_date,
+            FuelCodeListView.approval_date,
+            FuelCodeListView.feedstock,
+            FuelCodeListView.feedstock_location,
+            FuelCodeListView.feedstock_misc,
+            FuelCodeListView.co_processed,
+            FuelCodeListView.fuel_production_facility_city,
+            FuelCodeListView.fuel_production_facility_province_state,
+            FuelCodeListView.fuel_production_facility_country,
+            FuelCodeListView.facility_nameplate_capacity,
+            FuelCodeListView.facility_nameplate_capacity_unit,
+            FuelCodeListView.feedstock_fuel_transport_modes,
+            FuelCodeListView.finished_fuel_transport_modes,
+            FuelCodeListView.former_company,
+            FuelCodeListView.notes,
         ).where(
             cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
         )
@@ -228,11 +247,17 @@ class FuelCodeRepository:
             r = row._mapping
             effective_date = r["effective_date"]
             expiration_date = r["expiration_date"]
+            application_date = r["application_date"]
+            approval_date = r["approval_date"]
 
             if isinstance(effective_date, datetime):
                 effective_date = effective_date.date()
             if isinstance(expiration_date, datetime):
                 expiration_date = expiration_date.date()
+            if isinstance(application_date, datetime):
+                application_date = application_date.date()
+            if isinstance(approval_date, datetime):
+                approval_date = approval_date.date()
 
             formatted_rows.append(
                 {
@@ -242,6 +267,35 @@ class FuelCodeRepository:
                     "carbon_intensity": r["carbon_intensity"],
                     "effective_date": effective_date,
                     "expiry_date": expiration_date,
+                    "prefix": r["prefix"],
+                    "fuel_suffix": r["fuel_suffix"],
+                    "status": r["status"],
+                    "edrms": r["edrms"],
+                    "contact_name": r["contact_name"],
+                    "contact_email": r["contact_email"],
+                    "application_date": application_date,
+                    "approval_date": approval_date,
+                    "feedstock": r["feedstock"],
+                    "feedstock_location": r["feedstock_location"],
+                    "feedstock_misc": r["feedstock_misc"],
+                    "co_processed": r["co_processed"],
+                    "fuel_production_facility_city": r["fuel_production_facility_city"],
+                    "fuel_production_facility_province_state": r[
+                        "fuel_production_facility_province_state"
+                    ],
+                    "fuel_production_facility_country": r[
+                        "fuel_production_facility_country"
+                    ],
+                    "facility_nameplate_capacity": r["facility_nameplate_capacity"],
+                    "facility_nameplate_capacity_unit": r[
+                        "facility_nameplate_capacity_unit"
+                    ],
+                    "feedstock_fuel_transport_modes": r[
+                        "feedstock_fuel_transport_modes"
+                    ],
+                    "finished_fuel_transport_modes": r["finished_fuel_transport_modes"],
+                    "former_company": r["former_company"],
+                    "notes": r["notes"],
                 }
             )
 
@@ -937,8 +991,7 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
-        query = text(
-            """
+        query = text("""
             WITH parsed_codes AS (
                 SELECT SPLIT_PART(fc.fuel_suffix, '.', 1)::INTEGER AS base_code
                 FROM fuel_code fc
@@ -972,16 +1025,14 @@ class FuelCodeRepository:
             )
             SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
             FROM next_code;
-            """
-        )
+            """)
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
         self, input_version: str, prefix_id: int
     ) -> str:
-        query = text(
-            """
+        query = text("""
             WITH split_versions AS (
                 SELECT
                     fuel_suffix,
@@ -1014,8 +1065,7 @@ class FuelCodeRepository:
                 COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR,
                         (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR)
                 AS next_available_version
-            """
-        )
+            """)
         result = (
             await self.db.execute(
                 query, {"input_version": int(input_version), "prefix_id": prefix_id}

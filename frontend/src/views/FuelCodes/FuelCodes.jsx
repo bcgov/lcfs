@@ -21,6 +21,7 @@ import { fuelCodeColDefs, defaultSortModel } from './_schema'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
 import { ArchivedFuelCodes } from '@/views/FuelCodeBulletins/components/ArchivedFuelCodes'
+import { CurrentFuelCodes } from '@/views/FuelCodeBulletins/components/CurrentFuelCodes'
 
 const convertToBackendFilters = (model = {}) =>
   Object.entries(model).map(([field, cfg]) => ({
@@ -61,8 +62,9 @@ const FuelCodesBase = () => {
   const isCurrent = tabType === 'current'
 
   const queryData = useGetFuelCodes(
-    { ...paginationOptions, excludeArchived: isCurrent },
+    { ...paginationOptions },
     {
+      enabled: !isArchived && !isCurrent,
       cacheTime: 0,
       staleTime: 0
     }
@@ -112,8 +114,7 @@ const FuelCodesBase = () => {
     try {
       await downloadFuelCodes({
         format: 'xlsx',
-        body: buildExportPayload(),
-        excludeArchived: isCurrent
+        body: buildExportPayload()
       })
       setIsDownloading(false)
     } catch (error) {
@@ -139,6 +140,8 @@ const FuelCodesBase = () => {
 
       {isArchived ? (
         <ArchivedFuelCodes />
+      ) : isCurrent ? (
+        <CurrentFuelCodes />
       ) : (
         <>
           <div>
@@ -149,9 +152,7 @@ const FuelCodesBase = () => {
             )}
           </div>
           <BCTypography variant="h5" color="primary" data-test="title">
-            {isCurrent
-              ? t('fuelCode:currentFuelCodes')
-              : t('fuelCode:fuelCodes')}
+            {t('fuelCode:fuelCodes')}
           </BCTypography>
           <Stack
             direction={{ md: 'column', lg: 'row' }}
