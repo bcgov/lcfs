@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
-  FormControl,
   FormControlLabel,
   OutlinedInput,
   Radio,
@@ -20,17 +19,23 @@ import { roles } from '@/constants/roles'
 import {
   useCompleteCIApplicationVerification1,
   useCompleteCIApplicationVerification2,
+  useGenerateCIApplicationFuelCodes,
   useRecommendCIApplication,
   useRecordCIDecision
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
-/**
- * Step 5 — Government decision. Renders the shared comments widget
- * (entityType="ciApplication", commentMode="dual" — gov posts Internal
- * or Public, BCeID posts Public-only) plus, for government users, a
- * panel to record the terminal decision.
- */
+type GovernmentDecisionStepProps = {
+  ciApplication: any
+  isGovernment?: boolean
+  readOnly?: boolean
+  onDocumentUploadClick?: (() => void) | null
+  showDecisionPanel?: boolean
+  showComments?: boolean
+  showTitle?: boolean
+  showCommentsTitle?: boolean
+}
+
 export const GovernmentDecisionStep = ({
   ciApplication,
   isGovernment = false,
@@ -40,7 +45,7 @@ export const GovernmentDecisionStep = ({
   showComments = true,
   showTitle = true,
   showCommentsTitle = true
-}) => {
+}: GovernmentDecisionStepProps) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
   const { hasAnyRole } = useCurrentUser()
@@ -53,14 +58,16 @@ export const GovernmentDecisionStep = ({
     useCompleteCIApplicationVerification2(ciApplicationId)
   const { mutateAsync: recommendToDirector, isPending: isRecommending } =
     useRecommendCIApplication(ciApplicationId)
+  const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
+    useGenerateCIApplicationFuelCodes(ciApplicationId)
 
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const status = ciApplication?.status?.status
   const isDirector = hasAnyRole?.(roles.director)
   const isAnalyst = hasAnyRole?.(roles.analyst)
+  const isComplianceManager = hasAnyRole?.(roles.compliance_manager)
   const isRecommended = status === 'Recommended'
-  const isApproved = status === 'Completed'
   const isSubmitted = status === 'Submitted'
   const [riskAssessment, setRiskAssessment] = useState(
     ciApplication?.preliminaryRiskAssessment || 'Low'
@@ -69,13 +76,13 @@ export const GovernmentDecisionStep = ({
     ciApplication?.priorityScore || ''
   )
 
-  const recordDecisionFor = async (status) => {
+  const recordDecisionFor = async (nextStatus: string) => {
     setError(null)
     setSuccess(null)
     try {
-      await recordDecision({ status })
+      await recordDecision({ status: nextStatus })
       setSuccess(t('carbonIntensity:step5.decisionSuccess'))
-    } catch (err) {
+    } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -84,13 +91,16 @@ export const GovernmentDecisionStep = ({
     }
   }
 
-  const recordWorkflowAction = async (action, successMessage) => {
+  const recordWorkflowAction = async (
+    action: () => Promise<any>,
+    successMessage: string
+  ) => {
     setError(null)
     setSuccess(null)
     try {
       await action()
       setSuccess(successMessage)
-    } catch (err) {
+    } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -103,6 +113,7 @@ export const GovernmentDecisionStep = ({
     ciApplication?.preliminaryRiskAssessment === 'Medium' ||
     ciApplication?.preliminaryRiskAssessment === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
+  const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
   const showVerification1Panel =
     isAnalyst && isSubmitted && !ciApplication?.verification1Date
   const showVerification2Panel =
@@ -117,6 +128,13 @@ export const GovernmentDecisionStep = ({
     ciApplication?.verification1Date &&
     (!requiresVerification2 || ciApplication?.verification2Date) &&
     !ciApplication?.recommendationDate
+  const showGenerateFuelCodesButton =
+    (isAnalyst || isComplianceManager || isDirector) &&
+    isSubmitted &&
+    ciApplication?.verification1Date &&
+    (!requiresVerification2 || ciApplication?.verification2Date) &&
+    !ciApplication?.recommendationDate &&
+    generatedFuelCodesCount === 0
   const showDirectorDecisionPanel = isDirector && isRecommended
   const activeVerificationLabel = showVerification2Panel
     ? 'Verification 2'
@@ -138,22 +156,25 @@ export const GovernmentDecisionStep = ({
       )}
 
       {error && (
-        <BCAlert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
+        <BCAlert severity="error" sx={{ mb: 1 }}>
           {error}
         </BCAlert>
       )}
       {success && (
-        <BCAlert
-          severity="success"
-          sx={{ mb: 1 }}
-          onClose={() => setSuccess(null)}
-        >
+        <BCAlert severity="success" sx={{ mb: 1 }}>
           {success}
         </BCAlert>
       )}
 
       {showDecisionPanel && isGovernment && (
-        <Role roles={[roles.government, roles.analyst, roles.director]}>
+        <Role
+          roles={[
+            roles.government,
+            roles.analyst,
+            roles.compliance_manager,
+            roles.director
+          ]}
+        >
           <Box
             sx={{
               bgcolor: 'background.grey',
@@ -187,7 +208,6 @@ export const GovernmentDecisionStep = ({
                       onChange={(event) =>
                         setRiskAssessment(event.target.value)
                       }
-                      spacing={2}
                     >
                       <FormControlLabel
                         labelPlacement="start"
@@ -221,8 +241,7 @@ export const GovernmentDecisionStep = ({
                     </BCTypography>
                     <OutlinedInput
                       type="number"
-                      min={0}
-                      max={1000}
+                      inputProps={{ min: 0, max: 1000 }}
                       value={priorityScore}
                       onChange={(event) => {
                         let value = Number(event.target.value)
@@ -276,7 +295,7 @@ export const GovernmentDecisionStep = ({
                           priorityScore: priorityScore
                             ? Number(priorityScore)
                             : undefined
-                        }),
+                        } as any),
                       t('carbonIntensity:step5.workflowSuccess')
                     )
                   }
@@ -300,13 +319,31 @@ export const GovernmentDecisionStep = ({
                           priorityScore: priorityScore
                             ? Number(priorityScore)
                             : undefined
-                        }),
+                        } as any),
                       t('carbonIntensity:step5.workflowSuccess')
                     )
                   }
                   data-test="ci-verification-2-complete-btn"
                 >
                   {t('carbonIntensity:step5.verification2Complete')}
+                </BCButton>
+              )}
+              {showGenerateFuelCodesButton && (
+                <BCButton
+                  type="button"
+                  variant="contained"
+                  color="primary"
+                  sx={workflowButtonSx}
+                  disabled={readOnly || isGeneratingFuelCodes}
+                  onClick={() =>
+                    recordWorkflowAction(
+                      () => generateFuelCodes(),
+                      t('carbonIntensity:step5.workflowSuccess')
+                    )
+                  }
+                  data-test="ci-generate-fuel-codes-btn"
+                >
+                  {t('carbonIntensity:step5.generateFuelCodes')}
                 </BCButton>
               )}
               {showRecommendPanel && (

@@ -7,8 +7,8 @@ decision (with the comments thread).
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from datetime import date, datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -28,11 +28,14 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
 )
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.ci_application.schema import (
     AssignedAnalystSchema,
     CIApplicationBaseSchema,
     CIApplicationDecisionSchema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
     CIApplicationUserSchema,
     CIRiskAssessmentEnum,
@@ -149,6 +152,40 @@ def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
     )
 
 
+def _generated_validation_message(validation_errors: Dict[str, str]) -> Optional[str]:
+    if not validation_errors:
+        return None
+    if len(validation_errors) == 1:
+        field, message = next(iter(validation_errors.items()))
+        return f"{field}: {message}"
+    return "Fill in the missing required fields."
+
+
+def _to_generated_fuel_code_schema(row: Dict[str, Any]) -> CIGeneratedFuelCodeSchema:
+    return CIGeneratedFuelCodeSchema.model_validate(row or {})
+
+
+def _next_local_fuel_suffix(candidate: Optional[str], reserved: set[str]) -> Optional[str]:
+    if not candidate:
+        return candidate
+    next_value = candidate
+    while next_value in reserved:
+        if "." not in next_value:
+            next_value = f"{int(next_value) + 1:03d}.0"
+            continue
+        main_version, sub_version = next_value.split(".")
+        if sub_version == "0":
+            next_value = f"{int(main_version) + 1:03d}.0"
+        else:
+            next_value = f"{int(main_version):03d}.{int(sub_version) + 1}"
+    reserved.add(next_value)
+    return next_value
+
+
+def _user_has_any_role(user: UserProfile, role_names: List[RoleEnum]) -> bool:
+    return any(user_has_roles(user, [role_name]) for role_name in role_names)
+
+
 def _to_full_schema(
     ci: CIApplication,
     signature_user_display_name: Optional[str] = None,
@@ -173,6 +210,10 @@ def _to_full_schema(
         proposed_fuel_code_effective_date=ci.proposed_fuel_code_effective_date,
         pathway_description=ci.pathway_description,
         pathways=[_to_pathway_schema(p) for p in (getattr(ci, "pathways", None) or [])],
+        generated_fuel_codes=[
+            _to_generated_fuel_code_schema(row)
+            for row in (getattr(ci, "generated_fuel_codes", None) or [])
+        ],
         documents=[
             FileResponseSchema.model_validate(d)
             for d in (getattr(ci, "documents", None) or [])
@@ -277,9 +318,11 @@ class CIApplicationServices:
         self,
         repo: CIApplicationRepository = Depends(CIApplicationRepository),
         user_repo: UserRepository = Depends(UserRepository),
+        fuel_repo: FuelCodeRepository = Depends(FuelCodeRepository),
     ) -> None:
         self.repo = repo
         self.user_repo = user_repo
+        self.fuel_repo = fuel_repo
 
     async def _to_full_schema_with_user(self, ci: CIApplication) -> CIApplicationSchema:
         """Serialize a CI application, resolving the signing-authority's
@@ -291,6 +334,257 @@ class CIApplicationServices:
             if display_name:
                 display_name = display_name.strip() or None
         return _to_full_schema(ci, signature_user_display_name=display_name)
+
+    @service_handler
+    async def generate_fuel_codes(
+        self,
+        ci_application: CIApplication,
+        user: UserProfile,
+    ) -> CIApplicationSchema:
+        if not _user_has_any_role(
+            user,
+            [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only internal users can generate fuel codes.",
+            )
+        self._require_submitted_workflow(ci_application)
+        risk = ci_application.preliminary_risk_assessment
+        requires_verification_2 = risk in {
+            CIRiskAssessmentEnum.Medium.value,
+            CIRiskAssessmentEnum.High.value,
+        }
+        if not ci_application.verification_1_date or (
+            requires_verification_2 and not ci_application.verification_2_date
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Required verification steps must be completed first.",
+            )
+        if self._get_generated_fuel_codes(ci_application):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Fuel codes have already been generated for this application.",
+            )
+
+        prefix_map = await self._get_fuel_code_prefix_map()
+        application_date = (
+            ci_application.signature_date_time.date()
+            if ci_application.signature_date_time
+            else date.today()
+        )
+        reserved_suffixes_by_prefix: Dict[str, set[str]] = {}
+
+        generated_rows: List[dict] = []
+        for index, pathway in enumerate(ci_application.pathways or [], start=1):
+            prefix_id, prefix_name, fuel_suffix = (
+                await self._resolve_generated_prefix_and_suffix(
+                    pathway,
+                    prefix_map,
+                    ci_application.facility_country,
+                )
+            )
+            if prefix_name:
+                reserved_suffixes = reserved_suffixes_by_prefix.setdefault(
+                    prefix_name, set()
+                )
+                fuel_suffix = _next_local_fuel_suffix(fuel_suffix, reserved_suffixes)
+            row = CIGeneratedFuelCodeSchema(
+                id=str(uuid.uuid4()),
+                pathway_id=pathway.pathway_id,
+                pathway_label=f"Pathway {index}",
+                prefix_id=prefix_id,
+                prefix=prefix_name,
+                fuel_suffix=fuel_suffix,
+                carbon_intensity=float(pathway.proposed_ci)
+                if pathway.proposed_ci is not None
+                else None,
+                edrms=None,
+                company=getattr(ci_application.organization, "name", None),
+                contact_name=ci_application.signature_user,
+                contact_email=getattr(ci_application.organization, "email", None),
+                application_date=application_date,
+                approval_date=None,
+                effective_date=ci_application.proposed_fuel_code_effective_date,
+                expiration_date=pathway.operating_data_to,
+                fuel_type_id=pathway.fuel_type_id,
+                feedstock=pathway.feedstock,
+                feedstock_location=pathway.feedstock_region,
+                co_processed="No",
+                fuel_production_facility_city=ci_application.facility_city,
+                fuel_production_facility_province_state=ci_application.facility_province_state,
+                fuel_production_facility_country=ci_application.facility_country,
+                facility_nameplate_capacity=ci_application.facility_nameplate_capacity,
+                facility_nameplate_capacity_unit=(
+                    ci_application.facility_nameplate_capacity_unit.name
+                    if ci_application.facility_nameplate_capacity_unit
+                    else None
+                ),
+                feedstock_fuel_transport_mode=[pathway.feedstock_transport_mode]
+                if pathway.feedstock_transport_mode
+                else [],
+                finished_fuel_transport_mode=[pathway.finished_fuel_transport_mode]
+                if pathway.finished_fuel_transport_mode
+                else [],
+            ).model_dump(mode="json")
+            generated_rows.append(self._validate_generated_fuel_code_row(row))
+
+        ci_application.generated_fuel_codes = generated_rows
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+
+        ci = await self.repo.get_by_id(ci_application.ci_application_id)
+        return await self._to_full_schema_with_user(ci)
+
+    @service_handler
+    async def update_generated_fuel_code(
+        self,
+        ci_application: CIApplication,
+        generated_fuel_code_id: str,
+        data: CIGeneratedFuelCodeUpdateSchema,
+        user: UserProfile,
+    ) -> CIGeneratedFuelCodeSchema:
+        if not _user_has_any_role(
+            user,
+            [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only internal users can update generated fuel codes.",
+            )
+        self._require_submitted_workflow(ci_application)
+
+        rows = self._get_generated_fuel_codes(ci_application)
+        row = next((item for item in rows if item.get("id") == generated_fuel_code_id), None)
+        if not row:
+            raise DataNotFoundException("Generated fuel code not found.")
+
+        row.update(data.model_dump(exclude_unset=True, mode="json"))
+        self._validate_generated_fuel_code_row(row)
+        ci_application.generated_fuel_codes = rows
+        ci_application.update_user = user.keycloak_username
+        ci_application.action_type = ActionTypeEnum.UPDATE
+        await self.repo.update(ci_application)
+        await self.repo.add_history(ci_application)
+        return _to_generated_fuel_code_schema(row)
+
+    def _get_generated_fuel_codes(self, ci_application: CIApplication) -> List[dict]:
+        return list(getattr(ci_application, "generated_fuel_codes", None) or [])
+
+    async def _get_fuel_code_prefix_map(self) -> Dict[str, Any]:
+        prefixes = await self.fuel_repo.get_fuel_code_prefixes()
+        return {prefix.prefix: prefix for prefix in prefixes}
+
+    async def _resolve_generated_prefix_and_suffix(
+        self,
+        pathway: Pathway,
+        prefix_map: Dict[str, Any],
+        facility_country: Optional[str],
+    ) -> tuple[Optional[int], Optional[str], Optional[str]]:
+        if pathway.fuel_code_id and pathway.fuel_code and pathway.fuel_code.prefix_id:
+            prefix_id = pathway.fuel_code.prefix_id
+            prefix_name = (
+                pathway.fuel_code.fuel_code_prefix.prefix
+                if pathway.fuel_code.fuel_code_prefix
+                else None
+            )
+            fuel_suffix = pathway.fuel_code.fuel_suffix if pathway.fuel_code else None
+            if prefix_id and fuel_suffix:
+                next_suffix = (
+                    await self.fuel_repo.get_next_available_sub_version_fuel_code_by_prefix(
+                        fuel_suffix.split(".")[0],
+                        prefix_id,
+                    )
+                )
+                return prefix_id, prefix_name, next_suffix
+
+        prefix_name = (
+            "C-BCLCF"
+            if (facility_country or "").strip().lower() == "canada"
+            else "BCLCF"
+        )
+        prefix = prefix_map.get(prefix_name)
+        if not prefix:
+            return None, prefix_name, None
+        next_suffix = await self.fuel_repo.get_next_available_fuel_code_by_prefix(
+            prefix_name
+        )
+        return prefix.fuel_code_prefix_id, prefix_name, next_suffix
+
+    def _validate_generated_fuel_code_row(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        validation_errors: Dict[str, str] = {}
+        required_fields = [
+            ("prefix_id", "prefixId"),
+            ("fuel_suffix", "fuelSuffix"),
+            ("carbon_intensity", "carbonIntensity"),
+            ("edrms", "edrms"),
+            ("company", "company"),
+            ("application_date", "applicationDate"),
+            ("approval_date", "approvalDate"),
+            ("effective_date", "effectiveDate"),
+            ("expiration_date", "expirationDate"),
+            ("fuel_type_id", "fuelTypeId"),
+            ("feedstock", "feedstock"),
+            ("feedstock_location", "feedstockLocation"),
+            ("fuel_production_facility_city", "fuelProductionFacilityCity"),
+            (
+                "fuel_production_facility_province_state",
+                "fuelProductionFacilityProvinceState",
+            ),
+            (
+                "fuel_production_facility_country",
+                "fuelProductionFacilityCountry",
+            ),
+        ]
+        for internal_key, frontend_key in required_fields:
+            value = row.get(internal_key)
+            if value in (None, "", []):
+                validation_errors[frontend_key] = "Required."
+
+        if row.get("facility_nameplate_capacity") not in (None, "") and not row.get(
+            "facility_nameplate_capacity_unit"
+        ):
+            validation_errors["facilityNameplateCapacityUnit"] = "Required."
+
+        application_date = row.get("application_date")
+        approval_date = row.get("approval_date")
+        effective_date = row.get("effective_date")
+        expiration_date = row.get("expiration_date")
+
+        if application_date and approval_date and application_date >= approval_date:
+            validation_errors["applicationDate"] = "Must be before approval date."
+            validation_errors["approvalDate"] = "Must be after application date."
+        if application_date and expiration_date and application_date >= expiration_date:
+            validation_errors["applicationDate"] = "Must be before expiration date."
+        if effective_date and application_date and effective_date < application_date:
+            validation_errors["effectiveDate"] = (
+                "Must be on or after application date."
+            )
+        if effective_date and expiration_date and effective_date >= expiration_date:
+            validation_errors["effectiveDate"] = "Must be before expiration date."
+            validation_errors["expirationDate"] = "Must be after effective date."
+
+        row["is_valid"] = not validation_errors
+        row["validation_errors"] = validation_errors or None
+        row["validation_msg"] = _generated_validation_message(validation_errors)
+        return row
+
+    def _assert_generated_fuel_codes_ready_for_recommendation(
+        self, ci_application: CIApplication
+    ) -> None:
+        generated_rows = self._get_generated_fuel_codes(ci_application)
+        invalid_rows = [row for row in generated_rows if not row.get("is_valid", False)]
+        if invalid_rows:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Generated fuel codes have missing required fields. "
+                    "Complete them before recommendation."
+                ),
+            )
 
     # ------------------------------------------------------------------
     # Reference data
@@ -499,6 +793,7 @@ class CIApplicationServices:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Required verification steps must be completed first.",
             )
+        self._assert_generated_fuel_codes_ready_for_recommendation(ci_application)
 
         ci_application.recommendation_user_id = user.user_profile_id
         ci_application.recommendation_date = datetime.now(timezone.utc)
@@ -964,6 +1259,7 @@ class CIApplicationServices:
             ci_application.recommendation_date = None
             ci_application.approval_user_id = None
             ci_application.approval_date = None
+            ci_application.generated_fuel_codes = None
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)

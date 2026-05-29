@@ -19,6 +19,7 @@ const mockRecordDecision = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification1 = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification2 = vi.fn().mockResolvedValue(null)
 const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
+const mockGenerateFuelCodes = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
   useCompleteCIApplicationVerification1: vi.fn(() => ({
@@ -31,6 +32,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   })),
   useRecommendCIApplication: vi.fn(() => ({
     mutateAsync: mockRecommendToDirector,
+    isPending: false
+  })),
+  useGenerateCIApplicationFuelCodes: vi.fn(() => ({
+    mutateAsync: mockGenerateFuelCodes,
     isPending: false
   })),
   useRecordCIDecision: vi.fn(() => ({
@@ -139,6 +144,26 @@ describe('GovernmentDecisionStep', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText('carbonIntensity:step5.recommendToDirector')
+    ).toBeInTheDocument()
+  })
+
+  it('shows Generate fuel codes after required verification is complete', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Low',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:step5.generateFuelCodes')
     ).toBeInTheDocument()
   })
 

@@ -40,6 +40,7 @@ import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
 import { DocumentsModellingStep } from './components/DocumentsModellingStep'
 import { SignAndSubmitStep } from './components/SignAndSubmitStep'
 import { GovernmentDecisionStep } from './components/GovernmentDecisionStep'
+import { GeneratedFuelCodesSection } from './components/GeneratedFuelCodesSection'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
 import colors from '@/themes/base/colors'
@@ -436,6 +437,39 @@ const EditViewCIApplicationBase = () => {
           {isGovernment && (
             <BCBox mb={3} data-test="ci-step5-decision-inline">
               {stepBodies.step5Decision}
+            </BCBox>
+          )}
+          {isGovernment && ciApplication?.generatedFuelCodes?.length > 0 && (
+            <BCBox mb={4} data-test="ci-generated-fuel-codes-inline">
+              <Accordion
+                key="generatedFuelCodes"
+                expanded={expanded.includes('generatedFuelCodes')}
+                onChange={handleAccordionToggle('generatedFuelCodes')}
+                data-test="ci-generated-fuel-codes-accordion"
+              >
+                <AccordionSummary
+                  expandIcon={
+                    <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
+                  }
+                >
+                  <BCTypography
+                    style={{ display: 'flex', alignItems: 'center' }}
+                    variant="h6"
+                    color="primary"
+                    component="div"
+                  >
+                    {t('carbonIntensity:step5.generatedFuelCodesHeader')}
+                  </BCTypography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <BCBox p={1}>
+                    <GeneratedFuelCodesSection
+                      ciApplication={ciApplication}
+                      readOnly={ciApplication?.status?.status !== 'Submitted'}
+                    />
+                  </BCBox>
+                </AccordionDetails>
+              </Accordion>
             </BCBox>
           )}
           <BCBox mb={4} data-test="ci-step5-comments-inline">

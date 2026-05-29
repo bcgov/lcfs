@@ -94,6 +94,10 @@ export const apiRoutes = {
   completeCIApplicationVerification2:
     '/ci-applications/:ciApplicationId/verification-2',
   recommendCIApplication: '/ci-applications/:ciApplicationId/recommend',
+  generateCIApplicationFuelCodes:
+    '/ci-applications/:ciApplicationId/fuel-codes/generate',
+  updateCIApplicationGeneratedFuelCode:
+    '/ci-applications/:ciApplicationId/fuel-codes/:generatedFuelCodeId',
   ciApplicationGHGeniusTemplate: '/ci-applications/ghgenius-template',
   deleteCIApplication: '/ci-applications/:ciApplicationId',
 
