@@ -98,12 +98,8 @@ class Settings(BaseSettings):
 
     # Public API rate limiting settings
     rate_limit_enabled: bool = True
-    rate_limit_default_times: int = 60 # Number of requests allowed per window
-    rate_limit_default_seconds: int = 60 # Window size in seconds
-    # Comma-separated list of CIDR ranges whose ``X-Forwarded-For``
-    # header is trusted (e.g. the OpenShift router subnet). When empty,
-    # the limiter always uses the direct connection peer.
-    rate_limit_trusted_proxies: str = ""
+    rate_limit_default_times: int = 60  # Number of requests allowed per window
+    rate_limit_default_seconds: int = 60  # Window size in seconds
 
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present

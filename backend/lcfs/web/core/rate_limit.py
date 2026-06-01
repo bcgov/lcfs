@@ -7,10 +7,9 @@ overrides are available via the ``rate_limit`` argument.
 
 from __future__ import annotations
 
-import ipaddress
 import time
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Optional
 
 import structlog
 from fastapi import HTTPException, Request, status
@@ -51,45 +50,18 @@ def _default_limit() -> RateLimit:
     )
 
 
-def _parse_trusted_proxies(raw: str) -> List[ipaddress._BaseNetwork]:
-    networks: List[ipaddress._BaseNetwork] = []
-    for chunk in (raw or "").split(","):
-        chunk = chunk.strip()
-        if not chunk:
-            continue
-        try:
-            networks.append(ipaddress.ip_network(chunk, strict=False))
-        except ValueError:
-            logger.warning("Ignoring invalid trusted proxy entry", entry=chunk)
-    return networks
-
-
-def _is_trusted(client_ip_str: str, trusted: Iterable[ipaddress._BaseNetwork]) -> bool:
-    try:
-        addr = ipaddress.ip_address(client_ip_str)
-    except ValueError:
-        return False
-    return any(addr in net for net in trusted)
-
-
 def client_ip(request: Request) -> str:
     """Resolve the originating client IP for rate-limiting purposes.
 
-    ``X-Forwarded-For`` is honoured only when the direct peer is in the
-    configured trusted-proxy list (``LCFS_RATE_LIMIT_TRUSTED_PROXIES``).
-    Otherwise the direct connection peer address is used. This prevents
-    anonymous callers from spoofing their IP via forwarded headers.
+    Uvicorn is configured with ``--proxy-headers`` and
+    ``--forwarded-allow-ips="*"`` (see ``lcfs.__main__``), which
+    rewrites ``request.client.host`` to the left-most ``X-Forwarded-For``
+    entry when the request arrives via the OpenShift router. Because
+    LCFS pods are never directly reachable from the internet, that
+    router is the only possible TCP peer, so we can trust the rewritten
+    value without an additional CIDR allow-list here.
     """
-    peer = request.client.host if request.client else "unknown"
-    trusted = _parse_trusted_proxies(settings.rate_limit_trusted_proxies)
-    if trusted and _is_trusted(peer, trusted):
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            # Left-most entry is the originating client per RFC 7239 conventions.
-            candidate = forwarded.split(",")[0].strip()
-            if candidate:
-                return candidate
-    return peer
+    return request.client.host if request.client else "unknown"
 
 
 def _identifier(request: Request, scope: str) -> str:

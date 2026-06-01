@@ -99,22 +99,23 @@ async def test_enforce_rate_limit_no_redis_is_best_effort():
     await enforce_rate_limit(_make_request(app), RateLimit(times=1, seconds=60))
 
 
-def test_client_ip_ignores_forwarded_when_proxy_not_trusted(monkeypatch):
-    monkeypatch.setattr(settings, "rate_limit_trusted_proxies", "")
+def test_client_ip_uses_request_client_host():
+    # Uvicorn (configured with --proxy-headers --forwarded-allow-ips=*)
+    # has already rewritten request.client.host to the real client IP
+    # by the time we see it, so the limiter just trusts that value.
     app = FastAPI()
     req = _make_request(
-        app, peer="203.0.113.5", headers={"x-forwarded-for": "9.9.9.9, 1.1.1.1"}
-    )
-    assert client_ip(req) == "203.0.113.5"
-
-
-def test_client_ip_honours_forwarded_when_proxy_trusted(monkeypatch):
-    monkeypatch.setattr(settings, "rate_limit_trusted_proxies", "10.0.0.0/8")
-    app = FastAPI()
-    req = _make_request(
-        app, peer="10.1.2.3", headers={"x-forwarded-for": "9.9.9.9, 10.1.2.3"}
+        app, peer="9.9.9.9", headers={"x-forwarded-for": "9.9.9.9, 10.1.2.3"}
     )
     assert client_ip(req) == "9.9.9.9"
+
+
+def test_client_ip_handles_missing_client():
+    app = FastAPI()
+    req = _make_request(app)
+    # Wipe scope client to simulate a synthetic/internal request.
+    req.scope["client"] = None
+    assert client_ip(req) == "unknown"
 
 
 @pytest.mark.anyio

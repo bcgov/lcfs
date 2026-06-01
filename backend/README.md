@@ -129,11 +129,15 @@ async def cheap_endpoint(...):
 | `LCFS_RATE_LIMIT_ENABLED`         | `True`  | Master kill-switch.                                                                                                             |
 | `LCFS_RATE_LIMIT_DEFAULT_TIMES`   | `60`    | Global per-window cap.                                                                                                          |
 | `LCFS_RATE_LIMIT_DEFAULT_SECONDS` | `60`    | Global window size, in seconds.                                                                                                 |
-| `LCFS_RATE_LIMIT_TRUSTED_PROXIES` | `""`    | Comma-separated CIDR list whose `X-Forwarded-For` is trusted. Set this to the OpenShift router subnet in deployed environments. |
 
-When `LCFS_RATE_LIMIT_TRUSTED_PROXIES` is empty the limiter always keys
-on the direct TCP peer, which prevents anonymous callers from spoofing
-their IP by setting their own `X-Forwarded-For` header.
+The limiter keys on `request.client.host`, which Uvicorn populates from
+`X-Forwarded-For` because the app is started with `--proxy-headers
+--forwarded-allow-ips="*"` (see `lcfs/__main__.py`). That `*` is safe
+only under the assumption that LCFS pods are never directly reachable
+from the internet — the OpenShift router is the only possible TCP peer.
+If a pod is ever exposed via a NodePort/LoadBalancer that bypasses the
+router, tighten `forwarded_allow_ips` to the router subnet or header
+spoofing becomes trivial.
 
 The limiter is best-effort: if Redis is unreachable the request is
 allowed through and a warning is logged, rather than failing closed.
