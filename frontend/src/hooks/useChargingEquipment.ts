@@ -1,0 +1,369 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
+
+const JOB_STATUS_STALE_TIME = 0 // Keep import status real-time
+
+export const useChargingEquipment = (paginationOptions: PaginationParams) => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  // Get charging equipment list
+  const equipmentQuery = useQuery({
+    queryKey: ['charging-equipment', paginationOptions],
+    queryFn: async () => {
+      // Convert frontend pagination format to backend format
+      const requestData = {
+        page: paginationOptions?.page || 1,
+        size: paginationOptions?.size || 25,
+        sort_orders: paginationOptions?.sortOrders || [],
+        filters: paginationOptions?.filters || []
+      }
+
+      // Add organization_id if provided (for IDIR users filtering)
+      if (paginationOptions?.organizationId) {
+        ;(requestData as any).organization_id = paginationOptions.organizationId
+      }
+
+      const response = await apiService.post(
+        apiRoutes.chargingEquipment.list,
+        requestData
+      )
+      return response.data
+    },
+    enabled: !!paginationOptions
+  })
+
+  // Submit equipment mutation
+  const submitMutation = useMutation({
+    mutationFn: async (equipmentIds: any) => {
+      const response = await apiService.post(
+        apiRoutes.chargingEquipment.bulkSubmit,
+        { charging_equipment_ids: equipmentIds }
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['charging-equipment'] })
+    }
+  })
+
+  // Decommission equipment mutation
+  const decommissionMutation = useMutation({
+    mutationFn: async (equipmentIds: any) => {
+      const response = await apiService.post(
+        apiRoutes.chargingEquipment.bulkDecommission,
+        { charging_equipment_ids: equipmentIds }
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['charging-equipment'] })
+    }
+  })
+
+  return {
+    data: equipmentQuery.data,
+    isLoading: equipmentQuery.isLoading,
+    isError: equipmentQuery.isError,
+    error: equipmentQuery.error,
+    refetch: equipmentQuery.refetch,
+    submitEquipment: submitMutation.mutateAsync,
+    decommissionEquipment: decommissionMutation.mutateAsync,
+    isSubmitting: submitMutation.isPending,
+    isDecommissioning: decommissionMutation.isPending
+  }
+}
+
+export const useDownloadChargingEquipment = (
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
+  const apiService = useApiService()
+
+  return useMutation({
+    mutationFn: async ({ body }: any) => {
+      return await apiService.download({
+        url: apiRoutes.chargingEquipment.export,
+        method: 'post',
+        data: body
+      })
+    },
+    ...options
+  })
+}
+
+// Get single charging equipment
+export const useGetChargingEquipment = (
+  id: number | string | undefined | null
+) => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-equipment', id],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.get.replace(':id', String(id ?? ''))
+      )
+      return response.data
+    },
+    enabled: !!id
+  })
+}
+
+// Create charging equipment
+export const useCreateChargingEquipment = () => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiService.post(
+        apiRoutes.chargingEquipment.create,
+        data
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['charging-equipment'] })
+    }
+  })
+}
+
+// Update charging equipment
+export const useUpdateChargingEquipment = () => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, data }: any) => {
+      const response = await apiService.put(
+        apiRoutes.chargingEquipment.update.replace(':id', String(id ?? '')),
+        data
+      )
+      return response.data
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['charging-equipment'] })
+      queryClient.invalidateQueries({
+        queryKey: ['charging-equipment', variables.id]
+      })
+    }
+  })
+}
+
+// Delete charging equipment
+export const useDeleteChargingEquipment = () => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (row: any) => {
+      const id =
+        typeof row === 'number' || typeof row === 'string' ? row : row?.id
+      await apiService.delete(
+        apiRoutes.chargingEquipment.delete.replace(':id', String(id ?? ''))
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['charging-equipment'] })
+    }
+  })
+}
+
+// Get equipment metadata (statuses, levels, end use types)
+export const useChargingEquipmentMetadata = () => {
+  const apiService = useApiService()
+
+  const statusesQuery = useQuery({
+    queryKey: ['charging-equipment-statuses'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.statuses
+      )
+      return response.data
+    }
+  })
+
+  const levelsQuery = useQuery({
+    queryKey: ['charging-equipment-levels'],
+    queryFn: async () => {
+      const response = await apiService.get(apiRoutes.chargingEquipment.levels)
+      return response.data
+    }
+  })
+
+  const endUseTypesQuery = useQuery({
+    queryKey: ['charging-equipment-end-use-types'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.endUseTypes
+      )
+      return response.data
+    }
+  })
+
+  const endUserTypesQuery = useQuery({
+    queryKey: ['charging-equipment-end-user-types'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.endUserTypes
+      )
+      return response.data
+    }
+  })
+
+  return {
+    statuses: statusesQuery.data,
+    levels: levelsQuery.data,
+    endUseTypes: endUseTypesQuery.data,
+    endUserTypes: endUserTypesQuery.data,
+    isLoading:
+      statusesQuery.isPending ||
+      levelsQuery.isPending ||
+      endUseTypesQuery.isPending ||
+      endUserTypesQuery.isPending
+  }
+}
+
+// Get charging sites for dropdown
+export const useChargingSites = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['charging-sites'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.chargingSites
+      )
+      return response.data
+    }
+  })
+}
+
+// Get organizations for dropdown
+export const useOrganizations = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['organizations-list'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.organizations
+      )
+      return response.data
+    }
+  })
+}
+
+// Boolean flag indicating whether the supplier has any allocation agreements
+export const useHasAllocationAgreements = () => {
+  const apiService = useApiService()
+
+  return useQuery({
+    queryKey: ['has-allocation-agreements'],
+    queryFn: async () => {
+      const response = await apiService.get(
+        apiRoutes.chargingEquipment.hasAllocationAgreements
+      )
+      return Boolean(response.data)
+    }
+  })
+}
+
+// Import charging equipment
+export const useImportChargingEquipment = (
+  organizationId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, any> = {}
+) => {
+  const apiService = useApiService()
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({ file, isOverwrite }: any) => {
+      if (!file) {
+        throw new Error('File is required for import')
+      }
+      if (!organizationId) {
+        throw new Error('Organization ID is required for import')
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('overwrite', isOverwrite)
+
+      const endpoint = apiRoutes.chargingEquipment.import.replace(
+        ':organizationId',
+        String(organizationId ?? '')
+      )
+
+      return await apiService.post(endpoint, formData, {
+        headers: {
+          accept: 'application/json',
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useChargingEquipmentImportJobStatus = (
+  jobId: string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
+  const apiService = useApiService()
+  const queryClient = useQueryClient()
+  const {
+    staleTime = JOB_STATUS_STALE_TIME,
+    gcTime = 1 * 60 * 1000,
+    enabled = true,
+    refetchInterval = 2000 as number | false,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['chargingEquipmentImportJobStatus', jobId],
+    queryFn: async () => {
+      const endpoint = apiRoutes.chargingEquipment.importJobStatus.replace(
+        ':jobId',
+        String(jobId ?? '')
+      )
+      const response = await apiService.get(endpoint)
+      return response.data
+    },
+    staleTime,
+    gcTime,
+    enabled: enabled && !!jobId,
+    refetchInterval: (data) => {
+      const statusData = (data as any)?.state?.data ?? (data as any)
+      if (
+        !statusData ||
+        statusData?.progress === 100 ||
+        statusData?.status === 'Import process completed.' ||
+        statusData?.status === 'Import process failed.'
+      ) {
+        if (statusData?.progress === 100) {
+          queryClient.invalidateQueries({
+            queryKey: ['charging-equipment']
+          })
+        }
+        return false
+      }
+      return refetchInterval as number | false
+    },
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}

@@ -54,6 +54,12 @@ class ViewCreator:
             "BCeID Daily Login Summary View",
             "BCeID User Statistics View",
             "Login Failures Analysis View",
+            "Fuel Supply Fuel Code Base View",
+            "Fuel Supply Base View",
+            "Compliance Report Fuel Supply Base View",
+            "Compliance Report Chained View",
+            "Allocation Agreement Chained View",
+            "Allocation Agreement Base View",
             "Compliance Report Base View With Early Issuance By Year",
             "Compliance Report Status Timeline View",
             "Compliance Report Status Median Durations",
@@ -69,11 +75,15 @@ class ViewCreator:
             "Allocation Agreement Duplicate Check",
             "Final Supply Equipment Duplicate Check",
             # Level 3: Views depending on Level 2
+            "Allocation Agreement Extended Base View (from HEAD)",
             "Compliance Reports Waiting review",
             "Fuel Supply Analytics Base View",
             "Fuel Export Analytics Base View",
             "Allocation agreement Analytics Base View",
             "Allocation Agreement Base View With Early Issuance By Year",
+            "Compliance Report Fuel Supply Volume Summary View",
+            "Fuel Supply Map View",
+            "Additional permissions for base tables",
         ]
 
     async def create_role_if_not_exists_async(self):

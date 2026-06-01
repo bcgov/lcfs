@@ -350,7 +350,7 @@ describe('useDownloadCreditLedger', () => {
 
     // Should still call download even with undefined orgId
     expect(mockDownload).toHaveBeenCalledWith({
-      url: expect.stringContaining('undefined'),
+      url: expect.stringContaining('/credit-ledger/organization//'),
       method: 'get',
       params: {
         compliance_year: '2024',

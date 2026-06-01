@@ -183,12 +183,22 @@ class FuelCodeServices:
 
     @service_handler
     async def search_fuel_codes(
-        self, pagination: PaginationRequestSchema
+        self,
+        pagination: PaginationRequestSchema,
+        exclude_archived: bool = False,
     ) -> FuelCodesSchema:
-        """
-        Gets the list of fuel codes.
-        """
-        fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(pagination)
+        """Gets the list of fuel codes, optionally excluding archived approved codes."""
+        compliance_period_start = None
+        if exclude_archived:
+            compliance_period_start, _ = self._get_compliance_period_bounds(
+                date.today()
+            )
+
+        fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(
+            pagination,
+            exclude_archived=exclude_archived,
+            compliance_period_start=compliance_period_start,
+        )
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,

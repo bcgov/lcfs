@@ -580,7 +580,7 @@ class FinalSupplyEquipmentServices:
                 )
 
         updated_count = await self.repo.update_reporting_active_status(
-            data.reporting_ids, data.is_active
+            data.reporting_ids, data.is_active, data.compliance_report_id
         )
         state = "activated" if data.is_active else "deactivated"
         return {

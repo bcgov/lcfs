@@ -1,9 +1,17 @@
-import { Box, Divider, Grid, Stack } from '@mui/material'
+import { Edit, FileDownloadOutlined } from '@mui/icons-material'
+import { Box, Divider, Grid, IconButton, Stack, Tooltip } from '@mui/material'
+import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
+import { useDownloadDocument } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
+import { ciApplicationPathwaySummaryColDefs } from '@/views/CarbonIntensity/components/_step2Schema'
+import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
+import { constructAddress } from '@/utils/constructAddress'
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -16,11 +24,36 @@ const formatDate = (value) => {
   }
 }
 
+const formatBytes = (bytes) => {
+  if (bytes == null) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 const Labelled = ({ label, value, dataTest }) => (
   <BCTypography variant="body2" data-test={dataTest}>
     <strong>{label}</strong> {value ?? ''}
   </BCTypography>
 )
+
+const getOrganizationAddress = (organization = {}) => {
+  if (organization?.orgAddress) {
+    return constructAddress(organization.orgAddress)
+  }
+
+  if (organization?.address) {
+    return constructAddress(organization.address)
+  }
+
+  if (organization?.addressLine) {
+    return organization.addressLine
+  }
+
+  return [organization.addressLine1, organization.cityProvinceCountry]
+    .filter(Boolean)
+    .join(', ')
+}
 
 /**
  * Consolidated read-only summary of a CI application — shown on the
@@ -28,11 +61,32 @@ const Labelled = ({ label, value, dataTest }) => (
  * Pulls every field straight off ``ciApplication`` so a single render
  * mirrors what the wizard captured.
  */
-export const ApplicationSummary = ({ ciApplication }) => {
-  const { t } = useTranslation(['carbonIntensity'])
+export const ApplicationSummary = ({
+  ciApplication,
+  currentUser,
+  canEditDocuments = false,
+  onEditDocuments
+}) => {
+  const { t } = useTranslation(['common', 'carbonIntensity'])
   if (!ciApplication) return null
+  const pathwayGridRef = useRef(null)
+  const downloadDocument = useDownloadDocument(
+    'ci_application',
+    ciApplication?.ciApplicationId
+  )
 
   const org = ciApplication.organization || {}
+  const currentUserFullName =
+    [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(' ') ||
+    ''
+  const signatureName =
+    ciApplication.signatureUserDisplayName || ciApplication.signatureUser || ''
+  const currentUsername =
+    currentUser?.keycloakUsername || currentUser?.keycloak_username || ''
+  const isCurrentUserSignatory = Boolean(
+    (currentUserFullName && currentUserFullName === signatureName) ||
+      (currentUsername && currentUsername === ciApplication.signatureUser)
+  )
   const facilityLocationParts = [
     ciApplication.facilityCity,
     ciApplication.facilityProvinceState,
@@ -48,29 +102,96 @@ export const ApplicationSummary = ({ ciApplication }) => {
 
   const documents = ciApplication.documents || []
   const pathways = ciApplication.pathways || []
+  const referencedPathway =
+    pathways.find((pathway) => pathway?.fuelCode) || null
+  const referencedFuelCode = referencedPathway?.fuelCode || null
+  const referenceNumber =
+    referencedFuelCode?.fuelCode ||
+    (ciApplication.ciApplicationId ? `CI${ciApplication.ciApplicationId}` : '')
+  const previousFuelCodeExpiryDate = formatDate(
+    referencedPathway?.operatingDataTo ||
+      referencedPathway?.operating_data_to ||
+      referencedFuelCode?.expirationDate ||
+      referencedFuelCode?.expiration_date
+  )
   const hasConsultant =
     ciApplication.consultantName ||
     ciApplication.consultantCompany ||
     ciApplication.consultantEmail
+  const signingAuthorityTitle = isCurrentUserSignatory
+    ? currentUser?.title || ''
+    : ''
+  const signingAuthorityEmail = isCurrentUserSignatory
+    ? currentUser?.email || ''
+    : ''
+  const organizationAddress = getOrganizationAddress(org)
+  const pathwayColumnDefs = useMemo(
+    () =>
+      ciApplicationPathwaySummaryColDefs({
+        optionsData: ciApplication?.optionsData,
+        proposedFuelCodeEffectiveDate:
+          ciApplication?.proposedFuelCodeEffectiveDate
+      }),
+    [ciApplication?.optionsData, ciApplication?.proposedFuelCodeEffectiveDate]
+  )
+  const pathwayQueryData = useMemo(
+    () => ({
+      data: { items: pathways },
+      isLoading: false,
+      isError: false,
+      error: null
+    }),
+    [pathways]
+  )
+  const pathwayDefaultColDef = useMemo(
+    () => ({
+      sortable: false,
+      filter: false,
+      floatingFilter: false,
+      resizable: true
+    }),
+    []
+  )
+  const pathwayGridOptions = useMemo(
+    () => ({
+      domLayout: 'autoHeight',
+      headerHeight: 42,
+      rowHeight: 44,
+      animateRows: false
+    }),
+    []
+  )
+  const handleDownloadPathways = () => {
+    pathwayGridRef.current?.api?.exportDataAsCsv({
+      fileName: `ci_application_pathways_${ciApplication?.ciApplicationId || 'draft'}.csv`
+    })
+  }
 
   return (
     <BCBox data-test="ci-application-summary">
       {/* Org + facility */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
-          <BCTypography
-            variant="subtitle1"
-            sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{ mb: 1, flexWrap: 'wrap' }}
           >
-            {org.name}
-          </BCTypography>
-          {org.addressLine1 && (
-            <BCTypography variant="body2">{org.addressLine1}</BCTypography>
-          )}
-          {org.cityProvinceCountry && (
-            <BCTypography variant="body2">
-              {org.cityProvinceCountry}
+            <BCTypography
+              variant="subtitle1"
+              sx={{ fontWeight: 700, color: colors.primary.main }}
+            >
+              {org.name}
             </BCTypography>
+            {ciApplication.status && (
+              <Box sx={{ '& > span': { m: '0 !important' } }}>
+                <CIApplicationStatusRenderer data={ciApplication} />
+              </Box>
+            )}
+          </Stack>
+          {organizationAddress && (
+            <BCTypography variant="body2">{organizationAddress}</BCTypography>
           )}
           {org.phone && (
             <BCTypography variant="body2">{org.phone}</BCTypography>
@@ -81,6 +202,11 @@ export const ApplicationSummary = ({ ciApplication }) => {
         </Grid>
         <Grid item xs={12} md={6}>
           <Stack spacing={0.5}>
+            <Labelled
+              label={t('carbonIntensity:summary.referenceNumber')}
+              value={referenceNumber}
+              dataTest="ci-summary-reference-number"
+            />
             <Labelled
               label={t('carbonIntensity:summary.facilityLocation')}
               value={facilityLocation}
@@ -95,6 +221,11 @@ export const ApplicationSummary = ({ ciApplication }) => {
               label={t('carbonIntensity:summary.proposedEffectiveDate')}
               value={formatDate(ciApplication.proposedFuelCodeEffectiveDate)}
               dataTest="ci-summary-effective-date"
+            />
+            <Labelled
+              label={t('carbonIntensity:summary.previousFuelCodeExpiryDate')}
+              value={previousFuelCodeExpiryDate}
+              dataTest="ci-summary-previous-expiry-date"
             />
           </Stack>
         </Grid>
@@ -116,12 +247,22 @@ export const ApplicationSummary = ({ ciApplication }) => {
         />
         <Labelled
           label={t('carbonIntensity:summary.signingAuthorityLabel')}
-          value={
-            ciApplication.signatureUserDisplayName ||
-            ciApplication.signatureUser ||
-            ''
-          }
+          value={signatureName}
         />
+        {signingAuthorityTitle && (
+          <Labelled
+            label={t('carbonIntensity:summary.titleLabel')}
+            value={signingAuthorityTitle}
+            dataTest="ci-summary-signing-title"
+          />
+        )}
+        {signingAuthorityEmail && (
+          <Labelled
+            label={t('carbonIntensity:summary.emailLabel')}
+            value={signingAuthorityEmail}
+            dataTest="ci-summary-signing-email"
+          />
+        )}
         {hasConsultant && (
           <BCTypography variant="body2" data-test="ci-summary-consultant">
             <strong>
@@ -147,55 +288,123 @@ export const ApplicationSummary = ({ ciApplication }) => {
       >
         {t('carbonIntensity:summary.documentsHeader')}
       </BCTypography>
-      {documents.length === 0 ? (
-        <BCTypography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t('carbonIntensity:step3.noDocuments')}
-        </BCTypography>
-      ) : (
-        <Box
-          component="ul"
-          sx={{ pl: 3, mb: 2 }}
-          data-test="ci-summary-documents"
+      <BCBox
+        sx={{
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1,
+          p: 2,
+          mb: 2,
+          height: 220,
+          width: '60%',
+          overflowY: 'auto'
+        }}
+        data-test="ci-summary-documents"
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={0.5}
+          sx={{ mb: 1.5 }}
         >
-          {documents.map((d) => (
-            <li key={d.documentId}>
-              <BCTypography variant="body2">
-                {d.fileName}
-                {d.fileSize != null && (
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ ml: 2 }}
-                  >
-                    {Math.round(d.fileSize / 1024).toLocaleString()} KB
-                  </BCTypography>
-                )}
-                {d.createUser && (
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ ml: 2 }}
-                  >
-                    {d.createUser}
-                  </BCTypography>
-                )}
-                {d.createDate && (
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ ml: 2 }}
-                  >
-                    {formatDate(d.createDate)}
-                  </BCTypography>
-                )}
+          <BCTypography
+            variant="body2"
+            color="primary"
+            sx={{ fontWeight: 600 }}
+          >
+            {t('carbonIntensity:step3.uploadedHeader')}
+          </BCTypography>
+          {canEditDocuments && onEditDocuments && (
+            <Tooltip title={t('common:editBtn')}>
+              <IconButton
+                color="primary"
+                aria-label={t('common:editBtn')}
+                onClick={onEditDocuments}
+                size="small"
+                data-test="ci-summary-documents-edit-btn"
+                sx={{ p: 0.5 }}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+        {documents.length === 0 ? (
+          <Box
+            sx={{
+              minHeight: '100%',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <BCTypography variant="body2" color="text.secondary">
+              {t('carbonIntensity:step3.noDocuments')}
+            </BCTypography>
+          </Box>
+        ) : (
+          documents.map((d) => (
+            <Box
+              key={d.documentId}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px',
+                alignItems: 'center',
+                gap: 2,
+                py: 0.75,
+                '&:not(:last-child)': {
+                  borderBottom: 1,
+                  borderColor: 'divider'
+                }
+              }}
+              data-test="ci-summary-document-row"
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  minWidth: 0
+                }}
+              >
+                <BCTypography
+                  component="span"
+                  variant="body2"
+                  sx={{ mr: 1, flexShrink: 0 }}
+                >
+                  •
+                </BCTypography>
+                <BCTypography
+                  component="span"
+                  variant="body2"
+                  color="link"
+                  onClick={() => {
+                    downloadDocument(d.documentId, d.fileName)
+                  }}
+                  sx={{
+                    minWidth: 0,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    '&:hover': { color: 'info.main' }
+                  }}
+                >
+                  {d.fileName}
+                </BCTypography>
+              </Box>
+              <BCTypography variant="body2" color="text.secondary">
+                {formatBytes(d.fileSize)}
               </BCTypography>
-            </li>
-          ))}
-        </Box>
-      )}
+              <BCTypography variant="body2" color="text.secondary">
+                {d.createUser || ''}
+              </BCTypography>
+              <BCTypography variant="body2" color="text.secondary">
+                {formatDate(d.createDate)}
+              </BCTypography>
+            </Box>
+          ))
+        )}
+      </BCBox>
 
       <Divider sx={{ mb: 2 }} />
 
@@ -206,60 +415,51 @@ export const ApplicationSummary = ({ ciApplication }) => {
       >
         {t('carbonIntensity:summary.pathwaysHeader')}
       </BCTypography>
+      <BCButton
+        type="button"
+        variant="outlined"
+        color="primary"
+        size="medium"
+        startIcon={
+          <FileDownloadOutlined sx={{ fontSize: '1.25rem !important' }} />
+        }
+        onClick={handleDownloadPathways}
+        sx={{ mb: 2 }}
+        data-test="ci-summary-download-pathways-btn"
+      >
+        {t('carbonIntensity:summary.downloadPathways')}
+      </BCButton>
       {pathways.length === 0 ? (
         <BCTypography variant="body2" color="text.secondary">
           {t('carbonIntensity:summary.noPathways')}
         </BCTypography>
       ) : (
-        <Box
-          component="table"
-          sx={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            '& th, & td': {
-              border: 1,
-              borderColor: 'divider',
-              p: 1,
-              fontSize: '0.85rem',
-              verticalAlign: 'top',
-              textAlign: 'left'
-            },
-            '& th': { fontWeight: 600, backgroundColor: 'grey.50' }
-          }}
+        <BCBox
           data-test="ci-summary-pathways"
+          sx={{ width: '100%', overflowX: 'auto' }}
         >
-          <thead>
-            <tr>
-              <th>{t('carbonIntensity:step2.applicationType')}</th>
-              <th>{t('carbonIntensity:summary.effectiveDateShort')}</th>
-              <th>{t('carbonIntensity:summary.iteration')}</th>
-              <th>{t('carbonIntensity:step2.proposedCi')}</th>
-              <th>{t('carbonIntensity:step2.fuelType')}</th>
-              <th>{t('carbonIntensity:step2.feedstock')}</th>
-              <th>{t('carbonIntensity:step2.feedstockRegion')}</th>
-              <th>{t('carbonIntensity:step2.feedstockTransportMode')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pathways.map((p) => (
-              <tr key={p.pathwayId || `${p.fuelCodeId}-${p.proposedCi}`}>
-                <td>{p.applicationType?.type || ''}</td>
-                <td>
-                  {formatDate(
-                    p.operatingDataFrom ||
-                      ciApplication.proposedFuelCodeEffectiveDate
-                  )}
-                </td>
-                <td>{p.fuelCode?.fuelCode || '—'}</td>
-                <td>{p.proposedCi ?? ''}</td>
-                <td>{p.fuelType?.fuelType || ''}</td>
-                <td>{p.feedstock || ''}</td>
-                <td>{p.feedstockRegion || ''}</td>
-                <td>{p.feedstockTransportMode || ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Box>
+          <BCGridViewer
+            gridRef={pathwayGridRef}
+            gridKey={`ci-summary-pathways-${ciApplication?.ciApplicationId || 'new'}`}
+            columnDefs={pathwayColumnDefs}
+            queryData={pathwayQueryData}
+            dataKey="items"
+            defaultColDef={pathwayDefaultColDef}
+            gridOptions={pathwayGridOptions}
+            autoSizeStrategy={null}
+            getRowId={(params) =>
+              String(
+                params.data?.pathwayId ||
+                  `${params.data?.fuelCodeId || 'new'}-${params.data?.proposedCi || 'row'}`
+              )
+            }
+            suppressPagination
+            enablePageCaching={false}
+            enableCopyButton={false}
+            enableExportButton={false}
+            enableResetButton={false}
+          />
+        </BCBox>
       )}
     </BCBox>
   )
