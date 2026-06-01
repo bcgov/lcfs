@@ -349,10 +349,22 @@ class ComplianceReportUpdateService:
                 report.organization_id,
             )
 
+        # Only block on FSE that were decommissioned before the report's
+        # compliance period. Equipment retired during or after the reported
+        # year was still valid for that year (e.g. a 2024 report must not be
+        # blocked by a 2025 decommission), so it remains submittable.
+        compliance_period = getattr(report, "compliance_period", None)
+        period_description = getattr(compliance_period, "description", None)
+        try:
+            submission_compliance_year = int(period_description)
+        except (TypeError, ValueError):
+            submission_compliance_year = None
+
         has_decommissioned_fse = (
             await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
                 report.compliance_report_id,
                 only_active=True,
+                compliance_year=submission_compliance_year,
             )
         )
         if has_decommissioned_fse:
