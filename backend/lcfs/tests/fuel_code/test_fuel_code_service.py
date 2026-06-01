@@ -85,7 +85,9 @@ async def test_search_fuel_codes_exclude_archived_derives_compliance_period():
     service = FuelCodeServices(repo=repo_mock)
     repo_mock.get_fuel_codes_paginated.return_value = ([], 0)
 
-    await service.search_fuel_codes(PaginationRequestSchema(page=1, size=10), exclude_archived=True)
+    await service.search_fuel_codes(
+        PaginationRequestSchema(page=1, size=10), exclude_archived=True
+    )
 
     kwargs = repo_mock.get_fuel_codes_paginated.call_args.kwargs
     assert kwargs["exclude_archived"] is True
@@ -100,7 +102,9 @@ async def test_search_fuel_codes_no_compliance_period_when_not_excluding():
     service = FuelCodeServices(repo=repo_mock)
     repo_mock.get_fuel_codes_paginated.return_value = ([], 0)
 
-    await service.search_fuel_codes(PaginationRequestSchema(page=1, size=10), exclude_archived=False)
+    await service.search_fuel_codes(
+        PaginationRequestSchema(page=1, size=10), exclude_archived=False
+    )
 
     kwargs = repo_mock.get_fuel_codes_paginated.call_args.kwargs
     assert kwargs["exclude_archived"] is False
@@ -384,7 +388,7 @@ async def test_update_fuel_code_status_success():
 
     fuel_code_id = 1
     new_status = FuelCodeStatusEnum.Approved
-    
+
     # Mock user
     mock_user = MagicMock()
     mock_user.user_profile_id = 1
@@ -424,11 +428,11 @@ async def test_update_fuel_code_status_not_found():
 
     fuel_code_id = 9999
     new_status = FuelCodeStatusEnum.Approved
-    
+
     # Mock user
     mock_user = MagicMock()
     mock_user.user_profile_id = 1
-    
+
     repo_mock.get_fuel_code.return_value = None
 
     # Act & Assert
@@ -665,7 +669,9 @@ async def test_update_fuel_code_clears_notification_when_expiration_date_changes
     mock_fuel_code.version = 0
     mock_fuel_code.history_records = [MagicMock(fuel_status_id=1)]
     mock_fuel_code.expiration_date = date(2024, 10, 1)  # Original date
-    mock_fuel_code.expiry_notification_sent_at = datetime(2024, 7, 1)  # Already notified
+    mock_fuel_code.expiry_notification_sent_at = datetime(
+        2024, 7, 1
+    )  # Already notified
 
     # Update with a NEW expiration date
     mock_fuel_code_data = FuelCodeCreateUpdateSchema(

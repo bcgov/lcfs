@@ -976,8 +976,7 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
-        query = text(
-            """
+        query = text("""
             WITH parsed_codes AS (
                 SELECT SPLIT_PART(fc.fuel_suffix, '.', 1)::INTEGER AS base_code
                 FROM fuel_code fc
@@ -1011,16 +1010,14 @@ class FuelCodeRepository:
             )
             SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
             FROM next_code;
-            """
-        )
+            """)
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
         self, input_version: str, prefix_id: int
     ) -> str:
-        query = text(
-            """
+        query = text("""
             WITH split_versions AS (
                 SELECT
                     fuel_suffix,
@@ -1053,8 +1050,7 @@ class FuelCodeRepository:
                 COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR,
                         (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR)
                 AS next_available_version
-            """
-        )
+            """)
         result = (
             await self.db.execute(
                 query, {"input_version": int(input_version), "prefix_id": prefix_id}
