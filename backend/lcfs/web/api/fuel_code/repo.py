@@ -550,12 +550,37 @@ class FuelCodeRepository:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
+        exclude_archived: bool = False,
+        compliance_period_start: Optional[date] = None,
     ) -> tuple[Sequence[FuelCode], int]:
         """
-        Paginated fuel code listing. When ``organization_id`` is supplied
-        the result is scoped to that organisation (used by "My fuel codes").
+        Queries fuel codes from the database with optional filters, pagination, and sorting.
+
+        When ``organization_id`` is supplied the result is scoped to that
+        organisation (used by "My fuel codes").
+
+        When exclude_archived is True, Approved fuel codes outside the current compliance
+        period are omitted. Non-Approved codes (Draft, Recommended, Deleted) are unaffected.
         """
         conditions = []
+
+        if exclude_archived and compliance_period_start is not None:
+            compliance_period_end = date(compliance_period_start.year + 1, 3, 31)
+            is_current_approved = and_(
+                FuelCodeListView.effective_date < compliance_period_end,
+                or_(
+                    FuelCodeListView.expiration_date.is_(None),
+                    FuelCodeListView.expiration_date > compliance_period_start,
+                ),
+            )
+            conditions.append(
+                or_(
+                    cast(FuelCodeListView.status, String)
+                    != FuelCodeStatusEnum.Approved.value,
+                    is_current_approved,
+                )
+            )
+
         query = select(FuelCodeListView)
 
         if organization_id is not None:

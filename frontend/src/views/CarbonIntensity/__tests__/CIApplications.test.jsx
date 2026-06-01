@@ -1,6 +1,12 @@
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor
+} from '@testing-library/react'
 
 import { CIApplications } from '@/views/CarbonIntensity/CIApplications'
 import { roles } from '@/constants/roles'
@@ -58,12 +64,14 @@ let mockListData = {
   },
   isLoading: false,
   isError: false,
-  error: null
+  error: null,
+  refetch: vi.fn()
 }
 
 vi.mock('@/hooks/useCIApplication', () => ({
   useGetCIApplications: vi.fn(() => mockListData),
-  useCIApplicationStatuses: vi.fn(() => ({ data: [], isLoading: false }))
+  useCIApplicationStatuses: vi.fn(() => ({ data: [], isLoading: false })),
+  useGetCIApplicationAnalysts: vi.fn(() => ({ data: [], isLoading: false }))
 }))
 
 // ---------------- Tests ----------------
@@ -103,7 +111,9 @@ describe('CIApplications listing', () => {
     mockUserRoles = [{ name: roles.government }]
     render(<CIApplications />, { wrapper })
     await waitFor(() => {
-      expect(screen.queryByTestId('new-ci-application-btn')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('new-ci-application-btn')
+      ).not.toBeInTheDocument()
       // grid still visible
       expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
     })
@@ -123,12 +133,15 @@ describe('CIApplications listing', () => {
       data: undefined,
       isLoading: false,
       isError: true,
-      error: { message: 'Network error' }
+      error: { message: 'Network error' },
+      refetch: vi.fn()
     }
     render(<CIApplications />, { wrapper })
     await waitFor(() => {
       expect(screen.getByTestId('alert-box')).toBeInTheDocument()
-      expect(screen.getByTestId('alert-box').textContent).toContain('Network error')
+      expect(screen.getByTestId('alert-box').textContent).toContain(
+        'Network error'
+      )
     })
     // restore default
     mockListData = {
@@ -138,7 +151,8 @@ describe('CIApplications listing', () => {
       },
       isLoading: false,
       isError: false,
-      error: null
+      error: null,
+      refetch: vi.fn()
     }
   })
 

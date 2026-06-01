@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import Depends
 from starlette.responses import StreamingResponse
@@ -53,6 +53,7 @@ class FuelCodeExporter:
         self,
         export_format: str,
         pagination: PaginationRequestSchema | None = None,
+        exclude_archived: bool = False,
     ) -> StreamingResponse:
         """
         Prepares a list of users in a file that is downloadable
@@ -68,7 +69,17 @@ class FuelCodeExporter:
         # Ignore client-side paging but preserve sorting
         pagination.page, pagination.size = 1, 10000
 
-        results = await self.repo.get_fuel_codes_paginated(pagination)
+        compliance_period_start = None
+        if exclude_archived:
+            today = date.today()
+            anchor = date(today.year, 3, 31)
+            compliance_period_start = anchor if today >= anchor else date(today.year - 1, 3, 31)
+
+        results = await self.repo.get_fuel_codes_paginated(
+            pagination,
+            exclude_archived=exclude_archived,
+            compliance_period_start=compliance_period_start,
+        )
 
         # Prepare data for the spreadsheet
         data = []

@@ -196,10 +196,21 @@ class FuelCodeServices:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
+        exclude_archived: bool = False,
     ) -> FuelCodesSchema:
-        """List fuel codes, optionally scoped to a single organisation."""
+        """List fuel codes, optionally scoped to a single organisation
+        and/or excluding archived approved codes."""
+        compliance_period_start = None
+        if exclude_archived:
+            compliance_period_start, _ = self._get_compliance_period_bounds(
+                date.today()
+            )
+
         fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(
-            pagination, organization_id=organization_id
+            pagination,
+            organization_id=organization_id,
+            exclude_archived=exclude_archived,
+            compliance_period_start=compliance_period_start,
         )
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(

@@ -42,6 +42,8 @@ import { SignAndSubmitStep } from './components/SignAndSubmitStep'
 import { GovernmentDecisionStep } from './components/GovernmentDecisionStep'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
+import colors from '@/themes/base/colors'
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 
 const STEP_KEYS = CI_APPLICATION_STEPS.map((s) => s.key)
 
@@ -60,6 +62,7 @@ const EditViewCIApplicationBase = () => {
     useCIApplicationOptions()
 
   const [searchParams, setSearchParams] = useSearchParams()
+  const [isDocumentEditorOpen, setIsDocumentEditorOpen] = useState(false)
   const stepFromUrl = (() => {
     const raw = Number.parseInt(searchParams.get('step') ?? '1', 10)
     if (Number.isNaN(raw)) return 0
@@ -107,12 +110,19 @@ const EditViewCIApplicationBase = () => {
     isUpdatingStep3 ||
     isSubmitting
 
-  const { hasRoles } = useCurrentUser()
-  const isGovernment = !!hasRoles?.(roles.government)
+  const { hasAnyRole } = useCurrentUser()
+  const isGovernment = !!hasAnyRole?.(
+    roles.government,
+    roles.analyst,
+    roles.compliance_manager,
+    roles.director
+  )
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
-      isOpen ? Array.from(new Set([...prev, key])) : prev.filter((k) => k !== key)
+      isOpen
+        ? Array.from(new Set([...prev, key]))
+        : prev.filter((k) => k !== key)
     )
   }
 
@@ -295,10 +305,14 @@ const EditViewCIApplicationBase = () => {
 
   const isDraft = ciApplication?.status?.status === 'Draft'
   const isSubmittedOrTerminal = Boolean(
-    ciApplication?.status?.status &&
-      ciApplication.status.status !== 'Draft'
+    ciApplication?.status?.status && ciApplication.status.status !== 'Draft'
   )
   const canDelete = !!ciApplicationId && (!ciApplication || isDraft)
+  const isDecisionReadOnly =
+    ciApplication?.status?.status === 'Completed' ||
+    ciApplication?.status?.status === 'Withdrawn'
+  const canManageSummaryDocuments =
+    isGovernment && isSubmittedOrTerminal && !isDecisionReadOnly
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
@@ -363,18 +377,30 @@ const EditViewCIApplicationBase = () => {
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step4" />
     ),
-    step5: isSubmittedOrTerminal ? (
+    step5Decision: isSubmittedOrTerminal ? (
       <GovernmentDecisionStep
         ciApplication={ciApplication}
         isGovernment={isGovernment}
-        readOnly={
-          ciApplication?.status?.status === 'Completed' ||
-          ciApplication?.status?.status === 'Withdrawn'
-        }
+        readOnly={isDecisionReadOnly}
+        showComments={false}
+        showTitle={false}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step5" />
-    )
+    ),
+    step5Comments: isSubmittedOrTerminal ? (
+      <GovernmentDecisionStep
+        ciApplication={ciApplication}
+        isGovernment={isGovernment}
+        readOnly={isDecisionReadOnly}
+        showDecisionPanel={false}
+        showTitle={false}
+        showCommentsTitle={false}
+      />
+    ) : (
+      <StepStub titleKey="carbonIntensity:steps.step5" />
+    ),
+    step5: <StepStub titleKey="carbonIntensity:steps.step5" />
   }
 
   return (
@@ -382,11 +408,14 @@ const EditViewCIApplicationBase = () => {
       <FuelCodesTabs />
       <FloatingAlert ref={alertRef} />
 
-      <BCTypography variant="h5" color="primary" data-test="title">
+      <BCTypography variant="h5" color="primary" data-test="title" my={2}>
         {t('carbonIntensity:carbonIntensityApplication')}
       </BCTypography>
 
-      <CIApplicationProgress activeStep={activeStep} />
+      <CIApplicationProgress
+        activeStep={activeStep}
+        ciApplication={ciApplication}
+      />
 
       {!isAdd && ciApplication?.status?.status && (
         <Box mb={2}>
@@ -404,41 +433,61 @@ const EditViewCIApplicationBase = () => {
       */}
       {isSubmittedOrTerminal ? (
         <>
-          <Accordion
-            key="step5"
-            expanded={expanded.includes('step5')}
-            onChange={handleAccordionToggle('step5')}
-            data-test="ci-step-accordion-step5"
-            sx={{ mb: 1 }}
-          >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t('carbonIntensity:steps.step5')}
-              </BCTypography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <BCBox p={1}>{stepBodies.step5}</BCBox>
-            </AccordionDetails>
-          </Accordion>
-          <Accordion
-            key="summary"
-            expanded={expanded.includes('summary')}
-            onChange={handleAccordionToggle('summary')}
-            defaultExpanded
-            data-test="ci-application-summary-accordion"
-            sx={{ mb: 1 }}
-          >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t('carbonIntensity:summary.header')}
-              </BCTypography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <BCBox p={1}>
-                <ApplicationSummary ciApplication={ciApplication} />
+          {isGovernment && (
+            <BCBox mb={3} data-test="ci-step5-decision-inline">
+              {stepBodies.step5Decision}
+            </BCBox>
+          )}
+          <BCBox mb={4} data-test="ci-step5-comments-inline">
+            <Accordion
+              key="step5"
+              expanded={expanded.includes('step5')}
+              onChange={handleAccordionToggle('step5')}
+              data-test="ci-step-accordion-step5"
+            >
+              <AccordionSummary
+                expandIcon={
+                  <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
+                }
+              >
+                <BCTypography
+                  style={{ display: 'flex', alignItems: 'center' }}
+                  variant="h6"
+                  color="primary"
+                  component="div"
+                >
+                  {t('carbonIntensity:step5.commentsToOrganizationHeader')}
+                </BCTypography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <BCBox p={1}>{stepBodies.step5Comments}</BCBox>
+              </AccordionDetails>
+            </Accordion>
+          </BCBox>
+          <BCWidgetCard
+            component="div"
+            style={{ height: 'fit-content' }}
+            title={t('carbonIntensity:summary.header')}
+            mt={2}
+            sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
+            content={
+              <BCBox
+                sx={{
+                  marginTop: '5px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2
+                }}
+              >
+                <ApplicationSummary
+                  ciApplication={ciApplication}
+                  currentUser={currentUser}
+                  canEditDocuments={canManageSummaryDocuments}
+                  onEditDocuments={() => setIsDocumentEditorOpen(true)}
+                />
               </BCBox>
-            </AccordionDetails>
-          </Accordion>
+            }
+          />
         </>
       ) : (
         CI_APPLICATION_STEPS.map((step, index) => (
@@ -461,8 +510,21 @@ const EditViewCIApplicationBase = () => {
         ))
       )}
 
-      <BCBox sx={{ mt: 4, p: 2, bgcolor: 'grey.50', border: 1, borderColor: 'divider' }}>
-        <BCTypography variant="caption" color="text.secondary" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}>
+      <BCBox
+        sx={{
+          mt: 4,
+          p: 2,
+          bgcolor: 'grey.50',
+          border: 1,
+          borderColor: 'divider'
+        }}
+      >
+        <BCTypography
+          variant="caption"
+          color="text.secondary"
+          component="pre"
+          sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', m: 0 }}
+        >
           {t('carbonIntensity:footer')}
         </BCTypography>
       </BCBox>
@@ -474,6 +536,29 @@ const EditViewCIApplicationBase = () => {
           data={modalData}
         />
       )}
+      <BCModal
+        open={isDocumentEditorOpen}
+        onClose={() => setIsDocumentEditorOpen(false)}
+        data={
+          isDocumentEditorOpen
+            ? {
+                title: t('carbonIntensity:step3.uploadedHeader'),
+                secondaryButtonText: t('common:cancelBtn'),
+                secondaryButtonAction: () => setIsDocumentEditorOpen(false),
+                content: (
+                  <DocumentsModellingStep
+                    ciApplication={ciApplication}
+                    onSave={async () => {}}
+                    isSaving={false}
+                    readOnly={false}
+                    showTitle={false}
+                    showSaveControls={false}
+                  />
+                )
+              }
+            : null
+        }
+      />
     </Grid2>
   )
 }

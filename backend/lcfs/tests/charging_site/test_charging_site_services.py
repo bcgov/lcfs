@@ -874,6 +874,44 @@ class TestChargingSiteService:
         mock_repo.update_charging_site_status.assert_not_called()
 
     @pytest.mark.anyio
+    async def test_bulk_update_equipment_status_decommissioned_deactivates_fse_rows(
+        self, charging_site_service, mock_repo, mock_user
+    ):
+        """Decommissioning equipment should deactivate related draft FSE rows."""
+        bulk_update = BulkEquipmentStatusUpdateSchema(
+            equipment_ids=[1, 2], new_status="Decommissioned"
+        )
+
+        mock_statuses = [
+            MagicMock(status="Validated", charging_equipment_status_id=3),
+            MagicMock(status="Decommissioned", charging_equipment_status_id=4),
+        ]
+        mock_repo.get_charging_equipment_statuses.return_value = mock_statuses
+
+        mock_site_statuses = [
+            MagicMock(status="Draft", charging_site_status_id=1),
+            MagicMock(status="Submitted", charging_site_status_id=2),
+            MagicMock(status="Validated", charging_site_status_id=3),
+        ]
+        mock_repo.get_charging_site_statuses.return_value = mock_site_statuses
+        mock_site = MagicMock()
+        mock_site.charging_site_id = 1
+        mock_site.status = MagicMock(status="Validated")
+        mock_repo.get_charging_site_by_id.return_value = mock_site
+        mock_repo.bulk_update_equipment_status.return_value = [1, 2]
+        mock_repo.deactivate_fse_for_decommissioned_equipment.return_value = 2
+
+        result = await charging_site_service.bulk_update_equipment_status(
+            bulk_update, 1, mock_user
+        )
+
+        assert result is True
+        mock_repo.deactivate_fse_for_decommissioned_equipment.assert_awaited_once_with(
+            [1, 2]
+        )
+        mock_repo.update_charging_site_status.assert_not_called()
+
+    @pytest.mark.anyio
     async def test_bulk_update_equipment_status_invalid_transition(
         self, charging_site_service, mock_repo, mock_user
     ):
