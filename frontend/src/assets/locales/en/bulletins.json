@@ -1,8 +1,7 @@
 {
   "tabs": {
     "current": "Current",
-    "archived": "Archived",
-    "myFuelCodes": "My fuel codes"
+    "archived": "Archived"
   },
   "current": {
     "bulletinLabel": "Bulletin 12",

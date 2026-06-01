@@ -27,4 +27,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Non-reversible data backfill. Schema rollback (dropping organization_id)
+    # is handled in the previous revision.
     pass

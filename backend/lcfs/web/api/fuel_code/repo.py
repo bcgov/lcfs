@@ -747,10 +747,15 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_organization_by_name(self, name: str) -> Optional[int]:
-        """Return the organization_id whose name matches (case-insensitive), or None."""
+        """Return the organization_id whose name or operating_name matches
+        (case-insensitive), or None."""
+        name_norm = name.strip()
         result = await self.db.execute(
             select(Organization.organization_id).where(
-                func.lower(Organization.name) == func.lower(name.strip())
+                or_(
+                    func.lower(Organization.name) == func.lower(name_norm),
+                    func.lower(Organization.operating_name) == func.lower(name_norm),
+                )
             )
         )
         return result.scalar_one_or_none()

@@ -116,7 +116,7 @@ class FuelCodeServices:
         # then any fuel-code company strings not already in the list.
         seen = set(n.lower() for n in org_names)
         merged = list(org_names) + [n for n in fuel_code_names if n.lower() not in seen]
-        return sorted(merged)[:10]
+        return merged[:10]
 
     @service_handler
     async def search_contact_name(self, company, contact_name):
