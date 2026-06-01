@@ -438,6 +438,7 @@ async def test_handle_submitted_status_rejects_decommissioned_fse(
     mock_report.compliance_report_id = 1
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period.description = "2024"
 
     mock_user_has_roles.return_value = True
     compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(

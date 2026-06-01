@@ -39,6 +39,8 @@ def mock_repo():
     repo = AsyncMock()
     repo.get_charging_power_output.return_value = None
     repo.get_total_kwh_usage_for_report_group.return_value = 0
+    # Default: equipment is active (not decommissioned).
+    repo.get_latest_equipment_status_with_date.return_value = ("Submitted", None)
     return repo
 
 
@@ -47,7 +49,12 @@ def mock_comp_report_repo():
     """
     Return an AsyncMock for the ComplianceReportRepository.
     """
-    return AsyncMock()
+    repo = AsyncMock()
+    # Default: reports resolve to the 2024 compliance period.
+    default_report = MagicMock()
+    default_report.compliance_period.description = "2024"
+    repo.get_compliance_report_by_id.return_value = default_report
+    return repo
 
 
 @pytest.fixture
@@ -519,11 +526,17 @@ async def test_create_fse_reporting_batch_success(service, mock_repo):
 async def test_create_fse_reporting_batch_rejects_decommissioned_equipment(
     service, mock_repo
 ):
-    mock_repo.get_latest_equipment_status.return_value = "Decommissioned"
+    # Decommissioned in 2023, reported for the 2024 period -> already retired
+    # before the period began, so it must be rejected.
+    mock_repo.get_latest_equipment_status_with_date.return_value = (
+        "Decommissioned",
+        datetime(2023, 5, 1),
+    )
 
     data = [
         MagicMock(
             charging_equipment_id=99,
+            compliance_report_id=10,
             model_dump=lambda: {
                 "charging_equipment_id": 99,
                 "compliance_report_id": 10,
@@ -542,12 +555,43 @@ async def test_create_fse_reporting_batch_rejects_decommissioned_equipment(
 
 
 @pytest.mark.anyio
+async def test_create_fse_reporting_batch_allows_post_period_decommissioned_equipment(
+    service, mock_repo
+):
+    # Decommissioned in 2025 but reported for the 2024 period -> the equipment
+    # was still active during 2024, so the batch must be allowed. This is the
+    # core fix for prior-year supplementals (issue #4485).
+    mock_repo.get_latest_equipment_status_with_date.return_value = (
+        "Decommissioned",
+        datetime(2025, 3, 1),
+    )
+    mock_repo.create_fse_reporting_batch.return_value = {"message": "Success"}
+
+    data = [
+        MagicMock(
+            charging_equipment_id=99,
+            compliance_report_id=10,
+            model_dump=lambda: {
+                "charging_equipment_id": 99,
+                "compliance_report_id": 10,
+                "supply_from_date": "2024-01-01",
+                "supply_to_date": "2024-12-31",
+            },
+        )
+    ]
+
+    result = await service.create_fse_reporting_batch(data)
+
+    assert result["message"] == "Success"
+    mock_repo.create_fse_reporting_batch.assert_awaited_once()
+
+
+@pytest.mark.anyio
 async def test_update_fse_reporting_success(service, mock_repo):
     """Test successful update of FSE reporting"""
     mock_repo.get_reporting_record_by_id.return_value = MagicMock(
-        charging_equipment_id=1
+        charging_equipment_id=1, compliance_report_id=10
     )
-    mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.update_fse_reporting.return_value = {"id": 1, "kwh_usage": 1500.0}
 
     data = MagicMock(model_dump=lambda: {"kwh_usage": 1500.0})
@@ -584,9 +628,8 @@ async def test_delete_fse_reporting_batch_success(service, mock_repo):
 async def test_update_fse_reporting_active_status(service, mock_repo):
     """Test toggling FSE reporting active status"""
     mock_repo.get_reporting_record_by_id.return_value = MagicMock(
-        charging_equipment_id=1
+        charging_equipment_id=1, compliance_report_id=10
     )
-    mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.update_reporting_active_status.return_value = 3
 
     data = MagicMock(reporting_ids=[1, 2, 3], is_active=False)
@@ -605,9 +648,13 @@ async def test_update_fse_reporting_active_status_rejects_activating_decommissio
     service, mock_repo
 ):
     mock_repo.get_reporting_record_by_id.return_value = MagicMock(
-        charging_equipment_id=1
+        charging_equipment_id=1, compliance_report_id=10
     )
-    mock_repo.get_latest_equipment_status.return_value = "Decommissioned"
+    # Decommissioned in 2023, report is for the 2024 period -> reject activation.
+    mock_repo.get_latest_equipment_status_with_date.return_value = (
+        "Decommissioned",
+        datetime(2023, 5, 1),
+    )
 
     data = MagicMock(reporting_ids=[1], is_active=True)
 
@@ -622,11 +669,11 @@ async def test_update_fse_reporting_active_status_rejects_activating_decommissio
 @pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_success(service, mock_repo):
     """Test successful setting of default dates for FSE reporting"""
-    mock_repo.get_latest_equipment_status.return_value = "Submitted"
     mock_repo.bulk_update_reporting_dates.return_value = 3
 
     data = MagicMock(
         equipment_ids=[1, 2, 3],
+        compliance_report_id=10,
         supply_from_date="2024-01-01",
         supply_to_date="2024-12-31",
     )
