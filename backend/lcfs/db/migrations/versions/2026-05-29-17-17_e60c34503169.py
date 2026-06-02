@@ -1,7 +1,7 @@
 """Add A1 flag to credit transfers.
 
 Revision ID: e60c34503169
-Revises: c2a4f6b8d9e1
+Revises: e4c6b2d0f3a8
 Create Date: 2026-05-27 17:17:06.451991
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "e60c34503169"
-down_revision = "c2a4f6b8d9e1"
+down_revision = "e4c6b2d0f3a8"
 branch_labels = None
 depends_on = None
 
