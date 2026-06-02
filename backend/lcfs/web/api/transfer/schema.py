@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 
 from lcfs.web.api.base import BaseSchema
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
@@ -64,9 +64,15 @@ class TransferSchema(BaseSchema):
     comments: Optional[List[TransferCommentSchema]] = None
     current_status: TransferStatusSchema
     transfer_category: Optional[TransferCategorySchema] = None
+    is_a1_category: bool = False
     transfer_history: Optional[List[TransferHistorySchema]] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
     model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    @field_validator("is_a1_category", mode="before")
+    @classmethod
+    def default_is_a1_category(cls, value):
+        return False if value is None else value
 
 
 class TransferCreateSchema(BaseSchema):
@@ -85,6 +91,11 @@ class TransferCreateSchema(BaseSchema):
     current_status_id: Optional[int] = None
     current_status: Optional[TransferStatusEnum] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
+
+
+class TransferCategoryUpdateSchema(BaseSchema):
+    category: Optional[str] = None
+    is_a1_category: Optional[bool] = None
 
 
 class CreateTransferHistorySchema(BaseSchema):
