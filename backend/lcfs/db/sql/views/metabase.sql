@@ -109,7 +109,8 @@ SELECT
     price_per_unit,
     quantity,
     price_per_unit * quantity::float AS transfer_value,
-    transfer_category.category::text AS transfer_category
+    transfer_category.category::text AS transfer_category,
+    transfer.is_a1_category
 FROM
     transfer
     INNER JOIN transfer_status ON transfer.current_status_id = transfer_status.transfer_status_id
