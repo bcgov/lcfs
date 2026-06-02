@@ -16,7 +16,7 @@ All statements use ``IF NOT EXISTS`` so the migration is safe to
 re-run, and any ad-hoc indexes added out-of-band won't collide.
 
 Revision ID: a7b3c9d5e1f2
-Revises: c2a4f6b8d9e1
+Revises: e60c34503169
 Create Date: 2026-05-28 14:00:00.000000
 
 """
@@ -25,7 +25,7 @@ from alembic import op
 
 
 revision = "a7b3c9d5e1f2"
-down_revision = "c2a4f6b8d9e1"
+down_revision = "e60c34503169"
 branch_labels = None
 depends_on = None
 
