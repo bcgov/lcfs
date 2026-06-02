@@ -15,6 +15,11 @@ chain on every submit, status change, and report fetch.
 All statements use ``IF NOT EXISTS`` so the migration is safe to
 re-run, and any ad-hoc indexes added out-of-band won't collide.
 
+Note: ``down_revision`` was rebased onto the current chain head
+(``e60c34503169``) after merging ``develop``, which had branched off
+the same parent and introduced a competing Alembic head. Keeping a
+single head lets ``alembic upgrade head`` resolve unambiguously in CI.
+
 Revision ID: a7b3c9d5e1f2
 Revises: e60c34503169
 Create Date: 2026-05-28 14:00:00.000000
