@@ -267,6 +267,14 @@ export const useUpdateComplianceReport = (reportID: number | string | undefined 
   } = options
 
   return useMutation({
+    // Compliance report updates (including submission) are NOT idempotent
+    // from the client's perspective: the backend serialises concurrent
+    // submits with a row lock and rejects the second attempt with a 409
+    // ("This report has already been submitted"). If react-query silently
+    // retries a slow-but-successful PUT, the retry races the first
+    // request's tail and surfaces that 409 as a "network error" toast even
+    // though the submit succeeded. See ticket #4431.
+    retry: 0,
     mutationFn: async (data: any) => {
       if (!reportID) {
         throw new Error('Report ID is required')

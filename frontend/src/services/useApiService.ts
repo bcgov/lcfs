@@ -21,6 +21,14 @@ export interface ApiServiceInstance extends AxiosInstance {
   download: (options: DownloadOptions) => Promise<void>
 }
 
+// Default request timeout. Axios's own default is 0 (wait forever), which
+// means a slow request hangs until OpenShift/nginx returns a 504 — long
+// after the user has assumed the action failed. 90s comfortably covers
+// the slowest compliance-report submission summary recalculation we see
+// in test (ticket #4431) while still giving the client a clean local
+// error well before any infra-layer timeout.
+const DEFAULT_TIMEOUT_MS = 90_000
+
 type ErrorResponse = {
   response?: { status: number; data?: unknown; headers?: Record<string, string> }
   message?: string
@@ -47,6 +55,7 @@ export const useApiService = (opts: AxiosRequestConfig = {}): ApiServiceInstance
   const apiService = useMemo(() => {
     const instance = axios.create({
       baseURL: CONFIG.API_BASE,
+      timeout: DEFAULT_TIMEOUT_MS,
       ...opts
     }) as ApiServiceInstance
 
