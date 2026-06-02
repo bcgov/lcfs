@@ -20,7 +20,6 @@ from lcfs.web.api.fuel_code.services import FuelCodeServices
 
 @pytest.mark.anyio
 async def test_get_fuel_codes_success():
-    # Arrange
     repo_mock = AsyncMock()
     service = FuelCodeServices(repo=repo_mock)
 
@@ -47,14 +46,44 @@ async def test_get_fuel_codes_success():
 
     pagination = PaginationRequestSchema(page=1, size=10)
 
-    # Act
     result = await service.search_fuel_codes(pagination)
 
-    # Assert
     assert isinstance(result.pagination, PaginationResponseSchema)
     assert len(result.fuel_codes) == 1
     assert result.fuel_codes[0].company == "XYZ Corp"
-    repo_mock.get_fuel_codes_paginated.assert_called_once_with(pagination)
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(
+        pagination,
+        exclude_archived=False,
+        compliance_period_start=None,
+    )
+
+
+@pytest.mark.anyio
+async def test_search_fuel_codes_exclude_archived_derives_compliance_period():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+    repo_mock.get_fuel_codes_paginated.return_value = ([], 0)
+
+    await service.search_fuel_codes(PaginationRequestSchema(page=1, size=10), exclude_archived=True)
+
+    kwargs = repo_mock.get_fuel_codes_paginated.call_args.kwargs
+    assert kwargs["exclude_archived"] is True
+    assert kwargs["compliance_period_start"] is not None
+    assert kwargs["compliance_period_start"].month == 3
+    assert kwargs["compliance_period_start"].day == 31
+
+
+@pytest.mark.anyio
+async def test_search_fuel_codes_no_compliance_period_when_not_excluding():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+    repo_mock.get_fuel_codes_paginated.return_value = ([], 0)
+
+    await service.search_fuel_codes(PaginationRequestSchema(page=1, size=10), exclude_archived=False)
+
+    kwargs = repo_mock.get_fuel_codes_paginated.call_args.kwargs
+    assert kwargs["exclude_archived"] is False
+    assert kwargs["compliance_period_start"] is None
 
 
 def create_mock_fuel_code_model():

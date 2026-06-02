@@ -494,8 +494,71 @@ async def test_handle_submitted_status_skips_fse_for_legacy_year(
     )
 
     compliance_report_update_service.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment.assert_not_awaited()
+    compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_not_awaited()
     compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report.assert_not_awaited()
     compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original_report(
+    compliance_report_update_service,
+    mock_user_has_roles,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
+    mock_report.supplemental_initiator = None
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=0)
+    )
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._validate_organization_details_for_submission = (
+        AsyncMock()
+    )
+
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_awaited_once_with(
+        1
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_skips_decommissioned_refresh_for_supplemental(
+    compliance_report_update_service,
+    mock_user_has_roles,
+):
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
+    mock_report.supplemental_initiator = SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=0)
+    )
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._validate_organization_details_for_submission = (
+        AsyncMock()
+    )
+
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_not_awaited()
 
 
 @pytest.mark.anyio

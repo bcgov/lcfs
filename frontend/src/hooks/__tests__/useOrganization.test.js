@@ -179,7 +179,7 @@ describe('useOrganization hooks', () => {
     try {
       await result.current.mutateAsync({})
     } catch {}
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith(['organization', 9])
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['organization', 9] })
   })
 
   it('useUpdateOrganizationUser success invalidates related queries', async () => {
@@ -201,11 +201,11 @@ describe('useOrganization hooks', () => {
     try {
       await result.current.mutateAsync({})
     } catch {}
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: [
       'organization-user',
       1,
       2
-    ])
+    ] })
   })
 
   it('useUpdateCurrentOrgCreditMarket success invalidates related', async () => {
@@ -216,16 +216,16 @@ describe('useOrganization hooks', () => {
     )
     await result.current.mutateAsync({})
     expect(qcMock.setQueryData).toHaveBeenCalled()
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith(['organization'])
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['organization'] })
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: [
       'current-org-balance'
-    ])
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+    ] })
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: [
       'credit-market-listings'
-    ])
-    expect(qcMock.refetchQueries).toHaveBeenCalledWith([
+    ] })
+    expect(qcMock.refetchQueries).toHaveBeenCalledWith({ queryKey: [
       'credit-market-listings'
-    ])
+    ] })
   })
 
   it('useUpdateOrganizationCreditMarket invalidates caches and listings', async () => {
@@ -236,14 +236,14 @@ describe('useOrganization hooks', () => {
     )
     await result.current.mutateAsync({})
     expect(mockPut).toHaveBeenCalledWith('/organizations/5/credit-market', {})
-    expect(qcMock.removeQueries).toHaveBeenCalledWith(['organization', 5])
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith(['organization'])
-    expect(qcMock.invalidateQueries).toHaveBeenCalledWith([
+    expect(qcMock.removeQueries).toHaveBeenCalledWith({ queryKey: ['organization', 5] })
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['organization'] })
+    expect(qcMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: [
       'credit-market-listings'
-    ])
-    expect(qcMock.refetchQueries).toHaveBeenCalledWith([
+    ] })
+    expect(qcMock.refetchQueries).toHaveBeenCalledWith({ queryKey: [
       'credit-market-listings'
-    ])
+    ] })
   })
 
   it('useOrganizationBalance disabled when user not government', async () => {

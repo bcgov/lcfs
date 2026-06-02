@@ -111,7 +111,7 @@ async def test_update_category_success(
     set_mock_user,
     mock_transfer_services,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    set_mock_user(fastapi_app, [RoleEnum.DIRECTOR])
 
     transfer_id = 1
     url = fastapi_app.url_path_for("update_category", transfer_id=transfer_id)
