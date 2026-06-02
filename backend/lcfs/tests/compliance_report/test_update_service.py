@@ -1115,6 +1115,39 @@ async def test_handle_recommended_by_analyst_status_not_superseded(
 
 
 @pytest.mark.anyio
+async def test_handle_recommended_by_analyst_status_skips_fse_for_legacy_year(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_recommended_analyst: MagicMock,
+):
+    """FSE didn't exist before 2024 — analyst adjustments of legacy reports must
+    not auto-validate (mutate) FSE records, mirroring the supplier submission guard."""
+    # Arrange a legacy compliance year
+    mock_compliance_report_recommended_analyst.compliance_period.description = "2023"
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
+    )
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_compliance_report_recommended_analyst, mock_user_profile_analyst
+        )
+
+        # Assert FSE auto-validation skipped for legacy year
+        mock_charging_equipment_service.auto_validate_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_handle_recommended_by_analyst_status_superseded(
     compliance_report_update_service: ComplianceReportUpdateService,
     mock_repo: AsyncMock,
@@ -1608,6 +1641,7 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
     )
+    mock_report.compliance_period = MagicMock(description="2024")
     # Start with no summary, will be assigned during execution
     mock_report.summary = None
 
@@ -1663,6 +1697,7 @@ async def test_handle_recommended_by_analyst_auto_validates_fse(
     mock_report.compliance_report_id = 456
     mock_report.organization_id = 91
     mock_report.version = 0
+    mock_report.compliance_period = MagicMock(description="2024")
     mock_report.summary = None
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
@@ -1714,6 +1749,7 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )  # Not government
+    mock_report.compliance_period = MagicMock(description="2024")
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 

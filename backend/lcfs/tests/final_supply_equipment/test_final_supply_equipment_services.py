@@ -399,6 +399,28 @@ async def test_copy_fse_to_new_report_skipped_for_legacy_year(service, mock_repo
 
 
 @pytest.mark.anyio
+async def test_create_fse_reporting_batch_rejected_for_legacy_year(
+    service, mock_repo, mock_comp_report_repo
+):
+    """Direct API writes to legacy-year (pre-2024) reports must be rejected,
+    not just hidden in the UI."""
+    legacy_report = MagicMock(spec=ComplianceReport)
+    legacy_report.compliance_period = MagicMock(description="2023")
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = legacy_report
+
+    item = MagicMock()
+    item.compliance_report_id = 42
+    item.charging_equipment_id = 7
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_fse_reporting_batch([item])
+
+    assert exc_info.value.status_code == 400
+    assert "before 2024" in exc_info.value.detail
+    mock_repo.create_fse_reporting_batch.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_success(
     service, mock_repo, mock_comp_report_repo
 ):

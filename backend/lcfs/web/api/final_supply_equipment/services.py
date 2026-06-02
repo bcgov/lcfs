@@ -38,6 +38,9 @@ logger = structlog.get_logger(__name__)
 class FinalSupplyEquipmentServices:
     DEFAULT_OPERATIONAL_HOURS = 24
     DECOMMISSIONED_STATUS = "Decommissioned"
+    # FSE reporting did not exist before this compliance year. Reports for
+    # earlier years must not gain or mutate FSE reporting data.
+    MIN_FSE_COMPLIANCE_YEAR = 2024
 
     def __init__(
         self,
@@ -328,6 +331,34 @@ class FinalSupplyEquipmentServices:
 
         return compliance_report
 
+    async def _validate_report_supports_fse(self, compliance_report_id: int) -> None:
+        """Reject FSE reporting writes against legacy-year reports (pre-2024).
+
+        FSE reporting did not exist before 2024, so the UI hides the section for
+        those years. This guard closes the gap for direct API calls so legacy
+        reports can never gain or mutate FSE reporting rows server-side, even if
+        a client bypasses the UI.
+        """
+        if compliance_report_id is None:
+            return
+        report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id
+        )
+        if report is None:
+            return
+        try:
+            compliance_year = int(report.compliance_period.description)
+        except (AttributeError, TypeError, ValueError):
+            return
+        if compliance_year < self.MIN_FSE_COMPLIANCE_YEAR:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "FSE reporting is not available for compliance periods before "
+                    f"{self.MIN_FSE_COMPLIANCE_YEAR}."
+                ),
+            )
+
     async def _validate_equipment_is_not_decommissioned(
         self, charging_equipment_id: int
     ) -> None:
@@ -534,6 +565,9 @@ class FinalSupplyEquipmentServices:
         """
         Create FSE compliance reporting data
         """
+        for report_id in {item.compliance_report_id for item in data}:
+            await self._validate_report_supports_fse(report_id)
+
         for item in data:
             await self._validate_equipment_is_not_decommissioned(
                 item.charging_equipment_id
@@ -550,7 +584,12 @@ class FinalSupplyEquipmentServices:
         """
         Update FSE compliance reporting data
         """
-        await self._validate_reporting_record_is_not_decommissioned(reporting_id)
+        reporting_record = await self._validate_reporting_record_is_not_decommissioned(
+            reporting_id
+        )
+        await self._validate_report_supports_fse(
+            reporting_record.compliance_report_id
+        )
         return await self.repo.update_fse_reporting(reporting_id, data.model_dump())
 
     @service_handler
@@ -577,6 +616,8 @@ class FinalSupplyEquipmentServices:
         if not data.reporting_ids:
             return {"updated": 0, "is_active": data.is_active}
 
+        await self._validate_report_supports_fse(data.compliance_report_id)
+
         if data.is_active:
             for reporting_id in data.reporting_ids:
                 await self._validate_reporting_record_is_not_decommissioned(
@@ -599,6 +640,8 @@ class FinalSupplyEquipmentServices:
     ) -> dict:
         if not data.equipment_ids:
             return {"created": 0, "updated": 0}
+
+        await self._validate_report_supports_fse(data.compliance_report_id)
 
         if not data.supply_from_date or not data.supply_to_date:
             raise HTTPException(

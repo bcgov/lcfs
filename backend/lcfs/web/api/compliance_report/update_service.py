@@ -421,10 +421,16 @@ class ComplianceReportUpdateService:
         if not has_analyst_or_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # Auto-validate all submitted FSE records associated with this report
-        await self.charging_equipment_service.auto_validate_equipment_for_report(
-            report.compliance_report_id, report.organization_id
-        )
+        # FSE reporting did not exist before 2024. Skip FSE auto-validation for
+        # legacy years so analyst adjustments/reassessments of pre-2024 reports
+        # do not mutate FSE data — mirroring the supplier submission guard in
+        # handle_submitted_status.
+        compliance_year = int(report.compliance_period.description)
+        if compliance_year >= 2024:
+            # Auto-validate all submitted FSE records associated with this report
+            await self.charging_equipment_service.auto_validate_equipment_for_report(
+                report.compliance_report_id, report.organization_id
+            )
 
         # Lock the summary when report is recommended by analyst - this is the snapshot point
         await self._calculate_and_lock_summary(report, user, skip_can_sign_check=True)
