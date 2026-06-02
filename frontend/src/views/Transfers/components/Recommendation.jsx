@@ -51,7 +51,7 @@ export const Recommendation = ({ currentStatus }) => {
           )}
         />
       ) : (
-        <BCTypography>
+        <BCTypography variant="body2">
           The analyst has recommended that you to{' '}
           <strong>{transferData.recommendation}</strong> this transfer.
         </BCTypography>
