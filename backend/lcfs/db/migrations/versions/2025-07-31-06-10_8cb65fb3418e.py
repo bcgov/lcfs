@@ -25,9 +25,6 @@ depends_on = None
 
 def upgrade() -> None:
     # update transfer base view to not use EffectiveDates
-    content = find_and_read_sql_file(sqlFile="metabase.sql")
-    sections = parse_sql_sections(content)
-    execute_sql_sections(sections, ["Transfer base Analytics View"])
     op.execute(
         """
         UPDATE transfer t
