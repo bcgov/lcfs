@@ -134,6 +134,7 @@ vi.mock('@/views/ComplianceReports/ComplianceReportViewSelector', () => ({
 
 vi.mock('@/views/FuelCodes', () => ({
   FuelCodes: () => <div data-test="fuel-codes">Fuel Codes</div>,
+  MyFuelCodes: () => <div data-test="my-fuel-codes">My Fuel Codes</div>,
   AddFuelCode: () => <div data-test="add-fuel-code">Add Fuel Code</div>,
   AddEditFuelCode: () => (
     <div data-test="add-edit-fuel-code">Add/Edit Fuel Code</div>

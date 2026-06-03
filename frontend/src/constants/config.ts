@@ -10,6 +10,7 @@ export interface FeatureFlagsConfig {
   manageFse?: boolean
   legacySupplementalLock?: boolean
   ciApplications?: boolean
+  internalCommentSearch?: boolean
 }
 
 export interface KeycloakConfig {
@@ -76,7 +77,8 @@ export const FEATURE_FLAGS = {
   MANAGE_CHARGING_SITES: 'manageChargingSites',
   MANAGE_FSE: 'manageFse',
   LEGACY_SUPPLEMENTAL_LOCK: 'legacySupplementalLock',
-  CI_APPLICATIONS: 'ciApplications'
+  CI_APPLICATIONS: 'ciApplications',
+  INTERNAL_COMMENT_SEARCH: 'internalCommentSearch'
 } as const
 
 export type FeatureFlagValue =
@@ -135,6 +137,8 @@ export const CONFIG: AppConfig = {
     // flips it on for production.
     ciApplications:
       window.lcfs_config.feature_flags.ciApplications ??
-      !isProductionEnvironment
+      !isProductionEnvironment,
+    internalCommentSearch:
+      window.lcfs_config.feature_flags.internalCommentSearch ?? false
   }
 }

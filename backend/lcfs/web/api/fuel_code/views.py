@@ -26,6 +26,7 @@ from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateUpdateSchema,
     FuelCodesSchema,
+    PaginationResponseSchema,
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
@@ -35,6 +36,7 @@ from lcfs.web.api.fuel_code.schema import (
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.core.decorators import view_handler, public_view_handler
+from lcfs.web.core.rate_limit import RateLimit
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -44,7 +46,9 @@ get_async_db = dependencies.get_async_db_session
 def resolve_bulletin_type(
     bulletin_type: Optional[str], bulletin_type_snake: Optional[str]
 ) -> str:
-    resolved_bulletin_type = (bulletin_type or bulletin_type_snake or "").strip().lower()
+    resolved_bulletin_type = (
+        (bulletin_type or bulletin_type_snake or "").strip().lower()
+    )
 
     if resolved_bulletin_type not in {"current", "archived"}:
         raise HTTPException(
@@ -165,6 +169,34 @@ async def get_fuel_codes(
 
 
 @router.post(
+    "/my-list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.CI_APPLICANT])
+async def get_my_fuel_codes(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: FuelCodeServices = Depends(),
+):
+    # Always derive scope from the session, never from the request body.
+    organization = getattr(request.user, "organization", None)
+    organization_id = getattr(organization, "organization_id", None)
+    if organization_id is None:
+        return FuelCodesSchema(
+            pagination=PaginationResponseSchema(
+                total=0,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=0,
+            ),
+            fuel_codes=[],
+        )
+
+    return await service.search_fuel_codes(
+        pagination, organization_id=organization_id
+    )
+
+
+@router.post(
     "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.GOVERNMENT])
@@ -216,15 +248,11 @@ async def get_fuel_code_bulletins(
     bulletin_type_snake: Optional[str] = Query(
         None, alias="bulletin_type", description="Type: 'current' or 'archived'"
     ),
-    pagination: PaginationRequestSchema = Body(
-        PaginationRequestSchema(), embed=False
-    ),
+    pagination: PaginationRequestSchema = Body(PaginationRequestSchema(), embed=False),
     service: FuelCodeServices = Depends(),
 ) -> FuelCodeBulletinsSchema:
     """Fetch paginated Bulletin 12 (current) or Bulletin 12a (archived) fuel code data."""
-    resolved_bulletin_type = resolve_bulletin_type(
-        bulletin_type, bulletin_type_snake
-    )
+    resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
 
     return await service.get_fuel_code_bulletins(resolved_bulletin_type, pagination)
 
@@ -234,7 +262,7 @@ async def get_fuel_code_bulletins(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@public_view_handler
+@public_view_handler(rate_limit=RateLimit(times=5, seconds=60))
 async def export_fuel_code_bulletins(
     request: Request,
     format: str = Query(default="xlsx", description="File export format"),
@@ -247,9 +275,7 @@ async def export_fuel_code_bulletins(
     pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeBulletinExporter = Depends(),
 ):
-    resolved_bulletin_type = resolve_bulletin_type(
-        bulletin_type, bulletin_type_snake
-    )
+    resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
     return await exporter.export(resolved_bulletin_type, format, pagination)
 
 
