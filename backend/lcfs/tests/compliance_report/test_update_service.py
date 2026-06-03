@@ -348,6 +348,7 @@ async def test_handle_submitted_status_auto_submits_fse_records(
     mock_report.compliance_report_id = report_id
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.line_20_surplus_deficit_units = 100
 
@@ -438,6 +439,7 @@ async def test_handle_submitted_status_rejects_decommissioned_fse(
     mock_report.compliance_report_id = 1
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
 
     mock_user_has_roles.return_value = True
     compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(
@@ -455,6 +457,49 @@ async def test_handle_submitted_status_rejects_decommissioned_fse(
 
 
 @pytest.mark.anyio
+async def test_handle_submitted_status_skips_fse_for_legacy_year(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    mock_summary_service,
+):
+    """Reports for 2023 and earlier predate FSE — all FSE submission logic must be skipped."""
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 1
+    mock_report.organization_id = 123
+    mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2023")
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = 0
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Any decommissioned-FSE noise should not block a legacy submission
+    compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report = AsyncMock(
+        return_value=True
+    )
+
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=0)
+    )
+    compliance_report_update_service.org_service = mock_org_service
+    mock_org_service.adjust_balance.return_value = MagicMock()
+
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    compliance_report_update_service.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment.assert_not_awaited()
+    compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_not_awaited()
+    compliance_report_update_service.final_supply_equipment_repo.has_decommissioned_fse_in_report.assert_not_awaited()
+    compliance_report_update_service._charging_equipment_service.auto_submit_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original_report(
     compliance_report_update_service,
     mock_user_has_roles,
@@ -463,7 +508,9 @@ async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original
     mock_report.compliance_report_id = 1
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
     mock_report.supplemental_initiator = None
+    mock_report.compliance_period.description = "2024"
 
     mock_user_has_roles.return_value = True
     compliance_report_update_service.summary_service.calculate_compliance_report_summary = AsyncMock(
@@ -480,8 +527,10 @@ async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original
         mock_report, UserProfile()
     )
 
+    # Deactivation is now compliance-period-aware and matches the whole report
+    # group: only FSE decommissioned before the reported year are deactivated.
     compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_awaited_once_with(
-        1
+        "report-group-123", compliance_year=2024
     )
 
 
@@ -494,6 +543,7 @@ async def test_handle_submitted_status_skips_decommissioned_refresh_for_suppleme
     mock_report.compliance_report_id = 1
     mock_report.organization_id = 123
     mock_report.compliance_report_group_uuid = "report-group-123"
+    mock_report.compliance_period = MagicMock(description="2024")
     mock_report.supplemental_initiator = SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
 
     mock_user_has_roles.return_value = True
@@ -1131,6 +1181,39 @@ async def test_handle_recommended_by_analyst_status_not_superseded(
 
 
 @pytest.mark.anyio
+async def test_handle_recommended_by_analyst_status_skips_fse_for_legacy_year(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_recommended_analyst: MagicMock,
+):
+    """FSE didn't exist before 2024 — analyst adjustments of legacy reports must
+    not auto-validate (mutate) FSE records, mirroring the supplier submission guard."""
+    # Arrange a legacy compliance year
+    mock_compliance_report_recommended_analyst.compliance_period.description = "2023"
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    mock_charging_equipment_service = AsyncMock()
+    mock_charging_equipment_service.auto_validate_equipment_for_report = AsyncMock(
+        return_value=0
+    )
+    compliance_report_update_service._charging_equipment_service = (
+        mock_charging_equipment_service
+    )
+
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_compliance_report_recommended_analyst, mock_user_profile_analyst
+        )
+
+        # Assert FSE auto-validation skipped for legacy year
+        mock_charging_equipment_service.auto_validate_equipment_for_report.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_handle_recommended_by_analyst_status_superseded(
     compliance_report_update_service: ComplianceReportUpdateService,
     mock_repo: AsyncMock,
@@ -1624,6 +1707,7 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
     )
+    mock_report.compliance_period = MagicMock(description="2024")
     # Start with no summary, will be assigned during execution
     mock_report.summary = None
 
@@ -1679,6 +1763,7 @@ async def test_handle_recommended_by_analyst_auto_validates_fse(
     mock_report.compliance_report_id = 456
     mock_report.organization_id = 91
     mock_report.version = 0
+    mock_report.compliance_period = MagicMock(description="2024")
     mock_report.summary = None
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
@@ -1730,6 +1815,7 @@ async def test_handle_recommended_by_analyst_non_government_reassessment_no_calc
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )  # Not government
+    mock_report.compliance_period = MagicMock(description="2024")
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 

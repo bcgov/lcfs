@@ -343,35 +343,47 @@ class ComplianceReportUpdateService:
             report.compliance_report_id
         )
 
-        if report.compliance_report_group_uuid:
-            await self.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment(
-                report.compliance_report_group_uuid,
-                report.organization_id,
-            )
+        # FSE reporting did not exist before 2024. Skip all FSE submission logic
+        # for legacy years so we do not mutate FSE data or block submission on
+        # validations that should not apply.
+        compliance_year = int(report.compliance_period.description)
+        if compliance_year >= 2024:
+            if report.compliance_report_group_uuid:
+                await self.final_supply_equipment_repo.sync_reporting_associations_to_latest_equipment(
+                    report.compliance_report_group_uuid,
+                    report.organization_id,
+                )
 
-        if report.supplemental_initiator is None:
-            await self.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report(
-                report.compliance_report_id
-            )
+            # Only act on FSE that were decommissioned before the report's
+            # compliance period. Equipment retired during or after the reported
+            # year was still valid for that year (e.g. a 2024 report must not be
+            # blocked by a 2025 decommission), so it stays reportable. Inside
+            # this guard the compliance year is already a valid int.
+            if report.supplemental_initiator is None:
+                await self.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report(
+                    report.compliance_report_group_uuid,
+                    compliance_year=compliance_year,
+                )
 
-        has_decommissioned_fse = (
-            await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
-                report.compliance_report_id,
-                only_active=True,
+            has_decommissioned_fse = (
+                await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
+                    report.compliance_report_group_uuid,
+                    only_active=True,
+                    compliance_year=compliance_year,
+                )
             )
-        )
-        if has_decommissioned_fse:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "This draft report includes decommissioned FSE. Remove or deactivate those rows before submission."
-                ),
-            )
+            if has_decommissioned_fse:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "This draft report includes decommissioned FSE. Remove or deactivate those rows before submission."
+                    ),
+                )
 
-        # Auto-submit all FSE records in Draft or Updated status to Submitted status
-        await self.charging_equipment_service.auto_submit_equipment_for_report(
-            report.compliance_report_id, report.organization_id
-        )
+            # Auto-submit all FSE records in Draft or Updated status to Submitted status
+            await self.charging_equipment_service.auto_submit_equipment_for_report(
+                report.compliance_report_id, report.organization_id
+            )
 
         # Ensure summary exists and snapshot user-entered lines before transaction creation
         calculated_summary = (
@@ -421,10 +433,16 @@ class ComplianceReportUpdateService:
         if not has_analyst_or_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # Auto-validate all submitted FSE records associated with this report
-        await self.charging_equipment_service.auto_validate_equipment_for_report(
-            report.compliance_report_id, report.organization_id
-        )
+        # FSE reporting did not exist before 2024. Skip FSE auto-validation for
+        # legacy years so analyst adjustments/reassessments of pre-2024 reports
+        # do not mutate FSE data — mirroring the supplier submission guard in
+        # handle_submitted_status.
+        compliance_year = int(report.compliance_period.description)
+        if compliance_year >= 2024:
+            # Auto-validate all submitted FSE records associated with this report
+            await self.charging_equipment_service.auto_validate_equipment_for_report(
+                report.compliance_report_id, report.organization_id
+            )
 
         # Lock the summary when report is recommended by analyst - this is the snapshot point
         await self._calculate_and_lock_summary(report, user, skip_can_sign_check=True)
