@@ -4,17 +4,16 @@ Scopes "My Fuel Codes" by FK rather than the brittle company text match.
 Nullable: foreign producers have no registered organisation.
 
 Revision ID: f9a8b7c6d5e4
-Revises: e60c34503169
+Revises: a7b3c9d5e1f2
 Create Date: 2026-05-15 15:30:00.000000
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision = "f9a8b7c6d5e4"
-down_revision = "e60c34503169"
+down_revision = "a7b3c9d5e1f2"
 branch_labels = None
 depends_on = None
 
