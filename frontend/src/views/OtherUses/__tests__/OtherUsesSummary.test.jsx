@@ -67,7 +67,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 }))
 
 // Mock the schema
-vi.mock('@/views/OtherUses/_schema.jsx', () => ({
+vi.mock('@/views/OtherUses/_schema', () => ({
   otherUsesSummaryColDefs: () => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantitySupplied', headerName: 'Quantity Supplied' },

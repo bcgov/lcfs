@@ -6,10 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance.ReportOpening import (
-    ReportOpening,
-    SupplementalReportAccessRole,
-)
+from lcfs.db.models.compliance.ReportOpening import ReportOpening
 from lcfs.web.api.report_opening.constants import configured_years
 from lcfs.web.core.decorators import repo_handler
 
@@ -24,7 +21,7 @@ class ReportOpeningRepository:
             compliance_year=year,
             compliance_reporting_enabled=year <= current_year,
             early_issuance_enabled=False,
-            supplemental_report_role=SupplementalReportAccessRole.BCeID,
+            create_supplemental_enabled=year >= current_year,
         )
 
     @repo_handler
@@ -77,7 +74,7 @@ class ReportOpeningRepository:
         *,
         compliance_reporting_enabled: bool | None = None,
         early_issuance_enabled: bool | None = None,
-        supplemental_report_role: SupplementalReportAccessRole | None = None,
+        create_supplemental_enabled: bool | None = None,
     ) -> ReportOpening:
         result = await self.db.execute(
             select(ReportOpening).where(ReportOpening.compliance_year == year)
@@ -93,8 +90,8 @@ class ReportOpeningRepository:
         if early_issuance_enabled is not None:
             record.early_issuance_enabled = early_issuance_enabled
 
-        if supplemental_report_role is not None:
-            record.supplemental_report_role = supplemental_report_role
+        if create_supplemental_enabled is not None:
+            record.create_supplemental_enabled = create_supplemental_enabled
 
         await self.db.flush()
         return record

@@ -29,13 +29,13 @@ describe('ReportOpenings', () => {
       complianceYear: 2019,
       complianceReportingEnabled: false,
       earlyIssuanceEnabled: false,
-      supplementalReportRole: 'BCeID'
+      createSupplementalEnabled: true
     },
     {
       complianceYear: 2020,
       complianceReportingEnabled: true,
       earlyIssuanceEnabled: false,
-      supplementalReportRole: 'IDIR'
+      createSupplementalEnabled: false
     }
   ]
 
@@ -67,10 +67,29 @@ describe('ReportOpenings', () => {
     await userEvent.click(complianceToggle2020)
 
     expect(saveButton).not.toBeDisabled()
+  })
 
-    const idirRadios = screen.getAllByRole('radio', { name: /IDIR/i })
-    await userEvent.click(idirRadios[0])
+  it('renders a create supplemental checkbox per year and enables save on toggle', async () => {
+    render(<ReportOpenings />, { wrapper })
 
+    const supplementalToggle2019 = await screen.findByLabelText(
+      /create supplemental report availability.*2019/i
+    )
+    const supplementalToggle2020 = screen.getByLabelText(
+      /create supplemental report availability.*2020/i
+    )
+
+    expect(supplementalToggle2019).toBeChecked()
+    expect(supplementalToggle2020).not.toBeChecked()
+
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+
+    const saveButton = screen.getByRole('button', { name: /Save/i })
+    expect(saveButton).toBeDisabled()
+
+    await userEvent.click(supplementalToggle2020)
+
+    expect(supplementalToggle2020).toBeChecked()
     expect(saveButton).not.toBeDisabled()
   })
 })

@@ -7,7 +7,7 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
-import { allocationAgreementSummaryColDef } from './_schema.jsx'
+import { allocationAgreementSummaryColDef } from './_schema'
 import { useParams } from 'react-router-dom'
 
 export const AllocationAgreementSummary = ({
