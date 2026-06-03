@@ -28,8 +28,15 @@ from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 class CIApplicationStatusEnum(str, Enum):
     Draft = "Draft"
     Submitted = "Submitted"
+    Recommended = "Recommended"
     Completed = "Completed"
     Withdrawn = "Withdrawn"
+
+
+class CIRiskAssessmentEnum(str, Enum):
+    Low = "Low"
+    Medium = "Medium"
+    High = "High"
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +85,30 @@ class LatestCommentSchema(BaseSchema):
     create_date: Optional[datetime] = None
 
 
+class CIApplicationUserSchema(BaseSchema):
+    user_profile_id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    initials: Optional[str] = None
+    full_name: Optional[str] = None
+
+    @classmethod
+    def model_validate(cls, user):
+        if user is None:
+            return None
+        first_name = getattr(user, "first_name", "") or ""
+        last_name = getattr(user, "last_name", "") or ""
+        initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+        full_name = f"{first_name} {last_name}".strip()
+        return cls(
+            user_profile_id=user.user_profile_id,
+            first_name=first_name,
+            last_name=last_name,
+            initials=initials,
+            full_name=full_name or initials,
+        )
+
+
 class PathwayApplicationTypeSchema(BaseSchema):
     pathway_application_type_id: int
     type: str
@@ -110,6 +141,8 @@ class FuelCodeOptionSchema(BaseSchema):
     fuel_type: Optional[str] = None
     feedstock: Optional[str] = None
     feedstock_location: Optional[str] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
 
 
 class CITableOptionsSchema(BaseSchema):
@@ -244,6 +277,9 @@ class CIApplicationBaseSchema(BaseSchema):
     facility_nameplate_capacity: Optional[int] = None
     facility_nameplate_capacity_unit_id: Optional[int] = None
     proposed_fuel_code_effective_date: Optional[date] = None
+    preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    priority_score: Optional[int] = None
+    assigned_analyst: Optional[CIApplicationUserSchema] = None
     update_date: Optional[str] = None
     create_date: Optional[str] = None
     assigned_analyst: Optional[AssignedAnalystSchema] = None
@@ -289,10 +325,39 @@ class CIApplicationSchema(BaseSchema):
     signature_user_display_name: Optional[str] = None
     signature_date_time: Optional[datetime] = None
 
+    # Internal workflow tracker
+    preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    priority_score: Optional[int] = None
+    assigned_analyst: Optional[CIApplicationUserSchema] = None
+    verification_1_user: Optional[CIApplicationUserSchema] = None
+    verification_1_date: Optional[datetime] = None
+    verification_2_user: Optional[CIApplicationUserSchema] = None
+    verification_2_date: Optional[datetime] = None
+    verification_2_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    verification_2_priority_score: Optional[int] = None
+    recommendation_user: Optional[CIApplicationUserSchema] = None
+    recommendation_date: Optional[datetime] = None
+    approval_user: Optional[CIApplicationUserSchema] = None
+    approval_date: Optional[datetime] = None
+
 
 class CIApplicationsListSchema(BaseSchema):
     ci_applications: List[CIApplicationBaseSchema]
     pagination: PaginationResponseSchema
+
+
+class CIApplicationAnalystAssignmentSchema(BaseSchema):
+    assigned_analyst_id: Optional[int] = None
+
+
+class CIApplicationVerification1Schema(BaseSchema):
+    preliminary_risk_assessment: CIRiskAssessmentEnum
+    priority_score: Optional[int] = Field(default=None, ge=0)
+
+
+class CIApplicationVerification2Schema(BaseSchema):
+    preliminary_risk_assessment: Optional[CIRiskAssessmentEnum] = None
+    priority_score: Optional[int] = Field(default=None, ge=0)
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +399,11 @@ class CIApplicationStep4Schema(BaseSchema):
             if not getattr(self, field):
                 raise ValueError("All three declarations must be acknowledged.")
         if self.consultant_consent:
-            if not self.consultant_name or not self.consultant_company or not self.consultant_email:
+            if (
+                not self.consultant_name
+                or not self.consultant_company
+                or not self.consultant_email
+            ):
                 raise ValueError(
                     "Consultant name, company, and email are required when "
                     "consenting to consultant communication."
@@ -363,10 +432,14 @@ class CIApplicationDecisionSchema(BaseSchema):
     @classmethod
     def _terminal_only(cls, value: CIApplicationStatusEnum):
         if value not in {
+            CIApplicationStatusEnum.Draft,
+            CIApplicationStatusEnum.Submitted,
             CIApplicationStatusEnum.Completed,
             CIApplicationStatusEnum.Withdrawn,
         }:
-            raise ValueError("Decision status must be Completed or Withdrawn.")
+            raise ValueError(
+                "Decision status must be Draft, Submitted, Completed or Withdrawn."
+            )
         return value
 
 

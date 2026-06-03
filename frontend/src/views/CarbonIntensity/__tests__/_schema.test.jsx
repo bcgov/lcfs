@@ -7,7 +7,8 @@ import {
 } from '@/views/CarbonIntensity/_schema'
 
 vi.mock('@/hooks/useCIApplication', () => ({
-  useCIApplicationStatuses: () => ({ data: [] })
+  useCIApplicationStatuses: () => ({ data: [] }),
+  useGetCIApplicationAnalysts: () => ({ data: [] })
 }))
 
 const t = (key) => key
@@ -81,6 +82,14 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(typeof analyst.cellRenderer).toBe('function')
     expect(typeof comment.cellRenderer).toBe('function')
   })
+
+  it('passes onRefresh through to the assigned analyst cell renderer', () => {
+    const onRefresh = vi.fn()
+    const cols = ciApplicationsColDefs(t, { isGovernment: true, onRefresh })
+    const analyst = cols.find((c) => c.field === 'assignedAnalyst')
+
+    expect(analyst.cellRendererParams).toMatchObject({ onRefresh })
+  })
 })
 
 describe('productionFacilityLocation column', () => {
@@ -139,7 +148,7 @@ describe('getResumeStep', () => {
     expect(getResumeStep({ status: { status: 'Draft' } })).toBe(2)
   })
 
-  it.each(['Submitted', 'Completed', 'Withdrawn'])(
+  it.each(['Submitted', 'Recommended', 'Completed', 'Withdrawn'])(
     'routes %s applications to the Step 5 decision panel',
     (status) => {
       expect(getResumeStep({ status: { status } })).toBe(5)

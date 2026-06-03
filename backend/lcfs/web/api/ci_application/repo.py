@@ -39,6 +39,8 @@ from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.Role import Role, RoleEnum
+from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
@@ -191,8 +193,16 @@ class CIApplicationRepository:
             select(CIApplication)
             .options(
                 selectinload(CIApplication.organization),
+                selectinload(CIApplication.organization).selectinload(
+                    Organization.org_address
+                ),
                 selectinload(CIApplication.ci_application_status),
                 selectinload(CIApplication.facility_nameplate_capacity_unit),
+                selectinload(CIApplication.assigned_analyst),
+                selectinload(CIApplication.verification_1_user),
+                selectinload(CIApplication.verification_2_user),
+                selectinload(CIApplication.recommendation_user),
+                selectinload(CIApplication.approval_user),
                 selectinload(CIApplication.pathways).selectinload(
                     Pathway.application_type
                 ),
@@ -287,9 +297,7 @@ class CIApplicationRepository:
                 selectinload(Pathway.application_type),
                 selectinload(Pathway.fuel_code_type),
                 selectinload(Pathway.fuel_type),
-                selectinload(Pathway.fuel_code).selectinload(
-                    FuelCode.fuel_code_prefix
-                ),
+                selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_code_prefix),
                 selectinload(Pathway.fuel_code).selectinload(FuelCode.fuel_type),
             )
             .where(Pathway.ci_application_id == ci_application_id)
@@ -298,20 +306,14 @@ class CIApplicationRepository:
         return list(result.scalars().all())
 
     @repo_handler
-    async def get_document_categories(
-        self, ci_application_id: int
-    ) -> List[str]:
+    async def get_document_categories(self, ci_application_id: int) -> List[str]:
         """
         Return just the ``document_category`` values currently linked to
         this CI application. Used by Step 3's required-uploads check; we
         deliberately don't pull Document rows so the validation stays cheap.
         """
-        stmt = (
-            select(ci_application_document_association.c.document_category)
-            .where(
-                ci_application_document_association.c.ci_application_id
-                == ci_application_id
-            )
+        stmt = select(ci_application_document_association.c.document_category).where(
+            ci_application_document_association.c.ci_application_id == ci_application_id
         )
         result = await self.db.execute(stmt)
         return [row[0] for row in result.all()]
@@ -394,6 +396,7 @@ class CIApplicationRepository:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
+        exclude_draft: bool = False,
     ) -> Tuple[List[CIApplication], int]:
         """
         Returns ``(items, total_count)``. When ``organization_id`` is
@@ -403,6 +406,12 @@ class CIApplicationRepository:
         conditions = self._apply_filters(pagination)
         if organization_id is not None:
             conditions.append(CIApplication.organization_id == organization_id)
+        if exclude_draft:
+            conditions.append(
+                CIApplication.ci_application_status.has(
+                    CIApplicationStatus.status != "Draft"
+                )
+            )
 
         order_clauses = self._apply_sorting(pagination)
         offset = (pagination.page - 1) * pagination.size
@@ -417,6 +426,10 @@ class CIApplicationRepository:
             .options(
                 selectinload(CIApplication.ci_application_status),
                 selectinload(CIApplication.organization),
+                selectinload(CIApplication.organization).selectinload(
+                    Organization.org_address
+                ),
+                selectinload(CIApplication.assigned_analyst),
                 selectinload(CIApplication.assigned_analyst),
             )
             .order_by(*order_clauses)
@@ -489,6 +502,32 @@ class CIApplicationRepository:
             full_name = " ".join(p for p in (first, last) if p).strip()
             out[ci_app_id] = (comment, full_name)
         return out
+
+    @repo_handler
+    async def get_user_by_id(self, user_profile_id: int) -> Optional[UserProfile]:
+        result = await self.db.execute(
+            select(UserProfile)
+            .options(selectinload(UserProfile.user_roles).selectinload(UserRole.role))
+            .where(UserProfile.user_profile_id == user_profile_id)
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_active_idir_analysts(self) -> List[UserProfile]:
+        result = await self.db.execute(
+            select(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
+            .where(
+                and_(
+                    UserProfile.is_active == True,
+                    UserProfile.organization_id.is_(None),
+                    Role.name == RoleEnum.ANALYST,
+                )
+            )
+            .order_by(UserProfile.first_name, UserProfile.last_name)
+        )
+        return list(result.scalars().all())
 
     @staticmethod
     def total_pages(total: int, size: int) -> int:

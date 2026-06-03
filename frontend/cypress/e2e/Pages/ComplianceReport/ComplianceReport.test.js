@@ -21,9 +21,9 @@ const SELECTORS = {
     '[data-test="renewable-summary"] > .MuiTable-root > .MuiTableBody-root',
   submitReportButton: 'button[data-test="submit-report-btn"]',
   recommendToCompianceManagerButton:
-    'button[data-test="recommend-report-analyst-btn"]',
-  recommendToDirectorButton: 'button[data-test="recommend-report-manager-btn"]',
-  issueAssessmentButton: 'button[data-test="assess-report-btn"]',
+    'button[data-test="recommend-by-analyst-btn"]',
+  recommendToDirectorButton: 'button[data-test="recommend-by-manager-btn"]',
+  issueAssessmentButton: 'button[data-test="issue-assessment-btn"]',
   createSupplementalReport: 'button[data-test="create-supplemental"]',
   submitModalButton: '#modal-btn-submit-report',
   submitModalComplianceManagerButton:
@@ -1010,6 +1010,12 @@ Then('the assessed by director banner shows success', () => {
   cy.contains('div', 'Compliance report successfully assessed').should(
     'be.visible'
   )
+})
+
+Then('the compliance report status is {string}', (status) => {
+  cy.get(SELECTORS.complianceReportStatus, { timeout: 15000 })
+    .should('be.visible')
+    .and('contain.text', `Status: ${status}`)
 })
 
 When('the director approves the report', () => {

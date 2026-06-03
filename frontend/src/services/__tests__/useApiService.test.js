@@ -136,11 +136,14 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
+        timeout: 90000,
       })
       expect(result).toBe(mockAxiosInstance)
     })
 
     it('should create axios instance with custom options', () => {
+      // Caller-supplied opts override defaults — e.g. a longer timeout
+      // for an export endpoint.
       const customOpts = { timeout: 5000 }
       const result = useApiService(customOpts)
 
@@ -639,6 +642,7 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
+        timeout: 90000,
       })
 
     })
@@ -650,6 +654,7 @@ describe('useApiService', () => {
 
       expect(axios.create).toHaveBeenCalledWith({
         baseURL: 'http://localhost:8000/api',
+        timeout: 90000,
       })
 
     })

@@ -190,6 +190,78 @@ class CIApplication(BaseModel, Auditable, Versioning):
         comment="UTC date and time at which the application was electronically signed",
     )
 
+    # ---------- Internal workflow tracking ----------
+    assigned_analyst_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="Optional analyst assignment for internal queue display",
+    )
+    preliminary_risk_assessment = Column(
+        String(20),
+        nullable=True,
+        comment="Preliminary risk assessment: Low, Medium, or High",
+    )
+    priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Internal workflow priority score assigned during verification",
+    )
+    verification_1_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who completed Verification 1",
+    )
+    verification_1_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time Verification 1 was completed",
+    )
+    verification_2_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who completed Verification 2",
+    )
+    verification_2_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time Verification 2 was completed",
+    )
+    verification_2_risk_assessment = Column(
+        String(20),
+        nullable=True,
+        comment="Risk assessment recorded during Verification 2",
+    )
+    verification_2_priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Priority score recorded during Verification 2",
+    )
+    recommendation_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who recommended the application to the director",
+    )
+    recommendation_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time the application was recommended to director",
+    )
+    approval_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who approved the application",
+    )
+    approval_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time the application was approved",
+    )
+
     # ---------- Relationships ----------
     ci_application_status = relationship(
         "CIApplicationStatus",
@@ -208,6 +280,31 @@ class CIApplication(BaseModel, Auditable, Versioning):
     )
     facility_nameplate_capacity_unit = relationship(
         "UnitOfMeasure",
+        lazy="selectin",
+    )
+    assigned_analyst = relationship(
+        "UserProfile",
+        foreign_keys=[assigned_analyst_id],
+        lazy="selectin",
+    )
+    verification_1_user = relationship(
+        "UserProfile",
+        foreign_keys=[verification_1_user_id],
+        lazy="selectin",
+    )
+    verification_2_user = relationship(
+        "UserProfile",
+        foreign_keys=[verification_2_user_id],
+        lazy="selectin",
+    )
+    recommendation_user = relationship(
+        "UserProfile",
+        foreign_keys=[recommendation_user_id],
+        lazy="selectin",
+    )
+    approval_user = relationship(
+        "UserProfile",
+        foreign_keys=[approval_user_id],
         lazy="selectin",
     )
     pathways = relationship(

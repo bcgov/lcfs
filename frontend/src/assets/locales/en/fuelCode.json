@@ -2,6 +2,7 @@
   "fuelCodes": "Fuel codes",
   "currentFuelCodes": "Current fuel codes",
   "newFuelCodeBtn": "New fuel code",
+  "myFuelCodesTitle": "My organization's fuel codes",
   "noFuelCodesFound": "No fuel codes found",
   "fuelCodeDownloadBtn": "Download as Excel",
   "fuelCodeDownloadingMsg": "Downloading fuel codes information",

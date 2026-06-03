@@ -15,6 +15,9 @@ def main() -> None:
             log_level=settings.log_level.value.lower(),
             factory=True,
             timeout_keep_alive=settings.timeout_keep_alive,
+            # Trust X-Forwarded-* from the OpenShift router
+            proxy_headers=True,
+            forwarded_allow_ips="*",
         )
     except Exception as e:
         print(e)

@@ -9,11 +9,38 @@ const QUERY_KEYS = {
   detail: (id: any) => ['ci-application', String(id)]
 }
 
+const updateCIApplicationListCaches = (queryClient: any, updatedCIApplication: any) => {
+  if (!updatedCIApplication?.ciApplicationId) return
+
+  queryClient.setQueriesData({ queryKey: ['ci-applications'] }, (current: any) => {
+    if (!current?.ciApplications) return current
+
+    return {
+      ...current,
+      ciApplications: current.ciApplications.map((item: any) =>
+        item.ciApplicationId === updatedCIApplication.ciApplicationId
+          ? {
+              ...item,
+              assignedAnalyst:
+                updatedCIApplication.assignedAnalyst ?? item.assignedAnalyst,
+              preliminaryRiskAssessment:
+                updatedCIApplication.preliminaryRiskAssessment ??
+                item.preliminaryRiskAssessment,
+              priorityScore:
+                updatedCIApplication.priorityScore ?? item.priorityScore
+            }
+          : item
+      )
+    }
+  })
+}
+
 export const useCIApplicationOptions = (options: QueryOptions<unknown> = {}) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.options,
-    queryFn: async () => (await client.get(apiRoutes.ciApplicationOptions)).data,
+    queryFn: async () =>
+      (await client.get(apiRoutes.ciApplicationOptions)).data,
     staleTime: 60 * 60 * 1000, // 1 hour — lookup data
     gcTime: 60 * 60 * 1000,
     ...options
@@ -28,7 +55,7 @@ export const useCIApplicationStatuses = (options: QueryOptions<unknown> = {}) =>
   }
 }
 
-export const useGetCIApplications = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
+export const useGetCIApplications = ({ page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {}, options: QueryOptions<unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: QUERY_KEYS.list({ page, size, sortOrders, filters }),
@@ -195,6 +222,105 @@ export const useRecordCIDecision = (ciApplicationId: number | string | undefined
   })
 }
 
+export const useGetCIApplicationAnalysts = (options: QueryOptions<unknown>) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['ci-application-analysts'],
+    queryFn: async () =>
+      (await client.get(apiRoutes.ciApplicationAnalysts)).data,
+    staleTime: 60 * 60 * 1000,
+    ...options
+  })
+}
+
+export const useAssignCIApplicationAnalyst = (ciApplicationId: number | string | undefined | null) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (assignedAnalystId) => {
+      return (
+        await client.put(
+          apiRoutes.assignCIApplicationAnalyst.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { assignedAnalystId }
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+      updateCIApplicationListCaches(queryClient, data)
+    }
+  })
+}
+
+export const useCompleteCIApplicationVerification1 = (ciApplicationId: number | string | undefined | null) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ preliminaryRiskAssessment, priorityScore }) => {
+      return (
+        await client.post(
+          apiRoutes.completeCIApplicationVerification1.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { preliminaryRiskAssessment, priorityScore }
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useCompleteCIApplicationVerification2 = (ciApplicationId: number | string | undefined | null) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ preliminaryRiskAssessment, priorityScore } = {}) => {
+      return (
+        await client.post(
+          apiRoutes.completeCIApplicationVerification2.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          ),
+          { preliminaryRiskAssessment, priorityScore }
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
+export const useRecommendCIApplication = (ciApplicationId: number | string | undefined | null) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      return (
+        await client.post(
+          apiRoutes.recommendCIApplication.replace(
+            ':ciApplicationId',
+            ciApplicationId
+          )
+        )
+      ).data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
+    }
+  })
+}
+
 // The Step 5 comment thread now uses the shared internal_comments
 // framework — see <Comments entityType="ciApplication" /> in
 // GovernmentDecisionStep. The legacy useGetCIComments / useAddCIComment
@@ -204,7 +330,7 @@ export const useDeleteCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (ciApplicationId: any) => {
+    mutationFn: async (ciApplicationId: number | string | undefined | null) => {
       return (
         await client.delete(
           apiRoutes.deleteCIApplication.replace(
