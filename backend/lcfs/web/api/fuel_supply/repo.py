@@ -274,6 +274,8 @@ class FuelSupplyRepository:
                 FuelCategory.category != "Jet fuel",
                 ~and_(FuelType.is_legacy == False, FuelType.fossil_derived == True),
                 ProvisionOfTheAct.is_legacy == True,
+                # Exclude 2024-era "Other" fuel types from legacy reports
+                FuelType.fuel_type.notin_(LCFS_Constants.LEGACY_EXCLUDED_FUEL_TYPES),
             ]
             if current_year < renewable_naphtha_min_year:
                 extra_filters.append(

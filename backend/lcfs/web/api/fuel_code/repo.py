@@ -60,6 +60,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
+from lcfs.utils.constants import LCFS_Constants
 
 logger = structlog.get_logger(__name__)
 
@@ -298,6 +299,11 @@ class FuelCodeRepository:
         # If we don't want to include legacy fuel types, filter them out
         if not include_legacy:
             conditions.append(FuelType.is_legacy == False)
+        else:
+            # Exclude 2024-era "Other" fuel types from legacy reports
+            conditions.append(
+                FuelType.fuel_type.notin_(LCFS_Constants.LEGACY_EXCLUDED_FUEL_TYPES)
+            )
 
         # Build the query with filtered fuel_codes and compliance period joins
         query = (
