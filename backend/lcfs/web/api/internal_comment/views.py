@@ -1,7 +1,7 @@
 import structlog
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, status, Request, HTTPException
+from fastapi import APIRouter, Body, Depends, Query, status, Request, HTTPException
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
@@ -11,13 +11,46 @@ from .schema import (
     InternalCommentCreateSchema,
     InternalCommentUpdateSchema,
     InternalCommentResponseSchema,
+    OrganizationCommentsResponseSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
-
 logger = structlog.get_logger(__name__)
 router = APIRouter()
+org_comments_router = APIRouter()
 get_async_db = dependencies.get_async_db_session
+
+
+@org_comments_router.get(
+    "/{organization_id}/comments",
+    response_model=OrganizationCommentsResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+async def get_organization_comments(
+    request: Request,
+    organization_id: int,
+    page: int = Query(1, ge=1),
+    size: int = Query(25, ge=1, le=100),
+    service: InternalCommentService = Depends(),
+):
+    """
+    Organization-scoped Comment Log feed (mounted in ``lcfs.web.api.router``
+    at ``/organizations``).
+
+    Returns all internal comments for the organization, regardless of
+    source entity type, paginated.
+
+    Visibility:
+    - IDIR / government users: ``Internal`` + ``Public``.
+    - BCeID users: ``Public`` only, and only for their own organization
+      (otherwise the service returns ``403``).
+    """
+    return await service.get_organization_comments(
+        organization_id=organization_id,
+        page=page,
+        size=size,
+    )
 
 
 @router.post(
@@ -104,6 +137,4 @@ async def update_comment(
             status_code=403, detail="User is not the creator of the comment."
         )
 
-    return await service.update_internal_comment(
-        internal_comment_id, comment_data
-    )
+    return await service.update_internal_comment(internal_comment_id, comment_data)
