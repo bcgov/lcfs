@@ -64,7 +64,7 @@ vi.mock('@mui/material/Grid2', () => ({
 }))
 
 // Mock the schema
-vi.mock('@/views/NotionalTransfers/_schema.jsx', () => ({
+vi.mock('@/views/NotionalTransfers/_schema', () => ({
   notionalTransferSummaryColDefs: vi.fn((isEarlyIssuance) => [
     { field: 'legalName', headerName: 'Legal Name' },
     { field: 'quantity', headerName: 'Quantity' },

@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
@@ -36,13 +39,13 @@ export const isFuelCodeProvision = (provision) =>
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const fuelExportColDefs = (
-  optionsData,
-  errors,
-  warnings,
-  gridReady,
-  isSupplemental,
-  compliancePeriod
-) => [
+  optionsData: OptionsData,
+  errors: GridErrors,
+  warnings: GridWarnings,
+  gridReady: boolean,
+  isSupplemental: boolean,
+  compliancePeriod: string | number
+): ColDef[] => [
   validation,
   actions((params) => {
     return {
@@ -674,7 +677,9 @@ export const fuelExportColDefs = (
   }
 ]
 
-export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
+export const fuelExportSummaryColDefs = (
+  showFuelTypeOther: boolean
+): ColDef[] => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
@@ -793,7 +798,7 @@ export const defaultColDef = {
   singleClickEdit: true
 }
 
-export const changelogCommonColDefs = (highlight = true) => [
+export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
@@ -897,7 +902,7 @@ export const changelogCommonColDefs = (highlight = true) => [
   }
 ]
 
-export const changelogColDefs = (highlight = true) => [
+export const changelogColDefs = (highlight: boolean = true): ColDef[] => [
   {
     field: 'groupUuid',
     hide: true,

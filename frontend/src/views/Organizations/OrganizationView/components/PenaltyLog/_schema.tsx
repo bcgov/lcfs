@@ -1,3 +1,5 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AutocompleteCellEditor,
@@ -106,10 +108,10 @@ export const penaltyLogColumnDefs = [
 ]
 
 export const penaltyLogEditorColDefs = (
-  compliancePeriodLabelMap,
-  complianceValues,
-  t
-) => [
+  compliancePeriodLabelMap: Map<number, string>,
+  complianceValues: number[],
+  t: (key: string, options?: Record<string, unknown>) => string
+): ColDef[] => [
   validation,
   actions((params) => ({
     enableDuplicate: false,

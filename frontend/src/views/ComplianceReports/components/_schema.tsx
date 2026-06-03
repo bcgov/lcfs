@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { SummaryColumn } from '@/types/schema'
 import {
   BCDateFloatingFilter,
   BCSelectFloatingFilter
@@ -83,7 +86,11 @@ const TypeCellRenderer = (isSupplier) => (props) => {
   )
 }
 
-export const reportsColDefs = (t, isSupplier, onRefresh) => [
+export const reportsColDefs = (
+  t: (key: string) => string,
+  isSupplier: boolean,
+  onRefresh: () => void
+): ColDef[] => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
@@ -225,13 +232,13 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
 ]
 
 export const renewableFuelColumns = (
-  t,
-  data,
-  editable,
-  compliancePeriodYear,
-  lines7And9Locked = false,
-  lines6And8Locked = false
-) => {
+  t: (key: string) => string,
+  data: Record<string, any>,
+  editable: boolean,
+  compliancePeriodYear: string | number,
+  lines7And9Locked: boolean = false,
+  lines6And8Locked: boolean = false
+): SummaryColumn[] => {
   /**
    * Editable Lines Logic:
    *
@@ -536,7 +543,9 @@ export const renewableFuelColumns = (
   return filteredColumns
 }
 
-export const lowCarbonColumns = (t) => [
+export const lowCarbonColumns = (
+  t: (key: string) => string
+): SummaryColumn[] => [
   {
     id: 'line',
     label: t('report:summaryLabels.line'),
@@ -557,7 +566,10 @@ export const lowCarbonColumns = (t) => [
   }
 ]
 
-export const nonComplianceColumns = (t, editable = false) => [
+export const nonComplianceColumns = (
+  t: (key: string) => string,
+  editable: boolean = false
+): SummaryColumn[] => [
   {
     id: 'description',
     label: t('report:nonCompliancePenaltySummary'),
@@ -573,7 +585,9 @@ export const nonComplianceColumns = (t, editable = false) => [
   }
 ]
 
-export const earlyIssuanceColumns = (t) => [
+export const earlyIssuanceColumns = (
+  t: (key: string) => string
+): SummaryColumn[] => [
   {
     id: 'line',
     label: t('report:summaryLabels.line'),
@@ -593,4 +607,6 @@ export const earlyIssuanceColumns = (t) => [
   }
 ]
 
-export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
+export const defaultSortModel: Array<{ field: string; direction: string }> = [
+  { field: 'updateDate', direction: 'desc' }
+]
