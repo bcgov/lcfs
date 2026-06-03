@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy import select, literal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -563,6 +564,26 @@ async def test_deactivate_decommissioned_fse_for_report(repo, fake_db):
 
 
 @pytest.mark.anyio
+async def test_deactivate_decommissioned_fse_for_report_filters_by_compliance_year(
+    repo, fake_db
+):
+    execute_result = MagicMock()
+    execute_result.rowcount = 1
+    fake_db.execute.return_value = execute_result
+
+    result = await repo.deactivate_decommissioned_fse_for_report(
+        10, compliance_year=2024
+    )
+
+    assert result == 1
+    executed_query = fake_db.execute.call_args[0][0]
+    compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
+    # Period-aware path only deactivates equipment decommissioned before the
+    # reported year.
+    assert "EXTRACT(year FROM charging_equipment.update_date) < 2024" in compiled_sql
+
+
+@pytest.mark.anyio
 async def test_get_fse_reporting_list_paginated_excludes_decommissioned_when_requested(
     repo, fake_db
 ):
@@ -585,6 +606,23 @@ async def test_get_fse_reporting_list_paginated_excludes_decommissioned_when_req
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
     assert "charging_equipment_status != 'Decommissioned'" in compiled_sql
     assert "charging_equipment_compliance_id IS NOT NULL" not in compiled_sql
+
+
+@pytest.mark.anyio
+async def test_has_decommissioned_fse_in_report_filters_by_compliance_year(
+    repo, fake_db
+):
+    fake_db.scalar.return_value = 0
+
+    result = await repo.has_decommissioned_fse_in_report(10, compliance_year=2024)
+
+    assert result is False
+    stmt = fake_db.scalar.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    # Period-aware path joins charging_equipment and only counts rows
+    # decommissioned before the reported year.
+    assert "charging_equipment" in compiled
+    assert "EXTRACT(year FROM charging_equipment.update_date) < 2024" in compiled
 
 
 @pytest.mark.anyio
@@ -1059,40 +1097,50 @@ async def test_bulk_update_deactivate_takes_precedence_over_activate(repo, fake_
 
 
 @pytest.mark.anyio
-async def test_get_latest_equipment_status_returns_status(repo, fake_db):
+async def test_get_latest_equipment_status_with_date_returns_status(repo, fake_db):
+    decommissioned_at = datetime(2025, 6, 1)
     result_mock = MagicMock()
-    result_mock.scalar_one_or_none.return_value = "Submitted"
+    result_mock.first.return_value = ("Decommissioned", decommissioned_at)
     fake_db.execute.return_value = result_mock
 
-    status_value = await repo.get_latest_equipment_status(charging_equipment_id=42)
+    status_value, decommissioned_date = (
+        await repo.get_latest_equipment_status_with_date(charging_equipment_id=42)
+    )
 
-    assert status_value == "Submitted"
+    assert status_value == "Decommissioned"
+    assert decommissioned_date == decommissioned_at
     fake_db.execute.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_get_latest_equipment_status_returns_none_when_not_found(repo, fake_db):
+async def test_get_latest_equipment_status_with_date_returns_none_when_not_found(
+    repo, fake_db
+):
     result_mock = MagicMock()
-    result_mock.scalar_one_or_none.return_value = None
+    result_mock.first.return_value = None
     fake_db.execute.return_value = result_mock
 
-    status_value = await repo.get_latest_equipment_status(charging_equipment_id=999)
+    status_value, decommissioned_date = (
+        await repo.get_latest_equipment_status_with_date(charging_equipment_id=999)
+    )
 
     assert status_value is None
+    assert decommissioned_date is None
 
 
 @pytest.mark.anyio
-async def test_get_latest_equipment_status_query_compiles(repo, fake_db):
+async def test_get_latest_equipment_status_with_date_query_compiles(repo, fake_db):
     result_mock = MagicMock()
-    result_mock.scalar_one_or_none.return_value = None
+    result_mock.first.return_value = None
     fake_db.execute.return_value = result_mock
 
-    await repo.get_latest_equipment_status(charging_equipment_id=1)
+    await repo.get_latest_equipment_status_with_date(charging_equipment_id=1)
 
     stmt = fake_db.execute.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
     assert "charging_equipment" in compiled
     assert "charging_equipment_status" in compiled
+    assert "charging_equipment.update_date" in compiled
     assert "FROM charging_equipment JOIN charging_equipment_status" in compiled
     assert "ORDER BY charging_equipment.version DESC" in compiled

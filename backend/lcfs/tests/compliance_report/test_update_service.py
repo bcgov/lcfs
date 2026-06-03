@@ -510,6 +510,7 @@ async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original
     mock_report.compliance_report_group_uuid = "report-group-123"
     mock_report.compliance_period = MagicMock(description="2024")
     mock_report.supplemental_initiator = None
+    mock_report.compliance_period.description = "2024"
 
     mock_user_has_roles.return_value = True
     compliance_report_update_service.summary_service.calculate_compliance_report_summary = AsyncMock(
@@ -526,8 +527,10 @@ async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original
         mock_report, UserProfile()
     )
 
+    # Deactivation is now compliance-period-aware: only FSE decommissioned
+    # before the reported year are deactivated.
     compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_awaited_once_with(
-        1
+        1, compliance_year=2024
     )
 
 
