@@ -1131,13 +1131,21 @@ class FinalSupplyEquipmentRepository:
     @repo_handler
     async def has_decommissioned_fse_in_report(
         self,
-        compliance_report_id: int,
+        compliance_report_group_uuid: str,
         only_active: bool = True,
         compliance_year: Optional[int] = None,
     ) -> bool:
         """
-        Check whether the report contains decommissioned FSE rows that should
-        block submission.
+        Check whether the report's reporting set contains decommissioned FSE
+        rows that should block submission.
+
+        Reporting selections live at the compliance-report-group level and carry
+        across report versions, so we match on ``compliance_report_group_uuid``
+        (not a single ``compliance_report_id``) — otherwise a supplemental would
+        miss equipment selected on the original report. ``v_fse_reporting_base``
+        already contains only the actually-selected reporting rows (one per
+        ``compliance_report_charging_equipment``), so it is queried directly
+        rather than the heavier "preferred"/editing view.
 
         A decommissioned FSE only blocks the report when it was decommissioned
         *before* the report's compliance period. Equipment decommissioned during
@@ -1149,9 +1157,9 @@ class FinalSupplyEquipmentRepository:
         When ``compliance_year`` is ``None`` the period check is skipped and any
         decommissioned row counts (legacy behaviour).
         """
-        vt = FSEReportingBasePrefView.__table__
+        vt = FSEReportingBaseView.__table__
         conditions = [
-            vt.c.compliance_report_id == compliance_report_id,
+            vt.c.compliance_report_group_uuid == compliance_report_group_uuid,
             vt.c.charging_equipment_compliance_id.is_not(None),
             vt.c.charging_equipment_status == "Decommissioned",
         ]
@@ -1178,11 +1186,15 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def deactivate_decommissioned_fse_for_report(
-        self, compliance_report_id: int, compliance_year: Optional[int] = None
+        self, compliance_report_group_uuid: str, compliance_year: Optional[int] = None
     ) -> int:
         """
         Deactivate active FSE reporting rows whose equipment has been
         decommissioned.
+
+        Matches the report group's reporting set via
+        ``compliance_report_group_uuid`` against ``v_fse_reporting_base`` (the
+        selected-rows view), consistent with ``has_decommissioned_fse_in_report``.
 
         Period-aware: when ``compliance_year`` is provided, only rows for
         equipment decommissioned *before* that compliance period are
@@ -1192,10 +1204,10 @@ class FinalSupplyEquipmentRepository:
         change, no dedicated timestamp). When ``compliance_year`` is ``None``
         every decommissioned row is deactivated (legacy behaviour).
         """
-        vt = FSEReportingBasePrefView.__table__
+        vt = FSEReportingBaseView.__table__
         base_select = select(vt.c.charging_equipment_compliance_id)
         conditions = [
-            vt.c.compliance_report_id == compliance_report_id,
+            vt.c.compliance_report_group_uuid == compliance_report_group_uuid,
             vt.c.charging_equipment_compliance_id.is_not(None),
             vt.c.charging_equipment_status == "Decommissioned",
             vt.c.is_active.is_(True),

@@ -361,13 +361,13 @@ class ComplianceReportUpdateService:
             # this guard the compliance year is already a valid int.
             if report.supplemental_initiator is None:
                 await self.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report(
-                    report.compliance_report_id,
+                    report.compliance_report_group_uuid,
                     compliance_year=compliance_year,
                 )
 
             has_decommissioned_fse = (
                 await self.final_supply_equipment_repo.has_decommissioned_fse_in_report(
-                    report.compliance_report_id,
+                    report.compliance_report_group_uuid,
                     only_active=True,
                     compliance_year=compliance_year,
                 )

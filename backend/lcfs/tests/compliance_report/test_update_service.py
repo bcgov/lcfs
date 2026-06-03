@@ -527,10 +527,10 @@ async def test_handle_submitted_status_refreshes_decommissioned_fse_for_original
         mock_report, UserProfile()
     )
 
-    # Deactivation is now compliance-period-aware: only FSE decommissioned
-    # before the reported year are deactivated.
+    # Deactivation is now compliance-period-aware and matches the whole report
+    # group: only FSE decommissioned before the reported year are deactivated.
     compliance_report_update_service.final_supply_equipment_repo.deactivate_decommissioned_fse_for_report.assert_awaited_once_with(
-        1, compliance_year=2024
+        "report-group-123", compliance_year=2024
     )
 
 

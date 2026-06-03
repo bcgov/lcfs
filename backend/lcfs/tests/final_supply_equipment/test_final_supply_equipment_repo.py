@@ -531,16 +531,26 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
 async def test_has_decommissioned_fse_in_report_true(repo, fake_db):
     fake_db.scalar.return_value = 1
 
-    result = await repo.has_decommissioned_fse_in_report(10)
+    result = await repo.has_decommissioned_fse_in_report("group-10")
 
     assert result is True
+
+    # Queries the selected-rows base view (not the heavier pref/editing view)
+    # and matches the whole report group, so supplementals see the original
+    # report's selections.
+    stmt = fake_db.scalar.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "v_fse_reporting_base" in compiled
+    assert "v_fse_reporting_base_pref" not in compiled
+    assert "compliance_report_group_uuid = 'group-10'" in compiled
+    assert "compliance_report_id" not in compiled
 
 
 @pytest.mark.anyio
 async def test_has_decommissioned_fse_in_report_false(repo, fake_db):
     fake_db.scalar.return_value = 0
 
-    result = await repo.has_decommissioned_fse_in_report(10)
+    result = await repo.has_decommissioned_fse_in_report("group-10")
 
     assert result is False
 
@@ -551,7 +561,7 @@ async def test_deactivate_decommissioned_fse_for_report(repo, fake_db):
     execute_result.rowcount = 2
     fake_db.execute.return_value = execute_result
 
-    result = await repo.deactivate_decommissioned_fse_for_report(10)
+    result = await repo.deactivate_decommissioned_fse_for_report("group-10")
 
     assert result == 2
     fake_db.flush.assert_awaited_once()
@@ -561,6 +571,10 @@ async def test_deactivate_decommissioned_fse_for_report(repo, fake_db):
     assert "UPDATE compliance_report_charging_equipment" in compiled_sql
     assert "charging_equipment_status = 'Decommissioned'" in compiled_sql
     assert "is_active IS true" in compiled_sql
+    # Sources rows from the selected-rows base view, matched by report group.
+    assert "v_fse_reporting_base" in compiled_sql
+    assert "v_fse_reporting_base_pref" not in compiled_sql
+    assert "compliance_report_group_uuid = 'group-10'" in compiled_sql
 
 
 @pytest.mark.anyio
@@ -572,7 +586,7 @@ async def test_deactivate_decommissioned_fse_for_report_filters_by_compliance_ye
     fake_db.execute.return_value = execute_result
 
     result = await repo.deactivate_decommissioned_fse_for_report(
-        10, compliance_year=2024
+        "group-10", compliance_year=2024
     )
 
     assert result == 1
@@ -614,7 +628,9 @@ async def test_has_decommissioned_fse_in_report_filters_by_compliance_year(
 ):
     fake_db.scalar.return_value = 0
 
-    result = await repo.has_decommissioned_fse_in_report(10, compliance_year=2024)
+    result = await repo.has_decommissioned_fse_in_report(
+        "group-10", compliance_year=2024
+    )
 
     assert result is False
     stmt = fake_db.scalar.call_args[0][0]
@@ -622,6 +638,7 @@ async def test_has_decommissioned_fse_in_report_filters_by_compliance_year(
     # Period-aware path joins charging_equipment and only counts rows
     # decommissioned before the reported year.
     assert "charging_equipment" in compiled
+    assert "EXTRACT(year FROM charging_equipment.update_date) < 2024" in compiled
     assert "EXTRACT(year FROM charging_equipment.update_date) < 2024" in compiled
 
 
