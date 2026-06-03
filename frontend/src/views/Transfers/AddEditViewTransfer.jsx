@@ -135,7 +135,7 @@ export const AddEditViewTransfer = () => {
           prevValues.signingAuthorityDeclaration ?? false,
         fromOrgComment:
           transferData?.comments?.find((c) => c.commentSource === 'FROM_ORG')
-            ?.comment || '',
+            ?.comment || ''
       }))
     }
     if (isLoadingError || queryState?.status === 'error') {
@@ -434,6 +434,12 @@ export const AddEditViewTransfer = () => {
                 transferId={transferId}
                 editorMode={editorMode}
                 transferData={transferData}
+                categoryOverride={
+                  currentStatus === TRANSFER_STATUSES.RECORDED &&
+                  hasRoles(roles.director) ? (
+                    <CategoryCheckbox />
+                  ) : null
+                }
               />
             )}
 
@@ -467,22 +473,10 @@ export const AddEditViewTransfer = () => {
                           Acting as Analyst
                         </BCTypography>
                         <Recommendation currentStatus={currentStatus} />
-                        <CategoryCheckbox
-                          isDisabled={
-                            currentStatus === TRANSFER_STATUSES.RECOMMENDED
-                          }
-                        />
                       </BCBox>
                     </BCBox>
                   ) : (
-                    <>
-                      <Recommendation currentStatus={currentStatus} />
-                      <CategoryCheckbox
-                        isDisabled={
-                          currentStatus === TRANSFER_STATUSES.RECOMMENDED
-                        }
-                      />
-                    </>
+                    <Recommendation currentStatus={currentStatus} />
                   )}
                 </>
               )}
