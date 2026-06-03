@@ -1,5 +1,5 @@
-from datetime import date
-from typing import Any, List, Sequence
+from datetime import date, datetime
+from typing import Any, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
@@ -8,6 +8,7 @@ from sqlalchemy import (
     delete,
     distinct,
     exists,
+    extract,
     func,
     select,
     update,
@@ -1070,10 +1071,21 @@ class FinalSupplyEquipmentRepository:
         return float(await self.db.scalar(total_query) or 0)
 
     @repo_handler
-    async def get_latest_equipment_status(self, charging_equipment_id: int) -> str | None:
+    async def get_latest_equipment_status_with_date(
+        self, charging_equipment_id: int
+    ) -> Tuple[Optional[str], Optional[datetime]]:
         """
-        Return the current status for the latest version in the same logical
-        charging equipment series as the provided equipment id.
+        Return the status and last-updated time for the latest version in the
+        same logical charging equipment series as the provided equipment id.
+
+        ``update_date`` doubles as a proxy for when the equipment was
+        decommissioned: decommissioning is an in-place status change with no
+        dedicated timestamp, so the last-updated time of the decommissioned
+        row stands in for the decommission date. Callers compare it against a
+        report's compliance period to decide whether the equipment was already
+        decommissioned for that period.
+
+        Returns ``(None, None)`` when the equipment series is not found.
         """
         group_uuid_subquery = (
             select(ChargingEquipment.group_uuid)
@@ -1082,7 +1094,7 @@ class FinalSupplyEquipmentRepository:
         )
 
         stmt = (
-            select(ChargingEquipmentStatus.status)
+            select(ChargingEquipmentStatus.status, ChargingEquipment.update_date)
             .select_from(ChargingEquipment)
             .join(
                 ChargingEquipmentStatus,
@@ -1096,7 +1108,10 @@ class FinalSupplyEquipmentRepository:
             )
             .limit(1)
         )
-        return (await self.db.execute(stmt)).scalar_one_or_none()
+        row = (await self.db.execute(stmt)).first()
+        if row is None:
+            return None, None
+        return row[0], row[1]
 
     @repo_handler
     async def get_reporting_record_by_id(
@@ -1114,23 +1129,115 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def has_decommissioned_fse_in_report(
-        self, compliance_report_id: int, only_active: bool = True
+        self,
+        compliance_report_group_uuid: str,
+        only_active: bool = True,
+        compliance_year: Optional[int] = None,
     ) -> bool:
         """
-        Check whether the current draft/report view contains any decommissioned
-        FSE rows that are still attached to the report.
+        Check whether the report's reporting set contains decommissioned FSE
+        rows that should block submission.
+
+        Reporting selections live at the compliance-report-group level and carry
+        across report versions, so we match on ``compliance_report_group_uuid``
+        (not a single ``compliance_report_id``) — otherwise a supplemental would
+        miss equipment selected on the original report. ``v_fse_reporting_base``
+        already contains only the actually-selected reporting rows (one per
+        ``compliance_report_charging_equipment``), so it is queried directly
+        rather than the heavier "preferred"/editing view.
+
+        A decommissioned FSE only blocks the report when it was decommissioned
+        *before* the report's compliance period. Equipment decommissioned during
+        or after the reported year was still valid for that year (e.g. a 2024
+        report must not be blocked by a 2025 decommission), so it is allowed.
+        The equipment's ``update_date`` stands in for the decommission date
+        (in-place status change, no dedicated timestamp).
+
+        When ``compliance_year`` is ``None`` the period check is skipped and any
+        decommissioned row counts (legacy behaviour).
         """
-        vt = FSEReportingBasePrefView.__table__
+        vt = FSEReportingBaseView.__table__
         conditions = [
-            vt.c.compliance_report_id == compliance_report_id,
+            vt.c.compliance_report_group_uuid == compliance_report_group_uuid,
             vt.c.charging_equipment_compliance_id.is_not(None),
             vt.c.charging_equipment_status == "Decommissioned",
         ]
         if only_active:
             conditions.append(vt.c.is_active.is_(True))
 
-        stmt = select(func.count()).select_from(vt).where(*conditions)
+        stmt = select(func.count()).select_from(vt)
+
+        if compliance_year is not None:
+            stmt = stmt.join(
+                ChargingEquipment,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == vt.c.charging_equipment_id,
+                    ChargingEquipment.version == vt.c.charging_equipment_version,
+                ),
+            )
+            conditions.append(
+                extract("year", ChargingEquipment.update_date) < compliance_year
+            )
+
+        stmt = stmt.where(*conditions)
         return bool(await self.db.scalar(stmt))
+
+    @repo_handler
+    async def deactivate_decommissioned_fse_for_report(
+        self, compliance_report_group_uuid: str, compliance_year: Optional[int] = None
+    ) -> int:
+        """
+        Deactivate active FSE reporting rows whose equipment has been
+        decommissioned.
+
+        Matches the report group's reporting set via
+        ``compliance_report_group_uuid`` against ``v_fse_reporting_base`` (the
+        selected-rows view), consistent with ``has_decommissioned_fse_in_report``.
+
+        Period-aware: when ``compliance_year`` is provided, only rows for
+        equipment decommissioned *before* that compliance period are
+        deactivated. Equipment retired during or after the reported year was
+        still valid for that year and is left active. The equipment's
+        ``update_date`` stands in for the decommission date (in-place status
+        change, no dedicated timestamp). When ``compliance_year`` is ``None``
+        every decommissioned row is deactivated (legacy behaviour).
+        """
+        vt = FSEReportingBaseView.__table__
+        base_select = select(vt.c.charging_equipment_compliance_id)
+        conditions = [
+            vt.c.compliance_report_group_uuid == compliance_report_group_uuid,
+            vt.c.charging_equipment_compliance_id.is_not(None),
+            vt.c.charging_equipment_status == "Decommissioned",
+            vt.c.is_active.is_(True),
+        ]
+        if compliance_year is not None:
+            base_select = base_select.join(
+                ChargingEquipment,
+                and_(
+                    ChargingEquipment.charging_equipment_id
+                    == vt.c.charging_equipment_id,
+                    ChargingEquipment.version == vt.c.charging_equipment_version,
+                ),
+            )
+            conditions.append(
+                extract("year", ChargingEquipment.update_date) < compliance_year
+            )
+        decommissioned_reporting_ids = base_select.where(*conditions).subquery()
+
+        result = await self.db.execute(
+            update(ComplianceReportChargingEquipment)
+            .where(
+                ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                    select(
+                        decommissioned_reporting_ids.c.charging_equipment_compliance_id
+                    )
+                )
+            )
+            .values(is_active=False)
+        )
+        await self.db.flush()
+        return result.rowcount or 0
 
     @repo_handler
     async def get_fse_reporting_list_paginated(
