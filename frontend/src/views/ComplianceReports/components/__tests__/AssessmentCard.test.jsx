@@ -60,6 +60,10 @@ vi.mock('@/hooks/useOrganizationSnapshot.js', () => ({
   useOrganizationSnapshot: vi.fn()
 }))
 
+vi.mock('@/hooks/useReportOpenings', () => ({
+  useReportOpenings: vi.fn(() => ({ data: [] }))
+}))
+
 // Mock useCreateSupplementalReport hook
 let mockSupplementalReportCallbacks = {}
 vi.mock('@/hooks/useComplianceReports', () => ({
@@ -184,6 +188,7 @@ vi.mock('@/components/BCTypography', () => ({
 const { useOrganizationSnapshot } = await import(
   '@/hooks/useOrganizationSnapshot.js'
 )
+const { useReportOpenings } = await import('@/hooks/useReportOpenings')
 
 describe('AssessmentCard', () => {
   // Default props for testing
@@ -207,6 +212,7 @@ describe('AssessmentCard', () => {
       data: { isEdited: false },
       isLoading: false
     })
+    vi.mocked(useReportOpenings).mockReturnValue({ data: [] })
   })
 
   // Basic Rendering Tests (3 tests)
@@ -718,6 +724,56 @@ describe('AssessmentCard', () => {
         expect(
           screen.queryByTestId('create-supplemental')
         ).not.toBeInTheDocument()
+      })
+
+      it('hides supplemental button when report openings disable the year', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({
+          data: [{ complianceYear: 2024, createSupplementalEnabled: false }]
+        })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2024"
+          />,
+          { wrapper }
+        )
+        expect(
+          screen.queryByTestId('create-supplemental')
+        ).not.toBeInTheDocument()
+      })
+
+      it('shows supplemental button when report openings enable the year', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({
+          data: [{ complianceYear: 2024, createSupplementalEnabled: true }]
+        })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2024"
+          />,
+          { wrapper }
+        )
+        expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
+      })
+
+      it('shows supplemental button when the year has no report opening config', () => {
+        mockShowRoleContent = true
+        vi.mocked(useReportOpenings).mockReturnValue({
+          data: [{ complianceYear: 2030, createSupplementalEnabled: false }]
+        })
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+            compliancePeriodYear="2024"
+          />,
+          { wrapper }
+        )
+        expect(screen.getByTestId('create-supplemental')).toBeInTheDocument()
       })
 
       it('shows download button for non-draft status', () => {
