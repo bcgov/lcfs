@@ -4,7 +4,7 @@ The new boolean is a BCeID-only visibility toggle. Existing rows are migrated fr
 old enum: BCeID -> true, IDIR -> false.
 
 Revision ID: d3e4f5a6b7c8
-Revises: c2a4f6b8d9e1
+Revises: d1e2f3a4b5c6
 Create Date: 2026-05-29 13:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "d3e4f5a6b7c8"
-down_revision = "c2a4f6b8d9e1"
+down_revision = "d1e2f3a4b5c6"
 branch_labels = None
 depends_on = None
 
