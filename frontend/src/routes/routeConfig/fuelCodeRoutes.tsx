@@ -1,4 +1,4 @@
-import { AddEditFuelCode, FuelCodes } from '@/views/FuelCodes'
+import { AddEditFuelCode, FuelCodes, MyFuelCodes } from '@/views/FuelCodes'
 import { FuelCodeBulletins } from '@/views/FuelCodeBulletins'
 import ROUTES from '../routes'
 import { AppRouteObject } from '../types'
@@ -8,6 +8,11 @@ export const fuelCodeRoutes: AppRouteObject[] = [
     path: ROUTES.FUEL_CODES.BULLETINS,
     element: <FuelCodeBulletins />,
     handle: { title: 'Fuel codes' }
+  },
+  {
+    path: ROUTES.FUEL_CODES.MY_LIST,
+    element: <MyFuelCodes />,
+    handle: { title: 'My fuel codes' }
   },
   {
     path: ROUTES.FUEL_CODES.LIST,

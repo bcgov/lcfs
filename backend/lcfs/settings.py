@@ -96,6 +96,11 @@ class Settings(BaseSettings):
     feature_credit_market_notifications: bool = True
     feature_fuel_code_expiry_email: bool = True
 
+    # Public API rate limiting settings
+    rate_limit_enabled: bool = True
+    rate_limit_default_times: int = 60  # Number of requests allowed per window
+    rate_limit_default_seconds: int = 60  # Window size in seconds
+
     def __init__(self, **kwargs):
         # Map APP_ENVIRONMENT to environment if present
         app_env = os.getenv("APP_ENVIRONMENT")

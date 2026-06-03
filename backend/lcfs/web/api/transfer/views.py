@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, Request, status, Body
-from typing import List, Annotated
+from typing import List, Annotated, Optional, Union
 
 from lcfs.web.api.transfer.validation import TransferValidation
 from lcfs.db import dependencies
 from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
+    TransferCategoryUpdateSchema,
     TransferSchema,
 )
 from lcfs.web.api.transfer.services import TransferServices
@@ -58,11 +59,25 @@ async def government_update_transfer(
     response_model=TransferSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.DIRECTOR])
 async def update_category(
     request: Request,
     transfer_id: int,
-    category: Annotated[str, Body()] = None,
+    payload: Annotated[
+        Optional[Union[TransferCategoryUpdateSchema, str]], Body()
+    ] = None,
     service: TransferServices = Depends(),
 ):
-    return await service.update_category(transfer_id, category)
+    if isinstance(payload, str) or payload is None:
+        category = payload
+        is_a1_category = None
+    else:
+        category = payload.category
+        is_a1_category = payload.is_a1_category
+    return await service.update_category(
+        transfer_id,
+        category,
+        is_a1_category=is_a1_category,
+        user=request.user,
+        enforce_director_override=True,
+    )
