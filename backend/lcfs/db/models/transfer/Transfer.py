@@ -1,6 +1,15 @@
 import enum
 
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, String, Numeric, BigInteger
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Integer,
+    ForeignKey,
+    DateTime,
+    Enum,
+    Numeric,
+    BigInteger,
+)
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -36,6 +45,12 @@ class Transfer(BaseModel, Auditable):
     quantity = Column(BigInteger, comment="Quantity of units")
     transfer_category_id = Column(
         Integer, ForeignKey("transfer_category.transfer_category_id")
+    )
+    is_a1_category = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Flag for credit transfers completed in less than 30 days.",
     )
     current_status_id = Column(
         Integer, ForeignKey("transfer_status.transfer_status_id")
