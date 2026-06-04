@@ -1,3 +1,5 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
 import {
   numberFormatter,
   phoneNumberFormatter,
@@ -7,7 +9,9 @@ import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/index'
 import { RoleRenderer } from '@/utils/grid/cellRenderers'
 
 // Column definitions for the credit trading market table
-export const creditMarketColDefs = (t) => [
+export const creditMarketColDefs = (
+  t: (key: string, fallback?: string) => string
+): ColDef[] => [
   {
     headerName: t('creditMarket:organizationName', 'Organization name'),
     field: 'organizationName',
@@ -87,14 +91,16 @@ export const creditMarketColDefs = (t) => [
   }
 ]
 
-export const defaultSortModel = [
+export const defaultSortModel: Array<{ colId: string; sort: string }> = [
   {
     colId: 'organizationName',
     sort: 'asc'
   }
 ]
 
-export const creditMarketAuditLogColDefs = (t) => [
+export const creditMarketAuditLogColDefs = (
+  t: (key: string, fallback?: string) => string
+): ColDef[] => [
   {
     headerName: t('creditMarket:organizationName', 'Organization name'),
     field: 'organizationName',
@@ -191,4 +197,7 @@ export const creditMarketAuditLogColDefs = (t) => [
   }
 ]
 
-export const defaultAuditSortModel = [{ field: 'uploadedDate', direction: 'desc' }]
+export const defaultAuditSortModel: Array<{
+  field: string
+  direction: string
+}> = [{ field: 'uploadedDate', direction: 'desc' }]

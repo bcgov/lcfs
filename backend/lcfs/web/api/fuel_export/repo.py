@@ -231,6 +231,10 @@ class FuelExportRepository:
                 and_(
                     FuelCategory.category != "Jet fuel",
                     ~and_(FuelType.is_legacy == False, FuelType.fossil_derived == True),
+                    # Exclude 2024-era "Other" fuel types from legacy reports
+                    FuelType.fuel_type.notin_(
+                        LCFS_Constants.LEGACY_EXCLUDED_FUEL_TYPES
+                    ),
                 )
             )
 

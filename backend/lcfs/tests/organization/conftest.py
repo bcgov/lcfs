@@ -71,7 +71,7 @@ def mock_report_opening_repo():
             compliance_year=2024,
             compliance_reporting_enabled=True,
             early_issuance_enabled=False,
-            supplemental_report_role="BCeID",
+            create_supplemental_enabled=True,
         )
     )
     return repo

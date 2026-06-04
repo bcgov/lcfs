@@ -53,14 +53,14 @@ async def test_get_all_compliance_periods_success(
             compliance_year=2024,
             compliance_reporting_enabled=True,
             early_issuance_enabled=False,
-            supplemental_report_role="BCeID",
+            create_supplemental_enabled=True,
             report_opening_id=1,
         ),
         SimpleNamespace(
             compliance_year=2025,
             compliance_reporting_enabled=True,
             early_issuance_enabled=False,
-            supplemental_report_role="BCeID",
+            create_supplemental_enabled=True,
             report_opening_id=2,
         ),
     ]
@@ -88,14 +88,14 @@ async def test_get_all_compliance_periods_filters_disabled_years(
             compliance_year=2024,
             compliance_reporting_enabled=True,
             early_issuance_enabled=False,
-            supplemental_report_role="BCeID",
+            create_supplemental_enabled=True,
             report_opening_id=1,
         ),
         SimpleNamespace(
             compliance_year=2025,
             compliance_reporting_enabled=False,
             early_issuance_enabled=False,
-            supplemental_report_role="BCeID",
+            create_supplemental_enabled=True,
             report_opening_id=2,
         ),
     ]

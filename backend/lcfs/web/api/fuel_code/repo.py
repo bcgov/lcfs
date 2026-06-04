@@ -52,6 +52,7 @@ from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
+from lcfs.db.models.organization.Organization import Organization
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     get_field_for_filter,
@@ -59,6 +60,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
+from lcfs.utils.constants import LCFS_Constants
 
 logger = structlog.get_logger(__name__)
 
@@ -297,6 +299,11 @@ class FuelCodeRepository:
         # If we don't want to include legacy fuel types, filter them out
         if not include_legacy:
             conditions.append(FuelType.is_legacy == False)
+        else:
+            # Exclude 2024-era "Other" fuel types from legacy reports
+            conditions.append(
+                FuelType.fuel_type.notin_(LCFS_Constants.LEGACY_EXCLUDED_FUEL_TYPES)
+            )
 
         # Build the query with filtered fuel_codes and compliance period joins
         query = (
@@ -548,11 +555,15 @@ class FuelCodeRepository:
     async def get_fuel_codes_paginated(
         self,
         pagination: PaginationRequestSchema,
+        organization_id: Optional[int] = None,
         exclude_archived: bool = False,
         compliance_period_start: Optional[date] = None,
     ) -> tuple[Sequence[FuelCode], int]:
         """
         Queries fuel codes from the database with optional filters, pagination, and sorting.
+
+        When ``organization_id`` is supplied the result is scoped to that
+        organisation (used by "My fuel codes").
 
         When exclude_archived is True, Approved fuel codes outside the current compliance
         period are omitted. Non-Approved codes (Draft, Recommended, Deleted) are unaffected.
@@ -577,6 +588,19 @@ class FuelCodeRepository:
             )
 
         query = select(FuelCodeListView)
+
+        if organization_id is not None:
+            # The view doesn't expose organization_id; subquery against the
+            # underlying table so we filter on the FK rather than on the
+            # brittle company text column.
+            conditions.append(
+                FuelCodeListView.fuel_code_id.in_(
+                    select(FuelCode.fuel_code_id).where(
+                        FuelCode.organization_id == organization_id
+                    )
+                )
+            )
+
         for filter in pagination.filters:
 
             filter_value = filter.filter
@@ -728,11 +752,37 @@ class FuelCodeRepository:
         )
 
     @repo_handler
+    async def get_organization_by_name(self, name: str) -> Optional[int]:
+        """Return the organization_id whose name or operating_name matches
+        (case-insensitive), or None."""
+        name_norm = name.strip()
+        result = await self.db.execute(
+            select(Organization.organization_id).where(
+                or_(
+                    func.lower(Organization.name) == func.lower(name_norm),
+                    func.lower(Organization.operating_name) == func.lower(name_norm),
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_distinct_company_names(self, company: str) -> List[str]:
         query = (
             select(distinct(FuelCode.company))
             .where(func.lower(FuelCode.company).like(func.lower(company + "%")))
             .order_by(FuelCode.company)
+            .limit(10)
+        )
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_organization_names_like(self, prefix: str) -> List[str]:
+        """Return registered organization names starting with prefix (case-insensitive)."""
+        query = (
+            select(Organization.name)
+            .where(func.lower(Organization.name).like(func.lower(prefix + "%")))
+            .order_by(Organization.name)
             .limit(10)
         )
         return (await self.db.execute(query)).scalars().all()
@@ -937,8 +987,7 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
-        query = text(
-            """
+        query = text("""
             WITH parsed_codes AS (
                 SELECT SPLIT_PART(fc.fuel_suffix, '.', 1)::INTEGER AS base_code
                 FROM fuel_code fc
@@ -972,16 +1021,14 @@ class FuelCodeRepository:
             )
             SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
             FROM next_code;
-            """
-        )
+            """)
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
         self, input_version: str, prefix_id: int
     ) -> str:
-        query = text(
-            """
+        query = text("""
             WITH split_versions AS (
                 SELECT
                     fuel_suffix,
@@ -1014,8 +1061,7 @@ class FuelCodeRepository:
                 COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR,
                         (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR)
                 AS next_available_version
-            """
-        )
+            """)
         result = (
             await self.db.execute(
                 query, {"input_version": int(input_version), "prefix_id": prefix_id}

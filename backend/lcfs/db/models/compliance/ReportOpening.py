@@ -1,15 +1,6 @@
-from enum import Enum as PyEnum
-
-from sqlalchemy import Boolean, Column, Enum, Integer, UniqueConstraint, text
+from sqlalchemy import Boolean, Column, Integer, UniqueConstraint, text
 
 from lcfs.db.base import Auditable, BaseModel
-
-
-class SupplementalReportAccessRole(str, PyEnum):
-    """Enumerates which user role may create supplemental reports for a year."""
-
-    BCeID = "BCeID"
-    IDIR = "IDIR"
 
 
 class ReportOpening(BaseModel, Auditable):
@@ -48,15 +39,15 @@ class ReportOpening(BaseModel, Auditable):
         default=False,
         comment="Indicates whether early issuance is enabled for this year",
     )
-    supplemental_report_role = Column(
-        Enum(
-            SupplementalReportAccessRole,
-            name="supplemental_report_access_role_enum",
-        ),
+    create_supplemental_enabled = Column(
+        Boolean,
         nullable=False,
-        default=SupplementalReportAccessRole.BCeID,
-        server_default=text("'BCeID'"),
-        comment="Which role (BCeID or IDIR) may create supplemental reports for the year",
+        server_default=text("true"),
+        default=True,
+        comment=(
+            "If True, the Create supplemental report button is shown to BCeID "
+            "users for this year (when it is otherwise eligible to appear)"
+        ),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - simple repr
