@@ -161,6 +161,35 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ON aa.current_status_id = aas.admin_adjustment_status_id
         UNION ALL
         ------------------------------------------------------------------------
+        -- Aggregator Issuances
+        ------------------------------------------------------------------------
+        SELECT
+            ag.aggregator_issuance_id AS transaction_id,
+            'AggregatorIssuance' AS transaction_type,
+            NULL AS description,
+            NULL AS from_organization_id,
+            NULL AS from_organization,
+            org.organization_id AS to_organization_id,
+            org.name AS to_organization,
+            ag.compliance_units AS quantity,
+            NULL AS price_per_unit,
+            'Recorded' AS status,
+            EXTRACT(YEAR FROM (ag.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'))::text AS compliance_period,
+            NULL AS from_org_comment,
+            NULL AS to_org_comment,
+            ag.gov_comment AS government_comment,
+            NULL AS category,
+            (ag.recorded_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS recorded_date,
+            NULL AS approved_date,
+            (ag.transaction_effective_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver')::date AS transaction_effective_date,
+            (ag.update_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver') AS update_date,
+            (ag.create_date AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver') AS create_date
+        FROM aggregator_issuance ag
+        JOIN organization org
+            ON ag.to_organization_id = org.organization_id
+        WHERE COALESCE(ag.effective_status, TRUE) = TRUE
+        UNION ALL
+        ------------------------------------------------------------------------
         -- Compliance Reports
         ------------------------------------------------------------------------
         SELECT
@@ -233,11 +262,14 @@ CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ON tf_from.from_transaction_id = t.transaction_id
         LEFT JOIN transfer tf_to
             ON tf_to.to_transaction_id = t.transaction_id
+        LEFT JOIN aggregator_issuance ag
+            ON ag.transaction_id = t.transaction_id
         WHERE cr.transaction_id IS NULL
           AND aa.transaction_id IS NULL
           AND ia.transaction_id IS NULL
           AND tf_from.from_transaction_id IS NULL
           AND tf_to.to_transaction_id IS NULL
+          AND ag.transaction_id IS NULL
           AND COALESCE(t.effective_status, TRUE) = TRUE
     )
     , deduped AS (
@@ -347,6 +379,21 @@ WITH base AS (
         t.update_date
     FROM   mv_transaction_aggregate t
     WHERE  t.transaction_type = 'StandaloneTransaction'
+    AND    t.status           = 'Recorded'
+
+    UNION ALL
+
+    -- Aggregator Issuances
+    SELECT
+        t.transaction_id,
+        t.transaction_type,
+        t.compliance_period,
+        t.to_organization_id                       AS organization_id,
+        t.quantity,
+        t.create_date,
+        t.update_date
+    FROM   mv_transaction_aggregate t
+    WHERE  t.transaction_type = 'AggregatorIssuance'
     AND    t.status           = 'Recorded'
 )
 
