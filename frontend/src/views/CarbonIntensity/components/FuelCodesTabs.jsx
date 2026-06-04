@@ -94,8 +94,8 @@ const buildTabs = ({
     tabs.push({
       key: 'mine',
       labelKey: 'carbonIntensity:tabs.myFuelCodes',
-      path: FUEL_CODES_PATH,
-      isActive: isOnInternalFuelCodes
+      path: ROUTES.FUEL_CODES.MY_LIST,
+      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.MY_LIST
     })
   } else if (isGovernment) {
     tabs.push({

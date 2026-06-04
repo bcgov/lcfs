@@ -1,5 +1,11 @@
-from sqlalchemy import Column, Integer, Text
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    Index,
+    Integer,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import ENUM, TSVECTOR
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -25,6 +31,21 @@ comment_visibility_enum = ENUM(
 class InternalComment(BaseModel, Auditable):
     __tablename__ = "internal_comment"
     __table_args__ = (
+        Index(
+            "idx_internal_comment_org_year_cat_vis",
+            "organization_id",
+            "compliance_year",
+            "comment_category_id",
+            "visibility",
+            "create_date",
+            postgresql_ops={"create_date": "DESC"},
+        ),
+        Index(
+            "idx_internal_comment_search_vector",
+            "comment_search_vector",
+            postgresql_using="gin",
+        ),
+        Index("idx_internal_comment_create_date", "create_date"),
         {"comment": "Stores internal comments with scope and related metadata."},
     )
 
@@ -48,7 +69,39 @@ class InternalComment(BaseModel, Auditable):
         comment="Visibility scope: Internal (gov-only) or Public (visible to org users)",
     )
 
+    # --- Comment Log denormalized metadata -------------------------------
+    organization_id = Column(
+        Integer,
+        ForeignKey("organization.organization_id"),
+        nullable=True,
+        comment="Denormalized org for fast org-scoped queries.",
+    )
+    compliance_year = Column(
+        Integer,
+        nullable=True,
+        comment="Denormalized compliance year from source entity.",
+    )
+    comment_category_id = Column(
+        Integer,
+        ForeignKey("comment_category.comment_category_id"),
+        nullable=True,
+        comment="FK to comment_category.",
+    )
+    comment_search_text = Column(
+        Text,
+        nullable=True,
+        comment="Sanitized plain text for full-text search.",
+    )
+    comment_search_vector = Column(
+        TSVECTOR,
+        nullable=True,
+        comment="tsvector for PostgreSQL full-text search.",
+    )
+
     # Relationships
+    comment_category = relationship(
+        "CommentCategory", back_populates="internal_comments"
+    )
     transfer_internal_comments = relationship(
         "TransferInternalComment", back_populates="internal_comment"
     )

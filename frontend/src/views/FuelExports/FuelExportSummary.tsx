@@ -1,38 +1,63 @@
 import BCBox from '@/components/BCBox'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
-import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
-import { defaultInitialPagination } from '@/constants/schedules'
-import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
-import { useFuelSupplyColumnStore } from '@/stores/useFuelSupplyColumnStore'
+import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
-import Loading from '@/components/Loading'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { defaultInitialPagination } from '@/constants/schedules'
 
-export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
-  const [paginationOptions, setPaginationOptions] = useState(
+interface FuelExport {
+  fuelExportId: number | string
+  actionType?: string
+  fuelType?: { fuelType?: string }
+  [key: string]: any
+}
+
+interface FuelExportSummaryProps {
+  data?: {
+    fuelExports?: FuelExport[]
+    totalComplianceUnits?: number | null
+  }
+  status?: string
+}
+
+interface PaginationFilter {
+  field: string
+  type: string
+  filter?: string
+}
+
+interface PaginationSort {
+  field: string
+  direction: 'asc' | 'desc'
+}
+
+interface PaginationOptions {
+  page: number
+  size: number
+  filters?: PaginationFilter[]
+  sortOrders?: PaginationSort[]
+}
+
+export const FuelExportSummary = ({
+  data,
+  status
+}: FuelExportSummaryProps) => {
+  const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
     defaultInitialPagination
   )
-  const gridRef = useRef()
-  const { t } = useTranslation(['common', 'fuelSupply'])
-  const { compliancePeriod } = useParams()
-  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions(
-    { compliancePeriod }
-  )
-
-  const columnState = useFuelSupplyColumnStore((s) => s.columnState)
-  const setColumnState = useFuelSupplyColumnStore((s) => s.setColumnState)
+  const gridRef = useRef(null)
+  const { t } = useTranslation(['common', 'fuelExport'])
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
-    if (!data?.fuelSupplies) {
+    if (!data?.fuelExports) {
       return {
         data: {
-          fuelSupplies: [],
+          fuelExports: [] as FuelExport[],
           pagination: {
             page: 1,
             size: paginationOptions.size,
@@ -45,8 +70,8 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
       }
     }
 
-    let filteredData = [
-      ...data.fuelSupplies.filter((item) => item.actionType !== 'DELETE')
+    let filteredData: FuelExport[] = [
+      ...data.fuelExports.filter((item) => item.actionType !== 'DELETE')
     ]
 
     // Apply filters if any
@@ -60,7 +85,7 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
               fieldValue
                 .toString()
                 .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+                .includes(filter.filter!.toLowerCase())
             )
           })
         }
@@ -93,7 +118,7 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
 
     return {
       data: {
-        fuelSupplies: paginatedItems,
+        fuelExports: paginatedItems,
         pagination: {
           page: paginationOptions.page,
           size: paginationOptions.size,
@@ -104,23 +129,22 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
       isError: false,
       isLoading: false
     }
-  }, [data?.fuelSupplies, paginationOptions])
+  }, [data?.fuelExports, paginationOptions])
 
-  const showFuelTypeOther = paginatedData.data.fuelSupplies.some(
-    (item) => item.fuelType === 'Other'
+  const showFuelTypeOther = paginatedData.data.fuelExports.some(
+    (item) => item.fuelType?.fuelType === 'Other'
   )
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
+      overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
       enableCellTextSelection: true,
-      ensureDomOrder: true,
-      maintainColumnOrder: true
+      ensureDomOrder: true
     }),
     [t]
   )
@@ -132,72 +156,50 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
       cellRenderer:
         status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
       cellRendererParams: {
-        url: () => 'supply-of-fuel'
+        url: () => 'fuel-exports'
       }
     }),
     [status]
   )
 
-  const columnDefs = useMemo(
-    () =>
-      fuelSupplySummaryColDef(
-        isEarlyIssuance,
-        showFuelTypeOther,
-        parseInt(compliancePeriod),
-        optionsData
-      ),
-    [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData]
-  )
-
-  const getRowId = (params) => {
-    return params.data.fuelSupplyId.toString()
-  }
-
-  if (optionsLoading) {
-    return <Loading />
+  const getRowId = (params: { data: FuelExport }) => {
+    return params.data.fuelExportId.toString()
   }
 
   return (
-    <Grid2 className="fuel-supply-container" mx={-1}>
-      <BCBox
-        component="div"
-        sx={{ height: '100%', width: '100%' }}
-        data-test="fuel-supply-summary"
-      >
+    <Grid2 className="fuel-export-container" mx={-1}>
+      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         {data?.totalComplianceUnits !== undefined &&
           data?.totalComplianceUnits !== null && (
             <ComplianceUnitsTotal
-              label={t('fuelSupply:totalComplianceUnits')}
+              label={t('fuelExport:totalComplianceUnits')}
               value={data.totalComplianceUnits}
-              dataTest="fuel-supply-total-compliance-units"
+              dataTest="fuel-export-total-compliance-units"
             />
           )}
         <BCGridViewer
-          gridKey="fuel-supplies"
+          gridKey="fuel-exports"
           gridRef={gridRef}
-          columnDefs={columnDefs}
           queryData={paginatedData}
-          dataKey="fuelSupplies"
+          dataKey="fuelExports"
+          columnDefs={fuelExportSummaryColDefs(showFuelTypeOther)}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={(data?.fuelSupplies?.length || 0) <= 10}
+          suppressPagination={(data?.fuelExports?.length || 0) <= 10}
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
+          onPaginationChange={(newPagination: Partial<PaginationOptions>) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
             }))
           }
           enablePageCaching={false}
-          suppressMovableColumns={false}
-          columnState={columnState}
-          onColumnStateChange={setColumnState}
         />
       </BCBox>
     </Grid2>
   )
 }
 
-FuelSupplySummary.displayName = 'FuelSupplySummary'
+FuelExportSummary.displayName = 'FuelExportSummary'

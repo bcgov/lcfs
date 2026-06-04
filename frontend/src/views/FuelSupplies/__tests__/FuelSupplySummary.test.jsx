@@ -79,7 +79,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 }))
 
 // Mock the schema
-vi.mock('@/views/FuelSupplies/_schema.jsx', () => ({
+vi.mock('@/views/FuelSupplies/_schema', () => ({
   fuelSupplySummaryColDef: (
     isEarlyIssuance,
     showFuelTypeOther,

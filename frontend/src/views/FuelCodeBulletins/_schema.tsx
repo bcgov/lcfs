@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ColDef } from '@ag-grid-community/core'
 import { TFunction } from 'i18next'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'

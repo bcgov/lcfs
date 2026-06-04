@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
@@ -64,7 +67,11 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
   }
 }
 
-export const chargingSiteColDefs = (errors, warnings, gridReady) => {
+export const chargingSiteColDefs = (
+  errors: GridErrors,
+  warnings: GridWarnings,
+  gridReady: boolean
+): ColDef[] => {
   return [
     validation,
     actions((params) => ({
@@ -271,7 +278,11 @@ export const chargingSiteColDefs = (errors, warnings, gridReady) => {
   ]
 }
 
-export const chargingEquipmentColDefs = (t, isIDIR = false, options = {}) => {
+export const chargingEquipmentColDefs = (
+  t: (key: string) => string,
+  isIDIR: boolean = false,
+  options: Record<string, any> = {}
+): ColDef[] => {
   const {
     enableSelection = false,
     historyMode = false,
@@ -666,7 +677,10 @@ export const defaultColDef = {
 }
 
 // Column defs for IDIR Charging Sites viewer grid
-export const indexChargingSitesColDefs = (isIDIR = false, orgIdToName = {}) => [
+export const indexChargingSitesColDefs = (
+  isIDIR: boolean = false,
+  orgIdToName: Record<string | number, string> = {}
+): ColDef[] => [
   {
     field: 'status',
     minWidth: 130,

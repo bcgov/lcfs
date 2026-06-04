@@ -19,6 +19,11 @@ from lcfs.web.exception.exceptions import (
     ValidationErrorException,
 )
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.core.rate_limit import (
+    RATE_LIMIT_EXEMPT,
+    RateLimit,
+    enforce_rate_limit,
+)
 
 # Context variables
 request_var = contextvars.ContextVar("request")
@@ -219,56 +224,90 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
     return decorator
 
 
-def public_view_handler(func):
-    """Handles try/except in the view layer for public (unauthenticated) endpoints."""
+def public_view_handler(_func=None, *, rate_limit=None):
+    """Handles try/except in the view layer for public (unauthenticated) endpoints.
 
-    @wraps(func)
-    async def wrapper(request: Request, *args, **kwargs):
-        logger = structlog.get_logger(func.__module__)
-        request_var.set(request)
-        user = getattr(request, "user", None)
-        user_var.set(user)
-        session = (
-            request.state.session if hasattr(request.state, "session") else None
-        )
-        session_var.set(session)
+    Public routes are automatically protected by a Redis-backed rate
+    limiter using the global default (see ``rate_limit_default_*`` in
+    ``settings.py``). To tighten or relax the cap for a single route,
+    pass a ``RateLimit`` instance::
 
-        try:
-            return await func(request, *args, **kwargs)
-        except ValueError as e:
-            source_info = get_source_info(func=func)
-            logger.error(str(e), source_info=source_info, exc_info=e)
-            raise HTTPException(status_code=400, detail=str(e))
-        except (DatabaseException, ServiceException) as e:
-            source_info = get_source_info(func=func)
-            logger.error(str(e), source_info=source_info, exc_info=e)
-            raise HTTPException(status_code=500, detail="Internal Server Error")
-        except HTTPException as e:
-            source_info = get_source_info(func=func)
-            logger.error(str(e), source_info=source_info, exc_info=e)
-            if e.status_code == 403:
-                raise HTTPException(status_code=403, detail="Forbidden resource")
-            raise
-        except DataNotFoundException:
-            raise HTTPException(status_code=404, detail="Not Found")
-        except VirusScanException:
-            raise HTTPException(
-                status_code=422,
-                detail="Viruses detected in file, please upload another",
+        from lcfs.web.core.rate_limit import RateLimit
+
+        @router.post("/expensive")
+        @public_view_handler(rate_limit=RateLimit(times=5, seconds=60))
+        async def expensive(...): ...
+
+    Pass ``rate_limit=RATE_LIMIT_EXEMPT`` to opt out entirely (only
+    appropriate for trivial endpoints such as health checks).
+    """
+
+    def _decorate(func):
+        @wraps(func)
+        async def wrapper(request: Request, *args, **kwargs):
+            logger = structlog.get_logger(func.__module__)
+
+            # Enforce the rate limit before we touch any handler logic
+            # so 429s are returned cheaply and never logged as errors
+            # by the inner try/except below.
+            if rate_limit is not RATE_LIMIT_EXEMPT:
+                await enforce_rate_limit(
+                    request,
+                    rate_limit if isinstance(rate_limit, RateLimit) else None,
+                )
+
+            request_var.set(request)
+            user = getattr(request, "user", None)
+            user_var.set(user)
+            session = (
+                request.state.session if hasattr(request.state, "session") else None
             )
-        except RequestValidationError as e:
-            raise e
-        except ValidationErrorException as e:
-            source_info = get_source_info(func=func)
-            logger.error(str(e), source_info=source_info, exc_info=e)
-            raise
-        except Exception as e:
-            context = extract_context()
-            log_unhandled_exception(logger, e, context, "view", func=func)
-            new_exception = HTTPException(status_code=500, detail="Internal Server Error")
-            raise new_exception.with_traceback(e.__traceback__)
+            session_var.set(session)
 
-    return wrapper
+            try:
+                return await func(request, *args, **kwargs)
+            except ValueError as e:
+                source_info = get_source_info(func=func)
+                logger.error(str(e), source_info=source_info, exc_info=e)
+                raise HTTPException(status_code=400, detail=str(e))
+            except (DatabaseException, ServiceException) as e:
+                source_info = get_source_info(func=func)
+                logger.error(str(e), source_info=source_info, exc_info=e)
+                raise HTTPException(status_code=500, detail="Internal Server Error")
+            except HTTPException as e:
+                source_info = get_source_info(func=func)
+                logger.error(str(e), source_info=source_info, exc_info=e)
+                if e.status_code == 403:
+                    raise HTTPException(status_code=403, detail="Forbidden resource")
+                raise
+            except DataNotFoundException:
+                raise HTTPException(status_code=404, detail="Not Found")
+            except VirusScanException:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Viruses detected in file, please upload another",
+                )
+            except RequestValidationError as e:
+                raise e
+            except ValidationErrorException as e:
+                source_info = get_source_info(func=func)
+                logger.error(str(e), source_info=source_info, exc_info=e)
+                raise
+            except Exception as e:
+                context = extract_context()
+                log_unhandled_exception(logger, e, context, "view", func=func)
+                new_exception = HTTPException(
+                    status_code=500, detail="Internal Server Error"
+                )
+                raise new_exception.with_traceback(e.__traceback__)
+
+        return wrapper
+
+    # Support both `@public_view_handler` and
+    # `@public_view_handler(rate_limit=...)` usage.
+    if _func is not None and callable(_func):
+        return _decorate(_func)
+    return _decorate
 
 
 def service_handler(func):
@@ -311,7 +350,13 @@ def repo_handler(func):
         try:
             return await func(*args, **kwargs)
         # raise the error to the service layer
-        except (HTTPException, DataNotFoundException, VirusScanException, ValueError, ServiceException):
+        except (
+            HTTPException,
+            DataNotFoundException,
+            VirusScanException,
+            ValueError,
+            ServiceException,
+        ):
             raise
         # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
         except Exception as e:

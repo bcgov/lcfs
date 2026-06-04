@@ -45,7 +45,7 @@ class ReportOpeningService:
                 update.compliance_year,
                 compliance_reporting_enabled=update.compliance_reporting_enabled,
                 early_issuance_enabled=update.early_issuance_enabled,
-                supplemental_report_role=update.supplemental_report_role,
+                create_supplemental_enabled=update.create_supplemental_enabled,
             )
 
         records = await self.repo.sync_configured_years()

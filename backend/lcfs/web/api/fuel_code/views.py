@@ -26,6 +26,7 @@ from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateUpdateSchema,
     FuelCodesSchema,
+    PaginationResponseSchema,
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
@@ -35,6 +36,7 @@ from lcfs.web.api.fuel_code.schema import (
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.core.decorators import view_handler, public_view_handler
+from lcfs.web.core.rate_limit import RateLimit
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -167,6 +169,34 @@ async def get_fuel_codes(
 
 
 @router.post(
+    "/my-list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.CI_APPLICANT])
+async def get_my_fuel_codes(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: FuelCodeServices = Depends(),
+):
+    # Always derive scope from the session, never from the request body.
+    organization = getattr(request.user, "organization", None)
+    organization_id = getattr(organization, "organization_id", None)
+    if organization_id is None:
+        return FuelCodesSchema(
+            pagination=PaginationResponseSchema(
+                total=0,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=0,
+            ),
+            fuel_codes=[],
+        )
+
+    return await service.search_fuel_codes(
+        pagination, organization_id=organization_id
+    )
+
+
+@router.post(
     "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.GOVERNMENT])
@@ -230,7 +260,7 @@ async def get_fuel_code_bulletins(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@public_view_handler
+@public_view_handler(rate_limit=RateLimit(times=5, seconds=60))
 async def export_fuel_code_bulletins(
     request: Request,
     format: str = Query(default="xlsx", description="File export format"),

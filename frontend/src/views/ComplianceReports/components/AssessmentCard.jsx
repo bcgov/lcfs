@@ -10,6 +10,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { useReportOpenings } from '@/hooks/useReportOpenings'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
@@ -46,6 +47,10 @@ export const AssessmentCard = ({
 
   const { data: snapshotData, isLoading: snapshotLoading } =
     useOrganizationSnapshot(complianceReportId)
+
+  const { data: reportOpenings } = useReportOpenings({
+    enabled: !isGovernmentUser
+  })
 
   const [isDownloading, setIsDownloading] = useState(false)
   const onDownloadReport = async () => {
@@ -139,6 +144,20 @@ export const AssessmentCard = ({
     isFeatureEnabled(FEATURE_FLAGS.LEGACY_SUPPLEMENTAL_LOCK) &&
     !Number.isNaN(compliancePeriodNumber) &&
     compliancePeriodNumber <= 2023
+
+  // Show/hide Create Supplemental button for BCeID by IDIR config per year.
+  const isCreateSupplementalAllowedForYear = useMemo(() => {
+    if (!Array.isArray(reportOpenings)) {
+      return true
+    }
+    const yearConfig = reportOpenings.find(
+      (opening) => opening.complianceYear === compliancePeriodNumber
+    )
+    if (!yearConfig) {
+      return true
+    }
+    return yearConfig.createSupplementalEnabled !== false
+  }, [reportOpenings, compliancePeriodNumber])
 
   return (
     <BCWidgetCard
@@ -236,7 +255,8 @@ export const AssessmentCard = ({
                   {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                     currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
                     !hasGovernmentReassessmentInProgress &&
-                    !isLegacySupplementalRestricted && (
+                    !isLegacySupplementalRestricted &&
+                    isCreateSupplementalAllowedForYear && (
                       <Box>
                         <BCButton
                           data-test="create-supplemental"

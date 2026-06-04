@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
@@ -23,14 +26,14 @@ import { NEW_REGULATION_YEAR } from '@/constants/common'
 import { isNotionalTransferRenewableClaimEditable } from '@/utils/renewableClaimUtils'
 
 export const notionalTransferColDefs = (
-  optionsData,
-  orgName,
-  errors,
-  warnings,
-  isSupplemental,
-  compliancePeriod,
-  isEarlyIssuance = false
-) => {
+  optionsData: OptionsData,
+  orgName: string,
+  errors: GridErrors,
+  warnings: GridWarnings,
+  isSupplemental: boolean,
+  compliancePeriod: string | number,
+  isEarlyIssuance: boolean = false
+): ColDef[] => {
   const baseColumns = [
     validation,
     actions((params) => {
@@ -397,9 +400,9 @@ export const notionalTransferColDefs = (
 }
 
 export const notionalTransferSummaryColDefs = (
-  isEarlyIssuance = false,
-  complianceYear
-) => {
+  isEarlyIssuance: boolean = false,
+  complianceYear: string | number
+): ColDef[] => {
   const baseColumns = [
     {
       headerName: i18n.t(
@@ -533,10 +536,10 @@ export const defaultColDef = {
 }
 
 export const changelogCommonColDefs = (
-  highlight = true,
-  complianceYear,
-  isEarlyIssuance
-) => {
+  highlight: boolean = true,
+  complianceYear: string | number,
+  isEarlyIssuance: boolean
+): ColDef[] => {
   const baseColumns = [
     {
       headerName: i18n.t(
@@ -678,10 +681,10 @@ export const changelogCommonColDefs = (
 }
 
 export const changelogColDefs = (
-  highlight = true,
-  complianceYear,
-  isEarlyIssuance
-) => [
+  highlight: boolean = true,
+  complianceYear: string | number,
+  isEarlyIssuance: boolean
+): ColDef[] => [
   {
     field: 'groupUuid',
     hide: true,

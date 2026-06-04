@@ -18,7 +18,12 @@ import { TransferDetailsCard } from '@/views/Transfers/components/TransferDetail
 import { Comments } from '@/views/Transfers/components'
 import { CommentList } from '@/views/Transfers/components/CommentList'
 
-export const TransferView = ({ transferId, editorMode, transferData }) => {
+export const TransferView = ({
+  transferId,
+  editorMode,
+  transferData,
+  categoryOverride
+}) => {
   const { t } = useTranslation(['common', 'transfer'])
   const { data: currentUser, sameOrganization, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
@@ -69,6 +74,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
           {t('transfer:complianceUnitsPerTvo')}{' '}
           <b>{currencyFormatter({ value: totalValue })}</b> CAD.
         </BCTypography>
+        {categoryOverride}
       </BCBox>
       {/* Comments */}
       {transferData?.comments.length > 0 && (
@@ -115,5 +121,6 @@ TransferView.propTypes = {
   isGovernmentUser: PropTypes.bool,
   totalValue: PropTypes.number,
   handleCommentChange: PropTypes.func,
-  comment: PropTypes.string
+  comment: PropTypes.string,
+  categoryOverride: PropTypes.node
 }
