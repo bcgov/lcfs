@@ -1,6 +1,6 @@
 from typing import Optional
 from enum import Enum
-from datetime import datetime
+from datetime import date, datetime
 from lcfs.web.api.base import BaseSchema
 
 
@@ -90,3 +90,26 @@ class OrganizationCommentsPaginationSchema(BaseSchema):
 class OrganizationCommentsResponseSchema(BaseSchema):
     comments: list[OrganizationCommentRecordSchema]
     pagination: OrganizationCommentsPaginationSchema
+
+
+class CommentSortFieldEnum(str, Enum):
+    CREATE_DATE = "create_date"
+    UPDATE_DATE = "update_date"
+
+
+class CommentSortOrderEnum(str, Enum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+class OrganizationCommentsFilterSchema(BaseSchema):
+    """Server-side filters for ``GET /organizations/{id}/comments``."""
+
+    category: Optional[str] = None
+    compliance_year: Optional[int] = None
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+    visibility: Optional[CommentVisibilityEnum] = None
+    search: Optional[str] = None
+    sort_by: CommentSortFieldEnum = CommentSortFieldEnum.CREATE_DATE
+    sort_order: CommentSortOrderEnum = CommentSortOrderEnum.DESC

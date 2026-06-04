@@ -1,5 +1,6 @@
 import structlog
-from typing import List
+from typing import List, Optional
+from datetime import date
 
 from fastapi import APIRouter, Body, Depends, Query, status, Request, HTTPException
 
@@ -8,9 +9,13 @@ from lcfs.web.core.decorators import view_handler
 from .services import InternalCommentService
 
 from .schema import (
+    CommentSortFieldEnum,
+    CommentSortOrderEnum,
+    CommentVisibilityEnum,
     InternalCommentCreateSchema,
     InternalCommentUpdateSchema,
     InternalCommentResponseSchema,
+    OrganizationCommentsFilterSchema,
     OrganizationCommentsResponseSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
@@ -32,24 +37,55 @@ async def get_organization_comments(
     organization_id: int,
     page: int = Query(1, ge=1),
     size: int = Query(25, ge=1, le=100),
+    category: Optional[str] = Query(None, description="Exact category display name."),
+    compliance_year: Optional[int] = Query(None, description="Compliance year."),
+    date_from: Optional[date] = Query(
+        None, description="Inclusive create_date lower bound."
+    ),
+    date_to: Optional[date] = Query(
+        None, description="Inclusive create_date upper bound."
+    ),
+    visibility: Optional[CommentVisibilityEnum] = Query(
+        None,
+        description="IDIR only; ignored for BCeID (always Public).",
+    ),
+    search: Optional[str] = Query(
+        None,
+        max_length=500,
+        description=(
+            "Full-text keyword search. Expanded to organization "
+            "name/operating_name when category='Organization details', or "
+            "to the author's name/email when category='Person'."
+        ),
+    ),
+    sort_by: CommentSortFieldEnum = Query(
+        CommentSortFieldEnum.CREATE_DATE, description="create_date | update_date"
+    ),
+    sort_order: CommentSortOrderEnum = Query(
+        CommentSortOrderEnum.DESC, description="asc | desc"
+    ),
     service: InternalCommentService = Depends(),
 ):
     """
-    Organization-scoped Comment Log feed (mounted in ``lcfs.web.api.router``
-    at ``/organizations``).
-
-    Returns all internal comments for the organization, regardless of
-    source entity type, paginated.
-
-    Visibility:
-    - IDIR / government users: ``Internal`` + ``Public``.
-    - BCeID users: ``Public`` only, and only for their own organization
-      (otherwise the service returns ``403``).
+    Organization-scoped Comment Log feed. IDIR sees Internal + Public and may
+    filter via ``visibility``; BCeID sees Public only and only for their own
+    organization (otherwise ``403``).
     """
+    filters = OrganizationCommentsFilterSchema(
+        category=category,
+        compliance_year=compliance_year,
+        date_from=date_from,
+        date_to=date_to,
+        visibility=visibility,
+        search=(search.strip() if isinstance(search, str) else search) or None,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
     return await service.get_organization_comments(
         organization_id=organization_id,
         page=page,
         size=size,
+        filters=filters,
     )
 
 

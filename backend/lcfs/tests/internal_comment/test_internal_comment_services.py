@@ -639,9 +639,12 @@ async def test_get_organization_comments_bcid_own_org_public_only():
 
     await service.get_organization_comments(organization_id=10)
 
-    service.repo.get_comments_for_organization.assert_awaited_once_with(
-        organization_id=10, page=1, size=25, visibility_filter="Public"
-    )
+    service.repo.get_comments_for_organization.assert_awaited_once()
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["organization_id"] == 10
+    assert call_kwargs["page"] == 1
+    assert call_kwargs["size"] == 25
+    assert call_kwargs["visibility_filter"] == "Public"
 
 
 @pytest.mark.anyio
@@ -652,9 +655,12 @@ async def test_get_organization_comments_idir_sees_internal_and_public():
 
     await service.get_organization_comments(organization_id=10, page=2, size=25)
 
-    service.repo.get_comments_for_organization.assert_awaited_once_with(
-        organization_id=10, page=2, size=25, visibility_filter=None
-    )
+    service.repo.get_comments_for_organization.assert_awaited_once()
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["organization_id"] == 10
+    assert call_kwargs["page"] == 2
+    assert call_kwargs["size"] == 25
+    assert call_kwargs["visibility_filter"] is None
 
 
 @pytest.mark.anyio
@@ -714,3 +720,107 @@ async def test_get_organization_comments_can_edit_false_for_other_user():
 
     result = await service.get_organization_comments(organization_id=5)
     assert result.comments[0].can_edit is False
+
+
+# ======================================================================
+# Comment Log filters & search (tickets #4452 / #4453)
+# ======================================================================
+from datetime import date
+
+from lcfs.web.api.internal_comment.schema import (
+    CommentSortFieldEnum,
+    CommentSortOrderEnum,
+    OrganizationCommentsFilterSchema,
+)
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_passes_all_filters_to_repo():
+    """AC: every filter param is forwarded to the repository in SQL."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    filters = OrganizationCommentsFilterSchema(
+        category="Transfer notes",
+        compliance_year=2024,
+        date_from=date(2024, 1, 1),
+        date_to=date(2024, 12, 31),
+        visibility=CommentVisibilityEnum.INTERNAL,
+        search="transfer",
+        sort_by=CommentSortFieldEnum.UPDATE_DATE,
+        sort_order=CommentSortOrderEnum.ASC,
+    )
+    await service.get_organization_comments(organization_id=5, filters=filters)
+
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["category"] == "Transfer notes"
+    assert call_kwargs["compliance_year"] == 2024
+    assert call_kwargs["date_from"] == date(2024, 1, 1)
+    assert call_kwargs["date_to"] == date(2024, 12, 31)
+    assert call_kwargs["visibility_filter"] == "Internal"
+    assert call_kwargs["search"] == "transfer"
+    assert call_kwargs["sort_by"] == "update_date"
+    assert call_kwargs["sort_order"] == "asc"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_bceid_visibility_param_ignored():
+    """AC: BCeID callers cannot escape the Public clamp via the visibility filter."""
+    service = _build_service_with_user_roles([RoleEnum.SUPPLIER])
+    service.request.user = SimpleNamespace(
+        role_names=[RoleEnum.SUPPLIER],
+        keycloak_username="bceid-user",
+        organization=SimpleNamespace(organization_id=10),
+    )
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    filters = OrganizationCommentsFilterSchema(
+        visibility=CommentVisibilityEnum.INTERNAL,  # smuggled
+    )
+    await service.get_organization_comments(organization_id=10, filters=filters)
+
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    # Visibility forced to Public regardless of input.
+    assert call_kwargs["visibility_filter"] == "Public"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_idir_visibility_filter_honored():
+    """AC: IDIR callers may narrow visibility via the param."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    filters = OrganizationCommentsFilterSchema(
+        visibility=CommentVisibilityEnum.INTERNAL,
+    )
+    await service.get_organization_comments(organization_id=10, filters=filters)
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["visibility_filter"] == "Internal"
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_size_capped_at_100():
+    """Service must cap page size to 100."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    await service.get_organization_comments(organization_id=1, size=10_000)
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["size"] == 100
+
+
+@pytest.mark.anyio
+async def test_get_organization_comments_defaults_when_no_filters_passed():
+    """No filters → all optional params default to None / create_date desc."""
+    service = _build_service_with_user_roles([RoleEnum.GOVERNMENT])
+    service.repo.get_comments_for_organization.return_value = ([], 0)
+
+    await service.get_organization_comments(organization_id=1)
+    call_kwargs = service.repo.get_comments_for_organization.await_args.kwargs
+    assert call_kwargs["category"] is None
+    assert call_kwargs["compliance_year"] is None
+    assert call_kwargs["date_from"] is None
+    assert call_kwargs["date_to"] is None
+    assert call_kwargs["search"] is None
+    assert call_kwargs["sort_by"] == "create_date"
+    assert call_kwargs["sort_order"] == "desc"

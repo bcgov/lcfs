@@ -760,3 +760,430 @@ async def test_org_comments_reflect_parent_update(
     body = (await client.get(url7)).json()
     assert body["pagination"]["total"] == 1
     assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id
+
+
+# ======================================================================
+# Comment Log filters & search (tickets #4452 / #4453)
+# ======================================================================
+from sqlalchemy import func, select as sa_select
+from lcfs.db.models.comment.CommentCategory import CommentCategory
+
+
+async def _seed_org_comment_full(
+    add_models,
+    dbsession,
+    *,
+    transfer_id: int,
+    to_org_id: int,
+    visibility: str = "Internal",
+    create_user: str = "IDIRUSER",
+    audience_scope: str | None = AudienceScopeEnum.ANALYST.value,
+    comment: str = "<p>hello world</p>",
+    plain_text: str = "hello world",
+    category_name: str | None = None,
+    compliance_year: int | None = None,
+) -> InternalComment:
+    """Seed an InternalComment with denormalized metadata + tsvector so
+    the Comment Log filter / search path can query it as production does.
+    """
+    transfer = _make_transfer(transfer_id, to_org_id)
+    await add_models([transfer])
+
+    category_id = None
+    if category_name is not None:
+        row = (
+            await dbsession.execute(
+                sa_select(CommentCategory.comment_category_id).where(
+                    CommentCategory.display_name == category_name
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            cat = CommentCategory(display_name=category_name, display_order=0)
+            await add_models([cat])
+            row = cat.comment_category_id
+        category_id = row
+
+    ic = InternalComment(
+        comment=comment,
+        comment_search_text=plain_text,
+        comment_search_vector=func.to_tsvector("english", plain_text),
+        visibility=visibility,
+        audience_scope=audience_scope,
+        create_user=create_user,
+        comment_category_id=category_id,
+        compliance_year=compliance_year,
+    )
+    await add_models([ic])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer.transfer_id,
+                internal_comment_id=ic.internal_comment_id,
+            )
+        ]
+    )
+    await dbsession.refresh(ic)
+    return ic
+
+
+async def _gov_setup(fastapi_app, set_mock_user, add_models):
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
+    )
+    await add_models(
+        [UserProfile(keycloak_username="IDIRUSER", first_name="T", last_name="U")]
+    )
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_by_category(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: category=Transfer notes returns only Transfer notes comments."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5001, to_org_id=1,
+        comment="<p>t</p>", plain_text="t",
+        category_name="Transfer notes",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5002, to_org_id=1,
+        comment="<p>c</p>", plain_text="c",
+        category_name="Compliance notes",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"category": "Transfer notes"})
+    assert resp.status_code == status.HTTP_200_OK
+    body = resp.json()
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["category"] == "Transfer notes"
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_by_compliance_year(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: compliance_year=2024 returns only 2024 comments."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5101, to_org_id=1,
+        comment="<p>a</p>", plain_text="a",
+        compliance_year=2024,
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5102, to_org_id=1,
+        comment="<p>b</p>", plain_text="b",
+        compliance_year=2025,
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"compliance_year": 2024})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["complianceYear"] == 2024
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_by_date_range_inclusive(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: date_from / date_to are inclusive on create_date."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    ic_old = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5201, to_org_id=1,
+        comment="<p>old</p>", plain_text="old",
+    )
+    ic_in = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5202, to_org_id=1,
+        comment="<p>in</p>", plain_text="in",
+    )
+    ic_new = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5203, to_org_id=1,
+        comment="<p>new</p>", plain_text="new",
+    )
+
+    # Force known create_dates via SQL update.
+    from sqlalchemy import update as sa_update
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_old.internal_comment_id)
+        .values(create_date=datetime(2024, 1, 1, 0, 0, 0))
+    )
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_in.internal_comment_id)
+        .values(create_date=datetime(2024, 6, 15, 12, 0, 0))
+    )
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_new.internal_comment_id)
+        .values(create_date=datetime(2025, 1, 1, 0, 0, 0))
+    )
+    await dbsession.flush()
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(
+        url, params={"date_from": "2024-01-01", "date_to": "2024-12-31"}
+    )
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    # Inclusive: old (Jan 1) and in (Jun 15) — but NOT new (Jan 1, 2025)
+    assert body["pagination"]["total"] == 2
+
+
+@pytest.mark.anyio
+async def test_org_comments_filter_combined_intersection(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: multiple filters compose as an AND intersection."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5301, to_org_id=1,
+        comment="<p>match</p>", plain_text="match",
+        category_name="Transfer notes",
+        compliance_year=2024,
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5302, to_org_id=1,
+        comment="<p>wrong year</p>", plain_text="wrong year",
+        category_name="Transfer notes",
+        compliance_year=2023,
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5303, to_org_id=1,
+        comment="<p>wrong cat</p>", plain_text="wrong cat",
+        category_name="Compliance notes",
+        compliance_year=2024,
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(
+        url, params={"category": "Transfer notes", "compliance_year": 2024}
+    )
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+
+
+@pytest.mark.anyio
+async def test_org_comments_visibility_filter_idir(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: IDIR can narrow by visibility=Internal."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5401, to_org_id=1, visibility="Internal",
+        comment="<p>i</p>", plain_text="i",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5402, to_org_id=1, visibility="Public",
+        audience_scope=None,
+        comment="<p>p</p>", plain_text="p",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"visibility": "Internal"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["visibility"] == "Internal"
+
+
+@pytest.mark.anyio
+async def test_org_comments_bceid_visibility_param_ignored(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: BCeID passing visibility=Internal still gets Public only."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.SUPPLIER],
+        user_details={"keycloak_username": "BCEIDUSER", "organization_id": 1},
+    )
+    await add_models(
+        [
+            UserProfile(
+                keycloak_username="BCEIDUSER",
+                first_name="BC",
+                last_name="User",
+                organization_id=1,
+            )
+        ]
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5501, to_org_id=1, visibility="Internal",
+        comment="<p>i</p>", plain_text="i",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5502, to_org_id=1, visibility="Public",
+        audience_scope=None, create_user="BCEIDUSER",
+        comment="<p>p</p>", plain_text="p",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"visibility": "Internal"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["visibility"] == "Public"
+
+
+@pytest.mark.anyio
+async def test_org_comments_sort_create_date_asc(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    ic_a = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5601, to_org_id=1,
+        comment="<p>a</p>", plain_text="a",
+    )
+    ic_b = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=5602, to_org_id=1,
+        comment="<p>b</p>", plain_text="b",
+    )
+
+    from sqlalchemy import update as sa_update
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_a.internal_comment_id)
+        .values(create_date=datetime(2024, 1, 1, 0, 0, 0))
+    )
+    await dbsession.execute(
+        sa_update(InternalComment)
+        .where(InternalComment.internal_comment_id == ic_b.internal_comment_id)
+        .values(create_date=datetime(2025, 1, 1, 0, 0, 0))
+    )
+    await dbsession.flush()
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"sort_by": "create_date", "sort_order": "asc"})
+    body = resp.json()
+    ids = [c["internalCommentId"] for c in body["comments"]]
+    assert ids == [ic_a.internal_comment_id, ic_b.internal_comment_id]
+
+    resp_desc = await client.get(
+        url, params={"sort_by": "create_date", "sort_order": "desc"}
+    )
+    ids_desc = [c["internalCommentId"] for c in resp_desc.json()["comments"]]
+    assert ids_desc == [ic_b.internal_comment_id, ic_a.internal_comment_id]
+
+
+# ----------------------------------------------------------------------
+# Search (ticket #4453)
+# ----------------------------------------------------------------------
+@pytest.mark.anyio
+async def test_org_comments_search_basic_match(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: search=transfer matches comment_search_vector."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    ic = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6001, to_org_id=1,
+        comment="<p>transfer agreement signed</p>",
+        plain_text="transfer agreement signed",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6002, to_org_id=1,
+        comment="<p>nothing here</p>", plain_text="nothing here",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": "transfer"})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id
+
+
+@pytest.mark.anyio
+async def test_org_comments_search_empty_returns_all(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: empty search → no FTS predicate is applied."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession, transfer_id=6101, to_org_id=1,
+        comment="<p>x</p>", plain_text="x",
+    )
+    await _seed_org_comment_full(
+        add_models, dbsession, transfer_id=6102, to_org_id=1,
+        comment="<p>y</p>", plain_text="y",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": "   "})
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 2
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "term",
+    ["!@#$%^&*()", "über café", "naïve résumé", "中文 测试", "\"unbalanced"],
+)
+async def test_org_comments_search_special_chars_no_500(
+    client, fastapi_app, set_mock_user, add_models, dbsession, term
+):
+    """AC: special characters / Unicode never cause a 500."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6200 + abs(hash(term)) % 50,
+        to_org_id=1, comment="<p>safe</p>", plain_text="safe",
+    )
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=1)
+    resp = await client.get(url, params={"search": term})
+    assert resp.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+async def test_org_comments_search_org_details_expands_to_org_name(
+    client, fastapi_app, set_mock_user, add_models, dbsession
+):
+    """AC: category=Organization details + search also matches Organization.name."""
+    await _gov_setup(fastapi_app, set_mock_user, add_models)
+    # Create an org with a recognisable name; the entity_meta join uses
+    # transfer.to_organization_id, so the seeded transfer's target org will
+    # be matched against Organization.name.
+    await add_models(
+        [Organization(organization_id=42, name="Acme Fuels Limited")]
+    )
+    ic = await _seed_org_comment_full(
+        add_models, dbsession,
+        transfer_id=6301, to_org_id=42,
+        comment="<p>random body</p>",
+        plain_text="random body",
+        category_name="Organization details",
+    )
+
+    url = fastapi_app.url_path_for("get_organization_comments", organization_id=42)
+    resp = await client.get(
+        url, params={"category": "Organization details", "search": "Acme"}
+    )
+    body = resp.json()
+    assert resp.status_code == status.HTTP_200_OK
+    assert body["pagination"]["total"] == 1
+    assert body["comments"][0]["internalCommentId"] == ic.internal_comment_id

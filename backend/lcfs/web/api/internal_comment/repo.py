@@ -1,11 +1,12 @@
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
+from datetime import date, datetime, time
 from typing import List, Optional, Tuple
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy as sa
-from sqlalchemy import asc, case, desc, func, select
+from sqlalchemy import asc, case, desc, func, or_, select
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -436,8 +437,6 @@ class InternalCommentRepository:
         Per ``internal_comment_id``, choose one (entity_type, entity_id,
         live_org_id, live_year) tuple via ``DISTINCT ON``.
         """
-        # CompliancePeriod.description is a varchar; safely cast numeric
-        # values to integer, NULL otherwise.
         cp_year = case(
             (
                 CompliancePeriod.description.op("~")("^[0-9]+$"),
@@ -557,36 +556,126 @@ class InternalCommentRepository:
         page: int,
         size: int,
         visibility_filter: Optional[str] = None,
+        category: Optional[str] = None,
+        compliance_year: Optional[int] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        search: Optional[str] = None,
+        sort_by: str = "create_date",
+        sort_order: str = "desc",
     ) -> Tuple[List[dict], int]:
         """
-        Paginated list of comments scoped to ``organization_id``, with the
-        organization and compliance year **derived live** from the source
-        parent entity (so parent updates are reflected immediately).
-        Returns ``(records, total)``.
+        Paginated organization comments with live-derived org/year, server-side
+        filters (category, compliance_year, date range, visibility, search) and
+        sorting. Search uses ``websearch_to_tsquery('english', ...)`` against
+        ``comment_search_vector``; with ``category='Organization details'`` it
+        also matches ``organization.name``/``operating_name``, and with
+        ``category='Person'`` it also matches the author's name / email.
         """
         entity_meta = self._entity_meta_subquery()
 
         where_clauses = [entity_meta.c.live_org_id == organization_id]
         if visibility_filter:
             where_clauses.append(InternalComment.visibility == visibility_filter)
+        if compliance_year is not None:
+            where_clauses.append(
+                func.coalesce(entity_meta.c.live_year, InternalComment.compliance_year)
+                == compliance_year
+            )
+        if date_from is not None:
+            lower = (
+                datetime.combine(date_from, time.min)
+                if isinstance(date_from, date) and not isinstance(date_from, datetime)
+                else date_from
+            )
+            where_clauses.append(InternalComment.create_date >= lower)
+        if date_to is not None:
+            upper = (
+                datetime.combine(date_to, time.max)
+                if isinstance(date_to, date) and not isinstance(date_to, datetime)
+                else date_to
+            )
+            where_clauses.append(InternalComment.create_date <= upper)
+        if category:
+            where_clauses.append(CommentCategory.display_name == category)
+
+        search_term = (search or "").strip()
+        if search_term:
+            tsquery = func.websearch_to_tsquery("english", search_term)
+            fts_predicate = InternalComment.comment_search_vector.op("@@")(tsquery)
+
+            ilike_term = f"%{search_term}%"
+            search_predicates = [fts_predicate]
+
+            if category == "Organization details":
+                search_predicates.append(Organization.name.ilike(ilike_term))
+                search_predicates.append(Organization.operating_name.ilike(ilike_term))
+            elif category == "Person":
+                search_predicates.append(UserProfile.first_name.ilike(ilike_term))
+                search_predicates.append(UserProfile.last_name.ilike(ilike_term))
+                search_predicates.append(
+                    func.concat(
+                        func.coalesce(UserProfile.first_name, ""),
+                        " ",
+                        func.coalesce(UserProfile.last_name, ""),
+                    ).ilike(ilike_term)
+                )
+                search_predicates.append(UserProfile.email.ilike(ilike_term))
+
+            where_clauses.append(or_(*search_predicates))
+
+        needs_org_join_for_count = bool(
+            search_term and category == "Organization details"
+        )
+        needs_user_join_for_count = bool(search_term and category == "Person")
+
+        full_name_col = (UserProfile.first_name + " " + UserProfile.last_name).label(
+            "full_name"
+        )
+
+        base_select_from = (
+            select(InternalComment.internal_comment_id)
+            .select_from(InternalComment)
+            .join(
+                entity_meta,
+                entity_meta.c.ic_id == InternalComment.internal_comment_id,
+            )
+            .outerjoin(
+                CommentCategory,
+                CommentCategory.comment_category_id
+                == InternalComment.comment_category_id,
+            )
+        )
+        if needs_org_join_for_count:
+            base_select_from = base_select_from.outerjoin(
+                Organization,
+                Organization.organization_id == entity_meta.c.live_org_id,
+            )
+        if needs_user_join_for_count:
+            base_select_from = base_select_from.outerjoin(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+            )
+        base_select_from = base_select_from.where(*where_clauses)
 
         total = (
             await self.db.execute(
-                select(func.count(InternalComment.internal_comment_id))
-                .select_from(InternalComment)
-                .join(
-                    entity_meta,
-                    entity_meta.c.ic_id == InternalComment.internal_comment_id,
-                )
-                .where(*where_clauses)
+                select(func.count()).select_from(base_select_from.subquery())
             )
         ).scalar_one()
 
         if total == 0:
             return ([], 0)
 
-        full_name_col = (UserProfile.first_name + " " + UserProfile.last_name).label(
-            "full_name"
+        sort_col = (
+            InternalComment.update_date
+            if sort_by == "update_date"
+            else InternalComment.create_date
+        )
+        sort_dir = asc if str(sort_order).lower() == "asc" else desc
+        order_by = (
+            sort_dir(sort_col),
+            sort_dir(InternalComment.internal_comment_id),
         )
 
         offset = max(page - 1, 0) * max(size, 1)
@@ -597,7 +686,9 @@ class InternalCommentRepository:
                 InternalComment.comment,
                 InternalComment.comment_search_text.label("plain_text_comment"),
                 entity_meta.c.live_org_id.label("organization_id"),
-                entity_meta.c.live_year.label("compliance_year"),
+                func.coalesce(
+                    entity_meta.c.live_year, InternalComment.compliance_year
+                ).label("compliance_year"),
                 InternalComment.visibility,
                 InternalComment.audience_scope,
                 InternalComment.create_user,
@@ -628,10 +719,7 @@ class InternalCommentRepository:
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
             .where(*where_clauses)
-            .order_by(
-                desc(InternalComment.create_date),
-                desc(InternalComment.internal_comment_id),
-            )
+            .order_by(*order_by)
             .limit(size)
             .offset(offset)
         )

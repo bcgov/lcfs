@@ -21,6 +21,7 @@ from .schema import (
     InternalCommentResponseSchema,
     EntityTypeEnum,
     OrganizationCommentRecordSchema,
+    OrganizationCommentsFilterSchema,
     OrganizationCommentsPaginationSchema,
     OrganizationCommentsResponseSchema,
 )
@@ -86,13 +87,11 @@ class InternalCommentService:
         ``organization_id``, ``compliance_year``, ``comment_category_id``,
         ``comment_search_text``, and ``comment_search_vector``.
         """
-        # 1. Search text + tsvector (always refreshed when comment text set).
         if comment.comment is not None:
             search_text = sanitize_comment_text(comment.comment)
             comment.comment_search_text = search_text
             comment.comment_search_vector = func.to_tsvector("english", search_text)
 
-        # 2. organization_id / compliance_year derived from the source entity.
         if entity_type is not None and entity_id is not None:
             org_id, year = await self.repo.get_entity_org_and_year(
                 entity_type, entity_id
@@ -102,11 +101,9 @@ class InternalCommentService:
             if year is not None:
                 comment.compliance_year = year
 
-        # 3. comment_category_id — explicit override wins, else fall back to
-        #    the agreed default for the entity type.
-        category_name = category_display_name
-        if not category_name and entity_type is not None:
-            category_name = DEFAULT_CATEGORY_BY_ENTITY.get(entity_type)
+        category_name = category_display_name or (
+            DEFAULT_CATEGORY_BY_ENTITY.get(entity_type) if entity_type else None
+        )
         if category_name:
             category_id = await self.repo.get_category_id_by_name(category_name)
             if category_id is not None:
@@ -357,17 +354,18 @@ class InternalCommentService:
         organization_id: int,
         page: int = 1,
         size: int = 25,
+        filters: Optional[OrganizationCommentsFilterSchema] = None,
     ) -> OrganizationCommentsResponseSchema:
         """
         Paginated organization-scoped Comment Log feed.
 
-        RBAC:
-        - IDIR / government: sees both ``Internal`` and ``Public`` comments
-          for any organization.
-        - BCeID: may only access their own organization; sees ``Public``
-          comments only.
+        IDIR sees Internal + Public and may narrow via ``filters.visibility``.
+        BCeID may only access their own organization and always sees Public
+        only — any caller-supplied ``filters.visibility`` is ignored.
         """
-        # --- Authorization -------------------------------------------
+        if filters is None:
+            filters = OrganizationCommentsFilterSchema()
+
         is_government_user = self._is_government_user()
         current_user = self.request.user
 
@@ -382,9 +380,10 @@ class InternalCommentService:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             visibility_filter: Optional[str] = CommentVisibilityEnum.PUBLIC.value
         else:
-            visibility_filter = None
+            visibility_filter = (
+                filters.visibility.value if filters.visibility is not None else None
+            )
 
-        # --- Pagination bounds ---------------------------------------
         page = page if page and page >= 1 else 1
         size = size if size and size >= 1 else 25
         if size > 100:
@@ -395,6 +394,13 @@ class InternalCommentService:
             page=page,
             size=size,
             visibility_filter=visibility_filter,
+            category=filters.category,
+            compliance_year=filters.compliance_year,
+            date_from=filters.date_from,
+            date_to=filters.date_to,
+            search=filters.search,
+            sort_by=filters.sort_by.value,
+            sort_order=filters.sort_order.value,
         )
 
         username = getattr(current_user, "keycloak_username", None)
