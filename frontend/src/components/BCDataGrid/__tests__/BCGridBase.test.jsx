@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
@@ -14,6 +14,12 @@ const mockGridApi = {
 }
 
 let shouldTriggerCallbacks = true
+
+const waitForGridReady = async () => {
+  await waitFor(() => {
+    expect(mockGridApi.getDisplayedRowCount).toHaveBeenCalled()
+  })
+}
 
 vi.mock('@ag-grid-community/react', () => ({
   AgGridReact: vi.fn((props) => {
@@ -207,6 +213,7 @@ describe('BCGridBase Component', () => {
   describe('Height Management', () => {
     it('does not call determineHeight when gridApiRef.current is null', async () => {
       const ref = createRef()
+      shouldTriggerCallbacks = false
 
       render(
         <TestWrapper>
@@ -214,9 +221,8 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      // Simulate onGridReady not being called yet (gridApiRef is null)
       await act(async () => {
-        // Force component to try determineHeight without gridApi
+        fireEvent(window, new Event('resize'))
       })
 
       // Since gridApiRef is null, no API calls should be made
@@ -234,9 +240,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      await act(async () => {
-        // Wait for onGridReady to trigger
-      })
+      await waitForGridReady()
 
       // Verify the AgGrid received domLayout: 'autoHeight' and height: 'auto'
       const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
@@ -286,9 +290,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      await act(async () => {
-        // onRowDataUpdated should be triggered by mock
-      })
+      await waitForGridReady()
 
       // Verify that the component handles row data updates
       const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
@@ -306,9 +308,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      await act(async () => {
-        // Wait for onGridReady
-      })
+      await waitForGridReady()
 
       // onGridReady should have been called
       const agGridProps = vi.mocked(AgGridReact).mock.calls[0][0]
@@ -340,9 +340,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      await act(async () => {
-        // Wait for onGridReady
-      })
+      await waitForGridReady()
 
       // Should not throw errors
       expect(consoleSpy).not.toHaveBeenCalled()
@@ -358,9 +356,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      await act(async () => {
-        // Wait for onGridReady
-      })
+      await waitForGridReady()
 
       // Should not throw errors
       expect(consoleSpy).not.toHaveBeenCalled()
@@ -446,9 +442,8 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      await act(async () => {
-        // Wait for initial setup
-      })
+      await waitForGridReady()
+      mockGridApi.getDisplayedRowCount.mockClear()
 
       // Trigger resize event
       await act(async () => {
