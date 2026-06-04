@@ -397,9 +397,9 @@ jobs:
         uses: actions/cache@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
+          key: ${{ runner.os }}-node-modules-v2-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-modules-
+            ${{ runner.os }}-node-modules-v2-
 
       - name: Install frontend dependencies
         run: |
@@ -414,12 +414,15 @@ jobs:
       #     wait $TYPE_CHECK_PID
 
       - name: Cache node_modules for test shards
-        uses: actions/cache@v5.0.4
+        # Save-only on purpose. Restoring here (via restore-keys) could pull a
+        # cache built for a different lockfile and overwrite the node_modules we
+        # just installed with `npm ci`, making the shards run a mismatched
+        # dependency version (e.g. a stale Vitest). The `-v2-` salt bypasses
+        # previously poisoned caches.
+        uses: actions/cache/save@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-shared-
+          key: ${{ runner.os }}-node-modules-shared-v2-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Mark setup as complete
         id: setup-complete
@@ -482,13 +485,13 @@ jobs:
 
       - name: Restore node_modules cache
         id: cache-restore
-        uses: actions/cache@v5.0.4
+        # Restore-only with an exact (salted) key: only reuse a cache built for
+        # this exact lockfile. No restore-keys, so a stale cache can never be
+        # partially restored; on a miss the fallback step below runs `npm ci`.
+        uses: actions/cache/restore@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-shared-
-            ${{ runner.os }}-node-modules-
+          key: ${{ runner.os }}-node-modules-shared-v2-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install frontend dependencies (fallback)
         if: steps.cache-restore.outputs.cache-hit != 'true'
