@@ -4,6 +4,7 @@ import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
 import Tooltip from '@mui/material/Tooltip'
 import Chip from '@mui/material/Chip'
+import AppBar from '@mui/material/AppBar'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
@@ -128,10 +129,7 @@ const CommentList = ({
       }
     }
     // Internal-only mode or internal visibility in dual mode
-    if (
-      hasAnyRole(roles.analyst) ||
-      hasAnyRole(roles.compliance_manager)
-    ) {
+    if (hasAnyRole(roles.analyst) || hasAnyRole(roles.compliance_manager)) {
       return t('internalComment:commentToDirector')
     }
     if (hasAnyRole(roles.director)) {
@@ -186,51 +184,37 @@ const CommentList = ({
       >
         {showCommentTabs && (
           <BCBox sx={{ backgroundColor: '#fff', p: 2, pb: 1 }}>
-            <Tabs
-              value={commentFilter}
-              onChange={(_, value) => setCommentFilter(value)}
-              aria-label={t('internalComment:commentFilterTabs')}
-              data-test="comment-filter-tabs"
-              sx={{
-                minHeight: 48,
-                width: { xs: '100%', md: 560 },
-                maxWidth: '100%',
-                bgcolor: '#eeeeee',
-                borderRadius: 1,
-                '& .MuiTabs-indicator': {
-                  display: 'none'
-                },
-                '& .MuiTab-root': {
-                  minHeight: 40,
-                  flex: 1,
-                  color: '#1a3b6d',
-                  fontSize: '1rem',
-                  fontWeight: 400,
-                  textTransform: 'none'
-                },
-                '& .Mui-selected': {
-                  bgcolor: '#ffffff',
-                  borderRadius: 1,
-                  color: '#1a3b6d'
-                }
-              }}
+            <AppBar
+              position="static"
+              sx={{ boxShadow: 'none', border: 'none', mb: 3 }}
             >
-              <Tab
-                value="internal"
-                label={t('internalComment:internalComments')}
-                data-test="comment-filter-internal"
-              />
-              <Tab
-                value="public"
-                label={t('internalComment:publicComments')}
-                data-test="comment-filter-public"
-              />
-              <Tab
-                value="all"
-                label={t('internalComment:allComments')}
-                data-test="comment-filter-all"
-              />
-            </Tabs>
+              <Tabs
+                value={commentFilter}
+                onChange={(_, value) => setCommentFilter(value)}
+                aria-label={t('internalComment:commentFilterTabs')}
+                data-test="comment-filter-tabs"
+                sx={{
+                  background: 'rgb(0, 0, 0, 0.08)',
+                  width: { xs: '100%', md: '60%' }
+                }}
+              >
+                <Tab
+                  value="internal"
+                  label={t('internalComment:internalComments')}
+                  data-test="comment-filter-internal"
+                />
+                <Tab
+                  value="public"
+                  label={t('internalComment:publicComments')}
+                  data-test="comment-filter-public"
+                />
+                <Tab
+                  value="all"
+                  label={t('internalComment:allComments')}
+                  data-test="comment-filter-all"
+                />
+              </Tabs>
+            </AppBar>
           </BCBox>
         )}
         {filteredComments.map((comment, index) => (
@@ -297,8 +281,14 @@ const CommentList = ({
                       alignItems: 'center'
                     }}
                   >
-                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <BCTypography variant="body2" color="text" component="span">
+                    <BCBox
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
+                      <BCTypography
+                        variant="body2"
+                        color="text"
+                        component="span"
+                      >
                         <CommentTimestamp
                           createDate={comment.createDate}
                           updateDate={comment.updateDate}
@@ -339,7 +329,9 @@ const CommentList = ({
                         </BCTypography>
                       )}
                     </BCBox>
-                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BCBox
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
                       {isDualMode && isGov && comment.visibility && (
                         <Chip
                           label={
