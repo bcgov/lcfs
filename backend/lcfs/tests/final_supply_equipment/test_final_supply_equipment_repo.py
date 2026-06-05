@@ -639,7 +639,6 @@ async def test_has_decommissioned_fse_in_report_filters_by_compliance_year(
     # decommissioned before the reported year.
     assert "charging_equipment" in compiled
     assert "EXTRACT(year FROM charging_equipment.update_date) < 2024" in compiled
-    assert "EXTRACT(year FROM charging_equipment.update_date) < 2024" in compiled
 
 
 @pytest.mark.anyio

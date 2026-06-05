@@ -78,6 +78,42 @@ async def test_save_allocation_agreement_create(
 
 
 @pytest.mark.anyio
+async def test_save_allocation_agreement_missing_provision_returns_422(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_allocation_agreement_service,
+    mock_allocation_agreement_validation,
+):
+    """Saving a row without provision_of_the_act must return a clean field
+    validation error (422) rather than crashing the carbon-intensity lookup
+    with a 500 (regression for #4444)."""
+    with patch(
+        "lcfs.web.api.allocation_agreement.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_allocation_agreements_row")
+        payload = create_mock_schema({"provision_of_the_act": None}).model_dump()
+
+        mock_validate_organization_access.return_value = True
+
+        fastapi_app.dependency_overrides[AllocationAgreementServices] = (
+            lambda: mock_allocation_agreement_service
+        )
+        fastapi_app.dependency_overrides[ComplianceReportValidation] = (
+            lambda: mock_allocation_agreement_validation
+        )
+
+        response = await client.post(url, json=payload)
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["errors"][0]["fields"] == ["provisionOfTheAct"]
+        # The crashing service path must not be reached
+        mock_allocation_agreement_service.create_allocation_agreement.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_save_allocation_agreement_update(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -147,6 +183,42 @@ async def test_save_allocation_agreement_delete(
             url,
             json=payload,
         )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "Allocation agreement deleted successfully"
+
+
+@pytest.mark.anyio
+async def test_save_allocation_agreement_delete_without_quantity(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_allocation_agreement_service,
+    mock_allocation_agreement_validation,
+):
+    """A delete must succeed even when the row carries no quantity, e.g. an
+    incomplete duplicate line. Quantity validation should be skipped on delete
+    (regression for #4444)."""
+    with patch(
+        "lcfs.web.api.allocation_agreement.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_allocation_agreements_row")
+        payload = create_mock_delete_schema({"quantity": None}).model_dump()
+
+        mock_allocation_agreement_service.delete_allocation_agreement.return_value = (
+            create_mock_update_response_schema({})
+        )
+        mock_validate_organization_access.return_value = True
+
+        fastapi_app.dependency_overrides[AllocationAgreementServices] = (
+            lambda: mock_allocation_agreement_service
+        )
+        fastapi_app.dependency_overrides[ComplianceReportValidation] = (
+            lambda: mock_allocation_agreement_validation
+        )
+        response = await client.post(url, json=payload)
 
         assert response.status_code == 200
         data = response.json()
