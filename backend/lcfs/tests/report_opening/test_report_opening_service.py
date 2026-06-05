@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from lcfs.db.models.compliance.ReportOpening import SupplementalReportAccessRole
 from lcfs.web.api.report_opening.schema import (
     ReportOpeningUpdateRequest,
     ReportOpeningUpdateSchema,
@@ -21,14 +20,14 @@ def mock_report_opening_repo():
                 compliance_year=2019,
                 compliance_reporting_enabled=True,
                 early_issuance_enabled=False,
-                supplemental_report_role="BCeID",
+                create_supplemental_enabled=True,
             ),
             SimpleNamespace(
                 report_opening_id=2,
                 compliance_year=2020,
                 compliance_reporting_enabled=False,
                 early_issuance_enabled=False,
-                supplemental_report_role="BCeID",
+                create_supplemental_enabled=True,
             ),
         ]
     )
@@ -64,7 +63,7 @@ async def test_update_report_openings_updates_each_year(mock_report_opening_repo
                 compliance_year=2019,
                 compliance_reporting_enabled=False,
                 early_issuance_enabled=True,
-                supplemental_report_role="IDIR",
+                create_supplemental_enabled=False,
             )
         ]
     )
@@ -75,7 +74,7 @@ async def test_update_report_openings_updates_each_year(mock_report_opening_repo
         2019,
         compliance_reporting_enabled=False,
         early_issuance_enabled=True,
-        supplemental_report_role=SupplementalReportAccessRole.IDIR,
+        create_supplemental_enabled=False,
     )
     assert any(result.compliance_year == 2019 for result in results)
 

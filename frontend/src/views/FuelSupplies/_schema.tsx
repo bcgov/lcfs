@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
@@ -44,13 +47,13 @@ export const isFuelCodeProvision = (provision) =>
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const fuelSupplyColDefs = (
-  optionsData,
-  errors,
-  warnings,
-  compliancePeriod,
-  isSupplemental,
-  isEarlyIssuance = false
-) => {
+  optionsData: OptionsData,
+  errors: GridErrors,
+  warnings: GridWarnings,
+  compliancePeriod: string | number,
+  isSupplemental: boolean,
+  isEarlyIssuance: boolean = false
+): ColDef[] => {
   const baseColumns = [
     validation,
     actions((params) => {
@@ -844,11 +847,11 @@ export const fuelSupplyColDefs = (
 }
 
 export const fuelSupplySummaryColDef = (
-  isEarlyIssuance,
-  showFuelTypeOther,
-  complianceYear,
-  optionsData
-) => {
+  isEarlyIssuance: boolean,
+  showFuelTypeOther: boolean,
+  complianceYear: string | number,
+  optionsData: OptionsData
+): ColDef[] => {
   const baseColumns = [
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
@@ -1068,11 +1071,11 @@ export const defaultColDef = {
 }
 
 export const changelogCommonColDefs = (
-  highlight = true,
-  isEarlyIssuance = false,
-  complianceYear,
-  optionsData
-) => {
+  highlight: boolean = true,
+  isEarlyIssuance: boolean = false,
+  complianceYear: string | number,
+  optionsData: OptionsData
+): ColDef[] => {
   const baseColumns = [
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
@@ -1126,14 +1129,14 @@ export const changelogCommonColDefs = (
         highlight && changelogCellStyle(params, 'isCanadaProduced'),
       valueGetter: (params) => {
         // For fuel codes with known location, show the system-determined value
-        const showCanadianProduced = 
-        canEditCanadianProduced(
+        const showCanadianProduced = canEditCanadianProduced(
           params.data,
           complianceYear,
           optionsData
         )
         const isDefaultCI =
-          (params.data.provisionOfTheAct?.name || params.data.provisionOfTheAct) === DEFAULT_CI_FUEL_CODE
+          (params.data.provisionOfTheAct?.name ||
+            params.data.provisionOfTheAct) === DEFAULT_CI_FUEL_CODE
         if (showCanadianProduced && isDefaultCI) {
           return params.data.isCanadaProduced ? 'Yes' : 'No'
         }
@@ -1290,11 +1293,11 @@ export const changelogCommonColDefs = (
 }
 
 export const changelogColDefs = (
-  highlight = true,
-  isEarlyIssuance = false,
-  complianceYear,
-  optionsData
-) => {
+  highlight: boolean = true,
+  isEarlyIssuance: boolean = false,
+  complianceYear: string | number,
+  optionsData: OptionsData
+): ColDef[] => {
   const baseColumns = [
     {
       field: 'groupUuid',

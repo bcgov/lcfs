@@ -358,6 +358,12 @@ class OtherUsesRepository:
         # Conditionally add the is_legacy filter
         if not include_legacy:
             base_conditions.append(FuelType.is_legacy == False)
+        else:
+            # Exclude 2024-era "Other" fuel types from legacy reports
+            # ("Other" is already excluded above; this also drops "Other diesel fuel")
+            base_conditions.append(
+                FuelType.fuel_type.notin_(LCFS_Constants.LEGACY_EXCLUDED_FUEL_TYPES)
+            )
 
         # Get compliance period id for default CI lookup
         compliance_period_id = None

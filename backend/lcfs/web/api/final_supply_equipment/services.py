@@ -38,6 +38,9 @@ logger = structlog.get_logger(__name__)
 class FinalSupplyEquipmentServices:
     DEFAULT_OPERATIONAL_HOURS = 24
     DECOMMISSIONED_STATUS = "Decommissioned"
+    # FSE reporting did not exist before this compliance year. Reports for
+    # earlier years must not gain or mutate FSE reporting data.
+    MIN_FSE_COMPLIANCE_YEAR = 2024
 
     def __init__(
         self,
@@ -328,11 +331,64 @@ class FinalSupplyEquipmentServices:
 
         return compliance_report
 
+    async def _validate_report_supports_fse(self, compliance_report_id: int) -> None:
+        """Reject FSE reporting writes against legacy-year reports (pre-2024).
+
+        FSE reporting did not exist before 2024, so the UI hides the section for
+        those years. This guard closes the gap for direct API calls so legacy
+        reports can never gain or mutate FSE reporting rows server-side, even if
+        a client bypasses the UI.
+        """
+        if compliance_report_id is None:
+            return
+        report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id
+        )
+        if report is None:
+            return
+        try:
+            compliance_year = int(report.compliance_period.description)
+        except (AttributeError, TypeError, ValueError):
+            return
+        if compliance_year < self.MIN_FSE_COMPLIANCE_YEAR:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "FSE reporting is not available for compliance periods before "
+                    f"{self.MIN_FSE_COMPLIANCE_YEAR}."
+                ),
+            )
+
+    async def _get_report_compliance_year(self, compliance_report_id: int) -> int:
+        """Resolve the compliance period year for a report id."""
+        report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id
+        )
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found",
+            )
+        return int(report.compliance_period.description)
+
     async def _validate_equipment_is_not_decommissioned(
-        self, charging_equipment_id: int
+        self, charging_equipment_id: int, compliance_year: int
     ) -> None:
-        latest_status = await self.repo.get_latest_equipment_status(charging_equipment_id)
-        if latest_status == self.DECOMMISSIONED_STATUS:
+        latest_status, decommissioned_date = (
+            await self.repo.get_latest_equipment_status_with_date(charging_equipment_id)
+        )
+        # The decommission restriction is period-aware: equipment is only
+        # off-limits for periods that begin after it was decommissioned. A
+        # report for an earlier year (e.g. a 2024 supplemental for FSE retired
+        # in 2025) stays editable because the equipment was still active during
+        # the reported period. update_date stands in for the decommission date
+        # (in-place status change, no dedicated timestamp). When the date is
+        # unavailable we err on the side of allowing the edit.
+        if (
+            latest_status == self.DECOMMISSIONED_STATUS
+            and decommissioned_date is not None
+            and decommissioned_date.year < compliance_year
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -350,8 +406,11 @@ class FinalSupplyEquipmentServices:
                 detail="FSE reporting record not found",
             )
 
+        compliance_year = await self._get_report_compliance_year(
+            reporting_record.compliance_report_id
+        )
         await self._validate_equipment_is_not_decommissioned(
-            reporting_record.charging_equipment_id
+            reporting_record.charging_equipment_id, compliance_year
         )
         return reporting_record
 
@@ -428,6 +487,10 @@ class FinalSupplyEquipmentServices:
         compliance period year as the default supply date range.
         """
         compliance_year = int(report.compliance_period.description)
+        # FSE reporting did not exist before 2024. Skip entirely so legacy reports
+        # do not create ComplianceReportChargingEquipment rows or mutate FSE data.
+        if compliance_year < 2024:
+            return {"created": 0}
         supply_from_date = date(compliance_year, 1, 1)
         supply_to_date = date(compliance_year, 12, 31)
 
@@ -530,10 +593,17 @@ class FinalSupplyEquipmentServices:
         """
         Create FSE compliance reporting data
         """
-        for item in data:
-            await self._validate_equipment_is_not_decommissioned(
-                item.charging_equipment_id
+        for report_id in {item.compliance_report_id for item in data}:
+            await self._validate_report_supports_fse(report_id)
+
+        if data:
+            compliance_year = await self._get_report_compliance_year(
+                data[0].compliance_report_id
             )
+            for item in data:
+                await self._validate_equipment_is_not_decommissioned(
+                    item.charging_equipment_id, compliance_year
+                )
 
         # Convert Pydantic schemas to dict format for SQLAlchemy
         model_data = [item.model_dump() for item in data]
@@ -546,7 +616,12 @@ class FinalSupplyEquipmentServices:
         """
         Update FSE compliance reporting data
         """
-        await self._validate_reporting_record_is_not_decommissioned(reporting_id)
+        reporting_record = await self._validate_reporting_record_is_not_decommissioned(
+            reporting_id
+        )
+        await self._validate_report_supports_fse(
+            reporting_record.compliance_report_id
+        )
         return await self.repo.update_fse_reporting(reporting_id, data.model_dump())
 
     @service_handler
@@ -573,6 +648,8 @@ class FinalSupplyEquipmentServices:
         if not data.reporting_ids:
             return {"updated": 0, "is_active": data.is_active}
 
+        await self._validate_report_supports_fse(data.compliance_report_id)
+
         if data.is_active:
             for reporting_id in data.reporting_ids:
                 await self._validate_reporting_record_is_not_decommissioned(
@@ -596,14 +673,21 @@ class FinalSupplyEquipmentServices:
         if not data.equipment_ids:
             return {"created": 0, "updated": 0}
 
+        await self._validate_report_supports_fse(data.compliance_report_id)
+
         if not data.supply_from_date or not data.supply_to_date:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Supply from and to dates are required",
             )
 
+        compliance_year = await self._get_report_compliance_year(
+            data.compliance_report_id
+        )
         for equipment_id in data.equipment_ids:
-            await self._validate_equipment_is_not_decommissioned(equipment_id)
+            await self._validate_equipment_is_not_decommissioned(
+                equipment_id, compliance_year
+            )
 
         updated_count = await self.repo.bulk_update_reporting_dates(data)
 

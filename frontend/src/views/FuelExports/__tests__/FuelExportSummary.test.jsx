@@ -71,7 +71,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 }))
 
 // Mock the schema - enhanced to support showFuelTypeOther parameter
-vi.mock('@/views/FuelExports/_schema.jsx', () => {
+vi.mock('@/views/FuelExports/_schema', () => {
   const mockColDefs = vi.fn((showFuelTypeOther) => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' },

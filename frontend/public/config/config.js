@@ -21,7 +21,8 @@ export const config = {
     reporting2025Enabled: false,
     manageChargingSites: true,
     manageFse: true,
-    legacySupplementalLock: false
+    legacySupplementalLock: false,
+    internalCommentSearch: true
   }
 }
 

@@ -1,3 +1,5 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import {
@@ -247,9 +249,12 @@ const lastCommentCol = (t) => ({
  * the verification workflow is specced.
  */
 export const ciApplicationsColDefs = (
-  t,
-  { isGovernment = false, onRefresh } = {}
-) => {
+  t: (key: string) => string,
+  {
+    isGovernment = false,
+    onRefresh
+  }: { isGovernment?: boolean; onRefresh?: () => void } = {}
+): ColDef[] => {
   if (!isGovernment) {
     return [
       statusCol(t),
@@ -273,7 +278,9 @@ export const ciApplicationsColDefs = (
   ]
 }
 
-export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
+export const defaultSortModel: Array<{ field: string; direction: string }> = [
+  { field: 'updateDate', direction: 'desc' }
+]
 
 /**
  * Map an application's status to the wizard step number (1-indexed) the user
@@ -284,7 +291,9 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
  * submitted, the applicant is past the editable steps and should land on
  * the Government decision panel.
  */
-export const getResumeStep = (application) => {
+export const getResumeStep = (
+  application: Record<string, any> | null | undefined
+): number => {
   const status = application?.status?.status
   switch (status) {
     case 'Draft':

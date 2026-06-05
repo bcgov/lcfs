@@ -75,7 +75,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 }))
 
 // Mock the schema
-vi.mock('../_schema.jsx', () => ({
+vi.mock('../_schema', () => ({
   allocationAgreementSummaryColDef: vi.fn((isEarlyIssuance) => [
     { field: 'agreementName', headerName: 'Agreement Name' },
     { field: 'fuel', headerName: 'Fuel' },

@@ -9,14 +9,14 @@ const reportOpenings = [
     complianceYear: 2019,
     complianceReportingEnabled: true,
     earlyIssuanceEnabled: false,
-    supplementalReportRole: 'BCeID'
+    createSupplementalEnabled: true
   },
   {
     reportOpeningId: 2,
     complianceYear: 2020,
     complianceReportingEnabled: false,
     earlyIssuanceEnabled: false,
-    supplementalReportRole: 'BCeID'
+    createSupplementalEnabled: true
   }
 ]
 
@@ -83,8 +83,8 @@ export const handlers = [
           override.complianceReportingEnabled ?? entry.complianceReportingEnabled,
         earlyIssuanceEnabled:
           override.earlyIssuanceEnabled ?? entry.earlyIssuanceEnabled,
-        supplementalReportRole:
-          override.supplementalReportRole ?? entry.supplementalReportRole
+        createSupplementalEnabled:
+          override.createSupplementalEnabled ?? entry.createSupplementalEnabled
       }
     })
     return HttpResponse.json(updated)

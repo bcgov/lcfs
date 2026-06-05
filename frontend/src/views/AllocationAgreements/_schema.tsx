@@ -1,3 +1,6 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
@@ -27,14 +30,14 @@ import { isQuarterEditable } from '@/utils/grid/cellEditables'
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
 export const allocationAgreementColDefs = (
-  optionsData,
-  orgName,
-  errors,
-  warnings,
-  isSupplemental,
-  compliancePeriod,
-  isEarlyIssuance = false
-) => {
+  optionsData: OptionsData,
+  orgName: string,
+  errors: GridErrors,
+  warnings: GridWarnings,
+  isSupplemental: boolean,
+  compliancePeriod: string | number,
+  isEarlyIssuance: boolean = false
+): ColDef[] => {
   const baseColumns = [
     validation,
     actions((params) => {
@@ -326,8 +329,7 @@ export const allocationAgreementColDefs = (
       suppressKeyboardEvent,
       minWidth: 300,
       valueGetter: (params) =>
-        params.data.provisionOfTheAct?.name ||
-        params.data.provisionOfTheAct,
+        params.data.provisionOfTheAct?.name || params.data.provisionOfTheAct,
       valueSetter: (params) => {
         if (params.newValue) {
           params.data.provisionOfTheAct = params.newValue
@@ -616,7 +618,9 @@ export const allocationAgreementColDefs = (
   return baseColumns
 }
 
-export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
+export const allocationAgreementSummaryColDef = (
+  isEarlyIssuance: boolean
+): ColDef[] => {
   const baseColumns = [
     {
       headerName: i18n.t(
@@ -674,8 +678,7 @@ export const allocationAgreementSummaryColDef = (isEarlyIssuance) => {
       minWidth: 370,
       field: 'provisionOfTheAct',
       valueGetter: (params) =>
-        params.data.provisionOfTheAct?.name ||
-        params.data.provisionOfTheAct
+        params.data.provisionOfTheAct?.name || params.data.provisionOfTheAct
     },
     {
       headerName: i18n.t(
@@ -782,9 +785,9 @@ export const defaultColDef = {
 }
 
 export const changelogCommonColDefs = (
-  highlight = true,
-  isEarlyIssuance = false
-) => {
+  highlight: boolean = true,
+  isEarlyIssuance: boolean = false
+): ColDef[] => {
   const baseColumns = [
     {
       headerName: i18n.t(
@@ -970,7 +973,10 @@ export const changelogCommonColDefs = (
   return baseColumns
 }
 
-export const changelogColDefs = (highlight = true, isEarlyIssuance = false) => {
+export const changelogColDefs = (
+  highlight: boolean = true,
+  isEarlyIssuance: boolean = false
+): ColDef[] => {
   const baseColumns = [
     {
       field: 'groupUuid',
@@ -1100,7 +1106,9 @@ export const changelogGridOptions = {
   }
 }
 
-export const allocAgrmtSummaryColDefs = (t) => [
+export const allocAgrmtSummaryColDefs = (
+  t: (key: string) => string
+): ColDef[] => [
   {
     headerName: t(
       'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
@@ -1147,8 +1155,7 @@ export const allocAgrmtSummaryColDefs = (t) => [
     ),
     field: 'provisionOfTheAct',
     valueGetter: (params) =>
-      params.data?.provisionOfTheAct?.name ||
-      params.data?.provisionOfTheAct
+      params.data?.provisionOfTheAct?.name || params.data?.provisionOfTheAct
   },
   {
     headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'),

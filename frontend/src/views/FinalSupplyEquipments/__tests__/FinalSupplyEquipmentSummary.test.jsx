@@ -33,7 +33,7 @@ const mockFinalSupplyEquipmentSummaryColDefs = vi.hoisted(() =>
   ])
 )
 
-vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
+vi.mock('@/views/FinalSupplyEquipments/_schema', () => ({
   finalSupplyEquipmentSummaryColDefs: mockFinalSupplyEquipmentSummaryColDefs
 }))
 

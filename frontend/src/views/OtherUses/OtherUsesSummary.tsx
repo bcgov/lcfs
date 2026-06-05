@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
-import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
+import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
@@ -10,23 +10,50 @@ import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
 import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 
-export const OtherUsesSummary = ({ data, status }) => {
-  const [paginationOptions, setPaginationOptions] = useState(
+interface OtherUse {
+  otherUsesId: number | string
+  actionType?: string
+  [key: string]: any
+}
+
+interface OtherUsesSummaryProps {
+  data?: { otherUses?: OtherUse[] }
+  status?: string
+}
+
+interface PaginationFilter {
+  field: string
+  type: string
+  filter?: string
+}
+
+interface PaginationSort {
+  field: string
+  direction: 'asc' | 'desc'
+}
+
+interface PaginationOptions {
+  page: number
+  size: number
+  filters?: PaginationFilter[]
+  sortOrders?: PaginationSort[]
+}
+
+export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
+  const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
     defaultInitialPagination
   )
-  const gridRef = useRef()
-  const { compliancePeriod } = useParams()
-  const {
-    data: optionsData,
-    isLoading: optionsLoading,
-    isFetched
-  } = useOtherUsesOptions({ compliancePeriod })
+  const gridRef = useRef(null)
+  const { compliancePeriod } = useParams<{ compliancePeriod: string }>()
+  const { data: optionsData, isLoading: optionsLoading } = useOtherUsesOptions({
+    compliancePeriod
+  })
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
     if (!data?.otherUses) {
       return {
         data: {
-          otherUses: [],
+          otherUses: [] as OtherUse[],
           pagination: {
             page: 1,
             size: paginationOptions.size,
@@ -39,7 +66,7 @@ export const OtherUsesSummary = ({ data, status }) => {
       }
     }
 
-    let filteredData = [
+    let filteredData: OtherUse[] = [
       ...data.otherUses.filter((item) => item.actionType !== 'DELETE')
     ]
 
@@ -54,7 +81,7 @@ export const OtherUsesSummary = ({ data, status }) => {
               fieldValue
                 .toString()
                 .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+                .includes(filter.filter!.toLowerCase())
             )
           })
         }
@@ -113,7 +140,8 @@ export const OtherUsesSummary = ({ data, status }) => {
     [status]
   )
 
-  const getRowId = (params) => params.data.otherUsesId.toString()
+  const getRowId = (params: { data: OtherUse }) =>
+    params.data.otherUsesId.toString()
   if (optionsLoading) {
     return <Loading />
   }
@@ -124,7 +152,10 @@ export const OtherUsesSummary = ({ data, status }) => {
           gridKey="other-uses"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={otherUsesSummaryColDefs(parseInt(compliancePeriod), optionsData)}
+          columnDefs={otherUsesSummaryColDefs(
+            parseInt(compliancePeriod ?? '0'),
+            optionsData
+          )}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="otherUses"
@@ -136,7 +167,7 @@ export const OtherUsesSummary = ({ data, status }) => {
           }}
           enableCellTextSelection
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
+          onPaginationChange={(newPagination: Partial<PaginationOptions>) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination

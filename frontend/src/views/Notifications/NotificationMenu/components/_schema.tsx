@@ -1,9 +1,14 @@
+// @ts-nocheck
+import type { ColDef } from '@ag-grid-community/core'
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
 import { ROUTES } from '@/routes/routes'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
 
-export const columnDefs = (t, currentUser) => [
+export const columnDefs = (
+  t: (key: string) => string,
+  currentUser: Record<string, any>
+): ColDef[] => [
   {
     ...actions({ enableDelete: true }),
     headerName: 'Delete',
@@ -68,7 +73,9 @@ export const defaultColDef = {
   sortable: true
 }
 
-export const routesMapping = (currentUser) => ({
+export const routesMapping = (
+  currentUser: Record<string, any>
+): Record<string, string> => ({
   Transfer: ROUTES.TRANSFERS.VIEW,
   AdminAdjustment: currentUser.isGovernmentUser
     ? ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
@@ -85,4 +92,6 @@ export const routesMapping = (currentUser) => ({
   'Fuel Code Returned': ROUTES.FUEL_CODES.EDIT
 })
 
-export const defaultSortModel = [{ field: 'date', direction: 'desc' }]
+export const defaultSortModel: Array<{ field: string; direction: string }> = [
+  { field: 'date', direction: 'desc' }
+]
