@@ -97,6 +97,42 @@ describe('CIApplicationProgress', () => {
     vi.useRealTimers()
   })
 
+  it('adds an hourglass supplier-wait step with days counted from request date', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-19T12:00:00Z'))
+    render(
+      <CIApplicationProgress
+        ciApplication={{
+          status: { status: 'Submitted' },
+          signatureUserDisplayName: 'Jane Submitter',
+          signatureDateTime: '2026-05-01T12:00:00Z',
+          preliminaryRiskAssessment: 'Low',
+          verification1Date: '2026-05-02T12:00:00Z',
+          supplierRequestDate: '2026-05-17T09:00:00Z',
+          proposedFuelCodeEffectiveDate: '2026-06-01'
+        }}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByText('With supplier')).toBeInTheDocument()
+    expect(screen.getByText('2 days with supplier')).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('keeps the workflow progress visible for Draft applications returned to the supplier', () => {
+    const steps = buildCIWorkflowSteps({
+      status: { status: 'Draft' },
+      signatureUserDisplayName: 'Jane Submitter',
+      signatureDateTime: '2026-05-01T12:00:00Z',
+      supplierRequestDate: '2026-05-17T09:00:00Z',
+      proposedFuelCodeEffectiveDate: '2026-06-01'
+    })
+
+    expect(steps.map((step) => step.key)).toContain('withSupplier')
+    expect(steps.map((step) => step.key)).toContain('target')
+  })
+
   it('hides verification workflow steps for external users until approval', () => {
     mockHasAnyRole = vi.fn(() => false)
     const steps = buildCIWorkflowSteps(

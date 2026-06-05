@@ -351,13 +351,25 @@ class CIApplicationServices:
             )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
-        requires_verification_2 = risk in {
-            CIRiskAssessmentEnum.Medium.value,
-            CIRiskAssessmentEnum.High.value,
-        }
-        if not ci_application.verification_1_date or (
-            requires_verification_2 and not ci_application.verification_2_date
-        ):
+        verification_2_risk = ci_application.verification_2_risk_assessment or risk
+        can_generate_after_verification_1 = (
+            ci_application.verification_1_date
+            and risk
+            in {
+                CIRiskAssessmentEnum.Low.value,
+                CIRiskAssessmentEnum.Medium.value,
+            }
+        )
+        can_generate_after_verification_2 = (
+            ci_application.verification_2_date
+            and verification_2_risk
+            in {
+                CIRiskAssessmentEnum.Low.value,
+                CIRiskAssessmentEnum.Medium.value,
+                CIRiskAssessmentEnum.High.value,
+            }
+        )
+        if not (can_generate_after_verification_1 or can_generate_after_verification_2):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Required verification steps must be completed first.",
@@ -775,10 +787,16 @@ class CIApplicationServices:
         ci_application: CIApplication,
         user: UserProfile,
     ) -> CIApplicationSchema:
-        if not user_has_roles(user, [RoleEnum.ANALYST]):
+        if not _user_has_any_role(
+            user,
+            [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only analysts can recommend CI applications to directors.",
+                detail=(
+                    "Only analysts, compliance managers, and directors can "
+                    "recommend CI applications to directors."
+                ),
             )
         self._require_submitted_workflow(ci_application)
         risk = ci_application.preliminary_risk_assessment
@@ -1206,10 +1224,13 @@ class CIApplicationServices:
                     detail="Only Recommended applications can be returned to analysts.",
                 )
         elif data.status == CIApplicationStatusEnum.Draft:
-            if not is_analyst:
+            if not (is_analyst or is_compliance_manager or is_director):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only analysts can request CI pathway changes.",
+                    detail=(
+                        "Only analysts, compliance managers, and directors "
+                        "can request CI pathway changes."
+                    ),
                 )
             if current_status != CIApplicationStatusEnum.Submitted.value:
                 raise HTTPException(

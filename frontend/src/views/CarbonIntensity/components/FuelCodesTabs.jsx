@@ -14,8 +14,8 @@ const CI_APPLICATIONS_PATH = ROUTES.CI_APPLICATIONS.LIST
 
 const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
 const isOnInternalFuelCodes = (loc) => loc.pathname === FUEL_CODES_PATH
-const isOnCIApplications = (loc) =>
-  loc.pathname.startsWith(CI_APPLICATIONS_PATH)
+const isOnCIApplications = (loc) => loc.pathname.startsWith(CI_APPLICATIONS_PATH)
+const isOnCIApplicationsIndex = (loc) => loc.pathname === CI_APPLICATIONS_PATH
 const getTypeQuery = (loc) => new URLSearchParams(loc.search).get('type')
 const isArchivedQuery = (loc) => getTypeQuery(loc) === 'archived'
 const isCurrentQuery = (loc) => getTypeQuery(loc) === 'current'
@@ -24,7 +24,7 @@ const ciApplicationsTab = {
   key: 'ci',
   labelKey: 'carbonIntensity:tabs.ciApplications',
   path: CI_APPLICATIONS_PATH,
-  isActive: isOnCIApplications
+  isActive: isOnCIApplicationsIndex
 }
 
 const buildInternalFuelCodesTabs = ({ includeCiApplications }) => [

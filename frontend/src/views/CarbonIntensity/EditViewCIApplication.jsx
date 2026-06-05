@@ -64,6 +64,7 @@ const EditViewCIApplicationBase = () => {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [isDocumentEditorOpen, setIsDocumentEditorOpen] = useState(false)
+  const [supplierRequestDate, setSupplierRequestDate] = useState(null)
   const stepFromUrl = (() => {
     const raw = Number.parseInt(searchParams.get('step') ?? '1', 10)
     if (Number.isNaN(raw)) return 0
@@ -118,6 +119,10 @@ const EditViewCIApplicationBase = () => {
     roles.compliance_manager,
     roles.director
   )
+
+  const ciApplicationWithSupplierRequest = supplierRequestDate
+    ? { ...ciApplication, supplierRequestDate }
+    : ciApplication
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
@@ -380,9 +385,13 @@ const EditViewCIApplicationBase = () => {
     ),
     step5Decision: isSubmittedOrTerminal ? (
       <GovernmentDecisionStep
-        ciApplication={ciApplication}
+        ciApplication={ciApplicationWithSupplierRequest}
         isGovernment={isGovernment}
         readOnly={isDecisionReadOnly}
+        onDocumentUploadClick={() => setIsDocumentEditorOpen(true)}
+        onSupplierRequest={() =>
+          setSupplierRequestDate(new Date().toISOString())
+        }
         showComments={false}
         showTitle={false}
       />
@@ -415,7 +424,7 @@ const EditViewCIApplicationBase = () => {
 
       <CIApplicationProgress
         activeStep={activeStep}
-        ciApplication={ciApplication}
+        ciApplication={ciApplicationWithSupplierRequest}
       />
 
       {!isAdd && ciApplication?.status?.status && (

@@ -571,6 +571,52 @@ async def test_update_step3_rejects_when_ghgenius_missing(
 from fastapi import HTTPException
 
 
+@pytest.mark.anyio
+async def test_generate_fuel_codes_allows_moderate_after_verification_1(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Medium")
+    _stub_generation_dependencies(service, repo, ci)
+
+    result = await service.generate_fuel_codes(ci, mock_user)
+
+    assert isinstance(result, CIApplicationSchema)
+    assert len(ci.generated_fuel_codes) == 1
+    repo.update.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_requires_verification_2_for_high_risk(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("High")
+
+    with pytest.raises(HTTPException) as exc:
+        await service.generate_fuel_codes(ci, mock_user)
+
+    assert exc.value.status_code == 400
+    assert "Required verification" in exc.value.detail
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_allows_high_after_verification_2(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("High")
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "High"
+    _stub_generation_dependencies(service, repo, ci)
+
+    result = await service.generate_fuel_codes(ci, mock_user)
+
+    assert isinstance(result, CIApplicationSchema)
+    assert len(ci.generated_fuel_codes) == 1
+    repo.update.assert_awaited_once()
+
+
 def _step4_payload(**overrides):
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
     base = dict(
@@ -591,6 +637,47 @@ def _draft_ci_with_pathways():
     ci = _ci_application(status=_status("Draft", 1))
     ci.pathways = [True]
     return ci
+
+
+def _generation_pathway():
+    return SimpleNamespace(
+        pathway_id=1,
+        fuel_code_id=None,
+        fuel_code=None,
+        proposed_ci=5.61,
+        operating_data_to=date(2026, 12, 31),
+        fuel_type_id=1,
+        feedstock="Canola",
+        feedstock_region="Saskatchewan",
+        feedstock_transport_mode="Truck",
+        finished_fuel_transport_mode="Rail",
+    )
+
+
+def _submitted_ci_for_generation(risk="Medium"):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.signature_user = "signing-user"
+    ci.signature_date_time = datetime(2026, 5, 1, tzinfo=timezone.utc)
+    ci.preliminary_risk_assessment = risk
+    ci.priority_score = 10
+    ci.verification_1_date = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    ci.verification_2_date = None
+    ci.verification_2_risk_assessment = None
+    ci.verification_2_priority_score = None
+    ci.generated_fuel_codes = []
+    ci.pathways = [_generation_pathway()]
+    return ci
+
+
+def _stub_generation_dependencies(service, repo, ci):
+    service.fuel_repo = AsyncMock()
+    service.fuel_repo.get_fuel_code_prefixes.return_value = [
+        SimpleNamespace(fuel_code_prefix_id=1, prefix="BCLCF")
+    ]
+    service.fuel_repo.get_next_available_fuel_code_by_prefix.return_value = "001.0"
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
 
 
 def _reloaded_ci(ci):
@@ -797,7 +884,32 @@ async def test_recommend_to_director_transitions_status_to_recommended(
 
 
 @pytest.mark.anyio
-async def test_recommend_to_director_requires_analyst_role(
+@pytest.mark.parametrize(
+    "role",
+    [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+)
+async def test_recommend_to_director_allows_workflow_roles(
+    service, repo, mock_user, role
+):
+    mock_user.role_names = {role}
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.preliminary_risk_assessment = "Low"
+    ci.verification_1_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
+    recommended = _status("Recommended", 3)
+    repo.get_status_by_name.return_value = recommended
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.recommend_to_director(ci, mock_user)
+
+    assert ci.status_id == recommended.ci_application_status_id
+    assert ci.recommendation_date is not None
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_recommend_to_director_requires_workflow_role(
     service, repo, mock_user
 ):
     ci = _ci_application(status=_status("Submitted", 2))
@@ -854,10 +966,14 @@ async def test_step5_decision_can_return_recommended_to_submitted(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "role",
+    [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR],
+)
 async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
-    service, repo, mock_user
+    service, repo, mock_user, role
 ):
-    mock_user.role_names = {RoleEnum.ANALYST}
+    mock_user.role_names = {role}
     ci = _ci_application(status=_status("Submitted", 2))
     ci.assigned_analyst_id = 12
     ci.preliminary_risk_assessment = "High"
@@ -898,15 +1014,44 @@ async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
 
 
 @pytest.mark.anyio
-async def test_step5_decision_rejects_draft_pathway_change_for_non_analyst(
+async def test_step5_decision_rejects_draft_pathway_change_for_non_workflow_role(
     service, repo, mock_user
 ):
-    mock_user.role_names = {RoleEnum.DIRECTOR}
     ci = _ci_application(status=_status("Submitted", 2))
 
     with pytest.raises(HTTPException) as exc:
         await service.record_decision(
             ci, _decision_payload("Draft"), mock_user, is_government=True
+        )
+
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_step5_decision_rejects_approval_for_non_director(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _ci_application(status=_status("Recommended", 3))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload("Completed"), mock_user, is_government=True
+        )
+
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_step5_decision_rejects_return_to_analyst_for_non_director(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.COMPLIANCE_MANAGER}
+    ci = _ci_application(status=_status("Recommended", 3))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.record_decision(
+            ci, _decision_payload("Submitted"), mock_user, is_government=True
         )
 
     assert exc.value.status_code == 403

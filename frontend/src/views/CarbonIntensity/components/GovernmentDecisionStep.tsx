@@ -30,6 +30,9 @@ type GovernmentDecisionStepProps = {
   isGovernment?: boolean
   readOnly?: boolean
   onDocumentUploadClick?: (() => void) | null
+  onSupplierRequest?: ((
+    requestType: 'documentation' | 'pathwayChanges'
+  ) => void) | null
   showDecisionPanel?: boolean
   showComments?: boolean
   showTitle?: boolean
@@ -41,10 +44,11 @@ export const GovernmentDecisionStep = ({
   isGovernment = false,
   readOnly = false,
   onDocumentUploadClick = null,
+  onSupplierRequest = null,
   showDecisionPanel = true,
   showComments = true,
   showTitle = true,
-  showCommentsTitle = true
+  showCommentsTitle = false
 }: GovernmentDecisionStepProps) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
@@ -67,6 +71,7 @@ export const GovernmentDecisionStep = ({
   const isDirector = hasAnyRole?.(roles.director)
   const isAnalyst = hasAnyRole?.(roles.analyst)
   const isComplianceManager = hasAnyRole?.(roles.compliance_manager)
+  const hasWorkflowRole = isAnalyst || isComplianceManager || isDirector
   const isRecommended = status === 'Recommended'
   const isSubmitted = status === 'Submitted'
   const [riskAssessment, setRiskAssessment] = useState(
@@ -75,6 +80,39 @@ export const GovernmentDecisionStep = ({
   const [priorityScore, setPriorityScore] = useState(
     ciApplication?.priorityScore || ''
   )
+  const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
+
+  const normalizeRisk = (risk?: string | null) =>
+    risk === 'Moderate' ? 'Medium' : risk
+
+  const isLowOrModerateRisk = (risk?: string | null) =>
+    ['Low', 'Medium'].includes(normalizeRisk(risk) || '')
+
+  const isLowModerateOrHighRisk = (risk?: string | null) =>
+    ['Low', 'Medium', 'High'].includes(normalizeRisk(risk) || '')
+
+  const generatedFuelCodeRequiredFields = [
+    'prefixId',
+    'fuelSuffix',
+    'carbonIntensity',
+    'edrms',
+    'company',
+    'applicationDate',
+    'approvalDate',
+    'effectiveDate',
+    'expirationDate',
+    'fuelTypeId',
+    'feedstock',
+    'feedstockLocation'
+  ]
+
+  const isGeneratedFuelCodeReady = (row: any) =>
+    row?.isValid === true ||
+    generatedFuelCodeRequiredFields.every((field) => {
+      const value = row?.[field]
+      return value !== undefined && value !== null && value !== ''
+    })
 
   const recordDecisionFor = async (nextStatus: string) => {
     setError(null)
@@ -109,30 +147,41 @@ export const GovernmentDecisionStep = ({
     }
   }
 
+  const preliminaryRisk = normalizeRisk(ciApplication?.preliminaryRiskAssessment)
+  const verification2Risk = normalizeRisk(
+    ciApplication?.verification2RiskAssessment
+  )
   const requiresVerification2 =
-    ciApplication?.preliminaryRiskAssessment === 'Medium' ||
-    ciApplication?.preliminaryRiskAssessment === 'High'
+    preliminaryRisk === 'Medium' || preliminaryRisk === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
   const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
+  const generatedFuelCodesReady =
+    generatedFuelCodesCount > 0 &&
+    ciApplication?.generatedFuelCodes?.every(isGeneratedFuelCodeReady)
   const showVerification1Panel =
-    isAnalyst && isSubmitted && !ciApplication?.verification1Date
+    hasWorkflowRole && isSubmitted && !ciApplication?.verification1Date
   const showVerification2Panel =
-    isAnalyst &&
+    hasWorkflowRole &&
     isSubmitted &&
     ciApplication?.verification1Date &&
     requiresVerification2 &&
     !ciApplication?.verification2Date
   const showRecommendPanel =
-    isAnalyst &&
+    hasWorkflowRole &&
     isSubmitted &&
     ciApplication?.verification1Date &&
     (!requiresVerification2 || ciApplication?.verification2Date) &&
-    !ciApplication?.recommendationDate
+    !ciApplication?.recommendationDate &&
+    generatedFuelCodesReady
+  const canGenerateAfterVerification1 =
+    ciApplication?.verification1Date && isLowOrModerateRisk(preliminaryRisk)
+  const canGenerateAfterVerification2 =
+    ciApplication?.verification2Date &&
+    isLowModerateOrHighRisk(verification2Risk || preliminaryRisk)
   const showGenerateFuelCodesButton =
-    (isAnalyst || isComplianceManager || isDirector) &&
+    hasWorkflowRole &&
     isSubmitted &&
-    ciApplication?.verification1Date &&
-    (!requiresVerification2 || ciApplication?.verification2Date) &&
+    (canGenerateAfterVerification1 || canGenerateAfterVerification2) &&
     !ciApplication?.recommendationDate &&
     generatedFuelCodesCount === 0
   const showDirectorDecisionPanel = isDirector && isRecommended
@@ -145,6 +194,18 @@ export const GovernmentDecisionStep = ({
     px: 2,
     fontSize: '1rem',
     textTransform: 'none'
+  }
+
+  const handleRequestDocumentation = () => {
+    setRequestedDocumentation(true)
+    onSupplierRequest?.('documentation')
+    onDocumentUploadClick?.()
+  }
+
+  const handleRequestPathwayChanges = () => {
+    setRequestedPathwayChanges(true)
+    onSupplierRequest?.('pathwayChanges')
+    recordDecisionFor('Draft')
   }
 
   return (
@@ -364,15 +425,15 @@ export const GovernmentDecisionStep = ({
                   {t('carbonIntensity:step5.recommendToDirector')}
                 </BCButton>
               )}
-              {isAnalyst && isSubmitted && (
+              {hasWorkflowRole && isSubmitted && (
                 <>
                   <BCButton
                     type="button"
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly || !onDocumentUploadClick}
-                    onClick={onDocumentUploadClick || undefined}
+                    disabled={readOnly || requestedDocumentation}
+                    onClick={handleRequestDocumentation}
                     data-test="ci-request-documentation-btn"
                   >
                     {t('carbonIntensity:step5.requestDocumentation')}
@@ -382,8 +443,8 @@ export const GovernmentDecisionStep = ({
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly}
-                    onClick={() => recordDecisionFor('Draft')}
+                    disabled={readOnly || requestedPathwayChanges || isDeciding}
+                    onClick={handleRequestPathwayChanges}
                     data-test="ci-request-pathway-changes-btn"
                   >
                     {t('carbonIntensity:step5.requestPathwayChanges')}
