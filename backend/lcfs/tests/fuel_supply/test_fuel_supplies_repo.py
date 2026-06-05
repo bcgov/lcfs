@@ -285,6 +285,38 @@ async def test_get_fuel_supply_table_options_ghgenius_provision(
 
 
 @pytest.mark.anyio
+async def test_get_fuel_supply_table_options_excludes_other_fuel_types_pre_2024(
+    fuel_supply_repo, mock_db_session
+):
+    """Legacy reports (<2024) must exclude the 2024-era "Other" fuel types,
+    while 2024+ reports keep them."""
+    captured = {}
+
+    async def mock_execute(query, *args, **kwargs):
+        captured["query"] = query
+        result = MagicMock()
+        result.all = MagicMock(return_value=[])
+        return result
+
+    mock_db_session.execute = mock_execute
+
+    def compiled_sql():
+        return str(
+            captured["query"].compile(compile_kwargs={"literal_binds": True})
+        )
+
+    # Pre-2024: exclusion clause for both "Other" fuel types must be present
+    await fuel_supply_repo.get_fuel_supply_table_options("2023")
+    legacy_sql = compiled_sql()
+    assert "Other diesel fuel" in legacy_sql
+    assert "NOT IN" in legacy_sql.upper()
+
+    # 2024+: no such exclusion — both options remain available
+    await fuel_supply_repo.get_fuel_supply_table_options("2024")
+    assert "Other diesel fuel" not in compiled_sql()
+
+
+@pytest.mark.anyio
 async def test_get_fuel_supply_list_with_valid_group_uuid(
     fuel_supply_repo, mock_db_session
 ):

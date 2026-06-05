@@ -61,6 +61,8 @@ class LCFS_Constants:
     LEGISLATION_TRANSITION_YEAR = (
         "2024"  # First year that the new LCFS Legislation takes effect
     )
+    # Fuel types introduced with the 2024 legislation; not valid in pre-2024 reports
+    LEGACY_EXCLUDED_FUEL_TYPES = ["Other", "Other diesel fuel"]
 
     @classmethod
     def get_current_compliance_year(cls) -> str:

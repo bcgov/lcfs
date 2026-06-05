@@ -2,10 +2,7 @@ from typing import List
 
 from pydantic import Field
 
-from lcfs.db.models.compliance.ReportOpening import (
-    ReportOpening,
-    SupplementalReportAccessRole,
-)
+from lcfs.db.models.compliance.ReportOpening import ReportOpening
 from lcfs.web.api.base import BaseSchema
 
 
@@ -14,14 +11,14 @@ class ReportOpeningSchema(BaseSchema):
     compliance_year: int
     compliance_reporting_enabled: bool
     early_issuance_enabled: bool
-    supplemental_report_role: SupplementalReportAccessRole
+    create_supplemental_enabled: bool
 
 
 class ReportOpeningUpdateSchema(BaseSchema):
     compliance_year: int
     compliance_reporting_enabled: bool | None = None
     early_issuance_enabled: bool | None = None
-    supplemental_report_role: SupplementalReportAccessRole | None = None
+    create_supplemental_enabled: bool | None = None
 
 
 class ReportOpeningUpdateRequest(BaseSchema):

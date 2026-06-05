@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import patch
 
-from lcfs.db.models.compliance.ReportOpening import SupplementalReportAccessRole
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.report_opening.schema import ReportOpeningSchema
 
@@ -32,7 +31,7 @@ mock_report_opening = ReportOpeningSchema(
     compliance_year=2025,
     compliance_reporting_enabled=True,
     early_issuance_enabled=False,
-    supplemental_report_role=SupplementalReportAccessRole.BCeID,
+    create_supplemental_enabled=True,
 )
 
 
@@ -108,7 +107,7 @@ async def test_update_report_openings_as_system_admin(
                         "complianceYear": 2025,
                         "complianceReportingEnabled": True,
                         "earlyIssuanceEnabled": False,
-                        "supplementalReportRole": "BCeID",
+                        "createSupplementalEnabled": True,
                     }
                 ]
             },
@@ -134,7 +133,7 @@ async def test_update_report_openings_unauthorized(
                     "complianceYear": 2025,
                     "complianceReportingEnabled": True,
                     "earlyIssuanceEnabled": False,
-                    "supplementalReportRole": "BCeID",
+                    "createSupplementalEnabled": True,
                 }
             ]
         },
