@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, asc, desc, func, select
+from sqlalchemy import and_, asc, case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -49,6 +49,12 @@ from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
 
+VERIFICATION_LEVEL_EXPR = case(
+    (CIApplication.verification_2_date.isnot(None), "VX2"),
+    (CIApplication.verification_1_date.isnot(None), "VX1"),
+    else_=None,
+)
+
 # Grid-facing filter / sort resolvers. Keys use the post-validation
 # snake_case form (FilterModel.field / SortOrder.field route incoming
 # values through camel_to_snake). Unknown fields are silently dropped.
@@ -60,7 +66,7 @@ _DIRECT_FILTER_COLUMNS = {
     "facility_nameplate_capacity": CIApplication.facility_nameplate_capacity,
     "proposed_fuel_code_effective_date": CIApplication.proposed_fuel_code_effective_date,
     "priority_score": CIApplication.priority_score,
-    "verification_level": CIApplication.verification_level,
+    "verification_level": VERIFICATION_LEVEL_EXPR,
     "update_date": CIApplication.update_date,
     "create_date": CIApplication.create_date,
 }

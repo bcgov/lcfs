@@ -867,6 +867,7 @@ async def test_recommend_to_director_transitions_status_to_recommended(
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = 12
     ci.preliminary_risk_assessment = "Low"
     ci.verification_1_date = datetime(2026, 5, 20, tzinfo=timezone.utc)
     recommended = _status("Recommended", 3)
@@ -878,6 +879,7 @@ async def test_recommend_to_director_transitions_status_to_recommended(
     result = await service.recommend_to_director(ci, mock_user)
 
     assert ci.status_id == recommended.ci_application_status_id
+    assert ci.assigned_analyst_id == 12
     assert ci.recommendation_date is not None
     repo.get_status_by_name.assert_awaited_with("Recommended")
     assert isinstance(result, CIApplicationSchema)
@@ -997,7 +999,7 @@ async def test_step5_decision_can_return_submitted_to_draft_for_pathway_changes(
     )
 
     assert ci.status_id == draft.ci_application_status_id
-    assert ci.assigned_analyst_id is None
+    assert ci.assigned_analyst_id == 12
     assert ci.preliminary_risk_assessment is None
     assert ci.priority_score is None
     assert ci.verification_1_user_id is None
@@ -1061,6 +1063,7 @@ async def test_step5_decision_rejects_return_to_analyst_for_non_director(
 async def test_step5_decision_transitions_to_completed(service, repo, mock_user):
     mock_user.role_names = {RoleEnum.DIRECTOR}
     ci = _ci_application(status=_status("Recommended", 3))
+    ci.assigned_analyst_id = 12
     completed = _status("Completed", 4)
     repo.get_status_by_name.return_value = completed
     repo.update.side_effect = lambda obj: obj
@@ -1072,7 +1075,29 @@ async def test_step5_decision_transitions_to_completed(service, repo, mock_user)
     )
 
     assert ci.status_id == completed.ci_application_status_id
+    assert ci.assigned_analyst_id == 12
     repo.add_history.assert_awaited_once()
+    assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step5_decision_clears_assigned_analyst_when_withdrawn(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = 12
+    withdrawn = _status("Withdrawn", 5)
+    repo.get_status_by_name.return_value = withdrawn
+    repo.update.side_effect = lambda obj: obj
+    repo.add_history.return_value = MagicMock()
+    repo.get_by_id.return_value = ci
+
+    result = await service.record_decision(
+        ci, _decision_payload("Withdrawn"), mock_user, is_government=True
+    )
+
+    assert ci.status_id == withdrawn.ci_application_status_id
+    assert ci.assigned_analyst_id is None
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -1084,6 +1109,7 @@ async def test_step5_decision_ignores_inline_comment_field(
     dropped — comments now live in the shared internal_comments framework.
     """
     ci = _ci_application(status=_status("Submitted", 2))
+    ci.assigned_analyst_id = 12
     repo.get_status_by_name.return_value = _status("Withdrawn", 4)
     repo.update.side_effect = lambda obj: obj
     repo.get_by_id.return_value = ci
@@ -1097,6 +1123,7 @@ async def test_step5_decision_ignores_inline_comment_field(
 
     # No legacy add_comment call should be made by the decision flow.
     assert not hasattr(repo, "add_comment") or not repo.add_comment.await_count
+    assert ci.assigned_analyst_id is None
 
 
 @pytest.mark.anyio
