@@ -9,55 +9,120 @@ import ROUTES from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 
 const BULLETINS_PATH = ROUTES.FUEL_CODES.BULLETINS
+const FUEL_CODES_PATH = ROUTES.FUEL_CODES.LIST
+const CI_APPLICATIONS_PATH = ROUTES.CI_APPLICATIONS.LIST
 
 const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
-const isArchivedQuery = (loc) =>
-  new URLSearchParams(loc.search).get('type') === 'archived'
+const isOnInternalFuelCodes = (loc) => loc.pathname === FUEL_CODES_PATH
+const isOnCIApplications = (loc) =>
+  loc.pathname.startsWith(CI_APPLICATIONS_PATH)
+const getTypeQuery = (loc) => new URLSearchParams(loc.search).get('type')
+const isArchivedQuery = (loc) => getTypeQuery(loc) === 'archived'
+const isCurrentQuery = (loc) => getTypeQuery(loc) === 'current'
+
+const ciApplicationsTab = {
+  key: 'ci',
+  labelKey: 'carbonIntensity:tabs.ciApplications',
+  path: CI_APPLICATIONS_PATH,
+  isActive: isOnCIApplications
+}
+
+const buildInternalFuelCodesTabs = ({ includeCiApplications }) => [
+  ...(includeCiApplications ? [ciApplicationsTab] : []),
+  {
+    key: 'fuelCodes',
+    labelKey: 'carbonIntensity:tabs.fuelCodes',
+    path: FUEL_CODES_PATH,
+    isActive: (loc) =>
+      isOnInternalFuelCodes(loc) &&
+      !isArchivedQuery(loc) &&
+      !isCurrentQuery(loc)
+  },
+  {
+    key: 'current',
+    labelKey: 'carbonIntensity:tabs.currentFuelCodes',
+    path: `${FUEL_CODES_PATH}?type=current`,
+    isActive: (loc) =>
+      (isOnInternalFuelCodes(loc) && isCurrentQuery(loc)) ||
+      (isOnBulletins(loc) && !isArchivedQuery(loc))
+  },
+  {
+    key: 'archived',
+    labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
+    path: `${FUEL_CODES_PATH}?type=archived`,
+    isActive: (loc) =>
+      (isOnInternalFuelCodes(loc) || isOnBulletins(loc)) && isArchivedQuery(loc)
+  }
+]
 
 const buildTabs = ({
   isCiApplicant,
   isSigningAuthority,
   isGovernment,
-  ciApplicationsEnabled
+  ciApplicationsEnabled,
+  variant,
+  location
 }) => {
-  const tabs = []
-  if (
+  const canAccessCiApplications =
     ciApplicationsEnabled &&
     (isCiApplicant || isSigningAuthority || isGovernment)
-  ) {
-    tabs.push({
-      key: 'ci',
-      labelKey: 'carbonIntensity:tabs.ciApplications',
-      path: ROUTES.CI_APPLICATIONS.LIST,
-      isActive: (loc) => loc.pathname.startsWith(ROUTES.CI_APPLICATIONS.LIST)
+
+  if (isGovernment && isOnBulletins(location)) {
+    return buildInternalFuelCodesTabs({
+      includeCiApplications: ciApplicationsEnabled
     })
+  }
+
+  if (
+    variant === 'internal' ||
+    (isGovernment &&
+      (isOnInternalFuelCodes(location) || isOnCIApplications(location)))
+  ) {
+    return buildInternalFuelCodesTabs({
+      includeCiApplications: ciApplicationsEnabled
+    })
+  }
+
+  const tabs = []
+  if (canAccessCiApplications) {
+    tabs.push(ciApplicationsTab)
   }
   if (isCiApplicant) {
     tabs.push({
       key: 'mine',
       labelKey: 'carbonIntensity:tabs.myFuelCodes',
+      path: ROUTES.FUEL_CODES.MY_LIST,
+      isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.MY_LIST
+    })
+  } else if (isGovernment) {
+    tabs.push({
+      key: 'manage',
+      labelKey: 'carbonIntensity:tabs.fuelCodes',
       path: ROUTES.FUEL_CODES.LIST,
       isActive: (loc) => loc.pathname === ROUTES.FUEL_CODES.LIST
     })
   }
-  tabs.push(
-    {
-      key: 'current',
-      labelKey: 'carbonIntensity:tabs.currentFuelCodes',
-      path: BULLETINS_PATH,
-      isActive: (loc) => isOnBulletins(loc) && !isArchivedQuery(loc)
-    },
-    {
-      key: 'archived',
-      labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
-      path: `${BULLETINS_PATH}?type=archived`,
-      isActive: (loc) => isOnBulletins(loc) && isArchivedQuery(loc)
-    }
-  )
+
+  if (!isGovernment) {
+    tabs.push(
+      {
+        key: 'current',
+        labelKey: 'carbonIntensity:tabs.currentFuelCodes',
+        path: BULLETINS_PATH,
+        isActive: (loc) => isOnBulletins(loc) && !isArchivedQuery(loc)
+      },
+      {
+        key: 'archived',
+        labelKey: 'carbonIntensity:tabs.archivedFuelCodes',
+        path: `${BULLETINS_PATH}?type=archived`,
+        isActive: (loc) => isOnBulletins(loc) && isArchivedQuery(loc)
+      }
+    )
+  }
   return tabs
 }
 
-export const FuelCodesTabs = () => {
+export const FuelCodesTabs = ({ variant = 'default' } = {}) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const navigate = useNavigate()
   const location = useLocation()
@@ -71,15 +136,15 @@ export const FuelCodesTabs = () => {
         isCiApplicant: hasAnyRole(roles.ci_applicant),
         isSigningAuthority: hasAnyRole(roles.signing_authority),
         isGovernment: hasAnyRole(...govRoles),
-        ciApplicationsEnabled
+        ciApplicationsEnabled,
+        variant,
+        location
       }),
-    [hasAnyRole, ciApplicationsEnabled]
+    [hasAnyRole, ciApplicationsEnabled, variant, location]
   )
 
-  const activeIndex = Math.max(
-    0,
-    tabs.findIndex((tab) => tab.isActive(location))
-  )
+  const matchedIndex = tabs.findIndex((tab) => tab.isActive(location))
+  const activeIndex = matchedIndex === -1 ? false : matchedIndex
 
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   useEffect(() => {

@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import Organization
 from lcfs.db.models.compliance import (
     AllocationAgreement,
@@ -1246,6 +1247,7 @@ class FinalSupplyEquipmentRepository:
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
         mode: str = "all",
+        include_decommissioned_attached: bool = True,
     ) -> tuple[list[dict], int]:
         """
         Get paginated charging equipment reporting rows from reporting views.
@@ -1291,11 +1293,16 @@ class FinalSupplyEquipmentRepository:
         conditions = [
             vt.c.organization_id == organization_id,
             vt.c.compliance_report_id == compliance_report_id,
-            sa.or_(
-                vt.c.charging_equipment_status != "Decommissioned",
-                vt.c.charging_equipment_compliance_id.is_not(None),
-            ),
         ]
+        if include_decommissioned_attached:
+            conditions.append(
+                sa.or_(
+                    vt.c.charging_equipment_status != "Decommissioned",
+                    vt.c.charging_equipment_compliance_id.is_not(None),
+                )
+            )
+        else:
+            conditions.append(vt.c.charging_equipment_status != "Decommissioned")
         if mode == "summary":
             conditions.append(vt.c.is_active.is_(True))
 
@@ -1727,34 +1734,158 @@ class FinalSupplyEquipmentRepository:
         """
         Update FSE compliance reporting data
         """
+        existing_record = await self.get_reporting_record_by_id(
+            charging_equipment_compliance_id
+        )
+        if (
+            existing_record
+            and data.get("compliance_report_id") is not None
+            and existing_record.compliance_report_id != data["compliance_report_id"]
+        ):
+            revision = await self._create_fse_reporting_revision(
+                existing_record,
+                data,
+                ActionTypeEnum.UPDATE,
+            )
+            return {
+                "id": revision.charging_equipment_compliance_id,
+                **data,
+                "charging_equipment_compliance_id": (
+                    revision.charging_equipment_compliance_id
+                ),
+            }
+
+        immutable_fields = {
+            "charging_equipment_compliance_id",
+            "charging_equipment_id",
+            "charging_equipment_version",
+            "organization_id",
+            "compliance_report_id",
+            "compliance_report_group_uuid",
+        }
+        update_data = {
+            field: value
+            for field, value in data.items()
+            if field not in immutable_fields
+        }
+        if not update_data:
+            return {"id": charging_equipment_compliance_id}
+
         stmt = (
             update(ComplianceReportChargingEquipment)
             .where(
                 ComplianceReportChargingEquipment.charging_equipment_compliance_id
                 == charging_equipment_compliance_id
             )
-            .values(**data)
+            .values(**update_data)
         )
         await self.db.execute(stmt)
         await self.db.flush()
-        return {"id": charging_equipment_compliance_id, **data}
+        return {"id": charging_equipment_compliance_id, **update_data}
+
+    async def _get_next_reporting_version(
+        self, reporting_record: ComplianceReportChargingEquipment
+    ) -> int:
+        stmt = select(
+            func.coalesce(func.max(ComplianceReportChargingEquipment.version), -1) + 1
+        ).where(
+            and_(
+                ComplianceReportChargingEquipment.compliance_report_group_uuid
+                == reporting_record.compliance_report_group_uuid,
+                ComplianceReportChargingEquipment.charging_equipment_id
+                == reporting_record.charging_equipment_id,
+                ComplianceReportChargingEquipment.charging_equipment_version
+                == reporting_record.charging_equipment_version,
+                ComplianceReportChargingEquipment.organization_id
+                == reporting_record.organization_id,
+            )
+        )
+        return int(await self.db.scalar(stmt) or 0)
+
+    async def _create_fse_reporting_revision(
+        self,
+        existing_record: ComplianceReportChargingEquipment,
+        data: dict,
+        action_type: ActionTypeEnum,
+    ) -> ComplianceReportChargingEquipment:
+        revision = ComplianceReportChargingEquipment(
+            charging_equipment_id=existing_record.charging_equipment_id,
+            charging_equipment_version=existing_record.charging_equipment_version,
+            compliance_report_id=data.get(
+                "compliance_report_id", existing_record.compliance_report_id
+            ),
+            compliance_report_group_uuid=existing_record.compliance_report_group_uuid,
+            organization_id=existing_record.organization_id,
+            supply_from_date=data.get(
+                "supply_from_date", existing_record.supply_from_date
+            ),
+            supply_to_date=data.get("supply_to_date", existing_record.supply_to_date),
+            kwh_usage=data.get("kwh_usage", existing_record.kwh_usage),
+            compliance_notes=data.get(
+                "compliance_notes", existing_record.compliance_notes
+            ),
+            is_active=data.get("is_active", existing_record.is_active),
+            version=await self._get_next_reporting_version(existing_record),
+            action_type=action_type,
+        )
+        self.db.add(revision)
+        await self.db.flush()
+        return revision
 
     @repo_handler
     async def update_reporting_active_status(
-        self, reporting_ids: List[int], is_active: bool
+        self,
+        reporting_ids: List[int],
+        is_active: bool,
+        compliance_report_id: int | None = None,
     ) -> int:
-        stmt = (
-            update(ComplianceReportChargingEquipment)
-            .where(
-                ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
-                    reporting_ids
+        records_stmt = select(ComplianceReportChargingEquipment).where(
+            ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                reporting_ids
+            )
+        )
+        records = (await self.db.execute(records_stmt)).scalars().all()
+        direct_update_ids = []
+        created_count = 0
+
+        for record in records:
+            if (
+                compliance_report_id
+                and record.compliance_report_id != compliance_report_id
+            ):
+                await self._create_fse_reporting_revision(
+                    record,
+                    {
+                        "compliance_report_id": compliance_report_id,
+                        "is_active": is_active,
+                    },
+                    ActionTypeEnum.CREATE if is_active else ActionTypeEnum.DELETE,
+                )
+                created_count += 1
+            else:
+                direct_update_ids.append(record.charging_equipment_compliance_id)
+
+        updated_count = 0
+        if direct_update_ids:
+            stmt = (
+                update(ComplianceReportChargingEquipment)
+                .where(
+                    ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                        direct_update_ids
+                    )
+                )
+                .values(
+                    is_active=is_active,
+                    action_type=(
+                        ActionTypeEnum.CREATE if is_active else ActionTypeEnum.DELETE
+                    ),
                 )
             )
-            .values(is_active=is_active)
-        )
-        result = await self.db.execute(stmt)
+            result = await self.db.execute(stmt)
+            updated_count = result.rowcount or 0
+
         await self.db.flush()
-        return result.rowcount or 0
+        return updated_count + created_count
 
     @repo_handler
     async def delete_fse_reporting(self, charging_equipment_compliance_id: int) -> None:

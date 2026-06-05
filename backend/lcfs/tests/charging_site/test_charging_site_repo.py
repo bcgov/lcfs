@@ -97,6 +97,36 @@ class TestChargingSiteRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.anyio
+    async def test_deactivate_fse_for_decommissioned_equipment(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Test deactivating active FSE reporting rows for decommissioned equipment."""
+        mock_result = MagicMock()
+        mock_result.rowcount = 2
+        mock_db_session.execute.return_value = mock_result
+
+        result = await charging_site_repo.deactivate_fse_for_decommissioned_equipment(
+            [1, 2]
+        )
+
+        assert result == 2
+        mock_db_session.execute.assert_called_once()
+        mock_db_session.flush.assert_awaited_once()
+
+    @pytest.mark.anyio
+    async def test_deactivate_fse_for_decommissioned_equipment_empty_ids(
+        self, charging_site_repo, mock_db_session
+    ):
+        """Empty equipment list should not issue an update."""
+        result = await charging_site_repo.deactivate_fse_for_decommissioned_equipment(
+            []
+        )
+
+        assert result == 0
+        mock_db_session.execute.assert_not_called()
+        mock_db_session.flush.assert_not_awaited()
+
+    @pytest.mark.anyio
     async def test_get_equipment_for_charging_site_paginated(
         self, charging_site_repo, mock_db_session, mock_equipment_list
     ):

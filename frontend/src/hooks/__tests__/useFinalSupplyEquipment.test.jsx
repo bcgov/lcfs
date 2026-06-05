@@ -360,8 +360,10 @@ describe('useFinalSupplyEquipment', () => {
         '/final-supply-equipment/import/123',
         expect.any(FormData),
         expect.objectContaining({
-          accept: 'application/json',
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: {
+            accept: 'application/json',
+            'Content-Type': 'multipart/form-data'
+          }
         })
       )
     })
@@ -742,10 +744,9 @@ describe('useFinalSupplyEquipment', () => {
       const mockResponse = { data: { jobId: 'bulk-job-1' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(
-        () => useImportFSEReportingUpdate(123),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useImportFSEReportingUpdate(123), {
+        wrapper: createWrapper()
+      })
 
       const file = new File(['xlsx'], 'update.xlsx', {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -766,10 +767,9 @@ describe('useFinalSupplyEquipment', () => {
     })
 
     it('should throw when complianceReportId is missing', async () => {
-      const { result } = renderHook(
-        () => useImportFSEReportingUpdate(null),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useImportFSEReportingUpdate(null), {
+        wrapper: createWrapper()
+      })
 
       const file = new File(['xlsx'], 'update.xlsx', {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -780,7 +780,9 @@ describe('useFinalSupplyEquipment', () => {
         expect(result.current.isError).toBe(true)
       })
 
-      expect(result.current.error.message).toMatch(/Compliance report ID is required/)
+      expect(result.current.error.message).toMatch(
+        /Compliance report ID is required/
+      )
     })
 
     it('should call onSuccess callback when provided', async () => {
@@ -871,7 +873,8 @@ describe('useFinalSupplyEquipment', () => {
 
     it('should not fetch when enabled is false', () => {
       const { result } = renderHook(
-        () => useGetFSEReportingUpdateJobStatus('bulk-job-1', { enabled: false }),
+        () =>
+          useGetFSEReportingUpdateJobStatus('bulk-job-1', { enabled: false }),
         { wrapper: createWrapper() }
       )
 
@@ -889,7 +892,9 @@ describe('useFinalSupplyEquipment', () => {
       )
 
       await waitFor(
-        () => { expect(result.current.isError).toBe(true) },
+        () => {
+          expect(result.current.isError).toBe(true)
+        },
         { timeout: 5000 }
       )
 

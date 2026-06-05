@@ -481,6 +481,9 @@ class ChargingSiteService:
                 f"be in the required status."
             )
 
+        if bulk_update.new_status == "Decommissioned":
+            await self.repo.deactivate_fse_for_decommissioned_equipment(updated_ids)
+
         # Update charging site status based on equipment status changes
         # Get charging site statuses and find the corresponding status ID
         site_statuses = await self.repo.get_charging_site_statuses()

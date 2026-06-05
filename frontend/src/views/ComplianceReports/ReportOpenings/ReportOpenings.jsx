@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box,
   Checkbox,
-  Radio,
-  RadioGroup,
   Table,
   TableBody,
   TableCell,
@@ -29,7 +27,7 @@ const buildRowState = (records = []) => ({
       complianceYear: record.complianceYear,
       complianceReportingEnabled: record.complianceReportingEnabled,
       earlyIssuanceEnabled: record.earlyIssuanceEnabled,
-      supplementalReportRole: record.supplementalReportRole
+      createSupplementalEnabled: record.createSupplementalEnabled
     })),
   lookup: records.reduce((acc, record) => {
     acc[record.complianceYear] = record
@@ -83,7 +81,7 @@ export const ReportOpenings = () => {
         original.complianceReportingEnabled !==
           row.complianceReportingEnabled ||
         original.earlyIssuanceEnabled !== row.earlyIssuanceEnabled ||
-        original.supplementalReportRole !== row.supplementalReportRole
+        original.createSupplementalEnabled !== row.createSupplementalEnabled
       )
     })
   }, [rows, originalLookup])
@@ -123,14 +121,14 @@ export const ReportOpenings = () => {
     }))
   }
 
-  const handleSupplementalChange = (year, role) => {
+  const handleSupplementalToggle = (year) => {
     setRowState((prev) => ({
       ...prev,
       rows: prev.rows.map((row) =>
         row.complianceYear === year
           ? {
               ...row,
-              supplementalReportRole: role
+              createSupplementalEnabled: !row.createSupplementalEnabled
             }
           : row
       )
@@ -148,7 +146,7 @@ export const ReportOpenings = () => {
           complianceYear: row.complianceYear,
           complianceReportingEnabled: row.complianceReportingEnabled,
           earlyIssuanceEnabled: row.earlyIssuanceEnabled,
-          supplementalReportRole: row.supplementalReportRole
+          createSupplementalEnabled: row.createSupplementalEnabled
         }))
       },
       {
@@ -237,17 +235,6 @@ export const ReportOpenings = () => {
           <TableHead>
             <TableRow>
               <CustomTableCell sx={{ background: 'none', width: 100 }} />
-              <CustomTableCell sx={{ background: 'none' }} />
-              <CustomTableCell sx={{ background: 'none' }} />
-              <CustomTableCell
-                sx={{ fontWeight: 600, color: 'primary.main' }}
-                colSpan={2}
-              >
-                {t('reportOpenings.createSupplemental')}
-              </CustomTableCell>
-            </TableRow>
-            <TableRow>
-              <CustomTableCell sx={{ background: 'none' }} />
               <CustomTableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
                 {t('reportOpenings.complianceReporting')}
               </CustomTableCell>
@@ -255,10 +242,7 @@ export const ReportOpenings = () => {
                 {t('reportOpenings.earlyIssuance')}
               </CustomTableCell>
               <CustomTableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                {t('reportOpenings.bceid')}
-              </CustomTableCell>
-              <CustomTableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                {t('reportOpenings.idir')}
+                {t('reportOpenings.createSupplemental')}
               </CustomTableCell>
             </TableRow>
           </TableHead>
@@ -298,47 +282,22 @@ export const ReportOpenings = () => {
                     }}
                   />
                 </CustomTableCell>
-                <CustomTableCell colSpan={2}>
-                  <RadioGroup
-                    row
-                    name={`supplemental-${row.complianceYear}`}
-                    value={row.supplementalReportRole}
-                    onChange={(event) =>
-                      handleSupplementalChange(
-                        row.complianceYear,
-                        event.target.value
-                      )
+                <CustomTableCell>
+                  <Checkbox
+                    color="primary"
+                    checked={row.createSupplementalEnabled}
+                    onChange={() =>
+                      handleSupplementalToggle(row.complianceYear)
                     }
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: 10,
-                      '& .MuiRadio-root': {
-                        p: 0
-                      }
+                    inputProps={{
+                      'aria-label': t(
+                        'reportOpenings.createSupplementalToggle',
+                        {
+                          year: row.complianceYear
+                        }
+                      )
                     }}
-                  >
-                    <Radio
-                      value="BCeID"
-                      color="primary"
-                      inputProps={{
-                        'aria-label': `${t(
-                          'reportOpenings.bceid'
-                        )} ${row.complianceYear}`
-                      }}
-                    />
-                    <Radio
-                      value="IDIR"
-                      color="primary"
-                      inputProps={{
-                        'aria-label': `${t(
-                          'reportOpenings.idir'
-                        )} ${row.complianceYear}`
-                      }}
-                    />
-                  </RadioGroup>
+                  />
                 </CustomTableCell>
               </TableRow>
             ))}
