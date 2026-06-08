@@ -145,6 +145,25 @@ class FuelCodeRepository:
             FuelCodeListView.carbon_intensity,
             FuelCodeListView.effective_date,
             FuelCodeListView.expiration_date,
+            FuelCodeListView.status,
+            FuelCodeListView.edrms,
+            FuelCodeListView.contact_name,
+            FuelCodeListView.contact_email,
+            FuelCodeListView.application_date,
+            FuelCodeListView.approval_date,
+            FuelCodeListView.feedstock,
+            FuelCodeListView.feedstock_location,
+            FuelCodeListView.feedstock_misc,
+            FuelCodeListView.co_processed,
+            FuelCodeListView.fuel_production_facility_city,
+            FuelCodeListView.fuel_production_facility_province_state,
+            FuelCodeListView.fuel_production_facility_country,
+            FuelCodeListView.facility_nameplate_capacity,
+            FuelCodeListView.facility_nameplate_capacity_unit,
+            FuelCodeListView.feedstock_fuel_transport_modes,
+            FuelCodeListView.finished_fuel_transport_modes,
+            FuelCodeListView.former_company,
+            FuelCodeListView.notes,
         ).where(
             cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
         )
@@ -230,11 +249,17 @@ class FuelCodeRepository:
             r = row._mapping
             effective_date = r["effective_date"]
             expiration_date = r["expiration_date"]
+            application_date = r["application_date"]
+            approval_date = r["approval_date"]
 
             if isinstance(effective_date, datetime):
                 effective_date = effective_date.date()
             if isinstance(expiration_date, datetime):
                 expiration_date = expiration_date.date()
+            if isinstance(application_date, datetime):
+                application_date = application_date.date()
+            if isinstance(approval_date, datetime):
+                approval_date = approval_date.date()
 
             formatted_rows.append(
                 {
@@ -244,6 +269,35 @@ class FuelCodeRepository:
                     "carbon_intensity": r["carbon_intensity"],
                     "effective_date": effective_date,
                     "expiry_date": expiration_date,
+                    "prefix": r["prefix"],
+                    "fuel_suffix": r["fuel_suffix"],
+                    "status": r["status"],
+                    "edrms": r["edrms"],
+                    "contact_name": r["contact_name"],
+                    "contact_email": r["contact_email"],
+                    "application_date": application_date,
+                    "approval_date": approval_date,
+                    "feedstock": r["feedstock"],
+                    "feedstock_location": r["feedstock_location"],
+                    "feedstock_misc": r["feedstock_misc"],
+                    "co_processed": r["co_processed"],
+                    "fuel_production_facility_city": r["fuel_production_facility_city"],
+                    "fuel_production_facility_province_state": r[
+                        "fuel_production_facility_province_state"
+                    ],
+                    "fuel_production_facility_country": r[
+                        "fuel_production_facility_country"
+                    ],
+                    "facility_nameplate_capacity": r["facility_nameplate_capacity"],
+                    "facility_nameplate_capacity_unit": r[
+                        "facility_nameplate_capacity_unit"
+                    ],
+                    "feedstock_fuel_transport_modes": r[
+                        "feedstock_fuel_transport_modes"
+                    ],
+                    "finished_fuel_transport_modes": r["finished_fuel_transport_modes"],
+                    "former_company": r["former_company"],
+                    "notes": r["notes"],
                 }
             )
 

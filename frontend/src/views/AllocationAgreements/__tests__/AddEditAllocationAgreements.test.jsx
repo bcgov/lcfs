@@ -1,7 +1,10 @@
 import React from 'react'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
+import {
+  AddEditAllocationAgreements,
+  flattenNestedFields
+} from '../AddEditAllocationAgreements'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -382,6 +385,61 @@ vi.mock('@/contexts/AuthorizationContext', () => ({
     setForbidden: vi.fn()
   })
 }))
+
+describe('flattenNestedFields', () => {
+  it('flattens a nested provisionOfTheAct object to its name string and captures the id', () => {
+    // Regression: /list-all returns provisionOfTheAct as an object. If it
+    // reaches the /save payload un-flattened, the backend rejects it (a `str`
+    // field), surfacing as a spurious "Determining carbon intensity" error
+    // and blocking quantity edits / deletions of pre-existing rows.
+    const result = flattenNestedFields({
+      quantity: 100,
+      provisionOfTheAct: {
+        name: 'Section 6(d)(i)(A)',
+        provisionOfTheActId: 1
+      }
+    })
+
+    expect(result.provisionOfTheAct).toBe('Section 6(d)(i)(A)')
+    expect(result.provisionOfTheActId).toBe(1)
+    expect(result.quantity).toBe(100)
+  })
+
+  it('flattens nested fuelCode, fuelType and fuelCategory objects', () => {
+    const result = flattenNestedFields({
+      fuelCode: { fuelCode: 'BCLCF123.4', fuelCodeId: 7 },
+      fuelType: { fuelType: 'Biodiesel' },
+      fuelCategory: { category: 'Diesel' }
+    })
+
+    expect(result.fuelCode).toBe('BCLCF123.4')
+    expect(result.fuelCodeId).toBe(7)
+    expect(result.fuelType).toBe('Biodiesel')
+    expect(result.fuelCategory).toBe('Diesel')
+  })
+
+  it('leaves plain string values untouched', () => {
+    const row = {
+      provisionOfTheAct: 'Section 6(d)(i)(A)',
+      fuelType: 'Biodiesel',
+      fuelCategory: 'Diesel',
+      fuelCode: 'BCLCF123.4',
+      quantity: 50
+    }
+
+    expect(flattenNestedFields(row)).toEqual(row)
+  })
+
+  it('does not mutate the original row', () => {
+    const row = {
+      provisionOfTheAct: { name: 'X', provisionOfTheActId: 2 }
+    }
+    flattenNestedFields(row)
+
+    expect(typeof row.provisionOfTheAct).toBe('object')
+    expect(row.provisionOfTheAct.name).toBe('X')
+  })
+})
 
 describe('AddEditAllocationAgreements', () => {
   let mockAlertRef
