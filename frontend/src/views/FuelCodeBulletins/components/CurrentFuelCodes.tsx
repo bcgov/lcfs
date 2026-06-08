@@ -22,7 +22,7 @@ const initialPaginationOptions = {
 }
 
 export const CurrentFuelCodes = () => {
-  const { t } = useTranslation(['bulletins'])
+  const { t } = useTranslation(['bulletins', 'fuelCode'])
   const { hasAnyRole } = useCurrentUser()
   const isIdirView = hasAnyRole(...govRoles)
   const gridRef = useRef<any>(null)
@@ -38,7 +38,7 @@ export const CurrentFuelCodes = () => {
     paginationOptions
   )
 
-  const colDefs = useMemo(() => buildColumnDefs(t), [t])
+  const colDefs = useMemo(() => buildColumnDefs(t, isIdirView), [t, isIdirView])
   const queryData = useMemo(
     () => ({
       data: {
@@ -63,6 +63,7 @@ export const CurrentFuelCodes = () => {
       await downloadBulletins({
         bulletinType: 'current',
         format: 'xlsx',
+        idir: isIdirView,
         body: {
           page: 1,
           size: paginationOptions.size || 25,

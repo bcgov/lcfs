@@ -191,7 +191,9 @@ class FuelCodeSchema(BaseSchema):
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
-    facility_nameplate_capacity_unit: Optional[Union[FuelTypeQuantityUnitsEnumSchema, str]] = None
+    facility_nameplate_capacity_unit: Optional[
+        Union[FuelTypeQuantityUnitsEnumSchema, str]
+    ] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
@@ -214,19 +216,19 @@ class FuelCodeSchema(BaseSchema):
     def default_co_processed(cls, value):
         return normalize_co_processed(value)
 
+
 class FuelCodeHistorySchema(BaseSchema):
     fuel_code_history_id: int
     fuel_code_id: int
     fuel_status_id: int
     fuel_code_snapshot: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Complete snapshot of fuel code data at time of change"
+        None, description="Complete snapshot of fuel code data at time of change"
     )
     group_uuid: Optional[str] = None
     version: Optional[int] = 0
     action_type: Optional[str] = None
 
-    @field_validator('fuel_code_snapshot', mode='before')
+    @field_validator("fuel_code_snapshot", mode="before")
     @classmethod
     def parse_fuel_code_snapshot(cls, v):
         """Parse fuel_code_snapshot if it comes as a JSON string"""
@@ -364,6 +366,28 @@ class FuelCodeBulletinRowSchema(BaseSchema):
     carbon_intensity: float
     effective_date: Optional[date] = None
     expiry_date: Optional[date] = None
+    # Extra fields exposed for IDIR view (optional for public view)
+    prefix: Optional[str] = None
+    fuel_suffix: Optional[str] = None
+    status: Optional[str] = None
+    edrms: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    application_date: Optional[date] = None
+    approval_date: Optional[date] = None
+    feedstock: Optional[str] = None
+    feedstock_location: Optional[str] = None
+    feedstock_misc: Optional[str] = None
+    co_processed: Optional[str] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
+    facility_nameplate_capacity: Optional[float] = None
+    facility_nameplate_capacity_unit: Optional[str] = None
+    feedstock_fuel_transport_modes: Optional[List[str]] = None
+    finished_fuel_transport_modes: Optional[List[str]] = None
+    former_company: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class FuelCodeBulletinsSchema(BaseSchema):
