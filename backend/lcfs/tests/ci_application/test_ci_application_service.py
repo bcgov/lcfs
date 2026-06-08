@@ -642,15 +642,25 @@ def _draft_ci_with_pathways():
 def _generation_pathway():
     return SimpleNamespace(
         pathway_id=1,
+        ci_application_id=10,
+        application_type_id=1,
+        application_type=_pathway_app_type(),
+        fuel_code_type_id=1,
+        fuel_code_type=_pathway_fc_type(),
+        operating_data_from=date(2026, 1, 1),
         fuel_code_id=None,
         fuel_code=None,
         proposed_ci=5.61,
         operating_data_to=date(2026, 12, 31),
         fuel_type_id=1,
+        fuel_type=_fuel_type_obj(),
         feedstock="Canola",
         feedstock_region="Saskatchewan",
         feedstock_transport_mode="Truck",
+        feedstock_transport_distance=100,
+        coproducts=None,
         finished_fuel_transport_mode="Rail",
+        finished_fuel_transport_distance=200,
     )
 
 
