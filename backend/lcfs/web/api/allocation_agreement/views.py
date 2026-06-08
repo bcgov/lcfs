@@ -14,6 +14,7 @@ from fastapi import (
     File,
     Form,
 )
+from fastapi.exceptions import RequestValidationError
 from starlette.responses import StreamingResponse, JSONResponse
 
 from lcfs.db import dependencies
@@ -163,7 +164,22 @@ async def save_allocation_agreements_row(
         return DeleteAllocationAgreementResponseSchema(
             message="Allocation agreement deleted successfully"
         )
-    elif allocation_agreement_id:
+
+    # provision_of_the_act drives the carbon intensity calculation; without it
+    # the service would crash on a None lookup (500). Surface a clean field
+    # validation error instead so the grid highlights the missing column.
+    if not request_data.provision_of_the_act:
+        raise RequestValidationError(
+            [
+                {
+                    "loc": ("provisionOfTheAct",),
+                    "msg": "field required",
+                    "type": "value_error",
+                }
+            ]
+        )
+
+    if allocation_agreement_id:
         # Update existing Allocation agreement
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]

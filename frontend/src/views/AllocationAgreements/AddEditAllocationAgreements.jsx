@@ -32,6 +32,36 @@ import BCButton from '@/components/BCButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
+// The /list-all response returns provisionOfTheAct (and, defensively, other
+// reference fields) as nested objects, while the grid editors and the /save
+// endpoint expect plain strings. If an un-edited row is saved or deleted with
+// these objects still nested, the backend rejects provisionOfTheAct (a `str`
+// field), surfacing as a spurious "Determining carbon intensity" error and
+// blocking quantity edits and deletions. Flatten them so the payload is valid.
+export const flattenNestedFields = (row) => {
+  const normalized = { ...row }
+  if (
+    normalized.provisionOfTheAct &&
+    typeof normalized.provisionOfTheAct === 'object'
+  ) {
+    normalized.provisionOfTheActId =
+      normalized.provisionOfTheAct.provisionOfTheActId
+    normalized.provisionOfTheAct = normalized.provisionOfTheAct.name
+  }
+  if (normalized.fuelCode && typeof normalized.fuelCode === 'object') {
+    normalized.fuelCodeId = normalized.fuelCode.fuelCodeId
+    normalized.fuelCode = normalized.fuelCode.fuelCode
+  }
+  if (normalized.fuelType && typeof normalized.fuelType === 'object') {
+    normalized.fuelType = normalized.fuelType.fuelType
+  }
+  if (normalized.fuelCategory && typeof normalized.fuelCategory === 'object') {
+    normalized.fuelCategory =
+      normalized.fuelCategory.category || normalized.fuelCategory.fuelCategory
+  }
+  return normalized
+}
+
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
@@ -151,7 +181,7 @@ export const AddEditAllocationAgreements = () => {
         data.allocationAgreements.length > 0
       ) {
         const updatedRowData = data.allocationAgreements.map((item) => ({
-          ...item,
+          ...flattenNestedFields(item),
           complianceReportId,
           compliancePeriod,
           isNewSupplementalEntry:
@@ -220,7 +250,7 @@ export const AddEditAllocationAgreements = () => {
           )
         }
         return {
-          ...item,
+          ...flattenNestedFields(item),
           complianceReportId,
           compliancePeriod,
           isNewSupplementalEntry:
@@ -416,20 +446,7 @@ export const AddEditAllocationAgreements = () => {
       updatedData.ciOfFuel = params.node.data.ciOfFuel
 
       // The backend may return nested objects for fields the grid expects as strings
-      if (updatedData.provisionOfTheAct && typeof updatedData.provisionOfTheAct === 'object') {
-        updatedData.provisionOfTheActId = updatedData.provisionOfTheAct.provisionOfTheActId
-        updatedData.provisionOfTheAct = updatedData.provisionOfTheAct.name
-      }
-      if (updatedData.fuelCode && typeof updatedData.fuelCode === 'object') {
-        updatedData.fuelCodeId = updatedData.fuelCode.fuelCodeId
-        updatedData.fuelCode = updatedData.fuelCode.fuelCode
-      }
-      if (updatedData.fuelType && typeof updatedData.fuelType === 'object') {
-        updatedData.fuelType = updatedData.fuelType.fuelType
-      }
-      if (updatedData.fuelCategory && typeof updatedData.fuelCategory === 'object') {
-        updatedData.fuelCategory = updatedData.fuelCategory.category || updatedData.fuelCategory.fuelCategory
-      }
+      updatedData = flattenNestedFields(updatedData)
 
       params.node.updateData(updatedData)
       params.api?.autoSizeAllColumns?.()
