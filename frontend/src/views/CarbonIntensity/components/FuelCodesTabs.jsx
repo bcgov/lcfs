@@ -60,15 +60,13 @@ const buildInternalFuelCodesTabs = ({ includeCiApplications }) => [
 
 const buildTabs = ({
   isCiApplicant,
-  isSigningAuthority,
   isGovernment,
   ciApplicationsEnabled,
   variant,
   location
 }) => {
   const canAccessCiApplications =
-    ciApplicationsEnabled &&
-    (isCiApplicant || isSigningAuthority || isGovernment)
+    ciApplicationsEnabled && (isCiApplicant || isGovernment)
 
   if (isGovernment && isOnBulletins(location)) {
     return buildInternalFuelCodesTabs({
@@ -140,7 +138,6 @@ export const FuelCodesTabs = ({ variant = 'default' } = {}) => {
     () =>
       buildTabs({
         isCiApplicant: hasAnyRole(roles.ci_applicant),
-        isSigningAuthority: hasAnyRole(roles.signing_authority),
         isGovernment: hasAnyRole(...govRoles),
         ciApplicationsEnabled,
         variant,

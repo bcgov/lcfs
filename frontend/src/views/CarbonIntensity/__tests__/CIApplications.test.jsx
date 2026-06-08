@@ -128,6 +128,15 @@ describe('CIApplications listing', () => {
     })
   })
 
+  it('redirects a signing authority without the CI Applicant role to dashboard', async () => {
+    mockUserRoles = [{ name: roles.signing_authority }]
+    const { container } = render(<CIApplications />, { wrapper })
+    // withRole returns <Navigate /> which renders nothing in test env
+    await waitFor(() => {
+      expect(container.querySelector('[data-test="title"]')).toBeNull()
+    })
+  })
+
   it('surfaces errors via the alert box', async () => {
     mockListData = {
       data: undefined,
