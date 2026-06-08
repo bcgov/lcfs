@@ -588,6 +588,28 @@ JOIN (
 AND cr.version = latest.max_version
 GROUP BY cr.organization_id
 ORDER BY cr.organization_id;
+
+-- ==========================================
+-- Unique indexes on the count MVs.
+-- Required so the refresh_mv_*_count() triggers can run a CONCURRENT
+-- REFRESH MATERIALIZED VIEW. Without them every insert/update on
+-- transfer / admin_adjustment / initiative_agreement /
+-- compliance_report / fuel_code fails the concurrent refresh.
+-- ==========================================
+CREATE UNIQUE INDEX mv_transaction_count_unique_idx
+    ON mv_transaction_count (transaction_type);
+
+CREATE UNIQUE INDEX mv_compliance_report_count_idx
+    ON mv_compliance_report_count (status);
+
+CREATE UNIQUE INDEX mv_fuel_code_count_idx
+    ON mv_fuel_code_count (status);
+
+CREATE UNIQUE INDEX mv_director_review_transaction_count_unique_idx
+    ON mv_director_review_transaction_count (transaction_type);
+
+CREATE UNIQUE INDEX mv_org_compliance_report_count_org_id_idx
+    ON mv_org_compliance_report_count (organization_id);
 """
 
 # Full materialized-view DDL BEFORE this migration (restored on downgrade).
@@ -1105,6 +1127,28 @@ JOIN (
 AND cr.version = latest.max_version
 GROUP BY cr.organization_id
 ORDER BY cr.organization_id;
+
+-- ==========================================
+-- Unique indexes on the count MVs.
+-- Required so the refresh_mv_*_count() triggers can run a CONCURRENT
+-- REFRESH MATERIALIZED VIEW. Without them every insert/update on
+-- transfer / admin_adjustment / initiative_agreement /
+-- compliance_report / fuel_code fails the concurrent refresh.
+-- ==========================================
+CREATE UNIQUE INDEX mv_transaction_count_unique_idx
+    ON mv_transaction_count (transaction_type);
+
+CREATE UNIQUE INDEX mv_compliance_report_count_idx
+    ON mv_compliance_report_count (status);
+
+CREATE UNIQUE INDEX mv_fuel_code_count_idx
+    ON mv_fuel_code_count (status);
+
+CREATE UNIQUE INDEX mv_director_review_transaction_count_unique_idx
+    ON mv_director_review_transaction_count (transaction_type);
+
+CREATE UNIQUE INDEX mv_org_compliance_report_count_org_id_idx
+    ON mv_org_compliance_report_count (organization_id);
 """
 
 
