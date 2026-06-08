@@ -12,5 +12,9 @@
   "edit": "Edit",
   "edited": "Edited",
   "internal": "Internal",
-  "public": "Public"
+  "public": "Public",
+  "internalComments": "Internal comments",
+  "publicComments": "Public comments",
+  "allComments": "All comments",
+  "commentFilterTabs": "Comment filters"
 }

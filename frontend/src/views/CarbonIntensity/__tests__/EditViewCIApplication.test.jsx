@@ -1,5 +1,13 @@
 import React from 'react'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -94,6 +102,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useGenerateCIApplicationFuelCodes: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
@@ -109,33 +121,21 @@ vi.mock('@/hooks/useCIApplication', () => ({
   }))
 }))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/DocumentsModellingStep',
-  () => ({
-    DocumentsModellingStep: () => <div data-test="step3-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
+  DocumentsModellingStep: () => <div data-test="step3-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/SignAndSubmitStep',
-  () => ({
-    SignAndSubmitStep: () => <div data-test="step4-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/SignAndSubmitStep', () => ({
+  SignAndSubmitStep: () => <div data-test="step4-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/GovernmentDecisionStep',
-  () => ({
-    GovernmentDecisionStep: () => <div data-test="step5-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/GovernmentDecisionStep', () => ({
+  GovernmentDecisionStep: () => <div data-test="step5-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep',
-  () => ({
-    ProposedFuelPathwaysStep: () => <div data-test="step2-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/ProposedFuelPathwaysStep', () => ({
+  ProposedFuelPathwaysStep: () => <div data-test="step2-stub" />
+}))
 
 // Stub the heavy step component so we can drive its props directly.
 vi.mock(
