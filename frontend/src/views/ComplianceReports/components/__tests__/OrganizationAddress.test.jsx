@@ -3,7 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import * as OrganizationSnapshotHooks from '@/hooks/useOrganizationSnapshot.js'
-import { OrganizationAddress } from '../OrganizationAddress'
+import {
+  addressHasPostalCode,
+  addressWithPostalCode,
+  OrganizationAddress
+} from '../OrganizationAddress'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 // Mock react-router-dom
@@ -270,6 +274,32 @@ describe('OrganizationAddress', () => {
 
   // Helper Functions Tests
   describe('Helper Functions', () => {
+    it('recognizes existing postal codes in address values', () => {
+      expect(addressHasPostalCode('123 Main St, Victoria, BC V8W 2C3')).toBe(
+        true
+      )
+      expect(addressHasPostalCode('123 Main St, Victoria, BC V8W2C3')).toBe(
+        true
+      )
+      expect(addressHasPostalCode('123 Main St, Victoria, BC')).toBe(false)
+    })
+
+    it('preserves postal codes from autocomplete selections', () => {
+      expect(
+        addressWithPostalCode({
+          fullAddress: '123 Main St, Victoria, BC',
+          postalCode: 'V8W 2C3'
+        })
+      ).toBe('123 Main St, Victoria, BC, V8W 2C3')
+
+      expect(
+        addressWithPostalCode({
+          fullAddress: '123 Main St, Victoria, BC V8W 2C3',
+          postalCode: 'V8W 2C3'
+        })
+      ).toBe('123 Main St, Victoria, BC V8W 2C3')
+    })
+
     it('displayAddressValue returns value when present', () => {
       render(<OrganizationAddress {...defaultProps} />, { wrapper })
 
