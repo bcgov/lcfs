@@ -178,9 +178,19 @@ const priorityScoreCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
+export const getVerificationColumnValue = (data) => {
+  if (data?.verification2Date) return 'VX2'
+  if (data?.verification1Date) return 'VX1'
+  if (['VX1', 'VX2'].includes(data?.verificationLevel)) {
+    return data.verificationLevel
+  }
+  return null
+}
+
 const verificationCol = (t) => ({
   field: 'verificationLevel',
   headerName: t('carbonIntensity:columns.verification'),
+  valueGetter: ({ data }) => getVerificationColumnValue(data),
   minWidth: 220,
   filter: 'agTextColumnFilter',
   filterParams: TEXT_FILTER_PARAMS,

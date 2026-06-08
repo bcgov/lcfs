@@ -236,6 +236,14 @@ def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
     )
 
 
+def _verification_level_from_progress(ci: CIApplication) -> Optional[str]:
+    if getattr(ci, "verification_2_date", None):
+        return "VX2"
+    if getattr(ci, "verification_1_date", None):
+        return "VX1"
+    return None
+
+
 def _to_list_item(
     ci: CIApplication,
     last_comment_entry: Optional[Tuple] = None,
@@ -268,7 +276,7 @@ def _to_list_item(
         ),
         last_comment=last_comment,
         priority_score=getattr(ci, "priority_score", None),
-        verification_level=getattr(ci, "verification_level", None),
+        verification_level=_verification_level_from_progress(ci),
     )
 
 
@@ -291,6 +299,14 @@ class CIApplicationServices:
             if display_name:
                 display_name = display_name.strip() or None
         return _to_full_schema(ci, signature_user_display_name=display_name)
+
+    def _apply_status_change_side_effects(
+        self,
+        ci_application: CIApplication,
+        target_status: CIApplicationStatusEnum,
+    ) -> None:
+        if target_status == CIApplicationStatusEnum.Withdrawn:
+            ci_application.assigned_analyst_id = None
 
     # ------------------------------------------------------------------
     # Reference data
@@ -510,6 +526,9 @@ class CIApplicationServices:
                 f"Status '{CIApplicationStatusEnum.Recommended.value}' is not configured."
             )
         ci_application.status_id = recommended_status.ci_application_status_id
+        self._apply_status_change_side_effects(
+            ci_application, CIApplicationStatusEnum.Recommended
+        )
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
         await self.repo.update(ci_application)
@@ -849,6 +868,9 @@ class CIApplicationServices:
         )
         ci_application.signature_date_time = datetime.now(timezone.utc)
         ci_application.status_id = submitted_status.ci_application_status_id
+        self._apply_status_change_side_effects(
+            ci_application, CIApplicationStatusEnum.Submitted
+        )
         ci_application.update_user = user.keycloak_username
         ci_application.action_type = ActionTypeEnum.UPDATE
 
@@ -942,6 +964,7 @@ class CIApplicationServices:
             )
 
         ci_application.status_id = target_status.ci_application_status_id
+        self._apply_status_change_side_effects(ci_application, data.status)
         if data.status == CIApplicationStatusEnum.Completed:
             ci_application.approval_user_id = user.user_profile_id
             ci_application.approval_date = datetime.now(timezone.utc)
@@ -951,7 +974,6 @@ class CIApplicationServices:
             ci_application.approval_user_id = None
             ci_application.approval_date = None
         elif data.status == CIApplicationStatusEnum.Draft:
-            ci_application.assigned_analyst_id = None
             ci_application.preliminary_risk_assessment = None
             ci_application.priority_score = None
             ci_application.verification_1_user_id = None
