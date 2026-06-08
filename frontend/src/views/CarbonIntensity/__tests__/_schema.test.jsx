@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   ciApplicationsColDefs,
   defaultSortModel,
+  getVerificationColumnValue,
   getResumeStep
 } from '@/views/CarbonIntensity/_schema'
 
@@ -89,6 +90,40 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     const analyst = cols.find((c) => c.field === 'assignedAnalyst')
 
     expect(analyst.cellRendererParams).toMatchObject({ onRefresh })
+  })
+
+  it('derives the Verification column from verification progress', () => {
+    const cols = ciApplicationsColDefs(t, { isGovernment: true })
+    const verification = cols.find((c) => c.field === 'verificationLevel')
+
+    expect(verification.valueGetter({ data: {} })).toBeNull()
+    expect(
+      verification.valueGetter({
+        data: { verification1Date: '2026-05-19T00:00:00Z' }
+      })
+    ).toBe('VX1')
+    expect(
+      verification.valueGetter({
+        data: {
+          verification1Date: '2026-05-19T00:00:00Z',
+          verification2Date: '2026-05-20T00:00:00Z'
+        }
+      })
+    ).toBe('VX2')
+    expect(
+      verification.valueGetter({ data: { verificationLevel: 'VX2 - High' } })
+    ).toBeNull()
+  })
+})
+
+describe('getVerificationColumnValue', () => {
+  it('uses completed verification stages before the API fallback value', () => {
+    expect(
+      getVerificationColumnValue({
+        verificationLevel: 'VX1',
+        verification2Date: '2026-05-20T00:00:00Z'
+      })
+    ).toBe('VX2')
   })
 })
 
