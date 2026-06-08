@@ -23,7 +23,8 @@ vi.mock('react-i18next', () => ({
         'fuelCode:newFuelCodeBtn': 'New fuel code',
         'fuelCode:fuelCodeDownloadBtn': 'Download fuel codes information',
         'fuelCode:fuelCodeDownloadingMsg': 'Downloading fuel codes information',
-        'fuelCode:fuelCodeDownloadFailMsg': 'Failed to download fuel code information',
+        'fuelCode:fuelCodeDownloadFailMsg':
+          'Failed to download fuel code information',
         'fuelCode:noFuelCodesFound': 'No fuel codes found',
         'common:ClearFilters': 'Clear filters'
       }
@@ -180,14 +181,16 @@ describe('FuelCodes Component Tests', () => {
           dateFrom: cfg.dateFrom,
           dateTo: cfg.dateTo
         }))
-        expect(result).toEqual([{
-          field: 'name',
-          filterType: 'text',
-          type: 'contains',
-          filter: 'test',
-          dateFrom: undefined,
-          dateTo: undefined
-        }])
+        expect(result).toEqual([
+          {
+            field: 'name',
+            filterType: 'text',
+            type: 'contains',
+            filter: 'test',
+            dateFrom: undefined,
+            dateTo: undefined
+          }
+        ])
       })
 
       it('should convert filter model with date filters', () => {
@@ -207,14 +210,16 @@ describe('FuelCodes Component Tests', () => {
           dateFrom: cfg.dateFrom,
           dateTo: cfg.dateTo
         }))
-        expect(result).toEqual([{
-          field: 'applicationDate',
-          filterType: 'date',
-          type: 'inRange',
-          filter: undefined,
-          dateFrom: '2024-01-01',
-          dateTo: '2024-12-31'
-        }])
+        expect(result).toEqual([
+          {
+            field: 'applicationDate',
+            filterType: 'date',
+            type: 'inRange',
+            filter: undefined,
+            dateFrom: '2024-01-01',
+            dateTo: '2024-12-31'
+          }
+        ])
       })
 
       it('should handle missing filterType with default text type', () => {
@@ -232,14 +237,16 @@ describe('FuelCodes Component Tests', () => {
           dateFrom: cfg.dateFrom,
           dateTo: cfg.dateTo
         }))
-        expect(result).toEqual([{
-          field: 'code',
-          filterType: 'text',
-          type: 'equals',
-          filter: '001',
-          dateFrom: undefined,
-          dateTo: undefined
-        }])
+        expect(result).toEqual([
+          {
+            field: 'code',
+            filterType: 'text',
+            type: 'equals',
+            filter: '001',
+            dateFrom: undefined,
+            dateTo: undefined
+          }
+        ])
       })
     })
   })
@@ -268,7 +275,9 @@ describe('FuelCodes Component Tests', () => {
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
       expect(downloadButton).toBeInTheDocument()
       expect(downloadButton).toBeEnabled()
-      expect(downloadButton).toHaveTextContent('Download fuel codes information')
+      expect(downloadButton).toHaveTextContent(
+        'Download fuel codes information'
+      )
     })
 
     it('should render new fuel code button for analysts', () => {
@@ -277,7 +286,6 @@ describe('FuelCodes Component Tests', () => {
       expect(newFuelCodeBtn).toBeInTheDocument()
       expect(newFuelCodeBtn).toHaveTextContent('New fuel code')
     })
-
   })
 
   describe('Alert Message Handling', () => {
@@ -293,9 +301,9 @@ describe('FuelCodes Component Tests', () => {
         message: 'Test success message',
         severity: 'success'
       }
-      
+
       render(<FuelCodes />, { wrapper })
-      
+
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
         expect(alertBox).toBeInTheDocument()
@@ -307,9 +315,9 @@ describe('FuelCodes Component Tests', () => {
       mockLocationState.state = {
         message: 'Test message without severity'
       }
-      
+
       render(<FuelCodes />, { wrapper })
-      
+
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
         expect(alertBox).toBeInTheDocument()
@@ -322,9 +330,9 @@ describe('FuelCodes Component Tests', () => {
         message: 'Test error message',
         severity: 'error'
       }
-      
+
       render(<FuelCodes />, { wrapper })
-      
+
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
         expect(alertBox).toBeInTheDocument()
@@ -350,7 +358,6 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith({
           format: 'xlsx',
-          excludeArchived: false,
           body: {
             page: 1,
             size: 10000,
@@ -365,7 +372,6 @@ describe('FuelCodes Component Tests', () => {
         })
       })
     })
-
   })
 
   describe('Download Functionality', () => {
@@ -378,7 +384,9 @@ describe('FuelCodes Component Tests', () => {
       fireEvent.click(downloadButton)
 
       await waitFor(() => {
-        expect(downloadButton).toHaveTextContent('Downloading fuel codes information...')
+        expect(downloadButton).toHaveTextContent(
+          'Downloading fuel codes information...'
+        )
         expect(downloadButton).toBeDisabled()
       })
     })
@@ -392,13 +400,17 @@ describe('FuelCodes Component Tests', () => {
       fireEvent.click(downloadButton)
 
       await waitFor(() => {
-        expect(downloadButton).toHaveTextContent('Download fuel codes information')
+        expect(downloadButton).toHaveTextContent(
+          'Download fuel codes information'
+        )
         expect(downloadButton).toBeEnabled()
       })
     })
 
     it('should display error message on download failure', async () => {
-      mockDownloadMutate = vi.fn().mockRejectedValue(new Error('Download failed'))
+      mockDownloadMutate = vi
+        .fn()
+        .mockRejectedValue(new Error('Download failed'))
 
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
@@ -408,12 +420,16 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
         expect(alertBox).toBeInTheDocument()
-        expect(alertBox).toHaveTextContent('Failed to download fuel code information')
+        expect(alertBox).toHaveTextContent(
+          'Failed to download fuel code information'
+        )
       })
     })
 
     it('should reset button state after download failure', async () => {
-      mockDownloadMutate = vi.fn().mockRejectedValue(new Error('Download failed'))
+      mockDownloadMutate = vi
+        .fn()
+        .mockRejectedValue(new Error('Download failed'))
 
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
@@ -421,7 +437,9 @@ describe('FuelCodes Component Tests', () => {
       fireEvent.click(downloadButton)
 
       await waitFor(() => {
-        expect(downloadButton).toHaveTextContent('Download fuel codes information')
+        expect(downloadButton).toHaveTextContent(
+          'Download fuel codes information'
+        )
         expect(downloadButton).toBeEnabled()
       })
     })
@@ -443,7 +461,6 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith({
           format: 'xlsx',
-          excludeArchived: false,
           body: expect.objectContaining({
             page: 1,
             size: 10000,
@@ -463,7 +480,6 @@ describe('FuelCodes Component Tests', () => {
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith({
           format: 'xlsx',
-          excludeArchived: false,
           body: {
             page: 1,
             size: 10000,
@@ -479,7 +495,7 @@ describe('FuelCodes Component Tests', () => {
       })
     })
 
-    it('should pass excludeArchived: false on the default (Fuel codes) tab', async () => {
+    it('should include format on the default (Fuel codes) tab', async () => {
       mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
       render(<FuelCodes />, { wrapper })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
@@ -488,7 +504,7 @@ describe('FuelCodes Component Tests', () => {
 
       await waitFor(() => {
         expect(mockDownloadMutate).toHaveBeenCalledWith(
-          expect.objectContaining({ excludeArchived: false })
+          expect.objectContaining({ format: 'xlsx' })
         )
       })
     })
@@ -568,7 +584,7 @@ describe('FuelCodes Component Tests', () => {
     it('should handle different fuel code IDs', () => {
       const params1 = { data: { fuelCodeId: 1 } }
       const params2 = { data: { fuelCodeId: '002' } }
-      
+
       expect(params1.data.fuelCodeId.toString()).toBe('1')
       expect(params2.data.fuelCodeId.toString()).toBe('002')
     })
@@ -587,7 +603,7 @@ describe('FuelCodes Component Tests', () => {
           }
         ]
       }
-      
+
       expect(payload.page).toBe(1)
       expect(payload.size).toBe(10000)
       expect(Array.isArray(payload.filters)).toBe(true)
@@ -605,7 +621,7 @@ describe('FuelCodes Component Tests', () => {
         dateFrom: cfg.dateFrom,
         dateTo: cfg.dateTo
       }))
-      
+
       expect(filters).toEqual([])
     })
   })
@@ -637,7 +653,7 @@ describe('FuelCodes Component Tests', () => {
       }
 
       render(<FuelCodes />, { wrapper })
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('alert-box')).toBeInTheDocument()
       })
@@ -660,7 +676,7 @@ describe('FuelCodes Component Tests', () => {
 
     it('should always render download button', () => {
       render(<FuelCodes />, { wrapper })
-      
+
       expect(screen.getByTestId('fuel-code-download-btn')).toBeInTheDocument()
     })
   })
@@ -671,7 +687,9 @@ describe('FuelCodes Component Tests', () => {
 
       expect(screen.getByText('Fuel codes')).toBeInTheDocument()
       expect(screen.getByText('New fuel code')).toBeInTheDocument()
-      expect(screen.getByText('Download fuel codes information')).toBeInTheDocument()
+      expect(
+        screen.getByText('Download fuel codes information')
+      ).toBeInTheDocument()
     })
   })
 })
