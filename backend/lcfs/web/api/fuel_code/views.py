@@ -229,9 +229,7 @@ async def export_fuel_codes(
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    return await exporter.export(
-        format, pagination, exclude_archived=exclude_archived
-    )
+    return await exporter.export(format, pagination, exclude_archived=exclude_archived)
 
 
 @router.post(
@@ -272,11 +270,17 @@ async def export_fuel_code_bulletins(
     bulletin_type_snake: Optional[str] = Query(
         None, alias="bulletin_type", description="Type: 'current' or 'archived'"
     ),
+    idir: bool = Query(
+        default=False,
+        description="If true, export the full IDIR column set.",
+    ),
     pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeBulletinExporter = Depends(),
 ):
     resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
-    return await exporter.export(resolved_bulletin_type, format, pagination)
+    return await exporter.export(
+        resolved_bulletin_type, format, pagination, is_idir=idir
+    )
 
 
 @router.get(
