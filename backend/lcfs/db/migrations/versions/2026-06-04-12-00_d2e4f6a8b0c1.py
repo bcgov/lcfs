@@ -12,7 +12,7 @@ This migration is STRUCTURAL ONLY. It creates the table and rebuilds
 records is performed separately via manual SQL kept outside version control.
 
 Revision ID: d2e4f6a8b0c1
-Revises: d3e4f5a6b7c8
+Revises: a4b5c6d7e8f9
 """
 
 import sqlalchemy as sa
@@ -20,7 +20,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "d2e4f6a8b0c1"
-down_revision = "d3e4f5a6b7c8"
+down_revision = "a4b5c6d7e8f9"
 branch_labels = None
 depends_on = None
 
