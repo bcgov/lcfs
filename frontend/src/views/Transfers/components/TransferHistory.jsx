@@ -65,6 +65,8 @@ function TransferHistory({ transferHistory }) {
   } else if (diffYears >= 1) {
     category = 'C'
   }
+  const transferCategory = transferData.transferCategory?.category ?? category
+  const displayCategory = transferData.isA1Category ? 'A1' : transferCategory
 
   // Filter out any DRAFT records, so “Created draft” never shows up
   const filteredHistory = transferHistory?.filter(
@@ -89,12 +91,9 @@ function TransferHistory({ transferHistory }) {
                 <BCTypography variant="body2" component="div">
                   <span>
                     Date of written agreement reached between the two
-                    organizations: {agreementDate.format('LL')} (proposal falls
-                    under{' '}
-                    <strong>
-                      Category{' '}
-                      {transferData.transferCategory?.category ?? category}
-                    </strong>
+                    organizations: <strong>{agreementDate.format('LL')}</strong>{' '}
+                    (proposal falls under{' '}
+                    <strong>Category {displayCategory}</strong>
                     {!transferData.transferCategory?.category &&
                       (category === 'A' || category === 'B') && (
                         <>

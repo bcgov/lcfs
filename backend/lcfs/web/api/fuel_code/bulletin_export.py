@@ -7,10 +7,10 @@ from starlette.responses import StreamingResponse
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.fuel_code.export import FUEL_CODE_EXPORT_COLUMNS
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
-
 
 FUEL_CODE_BULLETIN_EXPORT_COLUMNS = [
     SpreadsheetColumn("Fuel Code", "text"),
@@ -38,8 +38,10 @@ class FuelCodeBulletinExporter:
 
     def _get_compliance_period_start(self, today: date) -> date:
         period_anchor_this_year = date(today.year, 3, 31)
-        return period_anchor_this_year if today >= period_anchor_this_year else date(
-            today.year - 1, 3, 31
+        return (
+            period_anchor_this_year
+            if today >= period_anchor_this_year
+            else date(today.year - 1, 3, 31)
         )
 
     @service_handler
@@ -48,6 +50,7 @@ class FuelCodeBulletinExporter:
         bulletin_type: str,
         export_format: str,
         pagination: PaginationRequestSchema | None = None,
+        is_idir: bool = False,
     ) -> StreamingResponse:
         if export_format not in ["xls", "xlsx", "csv"]:
             raise DataNotFoundException("Export format not supported")
@@ -72,22 +75,57 @@ class FuelCodeBulletinExporter:
             sort_orders=sort_orders,
         )
 
-        spreadsheet_rows = [
-            [
-                row["fuel_code"],
-                row["fuel"],
-                row["company"],
-                row["carbon_intensity"],
-                row["effective_date"],
-                row["expiry_date"],
+        if is_idir:
+            columns = FUEL_CODE_EXPORT_COLUMNS
+            spreadsheet_rows = [
+                [
+                    row.get("status"),
+                    row.get("prefix"),
+                    row.get("fuel_suffix"),
+                    row.get("carbon_intensity"),
+                    row.get("edrms"),
+                    row.get("company"),
+                    row.get("contact_name"),
+                    row.get("contact_email"),
+                    row.get("application_date"),
+                    row.get("approval_date"),
+                    row.get("effective_date"),
+                    row.get("expiry_date"),
+                    row.get("fuel"),
+                    row.get("feedstock"),
+                    row.get("feedstock_location"),
+                    row.get("feedstock_misc"),
+                    row.get("co_processed"),
+                    row.get("fuel_production_facility_city"),
+                    row.get("fuel_production_facility_province_state"),
+                    row.get("fuel_production_facility_country"),
+                    row.get("facility_nameplate_capacity"),
+                    row.get("facility_nameplate_capacity_unit"),
+                    (", ".join(row.get("feedstock_fuel_transport_modes") or [])),
+                    (", ".join(row.get("finished_fuel_transport_modes") or [])),
+                    row.get("former_company"),
+                    row.get("notes"),
+                ]
+                for row in rows
             ]
-            for row in rows
-        ]
+        else:
+            columns = FUEL_CODE_BULLETIN_EXPORT_COLUMNS
+            spreadsheet_rows = [
+                [
+                    row["fuel_code"],
+                    row["fuel"],
+                    row["company"],
+                    row["carbon_intensity"],
+                    row["effective_date"],
+                    row["expiry_date"],
+                ]
+                for row in rows
+            ]
 
         builder = SpreadsheetBuilder(file_format=export_format)
         builder.add_sheet(
             sheet_name=FUEL_CODE_BULLETIN_SHEET_NAMES[bulletin_type],
-            columns=FUEL_CODE_BULLETIN_EXPORT_COLUMNS,
+            columns=columns,
             rows=spreadsheet_rows,
             styles={"bold_headers": True},
         )

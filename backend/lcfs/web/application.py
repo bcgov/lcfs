@@ -63,6 +63,7 @@ class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
             response = JSONResponse(
                 status_code=exc.status_code,
                 content={"status": exc.status_code, "detail": exc.detail},
+                headers=exc.headers or None,
             )
 
             # Check if the request origin is in the allowed origins or matches dev pattern

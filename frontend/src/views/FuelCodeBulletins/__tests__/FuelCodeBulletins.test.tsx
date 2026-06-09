@@ -15,6 +15,14 @@ vi.mock('@/utils/withRole', () => ({
   default: (Component: any) => Component
 }))
 
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasAnyRole: () => false,
+    data: null,
+    isLoading: false
+  })
+}))
+
 vi.mock('react-router-dom', async () => {
   const actual: any = await vi.importActual('react-router-dom')
   return {
@@ -176,14 +184,21 @@ describe('FuelCodeBulletins UI', () => {
     expect(gridProps.overlayNoRowsTemplate).toBe('No bulletin rows found')
     expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
       'current',
-      expect.objectContaining({ page: 1, size: 25, sortOrders: [], filters: [] })
+      expect.objectContaining({
+        page: 1,
+        size: 25,
+        sortOrders: [],
+        filters: []
+      })
     )
   })
 
   it('updates pagination options after grid pagination change', async () => {
     render(<CurrentFuelCodes />, { wrapper })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Change pagination' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Change pagination' })
+    )
 
     await waitFor(() => {
       expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
@@ -217,12 +232,15 @@ describe('FuelCodeBulletins UI', () => {
   it('downloads current bulletin with current filters and sorting', async () => {
     render(<CurrentFuelCodes />, { wrapper })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Download Excel' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Download Excel' })
+    )
 
     await waitFor(() => {
       expect(mockDownloadMutate).toHaveBeenCalledWith({
         bulletinType: 'current',
         format: 'xlsx',
+        idir: false,
         body: {
           page: 1,
           size: 25,
@@ -238,7 +256,9 @@ describe('FuelCodeBulletins UI', () => {
 
     render(<ArchivedFuelCodes />, { wrapper })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Download Excel' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Download Excel' })
+    )
 
     await waitFor(() => {
       expect(

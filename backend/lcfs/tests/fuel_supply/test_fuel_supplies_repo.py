@@ -285,6 +285,72 @@ async def test_get_fuel_supply_table_options_ghgenius_provision(
 
 
 @pytest.mark.anyio
+async def test_get_fuel_supply_table_options_excludes_other_fuel_types_pre_2024(
+    fuel_supply_repo, mock_db_session
+):
+    """Legacy reports (<2024) must exclude the 2024-era "Other" fuel types,
+    while 2024+ reports keep them."""
+    captured = {}
+
+    async def mock_execute(query, *args, **kwargs):
+        captured["query"] = query
+        result = MagicMock()
+        result.all = MagicMock(return_value=[])
+        return result
+
+    mock_db_session.execute = mock_execute
+
+    def compiled_sql():
+        return str(
+            captured["query"].compile(compile_kwargs={"literal_binds": True})
+        )
+
+    # Pre-2024: exclusion clause for both "Other" fuel types must be present
+    await fuel_supply_repo.get_fuel_supply_table_options("2023")
+    legacy_sql = compiled_sql()
+    assert "Other diesel fuel" in legacy_sql
+    assert "NOT IN" in legacy_sql.upper()
+
+    # 2024+: no such exclusion — both options remain available
+    await fuel_supply_repo.get_fuel_supply_table_options("2024")
+    assert "Other diesel fuel" not in compiled_sql()
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supply_table_options_legacy_petroleum_provision_by_category(
+    fuel_supply_repo, mock_db_session
+):
+    """#4435: For legacy reports (<2024) the prescribed-CI provision offered for
+    petroleum-based fuels must be determined by fuel category — Gasoline maps to
+    Section 6 (5) (a) (provision 4) and Diesel maps to Section 6 (5) (b)
+    (provision 5) — so only one valid option is presented per fuel rather than
+    both being offered for every legacy fuel."""
+    captured = {}
+
+    async def mock_execute(query, *args, **kwargs):
+        captured["query"] = query
+        result = MagicMock()
+        result.all = MagicMock(return_value=[])
+        return result
+
+    mock_db_session.execute = mock_execute
+
+    await fuel_supply_repo.get_fuel_supply_table_options("2020")
+    legacy_sql = str(
+        captured["query"].compile(compile_kwargs={"literal_binds": True})
+    )
+
+    # The category-aware pairing is present: Gasoline -> 4, Diesel -> 5.
+    assert "category = 'Gasoline'" in legacy_sql
+    assert "category = 'Diesel'" in legacy_sql
+    assert "provision_of_the_act_id = 4" in legacy_sql
+    assert "provision_of_the_act_id = 5" in legacy_sql
+
+    # The old category-blind blanket (both provisions for every legacy fuel) is gone.
+    assert "IN (4, 5)" not in legacy_sql.upper()
+
+
+@pytest.mark.anyio
 async def test_get_fuel_supply_list_with_valid_group_uuid(
     fuel_supply_repo, mock_db_session
 ):

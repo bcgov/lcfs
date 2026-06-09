@@ -580,12 +580,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Vitest
+      # NOTE: previously this step did `npm install vitest@$VITEST_VERSION --no-save`,
+      # which re-resolved vitest to the latest matching patch (e.g. 3.2.6) while
+      # @vitest/ui / @vitest/coverage-v8 stayed at 3.2.4, producing an ERESOLVE
+      # peer-dependency conflict and failing the publish job. Using `npm ci`
+      # installs the exact, mutually compatible versions from package-lock.json.
+      - name: Install frontend dependencies
         run: |
           cd frontend
-          VITEST_VERSION=$(node -p "require('./package.json').devDependencies.vitest")
-          echo "Installing vitest version: $VITEST_VERSION"
-          npm install vitest@$VITEST_VERSION --no-save
+          npm ci --prefer-offline --no-audit --no-fund
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v8.0.1
@@ -626,9 +629,10 @@ jobs:
             exit 0
           fi
 
-          # Merge valid reports
+          # Merge valid reports using the locally installed vitest so it
+          # stays in sync with @vitest/ui and @vitest/coverage-v8.
           echo "Merging valid blob reports..."
-          npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+          ./node_modules/.bin/vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
 
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.23.0

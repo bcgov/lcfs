@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Stack } from '@mui/material'
@@ -12,7 +12,8 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import withRole from '@/utils/withRole'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import ROUTES from '@/routes/routes'
@@ -37,6 +38,8 @@ const CIApplicationsBase = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const gridRef = useRef(null)
+  const { hasAnyRole } = useCurrentUser()
+  const isGovernment = hasAnyRole(...govRoles)
 
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
@@ -45,6 +48,15 @@ const CIApplicationsBase = () => {
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const queryData = useGetCIApplications(paginationOptions)
+
+  const handleRefresh = useCallback(() => {
+    queryData.refetch()
+  }, [queryData.refetch])
+
+  const columnDefs = useMemo(
+    () => ciApplicationsColDefs(t, { isGovernment, onRefresh: handleRefresh }),
+    [t, isGovernment, handleRefresh]
+  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -88,8 +100,10 @@ const CIApplicationsBase = () => {
         </BCAlert>
       )}
 
-      <BCTypography variant="h5" color="primary" data-test="title">
-        {t('carbonIntensity:ciApplications')}
+      <BCTypography variant="h5" color="primary" data-test="title" mt={2}>
+        {isGovernment
+          ? t('carbonIntensity:carbonIntensityApplication')
+          : t('carbonIntensity:myOrgCIApplications')}
       </BCTypography>
 
       <Stack
@@ -97,7 +111,7 @@ const CIApplicationsBase = () => {
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
-        mt={1}
+        mt={4}
         mb={2}
       >
         <Role roles={[roles.ci_applicant, roles.signing_authority]}>
@@ -122,7 +136,7 @@ const CIApplicationsBase = () => {
         <BCGridViewer
           gridRef={gridRef}
           gridKey="ci-applications-grid"
-          columnDefs={ciApplicationsColDefs(t)}
+          columnDefs={columnDefs}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('carbonIntensity:noCIApplicationsFound')}
           defaultColDef={defaultColDef}

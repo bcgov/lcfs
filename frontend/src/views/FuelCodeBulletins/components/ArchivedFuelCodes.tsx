@@ -4,6 +4,8 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { Stack } from '@mui/material'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { govRoles } from '@/constants/roles'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildColumnDefs, normalizeRows } from '../_schema'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
@@ -20,7 +22,9 @@ const initialPaginationOptions = {
 }
 
 export const ArchivedFuelCodes = () => {
-  const { t } = useTranslation(['bulletins'])
+  const { t } = useTranslation(['bulletins', 'fuelCode'])
+  const { hasAnyRole } = useCurrentUser()
+  const isIdirView = hasAnyRole(...govRoles)
   const gridRef = useRef<any>(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState('')
@@ -34,7 +38,7 @@ export const ArchivedFuelCodes = () => {
     paginationOptions
   )
 
-  const colDefs = useMemo(() => buildColumnDefs(t), [t])
+  const colDefs = useMemo(() => buildColumnDefs(t, isIdirView), [t, isIdirView])
   const queryData = useMemo(
     () => ({
       data: {
@@ -56,6 +60,7 @@ export const ArchivedFuelCodes = () => {
       await downloadBulletins({
         bulletinType: 'archived',
         format: 'xlsx',
+        idir: isIdirView,
         body: {
           page: 1,
           size: paginationOptions.size || 25,
@@ -79,15 +84,19 @@ export const ArchivedFuelCodes = () => {
         </BCAlert>
       )}
       <BCTypography variant="h5" color="primary">
-        {t('archived.title')}
+        {isIdirView ? t('archived.idirTitle') : t('archived.title')}
       </BCTypography>
 
-      <BCTypography variant="body2" color="text">
-        {t('archived.description')}
-      </BCTypography>
-      <BCTypography variant="body2" color="text">
-        {t('common.fuelCodePrefix')}
-      </BCTypography>
+      {!isIdirView && (
+        <>
+          <BCTypography variant="body2" color="text">
+            {t('archived.description')}
+          </BCTypography>
+          <BCTypography variant="body2" color="text">
+            {t('common.fuelCodePrefix')}
+          </BCTypography>
+        </>
+      )}
 
       <Stack direction="row">
         <DownloadButton

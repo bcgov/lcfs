@@ -31,6 +31,8 @@ class FSEReportingBaseView(Base):
     compliance_report_id = Column(Integer)
     compliance_report_group_uuid = Column(String)
     is_active = Column(Boolean)
+    version = Column(Integer)
+    action_type = Column(String)
     street_address = Column(String)
     city = Column(String)
     postal_code = Column(String)

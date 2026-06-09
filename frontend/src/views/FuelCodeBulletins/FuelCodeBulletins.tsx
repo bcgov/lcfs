@@ -1,4 +1,4 @@
-import { nonGovRoles } from '@/constants/roles'
+import { govRoles, nonGovRoles } from '@/constants/roles'
 import ROUTES from '@/routes/routes'
 import withRole from '@/utils/withRole'
 import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'
@@ -12,7 +12,7 @@ export const FuelCodeBulletinsBase = () => {
   const isArchived = searchParams.get('type') === 'archived'
 
   return (
-    <Stack spacing={2} sx={{ width: '100%' }}>
+    <Stack sx={{ width: '100%' }}>
       <FuelCodesTabs />
       {isArchived ? <ArchivedFuelCodes /> : <CurrentFuelCodes />}
     </Stack>
@@ -21,7 +21,7 @@ export const FuelCodeBulletinsBase = () => {
 
 export const FuelCodeBulletins = withRole(
   FuelCodeBulletinsBase,
-  nonGovRoles,
+  [...govRoles, ...nonGovRoles],
   ROUTES.DASHBOARD
 )
 FuelCodeBulletins.displayName = 'FuelCodeBulletins'

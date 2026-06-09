@@ -85,6 +85,18 @@ class CIApplication(BaseModel, Auditable, Versioning):
         comment="Organization submitting the CI application",
     )
 
+    # ---------- Assigned IDIR analyst ----------
+    assigned_analyst_id = Column(
+        Integer,
+        ForeignKey(
+            "user_profile.user_profile_id",
+            name="fk_ci_application_assigned_analyst_id_user_profile",
+        ),
+        nullable=True,
+        index=True,
+        comment="IDIR Analyst assigned to review this CI application.",
+    )
+
     # ---------- Facility location ----------
     facility_city = Column(
         String(500),
@@ -118,6 +130,18 @@ class CIApplication(BaseModel, Auditable, Versioning):
         ForeignKey("unit_of_measure.uom_id"),
         nullable=False,
         comment="Unit of measure for the facility nameplate capacity",
+    )
+
+    # ---------- Analyst triage (IDIR-only display) ----------
+    priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Analyst-facing triage score for the IDIR CI applications inbox.",
+    )
+    verification_level = Column(
+        String(50),
+        nullable=True,
+        comment="Verification level label (e.g. 'VX1 - Low', 'VX2 - High').",
     )
 
     # ---------- Fuel code / pathway ----------
@@ -166,6 +190,78 @@ class CIApplication(BaseModel, Auditable, Versioning):
         comment="UTC date and time at which the application was electronically signed",
     )
 
+    # ---------- Internal workflow tracking ----------
+    assigned_analyst_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="Optional analyst assignment for internal queue display",
+    )
+    preliminary_risk_assessment = Column(
+        String(20),
+        nullable=True,
+        comment="Preliminary risk assessment: Low, Medium, or High",
+    )
+    priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Internal workflow priority score assigned during verification",
+    )
+    verification_1_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who completed Verification 1",
+    )
+    verification_1_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time Verification 1 was completed",
+    )
+    verification_2_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who completed Verification 2",
+    )
+    verification_2_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time Verification 2 was completed",
+    )
+    verification_2_risk_assessment = Column(
+        String(20),
+        nullable=True,
+        comment="Risk assessment recorded during Verification 2",
+    )
+    verification_2_priority_score = Column(
+        Integer,
+        nullable=True,
+        comment="Priority score recorded during Verification 2",
+    )
+    recommendation_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who recommended the application to the director",
+    )
+    recommendation_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time the application was recommended to director",
+    )
+    approval_user_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who approved the application",
+    )
+    approval_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="UTC date and time the application was approved",
+    )
+
     # ---------- Relationships ----------
     ci_application_status = relationship(
         "CIApplicationStatus",
@@ -177,8 +273,38 @@ class CIApplication(BaseModel, Auditable, Versioning):
         back_populates="ci_applications",
         lazy="selectin",
     )
+    assigned_analyst = relationship(
+        "UserProfile",
+        foreign_keys=[assigned_analyst_id],
+        lazy="selectin",
+    )
     facility_nameplate_capacity_unit = relationship(
         "UnitOfMeasure",
+        lazy="selectin",
+    )
+    assigned_analyst = relationship(
+        "UserProfile",
+        foreign_keys=[assigned_analyst_id],
+        lazy="selectin",
+    )
+    verification_1_user = relationship(
+        "UserProfile",
+        foreign_keys=[verification_1_user_id],
+        lazy="selectin",
+    )
+    verification_2_user = relationship(
+        "UserProfile",
+        foreign_keys=[verification_2_user_id],
+        lazy="selectin",
+    )
+    recommendation_user = relationship(
+        "UserProfile",
+        foreign_keys=[recommendation_user_id],
+        lazy="selectin",
+    )
+    approval_user = relationship(
+        "UserProfile",
+        foreign_keys=[approval_user_id],
         lazy="selectin",
     )
     pathways = relationship(
