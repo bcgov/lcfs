@@ -608,7 +608,7 @@ const EditViewCIApplicationBase = () => {
 
 export const EditViewCIApplication = withRole(
   EditViewCIApplicationBase,
-  [roles.ci_applicant, roles.signing_authority, roles.government],
+  [roles.ci_applicant, roles.government],
   ROUTES.DASHBOARD
 )
 EditViewCIApplication.displayName = 'EditViewCIApplication'

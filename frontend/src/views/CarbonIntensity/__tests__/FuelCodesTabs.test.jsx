@@ -70,13 +70,13 @@ describe('FuelCodesTabs', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows the CI applications tab but not My fuel codes for a signing authority', () => {
+  it('does not show the CI applications tab for a signing authority without the CI Applicant role', () => {
     mockHasAnyRole = (...names) => names.includes(roles.signing_authority)
     render(<FuelCodesTabs />, { wrapper })
 
     expect(
-      screen.getByText('carbonIntensity:tabs.ciApplications')
-    ).toBeInTheDocument()
+      screen.queryByText('carbonIntensity:tabs.ciApplications')
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText('carbonIntensity:tabs.myFuelCodes')
     ).not.toBeInTheDocument()
