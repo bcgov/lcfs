@@ -40,6 +40,7 @@ import { ProposedFuelPathwaysStep } from './components/ProposedFuelPathwaysStep'
 import { DocumentsModellingStep } from './components/DocumentsModellingStep'
 import { SignAndSubmitStep } from './components/SignAndSubmitStep'
 import { GovernmentDecisionStep } from './components/GovernmentDecisionStep'
+import { GeneratedFuelCodesSection } from './components/GeneratedFuelCodesSection'
 import { StepStub } from './components/StepStub'
 import { FuelCodesTabs } from './components/FuelCodesTabs'
 import colors from '@/themes/base/colors'
@@ -63,6 +64,7 @@ const EditViewCIApplicationBase = () => {
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [isDocumentEditorOpen, setIsDocumentEditorOpen] = useState(false)
+  const [supplierRequestDate, setSupplierRequestDate] = useState(null)
   const stepFromUrl = (() => {
     const raw = Number.parseInt(searchParams.get('step') ?? '1', 10)
     if (Number.isNaN(raw)) return 0
@@ -117,6 +119,10 @@ const EditViewCIApplicationBase = () => {
     roles.compliance_manager,
     roles.director
   )
+
+  const ciApplicationWithSupplierRequest = supplierRequestDate
+    ? { ...ciApplication, supplierRequestDate }
+    : ciApplication
 
   const handleAccordionToggle = (key) => (_, isOpen) => {
     setExpanded((prev) =>
@@ -379,9 +385,13 @@ const EditViewCIApplicationBase = () => {
     ),
     step5Decision: isSubmittedOrTerminal ? (
       <GovernmentDecisionStep
-        ciApplication={ciApplication}
+        ciApplication={ciApplicationWithSupplierRequest}
         isGovernment={isGovernment}
         readOnly={isDecisionReadOnly}
+        onDocumentUploadClick={() => setIsDocumentEditorOpen(true)}
+        onSupplierRequest={() =>
+          setSupplierRequestDate(new Date().toISOString())
+        }
         showComments={false}
         showTitle={false}
       />
@@ -414,7 +424,7 @@ const EditViewCIApplicationBase = () => {
 
       <CIApplicationProgress
         activeStep={activeStep}
-        ciApplication={ciApplication}
+        ciApplication={ciApplicationWithSupplierRequest}
       />
 
       {!isAdd && ciApplication?.status?.status && (
@@ -436,6 +446,39 @@ const EditViewCIApplicationBase = () => {
           {isGovernment && (
             <BCBox mb={3} data-test="ci-step5-decision-inline">
               {stepBodies.step5Decision}
+            </BCBox>
+          )}
+          {isGovernment && ciApplication?.generatedFuelCodes?.length > 0 && (
+            <BCBox mb={4} data-test="ci-generated-fuel-codes-inline">
+              <Accordion
+                key="generatedFuelCodes"
+                expanded={expanded.includes('generatedFuelCodes')}
+                onChange={handleAccordionToggle('generatedFuelCodes')}
+                data-test="ci-generated-fuel-codes-accordion"
+              >
+                <AccordionSummary
+                  expandIcon={
+                    <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
+                  }
+                >
+                  <BCTypography
+                    style={{ display: 'flex', alignItems: 'center' }}
+                    variant="h6"
+                    color="primary"
+                    component="div"
+                  >
+                    {t('carbonIntensity:step5.generatedFuelCodesHeader')}
+                  </BCTypography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <BCBox p={1}>
+                    <GeneratedFuelCodesSection
+                      ciApplication={ciApplication}
+                      readOnly={ciApplication?.status?.status !== 'Submitted'}
+                    />
+                  </BCBox>
+                </AccordionDetails>
+              </Accordion>
             </BCBox>
           )}
           <BCBox mb={4} data-test="ci-step5-comments-inline">
@@ -565,7 +608,7 @@ const EditViewCIApplicationBase = () => {
 
 export const EditViewCIApplication = withRole(
   EditViewCIApplicationBase,
-  [roles.ci_applicant, roles.signing_authority, roles.government],
+  [roles.ci_applicant, roles.government],
   ROUTES.DASHBOARD
 )
 EditViewCIApplication.displayName = 'EditViewCIApplication'

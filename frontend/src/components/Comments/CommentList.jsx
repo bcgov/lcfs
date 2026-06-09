@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
 import Tooltip from '@mui/material/Tooltip'
 import Chip from '@mui/material/Chip'
+import AppBar from '@mui/material/AppBar'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useTranslation } from 'react-i18next'
 import CommentForm from './CommentForm'
@@ -31,6 +34,7 @@ const CommentList = ({
   const [editCommentId, setEditCommentId] = useState(null)
   const [editCommentText, setEditCommentText] = useState('')
   const [editVisibility, setEditVisibility] = useState('Internal')
+  const [commentFilter, setCommentFilter] = useState('all')
 
   const isGov = hasAnyRole(
     roles.analyst,
@@ -125,10 +129,7 @@ const CommentList = ({
       }
     }
     // Internal-only mode or internal visibility in dual mode
-    if (
-      hasAnyRole(roles.analyst) ||
-      hasAnyRole(roles.compliance_manager)
-    ) {
+    if (hasAnyRole(roles.analyst) || hasAnyRole(roles.compliance_manager)) {
       return t('internalComment:commentToDirector')
     }
     if (hasAnyRole(roles.director)) {
@@ -144,6 +145,19 @@ const CommentList = ({
 
   // Show visibility toggle only for gov users in dual mode
   const showVisibilityToggle = isDualMode && isGov && allowInternalVisibility
+  const showCommentTabs = isDualMode && isGov
+
+  const filteredComments = useMemo(() => {
+    if (!showCommentTabs || commentFilter === 'all') {
+      return comments
+    }
+
+    return comments.filter((comment) => {
+      const commentVisibility =
+        comment.visibility === 'Public' ? 'public' : 'internal'
+      return commentVisibility === commentFilter
+    })
+  }, [comments, commentFilter, showCommentTabs])
 
   return (
     <>
@@ -168,7 +182,42 @@ const CommentList = ({
         mb={1}
         sx={{ backgroundColor: '#f2f2f2' }}
       >
-        {comments.map((comment, index) => (
+        {showCommentTabs && (
+          <BCBox sx={{ backgroundColor: '#fff', p: 2, pb: 1 }}>
+            <AppBar
+              position="static"
+              sx={{ boxShadow: 'none', border: 'none', mb: 3 }}
+            >
+              <Tabs
+                value={commentFilter}
+                onChange={(_, value) => setCommentFilter(value)}
+                aria-label={t('internalComment:commentFilterTabs')}
+                data-test="comment-filter-tabs"
+                sx={{
+                  background: 'rgb(0, 0, 0, 0.08)',
+                  width: { xs: '100%', md: '60%' }
+                }}
+              >
+                <Tab
+                  value="internal"
+                  label={t('internalComment:internalComments')}
+                  data-test="comment-filter-internal"
+                />
+                <Tab
+                  value="public"
+                  label={t('internalComment:publicComments')}
+                  data-test="comment-filter-public"
+                />
+                <Tab
+                  value="all"
+                  label={t('internalComment:allComments')}
+                  data-test="comment-filter-all"
+                />
+              </Tabs>
+            </AppBar>
+          </BCBox>
+        )}
+        {filteredComments.map((comment, index) => (
           <BCBox
             key={comment.internalCommentId}
             sx={{
@@ -177,7 +226,7 @@ const CommentList = ({
               paddingLeft: 2,
               paddingBottom: 1,
               backgroundColor:
-                (comments.length - 1 - index) % 2 === 0
+                (filteredComments.length - 1 - index) % 2 === 0
                   ? 'transparent'
                   : '#ffffff'
             }}
@@ -232,8 +281,14 @@ const CommentList = ({
                       alignItems: 'center'
                     }}
                   >
-                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <BCTypography variant="body2" color="text" component="span">
+                    <BCBox
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
+                      <BCTypography
+                        variant="body2"
+                        color="text"
+                        component="span"
+                      >
                         <CommentTimestamp
                           createDate={comment.createDate}
                           updateDate={comment.updateDate}
@@ -274,7 +329,9 @@ const CommentList = ({
                         </BCTypography>
                       )}
                     </BCBox>
-                    <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BCBox
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
                       {isDualMode && isGov && comment.visibility && (
                         <Chip
                           label={

@@ -23,6 +23,8 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.ci_application.schema import (
     CIApplicationAnalystAssignmentSchema,
     CIApplicationDecisionSchema,
+    CIGeneratedFuelCodeSchema,
+    CIGeneratedFuelCodeUpdateSchema,
     CIApplicationSchema,
     CIApplicationsListSchema,
     CIApplicationUserSchema,
@@ -440,6 +442,56 @@ async def recommend_ci_application_to_director(
 ) -> CIApplicationSchema:
     ci = await validate.validate_access(ci_application_id)
     return await service.recommend_to_director(ci, request.user)
+
+
+@router.post(
+    "/{ci_application_id}/fuel-codes/generate",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def generate_ci_application_fuel_codes(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.generate_fuel_codes(ci, request.user)
+
+
+@router.put(
+    "/{ci_application_id}/fuel-codes/{generated_fuel_code_id}",
+    response_model=CIGeneratedFuelCodeSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def update_ci_application_generated_fuel_code(
+    request: Request,
+    ci_application_id: int,
+    generated_fuel_code_id: str,
+    data: CIGeneratedFuelCodeUpdateSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIGeneratedFuelCodeSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.update_generated_fuel_code(
+        ci, generated_fuel_code_id, data, request.user
+    )
 
 
 # Step 5 comment thread is now served by the shared internal_comments
