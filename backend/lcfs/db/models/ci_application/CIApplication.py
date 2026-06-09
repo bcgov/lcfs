@@ -8,6 +8,7 @@ from sqlalchemy import (
     Table,
     TIMESTAMP,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, Versioning
@@ -154,6 +155,11 @@ class CIApplication(BaseModel, Auditable, Versioning):
         Text,
         nullable=True,
         comment="Free-text description of the CI pathway",
+    )
+    generated_fuel_codes = Column(
+        JSONB,
+        nullable=True,
+        comment="Draft fuel code rows generated from CI pathways for internal review.",
     )
     supporting_document_other = Column(
         String(1000),

@@ -40,8 +40,12 @@ class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
     gov_comment = Column(
         String(1500), comment="Comment from the government to organization"
     )
-    to_organization_id = Column(Integer, ForeignKey("organization.organization_id"))
-    transaction_id = Column(Integer, ForeignKey("transaction.transaction_id"))
+    to_organization_id = Column(
+        Integer, ForeignKey("organization.organization_id"), index=True
+    )
+    transaction_id = Column(
+        Integer, ForeignKey("transaction.transaction_id"), index=True
+    )
     current_status_id = Column(
         Integer, ForeignKey("admin_adjustment_status.admin_adjustment_status_id")
     )
