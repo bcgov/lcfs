@@ -12,5 +12,19 @@
   "edit": "Edit",
   "edited": "Edited",
   "internal": "Internal",
-  "public": "Public"
+  "public": "Public",
+  "log": {
+    "title": "Comment log",
+    "loading": "Loading comments\u2026",
+    "empty": "No comments match the current filters.",
+    "errorTitle": "Could not load comments",
+    "retry": "Retry",
+    "editedOn": "Edited on {{date}}",
+    "filters": {
+      "searchLabel": "Search all comments",
+      "searchPlaceholder": "Search",
+      "categoryLabel": "Category",
+      "yearLabel": "Year"
+    }
+  }
 }

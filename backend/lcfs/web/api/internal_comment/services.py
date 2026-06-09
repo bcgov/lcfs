@@ -124,6 +124,11 @@ class InternalCommentService:
         return None
 
     @service_handler
+    async def get_all_categories(self) -> List[str]:
+        """Return all comment category display names from the DB, ordered by display_order."""
+        return await self.repo.get_all_categories()
+
+    @service_handler
     async def create_internal_comment(
         self, data: InternalCommentCreateSchema
     ) -> InternalCommentResponseSchema:

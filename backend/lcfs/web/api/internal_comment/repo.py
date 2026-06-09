@@ -372,6 +372,14 @@ class InternalCommentRepository:
         return [row[0] for row in result.all()]
 
     @repo_handler
+    async def get_all_categories(self) -> List[str]:
+        """Return all comment category display names ordered by display_order."""
+        result = await self.db.execute(
+            select(CommentCategory.display_name).order_by(CommentCategory.display_order)
+        )
+        return [row[0] for row in result.all()]
+
+    @repo_handler
     async def get_category_id_by_name(self, display_name: str) -> Optional[int]:
         """Look up a ``comment_category`` row id by display name."""
         if not display_name:
@@ -658,13 +666,13 @@ class InternalCommentRepository:
             )
         base_select_from = base_select_from.where(*where_clauses)
 
-        total = (
+        row_total = (
             await self.db.execute(
                 select(func.count()).select_from(base_select_from.subquery())
             )
         ).scalar_one()
 
-        if total == 0:
+        if row_total == 0:
             return ([], 0)
 
         sort_col = (
@@ -673,14 +681,29 @@ class InternalCommentRepository:
             else InternalComment.create_date
         )
         sort_dir = asc if str(sort_order).lower() == "asc" else desc
-        order_by = (
-            sort_dir(sort_col),
-            sort_dir(InternalComment.internal_comment_id),
-        )
 
         offset = max(page - 1, 0) * max(size, 1)
 
-        query = (
+        group_type_expr = func.coalesce(
+            entity_meta.c.entity_type, sa.literal("_comment")
+        )
+        group_id_expr = func.coalesce(
+            entity_meta.c.entity_id, InternalComment.internal_comment_id
+        )
+        group_type = group_type_expr.label("_group_type")
+        group_id = group_id_expr.label("_group_id")
+
+        # Window function: most recent (or oldest) comment date within each
+        # entity group.  This is the conversation sort key.  Pagination happens
+        # against distinct groups below, then expands all comments for those
+        # selected groups so a conversation does not get split at page edges.
+        group_latest = (
+            func.max(sort_col)
+            .over(partition_by=[group_type_expr, group_id_expr])
+            .label("_group_latest")
+        )
+
+        inner_q = (
             select(
                 InternalComment.internal_comment_id,
                 InternalComment.comment,
@@ -699,6 +722,9 @@ class InternalCommentRepository:
                 full_name_col,
                 entity_meta.c.entity_type,
                 entity_meta.c.entity_id,
+                group_type,
+                group_id,
+                group_latest,
             )
             .select_from(InternalComment)
             .join(
@@ -719,9 +745,70 @@ class InternalCommentRepository:
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
             .where(*where_clauses)
-            .order_by(*order_by)
+        ).subquery("inner_q")
+
+        conversation_groups = (
+            select(
+                inner_q.c._group_type,
+                inner_q.c._group_id,
+                inner_q.c._group_latest,
+            )
+            .distinct()
+            .subquery("conversation_groups")
+        )
+
+        total = (
+            await self.db.execute(select(func.count()).select_from(conversation_groups))
+        ).scalar_one()
+
+        paged_groups = (
+            select(
+                conversation_groups.c._group_type,
+                conversation_groups.c._group_id,
+                conversation_groups.c._group_latest,
+            )
+            .order_by(
+                sort_dir(conversation_groups.c._group_latest),
+                asc(conversation_groups.c._group_type),
+                asc(conversation_groups.c._group_id),
+            )
             .limit(size)
             .offset(offset)
+            .subquery("paged_groups")
+        )
+
+        query = (
+            select(
+                inner_q.c.internal_comment_id,
+                inner_q.c.comment,
+                inner_q.c.plain_text_comment,
+                inner_q.c.organization_id,
+                inner_q.c.compliance_year,
+                inner_q.c.visibility,
+                inner_q.c.audience_scope,
+                inner_q.c.create_user,
+                inner_q.c.create_date,
+                inner_q.c.update_date,
+                inner_q.c.organization_name,
+                inner_q.c.category,
+                inner_q.c.full_name,
+                inner_q.c.entity_type,
+                inner_q.c.entity_id,
+            ).join(
+                paged_groups,
+                (paged_groups.c._group_type == inner_q.c._group_type)
+                & (paged_groups.c._group_id == inner_q.c._group_id),
+            )
+            # 1. Sort selected conversations by activity.
+            # 2. Keep rows in the same conversation together.
+            # 3. Within each conversation, show comments oldest-first.
+            .order_by(
+                sort_dir(paged_groups.c._group_latest),
+                asc(inner_q.c.entity_type).nulls_last(),
+                asc(inner_q.c.entity_id).nulls_last(),
+                asc(inner_q.c.create_date),
+                asc(inner_q.c.internal_comment_id),
+            )
         )
 
         rows = (await self.db.execute(query)).mappings().all()

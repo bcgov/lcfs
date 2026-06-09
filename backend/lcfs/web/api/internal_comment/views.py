@@ -18,6 +18,7 @@ from .schema import (
     OrganizationCommentsFilterSchema,
     OrganizationCommentsResponseSchema,
 )
+from typing import List
 from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
@@ -87,6 +88,20 @@ async def get_organization_comments(
         size=size,
         filters=filters,
     )
+
+
+@router.get(
+    "/categories",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+async def get_comment_categories(
+    request: Request,
+    service: InternalCommentService = Depends(),
+):
+    """Return all comment category display names ordered by display_order."""
+    return await service.get_all_categories()
 
 
 @router.post(
