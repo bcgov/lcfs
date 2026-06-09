@@ -1273,8 +1273,40 @@ def _create_refresh_trigger() -> None:
     )
 
 
+# FK join-keys used by the transaction materialized views (join to organization
+# on to_organization_id; anti-join on transaction_id in the standalone branch).
+# admin_adjustment / initiative_agreement historically shipped without these
+# indexes; index them alongside the new aggregator_issuance table so the
+# government-issuance siblings are consistent. Names follow the metadata
+# naming convention (ix_%(table_name)s_%(column_0_name)s) so they stay in sync
+# with the index=True flags on the models.
+_FK_INDEXES = [
+    ("ix_aggregator_issuance_to_organization_id", "aggregator_issuance", "to_organization_id"),
+    ("ix_aggregator_issuance_transaction_id", "aggregator_issuance", "transaction_id"),
+    ("ix_admin_adjustment_to_organization_id", "admin_adjustment", "to_organization_id"),
+    ("ix_admin_adjustment_transaction_id", "admin_adjustment", "transaction_id"),
+    ("ix_initiative_agreement_to_organization_id", "initiative_agreement", "to_organization_id"),
+    ("ix_initiative_agreement_transaction_id", "initiative_agreement", "transaction_id"),
+]
+
+
+def _create_fk_indexes() -> None:
+    for name, table, column in _FK_INDEXES:
+        op.create_index(name, table, [column])
+
+
+def _drop_fk_indexes() -> None:
+    # aggregator_issuance indexes are dropped with the table; only the
+    # sibling-table indexes need to be removed explicitly here.
+    for name, table, column in _FK_INDEXES:
+        if table == "aggregator_issuance":
+            continue
+        op.drop_index(name, table_name=table)
+
+
 def upgrade() -> None:
     _create_aggregator_issuance_table()
+    _create_fk_indexes()
     _exec_script(NEW_MV_DDL)
     _create_refresh_trigger()
 
@@ -1286,5 +1318,6 @@ def downgrade() -> None:
     )
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_credit_ledger CASCADE;")
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate CASCADE;")
+    _drop_fk_indexes()
     op.drop_table("aggregator_issuance")
     _exec_script(OLD_MV_DDL)
