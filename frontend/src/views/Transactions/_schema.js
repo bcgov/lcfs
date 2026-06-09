@@ -15,7 +15,8 @@ const prefixMap = {
   Transfer: 'CT',
   AdminAdjustment: 'AA',
   InitiativeAgreement: 'IA',
-  ComplianceReport: 'CR'
+  ComplianceReport: 'CR',
+  AggregatorIssuance: 'AG'
 }
 
 export const transactionsColDefs = (t) => [
@@ -124,7 +125,8 @@ export const transactionsColDefs = (t) => [
           { transactionType: 'Admin Adjustment', type: 'AdminAdjustment' },
           { transactionType: 'Transfer', type: 'Transfer' },
           { transactionType: 'Initiative Agreement', type: 'InitiativeAgreement' },
-          { transactionType: 'Legacy Transaction', type: 'StandaloneTransaction' }
+          { transactionType: 'Legacy Transaction', type: 'StandaloneTransaction' },
+          { transactionType: 'Aggregator Issuance', type: 'AggregatorIssuance' }
         ],
         isLoading: false
       })
