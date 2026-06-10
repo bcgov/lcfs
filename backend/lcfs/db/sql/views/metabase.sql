@@ -2640,6 +2640,130 @@ ORDER BY
 
 GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
 -- ==========================================
+-- FSE Base View YoY Optimised
+-- ==========================================
+-- Replaces v_fse_reporting_base_pref chain with flat CTEs for performance.
+DROP VIEW IF EXISTS vw_fse_base CASCADE;
+CREATE OR REPLACE VIEW vw_fse_base AS
+WITH
+target_reports AS (
+    SELECT DISTINCT ON (cr.compliance_report_group_uuid)
+        cr.compliance_report_id,
+        cr.compliance_report_group_uuid,
+        cr.organization_id,
+        cr.version,
+        cr.nickname          AS report_type,
+        cr.supplemental_initiator,
+        crs.status::text     AS report_status,
+        cr.compliance_period_id
+    FROM compliance_report cr
+    JOIN compliance_report_status crs
+        ON crs.compliance_report_status_id = cr.current_status_id
+    WHERE crs.status != 'Draft'
+    ORDER BY cr.compliance_report_group_uuid, cr.version DESC
+),
+best_crce AS (
+    SELECT DISTINCT ON (
+        crce.compliance_report_group_uuid,
+        crce.organization_id,
+        crce.charging_equipment_id,
+        crce.charging_equipment_version
+    )
+        crce.compliance_report_group_uuid,
+        crce.organization_id,
+        crce.charging_equipment_id,
+        crce.charging_equipment_version,
+        crce.supply_from_date,
+        crce.supply_to_date,
+        crce.kwh_usage,
+        crce.compliance_notes
+    FROM compliance_report_charging_equipment crce
+    JOIN target_reports tr
+        ON tr.compliance_report_group_uuid = crce.compliance_report_group_uuid
+    ORDER BY
+        crce.compliance_report_group_uuid,
+        crce.organization_id,
+        crce.charging_equipment_id,
+        crce.charging_equipment_version,
+        (crce.is_active IS TRUE) DESC,
+        crce.version DESC,
+        crce.charging_equipment_compliance_id DESC
+)
+SELECT
+    tr.compliance_period_id                       AS "Compliance Period ID",
+    cp.description                                AS "Compliance Year",
+    tr.organization_id                            AS "Organization ID",
+    o.name                                        AS "Organization",
+    o.operating_name                              AS "Organization Operating Name",
+    (ls.site_code || '-' || ce.equipment_number)  AS "Registration Number",
+    tr.compliance_report_id                       AS "Compliance Report ID",
+    tr.compliance_report_group_uuid               AS "Compliance Report Group UUID",
+    tr.version                                    AS "Report Version",
+    tr.report_type                                AS "Report Type",
+    tr.supplemental_initiator                     AS "Supplemental Initiator",
+    tr.report_status                              AS "Report Status",
+    ls.site_name                                  AS "Site Name",
+    ls.street_address                             AS "Street Address",
+    ls.city                                       AS "City",
+    ls.postal_code                                AS "Postal Code",
+    ls.latitude                                   AS "Latitude",
+    ls.longitude                                  AS "Longitude",
+    bc.supply_from_date                           AS "Supply From Date",
+    bc.supply_to_date                             AS "Supply To Date",
+    bc.kwh_usage                                  AS "kWh Usage",
+    ce.serial_number                              AS "Serial #",
+    ce.manufacturer                               AS "Manufacturer",
+    ce.model                                      AS "Model",
+    (
+        SELECT loe.name
+        FROM level_of_equipment loe
+        WHERE loe.level_of_equipment_id = ce.level_of_equipment_id
+    )                                             AS "Level of Equipment",
+    ce.ports                                      AS "Ports",
+    COALESCE((
+        SELECT string_agg(eut.type, ', ' ORDER BY eut.type)
+        FROM charging_equipment_intended_use_association ceiu
+        JOIN end_use_type eut ON eut.end_use_type_id = ceiu.end_use_type_id
+        WHERE ceiu.charging_equipment_id = ce.charging_equipment_id
+    ), '')                                        AS "Intended Use",
+    COALESCE((
+        SELECT string_agg(eut2.type_name, ', ' ORDER BY eut2.type_name)
+        FROM charging_equipment_intended_user_association ceiu2
+        JOIN end_user_type eut2 ON eut2.end_user_type_id = ceiu2.end_user_type_id
+        WHERE ceiu2.charging_equipment_id = ce.charging_equipment_id
+    ), '')                                        AS "Intended Users",
+    ls.allocating_organization_name               AS "Allocating Organization",
+    ce.notes                                      AS "Equipment Notes",
+    bc.compliance_notes                           AS "Compliance Notes"
+FROM best_crce bc
+JOIN target_reports tr
+    ON tr.compliance_report_group_uuid = bc.compliance_report_group_uuid
+JOIN organization o
+    ON o.organization_id = tr.organization_id
+JOIN compliance_period cp
+    ON cp.compliance_period_id = tr.compliance_period_id
+JOIN charging_equipment ce
+    ON ce.charging_equipment_id = bc.charging_equipment_id
+   AND ce.version              = bc.charging_equipment_version
+JOIN charging_site cs_fk
+    ON cs_fk.charging_site_id = ce.charging_site_id
+JOIN LATERAL (
+    SELECT cs.site_code,
+           cs.site_name,
+           cs.street_address,
+           cs.city,
+           cs.postal_code,
+           cs.latitude,
+           cs.longitude,
+           cs.allocating_organization_name
+    FROM charging_site cs
+    WHERE cs.group_uuid = cs_fk.group_uuid
+    ORDER BY cs.version DESC
+    LIMIT 1
+) ls ON TRUE;
+
+GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
+-- ==========================================
 -- Electricity Allocation FSE Match Query
 -- ==========================================
 DROP VIEW IF EXISTS vw_electricity_allocation_fse_match CASCADE;
