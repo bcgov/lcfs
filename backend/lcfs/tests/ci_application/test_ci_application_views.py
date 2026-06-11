@@ -326,9 +326,7 @@ async def test_update_step1_forbidden_for_government(
     set_user_role,
 ):
     set_user_role(RoleEnum.GOVERNMENT)
-    response = await client.put(
-        "/api/ci-applications/10/step1", json=_step1_payload()
-    )
+    response = await client.put("/api/ci-applications/10/step1", json=_step1_payload())
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -477,6 +475,34 @@ async def test_decision_endpoint_rejects_non_terminal_status(
         "/api/ci-applications/10/decision", json={"status": "Recommended"}
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_request_pathway_changes_endpoint_keeps_submitted_workflow(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_user_role,
+):
+    set_user_role(RoleEnum.ANALYST)
+    response_schema = _ci_full_schema(10)
+    response_schema.status = CIApplicationStatusSchema(
+        ci_application_status_id=2,
+        status=CIApplicationStatusEnum.Submitted,
+    )
+    with patch(
+        "lcfs.web.api.ci_application.validation.CIApplicationValidation.validate_access",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "lcfs.web.api.ci_application.services.CIApplicationServices.request_pathway_changes"
+    ) as svc:
+        svc.return_value = response_schema
+        response = await client.post(
+            "/api/ci-applications/10/request-pathway-changes",
+            json={},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"]["status"] == "Submitted"
 
 
 # The legacy /ci-applications/{id}/comments endpoints were retired when

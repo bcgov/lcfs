@@ -223,7 +223,11 @@ export const ProposedFuelPathwaysStep = ({
         <BCTypography variant="subtitle2" sx={{ pb: 1 }}>
           {t('carbonIntensity:step2.descriptionLabel')}
         </BCTypography>
-        <BCTypography variant="caption" color="text.secondary" sx={{ pb: 1, display: 'block' }}>
+        <BCTypography
+          variant="caption"
+          color="text.secondary"
+          sx={{ pb: 1, display: 'block' }}
+        >
           {t('carbonIntensity:step2.descriptionHelp')}
         </BCTypography>
         <TextField
@@ -246,7 +250,9 @@ export const ProposedFuelPathwaysStep = ({
           onClick={handleSave}
           disabled={readOnly || isSaving}
         >
-          {t('carbonIntensity:step2.saveAndProceed')}
+          {ciApplication?.status?.status === 'Submitted'
+            ? t('carbonIntensity:step2.saveSupplementalChanges')
+            : t('carbonIntensity:step2.saveAndProceed')}
         </BCButton>
         {ciApplication?.ciApplicationId && onDelete && (
           <BCButton
