@@ -94,6 +94,9 @@ describe('BCGridBase Component', () => {
   afterEach(() => {
     window.innerHeight = originalInnerHeight
     vi.restoreAllMocks()
+    // vitest 4: restoreAllMocks only affects vi.spyOn spies, so also reset
+    // vi.fn() module mocks (e.g. AgGridReact) back to their factory impls
+    vi.resetAllMocks()
   })
 
   describe('Basic Rendering', () => {
@@ -447,7 +450,8 @@ describe('BCGridBase Component', () => {
       )
 
       await act(async () => {
-        // Wait for initial setup
+        // Wait for the mocked AgGridReact's setTimeout(0) to fire onGridReady
+        await new Promise((resolve) => setTimeout(resolve, 0))
       })
 
       // Trigger resize event
