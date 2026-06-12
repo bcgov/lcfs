@@ -12,18 +12,22 @@ import {
 
 // Mock Leaflet
 vi.mock('leaflet', () => {
-  const mockDefaultIcon = vi.fn().mockImplementation(() => ({
-    type: 'default-icon'
-  }))
+  const mockDefaultIcon = vi.fn().mockImplementation(function () {
+    return {
+      type: 'default-icon'
+    }
+  })
 
-  const mockIcon = vi.fn().mockImplementation((options) => ({
-    options,
-    iconUrl: options.iconUrl,
-    shadowUrl: options.shadowUrl,
-    iconSize: options.iconSize,
-    iconAnchor: options.iconAnchor,
-    popupAnchor: options.popupAnchor
-  }))
+  const mockIcon = vi.fn().mockImplementation(function (options) {
+    return {
+      options,
+      iconUrl: options.iconUrl,
+      shadowUrl: options.shadowUrl,
+      iconSize: options.iconSize,
+      iconAnchor: options.iconAnchor,
+      popupAnchor: options.popupAnchor
+    }
+  })
 
   mockDefaultIcon.prototype = {
     _getIconUrl: vi.fn()
