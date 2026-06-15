@@ -36,7 +36,6 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.Role import Role, RoleEnum
@@ -133,13 +132,6 @@ class CIApplicationRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
-    async def get_units_of_measure(self) -> Sequence[UnitOfMeasure]:
-        result = await self.db.execute(
-            select(UnitOfMeasure).order_by(UnitOfMeasure.uom_id)
-        )
-        return result.scalars().all()
-
-    @repo_handler
     async def get_pathway_application_types(
         self,
     ) -> Sequence[PathwayApplicationType]:
@@ -203,7 +195,6 @@ class CIApplicationRepository:
                     Organization.org_address
                 ),
                 selectinload(CIApplication.ci_application_status),
-                selectinload(CIApplication.facility_nameplate_capacity_unit),
                 selectinload(CIApplication.assigned_analyst),
                 selectinload(CIApplication.verification_1_user),
                 selectinload(CIApplication.verification_2_user),
