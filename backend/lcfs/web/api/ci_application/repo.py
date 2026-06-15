@@ -209,6 +209,7 @@ class CIApplicationRepository:
                 selectinload(CIApplication.verification_2_user),
                 selectinload(CIApplication.recommendation_user),
                 selectinload(CIApplication.approval_user),
+                selectinload(CIApplication.history_records),
                 selectinload(CIApplication.pathways).selectinload(
                     Pathway.application_type
                 ),
@@ -350,6 +351,7 @@ class CIApplicationRepository:
         )
         self.db.add(history)
         await self.db.flush()
+        await self.db.refresh(ci_application, ["history_records"])
         return history
 
     # Step 5 comment thread now lives in the shared internal_comments

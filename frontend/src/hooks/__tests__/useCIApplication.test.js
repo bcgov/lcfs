@@ -10,6 +10,7 @@ import {
   useGetCIApplication,
   useGetCIApplications,
   useRecordCIDecision,
+  useRequestCIApplicationPathwayChanges,
   useSubmitCIApplication,
   useUpdateCIApplicationStep1
 } from '../useCIApplication'
@@ -298,6 +299,33 @@ describe('useCIApplication hooks', () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ['ci-applications']
       })
+    })
+  })
+
+  describe('useRequestCIApplicationPathwayChanges', () => {
+    it('POSTs the supplemental pathway request and updates the detail cache', async () => {
+      const submitted = {
+        ciApplicationId: 12,
+        status: { status: 'Submitted' },
+        pathwayChangesRequestedAt: '2026-06-10T10:00:00Z'
+      }
+      mockPost.mockResolvedValue({ data: submitted })
+
+      const { result } = renderHook(
+        () => useRequestCIApplicationPathwayChanges(12),
+        { wrapper }
+      )
+      const out = await result.current.mutateAsync()
+
+      expect(mockPost).toHaveBeenCalledWith(
+        '/ci-applications/12/request-pathway-changes',
+        {}
+      )
+      expect(out).toEqual(submitted)
+      expect(mockSetQueryData).toHaveBeenCalledWith(
+        ['ci-application', '12'],
+        submitted
+      )
     })
   })
 
