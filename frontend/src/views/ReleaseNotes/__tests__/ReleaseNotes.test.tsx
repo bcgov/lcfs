@@ -109,7 +109,7 @@ describe('ReleaseNotes', () => {
 
     await waitFor(() => {
       expect(screen.getByText('v1.0.0')).toBeInTheDocument()
-      expect(screen.getByText('June 12, 2026')).toBeInTheDocument()
+      expect(screen.getByText('Jun 12, 2026')).toBeInTheDocument()
     })
   })
 
@@ -156,15 +156,13 @@ describe('ReleaseNotes', () => {
     })
   })
 
-  it('renders contributor chips with GitHub profile links', async () => {
+  it('does not render contributor chips (feature removed)', async () => {
     mockFetch([mockRelease])
     render(<ReleaseNotes />, { wrapper })
 
     await waitFor(() => {
-      const dev1Link = screen.getByText('@dev1').closest('a')
-      expect(dev1Link).toHaveAttribute('href', 'https://github.com/dev1')
-      expect(dev1Link).toHaveAttribute('target', '_blank')
-      expect(dev1Link).toHaveAttribute('rel', 'noopener noreferrer')
+      expect(screen.queryByText('@dev1')).not.toBeInTheDocument()
+      expect(screen.queryByText('@dev2')).not.toBeInTheDocument()
     })
   })
 

@@ -343,7 +343,7 @@ export const ReleaseNotes = () => {
 
       {/* loading */}
       {isLoading && (
-        <Stack spacing={2} data-testid="release-notes-loading">
+        <Stack spacing={2} data-test="release-notes-loading">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton
               key={i}
@@ -406,7 +406,7 @@ export const ReleaseNotes = () => {
                   onChange={handleToggle(panelId, release.tag)}
                   elevation={0}
                   disableGutters
-                  data-testid={`release-accordion-${release.tag}`}
+                  data-test={`release-accordion-${release.tag}`}
                   sx={{
                     border: '1px solid',
                     borderColor: isOpen ? 'primary.main' : '#8c8c8c',
