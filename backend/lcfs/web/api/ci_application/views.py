@@ -327,7 +327,14 @@ async def submit_ci_application(
     response_model=CIApplicationSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.DIRECTOR])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
 async def record_government_decision(
     request: Request,
     ci_application_id: int,
@@ -335,7 +342,7 @@ async def record_government_decision(
     service: CIApplicationServices = Depends(),
     validate: CIApplicationValidation = Depends(),
 ) -> CIApplicationSchema:
-    """Step 5 — Government decision (Completed or Withdrawn)."""
+    """Step 5 — Government decision and status transitions."""
     ci = await validate.validate_access(ci_application_id)
     is_government = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
     return await service.record_decision(ci, data, request.user, is_government)
@@ -442,6 +449,29 @@ async def recommend_ci_application_to_director(
 ) -> CIApplicationSchema:
     ci = await validate.validate_access(ci_application_id)
     return await service.recommend_to_director(ci, request.user)
+
+
+@router.post(
+    "/{ci_application_id}/request-pathway-changes",
+    response_model=CIApplicationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    ]
+)
+async def request_ci_application_pathway_changes(
+    request: Request,
+    ci_application_id: int,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> CIApplicationSchema:
+    ci = await validate.validate_access(ci_application_id)
+    return await service.request_pathway_changes(ci, request.user)
 
 
 @router.post(

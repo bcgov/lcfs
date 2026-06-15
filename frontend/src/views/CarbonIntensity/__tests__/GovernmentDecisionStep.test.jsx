@@ -19,6 +19,7 @@ const mockRecordDecision = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification1 = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification2 = vi.fn().mockResolvedValue(null)
 const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
+const mockRequestPathwayChanges = vi.fn().mockResolvedValue(null)
 const mockGenerateFuelCodes = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
@@ -32,6 +33,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
   })),
   useRecommendCIApplication: vi.fn(() => ({
     mutateAsync: mockRecommendToDirector,
+    isPending: false
+  })),
+  useRequestCIApplicationPathwayChanges: vi.fn(() => ({
+    mutateAsync: mockRequestPathwayChanges,
     isPending: false
   })),
   useGenerateCIApplicationFuelCodes: vi.fn(() => ({
@@ -298,7 +303,7 @@ describe('GovernmentDecisionStep', () => {
     expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
   })
 
-  it('shows only director actions on Recommended applications', () => {
+  it('shows director actions and Set as withdrawn on Recommended applications', () => {
     mockUserRoles = [{ name: roles.director }]
     render(
       <GovernmentDecisionStep
@@ -316,9 +321,7 @@ describe('GovernmentDecisionStep', () => {
     expect(
       screen.queryByTestId('ci-request-pathway-changes-btn')
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId('ci-step5-withdraw-btn')
-    ).not.toBeInTheDocument()
+    expect(screen.getByTestId('ci-step5-withdraw-btn')).toBeInTheDocument()
   })
 
   it.each([
@@ -378,7 +381,52 @@ describe('GovernmentDecisionStep', () => {
     )
   })
 
-  it('records Draft when requesting pathway changes', async () => {
+  it('shows only Reactivate application workflow action when Withdrawn', async () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, status: { status: 'Withdrawn' } }}
+        isGovernment={true}
+        readOnly={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-step5-reactivate-btn')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-step5-withdraw-btn')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ci-approve-btn')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-verification-1-complete-btn')
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('ci-step5-reactivate-btn'))
+    await waitFor(() =>
+      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Submitted' })
+    )
+  })
+
+  it('shows no Withdrawn or Reactivate action after approval', () => {
+    mockUserRoles = [{ name: roles.director }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, status: { status: 'Completed' } }}
+        isGovernment={true}
+        readOnly={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-step5-withdraw-btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-step5-reactivate-btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('requests supplemental pathway changes without recording a Draft decision', async () => {
     mockUserRoles = [{ name: roles.analyst }]
     const onSupplierRequest = vi.fn()
     render(
@@ -396,8 +444,9 @@ describe('GovernmentDecisionStep', () => {
     ).not.toBeDisabled()
     expect(onSupplierRequest).toHaveBeenCalledWith('pathwayChanges')
     await waitFor(() =>
-      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Draft' })
+      expect(mockRequestPathwayChanges).toHaveBeenCalledTimes(1)
     )
+    expect(mockRecordDecision).not.toHaveBeenCalled()
   })
 
   it('keeps documentation and pathway request buttons active at the same time', () => {
@@ -430,9 +479,7 @@ describe('GovernmentDecisionStep', () => {
 
     fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
 
-    expect(
-      screen.getByTestId('ci-request-documentation-btn')
-    ).toBeDisabled()
+    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
     expect(
       screen.getByTestId('ci-request-pathway-changes-btn')
     ).not.toBeDisabled()

@@ -46,6 +46,7 @@ const getSupplierRequestDate = (ciApplication) =>
   ciApplication?.supplierRequestDate ||
   ciApplication?.requestFurtherDocumentationDate ||
   ciApplication?.requestDocumentationDate ||
+  ciApplication?.pathwayChangesRequestedAt ||
   ciApplication?.pathwayChangesRequestedDate
 
 const riskLabel = (risk) => (risk === 'Medium' ? 'Moderate' : risk)
@@ -370,7 +371,8 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
 
   if (
     !ciApplication ||
-    (ciApplication?.status?.status === 'Draft' && !getSupplierRequestDate(ciApplication))
+    (ciApplication?.status?.status === 'Draft' &&
+      !getSupplierRequestDate(ciApplication))
   ) {
     return (
       <Stack direction="row" sx={{ mb: 3, mt: 2 }}>

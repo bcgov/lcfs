@@ -381,9 +381,10 @@ class CIApplicationSchema(BaseSchema):
     # Step 2
     pathway_description: Optional[str] = None
     pathways: List[PathwaySchema] = Field(default_factory=list)
-    generated_fuel_codes: List[CIGeneratedFuelCodeSchema] = Field(
-        default_factory=list
-    )
+    pathway_changes_requested_at: Optional[datetime] = None
+    pathway_changes_requested_by: Optional[str] = None
+    pathway_changelog: List[Dict[str, Any]] = Field(default_factory=list)
+    generated_fuel_codes: List[CIGeneratedFuelCodeSchema] = Field(default_factory=list)
 
     # Reserved for later steps — surfaced on read so the UI can pre-fill any
     # values previously persisted by other developers / future steps.
@@ -495,9 +496,9 @@ class CIApplicationDecisionSchema(BaseSchema):
     """
     Payload for ``POST /ci-applications/{id}/decision``.
 
-    Governments transition a Submitted application into one of the two
-    terminal states. An optional comment is captured alongside the
-    decision and surfaced in the comments thread.
+    Government users approve, withdraw, reactivate, or return an application
+    to analysts. An optional comment is captured alongside the decision and
+    surfaced in the comments thread.
     """
 
     status: CIApplicationStatusEnum
@@ -507,13 +508,12 @@ class CIApplicationDecisionSchema(BaseSchema):
     @classmethod
     def _terminal_only(cls, value: CIApplicationStatusEnum):
         if value not in {
-            CIApplicationStatusEnum.Draft,
             CIApplicationStatusEnum.Submitted,
             CIApplicationStatusEnum.Completed,
             CIApplicationStatusEnum.Withdrawn,
         }:
             raise ValueError(
-                "Decision status must be Draft, Submitted, Completed or Withdrawn."
+                "Decision status must be Submitted, Completed or Withdrawn."
             )
         return value
 
