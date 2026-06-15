@@ -104,9 +104,16 @@ export const ProposedFuelPathwaysStep = ({
         return { add: [createEmptyRow()] }
       case 'duplicate':
         return { add: [{ ...params.data, id: uuid(), pathwayId: null }] }
-      case 'delete':
-        params.api.applyTransaction({ remove: [params.data] })
+      case 'delete': {
+        // Remove via the controlled rowData prop (read the live grid rows, then
+        // drop the deleted one) rather than a bare transaction. This keeps the
+        // grid, the rowData prop, and the autoHeight calc in sync — a
+        // transaction-only remove leaves the grid sized for the old row count.
+        const rows = []
+        params.api.forEachNode((node) => rows.push(node.data))
+        setRowData(rows.filter((r) => r.id !== params.data.id))
         return null
+      }
       default:
         return null
     }
