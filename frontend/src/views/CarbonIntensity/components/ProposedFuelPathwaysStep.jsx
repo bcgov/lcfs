@@ -74,11 +74,10 @@ export const ProposedFuelPathwaysStep = ({
 
   const onCellValueChanged = useCallback(
     (params) => {
-      setRowData((prev) =>
-        prev.map((row) =>
-          row.id === params.data.id ? { ...params.data } : row
-        )
-      )
+      // ag-grid owns the row data (rows are added/removed via transactions);
+      // mirroring edits back into React state re-syncs the grid to a stale
+      // rowData prop, which drops transaction-added rows. Only the per-row
+      // error state needs updating here.
       setErrors((prev) => {
         if (!prev[params.data.id]) return prev
         const applicationTypes = optionsData?.pathwayApplicationTypes || []
@@ -96,35 +95,21 @@ export const ProposedFuelPathwaysStep = ({
     [optionsData]
   )
 
-  const onAction = useCallback(async (action, params) => {
+  // ag-grid is the source of truth for rows; BCGridEditor applies the returned
+  // transaction and the grid is read back via collectGridRows() on save. State
+  // is NOT mirrored here — doing so adds each row twice (state + transaction).
+  const onAction = useCallback((action, params) => {
     switch (action) {
-      case 'add': {
-        const newRow = createEmptyRow()
-        // Mirror the grid transaction into React state — otherwise the next
-        // re-render makes ag-grid re-sync to the stale rowData prop and the
-        // newly-added row vanishes from the grid.
-        setRowData((prev) => [...prev, newRow])
-        return { add: [newRow] }
-      }
-      case 'duplicate': {
-        const original = params.data
-        const copy = { ...original, id: uuid(), pathwayId: null }
-        setRowData((prev) => [...prev, copy])
-        return { add: [copy] }
-      }
+      case 'add':
+        return { add: [createEmptyRow()] }
+      case 'duplicate':
+        return { add: [{ ...params.data, id: uuid(), pathwayId: null }] }
       case 'delete':
         params.api.applyTransaction({ remove: [params.data] })
-        setRowData((prev) => prev.filter((r) => r.id !== params.data.id))
         return null
       default:
         return null
     }
-  }, [])
-
-  const handleAddRow = useCallback(() => {
-    const newRow = createEmptyRow()
-    setRowData((prev) => [...prev, newRow])
-    gridRef.current?.api?.applyTransaction({ add: [newRow] })
   }, [])
 
   const collectGridRows = () => {
@@ -208,7 +193,6 @@ export const ProposedFuelPathwaysStep = ({
         onCellValueChanged={onCellValueChanged}
         onAction={onAction}
         showAddRowsButton={canEdit}
-        onAddRows={handleAddRow}
         context={{ errors }}
         showMandatoryColumns={canEdit}
         getRowId={(params) => params.data.id}
