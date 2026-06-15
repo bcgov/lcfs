@@ -372,6 +372,7 @@ const EditViewCIApplicationBase = () => {
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
         readOnly={!isDraft}
+        showTitle={false}
       />
     ) : (
       <StepStub titleKey="carbonIntensity:steps.step3" />

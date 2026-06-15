@@ -6,7 +6,6 @@ import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import colors from '@/themes/base/colors'
 
 import {
   apiToRow,
@@ -201,10 +200,6 @@ export const ProposedFuelPathwaysStep = ({
 
   return (
     <Box>
-      <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
-        {t('carbonIntensity:step2.title')}
-      </BCTypography>
-
       <BCGridEditor
         gridRef={gridRef}
         columnDefs={columnDefs}

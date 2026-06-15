@@ -235,16 +235,14 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
       field: 'proposedCi',
       headerName: i18n.t('carbonIntensity:step2.proposedCi'),
       headerComponent: canEdit ? RequiredHeader : undefined,
-      editable: lockedOnRenewal,
+      // Proposed CI must stay editable for both New and Renewal applications
+      // (ticket #4532) — it is never carried over from the existing fuel code.
+      editable: canEdit,
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: { precision: 2, showStepperButtons: false },
       type: 'numericColumn',
       cellRenderer: renderNumberPlaceholder,
-      cellStyle: (params) => {
-        const base = cellErrorStyle(params)
-        if (isRenewal(params)) return { ...base, backgroundColor: '#f5f5f5' }
-        return base
-      },
+      cellStyle: cellErrorStyle,
       minWidth: 180
     },
     {
