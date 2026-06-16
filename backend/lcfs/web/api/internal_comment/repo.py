@@ -440,10 +440,12 @@ class InternalCommentRepository:
         org_id = (await self.db.execute(stmt)).scalar_one_or_none()
         return (org_id, None)
 
-    def _entity_meta_subquery(self):
+    def _entity_meta_subquery(self, organization_id: Optional[int] = None):
         """
         Per ``internal_comment_id``, choose one (entity_type, entity_id,
         live_org_id, live_year) tuple via ``DISTINCT ON``.
+
+        Pass *organization_id* to pre-filter rows to that org only.
         """
         cp_year = case(
             (
@@ -552,8 +554,52 @@ class InternalCommentRepository:
                 CIApplication.ci_application_id
                 == CIApplicationInternalComment.ci_application_id,
             )
+            .where(
+                *(
+                    [
+                        or_(
+                            Transfer.to_organization_id == organization_id,
+                            InitiativeAgreement.to_organization_id == organization_id,
+                            AdminAdjustment.to_organization_id == organization_id,
+                            ComplianceReport.organization_id == organization_id,
+                            CIApplication.organization_id == organization_id,
+                        )
+                    ]
+                    if organization_id is not None
+                    else []
+                )
+            )
             .distinct(InternalComment.internal_comment_id)
-            .order_by(InternalComment.internal_comment_id)
+            .order_by(
+                InternalComment.internal_comment_id,
+                # Tiebreaker: deterministic entity-type priority for comments
+                # linked to multiple entities (e.g. via copy_internal_comments).
+                case(
+                    (TransferInternalComment.transfer_id.isnot(None), 1),
+                    (
+                        InitiativeAgreementInternalComment.initiative_agreement_id.isnot(
+                            None
+                        ),
+                        2,
+                    ),
+                    (AdminAdjustmentInternalComment.admin_adjustment_id.isnot(None), 3),
+                    (
+                        ComplianceReportInternalComment.compliance_report_id.isnot(
+                            None
+                        ),
+                        4,
+                    ),
+                    (CIApplicationInternalComment.ci_application_id.isnot(None), 5),
+                    else_=6,
+                ),
+                func.coalesce(
+                    TransferInternalComment.transfer_id,
+                    InitiativeAgreementInternalComment.initiative_agreement_id,
+                    AdminAdjustmentInternalComment.admin_adjustment_id,
+                    ComplianceReportInternalComment.compliance_report_id,
+                    CIApplicationInternalComment.ci_application_id,
+                ),
+            )
             .subquery()
         )
 
@@ -580,9 +626,9 @@ class InternalCommentRepository:
         also matches ``organization.name``/``operating_name``, and with
         ``category='Person'`` it also matches the author's name / email.
         """
-        entity_meta = self._entity_meta_subquery()
+        entity_meta = self._entity_meta_subquery(organization_id)
 
-        where_clauses = [entity_meta.c.live_org_id == organization_id]
+        where_clauses = []
         if visibility_filter:
             where_clauses.append(InternalComment.visibility == visibility_filter)
         if compliance_year is not None:
@@ -665,15 +711,6 @@ class InternalCommentRepository:
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
         base_select_from = base_select_from.where(*where_clauses)
-
-        row_total = (
-            await self.db.execute(
-                select(func.count()).select_from(base_select_from.subquery())
-            )
-        ).scalar_one()
-
-        if row_total == 0:
-            return ([], 0)
 
         sort_col = (
             InternalComment.update_date
@@ -760,6 +797,9 @@ class InternalCommentRepository:
         total = (
             await self.db.execute(select(func.count()).select_from(conversation_groups))
         ).scalar_one()
+
+        if total == 0:
+            return ([], 0)
 
         paged_groups = (
             select(

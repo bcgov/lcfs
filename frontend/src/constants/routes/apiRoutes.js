@@ -46,6 +46,7 @@ export const apiRoutes = {
   organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
   organizationComments: '/organizations/:orgID/comments',
   commentCategories: '/internal_comments/categories',
+  internalComment: '/internal_comments/:commentId',
   creditMarketAuditLogsList: '/organizations/credit-market-audit-logs/list',
 
   // transactions

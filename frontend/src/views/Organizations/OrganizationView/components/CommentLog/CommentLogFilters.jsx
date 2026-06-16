@@ -1,9 +1,10 @@
-import { useId, useMemo } from 'react'
+import { useId, useMemo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Autocomplete, Box, InputAdornment, TextField } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
+import { useDebounce } from '@/utils/debounce'
 
 import { FilterToolbar } from '@/components/FilterToolbar'
 
@@ -22,6 +23,19 @@ export const CommentLogFilters = ({
 }) => {
   const { t } = useTranslation(['internalComment'])
   const searchId = useId()
+
+  const [localSearch, setLocalSearch] = useState(filters.search)
+  const debouncedSearch = useDebounce(localSearch, 300)
+
+  // Sync local input when filter is cleared externally (e.g. "Clear all")
+  useEffect(() => {
+    setLocalSearch(filters.search)
+  }, [filters.search])
+
+  // Commit debounced value to the shared filter state
+  useEffect(() => {
+    setFilter('search', debouncedSearch)
+  }, [debouncedSearch, setFilter])
 
   const categoryOptions = useMemo(() => buildOptions(categories), [categories])
   const yearOptions = useMemo(() => buildOptions(years), [years])
@@ -102,8 +116,8 @@ export const CommentLogFilters = ({
               data-test="comment-log-search"
               size="small"
               placeholder={t('internalComment:log.filters.searchPlaceholder')}
-              value={filters.search}
-              onChange={(e) => setFilter('search', e.target.value)}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
               inputProps={{ maxLength: 500 }}
               InputProps={{
                 startAdornment: (

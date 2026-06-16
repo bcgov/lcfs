@@ -282,7 +282,7 @@ export const useEditOrganizationComment = (
       const payload: Record<string, any> = { comment }
       if (visibility) payload.visibility = visibility
       const response = await client.put(
-        `/internal_comments/${commentId}`,
+        apiRoutes.internalComment.replace(':commentId', String(commentId)),
         payload
       )
       return response.data
