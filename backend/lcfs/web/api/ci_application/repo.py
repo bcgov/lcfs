@@ -55,6 +55,11 @@ VERIFICATION_LEVEL_EXPR = case(
     else_=None,
 )
 
+PRIORITY_SCORE_EXPR = func.coalesce(
+    CIApplication.verification_2_priority_score,
+    CIApplication.priority_score,
+)
+
 # Grid-facing filter / sort resolvers. Keys use the post-validation
 # snake_case form (FilterModel.field / SortOrder.field route incoming
 # values through camel_to_snake). Unknown fields are silently dropped.
@@ -65,7 +70,7 @@ _DIRECT_FILTER_COLUMNS = {
     "facility_province_state": CIApplication.facility_province_state,
     "facility_nameplate_capacity": CIApplication.facility_nameplate_capacity,
     "proposed_fuel_code_effective_date": CIApplication.proposed_fuel_code_effective_date,
-    "priority_score": CIApplication.priority_score,
+    "priority_score": PRIORITY_SCORE_EXPR,
     "verification_level": VERIFICATION_LEVEL_EXPR,
     "update_date": CIApplication.update_date,
     "create_date": CIApplication.create_date,
