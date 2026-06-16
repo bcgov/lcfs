@@ -1,5 +1,13 @@
 import React from 'react'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -94,6 +102,10 @@ vi.mock('@/hooks/useCIApplication', () => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
   })),
+  useGenerateCIApplicationFuelCodes: vi.fn(() => ({
+    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    isPending: false
+  })),
   useRecordCIDecision: vi.fn(() => ({
     mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
     isPending: false
@@ -109,33 +121,35 @@ vi.mock('@/hooks/useCIApplication', () => ({
   }))
 }))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/DocumentsModellingStep',
-  () => ({
-    DocumentsModellingStep: () => <div data-test="step3-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
+  DocumentsModellingStep: () => <div data-test="step3-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/SignAndSubmitStep',
-  () => ({
-    SignAndSubmitStep: () => <div data-test="step4-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/SignAndSubmitStep', () => ({
+  SignAndSubmitStep: () => <div data-test="step4-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/GovernmentDecisionStep',
-  () => ({
-    GovernmentDecisionStep: () => <div data-test="step5-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/GovernmentDecisionStep', () => ({
+  GovernmentDecisionStep: () => <div data-test="step5-stub" />
+}))
 
-vi.mock(
-  '@/views/CarbonIntensity/components/ProposedFuelPathwaysStep',
-  () => ({
-    ProposedFuelPathwaysStep: () => <div data-test="step2-stub" />
-  })
-)
+vi.mock('@/views/CarbonIntensity/components/ProposedFuelPathwaysStep', () => ({
+  ProposedFuelPathwaysStep: ({ readOnly }) => (
+    <div data-test="step2-stub" data-read-only={String(readOnly)} />
+  )
+}))
+
+vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
+  ApplicationSummary: ({ canEditPathways, onEditPathways }) => (
+    <div data-test="summary-stub">
+      {canEditPathways && (
+        <button data-test="summary-pathways-edit" onClick={onEditPathways}>
+          edit pathways
+        </button>
+      )}
+    </div>
+  )
+}))
 
 // Stub the heavy step component so we can drive its props directly.
 vi.mock(
@@ -318,5 +332,32 @@ describe('EditViewCIApplication', () => {
       ROUTES.CI_APPLICATIONS.LIST,
       expect.any(Object)
     )
+  })
+
+  it('enables supplemental pathway editing for a requested Submitted application', async () => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Submitted' },
+        pathwayChangesRequestedAt: '2026-06-10T10:00:00Z',
+        pathways: []
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, { wrapper })
+
+    fireEvent.click(await screen.findByTestId('summary-pathways-edit'))
+    await waitFor(() => {
+      expect(
+        screen.getByText('carbonIntensity:summary.editPathways')
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('step2-stub')).toHaveAttribute(
+        'data-read-only',
+        'false'
+      )
+    })
   })
 })

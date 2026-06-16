@@ -12,12 +12,16 @@ All five wizard steps are wired through the API:
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import EmailStr, Field, field_validator, model_validator
 
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
+from lcfs.web.api.fuel_code.schema import (
+    CoProcessedEnumSchema,
+    FuelTypeQuantityUnitsEnumSchema,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +263,74 @@ class PathwaySchema(BaseSchema):
     finished_fuel_transport_distance: int
 
 
+class CIGeneratedFuelCodeSchema(BaseSchema):
+    id: str
+    pathway_id: Optional[int] = None
+    pathway_label: Optional[str] = None
+    prefix_id: Optional[int] = None
+    prefix: Optional[str] = None
+    fuel_suffix: Optional[str] = None
+    carbon_intensity: Optional[float] = None
+    edrms: Optional[str] = None
+    company: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    application_date: Optional[date] = None
+    approval_date: Optional[date] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    fuel_type_id: Optional[int] = None
+    feedstock: Optional[str] = None
+    feedstock_location: Optional[str] = None
+    feedstock_misc: Optional[str] = None
+    co_processed: CoProcessedEnumSchema = CoProcessedEnumSchema.No
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
+    facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[
+        Union[FuelTypeQuantityUnitsEnumSchema, str]
+    ] = None
+    former_company: Optional[str] = None
+    notes: Optional[str] = None
+    feedstock_fuel_transport_mode: List[str] = Field(default_factory=list)
+    finished_fuel_transport_mode: List[str] = Field(default_factory=list)
+    is_valid: bool = False
+    validation_msg: Optional[str] = None
+    validation_errors: Optional[Dict[str, str]] = None
+
+
+class CIGeneratedFuelCodeUpdateSchema(BaseSchema):
+    prefix_id: Optional[int] = None
+    prefix: Optional[str] = None
+    fuel_suffix: Optional[str] = None
+    carbon_intensity: Optional[float] = None
+    edrms: Optional[str] = None
+    company: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    application_date: Optional[date] = None
+    approval_date: Optional[date] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    fuel_type_id: Optional[int] = None
+    feedstock: Optional[str] = None
+    feedstock_location: Optional[str] = None
+    feedstock_misc: Optional[str] = None
+    co_processed: Optional[CoProcessedEnumSchema] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
+    facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[
+        Union[FuelTypeQuantityUnitsEnumSchema, str]
+    ] = None
+    former_company: Optional[str] = None
+    notes: Optional[str] = None
+    feedstock_fuel_transport_mode: Optional[List[str]] = None
+    finished_fuel_transport_mode: Optional[List[str]] = None
+
+
 # ---------------------------------------------------------------------------
 # Read / response schemas
 # ---------------------------------------------------------------------------
@@ -309,6 +381,10 @@ class CIApplicationSchema(BaseSchema):
     # Step 2
     pathway_description: Optional[str] = None
     pathways: List[PathwaySchema] = Field(default_factory=list)
+    pathway_changes_requested_at: Optional[datetime] = None
+    pathway_changes_requested_by: Optional[str] = None
+    pathway_changelog: List[Dict[str, Any]] = Field(default_factory=list)
+    generated_fuel_codes: List[CIGeneratedFuelCodeSchema] = Field(default_factory=list)
 
     # Reserved for later steps — surfaced on read so the UI can pre-fill any
     # values previously persisted by other developers / future steps.
@@ -420,9 +496,9 @@ class CIApplicationDecisionSchema(BaseSchema):
     """
     Payload for ``POST /ci-applications/{id}/decision``.
 
-    Governments transition a Submitted application into one of the two
-    terminal states. An optional comment is captured alongside the
-    decision and surfaced in the comments thread.
+    Government users approve, withdraw, reactivate, or return an application
+    to analysts. An optional comment is captured alongside the decision and
+    surfaced in the comments thread.
     """
 
     status: CIApplicationStatusEnum
@@ -432,13 +508,12 @@ class CIApplicationDecisionSchema(BaseSchema):
     @classmethod
     def _terminal_only(cls, value: CIApplicationStatusEnum):
         if value not in {
-            CIApplicationStatusEnum.Draft,
             CIApplicationStatusEnum.Submitted,
             CIApplicationStatusEnum.Completed,
             CIApplicationStatusEnum.Withdrawn,
         }:
             raise ValueError(
-                "Decision status must be Draft, Submitted, Completed or Withdrawn."
+                "Decision status must be Submitted, Completed or Withdrawn."
             )
         return value
 

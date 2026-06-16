@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Box,
-  FormControl,
   FormControlLabel,
   OutlinedInput,
   Radio,
@@ -20,27 +19,38 @@ import { roles } from '@/constants/roles'
 import {
   useCompleteCIApplicationVerification1,
   useCompleteCIApplicationVerification2,
+  useGenerateCIApplicationFuelCodes,
   useRecommendCIApplication,
+  useRequestCIApplicationPathwayChanges,
   useRecordCIDecision
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
-/**
- * Step 5 — Government decision. Renders the shared comments widget
- * (entityType="ciApplication", commentMode="dual" — gov posts Internal
- * or Public, BCeID posts Public-only) plus, for government users, a
- * panel to record the terminal decision.
- */
+type GovernmentDecisionStepProps = {
+  ciApplication: any
+  isGovernment?: boolean
+  readOnly?: boolean
+  onDocumentUploadClick?: (() => void) | null
+  onSupplierRequest?:
+    | ((requestType: 'documentation' | 'pathwayChanges') => void)
+    | null
+  showDecisionPanel?: boolean
+  showComments?: boolean
+  showTitle?: boolean
+  showCommentsTitle?: boolean
+}
+
 export const GovernmentDecisionStep = ({
   ciApplication,
   isGovernment = false,
   readOnly = false,
   onDocumentUploadClick = null,
+  onSupplierRequest = null,
   showDecisionPanel = true,
   showComments = true,
   showTitle = true,
-  showCommentsTitle = true
-}) => {
+  showCommentsTitle = false
+}: GovernmentDecisionStepProps) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const ciApplicationId = ciApplication?.ciApplicationId
   const { hasAnyRole } = useCurrentUser()
@@ -53,29 +63,70 @@ export const GovernmentDecisionStep = ({
     useCompleteCIApplicationVerification2(ciApplicationId)
   const { mutateAsync: recommendToDirector, isPending: isRecommending } =
     useRecommendCIApplication(ciApplicationId)
+  const {
+    mutateAsync: requestPathwayChanges,
+    isPending: isRequestingPathwayChanges
+  } = useRequestCIApplicationPathwayChanges(ciApplicationId)
+  const { mutateAsync: generateFuelCodes, isPending: isGeneratingFuelCodes } =
+    useGenerateCIApplicationFuelCodes(ciApplicationId)
 
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const status = ciApplication?.status?.status
   const isDirector = hasAnyRole?.(roles.director)
   const isAnalyst = hasAnyRole?.(roles.analyst)
+  const isComplianceManager = hasAnyRole?.(roles.compliance_manager)
+  const hasWorkflowRole = isAnalyst || isComplianceManager || isDirector
   const isRecommended = status === 'Recommended'
-  const isApproved = status === 'Completed'
   const isSubmitted = status === 'Submitted'
+  const isWithdrawn = status === 'Withdrawn'
   const [riskAssessment, setRiskAssessment] = useState(
     ciApplication?.preliminaryRiskAssessment || 'Low'
   )
   const [priorityScore, setPriorityScore] = useState(
     ciApplication?.priorityScore || ''
   )
+  const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
 
-  const recordDecisionFor = async (status) => {
+  const normalizeRisk = (risk?: string | null) =>
+    risk === 'Moderate' ? 'Medium' : risk
+
+  const isLowOrModerateRisk = (risk?: string | null) =>
+    ['Low', 'Medium'].includes(normalizeRisk(risk) || '')
+
+  const isLowModerateOrHighRisk = (risk?: string | null) =>
+    ['Low', 'Medium', 'High'].includes(normalizeRisk(risk) || '')
+
+  const generatedFuelCodeRequiredFields = [
+    'prefixId',
+    'fuelSuffix',
+    'carbonIntensity',
+    'edrms',
+    'company',
+    'applicationDate',
+    'approvalDate',
+    'effectiveDate',
+    'expirationDate',
+    'fuelTypeId',
+    'feedstock',
+    'feedstockLocation'
+  ]
+
+  const isGeneratedFuelCodeReady = (row: any) =>
+    row?.isValid === true ||
+    generatedFuelCodeRequiredFields.every((field) => {
+      const value = row?.[field]
+      return value !== undefined && value !== null && value !== ''
+    })
+
+  const recordDecisionFor = async (nextStatus: string) => {
     setError(null)
     setSuccess(null)
     try {
-      await recordDecision({ status })
+      await recordDecision({ status: nextStatus })
       setSuccess(t('carbonIntensity:step5.decisionSuccess'))
-    } catch (err) {
+    } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -84,13 +135,16 @@ export const GovernmentDecisionStep = ({
     }
   }
 
-  const recordWorkflowAction = async (action, successMessage) => {
+  const recordWorkflowAction = async (
+    action: () => Promise<any>,
+    successMessage: string
+  ) => {
     setError(null)
     setSuccess(null)
     try {
       await action()
       setSuccess(successMessage)
-    } catch (err) {
+    } catch (err: any) {
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -99,24 +153,45 @@ export const GovernmentDecisionStep = ({
     }
   }
 
+  const preliminaryRisk = normalizeRisk(
+    ciApplication?.preliminaryRiskAssessment
+  )
+  const verification2Risk = normalizeRisk(
+    ciApplication?.verification2RiskAssessment
+  )
   const requiresVerification2 =
-    ciApplication?.preliminaryRiskAssessment === 'Medium' ||
-    ciApplication?.preliminaryRiskAssessment === 'High'
+    preliminaryRisk === 'Medium' || preliminaryRisk === 'High'
   const fuelPathwayCount = ciApplication?.pathways?.length || 0
+  const generatedFuelCodesCount = ciApplication?.generatedFuelCodes?.length || 0
+  const generatedFuelCodesReady =
+    generatedFuelCodesCount > 0 &&
+    ciApplication?.generatedFuelCodes?.every(isGeneratedFuelCodeReady)
   const showVerification1Panel =
-    isAnalyst && isSubmitted && !ciApplication?.verification1Date
+    hasWorkflowRole && isSubmitted && !ciApplication?.verification1Date
   const showVerification2Panel =
-    isAnalyst &&
+    hasWorkflowRole &&
     isSubmitted &&
     ciApplication?.verification1Date &&
     requiresVerification2 &&
     !ciApplication?.verification2Date
   const showRecommendPanel =
-    isAnalyst &&
+    hasWorkflowRole &&
     isSubmitted &&
     ciApplication?.verification1Date &&
     (!requiresVerification2 || ciApplication?.verification2Date) &&
-    !ciApplication?.recommendationDate
+    !ciApplication?.recommendationDate &&
+    generatedFuelCodesReady
+  const canGenerateAfterVerification1 =
+    ciApplication?.verification1Date && isLowOrModerateRisk(preliminaryRisk)
+  const canGenerateAfterVerification2 =
+    ciApplication?.verification2Date &&
+    isLowModerateOrHighRisk(verification2Risk || preliminaryRisk)
+  const showGenerateFuelCodesButton =
+    hasWorkflowRole &&
+    isSubmitted &&
+    (canGenerateAfterVerification1 || canGenerateAfterVerification2) &&
+    !ciApplication?.recommendationDate &&
+    generatedFuelCodesCount === 0
   const showDirectorDecisionPanel = isDirector && isRecommended
   const activeVerificationLabel = showVerification2Panel
     ? 'Verification 2'
@@ -129,6 +204,21 @@ export const GovernmentDecisionStep = ({
     textTransform: 'none'
   }
 
+  const handleRequestDocumentation = () => {
+    setRequestedDocumentation(true)
+    onSupplierRequest?.('documentation')
+    onDocumentUploadClick?.()
+  }
+
+  const handleRequestPathwayChanges = () => {
+    setRequestedPathwayChanges(true)
+    onSupplierRequest?.('pathwayChanges')
+    recordWorkflowAction(
+      () => requestPathwayChanges(),
+      t('carbonIntensity:step5.workflowSuccess')
+    )
+  }
+
   return (
     <Box>
       {showTitle && (
@@ -138,22 +228,25 @@ export const GovernmentDecisionStep = ({
       )}
 
       {error && (
-        <BCAlert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
+        <BCAlert severity="error" sx={{ mb: 1 }}>
           {error}
         </BCAlert>
       )}
       {success && (
-        <BCAlert
-          severity="success"
-          sx={{ mb: 1 }}
-          onClose={() => setSuccess(null)}
-        >
+        <BCAlert severity="success" sx={{ mb: 1 }}>
           {success}
         </BCAlert>
       )}
 
       {showDecisionPanel && isGovernment && (
-        <Role roles={[roles.government, roles.analyst, roles.director]}>
+        <Role
+          roles={[
+            roles.government,
+            roles.analyst,
+            roles.compliance_manager,
+            roles.director
+          ]}
+        >
           <Box
             sx={{
               bgcolor: 'background.grey',
@@ -187,7 +280,6 @@ export const GovernmentDecisionStep = ({
                       onChange={(event) =>
                         setRiskAssessment(event.target.value)
                       }
-                      spacing={2}
                     >
                       <FormControlLabel
                         labelPlacement="start"
@@ -221,8 +313,7 @@ export const GovernmentDecisionStep = ({
                     </BCTypography>
                     <OutlinedInput
                       type="number"
-                      min={0}
-                      max={1000}
+                      inputProps={{ min: 0, max: 1000 }}
                       value={priorityScore}
                       onChange={(event) => {
                         let value = Number(event.target.value)
@@ -276,7 +367,7 @@ export const GovernmentDecisionStep = ({
                           priorityScore: priorityScore
                             ? Number(priorityScore)
                             : undefined
-                        }),
+                        } as any),
                       t('carbonIntensity:step5.workflowSuccess')
                     )
                   }
@@ -300,13 +391,31 @@ export const GovernmentDecisionStep = ({
                           priorityScore: priorityScore
                             ? Number(priorityScore)
                             : undefined
-                        }),
+                        } as any),
                       t('carbonIntensity:step5.workflowSuccess')
                     )
                   }
                   data-test="ci-verification-2-complete-btn"
                 >
                   {t('carbonIntensity:step5.verification2Complete')}
+                </BCButton>
+              )}
+              {showGenerateFuelCodesButton && (
+                <BCButton
+                  type="button"
+                  variant="contained"
+                  color="primary"
+                  sx={workflowButtonSx}
+                  disabled={readOnly || isGeneratingFuelCodes}
+                  onClick={() =>
+                    recordWorkflowAction(
+                      () => generateFuelCodes(),
+                      t('carbonIntensity:step5.workflowSuccess')
+                    )
+                  }
+                  data-test="ci-generate-fuel-codes-btn"
+                >
+                  {t('carbonIntensity:step5.generateFuelCodes')}
                 </BCButton>
               )}
               {showRecommendPanel && (
@@ -327,15 +436,15 @@ export const GovernmentDecisionStep = ({
                   {t('carbonIntensity:step5.recommendToDirector')}
                 </BCButton>
               )}
-              {isAnalyst && isSubmitted && (
+              {hasWorkflowRole && isSubmitted && (
                 <>
                   <BCButton
                     type="button"
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly || !onDocumentUploadClick}
-                    onClick={onDocumentUploadClick || undefined}
+                    disabled={readOnly || requestedDocumentation}
+                    onClick={handleRequestDocumentation}
                     data-test="ci-request-documentation-btn"
                   >
                     {t('carbonIntensity:step5.requestDocumentation')}
@@ -345,24 +454,44 @@ export const GovernmentDecisionStep = ({
                     variant="outlined"
                     color="primary"
                     sx={workflowButtonSx}
-                    disabled={readOnly}
-                    onClick={() => recordDecisionFor('Draft')}
+                    disabled={
+                      readOnly ||
+                      requestedPathwayChanges ||
+                      !!ciApplication?.pathwayChangesRequestedAt ||
+                      isRequestingPathwayChanges
+                    }
+                    onClick={handleRequestPathwayChanges}
                     data-test="ci-request-pathway-changes-btn"
                   >
                     {t('carbonIntensity:step5.requestPathwayChanges')}
                   </BCButton>
-                  <BCButton
-                    type="button"
-                    variant="outlined"
-                    color="error"
-                    sx={workflowButtonSx}
-                    disabled={readOnly || isDeciding}
-                    onClick={() => recordDecisionFor('Withdrawn')}
-                    data-test="ci-step5-withdraw-btn"
-                  >
-                    {t('carbonIntensity:step5.withdrawBtn')}
-                  </BCButton>
                 </>
+              )}
+              {isGovernment && (isSubmitted || isRecommended) && (
+                <BCButton
+                  type="button"
+                  variant="outlined"
+                  color="error"
+                  sx={workflowButtonSx}
+                  disabled={readOnly || isDeciding}
+                  onClick={() => recordDecisionFor('Withdrawn')}
+                  data-test="ci-step5-withdraw-btn"
+                >
+                  {t('carbonIntensity:step5.withdrawBtn')}
+                </BCButton>
+              )}
+              {isGovernment && isWithdrawn && (
+                <BCButton
+                  type="button"
+                  variant="contained"
+                  color="primary"
+                  sx={workflowButtonSx}
+                  disabled={isDeciding}
+                  onClick={() => recordDecisionFor('Submitted')}
+                  data-test="ci-step5-reactivate-btn"
+                >
+                  {t('carbonIntensity:step5.reactivateBtn')}
+                </BCButton>
               )}
               {showDirectorDecisionPanel && (
                 <>

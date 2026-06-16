@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { Box, Stack, Tooltip, Typography, useTheme } from '@mui/material'
-import { Check, Close } from '@mui/icons-material'
+import { Check, Close, HourglassEmpty } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
@@ -37,6 +37,18 @@ const daysUntil = (date) => {
   return dayjs(date).startOf('day').diff(dayjs().startOf('day'), 'day')
 }
 
+const daysSince = (date) => {
+  if (!date) return null
+  return dayjs().startOf('day').diff(dayjs(date).startOf('day'), 'day')
+}
+
+const getSupplierRequestDate = (ciApplication) =>
+  ciApplication?.supplierRequestDate ||
+  ciApplication?.requestFurtherDocumentationDate ||
+  ciApplication?.requestDocumentationDate ||
+  ciApplication?.pathwayChangesRequestedAt ||
+  ciApplication?.pathwayChangesRequestedDate
+
 const riskLabel = (risk) => (risk === 'Medium' ? 'Moderate' : risk)
 
 const riskMeta = (risk, score) => {
@@ -58,6 +70,7 @@ export const buildCIWorkflowSteps = (
   const showVerification2 = risk === 'Medium' || risk === 'High'
   const recommendationComplete = Boolean(ciApplication.recommendationDate)
   const targetDate = ciApplication.proposedFuelCodeEffectiveDate
+  const supplierRequestDate = getSupplierRequestDate(ciApplication)
 
   const submitterName =
     ciApplication.signatureUserDisplayName || ciApplication.signatureUser || ''
@@ -113,6 +126,17 @@ export const buildCIWorkflowSteps = (
     })
   }
 
+  if (supplierRequestDate) {
+    steps.push({
+      key: 'withSupplier',
+      label: 'With supplier',
+      date: supplierRequestDate,
+      state: 'waiting',
+      icon: 'hourglass',
+      countdown: daysSince(supplierRequestDate)
+    })
+  }
+
   if (showInternalSteps && recommendationComplete) {
     steps.push({
       key: 'recommendation',
@@ -163,6 +187,7 @@ const WorkflowNode = ({ step, isLast }) => {
   const theme = useTheme()
   const completed = step.state === 'completed'
   const target = step.state === 'target'
+  const waiting = step.state === 'waiting'
   const withdrawn = step.key === 'withdrawn'
   const connectorStyle = step.connectorStyle || (completed ? 'solid' : 'dotted')
 
@@ -175,17 +200,21 @@ const WorkflowNode = ({ step, isLast }) => {
       ? withdrawn
         ? theme.palette.error.main
         : theme.palette.primary.main
-      : theme.palette.grey[400],
+      : waiting
+        ? theme.palette.warning.main
+        : theme.palette.grey[400],
     bgcolor: completed
       ? withdrawn
         ? theme.palette.error.main
         : theme.palette.primary.main
-      : target
+      : waiting || target
         ? theme.palette.common.white
         : theme.palette.grey[300],
     color: completed
       ? theme.palette.common.white
-      : theme.palette.text.secondary,
+      : waiting
+        ? theme.palette.warning.main
+        : theme.palette.text.secondary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -222,6 +251,8 @@ const WorkflowNode = ({ step, isLast }) => {
     />
   ) : step.initials ? (
     step.initials
+  ) : step.icon === 'hourglass' ? (
+    <HourglassEmpty fontSize="small" />
   ) : step.icon === 'close' ? (
     <Close fontSize="small" />
   ) : completed ? (
@@ -319,6 +350,16 @@ const WorkflowNode = ({ step, isLast }) => {
               : `${Math.abs(step.countdown)} days past`}
           </Typography>
         )}
+        {waiting && step.countdown !== null && (
+          <Typography
+            variant="body2"
+            color="primary.main"
+            align="center"
+            sx={{ fontWeight: 700, lineHeight: 1.15 }}
+          >
+            {`${step.countdown} days with supplier`}
+          </Typography>
+        )}
       </Stack>
     </Box>
   )
@@ -328,7 +369,11 @@ export const CIApplicationProgress = ({ activeStep = 0, ciApplication }) => {
   const { t } = useTranslation(['carbonIntensity'])
   const { hasAnyRole } = useCurrentUser()
 
-  if (!ciApplication || ciApplication?.status?.status === 'Draft') {
+  if (
+    !ciApplication ||
+    (ciApplication?.status?.status === 'Draft' &&
+      !getSupplierRequestDate(ciApplication))
+  ) {
     return (
       <Stack direction="row" sx={{ mb: 3, mt: 2 }}>
         {CI_APPLICATION_STEPS.map((step, index) => (

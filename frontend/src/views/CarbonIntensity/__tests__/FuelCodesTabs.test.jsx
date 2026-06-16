@@ -70,13 +70,13 @@ describe('FuelCodesTabs', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows the CI applications tab but not My fuel codes for a signing authority', () => {
+  it('does not show the CI applications tab for a signing authority without the CI Applicant role', () => {
     mockHasAnyRole = (...names) => names.includes(roles.signing_authority)
     render(<FuelCodesTabs />, { wrapper })
 
     expect(
-      screen.getByText('carbonIntensity:tabs.ciApplications')
-    ).toBeInTheDocument()
+      screen.queryByText('carbonIntensity:tabs.ciApplications')
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText('carbonIntensity:tabs.myFuelCodes')
     ).not.toBeInTheDocument()
@@ -304,6 +304,34 @@ describe('FuelCodesTabs', () => {
       .getByText('carbonIntensity:tabs.ciApplications')
       .closest('[role="tab"]')
     expect(ciTab.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('shows CI applications as inactive on deeper CI application pages and links to the index', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.ci_applicant)
+    mockLocation = { pathname: '/ci-applications/10', search: '' }
+    render(<FuelCodesTabs />, { wrapper })
+
+    const ciTab = screen
+      .getByText('carbonIntensity:tabs.ciApplications')
+      .closest('[role="tab"]')
+    expect(ciTab.getAttribute('aria-selected')).toBe('false')
+
+    fireEvent.click(screen.getByText('carbonIntensity:tabs.ciApplications'))
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
+  })
+
+  it('shows CI applications as inactive on the add page and links to the index for government users', () => {
+    mockHasAnyRole = (...names) => names.includes(roles.government)
+    mockLocation = { pathname: ROUTES.CI_APPLICATIONS.ADD, search: '' }
+    render(<FuelCodesTabs />, { wrapper })
+
+    const ciTab = screen
+      .getByText('carbonIntensity:tabs.ciApplications')
+      .closest('[role="tab"]')
+    expect(ciTab.getAttribute('aria-selected')).toBe('false')
+
+    fireEvent.click(screen.getByText('carbonIntensity:tabs.ciApplications'))
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.CI_APPLICATIONS.LIST)
   })
 
   it('marks the Current tab active when on /fuel-codes-bulletins with no query', () => {

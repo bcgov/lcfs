@@ -28,6 +28,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './testSetup.js',
+    // vitest 4 no longer excludes cypress/dist by default, so scope to src
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     coverage: {
       provider: 'v8',
       // thresholds: {

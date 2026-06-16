@@ -19,6 +19,8 @@ const mockRecordDecision = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification1 = vi.fn().mockResolvedValue(null)
 const mockCompleteVerification2 = vi.fn().mockResolvedValue(null)
 const mockRecommendToDirector = vi.fn().mockResolvedValue(null)
+const mockRequestPathwayChanges = vi.fn().mockResolvedValue(null)
+const mockGenerateFuelCodes = vi.fn().mockResolvedValue(null)
 
 vi.mock('@/hooks/useCIApplication', () => ({
   useCompleteCIApplicationVerification1: vi.fn(() => ({
@@ -31,6 +33,14 @@ vi.mock('@/hooks/useCIApplication', () => ({
   })),
   useRecommendCIApplication: vi.fn(() => ({
     mutateAsync: mockRecommendToDirector,
+    isPending: false
+  })),
+  useRequestCIApplicationPathwayChanges: vi.fn(() => ({
+    mutateAsync: mockRequestPathwayChanges,
+    isPending: false
+  })),
+  useGenerateCIApplicationFuelCodes: vi.fn(() => ({
+    mutateAsync: mockGenerateFuelCodes,
     isPending: false
   })),
   useRecordCIDecision: vi.fn(() => ({
@@ -120,7 +130,34 @@ describe('GovernmentDecisionStep', () => {
     )
   })
 
-  it('shows Recommend to director after low-risk verification 1 is complete', () => {
+  it.each([
+    ['Analyst', roles.analyst],
+    ['Manager', roles.compliance_manager],
+    ['Director', roles.director]
+  ])('shows Submitted action buttons to %s users', (_label, role) => {
+    mockUserRoles = [{ name: role }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByTestId('ci-verification-1-complete-btn')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId('ci-request-documentation-btn')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('ci-step5-withdraw-btn')).toBeInTheDocument()
+    expect(screen.queryByTestId('ci-approve-btn')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-return-to-analyst-btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides Recommend to director until generated fuel codes are complete', () => {
     mockUserRoles = [{ name: roles.analyst }]
     render(
       <GovernmentDecisionStep
@@ -135,6 +172,31 @@ describe('GovernmentDecisionStep', () => {
     )
 
     expect(
+      screen.queryByTestId('ci-recommend-to-director-btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows Recommend to director after required generated fuel code fields are complete', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Low',
+          verification1Date: '2026-05-19T12:00:00Z',
+          generatedFuelCodes: [
+            {
+              id: 'generated-1',
+              isValid: true
+            }
+          ]
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
       screen.getByTestId('ci-recommend-to-director-btn')
     ).toBeInTheDocument()
     expect(
@@ -142,7 +204,106 @@ describe('GovernmentDecisionStep', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows only director actions on Recommended applications', () => {
+  it.each([
+    ['Manager', roles.compliance_manager],
+    ['Director', roles.director]
+  ])('shows Recommend to director to %s users', (_label, role) => {
+    mockUserRoles = [{ name: role }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Low',
+          verification1Date: '2026-05-19T12:00:00Z',
+          generatedFuelCodes: [
+            {
+              id: 'generated-1',
+              isValid: true
+            }
+          ]
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.getByTestId('ci-recommend-to-director-btn')
+    ).toBeInTheDocument()
+  })
+
+  it('shows Generate fuel codes after Verification 1 for low risk', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Low',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
+    expect(
+      screen.getByText('carbonIntensity:step5.generateFuelCodes')
+    ).toBeInTheDocument()
+  })
+
+  it('shows Generate fuel codes after Verification 1 for moderate risk', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'Medium',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
+  })
+
+  it('waits for Verification 2 before showing Generate fuel codes for high risk', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const { rerender } = render(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'High',
+          verification1Date: '2026-05-19T12:00:00Z'
+        }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(
+      screen.queryByTestId('ci-generate-fuel-codes-btn')
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <GovernmentDecisionStep
+        ciApplication={{
+          ...baseCi,
+          preliminaryRiskAssessment: 'High',
+          verification1Date: '2026-05-19T12:00:00Z',
+          verification2Date: '2026-05-20T12:00:00Z',
+          verification2RiskAssessment: 'High'
+        }}
+        isGovernment={true}
+      />
+    )
+
+    expect(screen.getByTestId('ci-generate-fuel-codes-btn')).toBeInTheDocument()
+  })
+
+  it('shows director actions and Set as withdrawn on Recommended applications', () => {
     mockUserRoles = [{ name: roles.director }]
     render(
       <GovernmentDecisionStep
@@ -160,8 +321,25 @@ describe('GovernmentDecisionStep', () => {
     expect(
       screen.queryByTestId('ci-request-pathway-changes-btn')
     ).not.toBeInTheDocument()
+    expect(screen.getByTestId('ci-step5-withdraw-btn')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['Analyst', roles.analyst],
+    ['Manager', roles.compliance_manager]
+  ])('hides director decision actions from %s users', (_label, role) => {
+    mockUserRoles = [{ name: role }]
+    render(
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, status: { status: 'Recommended' } }}
+        isGovernment={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.queryByTestId('ci-approve-btn')).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId('ci-step5-withdraw-btn')
+      screen.queryByTestId('ci-return-to-analyst-btn')
     ).not.toBeInTheDocument()
   })
 
@@ -203,40 +381,110 @@ describe('GovernmentDecisionStep', () => {
     )
   })
 
-  it('records Draft when requesting pathway changes', async () => {
+  it('shows only Reactivate application workflow action when Withdrawn', async () => {
     mockUserRoles = [{ name: roles.analyst }]
     render(
-      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, status: { status: 'Withdrawn' } }}
+        isGovernment={true}
+        readOnly={true}
+      />,
       { wrapper }
     )
-    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+
+    expect(screen.getByTestId('ci-step5-reactivate-btn')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-step5-withdraw-btn')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ci-approve-btn')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-verification-1-complete-btn')
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('ci-step5-reactivate-btn'))
     await waitFor(() =>
-      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Draft' })
+      expect(mockRecordDecision).toHaveBeenCalledWith({ status: 'Submitted' })
     )
   })
 
-  it('disables the documentation request button when no upload handler is wired', () => {
-    mockUserRoles = [{ name: roles.analyst }]
+  it('shows no Withdrawn or Reactivate action after approval', () => {
+    mockUserRoles = [{ name: roles.director }]
     render(
-      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, status: { status: 'Completed' } }}
+        isGovernment={true}
+        readOnly={true}
+      />,
       { wrapper }
     )
-    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
+
+    expect(
+      screen.queryByTestId('ci-step5-withdraw-btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('ci-step5-reactivate-btn')
+    ).not.toBeInTheDocument()
   })
 
-  it('enables the documentation request button when an upload handler is provided', () => {
+  it('requests supplemental pathway changes without recording a Draft decision', async () => {
     mockUserRoles = [{ name: roles.analyst }]
+    const onSupplierRequest = vi.fn()
     render(
       <GovernmentDecisionStep
         ciApplication={baseCi}
         isGovernment={true}
-        onDocumentUploadClick={() => {}}
+        onSupplierRequest={onSupplierRequest}
       />,
+      { wrapper }
+    )
+    fireEvent.click(screen.getByTestId('ci-request-pathway-changes-btn'))
+    expect(screen.getByTestId('ci-request-pathway-changes-btn')).toBeDisabled()
+    expect(
+      screen.getByTestId('ci-request-documentation-btn')
+    ).not.toBeDisabled()
+    expect(onSupplierRequest).toHaveBeenCalledWith('pathwayChanges')
+    await waitFor(() =>
+      expect(mockRequestPathwayChanges).toHaveBeenCalledTimes(1)
+    )
+    expect(mockRecordDecision).not.toHaveBeenCalled()
+  })
+
+  it('keeps documentation and pathway request buttons active at the same time', () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    render(
+      <GovernmentDecisionStep ciApplication={baseCi} isGovernment={true} />,
       { wrapper }
     )
     expect(
       screen.getByTestId('ci-request-documentation-btn')
     ).not.toBeDisabled()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeDisabled()
+  })
+
+  it('disables only the clicked request button and records supplier wait start', async () => {
+    mockUserRoles = [{ name: roles.analyst }]
+    const onDocumentUploadClick = vi.fn()
+    const onSupplierRequest = vi.fn()
+    render(
+      <GovernmentDecisionStep
+        ciApplication={baseCi}
+        isGovernment={true}
+        onDocumentUploadClick={onDocumentUploadClick}
+        onSupplierRequest={onSupplierRequest}
+      />,
+      { wrapper }
+    )
+
+    fireEvent.click(screen.getByTestId('ci-request-documentation-btn'))
+
+    expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
+    expect(
+      screen.getByTestId('ci-request-pathway-changes-btn')
+    ).not.toBeDisabled()
+    expect(onDocumentUploadClick).toHaveBeenCalled()
+    expect(onSupplierRequest).toHaveBeenCalledWith('documentation')
   })
 
   it('can render only the decision panel for the submitted application page layout', () => {

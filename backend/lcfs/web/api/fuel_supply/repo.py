@@ -189,12 +189,25 @@ class FuelSupplyRepository:
                         ),
                         # Pre-2024 petroleum-based fuel types (is_legacy=True
                         # — Petroleum-based diesel/gasoline, Natural gas-based
-                        # gasoline): Section 6 prescribed (IDs 4, 5) only.
+                        # gasoline): the prescribed-CI provision is determined by
+                        # fuel category, so only one option is valid per fuel —
+                        # Gasoline -> Section 6 (5) (a) (ID 4), Diesel ->
+                        # Section 6 (5) (b) (ID 5). Offering both for every fuel
+                        # created duplicate/invalid pathways (#4435).
                         and_(
                             current_year
                             < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                             FuelType.is_legacy == True,
-                            ProvisionOfTheAct.provision_of_the_act_id.in_([4, 5]),
+                            or_(
+                                and_(
+                                    FuelCategory.category == "Gasoline",
+                                    ProvisionOfTheAct.provision_of_the_act_id == 4,
+                                ),
+                                and_(
+                                    FuelCategory.category == "Diesel",
+                                    ProvisionOfTheAct.provision_of_the_act_id == 5,
+                                ),
+                            ),
                         ),
                         # Pre-2024 renewable fuel types (is_legacy=False, reused
                         # across eras): all legacy provisions except the

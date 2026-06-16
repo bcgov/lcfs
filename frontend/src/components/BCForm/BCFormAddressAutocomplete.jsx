@@ -7,6 +7,16 @@ import PropTypes from 'prop-types'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import { AddressAutocomplete } from './AddressAutocomplete'
+import { POSTAL_CODE_REGEX } from '@/constants/common'
+
+export const addressHasPostalCode = (value) =>
+  POSTAL_CODE_REGEX.test(
+    typeof value === 'string'
+      ? value
+      : [value?.fullAddress, value?.postalCode, value?.postal_code]
+          .filter(Boolean)
+          .join(' ')
+  )
 
 export const BCFormAddressAutocomplete = ({
   name,
@@ -21,6 +31,17 @@ export const BCFormAddressAutocomplete = ({
   onSelectAddress
 }) => {
   const [showTooltip, setShowTooltip] = useState(false)
+
+  const promptForPostalCode = (addressValue) => {
+    const shouldShowPrompt =
+      Boolean(addressValue) && !addressHasPostalCode(addressValue)
+
+    setShowTooltip(shouldShowPrompt)
+
+    if (shouldShowPrompt) {
+      setTimeout(() => setShowTooltip(false), 5000)
+    }
+  }
 
   return (
     <Controller
@@ -88,21 +109,13 @@ export const BCFormAddressAutocomplete = ({
               value={value}
               onChange={(newValue) => {
                 onChange(newValue)
-                // Show tooltip when address is selected or changed
-                if (newValue && newValue.length > 0) {
-                  setShowTooltip(true)
-                  // Hide tooltip after 5 seconds
-                  setTimeout(() => setShowTooltip(false), 5000)
-                }
+                promptForPostalCode(newValue)
               }}
               onSelectAddress={(addressData) => {
                 if (onSelectAddress) {
                   onSelectAddress(addressData)
                 }
-                // Show tooltip when an address is selected from dropdown
-                setShowTooltip(true)
-                // Hide tooltip after 5 seconds
-                setTimeout(() => setShowTooltip(false), 5000)
+                promptForPostalCode(addressData)
               }}
               disabled={disabled}
             />

@@ -26,5 +26,9 @@
       "categoryLabel": "Category",
       "yearLabel": "Year"
     }
-  }
+  },
+  "internalComments": "Internal comments",
+  "publicComments": "Public comments",
+  "allComments": "All comments",
+  "commentFilterTabs": "Comment filters"
 }

@@ -17,8 +17,8 @@ const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
 const isOnApprovedCI = (loc) => loc.pathname === APPROVED_CI_PATH
 const isOnBulletinsOrPublic = (loc) => isOnBulletins(loc) || isOnApprovedCI(loc)
 const isOnInternalFuelCodes = (loc) => loc.pathname === FUEL_CODES_PATH
-const isOnCIApplications = (loc) =>
-  loc.pathname.startsWith(CI_APPLICATIONS_PATH)
+const isOnCIApplications = (loc) => loc.pathname.startsWith(CI_APPLICATIONS_PATH)
+const isOnCIApplicationsIndex = (loc) => loc.pathname === CI_APPLICATIONS_PATH
 const getTypeQuery = (loc) => new URLSearchParams(loc.search).get('type')
 const isArchivedQuery = (loc) => getTypeQuery(loc) === 'archived'
 const isCurrentQuery = (loc) => getTypeQuery(loc) === 'current'
@@ -27,7 +27,7 @@ const ciApplicationsTab = {
   key: 'ci',
   labelKey: 'carbonIntensity:tabs.ciApplications',
   path: CI_APPLICATIONS_PATH,
-  isActive: isOnCIApplications
+  isActive: isOnCIApplicationsIndex
 }
 
 const buildInternalFuelCodesTabs = ({ includeCiApplications }) => [
@@ -60,15 +60,13 @@ const buildInternalFuelCodesTabs = ({ includeCiApplications }) => [
 
 const buildTabs = ({
   isCiApplicant,
-  isSigningAuthority,
   isGovernment,
   ciApplicationsEnabled,
   variant,
   location
 }) => {
   const canAccessCiApplications =
-    ciApplicationsEnabled &&
-    (isCiApplicant || isSigningAuthority || isGovernment)
+    ciApplicationsEnabled && (isCiApplicant || isGovernment)
 
   if (isGovernment && isOnBulletins(location)) {
     return buildInternalFuelCodesTabs({
@@ -140,7 +138,6 @@ export const FuelCodesTabs = ({ variant = 'default' } = {}) => {
     () =>
       buildTabs({
         isCiApplicant: hasAnyRole(roles.ci_applicant),
-        isSigningAuthority: hasAnyRole(roles.signing_authority),
         isGovernment: hasAnyRole(...govRoles),
         ciApplicationsEnabled,
         variant,
