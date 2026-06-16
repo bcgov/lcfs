@@ -135,6 +135,7 @@
     "responseExpectations": "Applicants must respond to requests for additional information and/or corrections within 8 weeks. Failure to respond within this period may result in rejection of the application.",
     "commentsHeader": "Comments",
     "commentsToOrganizationHeader": "Comments to the organization",
+    "commentsToGovernmentHeader": "Comments to the Government of B.C.",
     "addCommentLabel": "Comments to government staff to support your application (optional):",
     "addComment": "Add comment",
     "noComments": "No comments yet.",

@@ -505,7 +505,9 @@ const EditViewCIApplicationBase = () => {
                   color="primary"
                   component="div"
                 >
-                  {t('carbonIntensity:step5.commentsToOrganizationHeader')}
+                  {isGovernment
+                    ? t('carbonIntensity:step5.commentsToOrganizationHeader')
+                    : t('carbonIntensity:step5.commentsToGovernmentHeader')}
                 </BCTypography>
               </AccordionSummary>
               <AccordionDetails>
