@@ -175,8 +175,7 @@ describe('useComments', () => {
       mockApiService.get.mockResolvedValue({ data: mockComments })
 
       const { result } = renderHook(
-        () =>
-          useComments('compliance_report', 123, { sortOrder: 'asc' }),
+        () => useComments('compliance_report', 123, { sortOrder: 'asc' }),
         { wrapper: createWrapper() }
       )
 
@@ -226,8 +225,7 @@ describe('useComments', () => {
       mockHasAnyRole.mockImplementation((role) => role === 'director')
 
       const { result } = renderHook(
-        () =>
-          useComments('compliance_report', 123, { autoFetch: false }),
+        () => useComments('compliance_report', 123, { autoFetch: false }),
         { wrapper: createWrapper() }
       )
 
@@ -508,6 +506,41 @@ describe('useComments', () => {
         visibility: 'Internal'
       })
     })
+
+    it('should reset visibility to Internal after a gov user submits a Public comment in dual mode', async () => {
+      mockHasAnyRole.mockImplementation((role) => role === 'government')
+      mockApiService.post.mockResolvedValue({
+        data: {
+          internalCommentId: 202,
+          comment: 'Public gov note',
+          visibility: 'Public',
+          audience_scope: null
+        }
+      })
+
+      const { result } = renderHook(
+        () =>
+          useComments('compliance_report', 123, {
+            commentMode: 'dual'
+          }),
+        { wrapper: createWrapper() }
+      )
+
+      act(() => {
+        result.current.handleVisibilityChange('Public')
+        result.current.handleCommentInputChange('Public gov note')
+      })
+
+      expect(result.current.visibility).toBe('Public')
+
+      await act(async () => {
+        await result.current.addComment()
+      })
+
+      await waitFor(() => {
+        expect(result.current.visibility).toBe('Internal')
+      })
+    })
   })
 
   describe('Editing comments', () => {
@@ -571,10 +604,13 @@ describe('useComments', () => {
         })
       })
 
-      expect(mockApiService.put).toHaveBeenCalledWith('/internal_comments/100', {
-        comment: 'Updated internal',
-        visibility: 'Internal'
-      })
+      expect(mockApiService.put).toHaveBeenCalledWith(
+        '/internal_comments/100',
+        {
+          comment: 'Updated internal',
+          visibility: 'Internal'
+        }
+      )
     })
   })
 
