@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import BCFooter from '@/components/BCFooter'
 
-// /* global __VERSION__ */
+/* global __APP_VERSION__ */
 
-const Footer = (props) => {
+const Footer = () => {
   const links = useMemo(
     () => [
       {
@@ -54,7 +54,7 @@ const Footer = (props) => {
   const repoDetails = useMemo(
     () => ({
       route: '/release-notes',
-      name: 'v1.3.3 — Release Notes',
+      name: `v${__APP_VERSION__} — Release Notes`,
       id: 'footer-release-notes',
       label: 'LCFS application release notes'
     }),
