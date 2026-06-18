@@ -16,5 +16,10 @@
   "internalComments": "Internal comments",
   "publicComments": "Public comments",
   "allComments": "All comments",
-  "commentFilterTabs": "Comment filters"
+  "commentFilterTabs": "Comment filters",
+  "attachFile": "Attach file",
+  "attachments": "Attachments",
+  "removeAttachment": "Remove attachment",
+  "downloadAttachment": "Download attachment",
+  "attachmentUploadError": "Some attachments could not be uploaded."
 }

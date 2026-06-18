@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import asc, select, desc
+from sqlalchemy.orm import selectinload
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -12,7 +13,11 @@ from lcfs.web.core.decorators import repo_handler
 
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.document import Document
+from lcfs.db.models.comment.InternalComment import (
+    InternalComment,
+    internal_comment_document_association,
+)
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
 from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
@@ -112,6 +117,9 @@ class InternalCommentRepository:
 
         await self.db.flush()
         await self.db.refresh(internal_comment)
+        # Load the (empty) documents relationship so response serialization
+        # does not trigger a lazy load outside the async context.
+        await self.db.refresh(internal_comment, ["documents"])
         return internal_comment
 
     @repo_handler
@@ -203,7 +211,7 @@ class InternalCommentRepository:
         # Execute the query
         results = await self.db.execute(base_query)
 
-        # Compile and return the list of internal comments with user info
+        # Compile the list of internal comments with user info
         comments_with_user_info = [
             {
                 "internal_comment_id": internal_comment.internal_comment_id,
@@ -214,9 +222,38 @@ class InternalCommentRepository:
                 "create_date": internal_comment.create_date,
                 "update_date": internal_comment.update_date,
                 "full_name": full_name,
+                "documents": [],
             }
             for internal_comment, full_name in results
         ]
+
+        # Attach any document attachments in a single batched query to avoid
+        # an N+1 across the comment list.
+        comment_ids = [c["internal_comment_id"] for c in comments_with_user_info]
+        if comment_ids:
+            docs_result = await self.db.execute(
+                select(
+                    internal_comment_document_association.c.internal_comment_id,
+                    Document,
+                )
+                .join(
+                    Document,
+                    Document.document_id
+                    == internal_comment_document_association.c.document_id,
+                )
+                .where(
+                    internal_comment_document_association.c.internal_comment_id.in_(
+                        comment_ids
+                    )
+                )
+            )
+            documents_by_comment = {}
+            for comment_id, document in docs_result.all():
+                documents_by_comment.setdefault(comment_id, []).append(document)
+            for comment in comments_with_user_info:
+                comment["documents"] = documents_by_comment.get(
+                    comment["internal_comment_id"], []
+                )
 
         return comments_with_user_info
 
@@ -236,8 +273,10 @@ class InternalCommentRepository:
         Raises:
             DataNotFoundException: If no internal comment with the given ID is found.
         """
-        base_query = select(InternalComment).where(
-            InternalComment.internal_comment_id == internal_comment_id
+        base_query = (
+            select(InternalComment)
+            .options(selectinload(InternalComment.documents))
+            .where(InternalComment.internal_comment_id == internal_comment_id)
         )
         result = await self.db.execute(base_query)
         internal_comment = result.scalars().first()
@@ -293,6 +332,9 @@ class InternalCommentRepository:
             internal_comment.audience_scope = None
         await self.db.flush()
         await self.db.refresh(internal_comment)
+        # Load documents so response serialization does not lazy-load outside
+        # the async context.
+        await self.db.refresh(internal_comment, ["documents"])
 
         # Updated the internal comment with the creator's full name.
         internal_comment.full_name = await self.user_repo.get_full_name(

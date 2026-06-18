@@ -493,3 +493,78 @@ async def test_update_internal_comment_nonexistent(
     response = await client.put(url, json=update_payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_get_internal_comments_embeds_attachments(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    """
+    A comment's attached documents are embedded in the comment list response
+    (issue #4514), so the UI can render and re-load attachments in one request.
+    """
+    from lcfs.db.models.document.Document import Document
+
+    set_mock_user(
+        fastapi_app, [RoleEnum.GOVERNMENT], user_details={"username": "IDIRUSER"}
+    )
+
+    transfer = Transfer(
+        transfer_id=4514,
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=datetime.now(),
+        transaction_effective_date=datetime.now(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1,
+        current_status_id=1,
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True,
+    )
+    user = UserProfile(
+        keycloak_username="IDIRUSER", first_name="Test", last_name="User"
+    )
+    await add_models([transfer, user])
+
+    document = Document(
+        file_key="lcfs-docs/internal_comment/45140/abc",
+        file_name="attachment.pdf",
+        file_size=2048,
+        mime_type="application/pdf",
+    )
+    internal_comment = InternalComment(
+        internal_comment_id=45140,
+        comment="Comment with attachment",
+        audience_scope=AudienceScopeEnum.ANALYST.value,
+        create_user="IDIRUSER",
+    )
+    # Linking via the relationship inserts the association row on flush.
+    internal_comment.documents = [document]
+    await add_models([document, internal_comment])
+    await add_models(
+        [
+            TransferInternalComment(
+                transfer_id=transfer.transfer_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
+        ]
+    )
+
+    url = fastapi_app.url_path_for(
+        "get_comments",
+        entity_type=EntityTypeEnum.TRANSFER.value,
+        entity_id=transfer.transfer_id,
+    )
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) == 1
+    documents = data[0]["documents"]
+    assert len(documents) == 1
+    assert documents[0]["fileName"] == "attachment.pdf"
+    assert documents[0]["fileSize"] == 2048
+    assert "documentId" in documents[0]
