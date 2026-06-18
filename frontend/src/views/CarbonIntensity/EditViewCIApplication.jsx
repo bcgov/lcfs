@@ -330,7 +330,7 @@ const EditViewCIApplicationBase = () => {
   useEffect(() => {
     if (isSubmittedOrTerminal && !didSyncSubmittedExpanded.current) {
       didSyncSubmittedExpanded.current = true
-      setExpanded(['step5', 'summary'])
+      setExpanded(['step5', 'summary', 'generatedFuelCodes'])
     }
   }, [isSubmittedOrTerminal])
 
