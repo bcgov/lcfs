@@ -4,6 +4,7 @@ from sqlalchemy import (
     String,
     Text,
     Date,
+    Boolean,
     ForeignKey,
     Table,
     TIMESTAMP,
@@ -156,10 +157,17 @@ class CIApplication(BaseModel, Auditable, Versioning):
         nullable=True,
         comment="Free-text description of the CI pathway",
     )
+    pathway_supplemental_edit_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="True when supplemental edits are enabled for CI pathway records.",
+    )
     pathway_changes_requested_at = Column(
         TIMESTAMP(timezone=True),
         nullable=True,
-        comment="UTC date and time supplemental pathway editing was enabled.",
+        comment="UTC date and time supplemental pathway editing was requested.",
     )
     pathway_changes_requested_by = Column(
         String(500),

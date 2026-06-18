@@ -263,6 +263,20 @@ class PathwaySchema(BaseSchema):
     finished_fuel_transport_distance: int
 
 
+class PathwayChangeLogSchema(BaseSchema):
+    """Field-level audit entry for supplemental pathway edits."""
+
+    ci_application_id: int
+    pathway_id: Optional[int] = None
+    pathway_group_uuid: str
+    action_type: str
+    changed_at: Optional[datetime] = None
+    changed_by: Optional[str] = None
+    changed_fields: Dict[str, Any] = Field(default_factory=dict)
+    before_snapshot: Optional[Dict[str, Any]] = None
+    after_snapshot: Optional[Dict[str, Any]] = None
+
+
 class CIGeneratedFuelCodeSchema(BaseSchema):
     id: str
     pathway_id: Optional[int] = None
@@ -381,9 +395,11 @@ class CIApplicationSchema(BaseSchema):
     # Step 2
     pathway_description: Optional[str] = None
     pathways: List[PathwaySchema] = Field(default_factory=list)
+    pathway_supplemental_edit_enabled: bool = False
     pathway_changes_requested_at: Optional[datetime] = None
     pathway_changes_requested_by: Optional[str] = None
     pathway_changelog: List[Dict[str, Any]] = Field(default_factory=list)
+    pathway_change_logs: List[PathwayChangeLogSchema] = Field(default_factory=list)
     generated_fuel_codes: List[CIGeneratedFuelCodeSchema] = Field(default_factory=list)
 
     # Reserved for later steps — surfaced on read so the UI can pre-fill any

@@ -24,11 +24,54 @@ const formatDate = (value) => {
   }
 }
 
+const formatDateTime = (value) => {
+  if (!value) return ''
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return String(value)
+    return d.toLocaleString()
+  } catch {
+    return String(value)
+  }
+}
+
 const formatBytes = (bytes) => {
   if (bytes == null) return ''
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+const humanizeField = (field) =>
+  String(field || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+
+const formatChangeValue = (value) => {
+  if (value === null || value === undefined || value === '') return 'blank'
+  return String(value)
+}
+
+const summarizeChangedFields = (changedFields = {}) =>
+  Object.entries(changedFields)
+    .map(([field, change]) => {
+      const oldValue = formatChangeValue(change?.old)
+      const newValue = formatChangeValue(change?.new)
+      return `${humanizeField(field)}: ${oldValue} -> ${newValue}`
+    })
+    .join('; ')
+
+const formatActionType = (value) => {
+  switch (String(value || '').toUpperCase()) {
+    case 'CREATE':
+      return 'Added'
+    case 'UPDATE':
+      return 'Edited'
+    case 'DELETE':
+      return 'Deleted'
+    default:
+      return value || ''
+  }
 }
 
 const Labelled = ({ label, value, dataTest }) => (
@@ -105,6 +148,13 @@ export const ApplicationSummary = ({
   const documents = ciApplication.documents || []
   const pathways = ciApplication.pathways || []
   const pathwayChangelog = ciApplication.pathwayChangelog || []
+  const pathwayChangeLogs = [
+    ...(ciApplication.pathwayChangeLogs || ciApplication.pathway_change_logs || [])
+  ].sort((a, b) => {
+    const aTime = new Date(a.changedAt || a.changed_at || 0).getTime()
+    const bTime = new Date(b.changedAt || b.changed_at || 0).getTime()
+    return aTime - bTime
+  })
   const referencedPathway =
     pathways.find((pathway) => pathway?.fuelCode) || null
   const referencedFuelCode = referencedPathway?.fuelCode || null
@@ -503,6 +553,72 @@ export const ApplicationSummary = ({
               </BCTypography>
             ))}
           </Stack>
+        </BCBox>
+      )}
+      {pathwayChangeLogs.length > 0 && (
+        <BCBox mt={2} data-test="ci-summary-pathway-change-log-details">
+          <BCTypography
+            variant="subtitle2"
+            sx={{ fontWeight: 700, color: colors.primary.main, mb: 1 }}
+          >
+            {t('carbonIntensity:summary.pathwayChangeLogDetails')}
+          </BCTypography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '120px 180px 180px minmax(240px, 1fr)',
+              bgcolor: 'grey.100',
+              borderBottom: 1,
+              borderColor: 'divider',
+              px: 1,
+              py: 0.75,
+              fontWeight: 700
+            }}
+          >
+            <BCTypography variant="caption">
+              {t('carbonIntensity:summary.changeAction')}
+            </BCTypography>
+            <BCTypography variant="caption">
+              {t('carbonIntensity:summary.changeDate')}
+            </BCTypography>
+            <BCTypography variant="caption">
+              {t('carbonIntensity:summary.changedBy')}
+            </BCTypography>
+            <BCTypography variant="caption">
+              {t('carbonIntensity:summary.changedFields')}
+            </BCTypography>
+          </Box>
+          {pathwayChangeLogs.map((entry) => (
+            <Box
+              key={
+                `${entry.pathwayGroupUuid || entry.pathway_group_uuid}-${entry.changedAt || entry.changed_at}`
+              }
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '120px 180px 180px minmax(240px, 1fr)',
+                borderBottom: 1,
+                borderColor: 'divider',
+                px: 1,
+                py: 0.75,
+                alignItems: 'start'
+              }}
+            >
+              <BCTypography variant="body2">
+                {formatActionType(entry.actionType || entry.action_type)}
+              </BCTypography>
+              <BCTypography variant="body2">
+                {formatDateTime(entry.changedAt || entry.changed_at)}
+              </BCTypography>
+              <BCTypography variant="body2">
+                {entry.changedBy || entry.changed_by || ''}
+              </BCTypography>
+              <BCTypography variant="body2">
+                {summarizeChangedFields(
+                  entry.changedFields || entry.changed_fields
+                )}
+              </BCTypography>
+            </Box>
+          ))}
         </BCBox>
       )}
     </BCBox>

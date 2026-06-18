@@ -341,6 +341,7 @@ describe('EditViewCIApplication', () => {
         ciApplicationId: 10,
         organization: { name: 'Acme Corp' },
         status: { status: 'Submitted' },
+        pathwaySupplementalEditEnabled: true,
         pathwayChangesRequestedAt: '2026-06-10T10:00:00Z',
         pathways: []
       },

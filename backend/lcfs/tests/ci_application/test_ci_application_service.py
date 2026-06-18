@@ -110,6 +110,7 @@ def _ci_application(
         facility_nameplate_capacity_unit=unit,
         proposed_fuel_code_effective_date=date(2026, 6, 1),
         pathway_description=None,
+        pathway_supplemental_edit_enabled=False,
         supporting_document_other=None,
         consultant_name=None,
         consultant_company=None,
@@ -399,6 +400,31 @@ def _new_pathway_input(**overrides):
     return PathwayInputSchema(**base)
 
 
+def _existing_pathway(**overrides):
+    base = dict(
+        pathway_id=1,
+        application_type_id=1,
+        fuel_code_type_id=1,
+        operating_data_from=date(2025, 1, 1),
+        operating_data_to=date(2025, 12, 31),
+        fuel_code_id=None,
+        proposed_ci=5.61,
+        fuel_type_id=1,
+        feedstock="Canola",
+        feedstock_region="Saskatchewan",
+        feedstock_transport_mode="Truck",
+        feedstock_transport_distance=100,
+        coproducts=None,
+        finished_fuel_transport_mode="Rail",
+        finished_fuel_transport_distance=200,
+        group_uuid="pathway-group-1",
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
 def _stub_step2_lookups(repo, *, with_fuel_code=False):
     repo.get_pathway_application_types.return_value = [
         _pathway_app_type(1, "New"),
@@ -449,6 +475,7 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     service, repo, mock_user
 ):
     ci = _ci_application(status=_status("Submitted", 2))
+    ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
     ci.pathways = []
     ci.verification_1_user_id = 22
@@ -468,7 +495,8 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     assert ci.ci_application_status.status == "Submitted"
     assert ci.verification_1_user_id == 22
     assert ci.verification_1_date == datetime(2026, 5, 19, tzinfo=timezone.utc)
-    assert ci.pathway_changes_requested_at is None
+    assert ci.pathway_supplemental_edit_enabled is False
+    assert ci.pathway_changes_requested_at == datetime(2026, 6, 10, tzinfo=timezone.utc)
     repo.add_history.assert_awaited_once()
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "supplemental_pathways_updated"
@@ -477,10 +505,70 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
 
 
 @pytest.mark.anyio
+async def test_update_step2_records_pathway_versions_for_change_log(
+    service, repo, mock_user
+):
+    ci = _ci_application(status=_status("Submitted", 2))
+    ci.pathway_supplemental_edit_enabled = True
+    ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
+    ci.pathway_changes_requested_by = "idir_user"
+    ci.pathways = [
+        _existing_pathway(pathway_id=1, group_uuid="pathway-group-1"),
+        _existing_pathway(pathway_id=2, group_uuid="pathway-group-2", feedstock="Soy"),
+    ]
+    _stub_step2_lookups(repo)
+    repo.replace_pathways.side_effect = (
+        lambda _ci_id, rows, preserve_history=False: rows
+    )
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = _ci_application(status=_status("Submitted", 2))
+    repo.get_by_id.return_value.pathways = []
+
+    payload = CIApplicationStep2Schema(
+        pathways=[
+            _new_pathway_input(
+                pathway_id=1,
+                feedstock="Camelina",
+                feedstock_transport_distance=125,
+            ),
+            _new_pathway_input(feedstock="Tallow"),
+        ],
+        pathway_description="Supplemental update",
+    )
+
+    await service.update_step2(ci, payload, mock_user)
+
+    repo.replace_pathways.assert_awaited_once()
+    args, kwargs = repo.replace_pathways.await_args
+    assert kwargs["preserve_history"] is True
+    version_rows = args[1]
+    assert len(version_rows) == 3
+
+    update_row = version_rows[0]
+    assert update_row.group_uuid == "pathway-group-1"
+    assert update_row.version == 1
+    assert update_row.action_type == ActionTypeEnum.UPDATE
+    assert update_row.feedstock == "Camelina"
+    assert update_row.feedstock_transport_distance == 125
+
+    create_row = version_rows[1]
+    assert create_row.action_type == ActionTypeEnum.CREATE
+    assert create_row.version == 0
+    assert create_row.feedstock == "Tallow"
+
+    delete_row = version_rows[2]
+    assert delete_row.group_uuid == "pathway-group-2"
+    assert delete_row.version == 1
+    assert delete_row.action_type == ActionTypeEnum.DELETE
+    assert delete_row.feedstock == "Soy"
+
+
+@pytest.mark.anyio
 async def test_update_step2_rejects_unrequested_submitted_edit(
     service, repo, mock_user
 ):
     ci = _ci_application(status=_status("Submitted", 2))
+    ci.pathway_supplemental_edit_enabled = False
     ci.pathway_changes_requested_at = None
 
     with pytest.raises(HTTPException) as exc:
@@ -1060,6 +1148,7 @@ async def test_request_pathway_changes_keeps_submitted_and_verification_work(
     assert ci.recommendation_user_id == 44
     assert ci.pathway_changes_requested_at is not None
     assert ci.pathway_changes_requested_by == "ci_applicant_user"
+    assert ci.pathway_supplemental_edit_enabled is True
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "pathway_changes_requested"
     assert isinstance(result, CIApplicationSchema)

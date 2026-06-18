@@ -323,7 +323,7 @@ const EditViewCIApplicationBase = () => {
   const canSupplementallyEditPathways =
     !isGovernment &&
     ciApplication?.status?.status === 'Submitted' &&
-    !!ciApplication?.pathwayChangesRequestedAt
+    !!ciApplication?.pathwaySupplementalEditEnabled
 
   // Hooks must run on every render — keep this above the loading-state
   // early return so hook order stays stable across renders.
